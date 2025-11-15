@@ -22,6 +22,52 @@ class MidiEditorModal {
 
         // Sequence de notes pour webaudio-pianoroll
         this.sequence = [];
+        this.fullSequence = []; // Toutes les notes (tous canaux)
+        this.currentChannel = 0; // Canal actuellement affiché (0-15, ou 'all')
+        this.channels = []; // Informations sur les canaux disponibles
+
+        // Table des instruments General MIDI
+        this.gmInstruments = [
+            // Piano (0-7)
+            'Acoustic Grand Piano', 'Bright Acoustic Piano', 'Electric Grand Piano', 'Honky-tonk Piano',
+            'Electric Piano 1', 'Electric Piano 2', 'Harpsichord', 'Clavinet',
+            // Chromatic Percussion (8-15)
+            'Celesta', 'Glockenspiel', 'Music Box', 'Vibraphone', 'Marimba', 'Xylophone', 'Tubular Bells', 'Dulcimer',
+            // Organ (16-23)
+            'Drawbar Organ', 'Percussive Organ', 'Rock Organ', 'Church Organ', 'Reed Organ', 'Accordion', 'Harmonica', 'Tango Accordion',
+            // Guitar (24-31)
+            'Acoustic Guitar (nylon)', 'Acoustic Guitar (steel)', 'Electric Guitar (jazz)', 'Electric Guitar (clean)',
+            'Electric Guitar (muted)', 'Overdriven Guitar', 'Distortion Guitar', 'Guitar harmonics',
+            // Bass (32-39)
+            'Acoustic Bass', 'Electric Bass (finger)', 'Electric Bass (pick)', 'Fretless Bass',
+            'Slap Bass 1', 'Slap Bass 2', 'Synth Bass 1', 'Synth Bass 2',
+            // Strings (40-47)
+            'Violin', 'Viola', 'Cello', 'Contrabass', 'Tremolo Strings', 'Pizzicato Strings', 'Orchestral Harp', 'Timpani',
+            // Ensemble (48-55)
+            'String Ensemble 1', 'String Ensemble 2', 'Synth Strings 1', 'Synth Strings 2',
+            'Choir Aahs', 'Voice Oohs', 'Synth Voice', 'Orchestra Hit',
+            // Brass (56-63)
+            'Trumpet', 'Trombone', 'Tuba', 'Muted Trumpet', 'French Horn', 'Brass Section', 'Synth Brass 1', 'Synth Brass 2',
+            // Reed (64-71)
+            'Soprano Sax', 'Alto Sax', 'Tenor Sax', 'Baritone Sax', 'Oboe', 'English Horn', 'Bassoon', 'Clarinet',
+            // Pipe (72-79)
+            'Piccolo', 'Flute', 'Recorder', 'Pan Flute', 'Blown Bottle', 'Shakuhachi', 'Whistle', 'Ocarina',
+            // Synth Lead (80-87)
+            'Lead 1 (square)', 'Lead 2 (sawtooth)', 'Lead 3 (calliope)', 'Lead 4 (chiff)',
+            'Lead 5 (charang)', 'Lead 6 (voice)', 'Lead 7 (fifths)', 'Lead 8 (bass + lead)',
+            // Synth Pad (88-95)
+            'Pad 1 (new age)', 'Pad 2 (warm)', 'Pad 3 (polysynth)', 'Pad 4 (choir)',
+            'Pad 5 (bowed)', 'Pad 6 (metallic)', 'Pad 7 (halo)', 'Pad 8 (sweep)',
+            // Synth Effects (96-103)
+            'FX 1 (rain)', 'FX 2 (soundtrack)', 'FX 3 (crystal)', 'FX 4 (atmosphere)',
+            'FX 5 (brightness)', 'FX 6 (goblins)', 'FX 7 (echoes)', 'FX 8 (sci-fi)',
+            // Ethnic (104-111)
+            'Sitar', 'Banjo', 'Shamisen', 'Koto', 'Kalimba', 'Bag pipe', 'Fiddle', 'Shanai',
+            // Percussive (112-119)
+            'Tinkle Bell', 'Agogo', 'Steel Drums', 'Woodblock', 'Taiko Drum', 'Melodic Tom', 'Synth Drum', 'Reverse Cymbal',
+            // Sound Effects (120-127)
+            'Guitar Fret Noise', 'Breath Noise', 'Seashore', 'Bird Tweet', 'Telephone Ring', 'Helicopter', 'Applause', 'Gunshot'
+        ];
     }
 
     // ========================================================================
@@ -113,10 +159,11 @@ class MidiEditorModal {
 
     /**
      * Convertir les données MIDI en format sequence pour webaudio-pianoroll
-     * Format: [[tick, note, gate, velocity], ...]
+     * Format: {t: tick, g: gate, n: note, c: channel}
      */
     convertMidiToSequence() {
-        this.sequence = [];
+        this.fullSequence = [];
+        this.channels = [];
 
         if (!this.midiData || !this.midiData.tracks) {
             this.log('warn', 'No MIDI tracks to convert');
@@ -125,6 +172,10 @@ class MidiEditorModal {
 
         const ticksPerBeat = this.midiData.header?.ticksPerBeat || 480;
         this.log('info', `Converting MIDI: ${this.midiData.tracks.length} tracks, ${ticksPerBeat} ticks/beat`);
+
+        // Informations sur les instruments par canal
+        const channelInstruments = new Map(); // canal -> program number
+        const channelNoteCount = new Map();   // canal -> nombre de notes
 
         // Extraire toutes les notes de toutes les pistes
         const allNotes = [];
@@ -146,15 +197,23 @@ class MidiEditorModal {
             track.events.forEach((event, eventIndex) => {
                 currentTick += event.deltaTime || 0;
 
+                // Program Change (instrument)
+                if (event.type === 'programChange') {
+                    const channel = event.channel || 0;
+                    channelInstruments.set(channel, event.programNumber);
+                    this.log('debug', `Channel ${channel}: program ${event.programNumber} (${this.gmInstruments[event.programNumber]})`);
+                }
+
                 // Note On
                 if (event.type === 'noteOn' && event.velocity > 0) {
                     noteOnCount++;
-                    const key = `${event.channel}_${event.noteNumber}`;
+                    const channel = event.channel || 0;
+                    const key = `${channel}_${event.noteNumber}`;
                     activeNotes.set(key, {
                         tick: currentTick,
                         note: event.noteNumber,
                         velocity: event.velocity,
-                        channel: event.channel || 0
+                        channel: channel
                     });
 
                     // Log first note on event for debugging
@@ -163,14 +222,15 @@ class MidiEditorModal {
                             tick: currentTick,
                             note: event.noteNumber,
                             velocity: event.velocity,
-                            channel: event.channel
+                            channel: channel
                         });
                     }
                 }
                 // Note Off
                 else if (event.type === 'noteOff' || (event.type === 'noteOn' && event.velocity === 0)) {
                     noteOffCount++;
-                    const key = `${event.channel}_${event.noteNumber}`;
+                    const channel = event.channel || 0;
+                    const key = `${channel}_${event.noteNumber}`;
                     const noteOn = activeNotes.get(key);
 
                     if (noteOn) {
@@ -179,8 +239,13 @@ class MidiEditorModal {
                             tick: noteOn.tick,
                             note: noteOn.note,
                             gate: gate,
-                            velocity: noteOn.velocity
+                            velocity: noteOn.velocity,
+                            channel: channel
                         });
+
+                        // Compter les notes par canal
+                        channelNoteCount.set(channel, (channelNoteCount.get(channel) || 0) + 1);
+
                         activeNotes.delete(key);
                     }
                 }
@@ -189,22 +254,63 @@ class MidiEditorModal {
             this.log('debug', `Track ${trackIndex} summary: ${noteOnCount} note-ons, ${noteOffCount} note-offs, ${allNotes.length} complete notes`);
         });
 
-        // Convertir en format webaudio-pianoroll: {t: tick, g: gate, n: note}
-        this.sequence = allNotes.map(note => ({
+        // Convertir en format webaudio-pianoroll: {t: tick, g: gate, n: note, c: channel}
+        this.fullSequence = allNotes.map(note => ({
             t: note.tick,    // tick (position de départ)
             g: note.gate,    // gate (durée)
-            n: note.note     // note (numéro MIDI)
+            n: note.note,    // note (numéro MIDI)
+            c: note.channel  // canal MIDI (0-15)
         }));
 
         // Trier par tick
-        this.sequence.sort((a, b) => a.t - b.t);
+        this.fullSequence.sort((a, b) => a.t - b.t);
 
-        this.log('info', `Converted ${this.sequence.length} notes to sequence`);
+        // Construire la liste des canaux disponibles
+        channelNoteCount.forEach((count, channel) => {
+            const programNumber = channelInstruments.get(channel) || 0;
+            const instrumentName = channel === 9 ? 'Drums' : this.gmInstruments[programNumber];
 
-        if (this.sequence.length === 0) {
-            this.log('warn', 'No notes found! Check MIDI data structure.');
+            this.channels.push({
+                channel: channel,
+                program: programNumber,
+                instrument: instrumentName,
+                noteCount: count
+            });
+        });
+
+        // Trier les canaux par numéro
+        this.channels.sort((a, b) => a.channel - b.channel);
+
+        this.log('info', `Converted ${this.fullSequence.length} notes to sequence`);
+        this.log('info', `Found ${this.channels.length} channels:`, this.channels);
+
+        // Charger le premier canal par défaut (économise la mémoire)
+        if (this.channels.length > 0) {
+            this.currentChannel = this.channels[0].channel;
+            this.filterByChannel(this.currentChannel);
         } else {
-            this.log('debug', 'Sample notes:', this.sequence.slice(0, 3));
+            this.log('warn', 'No notes found! Check MIDI data structure.');
+            this.sequence = [];
+        }
+    }
+
+    /**
+     * Filtrer la séquence par canal
+     */
+    filterByChannel(channel) {
+        if (channel === 'all') {
+            this.sequence = [...this.fullSequence];
+        } else {
+            this.sequence = this.fullSequence.filter(note => note.c === channel);
+        }
+
+        this.currentChannel = channel;
+
+        this.log('info', `Filtered to channel ${channel}: ${this.sequence.length} notes`);
+
+        // Mettre à jour le piano roll si il existe
+        if (this.pianoRoll) {
+            this.reloadPianoRoll();
         }
     }
 
@@ -213,27 +319,47 @@ class MidiEditorModal {
      * Format compatible avec la bibliothèque 'midi-file'
      */
     convertSequenceToMidi() {
-        if (!this.sequence || this.sequence.length === 0) {
+        // Récupérer la séquence complète depuis le piano roll
+        const currentSequence = this.pianoRoll?.sequence || this.sequence;
+
+        if (!currentSequence || currentSequence.length === 0) {
+            this.log('warn', 'No sequence to convert');
             return null;
         }
 
         const ticksPerBeat = this.midiData?.header?.ticksPerBeat || 480;
 
+        // Si on édite un seul canal, on doit reconstituer toute la séquence
+        let fullSequenceToSave;
+
+        if (this.currentChannel !== 'all') {
+            // Remplacer les notes du canal édité dans la séquence complète
+            fullSequenceToSave = this.fullSequence.filter(note => note.c !== this.currentChannel);
+            fullSequenceToSave = [...fullSequenceToSave, ...currentSequence];
+            fullSequenceToSave.sort((a, b) => a.t - b.t);
+
+            this.log('info', `Saving ${currentSequence.length} notes from channel ${this.currentChannel} + ${fullSequenceToSave.length - currentSequence.length} notes from other channels`);
+        } else {
+            fullSequenceToSave = currentSequence;
+            this.log('info', `Saving all ${fullSequenceToSave.length} notes`);
+        }
+
         // Convertir la sequence en événements MIDI
         const events = [];
 
         // Ajouter les événements de note
-        this.sequence.forEach(note => {
+        fullSequenceToSave.forEach(note => {
             const tick = note.t;
             const noteNumber = note.n;
             const gate = note.g;
+            const channel = note.c !== undefined ? note.c : 0;
             const velocity = note.v || 100; // velocity par défaut si non présente
 
             // Note On
             events.push({
                 absoluteTime: tick,
                 type: 'noteOn',
-                channel: 0,
+                channel: channel,
                 noteNumber: noteNumber,
                 velocity: velocity
             });
@@ -242,7 +368,7 @@ class MidiEditorModal {
             events.push({
                 absoluteTime: tick + gate,
                 type: 'noteOff',
-                channel: 0,
+                channel: channel,
                 noteNumber: noteNumber,
                 velocity: 0
             });
@@ -343,6 +469,30 @@ class MidiEditorModal {
     // RENDU
     // ========================================================================
 
+    /**
+     * Générer les options du sélecteur de canal
+     */
+    renderChannelOptions() {
+        if (!this.channels || this.channels.length === 0) {
+            return '<option value="0">Canal 1 (0 notes)</option>';
+        }
+
+        let options = '';
+
+        // Option "Tous les canaux"
+        if (this.channels.length > 1) {
+            options += `<option value="all">Tous les canaux (${this.fullSequence.length} notes)</option>`;
+        }
+
+        // Options pour chaque canal
+        this.channels.forEach(ch => {
+            const selected = ch.channel === this.currentChannel ? 'selected' : '';
+            options += `<option value="${ch.channel}" ${selected}>Canal ${ch.channel + 1}: ${ch.instrument} (${ch.noteCount} notes)</option>`;
+        });
+
+        return options;
+    }
+
     render() {
         // Créer le conteneur de la modale
         this.container = document.createElement('div');
@@ -359,9 +509,16 @@ class MidiEditorModal {
                 <div class="modal-body">
                     <div class="editor-toolbar">
                         <div class="toolbar-group">
+                            <label>Canal:
+                                <select id="channel-select">
+                                    ${this.renderChannelOptions()}
+                                </select>
+                            </label>
+                        </div>
+                        <div class="toolbar-group">
                             <label>Mode:
                                 <select id="edit-mode">
-                                    <option value="dragpoly">Drag Poly (Multi-notes)</option>
+                                    <option value="dragpoly">Drag Poly</option>
                                     <option value="dragmono">Drag Mono</option>
                                     <option value="gridpoly">Grid Poly</option>
                                     <option value="gridmono">Grid Mono</option>
@@ -369,10 +526,10 @@ class MidiEditorModal {
                             </label>
                         </div>
                         <div class="toolbar-group">
-                            <button class="btn btn-sm" data-action="zoom-in" title="Zoom horizontal +">H+</button>
-                            <button class="btn btn-sm" data-action="zoom-out" title="Zoom horizontal -">H-</button>
-                            <button class="btn btn-sm" data-action="vzoom-in" title="Zoom vertical +">V+</button>
-                            <button class="btn btn-sm" data-action="vzoom-out" title="Zoom vertical -">V-</button>
+                            <button class="btn btn-sm" data-action="zoom-in" title="Zoom horizontal +">🔍+</button>
+                            <button class="btn btn-sm" data-action="zoom-out" title="Zoom horizontal -">🔍−</button>
+                            <button class="btn btn-sm" data-action="vzoom-in" title="Zoom vertical +">⬆️</button>
+                            <button class="btn btn-sm" data-action="vzoom-out" title="Zoom vertical -">⬇️</button>
                         </div>
                         <div class="toolbar-group">
                             <span class="toolbar-label">Notes: <span id="note-count">${this.sequence.length}</span></span>
@@ -616,42 +773,121 @@ class MidiEditorModal {
                 }
             });
         }
+
+        // Changement de canal
+        const channelSelect = document.getElementById('channel-select');
+        if (channelSelect) {
+            channelSelect.addEventListener('change', (e) => {
+                const channel = e.target.value === 'all' ? 'all' : parseInt(e.target.value);
+                this.log('info', `Switching to channel: ${channel}`);
+                this.filterByChannel(channel);
+            });
+        }
+    }
+
+    /**
+     * Recharger le piano roll avec la séquence actuelle
+     */
+    reloadPianoRoll() {
+        if (!this.pianoRoll) {
+            this.log('warn', 'Cannot reload piano roll: not initialized');
+            return;
+        }
+
+        this.log('info', `Reloading piano roll with ${this.sequence.length} notes`);
+
+        // Calculer la plage de ticks depuis la séquence
+        let maxTick = 0;
+        let minNote = 127;
+        let maxNote = 0;
+
+        if (this.sequence && this.sequence.length > 0) {
+            this.sequence.forEach(note => {
+                const endTick = note.t + note.g;
+                if (endTick > maxTick) maxTick = endTick;
+                if (note.n < minNote) minNote = note.n;
+                if (note.n > maxNote) maxNote = note.n;
+            });
+        }
+
+        // Mettre à jour les attributs du piano roll
+        const xrange = Math.max(128, Math.ceil(maxTick / 128) * 128);
+        const noteRange = Math.max(36, maxNote - minNote + 12);
+
+        this.pianoRoll.setAttribute('markend', maxTick.toString());
+        this.pianoRoll.setAttribute('xrange', xrange.toString());
+        this.pianoRoll.setAttribute('yrange', noteRange.toString());
+
+        // Recharger la séquence
+        this.pianoRoll.sequence = this.sequence;
+
+        // Forcer le redraw
+        if (typeof this.pianoRoll.redraw === 'function') {
+            this.pianoRoll.redraw();
+        }
+
+        // Mettre à jour les stats
+        this.updateStats();
+
+        this.log('info', `Piano roll reloaded: ${this.sequence.length} notes, xrange=${xrange}, yrange=${noteRange}`);
     }
 
     /**
      * Zoom horizontal
      */
     zoomHorizontal(factor) {
-        if (!this.pianoRoll) return;
-
-        const currentRange = parseInt(this.pianoRoll.getAttribute('xrange')) || 128;
-        const newRange = Math.max(16, Math.min(10000, Math.round(currentRange * factor)));
-        this.pianoRoll.setAttribute('xrange', newRange);
-
-        // Forcer le redraw
-        if (typeof this.pianoRoll.redraw === 'function') {
-            this.pianoRoll.redraw();
+        if (!this.pianoRoll) {
+            this.log('warn', 'Cannot zoom: piano roll not initialized');
+            return;
         }
 
-        this.log('debug', `Horizontal zoom: ${currentRange} -> ${newRange}`);
+        // Essayer d'accéder à la propriété directement
+        const currentRange = this.pianoRoll.xrange || parseInt(this.pianoRoll.getAttribute('xrange')) || 128;
+        const newRange = Math.max(16, Math.min(10000, Math.round(currentRange * factor)));
+
+        // Essayer les deux méthodes
+        this.pianoRoll.setAttribute('xrange', newRange.toString());
+        if (this.pianoRoll.xrange !== undefined) {
+            this.pianoRoll.xrange = newRange;
+        }
+
+        // Forcer le redraw avec un court délai
+        setTimeout(() => {
+            if (typeof this.pianoRoll.redraw === 'function') {
+                this.pianoRoll.redraw();
+            }
+        }, 10);
+
+        this.log('info', `Horizontal zoom: ${currentRange} -> ${newRange}`);
     }
 
     /**
      * Zoom vertical
      */
     zoomVertical(factor) {
-        if (!this.pianoRoll) return;
-
-        const currentRange = parseInt(this.pianoRoll.getAttribute('yrange')) || 36;
-        const newRange = Math.max(12, Math.min(88, Math.round(currentRange * factor)));
-        this.pianoRoll.setAttribute('yrange', newRange);
-
-        // Forcer le redraw
-        if (typeof this.pianoRoll.redraw === 'function') {
-            this.pianoRoll.redraw();
+        if (!this.pianoRoll) {
+            this.log('warn', 'Cannot zoom: piano roll not initialized');
+            return;
         }
 
-        this.log('debug', `Vertical zoom: ${currentRange} -> ${newRange}`);
+        // Essayer d'accéder à la propriété directement
+        const currentRange = this.pianoRoll.yrange || parseInt(this.pianoRoll.getAttribute('yrange')) || 36;
+        const newRange = Math.max(12, Math.min(88, Math.round(currentRange * factor)));
+
+        // Essayer les deux méthodes
+        this.pianoRoll.setAttribute('yrange', newRange.toString());
+        if (this.pianoRoll.yrange !== undefined) {
+            this.pianoRoll.yrange = newRange;
+        }
+
+        // Forcer le redraw avec un court délai
+        setTimeout(() => {
+            if (typeof this.pianoRoll.redraw === 'function') {
+                this.pianoRoll.redraw();
+            }
+        }, 10);
+
+        this.log('info', `Vertical zoom: ${currentRange} -> ${newRange}`);
     }
 
     // ========================================================================
@@ -695,6 +931,9 @@ class MidiEditorModal {
         this.midiData = null;
         this.isDirty = false;
         this.sequence = [];
+        this.fullSequence = [];
+        this.currentChannel = 0;
+        this.channels = [];
 
         // Émettre événement
         if (this.eventBus) {
