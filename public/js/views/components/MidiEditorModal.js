@@ -23,8 +23,16 @@ class MidiEditorModal {
         // Sequence de notes pour webaudio-pianoroll
         this.sequence = [];
         this.fullSequence = []; // Toutes les notes (tous canaux)
-        this.currentChannel = 0; // Canal actuellement affiché (0-15, ou 'all')
+        this.activeChannels = new Set(); // Canaux actifs à afficher
         this.channels = []; // Informations sur les canaux disponibles
+
+        // Couleurs pour les 16 canaux MIDI
+        this.channelColors = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A',
+            '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2',
+            '#F8B88B', '#FAD7A0', '#A9DFBF', '#D7BDE2',
+            '#AED6F1', '#F9E79F', '#FAB1A0', '#D5DBDB'
+        ];
 
         // Table des instruments General MIDI
         this.gmInstruments = [
@@ -284,10 +292,11 @@ class MidiEditorModal {
         this.log('info', `Converted ${this.fullSequence.length} notes to sequence`);
         this.log('info', `Found ${this.channels.length} channels:`, this.channels);
 
-        // Charger le premier canal par défaut (économise la mémoire)
+        // Activer le premier canal par défaut (économise la mémoire)
         if (this.channels.length > 0) {
-            this.currentChannel = this.channels[0].channel;
-            this.filterByChannel(this.currentChannel);
+            this.activeChannels.clear();
+            this.activeChannels.add(this.channels[0].channel);
+            this.updateSequenceFromActiveChannels();
         } else {
             this.log('warn', 'No notes found! Check MIDI data structure.');
             this.sequence = [];
@@ -295,18 +304,32 @@ class MidiEditorModal {
     }
 
     /**
-     * Filtrer la séquence par canal
+     * Basculer l'affichage d'un canal
      */
-    filterByChannel(channel) {
-        if (channel === 'all') {
-            this.sequence = [...this.fullSequence];
+    toggleChannel(channel) {
+        if (this.activeChannels.has(channel)) {
+            this.activeChannels.delete(channel);
         } else {
-            this.sequence = this.fullSequence.filter(note => note.c === channel);
+            this.activeChannels.add(channel);
         }
 
-        this.currentChannel = channel;
+        this.log('info', `Toggled channel ${channel}. Active channels: [${Array.from(this.activeChannels).join(', ')}]`);
 
-        this.log('info', `Filtered to channel ${channel}: ${this.sequence.length} notes`);
+        this.updateSequenceFromActiveChannels();
+        this.updateChannelButtons();
+    }
+
+    /**
+     * Mettre à jour la séquence depuis les canaux actifs
+     */
+    updateSequenceFromActiveChannels() {
+        if (this.activeChannels.size === 0) {
+            this.sequence = [];
+        } else {
+            this.sequence = this.fullSequence.filter(note => this.activeChannels.has(note.c));
+        }
+
+        this.log('info', `Updated sequence: ${this.sequence.length} notes from ${this.activeChannels.size} active channel(s)`);
 
         // Mettre à jour le piano roll si il existe
         if (this.pianoRoll) {
@@ -329,18 +352,21 @@ class MidiEditorModal {
 
         const ticksPerBeat = this.midiData?.header?.ticksPerBeat || 480;
 
-        // Si on édite un seul canal, on doit reconstituer toute la séquence
+        // Reconstituer toute la séquence en remplaçant les canaux édités
         let fullSequenceToSave;
 
-        if (this.currentChannel !== 'all') {
-            // Remplacer les notes du canal édité dans la séquence complète
-            fullSequenceToSave = this.fullSequence.filter(note => note.c !== this.currentChannel);
-            fullSequenceToSave = [...fullSequenceToSave, ...currentSequence];
+        if (this.activeChannels.size > 0) {
+            // Garder les notes des canaux non édités
+            const inactiveChannelNotes = this.fullSequence.filter(note => !this.activeChannels.has(note.c));
+
+            // Ajouter les notes des canaux édités
+            fullSequenceToSave = [...inactiveChannelNotes, ...currentSequence];
             fullSequenceToSave.sort((a, b) => a.t - b.t);
 
-            this.log('info', `Saving ${currentSequence.length} notes from channel ${this.currentChannel} + ${fullSequenceToSave.length - currentSequence.length} notes from other channels`);
+            this.log('info', `Saving ${currentSequence.length} notes from ${this.activeChannels.size} edited channel(s) + ${inactiveChannelNotes.length} notes from other channels`);
         } else {
-            fullSequenceToSave = currentSequence;
+            // Sauvegarder tout si aucun canal spécifique n'est actif
+            fullSequenceToSave = this.fullSequence;
             this.log('info', `Saving all ${fullSequenceToSave.length} notes`);
         }
 
@@ -470,27 +496,57 @@ class MidiEditorModal {
     // ========================================================================
 
     /**
-     * Générer les options du sélecteur de canal
+     * Générer les boutons de canal
      */
-    renderChannelOptions() {
+    renderChannelButtons() {
         if (!this.channels || this.channels.length === 0) {
-            return '<option value="0">Canal 1 (0 notes)</option>';
+            return '<div class="channel-buttons"><span>Aucun canal disponible</span></div>';
         }
 
-        let options = '';
+        let buttons = '<div class="channel-buttons">';
 
-        // Option "Tous les canaux"
-        if (this.channels.length > 1) {
-            options += `<option value="all">Tous les canaux (${this.fullSequence.length} notes)</option>`;
-        }
-
-        // Options pour chaque canal
+        // Boutons pour chaque canal
         this.channels.forEach(ch => {
-            const selected = ch.channel === this.currentChannel ? 'selected' : '';
-            options += `<option value="${ch.channel}" ${selected}>Canal ${ch.channel + 1}: ${ch.instrument} (${ch.noteCount} notes)</option>`;
+            const isActive = this.activeChannels.has(ch.channel);
+            const color = this.channelColors[ch.channel % this.channelColors.length];
+            const activeClass = isActive ? 'active' : '';
+
+            buttons += `
+                <button
+                    class="channel-btn ${activeClass}"
+                    data-channel="${ch.channel}"
+                    style="--channel-color: ${color}"
+                    title="${ch.instrument} (${ch.noteCount} notes)"
+                >
+                    <span class="channel-number">${ch.channel + 1}</span>
+                    <span class="channel-name">${ch.instrument}</span>
+                    <span class="channel-count">${ch.noteCount}</span>
+                </button>
+            `;
         });
 
-        return options;
+        buttons += '</div>';
+        return buttons;
+    }
+
+    /**
+     * Mettre à jour l'état visuel des boutons de canal
+     */
+    updateChannelButtons() {
+        const buttons = this.container?.querySelectorAll('.channel-btn');
+        if (!buttons) return;
+
+        buttons.forEach(btn => {
+            const channel = parseInt(btn.dataset.channel);
+            if (this.activeChannels.has(channel)) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // Mettre à jour le compteur de notes
+        this.updateStats();
     }
 
     render() {
@@ -508,13 +564,6 @@ class MidiEditorModal {
                 </div>
                 <div class="modal-body">
                     <div class="editor-toolbar">
-                        <div class="toolbar-group">
-                            <label>Canal:
-                                <select id="channel-select">
-                                    ${this.renderChannelOptions()}
-                                </select>
-                            </label>
-                        </div>
                         <div class="toolbar-group">
                             <label>Mode:
                                 <select id="edit-mode">
@@ -534,6 +583,9 @@ class MidiEditorModal {
                         <div class="toolbar-group">
                             <span class="toolbar-label">Notes: <span id="note-count">${this.sequence.length}</span></span>
                         </div>
+                    </div>
+                    <div class="channels-toolbar">
+                        ${this.renderChannelButtons()}
                     </div>
                     <div class="piano-roll-container" id="piano-roll-container">
                         <!-- webaudio-pianoroll sera inséré ici -->
@@ -774,15 +826,15 @@ class MidiEditorModal {
             });
         }
 
-        // Changement de canal
-        const channelSelect = document.getElementById('channel-select');
-        if (channelSelect) {
-            channelSelect.addEventListener('change', (e) => {
-                const channel = e.target.value === 'all' ? 'all' : parseInt(e.target.value);
-                this.log('info', `Switching to channel: ${channel}`);
-                this.filterByChannel(channel);
+        // Clic sur les boutons de canal
+        const channelButtons = this.container.querySelectorAll('.channel-btn');
+        channelButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const channel = parseInt(btn.dataset.channel);
+                this.toggleChannel(channel);
             });
-        }
+        });
     }
 
     /**
@@ -932,7 +984,7 @@ class MidiEditorModal {
         this.isDirty = false;
         this.sequence = [];
         this.fullSequence = [];
-        this.currentChannel = 0;
+        this.activeChannels.clear();
         this.channels = [];
 
         // Émettre événement
