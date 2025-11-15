@@ -880,6 +880,9 @@ class MidiEditorModal {
                 // Marquer que le remplacement va être actif (utilisé dans les setters)
                 this.customRedrawActive = true;
 
+                // Flag pour requestAnimationFrame (évite les redraws trop fréquents - limite à 60fps)
+                let rafPending = false;
+
                 // CRITIQUE: Intercepter xoffset et yoffset pour appeler redraw() automatiquement
                 // Dans l'original, ces propriétés ont un observer qui appelle layout() → redraw()
                 let _xoffset = pr.xoffset !== undefined ? pr.xoffset : 0;
@@ -894,9 +897,13 @@ class MidiEditorModal {
                     set: function(value) {
                         if (_xoffset !== value) {
                             _xoffset = value;
-                            // Redraw seulement si la nouvelle méthode est installée
-                            if (that.customRedrawActive && pr.redraw) {
-                                pr.redraw();
+                            // Utiliser requestAnimationFrame pour limiter à 60fps
+                            if (that.customRedrawActive && pr.redraw && !rafPending) {
+                                rafPending = true;
+                                requestAnimationFrame(() => {
+                                    rafPending = false;
+                                    pr.redraw();
+                                });
                             }
                         }
                     },
@@ -908,16 +915,20 @@ class MidiEditorModal {
                     set: function(value) {
                         if (_yoffset !== value) {
                             _yoffset = value;
-                            // Redraw seulement si la nouvelle méthode est installée
-                            if (that.customRedrawActive && pr.redraw) {
-                                pr.redraw();
+                            // Utiliser requestAnimationFrame pour limiter à 60fps
+                            if (that.customRedrawActive && pr.redraw && !rafPending) {
+                                rafPending = true;
+                                requestAnimationFrame(() => {
+                                    rafPending = false;
+                                    pr.redraw();
+                                });
                             }
                         }
                     },
                     configurable: true
                 });
 
-                // Remplacer redraw() par une version COMPLETE qui colore directement par canal
+                // Remplacer redraw() par une version OPTIMISÉE avec requestAnimationFrame (60fps max)
                 pr.redraw = function() {
                     if (!ctx) return;
 
@@ -941,30 +952,9 @@ class MidiEditorModal {
                     // 1. Effacer tout
                     ctx.clearRect(0, 0, pr.width, pr.height);
 
-                    // 2. Dessiner le fond du piano roll (grille de touches blanches/noires)
-                    const semiflag = [1,0,1,0,1,1,0,1,0,1,0,1]; // Noires: do#, ré#, fa#, sol#, la#
-                    const collt = pr.getAttribute('collt') || '#444';  // Touches blanches
-                    const coldk = pr.getAttribute('coldk') || '#222';  // Touches noires
-                    const colgrid = pr.getAttribute('colgrid') || '#666';
-
-                    for (let n = 0; n < 128; ++n) {
-                        const ys = pr.height - (n - yoffset) * pr.steph;
-                        // Alterner couleur selon touche blanche/noire
-                        ctx.fillStyle = (semiflag[n % 12] & 1) ? coldk : collt;
-                        ctx.fillRect(pr.yruler + pr.kbwidth, ys | 0, pr.swidth, -pr.steph);
-                        // Ligne de grille horizontale
-                        ctx.fillStyle = colgrid;
-                        ctx.fillRect(pr.yruler + pr.kbwidth, ys | 0, pr.swidth, 1);
-                    }
-
-                    // Grille verticale (mesures)
-                    const grid = parseInt(pr.getAttribute('grid')) || 16;
-                    for (let t = 0; ; t += grid) {
-                        const gx = pr.stepw * (t - xoffset) + pr.yruler + pr.kbwidth;
-                        ctx.fillStyle = colgrid;
-                        ctx.fillRect(gx | 0, pr.xruler, 1, pr.sheight);
-                        if (gx >= pr.width) break;
-                    }
+                    // 2. Dessiner fond simplifié (juste noir)
+                    ctx.fillStyle = '#222';
+                    ctx.fillRect(0, 0, pr.width, pr.height);
 
                     // 3. Dessiner les notes avec couleurs par canal (ALGORITHME EXACT DE L'ORIGINAL)
                     const l = pr.sequence ? pr.sequence.length : 0;
@@ -1007,14 +997,6 @@ class MidiEditorModal {
                         ctx.fillRect(x, y, x2 - x, 1);
                         ctx.fillRect(x, y2, x2 - x, 1);
                     }
-
-                    // 4. Dessiner le clavier à gauche (simplifié)
-                    ctx.fillStyle = '#333';
-                    ctx.fillRect(pr.yruler, pr.xruler, pr.kbwidth, pr.sheight);
-
-                    // 5. Dessiner la règle temporelle en haut (simplifié)
-                    ctx.fillStyle = '#333';
-                    ctx.fillRect(pr.yruler + pr.kbwidth, 0, pr.swidth, pr.xruler);
                 };
 
                 // Forcer un redraw initial
