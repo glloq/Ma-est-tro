@@ -1,9 +1,10 @@
 # MidiMind 5.0
 
-Comprehensive MIDI orchestration system for Raspberry Pi.
+Comprehensive MIDI orchestration system for Raspberry Pi with modern web-based frontend.
 
 ## Features
 
+### Backend (Node.js)
 - **Device Management**: USB, Virtual, and BLE MIDI devices
 - **Routing Engine**: Advanced MIDI routing with filters and channel mapping
 - **File Management**: Upload, store, and playback MIDI files
@@ -11,6 +12,13 @@ Comprehensive MIDI orchestration system for Raspberry Pi.
 - **WebSocket API**: Real-time communication with 87+ commands
 - **Session Management**: Save and restore complete MIDI setups
 - **Playlist Support**: Organize and queue MIDI files
+
+### Frontend (Vanilla JS + Modern UI Components)
+- **High-Performance Piano Roll**: Optimized canvas rendering with RequestAnimationFrame (60 FPS)
+- **WebAudio Controls**: Professional knobs and faders inspired by webaudio-controls
+- **Enhanced WebSocket Client**: Auto-reconnect, message queuing, Promise-based API
+- **Component Adapter**: Easy integration of UI components with existing architecture
+- **Touch-Friendly**: Full support for mouse, touch, and keyboard interactions
 
 ## Requirements
 
@@ -155,6 +163,18 @@ Edit `config.json`:
   }
 }
 ```
+
+## Frontend Components
+
+See [FRONTEND_COMPONENTS.md](./FRONTEND_COMPONENTS.md) for detailed documentation on:
+- **WebAudioKnob** - Rotary knobs for MIDI/audio controls
+- **WebAudioFader** - Vertical/horizontal faders
+- **OptimizedPianoRoll** - High-performance MIDI editor
+- **EnhancedWebSocketClient** - Robust WebSocket with auto-reconnect
+- **UIComponentAdapter** - Integration helper
+
+### Demo
+Open `examples/ui-components-demo.html` to see the components in action.
 
 ## Database
 
