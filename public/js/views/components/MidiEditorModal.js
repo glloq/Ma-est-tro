@@ -874,31 +874,62 @@ class MidiEditorModal {
 
                 // Sauvegarder la méthode originale fillRect
                 const originalFillRect = ctx.fillRect.bind(ctx);
-                const originalFillStyle = ctx.fillStyle;
-
-                // Map pour suivre quelle note est en train d'être dessinée
-                let currentNoteIndex = 0;
                 const that = this;
+
+                // Stocker les valeurs colnote et colnotesel pour détecter le dessin de notes
+                let colnote = null;
+                let colnotesel = null;
 
                 // Monkey-patch fillRect pour colorer par canal
                 ctx.fillRect = function(x, y, w, h) {
-                    // Si la couleur actuelle correspond à colnote ou colnotesel, remplacer par la couleur du canal
                     const currentColor = this.fillStyle;
 
-                    if (that.pianoRoll && that.pianoRoll.sequence) {
-                        // Trouver la note correspondante basée sur les coordonnées
-                        const matchingNote = that.pianoRoll.sequence.find(note => {
-                            // C'est une heuristique basée sur la taille :
-                            // les notes ont typiquement une certaine largeur/hauteur
-                            return w > 1 && h > 5; // Probablement une note (pas la grille)
-                        });
+                    // Mettre à jour les couleurs de référence
+                    if (that.pianoRoll) {
+                        const colnoteAttr = that.pianoRoll.getAttribute('colnote');
+                        const colnoteselAttr = that.pianoRoll.getAttribute('colnotesel');
+                        if (colnoteAttr) colnote = colnoteAttr;
+                        if (colnoteselAttr) colnotesel = colnoteselAttr;
+                    }
 
-                        if (matchingNote && (w > 1 && h > 5)) {
-                            // C'est probablement une note, utiliser la couleur du canal
-                            const channel = that.pianoRoll.sequence[currentNoteIndex % that.pianoRoll.sequence.length]?.c || 0;
-                            const color = that.channelColors[channel % that.channelColors.length];
-                            this.fillStyle = color;
-                            currentNoteIndex++;
+                    // Détecter si c'est une note (basé sur la couleur et la taille)
+                    const isNote = (currentColor === colnote || currentColor === colnotesel ||
+                                   currentColor === 'rgba(0,0,0,0)' || currentColor === 'rgba(0, 0, 0, 0)') &&
+                                   w > 2 && h > 3;
+
+                    if (isNote && that.pianoRoll && that.pianoRoll.sequence) {
+                        // Récupérer les propriétés internes pour la formule inverse
+                        const xoffset = that.pianoRoll.xoffset || 0;
+                        const yoffset = that.pianoRoll.yoffset || 60;
+                        const kbwidth = that.pianoRoll.kbwidth || 0;
+                        const yruler = that.pianoRoll.yruler || 0;
+                        const stepw = that.pianoRoll.stepw;
+                        const steph = that.pianoRoll.steph;
+                        const height = that.pianoRoll.height || canvas.height;
+
+                        if (stepw && steph) {
+                            // FORMULE INVERSE pour retrouver t, g, n depuis x, y, w, h
+                            // Note: y dans fillRect correspond à y2 = Math.floor(y - steph) dans le code original
+                            // Donc: y2 = height - (note.n - yoffset + 1) * steph
+                            // => note.n = yoffset + (height - y) / steph - 1
+                            const noteT = ((x - yruler - kbwidth) / stepw) + xoffset;
+                            const noteG = w / stepw;
+                            const noteN = yoffset + ((height - y) / steph) - 1;
+
+                            // Trouver la note correspondante dans la séquence
+                            const matchingNote = that.pianoRoll.sequence.find(note => {
+                                // Tolérance de ±2 pour les arrondis et conversions floor
+                                return Math.abs(note.t - noteT) < 2 &&
+                                       Math.abs(note.g - noteG) < 2 &&
+                                       Math.abs(note.n - noteN) < 2;
+                            });
+
+                            if (matchingNote) {
+                                // Appliquer la couleur du canal
+                                const channel = matchingNote.c !== undefined ? matchingNote.c : 0;
+                                const color = that.channelColors[channel % that.channelColors.length];
+                                this.fillStyle = color;
+                            }
                         }
                     }
 
@@ -909,12 +940,15 @@ class MidiEditorModal {
                     this.fillStyle = currentColor;
                 };
 
+                // Marquer que le monkey-patch est actif (pas besoin de fallback)
+                this.monkeyPatchActive = true;
+
                 // Forcer un redraw
                 if (typeof this.pianoRoll.redraw === 'function') {
                     this.pianoRoll.redraw();
                 }
 
-                this.log('info', 'Canvas monkey-patched successfully');
+                this.log('info', 'Canvas monkey-patched successfully - direct coloring enabled, no lag!');
             }, 300);
         } catch (error) {
             this.log('error', 'Failed to setup colored note rendering:', error);
