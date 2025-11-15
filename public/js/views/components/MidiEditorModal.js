@@ -877,6 +877,27 @@ class MidiEditorModal {
                 // Sauvegarder la méthode originale redraw
                 const originalRedraw = pr.redraw ? pr.redraw.bind(pr) : null;
 
+                // CRITIQUE: Intercepter xoffset et yoffset pour appeler redraw() automatiquement
+                // Dans l'original, ces propriétés ont un observer qui appelle layout() → redraw()
+                let _xoffset = pr.xoffset || 0;
+                let _yoffset = pr.yoffset || 60;
+
+                Object.defineProperty(pr, 'xoffset', {
+                    get: function() { return _xoffset; },
+                    set: function(value) {
+                        _xoffset = value;
+                        if (pr.redraw) pr.redraw(); // Appeler redraw quand xoffset change
+                    }
+                });
+
+                Object.defineProperty(pr, 'yoffset', {
+                    get: function() { return _yoffset; },
+                    set: function(value) {
+                        _yoffset = value;
+                        if (pr.redraw) pr.redraw(); // Appeler redraw quand yoffset change
+                    }
+                });
+
                 // Remplacer redraw() par une version COMPLETE qui colore directement par canal
                 pr.redraw = function() {
                     if (!ctx) return;
@@ -889,8 +910,10 @@ class MidiEditorModal {
                     pr.xruler = pr.xruler || 24;
                     pr.swidth = pr.width - pr.kbwidth;
                     pr.sheight = pr.height - pr.xruler;
-                    pr.xoffset = pr.xoffset || 0;
-                    pr.yoffset = pr.yoffset || 60;
+
+                    // Utiliser les variables privées pour éviter de déclencher les setters
+                    const xoffset = _xoffset;
+                    const yoffset = _yoffset;
 
                     // Recalculer stepw et steph à chaque redraw (CRITIQUE pour le zoom)
                     pr.stepw = pr.swidth / (parseFloat(pr.getAttribute('xrange')) || 128);
@@ -906,7 +929,7 @@ class MidiEditorModal {
                     const colgrid = pr.getAttribute('colgrid') || '#666';
 
                     for (let n = 0; n < 128; ++n) {
-                        const ys = pr.height - (n - pr.yoffset) * pr.steph;
+                        const ys = pr.height - (n - yoffset) * pr.steph;
                         // Alterner couleur selon touche blanche/noire
                         ctx.fillStyle = (semiflag[n % 12] & 1) ? coldk : collt;
                         ctx.fillRect(pr.yruler + pr.kbwidth, ys | 0, pr.swidth, -pr.steph);
@@ -918,7 +941,7 @@ class MidiEditorModal {
                     // Grille verticale (mesures)
                     const grid = parseInt(pr.getAttribute('grid')) || 16;
                     for (let t = 0; ; t += grid) {
-                        const gx = pr.stepw * (t - pr.xoffset) + pr.yruler + pr.kbwidth;
+                        const gx = pr.stepw * (t - xoffset) + pr.yruler + pr.kbwidth;
                         ctx.fillStyle = colgrid;
                         ctx.fillRect(gx | 0, pr.xruler, 1, pr.sheight);
                         if (gx >= pr.width) break;
@@ -944,10 +967,10 @@ class MidiEditorModal {
 
                         // Calculer coordonnées (EXACTEMENT comme l'original)
                         w = ev.g * pr.stepw;
-                        x = (ev.t - pr.xoffset) * pr.stepw + pr.yruler + pr.kbwidth;
+                        x = (ev.t - xoffset) * pr.stepw + pr.yruler + pr.kbwidth;
                         x2 = (x + w) | 0;
                         x |= 0;
-                        y = pr.height - (ev.n - pr.yoffset) * pr.steph;
+                        y = pr.height - (ev.n - yoffset) * pr.steph;
                         y2 = (y - pr.steph) | 0;
                         y |= 0;
 
