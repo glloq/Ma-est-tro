@@ -71,16 +71,15 @@ class MidiEditorModal {
         try {
             this.log('info', `Loading MIDI file: ${filePath}`);
 
-            const response = await this.api.sendCommand('files.read', {
-                filename: filePath
-            });
+            // Utiliser la nouvelle méthode readMidiFile du BackendAPIClient
+            const response = await this.api.readMidiFile(filePath);
 
-            if (!response || !response.midi_data) {
+            if (!response || !response.midiData) {
                 throw new Error('No MIDI data received from server');
             }
 
             // Parser les données MIDI
-            this.midiData = this.midiParser.parse(response.midi_data);
+            this.midiData = this.midiParser.parse(response.midiData);
 
             // Convertir en sequence pour webaudio-pianoroll
             this.convertMidiToSequence();
@@ -89,6 +88,16 @@ class MidiEditorModal {
 
         } catch (error) {
             this.log('error', 'Failed to load MIDI file:', error);
+
+            // Si l'erreur est "Unknown command", proposer une alternative
+            if (error.message.includes('Unknown command') || error.message.includes('file_read')) {
+                throw new Error(
+                    'Le backend ne supporte pas encore la lecture de fichiers MIDI.\n\n' +
+                    'La commande "file_read" doit être ajoutée au backend.\n' +
+                    'En attendant, utilisez l\'éditeur classique.'
+                );
+            }
+
             throw error;
         }
     }
@@ -179,10 +188,7 @@ class MidiEditorModal {
             }
 
             // Envoyer au backend
-            const response = await this.api.sendCommand('files.write', {
-                filename: this.currentFile,
-                midi_data: midiData
-            });
+            const response = await this.api.writeMidiFile(this.currentFile, midiData);
 
             if (response) {
                 this.isDirty = false;
