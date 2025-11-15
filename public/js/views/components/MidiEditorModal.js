@@ -881,8 +881,19 @@ class MidiEditorModal {
                 pr.redraw = function() {
                     if (!ctx) return;
 
+                    // Assurer que width/height sont définis (comme dans l'original)
+                    if (!pr.width) pr.width = canvas.width;
+                    if (!pr.height) pr.height = canvas.height;
+                    if (!pr.kbwidth) pr.kbwidth = 52;  // Largeur clavier par défaut
+                    if (!pr.yruler) pr.yruler = 24;    // Hauteur règle Y par défaut
+                    if (!pr.xruler) pr.xruler = 24;    // Hauteur règle X par défaut
+
+                    // Calculer swidth et sheight si nécessaire
+                    pr.swidth = pr.width - pr.kbwidth;
+                    pr.sheight = pr.height - pr.xruler;
+
                     // Effacer le canvas
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.clearRect(0, 0, pr.width, pr.height);
 
                     // Recalculer stepw et steph (IMPORTANT pour le zoom)
                     pr.stepw = pr.swidth / (parseFloat(pr.getAttribute('xrange')) || 128);
@@ -920,7 +931,7 @@ class MidiEditorModal {
                         x = (ev.t - pr.xoffset) * pr.stepw + pr.yruler + pr.kbwidth;
                         x2 = (x + w) | 0;  // Calculer x2 AVANT de modifier x
                         x |= 0;             // Puis convertir x en int
-                        y = canvas.height - (ev.n - pr.yoffset) * pr.steph;
+                        y = pr.height - (ev.n - pr.yoffset) * pr.steph;  // Utiliser pr.height, pas canvas.height
                         y2 = (y - pr.steph) | 0;  // Calculer y2 AVANT de modifier y
                         y |= 0;                    // Puis convertir y en int
 
