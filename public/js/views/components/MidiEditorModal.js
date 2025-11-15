@@ -333,8 +333,44 @@ class MidiEditorModal {
 
         // Mettre à jour le piano roll si il existe
         if (this.pianoRoll) {
+            this.updatePianoRollColor();
             this.reloadPianoRoll();
         }
+    }
+
+    /**
+     * Mettre à jour la couleur des notes selon les canaux actifs
+     */
+    updatePianoRollColor() {
+        if (!this.pianoRoll) return;
+
+        let noteColor = '#4CAF50'; // Couleur par défaut
+
+        if (this.activeChannels.size === 1) {
+            // Un seul canal actif : utiliser sa couleur
+            const activeChannel = Array.from(this.activeChannels)[0];
+            noteColor = this.channelColors[activeChannel % this.channelColors.length];
+            this.log('info', `Piano roll color set to channel ${activeChannel}: ${noteColor}`);
+        } else if (this.activeChannels.size > 1) {
+            // Plusieurs canaux : couleur neutre blanche/grise claire
+            noteColor = '#E0E0E0';
+            this.log('info', `Piano roll color set to multi-channel: ${noteColor}`);
+        }
+
+        this.pianoRoll.setAttribute('colnote', noteColor);
+        this.pianoRoll.setAttribute('colnotesel', this.lightenColor(noteColor, 30));
+    }
+
+    /**
+     * Éclaircir une couleur hexadécimale
+     */
+    lightenColor(color, percent) {
+        const num = parseInt(color.replace('#', ''), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = Math.min(255, (num >> 16) + amt);
+        const G = Math.min(255, (num >> 8 & 0x00FF) + amt);
+        const B = Math.min(255, (num & 0x0000FF) + amt);
+        return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
     }
 
     /**
@@ -667,6 +703,9 @@ class MidiEditorModal {
         this.pianoRoll.setAttribute('markstart', '0');
         this.pianoRoll.setAttribute('markend', maxTick.toString());
 
+        // Appliquer la couleur selon les canaux actifs
+        this.updatePianoRollColor();
+
         this.log('info', `Piano roll configured: xrange=${xrange}, yrange=${noteRange}, markend=${maxTick}`);
 
         // Ajouter au conteneur AVANT de charger la sequence
@@ -869,6 +908,9 @@ class MidiEditorModal {
         this.pianoRoll.setAttribute('markend', maxTick.toString());
         this.pianoRoll.setAttribute('xrange', xrange.toString());
         this.pianoRoll.setAttribute('yrange', noteRange.toString());
+
+        // Appliquer la couleur selon les canaux actifs
+        this.updatePianoRollColor();
 
         // Recharger la séquence
         this.pianoRoll.sequence = this.sequence;
