@@ -917,6 +917,7 @@ class MidiEditorModal {
 
     /**
      * Dessine les notes colorées sur le canvas overlay
+     * Utilise la même formule que webaudio-pianoroll pour un alignement parfait
      */
     drawColoredNotesOverlay() {
         if (!this.colorOverlay || !this.colorOverlayCtx || !this.pianoRoll || !this.pianoRoll.sequence) return;
@@ -928,35 +929,29 @@ class MidiEditorModal {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         try {
-            // Récupérer les propriétés du piano roll
+            // Récupérer les propriétés EXACTES du piano roll
             const xrange = parseFloat(this.pianoRoll.getAttribute('xrange')) || 128;
             const yrange = parseFloat(this.pianoRoll.getAttribute('yrange')) || 36;
-            const width = canvas.width;
-            const height = canvas.height;
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
 
-            // Calculer ou récupérer le yoffset (note MIDI la plus basse visible)
-            let yoffset = parseFloat(this.pianoRoll.getAttribute('yoffset'));
+            // Accéder aux propriétés internes de webaudio-pianoroll
+            const xoffset = this.pianoRoll.xoffset !== undefined ? this.pianoRoll.xoffset : 0;
+            const yoffset = this.pianoRoll.yoffset !== undefined ? this.pianoRoll.yoffset : 60;
 
-            // Si yoffset n'est pas défini, le calculer depuis la séquence
-            if (isNaN(yoffset) || yoffset === null || yoffset === undefined) {
-                // Trouver la note la plus basse et la plus haute dans la séquence
-                let minNote = 127;
-                let maxNote = 0;
+            // Accéder aux dimensions internes si disponibles
+            const kbwidth = this.pianoRoll.kbwidth !== undefined ? this.pianoRoll.kbwidth : 0;
+            const yruler = this.pianoRoll.yruler !== undefined ? this.pianoRoll.yruler : 0;
 
-                this.pianoRoll.sequence.forEach(note => {
-                    if (note.n < minNote) minNote = note.n;
-                    if (note.n > maxNote) maxNote = note.n;
-                });
+            // Calculer swidth et sheight (dimensions sans clavier/règle)
+            const swidth = canvasWidth - kbwidth;
+            const sheight = canvasHeight - yruler;
 
-                // Le yoffset devrait être la note la plus basse moins une marge
-                // Pour centrer les notes, on peut calculer yoffset de sorte que
-                // les notes occupent bien la plage yrange
-                yoffset = Math.max(0, minNote - Math.floor((yrange - (maxNote - minNote)) / 2));
+            // Calculer stepw et steph (pixels par unité) - FORMULE EXACTE de webaudio-pianoroll
+            const stepw = swidth / xrange;
+            const steph = sheight / yrange;
 
-                this.log('debug', `Calculated yoffset: ${yoffset} (minNote: ${minNote}, maxNote: ${maxNote}, yrange: ${yrange})`);
-            }
-
-            this.log('debug', `Drawing ${this.pianoRoll.sequence.length} notes on overlay (yoffset: ${yoffset})`);
+            this.log('debug', `Overlay params: xoffset=${xoffset}, yoffset=${yoffset}, stepw=${stepw}, steph=${steph}, kbwidth=${kbwidth}, yruler=${yruler}`);
 
             // Dessiner chaque note avec sa couleur de canal
             this.pianoRoll.sequence.forEach(note => {
@@ -965,30 +960,26 @@ class MidiEditorModal {
                 const channel = note.c !== undefined ? note.c : 0;
                 const color = this.channelColors[channel % this.channelColors.length];
 
-                // Calculer les coordonnées de la note avec yoffset
-                const x = (note.t / xrange) * width;
-                const w = Math.max(2, (note.g / xrange) * width);
-                const noteHeight = height / yrange;
+                // FORMULE EXACTE de webaudio-pianoroll
+                const w = note.g * stepw;
+                const x = (note.t - xoffset) * stepw + yruler + kbwidth;
+                const y = canvasHeight - (note.n - yoffset) * steph;
+                const y2 = Math.floor(y - steph);
 
-                // Calculer y en tenant compte du yoffset
-                // Les notes sont numérotées de yoffset (en bas) à yoffset+yrange (en haut)
-                const notePosition = note.n - yoffset;
-                const y = height - ((notePosition + 1) * noteHeight);
-
-                // Ne dessiner que si la note est dans la plage visible
-                if (notePosition >= 0 && notePosition < yrange) {
+                // Ne dessiner que si la note est visible dans le viewport
+                if (x + w >= kbwidth && x <= canvasWidth && y2 >= yruler && y <= canvasHeight) {
                     // Dessiner la note avec la couleur du canal
                     ctx.fillStyle = color;
-                    ctx.fillRect(x, y, w, noteHeight);
+                    ctx.fillRect(x, y2, w, steph);
 
                     // Bordure pour visibilité
                     ctx.strokeStyle = 'rgba(0,0,0,0.2)';
                     ctx.lineWidth = 0.5;
-                    ctx.strokeRect(x, y, w, noteHeight);
+                    ctx.strokeRect(x, y2, w, steph);
                 }
             });
 
-            this.log('debug', 'Color overlay drawn successfully');
+            this.log('debug', `Color overlay drawn: ${this.pianoRoll.sequence.length} notes`);
         } catch (error) {
             this.log('error', 'Error drawing color overlay:', error);
         }
