@@ -66,23 +66,35 @@ class WebSocketServer {
     });
   }
 
-  handleMessage(ws, data) {
+  async handleMessage(ws, data) {
     try {
       const message = JSON.parse(data.toString());
-      
-      // Log command
-      this.app.logger.debug(`Received command: ${message.command}`);
 
-      // Dispatch to command handler
-      this.app.commandHandler.handle(message, ws);
+      // Log command with ID
+      this.app.logger.info(`Received command: ${message.command} (id: ${message.id})`);
+
+      // Dispatch to command handler (await to catch async errors)
+      await this.app.commandHandler.handle(message, ws);
     } catch (error) {
       this.app.logger.error(`Failed to process message: ${error.message}`);
-      
-      ws.send(JSON.stringify({
+
+      // Try to send error response with ID if available
+      let errorResponse = {
         type: 'error',
         error: 'Invalid message format',
         timestamp: Date.now()
-      }));
+      };
+
+      try {
+        const message = JSON.parse(data.toString());
+        if (message.id) {
+          errorResponse.id = message.id;
+        }
+      } catch (e) {
+        // Cannot parse message, send error without ID
+      }
+
+      ws.send(JSON.stringify(errorResponse));
     }
   }
 
