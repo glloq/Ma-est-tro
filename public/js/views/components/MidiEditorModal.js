@@ -287,13 +287,9 @@ class MidiEditorModal {
      * Sauvegarder le fichier MIDI
      */
     async saveMidiFile() {
-        if (!this.isDirty) {
-            this.showNotification('Aucune modification à sauvegarder', 'info');
-            return;
-        }
-
         if (!this.currentFile || !this.pianoRoll) {
             this.log('error', 'Cannot save: no file or piano roll');
+            this.showError('Impossible de sauvegarder: éditeur non initialisé');
             return;
         }
 
@@ -303,17 +299,26 @@ class MidiEditorModal {
             // Récupérer la sequence depuis le piano roll
             this.sequence = this.pianoRoll.sequence || [];
 
+            this.log('info', `Sequence length from piano roll: ${this.sequence.length}`);
+
+            if (this.sequence.length === 0) {
+                this.showError('Aucune note à sauvegarder');
+                return;
+            }
+
             // Convertir en format MIDI
             const midiData = this.convertSequenceToMidi();
 
             if (!midiData) {
-                throw new Error('No MIDI data to save');
+                throw new Error('Échec de conversion en format MIDI');
             }
+
+            this.log('debug', `MIDI data to save: ${midiData.tracks.length} tracks`);
 
             // Envoyer au backend
             const response = await this.api.writeMidiFile(this.currentFile, midiData);
 
-            if (response) {
+            if (response && response.success) {
                 this.isDirty = false;
                 this.updateSaveButton();
                 this.showNotification('Fichier sauvegardé avec succès', 'success');
@@ -324,6 +329,8 @@ class MidiEditorModal {
                         filePath: this.currentFile
                     });
                 }
+            } else {
+                throw new Error('La réponse du serveur indique un échec');
             }
 
         } catch (error) {
@@ -497,10 +504,32 @@ class MidiEditorModal {
 
         // Écouter les changements
         this.pianoRoll.addEventListener('change', () => {
+            this.log('debug', 'Piano roll changed (change event)');
             this.isDirty = true;
             this.updateSaveButton();
             this.updateStats();
         });
+
+        // Écouter également l'événement input (certains composants l'utilisent)
+        this.pianoRoll.addEventListener('input', () => {
+            this.log('debug', 'Piano roll changed (input event)');
+            this.isDirty = true;
+            this.updateSaveButton();
+            this.updateStats();
+        });
+
+        // Observer les mutations du sequence pour détecter les changements
+        let lastSequenceLength = this.pianoRoll.sequence?.length || 0;
+        setInterval(() => {
+            const currentLength = this.pianoRoll.sequence?.length || 0;
+            if (currentLength !== lastSequenceLength) {
+                this.log('debug', `Piano roll sequence changed: ${lastSequenceLength} -> ${currentLength}`);
+                this.isDirty = true;
+                this.updateSaveButton();
+                this.updateStats();
+                lastSequenceLength = currentLength;
+            }
+        }, 1000);
 
         this.updateStats();
     }
@@ -596,8 +625,15 @@ class MidiEditorModal {
         if (!this.pianoRoll) return;
 
         const currentRange = parseInt(this.pianoRoll.getAttribute('xrange')) || 128;
-        const newRange = Math.max(16, Math.min(512, Math.round(currentRange * factor)));
+        const newRange = Math.max(16, Math.min(10000, Math.round(currentRange * factor)));
         this.pianoRoll.setAttribute('xrange', newRange);
+
+        // Forcer le redraw
+        if (typeof this.pianoRoll.redraw === 'function') {
+            this.pianoRoll.redraw();
+        }
+
+        this.log('debug', `Horizontal zoom: ${currentRange} -> ${newRange}`);
     }
 
     /**
@@ -609,6 +645,13 @@ class MidiEditorModal {
         const currentRange = parseInt(this.pianoRoll.getAttribute('yrange')) || 36;
         const newRange = Math.max(12, Math.min(88, Math.round(currentRange * factor)));
         this.pianoRoll.setAttribute('yrange', newRange);
+
+        // Forcer le redraw
+        if (typeof this.pianoRoll.redraw === 'function') {
+            this.pianoRoll.redraw();
+        }
+
+        this.log('debug', `Vertical zoom: ${currentRange} -> ${newRange}`);
     }
 
     // ========================================================================
