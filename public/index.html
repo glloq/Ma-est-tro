@@ -780,7 +780,8 @@
             }
 
             try {
-                await midiEditorModal.show(filename);
+                // Passer le fileId (et pas le filename) au modal
+                await midiEditorModal.show(fileId, filename);
             } catch (error) {
                 log(`Erreur ouverture éditeur: ${error.message}`, 'error');
                 alert(`Impossible d'ouvrir l'éditeur pour "${filename}": ${error.message}`);

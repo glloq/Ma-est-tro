@@ -15,7 +15,8 @@ class MidiEditorModal {
         this.pianoRoll = null;
 
         // État
-        this.currentFile = null;
+        this.currentFile = null;  // fileId
+        this.currentFilename = null;  // nom du fichier pour affichage
         this.midiData = null;
         this.isDirty = false;
         this.midiParser = new MidiParser();
@@ -30,20 +31,22 @@ class MidiEditorModal {
 
     /**
      * Afficher la modale d'édition MIDI
-     * @param {string} filePath - Chemin du fichier MIDI à éditer
+     * @param {string} fileId - ID du fichier dans la base de données
+     * @param {string} filename - Nom du fichier (optionnel, pour l'affichage)
      */
-    async show(filePath) {
+    async show(fileId, filename = null) {
         if (this.isOpen) {
             this.log('warn', 'Modal already open');
             return;
         }
 
-        this.currentFile = filePath;
+        this.currentFile = fileId;
+        this.currentFilename = filename || fileId;
         this.isDirty = false;
 
         try {
             // Charger le fichier MIDI
-            await this.loadMidiFile(filePath);
+            await this.loadMidiFile(fileId);
 
             // Afficher la modale
             this.render();
@@ -55,7 +58,7 @@ class MidiEditorModal {
 
             // Émettre événement
             if (this.eventBus) {
-                this.eventBus.emit('midi_editor:opened', { filePath });
+                this.eventBus.emit('midi_editor:opened', { fileId, filename: this.currentFilename });
             }
 
         } catch (error) {
@@ -67,12 +70,12 @@ class MidiEditorModal {
     /**
      * Charger le fichier MIDI depuis le backend
      */
-    async loadMidiFile(filePath) {
+    async loadMidiFile(fileId) {
         try {
-            this.log('info', `Loading MIDI file: ${filePath}`);
+            this.log('info', `Loading MIDI file: ${this.currentFilename || fileId}`);
 
             // Utiliser la nouvelle méthode readMidiFile du BackendAPIClient
-            const response = await this.api.readMidiFile(filePath);
+            const response = await this.api.readMidiFile(fileId);
 
             if (!response || !response.midiData) {
                 throw new Error('No MIDI data received from server');
@@ -222,7 +225,7 @@ class MidiEditorModal {
                 <div class="modal-header">
                     <div class="modal-title">
                         <h3>🎹 Éditeur MIDI</h3>
-                        <span class="file-name">${this.escapeHtml(this.currentFile || '')}</span>
+                        <span class="file-name">${this.escapeHtml(this.currentFilename || this.currentFile || '')}</span>
                     </div>
                     <button class="modal-close" data-action="close">&times;</button>
                 </div>
@@ -477,6 +480,7 @@ class MidiEditorModal {
 
         this.isOpen = false;
         this.currentFile = null;
+        this.currentFilename = null;
         this.midiData = null;
         this.isDirty = false;
         this.sequence = [];

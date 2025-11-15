@@ -192,6 +192,7 @@ class FileView extends BaseView {
     buildFileRow(file) {
         const isSelected = this.viewState.selectedFile?.path === file.path;
         const filePath = file.path || file.name;
+        const fileId = file.id || filePath;
 
         // âœ… NOUVEAU: VÃ©rifier si le fichier a son routage configurÃ©
         const isRouted = this.fileRoutingService?.isFileRouted(filePath) || false;
@@ -199,6 +200,7 @@ class FileView extends BaseView {
         return `
             <div
                 class="file-row ${isSelected ? 'selected' : ''} ${isRouted ? 'routed' : ''}"
+                data-file-id="${this.escapeHtml(fileId)}"
                 data-file-path="${this.escapeHtml(filePath)}"
             >
                 <div class="file-icon">ðŸŽµ</div>
@@ -533,10 +535,11 @@ class FileView extends BaseView {
         this.container.addEventListener('click', (e) => {
             const action = e.target.closest('[data-action]')?.dataset.action;
             if (!action) return;
-            
+
             const fileRow = e.target.closest('.file-row');
+            const fileId = fileRow?.dataset.fileId;
             const filePath = fileRow?.dataset.filePath;
-            
+
             switch (action) {
                 case 'upload-file':
                     this.handleUpload();
@@ -548,7 +551,7 @@ class FileView extends BaseView {
                     if (filePath) this.handleSelectFile(filePath);
                     break;
                 case 'edit-file':
-                    if (filePath) this.handleEditFile(filePath);
+                    if (fileId) this.handleEditFile(fileId, filePath);
                     break;
                 case 'route-file':
                     if (filePath) this.handleRouteFile(filePath);
@@ -723,20 +726,20 @@ class FileView extends BaseView {
     /**
      * âœ… NOUVEAU: Ã‰diter le fichier dans l'Ã©diteur (en popup)
      */
-    async handleEditFile(filePath) {
-        this.log('info', 'FileView', `Edit requested: ${filePath}`);
+    async handleEditFile(fileId, filePath) {
+        this.log('info', 'FileView', `Edit requested: ${filePath || fileId}`);
 
         // Ouvrir la modale d'édition MIDI
         if (this.midiEditorModal) {
             try {
-                await this.midiEditorModal.show(filePath);
+                await this.midiEditorModal.show(fileId, filePath);
             } catch (error) {
                 this.log('error', 'FileView', 'Failed to open MIDI editor:', error);
 
                 // Fallback: naviguer vers l'éditeur classique
                 if (this.eventBus) {
                     this.eventBus.emit('file:load_in_editor', {
-                        file_path: filePath
+                        file_path: filePath || fileId
                     });
                 }
 
@@ -750,7 +753,7 @@ class FileView extends BaseView {
             // Fallback: utiliser l'éditeur classique
             if (this.eventBus) {
                 this.eventBus.emit('file:load_in_editor', {
-                    file_path: filePath
+                    file_path: filePath || fileId
                 });
             }
 
