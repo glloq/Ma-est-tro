@@ -90,12 +90,20 @@ print_success "Working directory clean"
 
 print_header "2. Stopping Server"
 
-# Try PM2 first
+# Check if PM2 is available
+PM2_AVAILABLE=false
 if command -v pm2 &> /dev/null; then
+    PM2_AVAILABLE=true
+fi
+
+# Stop PM2 process completely (delete, not just stop)
+if [ "$PM2_AVAILABLE" = true ]; then
     if pm2 list | grep -q "midimind"; then
-        print_info "Stopping PM2 process..."
-        pm2 stop midimind 2>/dev/null || true
-        print_success "PM2 process stopped"
+        print_info "Stopping and removing PM2 process..."
+        pm2 delete midimind 2>/dev/null || true
+        print_success "PM2 process removed"
+    else
+        print_info "No PM2 process running"
     fi
 fi
 
@@ -109,9 +117,11 @@ fi
 # Kill any remaining node processes on port 8080
 if lsof -ti:8080 &> /dev/null; then
     print_info "Killing processes on port 8080..."
-    lsof -ti:8080 | xargs -r kill 2>/dev/null || true
-    sleep 1
+    lsof -ti:8080 | xargs -r kill -9 2>/dev/null || true
+    sleep 2
     print_success "Port 8080 freed"
+else
+    print_info "Port 8080 already free"
 fi
 
 # ============================================================================
@@ -180,15 +190,35 @@ fi
 
 print_header "6. Restarting Server"
 
-# Choose restart method
-if command -v pm2 &> /dev/null && pm2 list | grep -q "midimind"; then
-    print_info "Restarting with PM2..."
-    pm2 restart midimind
-    print_success "PM2 process restarted"
+# Choose restart method based on what was running before
+if [ "$PM2_AVAILABLE" = true ]; then
+    print_info "Starting with PM2..."
 
-    # Show logs
-    print_info "Recent logs:"
-    pm2 logs midimind --lines 10 --nostream
+    # Start fresh with ecosystem.config.js
+    if pm2 start ecosystem.config.js; then
+        print_success "PM2 process started"
+
+        # Save PM2 configuration
+        pm2 save
+        print_success "PM2 configuration saved"
+
+        # Wait for server to be ready
+        sleep 3
+
+        # Show status
+        print_info "PM2 Status:"
+        pm2 list
+
+        # Show logs
+        echo ""
+        print_info "Recent logs:"
+        pm2 logs midimind --lines 15 --nostream
+
+    else
+        print_error "Failed to start PM2 process"
+        print_info "Check ecosystem.config.js for errors"
+        exit 1
+    fi
 
 elif systemctl list-units --type=service | grep -q "midimind"; then
     print_info "Restarting with systemd..."
@@ -196,16 +226,29 @@ elif systemctl list-units --type=service | grep -q "midimind"; then
     sleep 2
     if systemctl is-active --quiet midimind; then
         print_success "Systemd service restarted"
+
+        # Show status
+        print_info "Service status:"
+        sudo systemctl status midimind --no-pager -l
     else
         print_error "Failed to restart systemd service"
-        sudo systemctl status midimind
+        sudo systemctl status midimind --no-pager -l
         exit 1
     fi
 else
     print_warning "No service manager detected"
-    print_info "You can start the server manually with:"
-    echo "  npm start          # Foreground"
-    echo "  npm run pm2:start  # Background with PM2"
+    print_info "Starting server with PM2..."
+
+    if [ "$PM2_AVAILABLE" = true ]; then
+        pm2 start ecosystem.config.js
+        pm2 save
+        print_success "Server started with PM2"
+    else
+        print_warning "PM2 not available"
+        print_info "You can start the server manually with:"
+        echo "  npm start          # Foreground"
+        echo "  npm run pm2:start  # Background with PM2"
+    fi
 fi
 
 # ============================================================================
@@ -214,27 +257,51 @@ fi
 
 print_header "7. Verification"
 
-# Wait for server to start
-sleep 3
+# Wait for server to fully start
+print_info "Waiting for server to start..."
+sleep 5
+
+# Check PM2 status
+if [ "$PM2_AVAILABLE" = true ]; then
+    if pm2 list | grep -q "online.*midimind"; then
+        print_success "PM2 process is online"
+    else
+        print_warning "PM2 process may not be running correctly"
+        pm2 list
+    fi
+fi
 
 # Check if port 8080 is listening
 if lsof -ti:8080 &> /dev/null; then
-    print_success "Server is running on port 8080"
+    print_success "Server is listening on port 8080"
 else
-    print_warning "Server doesn't appear to be running on port 8080"
+    print_error "Server is NOT listening on port 8080"
+    if [ "$PM2_AVAILABLE" = true ]; then
+        print_info "Checking PM2 logs for errors..."
+        pm2 logs midimind --lines 20 --nostream
+    fi
 fi
 
 # Test HTTP endpoint
-if curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 | grep -q "200"; then
-    print_success "HTTP endpoint responding correctly"
+print_info "Testing HTTP endpoint..."
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 2>/dev/null)
+if [ "$HTTP_CODE" = "200" ]; then
+    print_success "HTTP endpoint responding correctly (HTTP $HTTP_CODE)"
 else
-    print_warning "HTTP endpoint not responding"
+    print_warning "HTTP endpoint returned: HTTP $HTTP_CODE"
 fi
 
 # Show current version
 if [ -f "package.json" ]; then
-    VERSION=$(node -p "require('./package.json').version")
-    print_info "Current version: $VERSION"
+    VERSION=$(node -p "require('./package.json').version" 2>/dev/null)
+    if [ -n "$VERSION" ]; then
+        print_info "Current version: $VERSION"
+    fi
+fi
+
+# Show database version
+if [ -f "data/midimind.db" ]; then
+    print_info "Database exists: data/midimind.db"
 fi
 
 # ============================================================================
