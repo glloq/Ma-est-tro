@@ -380,8 +380,38 @@ class CommandHandler {
   // ==================== PLAYBACK HANDLERS ====================
 
   async playbackStart(data) {
-    this.app.midiPlayer.start(data.outputDevice);
-    return { success: true };
+    // Load file first
+    if (!data.fileId) {
+      throw new Error('fileId is required');
+    }
+
+    this.app.logger.info(`Loading file ${data.fileId} for playback...`);
+    const fileInfo = await this.app.midiPlayer.loadFile(data.fileId);
+
+    // Determine output device
+    let outputDevice = data.outputDevice;
+
+    // If no output specified, use first available output
+    if (!outputDevice) {
+      const devices = this.app.deviceManager.getDeviceList();
+      const outputDevices = devices.filter(d => d.output && d.enabled);
+
+      if (outputDevices.length === 0) {
+        throw new Error('No output devices available');
+      }
+
+      outputDevice = outputDevices[0].id;
+      this.app.logger.info(`No output specified, using: ${outputDevice}`);
+    }
+
+    // Start playback
+    this.app.midiPlayer.start(outputDevice);
+
+    return {
+      success: true,
+      fileInfo: fileInfo,
+      outputDevice: outputDevice
+    };
   }
 
   async playbackStop() {
