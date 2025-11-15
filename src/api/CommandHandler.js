@@ -124,6 +124,8 @@ class CommandHandler {
     const startTime = Date.now();
 
     try {
+      this.app.logger.info(`Handling command: ${message.command} (id: ${message.id})`);
+
       // Validate message structure
       const validation = JsonValidator.validateCommand(message);
       if (!validation.valid) {
@@ -136,11 +138,16 @@ class CommandHandler {
         throw new Error(`Unknown command: ${message.command}`);
       }
 
+      this.app.logger.info(`Executing handler for: ${message.command}`);
+
       // Execute handler
       const result = await handler(message.data || {});
 
-      // Send response
+      this.app.logger.info(`Handler executed, sending response for: ${message.command}`);
+
+      // Send response with request ID for client to match
       ws.send(JSON.stringify({
+        id: message.id, // Include request ID
         type: 'response',
         command: message.command,
         data: result,
@@ -148,11 +155,13 @@ class CommandHandler {
         duration: Date.now() - startTime
       }));
 
-      this.app.logger.debug(`Command ${message.command} completed in ${Date.now() - startTime}ms`);
+      this.app.logger.info(`Command ${message.command} completed in ${Date.now() - startTime}ms`);
     } catch (error) {
       this.app.logger.error(`Command ${message.command} failed: ${error.message}`);
-      
+      this.app.logger.error(error.stack);
+
       ws.send(JSON.stringify({
+        id: message.id, // Include request ID even in errors
         type: 'error',
         command: message.command,
         error: error.message,
