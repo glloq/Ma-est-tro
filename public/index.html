@@ -575,21 +575,57 @@
                     // 🆕 Vérifier si le fichier est routé
                     const routed = isFileRouted(file.id);
 
+                    // Échapper le nom de fichier pour l'utiliser en toute sécurité
+                    const escapedName = file.filename.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
                     // Liste
                     const li = document.createElement('li');
                     li.className = 'file-item' + (routed ? ' routed' : '');
-                    li.innerHTML = `
-                        <span class="file-name">
-                            ${file.filename}
-                            ${routed ? '<span class="routed-badge">✓</span>' : ''}
-                        </span>
-                        <div class="file-actions">
-                            <button class="btn btn-secondary btn-sm" onclick="editFile(${file.id}, '${file.filename.replace(/'/g, "\\'")}')" title="Éditer">✏️</button>
-                            <button class="btn ${routed ? 'btn-success' : 'btn-secondary'} btn-sm" onclick="configureRouting(${file.id}, '${file.filename.replace(/'/g, "\\'")}')" title="Configurer le routage">🔀</button>
-                            <button class="btn ${routed ? 'btn-success' : 'btn-warning'} btn-sm" onclick="playFile(${file.id}, '${file.filename.replace(/'/g, "\\'")}')" title="Lire">${routed ? '▶️' : '⚠️▶️'}</button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteFile(${file.id})" title="Supprimer">🗑️</button>
-                        </div>
-                    `;
+
+                    // Créer le contenu
+                    const fileNameSpan = document.createElement('span');
+                    fileNameSpan.className = 'file-name';
+                    fileNameSpan.innerHTML = `${file.filename}${routed ? '<span class="routed-badge">✓</span>' : ''}`;
+
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'file-actions';
+
+                    // Bouton Éditer
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'btn btn-secondary btn-sm';
+                    editBtn.title = 'Éditer';
+                    editBtn.textContent = '✏️';
+                    editBtn.onclick = () => editFile(file.id, file.filename);
+
+                    // Bouton Router
+                    const routeBtn = document.createElement('button');
+                    routeBtn.className = `btn ${routed ? 'btn-success' : 'btn-secondary'} btn-sm`;
+                    routeBtn.title = 'Configurer le routage';
+                    routeBtn.textContent = '🔀';
+                    routeBtn.onclick = () => configureRouting(file.id, file.filename);
+
+                    // Bouton Play
+                    const playBtn = document.createElement('button');
+                    playBtn.className = `btn ${routed ? 'btn-success' : 'btn-warning'} btn-sm`;
+                    playBtn.title = routed ? 'Lire le fichier' : 'Configurer le routage avant de lire';
+                    playBtn.textContent = routed ? '▶️' : '⚠️▶️';
+                    playBtn.onclick = () => playFile(file.id, file.filename);
+
+                    // Bouton Supprimer
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btn btn-danger btn-sm';
+                    deleteBtn.title = 'Supprimer';
+                    deleteBtn.textContent = '🗑️';
+                    deleteBtn.onclick = () => deleteFile(file.id);
+
+                    actionsDiv.appendChild(editBtn);
+                    actionsDiv.appendChild(routeBtn);
+                    actionsDiv.appendChild(playBtn);
+                    actionsDiv.appendChild(deleteBtn);
+
+                    li.appendChild(fileNameSpan);
+                    li.appendChild(actionsDiv);
+
                     fileList.appendChild(li);
 
                     // Select
@@ -699,6 +735,19 @@
             try {
                 log(`🔀 Configuration du routage pour ${filename}...`);
 
+                // S'assurer que les devices sont chargés
+                if (!availableDevices || availableDevices.length === 0) {
+                    log('Chargement des périphériques...', 'info');
+                    await loadDevices();
+                }
+
+                // Vérifier qu'on a des périphériques de sortie
+                const outputDevices = availableDevices.filter(d => d.type === 'output' || d.type === 'virtual');
+                if (outputDevices.length === 0) {
+                    alert('Aucun périphérique de sortie MIDI disponible.\n\nVeuillez connecter un périphérique MIDI ou créer un port virtuel.');
+                    return;
+                }
+
                 // Charger le fichier et récupérer ses canaux
                 const response = await api.sendCommand('playback_start', { fileId });
                 const channelsResponse = await api.sendCommand('playback_get_channels');
@@ -708,6 +757,8 @@
                     alert(`Aucun canal MIDI trouvé dans "${filename}"`);
                     return;
                 }
+
+                log(`Canaux trouvés: ${channels.length}`, 'info');
 
                 // Créer une modale simple pour le routage
                 showRoutingModal(fileId, filename, channels);
