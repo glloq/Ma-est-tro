@@ -632,3 +632,134 @@
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
 }
+
+/* ======================================================================================
+   MIDI EDITOR MODAL - Piano Roll Editor Popup
+   ====================================================================================== */
+
+.midi-editor-modal .modal-dialog {
+    width: 95vw;
+    max-width: 1400px;
+    height: 90vh;
+    max-height: 900px;
+}
+
+.midi-editor-modal .modal-xl {
+    display: flex;
+    flex-direction: column;
+}
+
+.midi-editor-modal .modal-header {
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px 12px 0 0;
+}
+
+.midi-editor-modal .modal-title {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.midi-editor-modal .modal-title h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.midi-editor-modal .file-name {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    font-weight: 400;
+}
+
+.midi-editor-modal .modal-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    background: #1a1a1a;
+}
+
+.midi-editor-modal .editor-toolbar {
+    display: flex;
+    gap: 16px;
+    padding: 12px 16px;
+    background: #2a2a2a;
+    border-bottom: 1px solid #3a3a3a;
+    align-items: center;
+}
+
+.midi-editor-modal .toolbar-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.midi-editor-modal .toolbar-label {
+    color: #aaa;
+    font-size: 0.85rem;
+    margin-left: 8px;
+}
+
+.midi-editor-modal .toolbar-label span {
+    color: #fff;
+    font-weight: 600;
+}
+
+.midi-editor-modal .piano-roll-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #1a1a1a;
+}
+
+.midi-editor-modal .modal-footer {
+    padding: 16px 24px;
+    background: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.midi-editor-modal .btn-sm {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    min-width: 40px;
+}
+
+/* Piano Roll Canvas Styles */
+.pianoroll-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+}
+
+/* Modal responsiveness */
+@media (max-width: 768px) {
+    .midi-editor-modal .modal-dialog {
+        width: 100vw;
+        height: 100vh;
+        max-width: 100%;
+        max-height: 100%;
+        margin: 0;
+        border-radius: 0;
+    }
+
+    .midi-editor-modal .modal-header {
+        border-radius: 0;
+    }
+
+    .midi-editor-modal .editor-toolbar {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .midi-editor-modal .toolbar-group {
+        gap: 4px;
+    }
+}
