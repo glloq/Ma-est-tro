@@ -302,7 +302,7 @@ EOF
     2)
         print_info "Setting up PM2..."
         pm2 delete midimind 2>/dev/null || true
-        pm2 start ecosystem.config.js
+        pm2 start ecosystem.config.cjs
         pm2 save
 
         print_success "PM2 configured"
