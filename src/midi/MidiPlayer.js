@@ -18,7 +18,9 @@ class MidiPlayer {
     this.pauseTime = 0;
     this.outputDevice = null;
     this.loop = false;
-    
+    this.channels = []; // MIDI channels found in file
+    this.channelRouting = new Map(); // channel -> device mapping
+
     this.app.logger.info('MidiPlayer initialized');
   }
 
@@ -35,17 +37,19 @@ class MidiPlayer {
       this.ppq = midi.header.ticksPerBeat || 480;
       this.parseTracks(midi);
       this.extractTempo(midi);
+      this.extractChannels(midi);
       this.buildEventList();
       this.calculateDuration();
 
       this.app.logger.info(`File loaded: ${file.filename} (${this.events.length} events, ${this.duration.toFixed(2)}s)`);
-      
+
       return {
         filename: file.filename,
         duration: this.duration,
         tracks: this.tracks.length,
         events: this.events.length,
-        tempo: this.tempo
+        tempo: this.tempo,
+        channels: this.channels
       };
     } catch (error) {
       this.app.logger.error(`Failed to load file: ${error.message}`);
@@ -78,6 +82,43 @@ class MidiPlayer {
       }
     }
     this.tempo = 120; // Default tempo
+  }
+
+  extractChannels(midi) {
+    // Extract all MIDI channels used in the file
+    const channelsSet = new Set();
+
+    midi.tracks.forEach((track, trackIndex) => {
+      track.forEach(event => {
+        if (event.channel !== undefined) {
+          channelsSet.add(event.channel);
+        }
+      });
+    });
+
+    // Convert to array and create channel info
+    this.channels = Array.from(channelsSet).sort((a, b) => a - b).map(channel => {
+      // Find which track(s) use this channel
+      const tracksUsingChannel = [];
+      midi.tracks.forEach((track, trackIndex) => {
+        const usesChannel = track.some(e => e.channel === channel);
+        if (usesChannel) {
+          tracksUsingChannel.push({
+            index: trackIndex,
+            name: this.tracks[trackIndex]?.name || 'Unnamed'
+          });
+        }
+      });
+
+      return {
+        channel: channel,
+        channelDisplay: channel + 1, // MIDI channels are 0-indexed, display as 1-16
+        tracks: tracksUsingChannel,
+        assignedDevice: null // Will be set by user
+      };
+    });
+
+    this.app.logger.info(`Found ${this.channels.length} MIDI channels: ${this.channels.map(c => c.channelDisplay).join(', ')}`);
   }
 
   buildEventList() {
@@ -296,21 +337,28 @@ class MidiPlayer {
     }
 
     const device = this.app.deviceManager;
-    
+    // Use channel-specific routing if available
+    const targetDevice = this.getOutputForChannel(event.channel);
+
+    if (!targetDevice) {
+      this.app.logger.warn(`No output device for channel ${event.channel + 1}`);
+      return;
+    }
+
     if (event.type === 'noteOn') {
-      device.sendMessage(this.outputDevice, 'noteon', {
+      device.sendMessage(targetDevice, 'noteon', {
         channel: event.channel,
         note: event.note,
         velocity: event.velocity
       });
     } else if (event.type === 'noteOff') {
-      device.sendMessage(this.outputDevice, 'noteoff', {
+      device.sendMessage(targetDevice, 'noteoff', {
         channel: event.channel,
         note: event.note,
         velocity: event.velocity
       });
     } else if (event.type === 'controller') {
-      device.sendMessage(this.outputDevice, 'cc', {
+      device.sendMessage(targetDevice, 'cc', {
         channel: event.channel,
         controller: event.controller,
         value: event.value
@@ -374,6 +422,39 @@ class MidiPlayer {
       tempo: this.tempo,
       events: this.events.length
     };
+  }
+
+  // ==================== CHANNEL ROUTING ====================
+
+  setChannelRouting(channel, deviceId) {
+    this.channelRouting.set(channel, deviceId);
+    this.app.logger.info(`Channel ${channel + 1} routed to ${deviceId}`);
+
+    // Update channel info
+    const channelInfo = this.channels.find(c => c.channel === channel);
+    if (channelInfo) {
+      channelInfo.assignedDevice = deviceId;
+    }
+  }
+
+  clearChannelRouting() {
+    this.channelRouting.clear();
+    this.channels.forEach(c => c.assignedDevice = null);
+    this.app.logger.info('All channel routing cleared');
+  }
+
+  getChannelRouting() {
+    return this.channels.map(c => ({
+      channel: c.channel,
+      channelDisplay: c.channelDisplay,
+      tracks: c.tracks,
+      assignedDevice: c.assignedDevice
+    }));
+  }
+
+  getOutputForChannel(channel) {
+    // Get specific device for this channel, or default device
+    return this.channelRouting.get(channel) || this.outputDevice;
   }
 }
 
