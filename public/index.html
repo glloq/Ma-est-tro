@@ -534,10 +534,15 @@
                     log(`Erreur: ${error.message}`, 'error');
                 });
 
-                // Événement de statut de lecture (contient la durée)
+                // Événement de statut de lecture (contient la durée et l'état)
                 api.on('playback_status', (data) => {
                     if (data && data.duration !== undefined) {
                         currentDuration = data.duration;
+                    }
+                    // Mettre à jour l'état de lecture
+                    if (data && data.playing !== undefined) {
+                        isPlaying = data.playing && !data.paused;
+                        updatePlaybackControls();
                     }
                     if (data && data.position !== undefined) {
                         const percent = currentDuration > 0 ? (data.position / currentDuration) * 100 : 0;
