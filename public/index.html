@@ -686,9 +686,6 @@
                         <div class="device-type">${device.type} • ${device.id}</div>
                     `;
                     deviceList.appendChild(li);
-
-                    // Log pour debug
-                    log(`Périphérique détecté: ${device.name} (type: ${device.type})`, 'info');
                 });
 
                 log(`${devices.length} périphérique(s) trouvé(s)`);
@@ -754,6 +751,11 @@
             try {
                 log(`🔀 Configuration du routage pour ${filename}...`);
 
+                // Sauvegarder l'état actuel avant de charger le fichier pour la configuration
+                const savedFileId = currentFileId;
+                const savedIsPlaying = isPlaying;
+                const savedFileName = document.getElementById('headerFileName').textContent;
+
                 // S'assurer que les devices sont chargés
                 if (!availableDevices || availableDevices.length === 0) {
                     log('Chargement des périphériques...', 'info');
@@ -761,23 +763,26 @@
                 }
 
                 // Vérifier qu'on a des périphériques de sortie (accepter tous sauf 'input')
-                log(`Total périphériques disponibles: ${availableDevices.length}`, 'info');
-                availableDevices.forEach(d => {
-                    log(`  - ${d.name}: type="${d.type}"`, 'info');
-                });
-
                 const outputDevices = availableDevices.filter(d => d.type !== 'input');
-                log(`Périphériques de sortie filtrés: ${outputDevices.length}`, 'info');
 
                 if (outputDevices.length === 0) {
                     alert('Aucun périphérique de sortie MIDI disponible.\n\nVeuillez connecter un périphérique MIDI ou créer un port virtuel.');
                     return;
                 }
 
-                // Charger le fichier et récupérer ses canaux
+                // Charger le fichier et récupérer ses canaux (sans lancer la lecture)
                 const response = await api.sendCommand('playback_start', { fileId });
                 const channelsResponse = await api.sendCommand('playback_get_channels');
                 const channels = channelsResponse.channels || [];
+
+                // Arrêter immédiatement pour ne pas lancer la lecture
+                await api.sendCommand('playback_stop');
+
+                // Restaurer l'état précédent
+                currentFileId = savedFileId;
+                isPlaying = savedIsPlaying;
+                document.getElementById('headerFileName').textContent = savedFileName;
+                updatePlaybackControls();
 
                 if (channels.length === 0) {
                     alert(`Aucun canal MIDI trouvé dans "${filename}"`);
