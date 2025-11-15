@@ -378,33 +378,17 @@ class MidiEditorModal {
      * Format compatible avec la bibliothèque 'midi-file'
      */
     convertSequenceToMidi() {
-        // Récupérer la séquence complète depuis le piano roll
-        const currentSequence = this.pianoRoll?.sequence || this.sequence;
+        // Utiliser fullSequence qui contient toutes les notes à jour
+        const fullSequenceToSave = this.fullSequence;
 
-        if (!currentSequence || currentSequence.length === 0) {
+        if (!fullSequenceToSave || fullSequenceToSave.length === 0) {
             this.log('warn', 'No sequence to convert');
             return null;
         }
 
         const ticksPerBeat = this.midiData?.header?.ticksPerBeat || 480;
 
-        // Reconstituer toute la séquence en remplaçant les canaux édités
-        let fullSequenceToSave;
-
-        if (this.activeChannels.size > 0) {
-            // Garder les notes des canaux non édités
-            const inactiveChannelNotes = this.fullSequence.filter(note => !this.activeChannels.has(note.c));
-
-            // Ajouter les notes des canaux édités
-            fullSequenceToSave = [...inactiveChannelNotes, ...currentSequence];
-            fullSequenceToSave.sort((a, b) => a.t - b.t);
-
-            this.log('info', `Saving ${currentSequence.length} notes from ${this.activeChannels.size} edited channel(s) + ${inactiveChannelNotes.length} notes from other channels`);
-        } else {
-            // Sauvegarder tout si aucun canal spécifique n'est actif
-            fullSequenceToSave = this.fullSequence;
-            this.log('info', `Saving all ${fullSequenceToSave.length} notes`);
-        }
+        this.log('info', `Converting ${fullSequenceToSave.length} notes to MIDI`);
 
         // Convertir la sequence en événements MIDI
         const events = [];
@@ -485,14 +469,51 @@ class MidiEditorModal {
             this.log('info', `Saving MIDI file: ${this.currentFile}`);
 
             // Récupérer la sequence depuis le piano roll
-            this.sequence = this.pianoRoll.sequence || [];
+            const editedSequence = this.pianoRoll.sequence || [];
 
-            this.log('info', `Sequence length from piano roll: ${this.sequence.length}`);
+            this.log('info', `Sequence length from piano roll: ${editedSequence.length}`);
 
-            if (this.sequence.length === 0) {
-                this.showError('Aucune note à sauvegarder');
-                return;
-            }
+            // IMPORTANT: Restaurer la propriété canal (c) sur les notes éditées
+            // car webaudio-pianoroll ne la préserve pas
+            const editedSequenceWithChannels = editedSequence.map(note => {
+                // Si la note a déjà un canal, le garder
+                if (note.c !== undefined) {
+                    return note;
+                }
+
+                // Sinon, attribuer le canal basé sur les canaux actifs
+                // Si un seul canal actif, utiliser celui-ci
+                if (this.activeChannels.size === 1) {
+                    const activeChannel = Array.from(this.activeChannels)[0];
+                    return { ...note, c: activeChannel };
+                }
+
+                // Si plusieurs canaux actifs, essayer de retrouver le canal d'origine
+                // en cherchant dans fullSequence
+                const originalNote = this.fullSequence.find(
+                    fn => fn.t === note.t && fn.n === note.n && this.activeChannels.has(fn.c)
+                );
+
+                return {
+                    ...note,
+                    c: originalNote ? originalNote.c : Array.from(this.activeChannels)[0]
+                };
+            });
+
+            this.log('debug', `Restored channels on ${editedSequenceWithChannels.length} notes`);
+
+            // Mettre à jour this.sequence pour la conversion MIDI
+            this.sequence = editedSequenceWithChannels;
+
+            // Mettre à jour fullSequence avec les notes éditées
+            // Supprimer les anciennes notes des canaux actifs
+            this.fullSequence = this.fullSequence.filter(note => !this.activeChannels.has(note.c));
+
+            // Ajouter les notes éditées
+            this.fullSequence = [...this.fullSequence, ...editedSequenceWithChannels];
+            this.fullSequence.sort((a, b) => a.t - b.t);
+
+            this.log('info', `Updated fullSequence: ${this.fullSequence.length} total notes`);
 
             // Convertir en format MIDI
             const midiData = this.convertSequenceToMidi();
