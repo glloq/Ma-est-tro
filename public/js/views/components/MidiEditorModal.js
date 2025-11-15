@@ -19,7 +19,6 @@ class MidiEditorModal {
         this.currentFilename = null;  // nom du fichier pour affichage
         this.midiData = null;
         this.isDirty = false;
-        this.midiParser = new MidiParser();
 
         // Sequence de notes pour webaudio-pianoroll
         this.sequence = [];
@@ -81,8 +80,15 @@ class MidiEditorModal {
                 throw new Error('No MIDI data received from server');
             }
 
-            // Parser les données MIDI
-            this.midiData = this.midiParser.parse(response.midiData);
+            // Le backend renvoie un objet avec : { id, filename, midi: {...}, size, tracks, duration, tempo }
+            // Extraire les données MIDI proprement dites
+            const fileData = response.midiData;
+            this.midiData = fileData.midi || fileData;
+
+            // S'assurer qu'on a bien un objet header et tracks
+            if (!this.midiData.header || !this.midiData.tracks) {
+                throw new Error('Invalid MIDI data structure');
+            }
 
             // Convertir en sequence pour webaudio-pianoroll
             this.convertMidiToSequence();
@@ -112,54 +118,136 @@ class MidiEditorModal {
     convertMidiToSequence() {
         this.sequence = [];
 
-        if (!this.midiData || !this.midiData.allNotes) {
+        if (!this.midiData || !this.midiData.tracks) {
+            this.log('warn', 'No MIDI tracks to convert');
             return;
         }
 
-        const ticksPerBeat = this.midiData.division || 480;
+        const ticksPerBeat = this.midiData.header?.ticksPerBeat || 480;
 
-        this.midiData.allNotes.forEach(note => {
-            // Convertir le temps en ticks
-            const tick = Math.round((note.startTime || note.time || 0) * ticksPerBeat);
-            const notePitch = note.pitch || 60;
-            const gate = Math.round((note.duration || 0.5) * ticksPerBeat);
-            const velocity = note.velocity || 100;
+        // Extraire toutes les notes de toutes les pistes
+        const allNotes = [];
 
-            this.sequence.push([tick, notePitch, gate, velocity]);
+        this.midiData.tracks.forEach(track => {
+            if (!track.events) return;
+
+            // Tracker les notes actives pour calculer la durée
+            const activeNotes = new Map();
+            let currentTick = 0;
+
+            track.events.forEach(event => {
+                currentTick += event.deltaTime || 0;
+
+                // Note On
+                if (event.type === 'noteOn' && event.velocity > 0) {
+                    const key = `${event.channel}_${event.noteNumber}`;
+                    activeNotes.set(key, {
+                        tick: currentTick,
+                        note: event.noteNumber,
+                        velocity: event.velocity,
+                        channel: event.channel || 0
+                    });
+                }
+                // Note Off
+                else if (event.type === 'noteOff' || (event.type === 'noteOn' && event.velocity === 0)) {
+                    const key = `${event.channel}_${event.noteNumber}`;
+                    const noteOn = activeNotes.get(key);
+
+                    if (noteOn) {
+                        const gate = currentTick - noteOn.tick;
+                        allNotes.push({
+                            tick: noteOn.tick,
+                            note: noteOn.note,
+                            gate: gate,
+                            velocity: noteOn.velocity
+                        });
+                        activeNotes.delete(key);
+                    }
+                }
+            });
         });
+
+        // Convertir en format webaudio-pianoroll: [[tick, note, gate, velocity], ...]
+        this.sequence = allNotes.map(note => [
+            note.tick,
+            note.note,
+            note.gate,
+            note.velocity
+        ]);
 
         // Trier par tick
         this.sequence.sort((a, b) => a[0] - b[0]);
+
+        this.log('info', `Converted ${this.sequence.length} notes to sequence`);
     }
 
     /**
-     * Convertir la sequence en données MIDI
+     * Convertir la sequence en données MIDI pour le backend
+     * Format compatible avec la bibliothèque 'midi-file'
      */
     convertSequenceToMidi() {
         if (!this.sequence || this.sequence.length === 0) {
             return null;
         }
 
-        const ticksPerBeat = this.midiData?.division || 480;
-        const notes = [];
+        const ticksPerBeat = this.midiData?.header?.ticksPerBeat || 480;
 
-        this.sequence.forEach(([tick, pitch, gate, velocity]) => {
-            notes.push({
-                pitch: pitch,
-                velocity: velocity,
-                time: tick / ticksPerBeat,
-                duration: gate / ticksPerBeat,
-                channel: 0
+        // Convertir la sequence en événements MIDI
+        const events = [];
+
+        // Ajouter les événements de note
+        this.sequence.forEach(([tick, noteNumber, gate, velocity]) => {
+            // Note On
+            events.push({
+                absoluteTime: tick,
+                type: 'noteOn',
+                channel: 0,
+                noteNumber: noteNumber,
+                velocity: velocity
+            });
+
+            // Note Off
+            events.push({
+                absoluteTime: tick + gate,
+                type: 'noteOff',
+                channel: 0,
+                noteNumber: noteNumber,
+                velocity: 0
             });
         });
 
+        // Trier par temps absolu
+        events.sort((a, b) => a.absoluteTime - b.absoluteTime);
+
+        // Convertir temps absolu en deltaTime
+        let lastTime = 0;
+        const trackEvents = events.map(event => {
+            const deltaTime = event.absoluteTime - lastTime;
+            lastTime = event.absoluteTime;
+
+            return {
+                deltaTime: deltaTime,
+                type: event.type,
+                channel: event.channel,
+                noteNumber: event.noteNumber,
+                velocity: event.velocity
+            };
+        });
+
+        // Ajouter End of Track
+        trackEvents.push({
+            deltaTime: 0,
+            type: 'endOfTrack'
+        });
+
+        // Structure MIDI compatible avec midi-file
         return {
-            format: this.midiData?.format || 1,
-            division: ticksPerBeat,
-            tracks: [{
-                channel: 0,
-                notes: notes
-            }]
+            header: {
+                format: this.midiData?.header?.format || 1,
+                numTracks: 1,
+                ticksPerBeat: ticksPerBeat
+            },
+            tracks: [trackEvents]
         };
     }
 
