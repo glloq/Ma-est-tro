@@ -877,25 +877,44 @@ class MidiEditorModal {
                 // Sauvegarder la méthode originale redraw
                 const originalRedraw = pr.redraw ? pr.redraw.bind(pr) : null;
 
+                // Marquer que le remplacement va être actif (utilisé dans les setters)
+                this.customRedrawActive = true;
+
                 // CRITIQUE: Intercepter xoffset et yoffset pour appeler redraw() automatiquement
                 // Dans l'original, ces propriétés ont un observer qui appelle layout() → redraw()
-                let _xoffset = pr.xoffset || 0;
-                let _yoffset = pr.yoffset || 60;
+                let _xoffset = pr.xoffset !== undefined ? pr.xoffset : 0;
+                let _yoffset = pr.yoffset !== undefined ? pr.yoffset : 60;
+
+                // Supprimer les anciennes propriétés si elles existent
+                delete pr.xoffset;
+                delete pr.yoffset;
 
                 Object.defineProperty(pr, 'xoffset', {
                     get: function() { return _xoffset; },
                     set: function(value) {
-                        _xoffset = value;
-                        if (pr.redraw) pr.redraw(); // Appeler redraw quand xoffset change
-                    }
+                        if (_xoffset !== value) {
+                            _xoffset = value;
+                            // Redraw seulement si la nouvelle méthode est installée
+                            if (that.customRedrawActive && pr.redraw) {
+                                pr.redraw();
+                            }
+                        }
+                    },
+                    configurable: true
                 });
 
                 Object.defineProperty(pr, 'yoffset', {
                     get: function() { return _yoffset; },
                     set: function(value) {
-                        _yoffset = value;
-                        if (pr.redraw) pr.redraw(); // Appeler redraw quand yoffset change
-                    }
+                        if (_yoffset !== value) {
+                            _yoffset = value;
+                            // Redraw seulement si la nouvelle méthode est installée
+                            if (that.customRedrawActive && pr.redraw) {
+                                pr.redraw();
+                            }
+                        }
+                    },
+                    configurable: true
                 });
 
                 // Remplacer redraw() par une version COMPLETE qui colore directement par canal
@@ -997,9 +1016,6 @@ class MidiEditorModal {
                     ctx.fillStyle = '#333';
                     ctx.fillRect(pr.yruler + pr.kbwidth, 0, pr.swidth, pr.xruler);
                 };
-
-                // Marquer que le remplacement est actif
-                this.customRedrawActive = true;
 
                 // Forcer un redraw initial
                 pr.redraw();
