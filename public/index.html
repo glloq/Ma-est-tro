@@ -353,6 +353,30 @@
 
                     <p class="info-text" id="playbackInfo">Aucune lecture en cours</p>
                 </div>
+
+                <!-- Routage MIDI -->
+                <div class="card">
+                    <h2>🔀 Routage MIDI</h2>
+
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">Source (Entrée):</label>
+                        <select id="routeSource" style="margin-bottom: 8px;">
+                            <option value="">Sélectionner une source...</option>
+                        </select>
+
+                        <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">Destination (Sortie):</label>
+                        <select id="routeDestination" style="margin-bottom: 8px;">
+                            <option value="">Sélectionner une destination...</option>
+                        </select>
+                    </div>
+
+                    <button class="btn" id="createRouteBtn">➕ Créer Route</button>
+
+                    <h3 style="margin-top: 16px; margin-bottom: 8px; font-size: 14px;">Routes actives:</h3>
+                    <ul class="file-list" id="routeList">
+                        <li class="info-text">Aucune route</li>
+                    </ul>
+                </div>
             </div>
 
             <!-- Console -->
@@ -398,6 +422,7 @@
                     document.getElementById('wsStatusText').textContent = 'Connecté';
                     loadFiles();
                     loadDevices();
+                    loadRoutes();
                 });
 
                 api.on('disconnected', () => {
@@ -510,6 +535,9 @@
                 document.getElementById('deviceCount').textContent = `${devices.length} périphérique${devices.length > 1 ? 's' : ''}`;
                 log(`${devices.length} périphérique(s) trouvé(s)`);
 
+                // Mettre à jour les selects de routage
+                updateRouteSelects();
+
             } catch (error) {
                 log(`Erreur chargement périphériques: ${error.message}`, 'error');
             }
@@ -599,12 +627,111 @@
             return `${minutes}:${secs.toString().padStart(2, '0')}`;
         }
 
-        // Événements
+        // ========== ROUTAGE MIDI ==========
+
+        async function loadRoutes() {
+            try {
+                const response = await api.sendCommand('route_list');
+                const routes = response.routes || [];
+
+                const routeList = document.getElementById('routeList');
+                routeList.innerHTML = '';
+
+                if (routes.length === 0) {
+                    routeList.innerHTML = '<li class="info-text">Aucune route</li>';
+                    return;
+                }
+
+                routes.forEach(route => {
+                    const li = document.createElement('li');
+                    li.className = 'file-item';
+                    li.innerHTML = `
+                        <span>${route.source} → ${route.destination}</span>
+                        <button class="btn btn-danger" onclick="deleteRoute('${route.id}')">🗑️</button>
+                    `;
+                    routeList.appendChild(li);
+                });
+
+                log(`${routes.length} route(s) chargée(s)`);
+            } catch (error) {
+                log(`Erreur chargement routes: ${error.message}`, 'error');
+            }
+        }
+
+        function updateRouteSelects() {
+            const devices = Array.from(document.getElementById('deviceList').children)
+                .filter(li => !li.classList.contains('info-text'))
+                .map(li => li.querySelector('.device-name').textContent);
+
+            const sourceSelect = document.getElementById('routeSource');
+            const destSelect = document.getElementById('routeDestination');
+
+            sourceSelect.innerHTML = '<option value="">Sélectionner une source...</option>';
+            destSelect.innerHTML = '<option value="">Sélectionner une destination...</option>';
+
+            devices.forEach(deviceName => {
+                const sourceOption = document.createElement('option');
+                sourceOption.value = deviceName;
+                sourceOption.textContent = deviceName;
+                sourceSelect.appendChild(sourceOption);
+
+                const destOption = document.createElement('option');
+                destOption.value = deviceName;
+                destOption.textContent = deviceName;
+                destSelect.appendChild(destOption);
+            });
+        }
+
+        async function createRoute() {
+            const source = document.getElementById('routeSource').value;
+            const destination = document.getElementById('routeDestination').value;
+
+            if (!source || !destination) {
+                log('Sélectionnez une source et une destination', 'warning');
+                return;
+            }
+
+            if (source === destination) {
+                log('La source et la destination doivent être différentes', 'warning');
+                return;
+            }
+
+            try {
+                await api.sendCommand('route_create', {
+                    source: source,
+                    destination: destination,
+                    enabled: true
+                });
+
+                log(`✓ Route créée: ${source} → ${destination}`, 'info');
+                await loadRoutes();
+
+                // Reset selects
+                document.getElementById('routeSource').value = '';
+                document.getElementById('routeDestination').value = '';
+            } catch (error) {
+                log(`Erreur création route: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteRoute(routeId) {
+            try {
+                await api.sendCommand('route_delete', { routeId });
+                log(`✓ Route supprimée: ${routeId}`, 'info');
+                await loadRoutes();
+            } catch (error) {
+                log(`Erreur suppression route: ${error.message}`, 'error');
+            }
+        }
+
+        // ========== ÉVÉNEMENTS ==========
+
         document.getElementById('uploadBtn').addEventListener('click', uploadFile);
         document.getElementById('scanDevicesBtn').addEventListener('click', loadDevices);
         document.getElementById('playBtn').addEventListener('click', startPlayback);
         document.getElementById('pauseBtn').addEventListener('click', pausePlayback);
         document.getElementById('stopBtn').addEventListener('click', stopPlayback);
+        document.getElementById('createRouteBtn').addEventListener('click', createRoute);
 
         // Initialisation
         window.addEventListener('load', async () => {
