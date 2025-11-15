@@ -3,273 +3,1036 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MIDI Mind - v3.1</title>
-    
-    <!-- Styles -->
-    <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/components.css">
-    <link rel="stylesheet" href="styles/pages.css">
-    <link rel="stylesheet" href="styles/home.css">
-    <link rel="stylesheet" href="styles/instruments.css">
-    <link rel="stylesheet" href="styles/keyboard.css">
-    <link rel="stylesheet" href="styles/midi.css">
-    <link rel="stylesheet" href="styles/editor.css">
-    <link rel="stylesheet" href="styles/routing.css">
-    <link rel="stylesheet" href="styles/visualizer.css">
-    <link rel="stylesheet" href="styles/playlist.css">
-    <link rel="stylesheet" href="styles/fileview-extended.css">
-    <link rel="stylesheet" href="styles/themes.css">
+    <title>MidiMind 5.0 - MIDI Orchestration System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 16px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #eee;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+
+        .status-dot.connected {
+            background: #10b981;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            color: #667eea;
+            font-size: 20px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        input[type="file"] {
+            display: block;
+            margin-bottom: 12px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            width: 100%;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .file-list {
+            list-style: none;
+            margin-top: 12px;
+        }
+
+        .file-item {
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-item:hover {
+            background: #f3f4f6;
+        }
+
+        /* 🆕 Nouveaux styles pour les boutons et badges */
+        .file-item.routed {
+            border-left: 3px solid #10b981;
+        }
+
+        .file-name {
+            flex: 1;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .routed-badge {
+            display: inline-block;
+            color: #10b981;
+            font-weight: bold;
+            font-size: 16px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 13px;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+            }
+            50% {
+                box-shadow: 0 0 0 6px rgba(245, 158, 11, 0);
+            }
+        }
+
+        .device-list {
+            list-style: none;
+            margin-top: 12px;
+        }
+
+        .device-item {
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .device-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .device-type {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .log-console {
+            background: #1f2937;
+            color: #10b981;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 16px;
+            border-radius: 8px;
+            height: 200px;
+            overflow-y: auto;
+            margin-top: 12px;
+        }
+
+        .log-line {
+            margin-bottom: 4px;
+        }
+
+        .log-line.error {
+            color: #ef4444;
+        }
+
+        .log-line.warning {
+            color: #f59e0b;
+        }
+
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-content {
+            text-align: center;
+            color: white;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .playback-controls {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #667eea;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .info-text {
+            color: #666;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+    </style>
 </head>
 <body>
-    <div id="app" style="display: none;">
-        <!-- Header -->
-        <header class="app-header">
-            <div class="header-content">
-                <div class="header-logo">
-                    <div class="logo-icon">🎹</div>
-                    <div class="logo-text">
-                        <span class="logo-title">MIDI Mind</span>
-                        <span class="logo-version">v3.1</span>
+    <div id="loading" class="loading">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>Chargement de MidiMind...</p>
+        </div>
+    </div>
+
+    <div id="app" class="hidden">
+        <div class="container">
+            <header>
+                <h1>🎹 MidiMind 5.0</h1>
+                <p class="subtitle">Système d'orchestration MIDI pour Raspberry Pi</p>
+
+                <div class="status-bar">
+                    <div class="status-item">
+                        <span class="status-dot" id="wsStatus"></span>
+                        <span id="wsStatusText">Connexion...</span>
+                    </div>
+                    <div class="status-item">
+                        <span>📁</span>
+                        <span id="fileCount">0 fichiers</span>
+                    </div>
+                    <div class="status-item">
+                        <span>🎛️</span>
+                        <span id="deviceCount">0 périphériques</span>
                     </div>
                 </div>
-                <div class="global-playback-bar">
-                    <div class="playback-info">
-                        <span class="current-file-name" id="globalFileName">Aucun fichier</span>
-                        <span class="current-time" id="globalTime">00:00</span>
-                        <span class="separator">/</span>
-                        <span class="total-time" id="globalDuration">00:00</span>
-                    </div>
+            </header>
+
+            <div class="main-grid">
+                <!-- Fichiers MIDI -->
+                <div class="card">
+                    <h2>📁 Fichiers MIDI</h2>
+
+                    <input type="file" id="fileInput" accept=".mid,.midi" multiple>
+                    <button class="btn" id="uploadBtn">📤 Envoyer</button>
+
+                    <ul class="file-list" id="fileList">
+                        <li class="info-text">Aucun fichier</li>
+                    </ul>
+                </div>
+
+                <!-- Périphériques MIDI -->
+                <div class="card">
+                    <h2>🎛️ Périphériques MIDI</h2>
+
+                    <button class="btn" id="scanDevicesBtn">🔍 Scanner</button>
+
+                    <ul class="device-list" id="deviceList">
+                        <li class="info-text">Aucun périphérique</li>
+                    </ul>
+                </div>
+
+                <!-- Lecture -->
+                <div class="card">
+                    <h2>▶️ Lecture</h2>
+
+                    <select id="fileSelect">
+                        <option value="">Sélectionner un fichier...</option>
+                    </select>
+
                     <div class="playback-controls">
-                        <button class="control-btn btn-play" id="globalPlay" title="Lecture">▶</button>
-                        <button class="control-btn btn-pause" id="globalPause" title="Pause" style="display: none;">⏸</button>
-                        <button class="control-btn btn-stop" id="globalStop" title="Stop">⏹</button>
+                        <button class="btn" id="playBtn" disabled>▶️ Lecture</button>
+                        <button class="btn btn-secondary" id="pauseBtn" disabled>⏸️ Pause</button>
+                        <button class="btn btn-danger" id="stopBtn" disabled>⏹️ Stop</button>
                     </div>
-                    <div class="playback-progress">
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="globalProgress"></div>
+
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+
+                    <p class="info-text" id="playbackInfo">Aucune lecture en cours</p>
+                </div>
+
+                <!-- Routage par Canal -->
+                <div class="card">
+                    <h2>🔀 Routage par Canal</h2>
+
+                    <p class="info-text" id="channelRoutingInfo" style="margin-bottom: 12px;">
+                        Sélectionnez un fichier pour voir ses canaux MIDI
+                    </p>
+
+                    <div id="channelRoutingContainer" style="display: none;">
+                        <button class="btn btn-secondary" id="clearRoutingBtn" style="margin-bottom: 12px;">
+                            🗑️ Effacer tout le routage
+                        </button>
+
+                        <div id="channelRoutingList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Console -->
+            <div class="card">
+                <h2>📋 Console</h2>
+                <div class="log-console" id="logConsole"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/api/BackendAPIClient.js"></script>
+    <script>
+        let api;
+        let currentFileId = null;
+        let isPlaying = false;
+
+        // 🆕 Stockage du routage configuré par fichier
+        let fileRoutingConfig = {};
+
+        // Charger la config depuis localStorage
+        function loadRoutingConfig() {
+            const saved = localStorage.getItem('midi_file_routing');
+            if (saved) {
+                try {
+                    fileRoutingConfig = JSON.parse(saved);
+                } catch (e) {
+                    fileRoutingConfig = {};
+                }
+            }
+        }
+
+        // Sauvegarder la config dans localStorage
+        function saveRoutingConfig() {
+            localStorage.setItem('midi_file_routing', JSON.stringify(fileRoutingConfig));
+        }
+
+        // Vérifier si un fichier a son routage configuré
+        function isFileRouted(fileId) {
+            return fileRoutingConfig[fileId] && Object.keys(fileRoutingConfig[fileId].channels || {}).length > 0;
+        }
+
+        // Logger
+        function log(message, type = 'info') {
+            const console = document.getElementById('logConsole');
+            const line = document.createElement('div');
+            line.className = `log-line ${type}`;
+            const time = new Date().toLocaleTimeString();
+            line.textContent = `[${time}] ${message}`;
+            console.appendChild(line);
+            console.scrollTop = console.scrollHeight;
+        }
+
+        // Connexion WebSocket
+        async function connectWebSocket() {
+            try {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const host = window.location.hostname;
+                const port = window.location.port || '8080';
+                const wsUrl = `${protocol}//${host}:${port}`;
+
+                log(`Connexion à ${wsUrl}...`);
+                api = new BackendAPIClient(wsUrl);
+
+                api.on('connected', () => {
+                    log('✅ Connecté au serveur', 'info');
+                    document.getElementById('wsStatus').classList.add('connected');
+                    document.getElementById('wsStatusText').textContent = 'Connecté';
+                    loadFiles();
+                    loadDevices();
+                });
+
+                api.on('disconnected', () => {
+                    log('❌ Déconnecté du serveur', 'error');
+                    document.getElementById('wsStatus').classList.remove('connected');
+                    document.getElementById('wsStatusText').textContent = 'Déconnecté';
+                });
+
+                api.on('error', (error) => {
+                    log(`Erreur: ${error.message}`, 'error');
+                });
+
+                // Événements de lecture
+                api.on('playback_started', () => {
+                    isPlaying = true;
+                    updatePlaybackControls();
+                    log('▶️ Lecture démarrée');
+                });
+
+                api.on('playback_stopped', () => {
+                    isPlaying = false;
+                    updatePlaybackControls();
+                    document.getElementById('progressFill').style.width = '0%';
+                    log('⏹️ Lecture arrêtée');
+                });
+
+                api.on('playback_paused', () => {
+                    isPlaying = false;
+                    updatePlaybackControls();
+                    log('⏸️ Lecture en pause');
+                });
+
+                api.on('playback_progress', (data) => {
+                    const percent = (data.position / data.duration) * 100;
+                    document.getElementById('progressFill').style.width = `${percent}%`;
+                    document.getElementById('playbackInfo').textContent =
+                        `${formatTime(data.position)} / ${formatTime(data.duration)}`;
+                });
+
+                await api.connect();
+
+            } catch (error) {
+                log(`Erreur de connexion: ${error.message}`, 'error');
+            }
+        }
+
+        // Charger les fichiers
+        async function loadFiles() {
+            try {
+                const files = await api.listMidiFiles('/');
+                const fileList = document.getElementById('fileList');
+                const fileSelect = document.getElementById('fileSelect');
+
+                fileList.innerHTML = '';
+                fileSelect.innerHTML = '<option value="">Sélectionner un fichier...</option>';
+
+                if (files.length === 0) {
+                    fileList.innerHTML = '<li class="info-text">Aucun fichier</li>';
+                    return;
+                }
+
+                files.forEach(file => {
+                    // 🆕 Vérifier si le fichier est routé
+                    const routed = isFileRouted(file.id);
+
+                    // Liste
+                    const li = document.createElement('li');
+                    li.className = 'file-item' + (routed ? ' routed' : '');
+                    li.innerHTML = `
+                        <span class="file-name">
+                            ${file.filename}
+                            ${routed ? '<span class="routed-badge">✓</span>' : ''}
+                        </span>
+                        <div class="file-actions">
+                            <button class="btn btn-secondary btn-sm" onclick="editFile(${file.id}, '${file.filename.replace(/'/g, "\\'")}')" title="Éditer">✏️</button>
+                            <button class="btn ${routed ? 'btn-success' : 'btn-secondary'} btn-sm" onclick="configureRouting(${file.id}, '${file.filename.replace(/'/g, "\\'")}')" title="Configurer le routage">🔀</button>
+                            <button class="btn ${routed ? 'btn-success' : 'btn-warning'} btn-sm" onclick="playFile(${file.id}, '${file.filename.replace(/'/g, "\\'")}')" title="Lire">${routed ? '▶️' : '⚠️▶️'}</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteFile(${file.id})" title="Supprimer">🗑️</button>
                         </div>
+                    `;
+                    fileList.appendChild(li);
+
+                    // Select
+                    const option = document.createElement('option');
+                    option.value = file.id;
+                    option.textContent = file.filename;
+                    fileSelect.appendChild(option);
+                });
+
+                document.getElementById('fileCount').textContent = `${files.length} fichier${files.length > 1 ? 's' : ''}`;
+                log(`${files.length} fichier(s) chargé(s)`);
+
+            } catch (error) {
+                log(`Erreur chargement fichiers: ${error.message}`, 'error');
+            }
+        }
+
+        // Charger les périphériques
+        async function loadDevices() {
+            try {
+                const devices = await api.listDevices();
+                const deviceList = document.getElementById('deviceList');
+
+                deviceList.innerHTML = '';
+
+                if (devices.length === 0) {
+                    deviceList.innerHTML = '<li class="info-text">Aucun périphérique</li>';
+                    return;
+                }
+
+                devices.forEach(device => {
+                    const li = document.createElement('li');
+                    li.className = 'device-item';
+                    li.innerHTML = `
+                        <div class="device-name">${device.name}</div>
+                        <div class="device-type">${device.type} • ${device.id}</div>
+                    `;
+                    deviceList.appendChild(li);
+                });
+
+                document.getElementById('deviceCount').textContent = `${devices.length} périphérique${devices.length > 1 ? 's' : ''}`;
+                log(`${devices.length} périphérique(s) trouvé(s)`);
+
+                // Sauvegarder les périphériques pour le routage de canaux
+                availableDevices = devices;
+
+                // Mettre à jour l'affichage du routage si déjà chargé
+                if (currentChannels.length > 0) {
+                    displayChannelRouting();
+                }
+
+            } catch (error) {
+                log(`Erreur chargement périphériques: ${error.message}`, 'error');
+            }
+        }
+
+        // Upload fichier
+        async function uploadFile() {
+            const input = document.getElementById('fileInput');
+            const files = input.files;
+
+            if (files.length === 0) {
+                log('Aucun fichier sélectionné', 'warning');
+                return;
+            }
+
+            for (const file of files) {
+                try {
+                    log(`📤 Envoi de ${file.name}...`);
+                    await api.uploadMidiFile(file, '/');
+                    log(`✅ ${file.name} envoyé`);
+                } catch (error) {
+                    log(`❌ Erreur envoi ${file.name}: ${error.message}`, 'error');
+                }
+            }
+
+            input.value = '';
+            loadFiles();
+        }
+
+        // Supprimer fichier
+        async function deleteFile(fileId) {
+            if (!confirm('Supprimer ce fichier ?')) return;
+
+            try {
+                await api.sendCommand('file_delete', { fileId });
+                log(`🗑️ Fichier supprimé`);
+
+                // Supprimer aussi la config de routage
+                delete fileRoutingConfig[fileId];
+                saveRoutingConfig();
+
+                loadFiles();
+            } catch (error) {
+                log(`Erreur suppression: ${error.message}`, 'error');
+            }
+        }
+
+        // 🆕 Éditer un fichier (TODO: implémenter l'éditeur)
+        function editFile(fileId, filename) {
+            log(`📝 Édition de ${filename} - Fonctionnalité à implémenter`, 'info');
+            alert(`L'éditeur MIDI pour "${filename}" sera disponible prochainement.`);
+        }
+
+        // 🆕 Configurer le routage d'un fichier
+        async function configureRouting(fileId, filename) {
+            try {
+                log(`🔀 Configuration du routage pour ${filename}...`);
+
+                // Charger le fichier et récupérer ses canaux
+                const response = await api.sendCommand('playback_start', { fileId });
+                const channelsResponse = await api.sendCommand('playback_get_channels');
+                const channels = channelsResponse.channels || [];
+
+                if (channels.length === 0) {
+                    alert(`Aucun canal MIDI trouvé dans "${filename}"`);
+                    return;
+                }
+
+                // Créer une modale simple pour le routage
+                showRoutingModal(fileId, filename, channels);
+
+            } catch (error) {
+                log(`Erreur configuration routage: ${error.message}`, 'error');
+                alert(`Erreur lors du chargement du fichier: ${error.message}`);
+            }
+        }
+
+        // 🆕 Afficher la modale de routage
+        function showRoutingModal(fileId, filename, channels) {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+
+            const currentConfig = fileRoutingConfig[fileId] || { channels: {} };
+
+            let channelHTML = channels.map(ch => {
+                const trackNames = ch.tracks.map(t => t.name).join(', ');
+                const currentDevice = currentConfig.channels[ch.channel] || '';
+
+                return `
+                    <div style="display: flex; gap: 10px; align-items: center; padding: 10px; background: #f8f9fa; border-radius: 6px; margin-bottom: 8px;">
+                        <div style="flex: 1;">
+                            <strong>Canal ${ch.channelDisplay || (ch.channel + 1)}</strong><br>
+                            <small style="color: #666;">${trackNames}</small>
+                        </div>
+                        <select id="channel_${ch.channel}" style="flex: 1; padding: 8px;">
+                            <option value="">-- Aucun --</option>
+                            ${availableDevices.filter(d => d.type === 'output' || d.type === 'virtual').map(device =>
+                                `<option value="${device.id}" ${currentDevice === device.id ? 'selected' : ''}>${device.name}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                `;
+            }).join('');
+
+            modal.innerHTML = `
+                <div style="background: white; border-radius: 12px; padding: 24px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                    <h2 style="margin: 0 0 16px 0; color: #667eea;">🔀 Configuration du routage MIDI</h2>
+                    <p style="margin-bottom: 16px; color: #666;"><strong>Fichier:</strong> ${filename}</p>
+                    <p style="margin-bottom: 16px; color: #666;"><strong>Canaux trouvés:</strong> ${channels.length}</p>
+                    <div style="margin-bottom: 20px;">
+                        ${channelHTML}
+                    </div>
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Annuler</button>
+                        <button class="btn" onclick="saveRouting(${fileId})">✓ Sauvegarder</button>
                     </div>
                 </div>
-                <div class="header-debug">
-                    <button class="btn-debug" id="btnToggleDebug" title="Debug">🐞</button>
-                    <div class="connection-status" id="connectionStatus">
-                        <span class="status-dot"></span>
-                        <span class="status-text">Déconnecté</span>
+            `;
+
+            document.body.appendChild(modal);
+
+            // Stocker les canaux pour la sauvegarde
+            modal.dataset.channels = JSON.stringify(channels);
+        }
+
+        // 🆕 Sauvegarder la configuration de routage
+        async function saveRouting(fileId) {
+            const modal = document.querySelector('.modal-overlay');
+            const channels = JSON.parse(modal.dataset.channels);
+
+            const routing = {};
+            let hasRouting = false;
+
+            for (const ch of channels) {
+                const select = document.getElementById(`channel_${ch.channel}`);
+                if (select && select.value) {
+                    routing[ch.channel] = select.value;
+                    hasRouting = true;
+
+                    // Appliquer le routage au lecteur
+                    try {
+                        await api.sendCommand('playback_set_channel_routing', {
+                            channel: ch.channel,
+                            deviceId: select.value
+                        });
+                    } catch (error) {
+                        log(`Erreur routage canal ${ch.channel}: ${error.message}`, 'error');
+                    }
+                }
+            }
+
+            // Sauvegarder la config
+            if (hasRouting) {
+                fileRoutingConfig[fileId] = {
+                    channels: routing,
+                    configured: true,
+                    lastModified: Date.now()
+                };
+            } else {
+                delete fileRoutingConfig[fileId];
+            }
+
+            saveRoutingConfig();
+
+            log(`✓ Routage configuré pour ${Object.keys(routing).length} canaux`, 'info');
+
+            // Fermer la modale et rafraîchir
+            modal.remove();
+            loadFiles();
+        }
+
+        // 🆕 Lire un fichier avec vérification du routage
+        async function playFile(fileId, filename) {
+            const routed = isFileRouted(fileId);
+
+            if (!routed) {
+                const shouldConfigure = confirm(
+                    `Le routage MIDI n'est pas configuré pour "${filename}".\n\n` +
+                    `Voulez-vous le configurer maintenant ?`
+                );
+
+                if (shouldConfigure) {
+                    await configureRouting(fileId, filename);
+                }
+                return;
+            }
+
+            // Appliquer le routage sauvegardé
+            const config = fileRoutingConfig[fileId];
+            if (config && config.channels) {
+                for (const [channel, deviceId] of Object.entries(config.channels)) {
+                    try {
+                        await api.sendCommand('playback_set_channel_routing', {
+                            channel: parseInt(channel),
+                            deviceId: deviceId
+                        });
+                    } catch (error) {
+                        log(`Erreur application routage canal ${channel}: ${error.message}`, 'error');
+                    }
+                }
+            }
+
+            // Lancer la lecture
+            try {
+                await api.sendCommand('playback_start', { fileId });
+                currentFileId = fileId;
+                log(`▶️ Lecture de ${filename}`);
+            } catch (error) {
+                log(`Erreur lecture: ${error.message}`, 'error');
+            }
+        }
+
+        // Lecture
+        async function startPlayback() {
+            const fileId = parseInt(document.getElementById('fileSelect').value);
+            if (!fileId) {
+                log('Sélectionnez un fichier', 'warning');
+                return;
+            }
+
+            try {
+                const response = await api.sendCommand('playback_start', { fileId });
+                currentFileId = fileId;
+
+                // Charger les canaux MIDI du fichier qui vient d'être chargé
+                log(`Fichier chargé: ${response.fileInfo.filename}`);
+                log(`${response.fileInfo.channels.length} canaux MIDI détectés`);
+
+                // Charger l'interface de routage
+                await loadChannelRouting();
+            } catch (error) {
+                log(`Erreur lecture: ${error.message}`, 'error');
+            }
+        }
+
+        async function pausePlayback() {
+            try {
+                await api.sendCommand('playback_pause');
+            } catch (error) {
+                log(`Erreur pause: ${error.message}`, 'error');
+            }
+        }
+
+        async function stopPlayback() {
+            try {
+                await api.sendCommand('playback_stop');
+                currentFileId = null;
+            } catch (error) {
+                log(`Erreur stop: ${error.message}`, 'error');
+            }
+        }
+
+        function updatePlaybackControls() {
+            document.getElementById('playBtn').disabled = isPlaying;
+            document.getElementById('pauseBtn').disabled = !isPlaying;
+            document.getElementById('stopBtn').disabled = !isPlaying && !currentFileId;
+        }
+
+        // Utilitaires
+        function formatTime(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${minutes}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // ========== ROUTAGE PAR CANAL ==========
+
+        let currentChannels = [];
+        let availableDevices = [];
+
+        // Charger les canaux du fichier actuellement chargé
+        async function loadChannelRouting() {
+            try {
+                const response = await api.sendCommand('playback_get_channels');
+                currentChannels = response.channels || [];
+
+                if (currentChannels.length === 0) {
+                    document.getElementById('channelRoutingInfo').textContent =
+                        'Aucun fichier chargé ou fichier sans canaux MIDI';
+                    document.getElementById('channelRoutingContainer').style.display = 'none';
+                    return;
+                }
+
+                document.getElementById('channelRoutingInfo').textContent =
+                    `${currentChannels.length} canal/canaux MIDI trouvé(s)`;
+                document.getElementById('channelRoutingContainer').style.display = 'block';
+
+                displayChannelRouting();
+                log(`${currentChannels.length} canal/canaux MIDI chargé(s)`);
+            } catch (error) {
+                log(`Erreur chargement canaux: ${error.message}`, 'error');
+            }
+        }
+
+        function displayChannelRouting() {
+            const container = document.getElementById('channelRoutingList');
+            container.innerHTML = '';
+
+            currentChannels.forEach(channel => {
+                const div = document.createElement('div');
+                div.style.cssText = 'margin-bottom: 12px; padding: 12px; background: #f8f9fa; border-radius: 6px;';
+
+                const trackNames = channel.tracks.map(t => t.name).join(', ');
+
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <strong style="font-size: 14px;">Canal MIDI ${channel.channelDisplay}</strong>
+                        <span style="font-size: 12px; color: #666;">${trackNames}</span>
                     </div>
-                </div>
-            </div>
-        </header>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <select id="channel${channel.channel}Device" style="flex: 1;">
+                            <option value="">Aucun (silencieux)</option>
+                            ${availableDevices.map(d =>
+                                `<option value="${d.id}" ${channel.assignedDevice === d.id ? 'selected' : ''}>
+                                    ${d.name}
+                                </option>`
+                            ).join('')}
+                        </select>
+                        <button class="btn" onclick="assignChannel(${channel.channel})" style="white-space: nowrap;">
+                            Assigner
+                        </button>
+                    </div>
+                `;
 
-        <!-- Navigation -->
-        <nav class="main-nav">
-            <a href="#home" class="nav-item active" data-page="home">
-                <span class="nav-icon">🏠</span>
-                <span class="nav-label">Home</span>
-            </a>
-            <a href="#files" class="nav-item" data-page="files">
-                <span class="nav-icon">📁</span>
-                <span class="nav-label">Fichiers</span>
-            </a>
-            <a href="#instruments" class="nav-item" data-page="instruments">
-                <span class="nav-icon">🎸</span>
-                <span class="nav-label">Instruments</span>
-            </a>
-            <a href="#keyboard" class="nav-item" data-page="keyboard">
-                <span class="nav-icon">🎹</span>
-                <span class="nav-label">Keyboard</span>
-            </a>
-            <a href="#system" class="nav-item" data-page="system">
-                <span class="nav-icon">⚙️</span>
-                <span class="nav-label">Système</span>
-            </a>
-        </nav>
+                container.appendChild(div);
+            });
+        }
 
-        <!-- Debug Console -->
-        <div class="debug-console" id="debugConsole" style="display: none;">
-            <div class="debug-header">
-                <span class="debug-title">🐞 Console de Debug</span>
-                <button class="btn-close-debug" id="btnCloseDebug">×</button>
-            </div>
-            <div class="debug-content" id="debugContent"></div>
-            <div class="debug-controls">
-                <button class="btn-clear-logs" id="btnClearLogs">Effacer</button>
-                <select class="log-level-select" id="logLevelSelect">
-                    <option value="all">Tous</option>
-                    <option value="error">Erreurs</option>
-                    <option value="warn">Avertissements</option>
-                    <option value="info" selected>Info</option>
-                    <option value="debug">Debug</option>
-                </select>
-            </div>
-        </div>
+        async function assignChannel(channel) {
+            const select = document.getElementById(`channel${channel}Device`);
+            const deviceId = select.value;
 
-        <!-- Main Content -->
-        <main class="app-main">
-            <!-- PAGE HOME -->
-            <div id="home" class="page active">
-                <div id="home-view">
-                    <!-- Généré par HomeView -->
-                </div>
-            </div>
-            
-            <!-- PAGE FILES -->
-            <div id="files" class="page">
-                <div id="file-view">
-                    <!-- Généré par FileView -->
-                </div>
-            </div>
-            
-            <!-- PAGE INSTRUMENTS -->
-            <div id="instruments" class="page">
-                <div id="instrument-view">
-                    <!-- Généré par InstrumentView -->
-                </div>
-            </div>
-            
-            <!-- PAGE KEYBOARD -->
-            <div id="keyboard" class="page">
-                <div id="keyboard-view">
-                    <!-- Généré par KeyboardView -->
-                </div>
-            </div>
-            
-            <!-- PAGE SYSTEM -->
-            <div id="system" class="page">
-                <div id="system-view">
-                    <!-- Généré par SystemView -->
-                </div>
-            </div>
-            
-            <!-- PAGE EDITOR (Modal) -->
-            <div id="editor" class="page page-fullscreen" style="display: none;">
-                <div id="editor-view">
-                    <!-- Généré par EditorView -->
-                </div>
-            </div>
-            
-            <!-- PAGE ROUTING (Modal) -->
-            <div id="routing" class="page page-modal" style="display: none;">
-                <div id="routing-view">
-                    <!-- Généré par RoutingView -->
-                </div>
-            </div>
-            
-            <!-- PAGE PLAYLIST (Modal) -->
-            <div id="playlist" class="page page-modal" style="display: none;">
-                <div id="playlist-view">
-                    <!-- Généré par PlaylistView -->
-                </div>
-            </div>
-            
-            <!-- VISUALIZER (peut être intégré dans d'autres pages) -->
-            <div id="visualizer-view" style="display: none;">
-                <!-- Généré par VisualizerView -->
-            </div>
-        </main>
+            if (!deviceId) {
+                log(`Canal ${channel + 1}: Aucun périphérique sélectionné`, 'warning');
+                return;
+            }
 
-        <!-- Modal Overlay -->
-        <div id="modal-overlay" class="modal-overlay" style="display: none;">
-            <div class="modal-content" id="modalContent"></div>
-        </div>
-    </div>
+            try {
+                await api.sendCommand('playback_set_channel_routing', {
+                    channel: channel,
+                    deviceId: deviceId
+                });
 
-    <!-- Loading -->
-    <div id="loading-indicator" class="loading-indicator">
-        <div class="spinner"></div>
-        <p>Chargement de MIDI Mind...</p>
-    </div>
+                log(`✓ Canal ${channel + 1} → ${deviceId}`, 'info');
+                await loadChannelRouting();
+            } catch (error) {
+                log(`Erreur assignation canal: ${error.message}`, 'error');
+            }
+        }
 
-    <!-- Scripts - Ordre CRITIQUE ✅ CORRIGÉ Phase 1 -->
-    <!-- Config -->
-    <script src="js/config/AppConfig.js"></script>
-    <script src="js/config/PerformanceConfig.js"></script>
+        async function clearAllChannelRouting() {
+            try {
+                await api.sendCommand('playback_clear_channel_routing');
+                log('✓ Tout le routage effacé', 'info');
+                await loadChannelRouting();
+            } catch (error) {
+                log(`Erreur effacement routage: ${error.message}`, 'error');
+            }
+        }
 
-    <!-- ✅ EventBus EN PREMIER! (CRITIQUE) -->
-    <script src="js/core/EventBus.js"></script>
+        // ========== ÉVÉNEMENTS ==========
 
-    <!-- Utils (après EventBus) -->
-    <script src="js/utils/Logger.js"></script>
-    <script src="js/utils/DebugConsole.js"></script>
-    <script src="js/utils/Constants.js"></script>
-    <script src="js/utils/MidiConstants.js"></script>
-    <script src="js/utils/Formatter.js"></script>
-    <script src="js/utils/Validator.js"></script>
-    <script src="js/utils/MidiUtils.js"></script>
-    <script src="js/utils/Notifications.js"></script>
-    <script src="js/utils/MidiParser.js"></script>
-    <script src="js/utils/KeyboardShortcuts.js"></script>
-    <script src="js/utils/ApiClient.js"></script>
-    <script src="js/utils/RoutingManager.js"></script>
-    <script src="js/utils/MetronomeEngine.js"></script>
+        document.getElementById('uploadBtn').addEventListener('click', uploadFile);
+        document.getElementById('scanDevicesBtn').addEventListener('click', loadDevices);
+        document.getElementById('playBtn').addEventListener('click', startPlayback);
+        document.getElementById('pauseBtn').addEventListener('click', pausePlayback);
+        document.getElementById('stopBtn').addEventListener('click', stopPlayback);
+        document.getElementById('clearRoutingBtn').addEventListener('click', clearAllChannelRouting);
 
-    <!-- UI -->
-    <script src="js/ui/NotificationManager.js"></script>
+        // Quand un fichier est sélectionné, charger ses canaux
+        document.getElementById('fileSelect').addEventListener('change', async (e) => {
+            if (e.target.value) {
+                // Le fichier sera chargé au moment de startPlayback
+                // On ne peut pas charger les canaux maintenant car loadFile n'a pas encore été appelé
+            }
+        });
 
-    <!-- Monitoring -->
-    <script src="js/monitoring/PerformanceMonitor.js"></script>
+        // Initialisation
+        window.addEventListener('load', async () => {
+            log('🚀 Démarrage de MidiMind 5.0');
 
-    <!-- Core Utils -->
-    <script src="js/core/MidiJsonConverter.js"></script>
+            // 🆕 Charger la configuration de routage
+            loadRoutingConfig();
 
-    <!-- Audio -->
-    <script src="js/audio/Metronome.js"></script>
+            await connectWebSocket();
 
-    <!-- Services -->
-    <script src="js/services/StorageService.js"></script>
-    <script src="js/services/FileService.js"></script>
-    <script src="js/services/MidiService.js"></script>
-    <script src="js/services/BackendService.js"></script>
-    <script src="js/services/FileRoutingService.js"></script>
-
-    <!-- Base Classes -->
-    <script src="js/core/BaseModel.js"></script>
-    <script src="js/core/BaseView.js"></script>
-    <script src="js/core/BaseController.js"></script>
-
-    <!-- Models -->
-    <script src="js/models/StateModel.js"></script>
-    <script src="js/models/FileModel.js"></script>
-    <script src="js/models/InstrumentModel.js"></script>
-    <script src="js/models/EditorModel.js"></script>
-    <script src="js/models/RoutingModel.js"></script>
-    <script src="js/models/SystemModel.js"></script>
-    <script src="js/models/PlaybackModel.js"></script>
-    <script src="js/models/PlaylistModel.js"></script>
-
-    <!-- View Components -->
-    <script src="js/views/components/Modal.js"></script>
-    <script src="js/views/components/RoutingConfigModal.js"></script>
-
-    <!-- Views -->
-    <script src="js/views/HomeView.js"></script>
-    <script src="js/views/FileView.js"></script>
-    <script src="js/views/InstrumentView.js"></script>
-    <script src="js/views/KeyboardView.js"></script>
-    <script src="js/views/SystemView.js"></script>
-    <script src="js/views/EditorView.js"></script>
-    <script src="js/views/RoutingView.js"></script>
-    <script src="js/views/PlaylistView.js"></script>
-    <script src="js/views/VisualizerView.js"></script>
-
-    <!-- Controllers -->
-    <script src="js/controllers/NavigationController.js"></script>
-    <script src="js/controllers/HomeController.js"></script>
-    <script src="js/controllers/FileController.js"></script>
-    <script src="js/controllers/InstrumentController.js"></script>
-    <script src="js/controllers/KeyboardController.js"></script>
-    <script src="js/controllers/SystemController.js"></script>
-    <script src="js/controllers/EditorController.js"></script>
-    <script src="js/controllers/RoutingController.js"></script>
-    <script src="js/controllers/PlaybackController.js"></script>
-    <script src="js/controllers/GlobalPlaybackController.js"></script>
-    <script src="js/controllers/PlaylistController.js"></script>
-    <script src="js/controllers/VisualizerController.js"></script>
-
-    <!-- Application -->
-    <script src="js/core/Application.js"></script>
-    <script src="js/core/Router.js"></script>
-
-    <!-- Init -->
-    <script src="js/main.js"></script>
+            // Afficher l'app
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+        });
+    </script>
 </body>
 </html>
