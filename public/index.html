@@ -928,12 +928,19 @@
 
             // Lancer la lecture
             try {
-                await api.sendCommand('playback_start', { fileId });
+                // Définir l'ID du fichier AVANT de lancer la lecture
                 currentFileId = fileId;
                 document.getElementById('headerFileName').textContent = filename;
+                updatePlaybackControls(); // Activer les boutons immédiatement
+
+                await api.sendCommand('playback_start', { fileId });
                 log(`▶️ Lecture de ${filename}`);
             } catch (error) {
                 log(`Erreur lecture: ${error.message}`, 'error');
+                // En cas d'erreur, réinitialiser
+                currentFileId = null;
+                document.getElementById('headerFileName').textContent = 'Aucun fichier sélectionné';
+                updatePlaybackControls();
             }
         }
 
