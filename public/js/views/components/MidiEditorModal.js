@@ -877,84 +877,102 @@ class MidiEditorModal {
                 // Sauvegarder la méthode originale redraw
                 const originalRedraw = pr.redraw ? pr.redraw.bind(pr) : null;
 
-                // Remplacer redraw() par une version qui colore directement par canal
+                // Remplacer redraw() par une version COMPLETE qui colore directement par canal
                 pr.redraw = function() {
                     if (!ctx) return;
 
-                    // Assurer que width/height sont définis (comme dans l'original)
-                    if (!pr.width) pr.width = canvas.width;
-                    if (!pr.height) pr.height = canvas.height;
-                    if (!pr.kbwidth) pr.kbwidth = 52;  // Largeur clavier par défaut
-                    if (!pr.yruler) pr.yruler = 24;    // Hauteur règle Y par défaut
-                    if (!pr.xruler) pr.xruler = 24;    // Hauteur règle X par défaut
-
-                    // Calculer swidth et sheight si nécessaire
+                    // Initialiser les propriétés si nécessaire
+                    pr.width = pr.width || canvas.width;
+                    pr.height = pr.height || canvas.height;
+                    pr.kbwidth = pr.kbwidth || 52;
+                    pr.yruler = pr.yruler || 24;
+                    pr.xruler = pr.xruler || 24;
                     pr.swidth = pr.width - pr.kbwidth;
                     pr.sheight = pr.height - pr.xruler;
+                    pr.xoffset = pr.xoffset || 0;
+                    pr.yoffset = pr.yoffset || 60;
 
-                    // Effacer le canvas
-                    ctx.clearRect(0, 0, pr.width, pr.height);
-
-                    // Recalculer stepw et steph (IMPORTANT pour le zoom)
+                    // Recalculer stepw et steph à chaque redraw (CRITIQUE pour le zoom)
                     pr.stepw = pr.swidth / (parseFloat(pr.getAttribute('xrange')) || 128);
                     pr.steph = pr.sheight / (parseFloat(pr.getAttribute('yrange')) || 36);
 
-                    // Dessiner la grille (utiliser la méthode originale si disponible)
-                    if (typeof pr.redrawGrid === 'function') {
-                        pr.redrawGrid();
-                    } else {
-                        // Fallback simplifié
-                        ctx.fillStyle = pr.getAttribute('colbg') || '#000';
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    // 1. Effacer tout
+                    ctx.clearRect(0, 0, pr.width, pr.height);
+
+                    // 2. Dessiner le fond du piano roll (grille de touches blanches/noires)
+                    const semiflag = [1,0,1,0,1,1,0,1,0,1,0,1]; // Noires: do#, ré#, fa#, sol#, la#
+                    const collt = pr.getAttribute('collt') || '#444';  // Touches blanches
+                    const coldk = pr.getAttribute('coldk') || '#222';  // Touches noires
+                    const colgrid = pr.getAttribute('colgrid') || '#666';
+
+                    for (let n = 0; n < 128; ++n) {
+                        const ys = pr.height - (n - pr.yoffset) * pr.steph;
+                        // Alterner couleur selon touche blanche/noire
+                        ctx.fillStyle = (semiflag[n % 12] & 1) ? coldk : collt;
+                        ctx.fillRect(pr.yruler + pr.kbwidth, ys | 0, pr.swidth, -pr.steph);
+                        // Ligne de grille horizontale
+                        ctx.fillStyle = colgrid;
+                        ctx.fillRect(pr.yruler + pr.kbwidth, ys | 0, pr.swidth, 1);
                     }
 
-                    // Dessiner les notes avec couleurs par canal (COPIE EXACTE ligne par ligne de l'original)
+                    // Grille verticale (mesures)
+                    const grid = parseInt(pr.getAttribute('grid')) || 16;
+                    for (let t = 0; ; t += grid) {
+                        const gx = pr.stepw * (t - pr.xoffset) + pr.yruler + pr.kbwidth;
+                        ctx.fillStyle = colgrid;
+                        ctx.fillRect(gx | 0, pr.xruler, 1, pr.sheight);
+                        if (gx >= pr.width) break;
+                    }
+
+                    // 3. Dessiner les notes avec couleurs par canal (ALGORITHME EXACT DE L'ORIGINAL)
                     const l = pr.sequence ? pr.sequence.length : 0;
-                    let x, w, y, x2, y2; // Variables comme dans l'original
+                    let x, w, y, x2, y2;
 
                     for (let s = 0; s < l; ++s) {
                         const ev = pr.sequence[s];
                         if (!ev) continue;
 
-                        // Obtenir la couleur du canal pour le remplissage
+                        // Obtenir la couleur du canal
                         const channel = ev.c !== undefined ? ev.c : 0;
                         const channelColor = that.channelColors[channel % that.channelColors.length];
 
-                        // Couleur de remplissage selon sélection
+                        // Couleur de remplissage
                         if (ev.f)
                             ctx.fillStyle = pr.getAttribute('colnotesel') || 'rgba(255,255,255,0.3)';
                         else
-                            ctx.fillStyle = channelColor; // COULEUR DU CANAL au lieu de colnote
+                            ctx.fillStyle = channelColor;
 
-                        // Calculer coordonnées - EXACTEMENT comme l'original ligne par ligne
+                        // Calculer coordonnées (EXACTEMENT comme l'original)
                         w = ev.g * pr.stepw;
                         x = (ev.t - pr.xoffset) * pr.stepw + pr.yruler + pr.kbwidth;
-                        x2 = (x + w) | 0;  // Calculer x2 AVANT de modifier x
-                        x |= 0;             // Puis convertir x en int
-                        y = pr.height - (ev.n - pr.yoffset) * pr.steph;  // Utiliser pr.height, pas canvas.height
-                        y2 = (y - pr.steph) | 0;  // Calculer y2 AVANT de modifier y
-                        y |= 0;                    // Puis convertir y en int
+                        x2 = (x + w) | 0;
+                        x |= 0;
+                        y = pr.height - (ev.n - pr.yoffset) * pr.steph;
+                        y2 = (y - pr.steph) | 0;
+                        y |= 0;
 
-                        // Dessiner le remplissage - EXACTEMENT comme l'original
+                        // Dessiner le remplissage
                         ctx.fillRect(x, y, x2 - x, y2 - y);
 
-                        // Dessiner les bordures - EXACTEMENT comme l'original
+                        // Dessiner les bordures
                         if (ev.f)
                             ctx.fillStyle = pr.getAttribute('colnoteselborder') || '#fff';
                         else
                             ctx.fillStyle = pr.getAttribute('colnoteborder') || '#000';
 
-                        ctx.fillRect(x, y, 1, y2 - y);        // Bordure gauche
-                        ctx.fillRect(x2, y, 1, y2 - y);       // Bordure droite
-                        ctx.fillRect(x, y, x2 - x, 1);        // Bordure haut
-                        ctx.fillRect(x, y2, x2 - x, 1);       // Bordure bas
+                        ctx.fillRect(x, y, 1, y2 - y);
+                        ctx.fillRect(x2, y, 1, y2 - y);
+                        ctx.fillRect(x, y, x2 - x, 1);
+                        ctx.fillRect(x, y2, x2 - x, 1);
                     }
 
-                    // Dessiner les overlays (utiliser les méthodes originales si disponibles)
-                    if (typeof pr.redrawYRuler === 'function') pr.redrawYRuler();
-                    if (typeof pr.redrawXRuler === 'function') pr.redrawXRuler();
-                    if (typeof pr.redrawMarker === 'function') pr.redrawMarker();
-                    if (typeof pr.redrawAreaSel === 'function') pr.redrawAreaSel();
+                    // 4. Dessiner le clavier à gauche (simplifié)
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(pr.yruler, pr.xruler, pr.kbwidth, pr.sheight);
+
+                    // 5. Dessiner la règle temporelle en haut (simplifié)
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(pr.yruler + pr.kbwidth, 0, pr.swidth, pr.xruler);
                 };
 
                 // Marquer que le remplacement est actif
