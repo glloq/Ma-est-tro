@@ -877,6 +877,46 @@ class MidiEditorModal {
                 // Sauvegarder la méthode originale redraw
                 const originalRedraw = pr.redraw ? pr.redraw.bind(pr) : null;
 
+                // Marquer que le remplacement va être actif (utilisé dans les setters)
+                this.customRedrawActive = true;
+
+                // CRITIQUE: Intercepter xoffset et yoffset pour appeler redraw() automatiquement
+                // Dans l'original, ces propriétés ont un observer qui appelle layout() → redraw()
+                let _xoffset = pr.xoffset !== undefined ? pr.xoffset : 0;
+                let _yoffset = pr.yoffset !== undefined ? pr.yoffset : 60;
+
+                // Supprimer les anciennes propriétés si elles existent
+                delete pr.xoffset;
+                delete pr.yoffset;
+
+                Object.defineProperty(pr, 'xoffset', {
+                    get: function() { return _xoffset; },
+                    set: function(value) {
+                        if (_xoffset !== value) {
+                            _xoffset = value;
+                            // Redraw seulement si la nouvelle méthode est installée
+                            if (that.customRedrawActive && pr.redraw) {
+                                pr.redraw();
+                            }
+                        }
+                    },
+                    configurable: true
+                });
+
+                Object.defineProperty(pr, 'yoffset', {
+                    get: function() { return _yoffset; },
+                    set: function(value) {
+                        if (_yoffset !== value) {
+                            _yoffset = value;
+                            // Redraw seulement si la nouvelle méthode est installée
+                            if (that.customRedrawActive && pr.redraw) {
+                                pr.redraw();
+                            }
+                        }
+                    },
+                    configurable: true
+                });
+
                 // Remplacer redraw() par une version COMPLETE qui colore directement par canal
                 pr.redraw = function() {
                     if (!ctx) return;
@@ -889,8 +929,10 @@ class MidiEditorModal {
                     pr.xruler = pr.xruler || 24;
                     pr.swidth = pr.width - pr.kbwidth;
                     pr.sheight = pr.height - pr.xruler;
-                    pr.xoffset = pr.xoffset || 0;
-                    pr.yoffset = pr.yoffset || 60;
+
+                    // Utiliser les variables privées pour éviter de déclencher les setters
+                    const xoffset = _xoffset;
+                    const yoffset = _yoffset;
 
                     // Recalculer stepw et steph à chaque redraw (CRITIQUE pour le zoom)
                     pr.stepw = pr.swidth / (parseFloat(pr.getAttribute('xrange')) || 128);
@@ -906,7 +948,7 @@ class MidiEditorModal {
                     const colgrid = pr.getAttribute('colgrid') || '#666';
 
                     for (let n = 0; n < 128; ++n) {
-                        const ys = pr.height - (n - pr.yoffset) * pr.steph;
+                        const ys = pr.height - (n - yoffset) * pr.steph;
                         // Alterner couleur selon touche blanche/noire
                         ctx.fillStyle = (semiflag[n % 12] & 1) ? coldk : collt;
                         ctx.fillRect(pr.yruler + pr.kbwidth, ys | 0, pr.swidth, -pr.steph);
@@ -918,7 +960,7 @@ class MidiEditorModal {
                     // Grille verticale (mesures)
                     const grid = parseInt(pr.getAttribute('grid')) || 16;
                     for (let t = 0; ; t += grid) {
-                        const gx = pr.stepw * (t - pr.xoffset) + pr.yruler + pr.kbwidth;
+                        const gx = pr.stepw * (t - xoffset) + pr.yruler + pr.kbwidth;
                         ctx.fillStyle = colgrid;
                         ctx.fillRect(gx | 0, pr.xruler, 1, pr.sheight);
                         if (gx >= pr.width) break;
@@ -944,10 +986,10 @@ class MidiEditorModal {
 
                         // Calculer coordonnées (EXACTEMENT comme l'original)
                         w = ev.g * pr.stepw;
-                        x = (ev.t - pr.xoffset) * pr.stepw + pr.yruler + pr.kbwidth;
+                        x = (ev.t - xoffset) * pr.stepw + pr.yruler + pr.kbwidth;
                         x2 = (x + w) | 0;
                         x |= 0;
-                        y = pr.height - (ev.n - pr.yoffset) * pr.steph;
+                        y = pr.height - (ev.n - yoffset) * pr.steph;
                         y2 = (y - pr.steph) | 0;
                         y |= 0;
 
@@ -974,9 +1016,6 @@ class MidiEditorModal {
                     ctx.fillStyle = '#333';
                     ctx.fillRect(pr.yruler + pr.kbwidth, 0, pr.swidth, pr.xruler);
                 };
-
-                // Marquer que le remplacement est actif
-                this.customRedrawActive = true;
 
                 // Forcer un redraw initial
                 pr.redraw();
