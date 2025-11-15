@@ -471,6 +471,7 @@
         let api;
         let currentFileId = null;
         let isPlaying = false;
+        let isPaused = false; // Nouveau: tracker si on est en pause
         let currentDuration = 0; // Durée totale du fichier en cours (en secondes)
 
         // 🆕 Stockage du routage configuré par fichier
@@ -542,6 +543,7 @@
                     // Mettre à jour l'état de lecture
                     if (data && data.playing !== undefined) {
                         isPlaying = data.playing && !data.paused;
+                        isPaused = data.paused || false;
                         updatePlaybackControls();
                     }
                     if (data && data.position !== undefined) {
@@ -565,12 +567,14 @@
                 // Événements de lecture
                 api.on('playback_started', () => {
                     isPlaying = true;
+                    isPaused = false;
                     updatePlaybackControls();
                     log('▶️ Lecture démarrée');
                 });
 
                 api.on('playback_stopped', () => {
                     isPlaying = false;
+                    isPaused = false;
                     currentDuration = 0;
                     updatePlaybackControls();
                     document.getElementById('headerProgressFill').style.width = '0%';
@@ -581,8 +585,16 @@
 
                 api.on('playback_paused', () => {
                     isPlaying = false;
+                    isPaused = true;
                     updatePlaybackControls();
                     log('⏸️ Lecture en pause');
+                });
+
+                api.on('playback_resumed', () => {
+                    isPlaying = true;
+                    isPaused = false;
+                    updatePlaybackControls();
+                    log('▶️ Lecture reprise');
                 });
 
                 await api.connect();
@@ -759,6 +771,7 @@
                 // Sauvegarder l'état actuel avant de charger le fichier pour la configuration
                 const savedFileId = currentFileId;
                 const savedIsPlaying = isPlaying;
+                const savedIsPaused = isPaused;
                 const savedFileName = document.getElementById('headerFileName').textContent;
 
                 // S'assurer que les devices sont chargés
@@ -786,6 +799,7 @@
                 // Restaurer l'état précédent
                 currentFileId = savedFileId;
                 isPlaying = savedIsPlaying;
+                isPaused = savedIsPaused;
                 document.getElementById('headerFileName').textContent = savedFileName;
                 updatePlaybackControls();
 
@@ -958,8 +972,13 @@
 
             try {
                 if (isPlaying) {
+                    // Mettre en pause
                     await api.sendCommand('playback_pause');
+                } else if (isPaused) {
+                    // Reprendre la lecture (resume)
+                    await api.sendCommand('playback_resume');
                 } else {
+                    // Démarrer la lecture depuis le début
                     await api.sendCommand('playback_start', { fileId: currentFileId });
                 }
             } catch (error) {
@@ -970,6 +989,8 @@
         async function stopPlayback() {
             try {
                 await api.sendCommand('playback_stop');
+                // Réinitialiser l'état de pause
+                isPaused = false;
                 // Ne pas réinitialiser currentFileId pour permettre de relancer
             } catch (error) {
                 log(`Erreur stop: ${error.message}`, 'error');
