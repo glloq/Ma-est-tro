@@ -456,27 +456,6 @@
                     </ul>
                 </div>
 
-                <!-- Lecture -->
-                <div class="card">
-                    <h2>▶️ Lecture</h2>
-
-                    <select id="fileSelect">
-                        <option value="">Sélectionner un fichier...</option>
-                    </select>
-
-                    <div class="playback-controls">
-                        <button class="btn" id="playBtn" disabled>▶️ Lecture</button>
-                        <button class="btn btn-secondary" id="pauseBtn" disabled>⏸️ Pause</button>
-                        <button class="btn btn-danger" id="stopBtn" disabled>⏹️ Stop</button>
-                    </div>
-
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressFill"></div>
-                    </div>
-
-                    <p class="info-text" id="playbackInfo">Aucune lecture en cours</p>
-                </div>
-
             </div>
 
             <!-- Console -->
@@ -565,7 +544,6 @@
                 api.on('playback_stopped', () => {
                     isPlaying = false;
                     updatePlaybackControls();
-                    document.getElementById('progressFill').style.width = '0%';
                     document.getElementById('headerProgressFill').style.width = '0%';
                     document.getElementById('headerFileName').textContent = 'Aucun fichier sélectionné';
                     document.getElementById('headerTime').textContent = '00:00 / 00:00';
@@ -580,10 +558,8 @@
 
                 api.on('playback_progress', (data) => {
                     const percent = (data.position / data.duration) * 100;
-                    document.getElementById('progressFill').style.width = `${percent}%`;
                     document.getElementById('headerProgressFill').style.width = `${percent}%`;
                     const timeText = `${formatTime(data.position)} / ${formatTime(data.duration)}`;
-                    document.getElementById('playbackInfo').textContent = timeText;
                     document.getElementById('headerTime').textContent = timeText;
                 });
 
@@ -599,10 +575,8 @@
             try {
                 const files = await api.listMidiFiles('/');
                 const fileList = document.getElementById('fileList');
-                const fileSelect = document.getElementById('fileSelect');
 
                 fileList.innerHTML = '';
-                fileSelect.innerHTML = '<option value="">Sélectionner un fichier...</option>';
 
                 if (files.length === 0) {
                     fileList.innerHTML = '<li class="info-text">Aucun fichier</li>';
@@ -665,12 +639,6 @@
                     li.appendChild(actionsDiv);
 
                     fileList.appendChild(li);
-
-                    // Select
-                    const option = document.createElement('option');
-                    option.value = file.id;
-                    option.textContent = file.filename;
-                    fileSelect.appendChild(option);
                 });
 
                 log(`${files.length} fichier(s) chargé(s)`);
@@ -772,8 +740,8 @@
                     await loadDevices();
                 }
 
-                // Vérifier qu'on a des périphériques de sortie
-                const outputDevices = availableDevices.filter(d => d.type === 'output' || d.type === 'virtual');
+                // Vérifier qu'on a des périphériques de sortie (accepter tous sauf 'input')
+                const outputDevices = availableDevices.filter(d => d.type !== 'input');
                 if (outputDevices.length === 0) {
                     alert('Aucun périphérique de sortie MIDI disponible.\n\nVeuillez connecter un périphérique MIDI ou créer un port virtuel.');
                     return;
@@ -820,7 +788,7 @@
                         </div>
                         <select id="channel_${ch.channel}" style="flex: 1; padding: 8px;">
                             <option value="">-- Aucun --</option>
-                            ${availableDevices.filter(d => d.type === 'output' || d.type === 'virtual').map(device =>
+                            ${availableDevices.filter(d => d.type !== 'input').map(device =>
                                 `<option value="${device.id}" ${currentDevice === device.id ? 'selected' : ''}>${device.name}</option>`
                             ).join('')}
                         </select>
@@ -937,28 +905,15 @@
             }
         }
 
-        // Lecture
+        // Lecture (reprendre la lecture en pause ou démarrer le fichier actuel)
         async function startPlayback() {
-            const fileId = parseInt(document.getElementById('fileSelect').value);
-            if (!fileId) {
-                log('Sélectionnez un fichier', 'warning');
+            if (!currentFileId) {
+                log('Sélectionnez un fichier via la liste des fichiers', 'warning');
                 return;
             }
 
             try {
-                const response = await api.sendCommand('playback_start', { fileId });
-                currentFileId = fileId;
-
-                // Mettre à jour le nom du fichier dans le header
-                const fileSelect = document.getElementById('fileSelect');
-                const selectedOption = fileSelect.options[fileSelect.selectedIndex];
-                if (selectedOption) {
-                    document.getElementById('headerFileName').textContent = selectedOption.textContent;
-                }
-
-                // Charger les canaux MIDI du fichier qui vient d'être chargé
-                log(`Fichier chargé: ${response.fileInfo.filename}`);
-                log(`${response.fileInfo.channels.length} canaux MIDI détectés`);
+                await api.sendCommand('playback_start', { fileId: currentFileId });
             } catch (error) {
                 log(`Erreur lecture: ${error.message}`, 'error');
             }
@@ -982,12 +937,7 @@
         }
 
         function updatePlaybackControls() {
-            document.getElementById('playBtn').disabled = isPlaying;
-            document.getElementById('pauseBtn').disabled = !isPlaying;
-            document.getElementById('stopBtn').disabled = !isPlaying && !currentFileId;
-
-            // Mettre à jour les contrôles du header
-            document.getElementById('headerPlayBtn').disabled = isPlaying;
+            document.getElementById('headerPlayBtn').disabled = isPlaying || !currentFileId;
             document.getElementById('headerPauseBtn').disabled = !isPlaying;
             document.getElementById('headerStopBtn').disabled = !isPlaying && !currentFileId;
         }
@@ -1007,9 +957,6 @@
 
         document.getElementById('uploadBtn').addEventListener('click', uploadFile);
         document.getElementById('scanDevicesBtn').addEventListener('click', loadDevices);
-        document.getElementById('playBtn').addEventListener('click', startPlayback);
-        document.getElementById('pauseBtn').addEventListener('click', pausePlayback);
-        document.getElementById('stopBtn').addEventListener('click', stopPlayback);
 
         // Event listeners pour les contrôles du header
         document.getElementById('headerPlayBtn').addEventListener('click', startPlayback);
