@@ -1,20 +1,152 @@
 /**
- * BackendAPIClient - Complete API client for MidiMind backend
- * Handles all backend communication with proper error handling
+ * BackendAPIClient - Complete WebSocket client for MidiMind backend
+ * Handles connection, reconnection, and all API commands
  */
 
 class BackendAPIClient {
-    constructor(websocket) {
-        this.ws = websocket;
+    constructor(wsUrl) {
+        this.wsUrl = wsUrl;
+        this.ws = null;
         this.requestId = 0;
         this.pendingRequests = new Map();
+        this.eventHandlers = new Map();
+        this.connected = false;
+        this.reconnectAttempts = 0;
+        this.maxReconnectAttempts = 5;
+        this.reconnectDelay = 2000;
     }
 
     /**
-     * Send command to backend and wait for response
+     * Connect to WebSocket server
+     */
+    async connect() {
+        return new Promise((resolve, reject) => {
+            try {
+                this.ws = new WebSocket(this.wsUrl);
+
+                this.ws.onopen = () => {
+                    this.connected = true;
+                    this.reconnectAttempts = 0;
+                    this.emit('connected');
+                    resolve();
+                };
+
+                this.ws.onclose = () => {
+                    this.connected = false;
+                    this.emit('disconnected');
+                    this.attemptReconnect();
+                };
+
+                this.ws.onerror = (error) => {
+                    this.emit('error', error);
+                    reject(error);
+                };
+
+                this.ws.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        this.handleMessage(message);
+                    } catch (error) {
+                        console.error('Failed to parse message:', error);
+                    }
+                };
+
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    /**
+     * Attempt to reconnect
+     */
+    attemptReconnect() {
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+            this.reconnectAttempts++;
+            console.log(`Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+
+            setTimeout(() => {
+                this.connect().catch(err => {
+                    console.error('Reconnect failed:', err);
+                });
+            }, this.reconnectDelay);
+        }
+    }
+
+    /**
+     * Handle incoming message
+     */
+    handleMessage(message) {
+        // Handle command response
+        if (message.id && this.pendingRequests.has(message.id)) {
+            const pending = this.pendingRequests.get(message.id);
+            this.pendingRequests.delete(message.id);
+
+            if (message.error) {
+                pending.reject(new Error(message.error));
+            } else {
+                pending.resolve(message.data || message);
+            }
+            return;
+        }
+
+        // Handle event broadcasts
+        if (message.event) {
+            this.emit(message.event, message.data);
+        }
+    }
+
+    /**
+     * Register event handler
+     */
+    on(event, handler) {
+        if (!this.eventHandlers.has(event)) {
+            this.eventHandlers.set(event, []);
+        }
+        this.eventHandlers.get(event).push(handler);
+    }
+
+    /**
+     * Remove event handler
+     */
+    off(event, handler) {
+        if (!this.eventHandlers.has(event)) return;
+
+        const handlers = this.eventHandlers.get(event);
+        const index = handlers.indexOf(handler);
+        if (index > -1) {
+            handlers.splice(index, 1);
+        }
+    }
+
+    /**
+     * Emit event
+     */
+    emit(event, data) {
+        if (!this.eventHandlers.has(event)) return;
+
+        const handlers = this.eventHandlers.get(event);
+        handlers.forEach(handler => {
+            try {
+                handler(data);
+            } catch (error) {
+                console.error(`Error in event handler for ${event}:`, error);
+            }
+        });
+    }
+
+    /**
+     * Check if connected
+     */
+    isConnected() {
+        return this.connected && this.ws && this.ws.readyState === WebSocket.OPEN;
+    }
+
+    /**
+     * Send command to backend
      */
     async sendCommand(command, data = {}, timeout = 10000) {
-        if (!this.ws || !this.ws.isConnected()) {
+        if (!this.isConnected()) {
             throw new Error('WebSocket not connected');
         }
 
@@ -28,38 +160,33 @@ class BackendAPIClient {
             this.pendingRequests.set(id, {
                 resolve: (response) => {
                     clearTimeout(timeoutId);
-                    this.pendingRequests.delete(id);
                     resolve(response);
                 },
                 reject: (error) => {
                     clearTimeout(timeoutId);
-                    this.pendingRequests.delete(id);
                     reject(error);
                 }
             });
 
             // Send command
-            this.ws.send({
+            this.ws.send(JSON.stringify({
                 id,
                 command,
                 data,
                 timestamp: Date.now()
-            });
+            }));
         });
     }
 
     /**
-     * Handle response from backend
+     * Close connection
      */
-    handleResponse(response) {
-        if (response.id && this.pendingRequests.has(response.id)) {
-            const pending = this.pendingRequests.get(response.id);
-            if (response.error) {
-                pending.reject(new Error(response.error));
-            } else {
-                pending.resolve(response.data);
-            }
+    close() {
+        if (this.ws) {
+            this.ws.close();
+            this.ws = null;
         }
+        this.connected = false;
     }
 
     // ========================================================================
@@ -68,8 +195,6 @@ class BackendAPIClient {
 
     /**
      * Upload MIDI file to backend
-     * @param {File} file - MIDI file
-     * @param {string} folder - Target folder (optional)
      */
     async uploadMidiFile(file, folder = '/') {
         const arrayBuffer = await file.arrayBuffer();
@@ -84,31 +209,10 @@ class BackendAPIClient {
 
     /**
      * List MIDI files
-     * @param {string} folder - Folder to list
      */
     async listMidiFiles(folder = '/') {
         const result = await this.sendCommand('file_list', { folder });
-        return result.files || [];
-    }
-
-    /**
-     * Load MIDI file from backend
-     * @param {number} fileId - File ID
-     */
-    async loadMidiFile(fileId) {
-        return this.sendCommand('file_load', { fileId });
-    }
-
-    /**
-     * Save MIDI file modifications
-     * @param {number} fileId - File ID
-     * @param {object} midiData - MIDI data (JSON format)
-     */
-    async saveMidiFile(fileId, midiData) {
-        return this.sendCommand('file_save', {
-            fileId,
-            midi: midiData
-        });
+        return result.files || result || [];
     }
 
     /**
@@ -118,121 +222,23 @@ class BackendAPIClient {
         return this.sendCommand('file_delete', { fileId });
     }
 
-    /**
-     * Rename MIDI file
-     */
-    async renameMidiFile(fileId, newFilename) {
-        return this.sendCommand('file_rename', { fileId, newFilename });
-    }
-
-    /**
-     * Search MIDI files
-     */
-    async searchMidiFiles(query) {
-        return this.sendCommand('file_search', { query });
-    }
-
     // ========================================================================
-    // ROUTING & INSTRUMENTS
+    // DEVICES
     // ========================================================================
 
     /**
-     * Create MIDI route
-     * @param {string} fromDevice - Source device ID
-     * @param {string} toDevice - Target device ID
-     * @param {object} options - Routing options
+     * List all MIDI devices
      */
-    async createRoute(fromDevice, toDevice, options = {}) {
-        return this.sendCommand('route_create', {
-            from: fromDevice,
-            to: toDevice,
-            ...options
-        });
+    async listDevices() {
+        const result = await this.sendCommand('device_list');
+        return result.devices || result || [];
     }
 
     /**
-     * List all routes
+     * Refresh device list
      */
-    async listRoutes() {
-        const result = await this.sendCommand('route_list');
-        return result.routes || [];
-    }
-
-    /**
-     * Delete route
-     */
-    async deleteRoute(routeId) {
-        return this.sendCommand('route_delete', { routeId });
-    }
-
-    /**
-     * Map MIDI channel to instrument
-     * @param {number} routeId - Route ID
-     * @param {number} fromChannel - Source MIDI channel (0-15)
-     * @param {number} toChannel - Target MIDI channel (0-15)
-     */
-    async mapChannel(routeId, fromChannel, toChannel) {
-        return this.sendCommand('channel_map', {
-            routeId,
-            fromChannel,
-            toChannel
-        });
-    }
-
-    /**
-     * Set channel filter
-     */
-    async setChannelFilter(routeId, channels) {
-        return this.sendCommand('filter_set', {
-            routeId,
-            type: 'channel',
-            channels: Array.isArray(channels) ? channels : [channels]
-        });
-    }
-
-    // ========================================================================
-    // LATENCY COMPENSATION
-    // ========================================================================
-
-    /**
-     * Measure device latency
-     */
-    async measureLatency(deviceId) {
-        return this.sendCommand('latency_measure', { deviceId });
-    }
-
-    /**
-     * Set device latency compensation
-     * @param {string} deviceId - Device ID
-     * @param {number} latency - Latency in milliseconds
-     */
-    async setLatency(deviceId, latency) {
-        return this.sendCommand('latency_set', {
-            deviceId,
-            latency
-        });
-    }
-
-    /**
-     * Get device latency
-     */
-    async getLatency(deviceId) {
-        return this.sendCommand('latency_get', { deviceId });
-    }
-
-    /**
-     * List all latencies
-     */
-    async listLatencies() {
-        const result = await this.sendCommand('latency_list');
-        return result.latencies || [];
-    }
-
-    /**
-     * Auto-calibrate latency
-     */
-    async autoCalibrateLatency(deviceId) {
-        return this.sendCommand('latency_auto_calibrate', { deviceId });
+    async refreshDevices() {
+        return this.sendCommand('device_refresh');
     }
 
     // ========================================================================
@@ -241,16 +247,13 @@ class BackendAPIClient {
 
     /**
      * Start playback
-     * @param {number} fileId - File ID to play
-     * @param {object} options - Playback options
      */
     async startPlayback(fileId, options = {}) {
         return this.sendCommand('playback_start', {
             fileId,
             loop: options.loop || false,
             tempo: options.tempo || 120,
-            transpose: options.transpose || 0,
-            volume: options.volume || 100
+            transpose: options.transpose || 0
         });
     }
 
@@ -273,170 +276,6 @@ class BackendAPIClient {
      */
     async resumePlayback() {
         return this.sendCommand('playback_resume');
-    }
-
-    /**
-     * Seek to position
-     * @param {number} position - Position in seconds
-     */
-    async seekPlayback(position) {
-        return this.sendCommand('playback_seek', { position });
-    }
-
-    /**
-     * Get playback status
-     */
-    async getPlaybackStatus() {
-        return this.sendCommand('playback_status');
-    }
-
-    /**
-     * Set playback loop
-     */
-    async setPlaybackLoop(enabled) {
-        return this.sendCommand('playback_set_loop', { enabled });
-    }
-
-    /**
-     * Set playback tempo
-     */
-    async setPlaybackTempo(bpm) {
-        return this.sendCommand('playback_set_tempo', { bpm });
-    }
-
-    /**
-     * Set playback transpose
-     */
-    async setPlaybackTranspose(semitones) {
-        return this.sendCommand('playback_transpose', { semitones });
-    }
-
-    // ========================================================================
-    // DEVICES
-    // ========================================================================
-
-    /**
-     * List all MIDI devices
-     */
-    async listDevices() {
-        const result = await this.sendCommand('device_list');
-        return result.devices || [];
-    }
-
-    /**
-     * Refresh device list
-     */
-    async refreshDevices() {
-        return this.sendCommand('device_refresh');
-    }
-
-    /**
-     * Get device info
-     */
-    async getDeviceInfo(deviceId) {
-        return this.sendCommand('device_info', { deviceId });
-    }
-
-    /**
-     * Enable/disable device
-     */
-    async setDeviceEnabled(deviceId, enabled) {
-        return this.sendCommand('device_enable', {
-            deviceId,
-            enabled
-        });
-    }
-
-    // ========================================================================
-    // MIDI MESSAGES
-    // ========================================================================
-
-    /**
-     * Send raw MIDI message
-     */
-    async sendMidi(deviceId, data) {
-        return this.sendCommand('midi_send', {
-            device: deviceId,
-            data: Array.isArray(data) ? data : [data]
-        });
-    }
-
-    /**
-     * Send MIDI note
-     */
-    async sendNote(deviceId, note, velocity, channel = 0, duration = 500) {
-        return this.sendCommand('midi_send_note', {
-            device: deviceId,
-            note,
-            velocity,
-            channel,
-            duration
-        });
-    }
-
-    /**
-     * Send MIDI CC
-     */
-    async sendCC(deviceId, cc, value, channel = 0) {
-        return this.sendCommand('midi_send_cc', {
-            device: deviceId,
-            cc,
-            value,
-            channel
-        });
-    }
-
-    /**
-     * MIDI panic (all notes off)
-     */
-    async midiPanic(deviceId = null) {
-        return this.sendCommand('midi_panic', {
-            device: deviceId
-        });
-    }
-
-    // ========================================================================
-    // SESSIONS
-    // ========================================================================
-
-    /**
-     * Save session
-     */
-    async saveSession(name, data) {
-        return this.sendCommand('session_save', { name, data });
-    }
-
-    /**
-     * Load session
-     */
-    async loadSession(sessionId) {
-        return this.sendCommand('session_load', { sessionId });
-    }
-
-    /**
-     * List sessions
-     */
-    async listSessions() {
-        const result = await this.sendCommand('session_list');
-        return result.sessions || [];
-    }
-
-    // ========================================================================
-    // SYSTEM
-    // ========================================================================
-
-    /**
-     * Get system status
-     */
-    async getSystemStatus() {
-        return this.sendCommand('system_status');
-    }
-
-    /**
-     * Get system info
-     */
-    async getSystemInfo() {
-        return this.sendCommand('system_info');
     }
 
     // ========================================================================
