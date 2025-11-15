@@ -17,6 +17,10 @@ class DeviceManager {
     const inputs = easymidi.getInputs();
     const outputs = easymidi.getOutputs();
 
+    this.app.logger.info(`Scanning devices: ${inputs.length} inputs, ${outputs.length} outputs`);
+    this.app.logger.info(`Input devices found: ${JSON.stringify(inputs)}`);
+    this.app.logger.info(`Output devices found: ${JSON.stringify(outputs)}`);
+
     // Clear previous devices
     this.inputs.forEach(input => input.close());
     this.outputs.forEach(output => output.close());
@@ -27,15 +31,15 @@ class DeviceManager {
     inputs.forEach(name => {
       // Skip MIDI Through ports (system virtual ports)
       if (this.isSystemDevice(name)) {
-        this.app.logger.debug(`Skipping system device: ${name}`);
+        this.app.logger.info(`Skipping system device (input): ${name}`);
         return;
       }
 
       try {
         this.addInput(name);
-        this.app.logger.info(`Input device added: ${name}`);
+        this.app.logger.info(`✓ Input device added: ${name}`);
       } catch (error) {
-        this.app.logger.error(`Failed to add input ${name}: ${error.message}`);
+        this.app.logger.error(`✗ Failed to add input ${name}: ${error.message}`);
       }
     });
 
@@ -43,15 +47,15 @@ class DeviceManager {
     outputs.forEach(name => {
       // Skip MIDI Through ports (system virtual ports)
       if (this.isSystemDevice(name)) {
-        this.app.logger.debug(`Skipping system device: ${name}`);
+        this.app.logger.info(`Skipping system device (output): ${name}`);
         return;
       }
 
       try {
         this.addOutput(name);
-        this.app.logger.info(`Output device added: ${name}`);
+        this.app.logger.info(`✓ Output device added: ${name}`);
       } catch (error) {
-        this.app.logger.error(`Failed to add output ${name}: ${error.message}`);
+        this.app.logger.error(`✗ Failed to add output ${name}: ${error.message}`);
       }
     });
 
