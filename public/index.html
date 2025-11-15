@@ -686,6 +686,9 @@
                         <div class="device-type">${device.type} • ${device.id}</div>
                     `;
                     deviceList.appendChild(li);
+
+                    // Log pour debug
+                    log(`Périphérique détecté: ${device.name} (type: ${device.type})`, 'info');
                 });
 
                 log(`${devices.length} périphérique(s) trouvé(s)`);
@@ -758,7 +761,14 @@
                 }
 
                 // Vérifier qu'on a des périphériques de sortie (accepter tous sauf 'input')
+                log(`Total périphériques disponibles: ${availableDevices.length}`, 'info');
+                availableDevices.forEach(d => {
+                    log(`  - ${d.name}: type="${d.type}"`, 'info');
+                });
+
                 const outputDevices = availableDevices.filter(d => d.type !== 'input');
+                log(`Périphériques de sortie filtrés: ${outputDevices.length}`, 'info');
+
                 if (outputDevices.length === 0) {
                     alert('Aucun périphérique de sortie MIDI disponible.\n\nVeuillez connecter un périphérique MIDI ou créer un port virtuel.');
                     return;
