@@ -734,7 +734,7 @@
     justify-content: center;
     padding: 10px 14px;
     background: #0a0a0a;
-    border: 3px solid var(--channel-color, #555);
+    border: 4px solid var(--channel-color, #555);
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -742,8 +742,10 @@
     gap: 4px;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 0 10px rgba(0,0,0,0.5),
-                inset 0 1px 2px rgba(255,255,255,0.05);
+    box-shadow: 0 0 20px var(--channel-color),
+                0 0 35px var(--channel-color),
+                0 4px 15px rgba(0,0,0,0.6),
+                inset 0 0 15px rgba(255,255,255,0.1);
 }
 
 .midi-editor-modal .channel-btn::before {
@@ -754,22 +756,24 @@
     right: 0;
     bottom: 0;
     background: var(--channel-color, #555);
-    opacity: 0.2;
+    opacity: 0.5;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    filter: blur(1px);
 }
 
 .midi-editor-modal .channel-btn:hover {
     transform: translateY(-4px) scale(1.03);
     box-shadow: 0 8px 20px rgba(0,0,0,0.6),
-                0 0 25px var(--channel-color),
-                0 0 40px var(--channel-color),
-                inset 0 0 10px rgba(255,255,255,0.1);
-    border-width: 4px;
+                0 0 35px var(--channel-color),
+                0 0 50px var(--channel-color),
+                0 0 70px var(--channel-color),
+                inset 0 0 15px rgba(255,255,255,0.15);
+    border-width: 5px;
 }
 
 .midi-editor-modal .channel-btn:hover::before {
-    opacity: 0.5;
-    filter: blur(2px);
+    opacity: 0.7;
+    filter: blur(3px);
 }
 
 .midi-editor-modal .channel-btn.active {

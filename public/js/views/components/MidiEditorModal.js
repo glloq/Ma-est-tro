@@ -373,6 +373,15 @@ class MidiEditorModal {
         this.pianoRoll.setAttribute('colnote', noteColor);
         // Version plus claire pour la sélection (ajoute de la luminosité)
         this.pianoRoll.setAttribute('colnotesel', this.brightenColor(noteColor, 40));
+
+        // Forcer le redraw pour appliquer les nouvelles couleurs
+        if (typeof this.pianoRoll.redraw === 'function') {
+            // Petit délai pour s'assurer que les attributs sont bien appliqués
+            setTimeout(() => {
+                this.pianoRoll.redraw();
+                this.log('debug', `Piano roll colors updated and redrawn: ${noteColor}`);
+            }, 50);
+        }
     }
 
     /**
