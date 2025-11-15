@@ -421,8 +421,7 @@
                     </div>
 
                     <div class="header-controls">
-                        <button class="btn" id="headerPlayBtn" disabled>▶️ Lecture</button>
-                        <button class="btn btn-secondary" id="headerPauseBtn" disabled>⏸️ Pause</button>
+                        <button class="btn" id="headerPlayPauseBtn" disabled>▶️ Lecture</button>
                         <button class="btn btn-danger" id="headerStopBtn" disabled>⏹️ Stop</button>
                     </div>
 
@@ -472,6 +471,7 @@
         let api;
         let currentFileId = null;
         let isPlaying = false;
+        let progressTimer = null;
 
         // 🆕 Stockage du routage configuré par fichier
         let fileRoutingConfig = {};
@@ -528,6 +528,7 @@
 
                 api.on('disconnected', () => {
                     log('❌ Déconnecté du serveur', 'error');
+                    stopProgressTracking();
                 });
 
                 api.on('error', (error) => {
@@ -538,12 +539,14 @@
                 api.on('playback_started', () => {
                     isPlaying = true;
                     updatePlaybackControls();
+                    startProgressTracking();
                     log('▶️ Lecture démarrée');
                 });
 
                 api.on('playback_stopped', () => {
                     isPlaying = false;
                     updatePlaybackControls();
+                    stopProgressTracking();
                     document.getElementById('headerProgressFill').style.width = '0%';
                     document.getElementById('headerFileName').textContent = 'Aucun fichier sélectionné';
                     document.getElementById('headerTime').textContent = '00:00 / 00:00';
@@ -553,14 +556,8 @@
                 api.on('playback_paused', () => {
                     isPlaying = false;
                     updatePlaybackControls();
+                    stopProgressTracking();
                     log('⏸️ Lecture en pause');
-                });
-
-                api.on('playback_progress', (data) => {
-                    const percent = (data.position / data.duration) * 100;
-                    document.getElementById('headerProgressFill').style.width = `${percent}%`;
-                    const timeText = `${formatTime(data.position)} / ${formatTime(data.duration)}`;
-                    document.getElementById('headerTime').textContent = timeText;
                 });
 
                 await api.connect();
@@ -905,41 +902,76 @@
             }
         }
 
-        // Lecture (reprendre la lecture en pause ou démarrer le fichier actuel)
-        async function startPlayback() {
+        // Toggle entre lecture et pause
+        async function togglePlayPause() {
             if (!currentFileId) {
                 log('Sélectionnez un fichier via la liste des fichiers', 'warning');
                 return;
             }
 
             try {
-                await api.sendCommand('playback_start', { fileId: currentFileId });
+                if (isPlaying) {
+                    await api.sendCommand('playback_pause');
+                } else {
+                    await api.sendCommand('playback_start', { fileId: currentFileId });
+                }
             } catch (error) {
-                log(`Erreur lecture: ${error.message}`, 'error');
-            }
-        }
-
-        async function pausePlayback() {
-            try {
-                await api.sendCommand('playback_pause');
-            } catch (error) {
-                log(`Erreur pause: ${error.message}`, 'error');
+                log(`Erreur lecture/pause: ${error.message}`, 'error');
             }
         }
 
         async function stopPlayback() {
             try {
                 await api.sendCommand('playback_stop');
-                currentFileId = null;
+                // Ne pas réinitialiser currentFileId pour permettre de relancer
             } catch (error) {
                 log(`Erreur stop: ${error.message}`, 'error');
             }
         }
 
+        // Démarrer le suivi de la progression
+        function startProgressTracking() {
+            if (progressTimer) return;
+
+            progressTimer = setInterval(async () => {
+                try {
+                    const response = await api.sendCommand('playback_get_status');
+                    if (response && response.position !== undefined && response.duration !== undefined) {
+                        const percent = (response.position / response.duration) * 100;
+                        document.getElementById('headerProgressFill').style.width = `${percent}%`;
+                        const timeText = `${formatTime(response.position)} / ${formatTime(response.duration)}`;
+                        document.getElementById('headerTime').textContent = timeText;
+                    }
+                } catch (error) {
+                    // Ignorer les erreurs de polling silencieusement
+                }
+            }, 100); // Mise à jour toutes les 100ms
+        }
+
+        // Arrêter le suivi de la progression
+        function stopProgressTracking() {
+            if (progressTimer) {
+                clearInterval(progressTimer);
+                progressTimer = null;
+            }
+        }
+
         function updatePlaybackControls() {
-            document.getElementById('headerPlayBtn').disabled = isPlaying || !currentFileId;
-            document.getElementById('headerPauseBtn').disabled = !isPlaying;
-            document.getElementById('headerStopBtn').disabled = !isPlaying && !currentFileId;
+            const playPauseBtn = document.getElementById('headerPlayPauseBtn');
+            const stopBtn = document.getElementById('headerStopBtn');
+
+            // Désactiver si aucun fichier sélectionné
+            playPauseBtn.disabled = !currentFileId;
+            stopBtn.disabled = !currentFileId;
+
+            // Changer le texte et le style du bouton selon l'état
+            if (isPlaying) {
+                playPauseBtn.textContent = '⏸️ Pause';
+                playPauseBtn.className = 'btn btn-secondary';
+            } else {
+                playPauseBtn.textContent = '▶️ Lecture';
+                playPauseBtn.className = 'btn';
+            }
         }
 
         // Utilitaires
@@ -959,8 +991,7 @@
         document.getElementById('scanDevicesBtn').addEventListener('click', loadDevices);
 
         // Event listeners pour les contrôles du header
-        document.getElementById('headerPlayBtn').addEventListener('click', startPlayback);
-        document.getElementById('headerPauseBtn').addEventListener('click', pausePlayback);
+        document.getElementById('headerPlayPauseBtn').addEventListener('click', togglePlayPause);
         document.getElementById('headerStopBtn').addEventListener('click', stopPlayback);
 
 
