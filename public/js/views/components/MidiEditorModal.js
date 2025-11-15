@@ -591,11 +591,33 @@ class MidiEditorModal {
             const color = this.channelColors[ch.channel % this.channelColors.length];
             const activeClass = isActive ? 'active' : '';
 
+            // Générer les styles inline directement
+            const inlineStyles = isActive
+                ? `
+                    --channel-color: ${color};
+                    background: ${color};
+                    border-color: ${color};
+                    box-shadow: 0 0 30px ${color},
+                                0 0 50px ${color},
+                                0 0 70px ${color},
+                                0 6px 20px rgba(0,0,0,0.7),
+                                inset 0 0 20px rgba(255,255,255,0.2);
+                `.trim()
+                : `
+                    --channel-color: ${color};
+                    border-color: ${color};
+                    box-shadow: 0 0 20px ${color},
+                                0 0 35px ${color},
+                                0 4px 15px rgba(0,0,0,0.6),
+                                inset 0 0 15px rgba(255,255,255,0.1);
+                `.trim();
+
             buttons += `
                 <button
                     class="channel-btn ${activeClass}"
                     data-channel="${ch.channel}"
-                    style="--channel-color: ${color}"
+                    data-color="${color}"
+                    style="${inlineStyles}"
                     title="${ch.instrument} (${ch.noteCount} notes)"
                 >
                     <span class="channel-number">${ch.channel + 1}</span>
@@ -618,10 +640,33 @@ class MidiEditorModal {
 
         buttons.forEach(btn => {
             const channel = parseInt(btn.dataset.channel);
-            if (this.activeChannels.has(channel)) {
+            const color = btn.dataset.color; // Récupérer la couleur depuis data-attribute
+            const isActive = this.activeChannels.has(channel);
+
+            if (isActive) {
                 btn.classList.add('active');
+                // Appliquer les styles pour l'état actif
+                btn.style.cssText = `
+                    --channel-color: ${color};
+                    background: ${color};
+                    border-color: ${color};
+                    box-shadow: 0 0 30px ${color},
+                                0 0 50px ${color},
+                                0 0 70px ${color},
+                                0 6px 20px rgba(0,0,0,0.7),
+                                inset 0 0 20px rgba(255,255,255,0.2);
+                `;
             } else {
                 btn.classList.remove('active');
+                // Appliquer les styles pour l'état inactif
+                btn.style.cssText = `
+                    --channel-color: ${color};
+                    border-color: ${color};
+                    box-shadow: 0 0 20px ${color},
+                                0 0 35px ${color},
+                                0 4px 15px rgba(0,0,0,0.6),
+                                inset 0 0 15px rgba(255,255,255,0.1);
+                `;
             }
         });
 
