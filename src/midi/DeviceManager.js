@@ -23,8 +23,14 @@ class DeviceManager {
     this.inputs.clear();
     this.outputs.clear();
 
-    // Add inputs
+    // Add inputs (filter out system devices)
     inputs.forEach(name => {
+      // Skip MIDI Through ports (system virtual ports)
+      if (this.isSystemDevice(name)) {
+        this.app.logger.debug(`Skipping system device: ${name}`);
+        return;
+      }
+
       try {
         this.addInput(name);
         this.app.logger.info(`Input device added: ${name}`);
@@ -33,8 +39,14 @@ class DeviceManager {
       }
     });
 
-    // Add outputs
+    // Add outputs (filter out system devices)
     outputs.forEach(name => {
+      // Skip MIDI Through ports (system virtual ports)
+      if (this.isSystemDevice(name)) {
+        this.app.logger.debug(`Skipping system device: ${name}`);
+        return;
+      }
+
       try {
         this.addOutput(name);
         this.app.logger.info(`Output device added: ${name}`);
@@ -226,6 +238,17 @@ class DeviceManager {
 
   getDeviceInfo(deviceId) {
     return this.devices.get(deviceId);
+  }
+
+  isSystemDevice(name) {
+    // Filter out system MIDI Through ports and other virtual system devices
+    const systemPatterns = [
+      /^Midi Through/i,           // ALSA MIDI Through ports
+      /^Through Port/i,           // macOS MIDI Through
+      /^Microsoft GS Wavetable/i  // Windows system synth
+    ];
+
+    return systemPatterns.some(pattern => pattern.test(name));
   }
 
   broadcastDeviceList() {
