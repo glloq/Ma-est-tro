@@ -839,7 +839,7 @@ class MidiEditorModal {
 
     /**
      * Configure le rendu des notes colorées par canal
-     * Approche: Monkey-patch du canvas interne via Shadow DOM
+     * Approche: Remplacement complet de la méthode redraw() pour coloration directe
      */
     setupColoredNoteRendering() {
         if (!this.pianoRoll) return;
@@ -863,115 +863,114 @@ class MidiEditorModal {
                     return;
                 }
 
-                this.log('info', 'Found internal canvas, applying monkey patch');
+                this.log('info', 'Found internal canvas, replacing redraw() method');
 
-                // Obtenir le contexte 2D
                 const ctx = canvas.getContext('2d');
                 if (!ctx) {
                     this.log('warn', 'Cannot get 2D context');
                     return;
                 }
 
-                // Sauvegarder la méthode originale fillRect
-                const originalFillRect = ctx.fillRect.bind(ctx);
                 const that = this;
+                const pr = this.pianoRoll;
 
-                // Map pour recherche rapide note par coordonnées (O(1))
-                let noteMap = new Map();
+                // Sauvegarder la méthode originale redraw
+                const originalRedraw = pr.redraw ? pr.redraw.bind(pr) : null;
 
-                // Stocker les valeurs colnote et colnotesel pour détecter le dessin de notes
-                let colnote = 'rgba(0,0,0,0)';
-                let colnotesel = 'rgba(255,255,255,0.1)';
+                // Remplacer redraw() par une version qui colore directement par canal
+                pr.redraw = function() {
+                    if (!pr.sequence || !ctx) return;
 
-                // Fonction pour créer la clé de coordonnée
-                function makeKey(x, y, w, h) {
-                    // Arrondir pour gérer les variations de virgule flottante
-                    return `${Math.round(x)},${Math.round(y)},${Math.round(w)},${Math.round(h)}`;
-                }
+                    // Récupérer toutes les propriétés nécessaires
+                    const width = canvas.width;
+                    const height = canvas.height;
+                    const xoffset = pr.xoffset || 0;
+                    const yoffset = pr.yoffset || 60;
+                    const xrange = parseFloat(pr.getAttribute('xrange')) || 128;
+                    const yrange = parseFloat(pr.getAttribute('yrange')) || 36;
+                    const kbwidth = pr.kbwidth || 52;
+                    const yruler = pr.yruler || 24;
+                    const swidth = width - kbwidth;
+                    const sheight = height - yruler;
+                    const stepw = swidth / xrange;
+                    const steph = sheight / yrange;
 
-                // Fonction pour reconstruire la Map avant chaque redraw
-                function rebuildNoteMap() {
-                    noteMap.clear();
-                    if (!that.pianoRoll || !that.pianoRoll.sequence) return;
+                    // Effacer le canvas
+                    ctx.clearRect(0, 0, width, height);
 
-                    const xoffset = that.pianoRoll.xoffset || 0;
-                    const yoffset = that.pianoRoll.yoffset || 60;
-                    const kbwidth = that.pianoRoll.kbwidth || 0;
-                    const yruler = that.pianoRoll.yruler || 0;
-                    const stepw = that.pianoRoll.stepw;
-                    const steph = that.pianoRoll.steph;
-                    const height = that.pianoRoll.height || canvas.height;
+                    // Dessiner le fond
+                    ctx.fillStyle = pr.getAttribute('colbg') || '#000';
+                    ctx.fillRect(0, 0, width, height);
 
-                    if (!stepw || !steph) return;
+                    // Dessiner la grille (si nécessaire - version simplifiée)
+                    ctx.strokeStyle = pr.getAttribute('colgrid') || '#333';
+                    ctx.lineWidth = 1;
 
-                    // Pré-calculer les coordonnées de toutes les notes
-                    that.pianoRoll.sequence.forEach(note => {
-                        const w = note.g * stepw;
-                        const x = (note.t - xoffset) * stepw + yruler + kbwidth;
-                        const y = height - (note.n - yoffset) * steph;
-                        const y2 = Math.floor(y - steph);
-
-                        // Stocker dans la Map
-                        const key = makeKey(x, y2, w, steph);
-                        noteMap.set(key, note);
-                    });
-                }
-
-                // Intercepter setAttribute pour détecter les changements de couleur
-                const originalSetAttribute = that.pianoRoll.setAttribute.bind(that.pianoRoll);
-                that.pianoRoll.setAttribute = function(name, value) {
-                    if (name === 'colnote') colnote = value;
-                    if (name === 'colnotesel') colnotesel = value;
-                    return originalSetAttribute(name, value);
-                };
-
-                // Intercepter redraw pour reconstruire la Map
-                if (typeof that.pianoRoll.redraw === 'function') {
-                    const originalRedraw = that.pianoRoll.redraw.bind(that.pianoRoll);
-                    that.pianoRoll.redraw = function() {
-                        rebuildNoteMap(); // Reconstruire avant le redraw
-                        return originalRedraw();
-                    };
-                }
-
-                // Construire la Map initiale
-                rebuildNoteMap();
-
-                // Monkey-patch fillRect pour colorer par canal
-                ctx.fillRect = function(x, y, w, h) {
-                    const currentColor = this.fillStyle;
-
-                    // Détecter si c'est une note (basé sur la couleur et la taille)
-                    const isNote = (currentColor === colnote || currentColor === colnotesel) && w > 2 && h > 3;
-
-                    if (isNote) {
-                        // Recherche O(1) dans la Map
-                        const key = makeKey(x, y, w, h);
-                        const note = noteMap.get(key);
-
-                        if (note) {
-                            const channel = note.c !== undefined ? note.c : 0;
-                            const color = that.channelColors[channel % that.channelColors.length];
-                            this.fillStyle = color;
-                        }
+                    // Grille verticale
+                    const grid = parseInt(pr.getAttribute('grid')) || 16;
+                    const gridStep = stepw * (xrange / grid);
+                    for (let i = 0; i <= grid; ++i) {
+                        const x = kbwidth + yruler + i * gridStep;
+                        ctx.beginPath();
+                        ctx.moveTo(x, yruler);
+                        ctx.lineTo(x, height);
+                        ctx.stroke();
                     }
 
-                    // Appeler la méthode originale
-                    originalFillRect(x, y, w, h);
+                    // Grille horizontale
+                    for (let i = 0; i <= yrange; ++i) {
+                        const y = yruler + i * steph;
+                        ctx.beginPath();
+                        ctx.moveTo(kbwidth + yruler, y);
+                        ctx.lineTo(width, y);
+                        ctx.stroke();
+                    }
 
-                    // Réinitialiser la couleur
-                    this.fillStyle = currentColor;
+                    // Dessiner les notes avec couleurs par canal
+                    if (pr.sequence && pr.sequence.length > 0) {
+                        pr.sequence.forEach(note => {
+                            if (!note) return;
+
+                            // Calculer les coordonnées
+                            const w = note.g * stepw;
+                            const x = (note.t - xoffset) * stepw + yruler + kbwidth;
+                            const y = height - (note.n - yoffset) * steph;
+                            const y2 = Math.floor(y - steph);
+
+                            // Vérifier si visible
+                            if (x + w < kbwidth + yruler || x > width || y2 > height || y < yruler) return;
+
+                            // Obtenir la couleur du canal
+                            const channel = note.c !== undefined ? note.c : 0;
+                            const noteColor = that.channelColors[channel % that.channelColors.length];
+
+                            // Dessiner le rectangle rempli avec la couleur du canal
+                            ctx.fillStyle = noteColor;
+                            ctx.fillRect(x, y2, w, steph);
+
+                            // Dessiner le contour noir
+                            ctx.strokeStyle = '#000';
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(x, y2, w, steph);
+                        });
+                    }
+
+                    // Dessiner le clavier (version simplifiée - rectangle noir)
+                    ctx.fillStyle = '#222';
+                    ctx.fillRect(0, yruler, kbwidth, height - yruler);
+
+                    // Dessiner la règle temporelle (rectangle noir)
+                    ctx.fillStyle = '#222';
+                    ctx.fillRect(kbwidth, 0, width - kbwidth, yruler);
                 };
 
-                // Marquer que le monkey-patch est actif (pas besoin de fallback)
-                this.monkeyPatchActive = true;
+                // Marquer que le remplacement est actif
+                this.customRedrawActive = true;
 
-                // Forcer un redraw
-                if (typeof this.pianoRoll.redraw === 'function') {
-                    this.pianoRoll.redraw();
-                }
+                // Forcer un redraw initial
+                pr.redraw();
 
-                this.log('info', 'Canvas monkey-patched successfully - direct coloring enabled, no lag!');
+                this.log('info', 'Custom redraw() installed - direct coloring with zero lag!');
             }, 300);
         } catch (error) {
             this.log('error', 'Failed to setup colored note rendering:', error);
