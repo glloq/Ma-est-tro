@@ -447,7 +447,7 @@
         // Charger les fichiers
         async function loadFiles() {
             try {
-                const files = await api.sendCommand('file_list', { folder: '/' });
+                const files = await api.listMidiFiles('/');
                 const fileList = document.getElementById('fileList');
                 const fileSelect = document.getElementById('fileSelect');
 
@@ -487,7 +487,7 @@
         // Charger les périphériques
         async function loadDevices() {
             try {
-                const devices = await api.sendCommand('device_list');
+                const devices = await api.listDevices();
                 const deviceList = document.getElementById('deviceList');
 
                 deviceList.innerHTML = '';
