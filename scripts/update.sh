@@ -194,8 +194,8 @@ print_header "6. Restarting Server"
 if [ "$PM2_AVAILABLE" = true ]; then
     print_info "Starting with PM2..."
 
-    # Start fresh with ecosystem.config.js
-    if pm2 start ecosystem.config.js; then
+    # Start fresh with ecosystem.config.cjs
+    if pm2 start ecosystem.config.cjs; then
         print_success "PM2 process started"
 
         # Save PM2 configuration
@@ -216,7 +216,7 @@ if [ "$PM2_AVAILABLE" = true ]; then
 
     else
         print_error "Failed to start PM2 process"
-        print_info "Check ecosystem.config.js for errors"
+        print_info "Check ecosystem.config.cjs for errors"
         exit 1
     fi
 
@@ -240,7 +240,7 @@ else
     print_info "Starting server with PM2..."
 
     if [ "$PM2_AVAILABLE" = true ]; then
-        pm2 start ecosystem.config.js
+        pm2 start ecosystem.config.cjs
         pm2 save
         print_success "Server started with PM2"
     else

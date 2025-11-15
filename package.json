@@ -9,7 +9,7 @@
     "dev": "nodemon server.js",
     "migrate": "node scripts/migrate-db.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:start": "pm2 start ecosystem.config.cjs",
     "pm2:stop": "pm2 stop midimind",
     "pm2:restart": "pm2 restart midimind",
     "pm2:logs": "pm2 logs midimind",
