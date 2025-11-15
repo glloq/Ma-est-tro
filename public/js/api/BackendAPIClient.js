@@ -224,6 +224,28 @@ class BackendAPIClient {
         return this.sendCommand('file_delete', { fileId });
     }
 
+    /**
+     * Read MIDI file content
+     * @param {string} fileId - File ID or filename
+     * @returns {Promise<Object>} MIDI file data
+     */
+    async readMidiFile(fileId) {
+        return this.sendCommand('file_read', { fileId });
+    }
+
+    /**
+     * Write/Save MIDI file content
+     * @param {string} fileId - File ID or filename
+     * @param {Object} midiData - MIDI data to write
+     * @returns {Promise<Object>} Response
+     */
+    async writeMidiFile(fileId, midiData) {
+        return this.sendCommand('file_write', {
+            fileId,
+            midiData
+        });
+    }
+
     // ========================================================================
     // DEVICES
     // ========================================================================

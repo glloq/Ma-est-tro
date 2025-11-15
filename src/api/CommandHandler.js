@@ -42,10 +42,12 @@ class CommandHandler {
       'route_import': (data) => this.routeImport(data),
       'route_clear_all': () => this.routeClearAll(),
 
-      // ==================== FILE MANAGEMENT (10 commands) ====================
+      // ==================== FILE MANAGEMENT (12 commands) ====================
       'file_upload': (data) => this.fileUpload(data),
       'file_list': (data) => this.fileList(data),
       'file_load': (data) => this.fileLoad(data),
+      'file_read': (data) => this.fileRead(data),
+      'file_write': (data) => this.fileWrite(data),
       'file_delete': (data) => this.fileDelete(data),
       'file_save': (data) => this.fileSave(data),
       'file_rename': (data) => this.fileRename(data),
@@ -343,6 +345,22 @@ class CommandHandler {
   async fileLoad(data) {
     const result = await this.app.fileManager.loadFile(data.fileId);
     return result;
+  }
+
+  async fileRead(data) {
+    // Read MIDI file content for editing
+    const result = await this.app.fileManager.loadFile(data.fileId);
+    return {
+      success: true,
+      fileId: data.fileId,
+      midiData: result
+    };
+  }
+
+  async fileWrite(data) {
+    // Write MIDI file content from editor
+    await this.app.fileManager.saveFile(data.fileId, data.midiData);
+    return { success: true };
   }
 
   async fileDelete(data) {
