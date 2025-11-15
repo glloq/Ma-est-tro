@@ -1,5 +1,5 @@
 // ecosystem.config.js
-export default {
+module.exports = {
   apps: [
     {
       name: 'midimind',
