@@ -745,37 +745,27 @@
 }
 
 .midi-editor-modal .channel-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--channel-color, #555);
-    opacity: 0.5;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    filter: blur(1px);
+    content: none; /* Suppression complète du glow */
 }
 
 .midi-editor-modal .channel-btn:hover {
-    transform: translateY(-4px) scale(1.03);
+    transform: translateY(-2px);
 }
 
 .midi-editor-modal .channel-btn:hover::before {
-    opacity: 0.7;
-    filter: blur(3px);
+    content: none;
 }
 
 .midi-editor-modal .channel-btn.active {
-    animation: channelPulse 2s ease-in-out infinite;
+    /* Pas d'animation */
 }
 
 .midi-editor-modal .channel-btn.active::before {
-    opacity: 1;
+    content: none;
 }
 
 .midi-editor-modal .channel-btn.active:hover {
-    transform: translateY(-5px) scale(1.05);
+    transform: translateY(-2px);
 }
 
 /* Animation de pulsation pour les boutons actifs */
