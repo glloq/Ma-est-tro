@@ -354,28 +354,21 @@
                     <p class="info-text" id="playbackInfo">Aucune lecture en cours</p>
                 </div>
 
-                <!-- Routage MIDI -->
+                <!-- Routage par Canal -->
                 <div class="card">
-                    <h2>🔀 Routage MIDI</h2>
+                    <h2>🔀 Routage par Canal</h2>
 
-                    <div style="margin-bottom: 12px;">
-                        <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">Source (Entrée):</label>
-                        <select id="routeSource" style="margin-bottom: 8px;">
-                            <option value="">Sélectionner une source...</option>
-                        </select>
+                    <p class="info-text" id="channelRoutingInfo" style="margin-bottom: 12px;">
+                        Sélectionnez un fichier pour voir ses canaux MIDI
+                    </p>
 
-                        <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #666;">Destination (Sortie):</label>
-                        <select id="routeDestination" style="margin-bottom: 8px;">
-                            <option value="">Sélectionner une destination...</option>
-                        </select>
+                    <div id="channelRoutingContainer" style="display: none;">
+                        <button class="btn btn-secondary" id="clearRoutingBtn" style="margin-bottom: 12px;">
+                            🗑️ Effacer tout le routage
+                        </button>
+
+                        <div id="channelRoutingList"></div>
                     </div>
-
-                    <button class="btn" id="createRouteBtn">➕ Créer Route</button>
-
-                    <h3 style="margin-top: 16px; margin-bottom: 8px; font-size: 14px;">Routes actives:</h3>
-                    <ul class="file-list" id="routeList">
-                        <li class="info-text">Aucune route</li>
-                    </ul>
                 </div>
             </div>
 
@@ -422,7 +415,6 @@
                     document.getElementById('wsStatusText').textContent = 'Connecté';
                     loadFiles();
                     loadDevices();
-                    loadRoutes();
                 });
 
                 api.on('disconnected', () => {
@@ -535,8 +527,13 @@
                 document.getElementById('deviceCount').textContent = `${devices.length} périphérique${devices.length > 1 ? 's' : ''}`;
                 log(`${devices.length} périphérique(s) trouvé(s)`);
 
-                // Mettre à jour les selects de routage
-                updateRouteSelects();
+                // Sauvegarder les périphériques pour le routage de canaux
+                availableDevices = devices;
+
+                // Mettre à jour l'affichage du routage si déjà chargé
+                if (currentChannels.length > 0) {
+                    displayChannelRouting();
+                }
 
             } catch (error) {
                 log(`Erreur chargement périphériques: ${error.message}`, 'error');
@@ -589,8 +586,15 @@
             }
 
             try {
-                await api.sendCommand('playback_start', { fileId });
+                const response = await api.sendCommand('playback_start', { fileId });
                 currentFileId = fileId;
+
+                // Charger les canaux MIDI du fichier qui vient d'être chargé
+                log(`Fichier chargé: ${response.fileInfo.filename}`);
+                log(`${response.fileInfo.channels.length} canaux MIDI détectés`);
+
+                // Charger l'interface de routage
+                await loadChannelRouting();
             } catch (error) {
                 log(`Erreur lecture: ${error.message}`, 'error');
             }
@@ -627,100 +631,98 @@
             return `${minutes}:${secs.toString().padStart(2, '0')}`;
         }
 
-        // ========== ROUTAGE MIDI ==========
+        // ========== ROUTAGE PAR CANAL ==========
 
-        async function loadRoutes() {
+        let currentChannels = [];
+        let availableDevices = [];
+
+        // Charger les canaux du fichier actuellement chargé
+        async function loadChannelRouting() {
             try {
-                const response = await api.sendCommand('route_list');
-                const routes = response.routes || [];
+                const response = await api.sendCommand('playback_get_channels');
+                currentChannels = response.channels || [];
 
-                const routeList = document.getElementById('routeList');
-                routeList.innerHTML = '';
-
-                if (routes.length === 0) {
-                    routeList.innerHTML = '<li class="info-text">Aucune route</li>';
+                if (currentChannels.length === 0) {
+                    document.getElementById('channelRoutingInfo').textContent =
+                        'Aucun fichier chargé ou fichier sans canaux MIDI';
+                    document.getElementById('channelRoutingContainer').style.display = 'none';
                     return;
                 }
 
-                routes.forEach(route => {
-                    const li = document.createElement('li');
-                    li.className = 'file-item';
-                    li.innerHTML = `
-                        <span>${route.source} → ${route.destination}</span>
-                        <button class="btn btn-danger" onclick="deleteRoute('${route.id}')">🗑️</button>
-                    `;
-                    routeList.appendChild(li);
-                });
+                document.getElementById('channelRoutingInfo').textContent =
+                    `${currentChannels.length} canal/canaux MIDI trouvé(s)`;
+                document.getElementById('channelRoutingContainer').style.display = 'block';
 
-                log(`${routes.length} route(s) chargée(s)`);
+                displayChannelRouting();
+                log(`${currentChannels.length} canal/canaux MIDI chargé(s)`);
             } catch (error) {
-                log(`Erreur chargement routes: ${error.message}`, 'error');
+                log(`Erreur chargement canaux: ${error.message}`, 'error');
             }
         }
 
-        function updateRouteSelects() {
-            const devices = Array.from(document.getElementById('deviceList').children)
-                .filter(li => !li.classList.contains('info-text'))
-                .map(li => li.querySelector('.device-name').textContent);
+        function displayChannelRouting() {
+            const container = document.getElementById('channelRoutingList');
+            container.innerHTML = '';
 
-            const sourceSelect = document.getElementById('routeSource');
-            const destSelect = document.getElementById('routeDestination');
+            currentChannels.forEach(channel => {
+                const div = document.createElement('div');
+                div.style.cssText = 'margin-bottom: 12px; padding: 12px; background: #f8f9fa; border-radius: 6px;';
 
-            sourceSelect.innerHTML = '<option value="">Sélectionner une source...</option>';
-            destSelect.innerHTML = '<option value="">Sélectionner une destination...</option>';
+                const trackNames = channel.tracks.map(t => t.name).join(', ');
 
-            devices.forEach(deviceName => {
-                const sourceOption = document.createElement('option');
-                sourceOption.value = deviceName;
-                sourceOption.textContent = deviceName;
-                sourceSelect.appendChild(sourceOption);
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <strong style="font-size: 14px;">Canal MIDI ${channel.channelDisplay}</strong>
+                        <span style="font-size: 12px; color: #666;">${trackNames}</span>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <select id="channel${channel.channel}Device" style="flex: 1;">
+                            <option value="">Aucun (silencieux)</option>
+                            ${availableDevices.map(d =>
+                                `<option value="${d.id}" ${channel.assignedDevice === d.id ? 'selected' : ''}>
+                                    ${d.name}
+                                </option>`
+                            ).join('')}
+                        </select>
+                        <button class="btn" onclick="assignChannel(${channel.channel})" style="white-space: nowrap;">
+                            Assigner
+                        </button>
+                    </div>
+                `;
 
-                const destOption = document.createElement('option');
-                destOption.value = deviceName;
-                destOption.textContent = deviceName;
-                destSelect.appendChild(destOption);
+                container.appendChild(div);
             });
         }
 
-        async function createRoute() {
-            const source = document.getElementById('routeSource').value;
-            const destination = document.getElementById('routeDestination').value;
+        async function assignChannel(channel) {
+            const select = document.getElementById(`channel${channel}Device`);
+            const deviceId = select.value;
 
-            if (!source || !destination) {
-                log('Sélectionnez une source et une destination', 'warning');
-                return;
-            }
-
-            if (source === destination) {
-                log('La source et la destination doivent être différentes', 'warning');
+            if (!deviceId) {
+                log(`Canal ${channel + 1}: Aucun périphérique sélectionné`, 'warning');
                 return;
             }
 
             try {
-                await api.sendCommand('route_create', {
-                    source: source,
-                    destination: destination,
-                    enabled: true
+                await api.sendCommand('playback_set_channel_routing', {
+                    channel: channel,
+                    deviceId: deviceId
                 });
 
-                log(`✓ Route créée: ${source} → ${destination}`, 'info');
-                await loadRoutes();
-
-                // Reset selects
-                document.getElementById('routeSource').value = '';
-                document.getElementById('routeDestination').value = '';
+                log(`✓ Canal ${channel + 1} → ${deviceId}`, 'info');
+                await loadChannelRouting();
             } catch (error) {
-                log(`Erreur création route: ${error.message}`, 'error');
+                log(`Erreur assignation canal: ${error.message}`, 'error');
             }
         }
 
-        async function deleteRoute(routeId) {
+        async function clearAllChannelRouting() {
             try {
-                await api.sendCommand('route_delete', { routeId });
-                log(`✓ Route supprimée: ${routeId}`, 'info');
-                await loadRoutes();
+                await api.sendCommand('playback_clear_channel_routing');
+                log('✓ Tout le routage effacé', 'info');
+                await loadChannelRouting();
             } catch (error) {
-                log(`Erreur suppression route: ${error.message}`, 'error');
+                log(`Erreur effacement routage: ${error.message}`, 'error');
             }
         }
 
@@ -731,7 +733,15 @@
         document.getElementById('playBtn').addEventListener('click', startPlayback);
         document.getElementById('pauseBtn').addEventListener('click', pausePlayback);
         document.getElementById('stopBtn').addEventListener('click', stopPlayback);
-        document.getElementById('createRouteBtn').addEventListener('click', createRoute);
+        document.getElementById('clearRoutingBtn').addEventListener('click', clearAllChannelRouting);
+
+        // Quand un fichier est sélectionné, charger ses canaux
+        document.getElementById('fileSelect').addEventListener('change', async (e) => {
+            if (e.target.value) {
+                // Le fichier sera chargé au moment de startPlayback
+                // On ne peut pas charger les canaux maintenant car loadFile n'a pas encore été appelé
+            }
+        });
 
         // Initialisation
         window.addEventListener('load', async () => {

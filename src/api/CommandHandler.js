@@ -54,7 +54,7 @@ class CommandHandler {
       'file_export': (data) => this.fileExport(data),
       'file_search': (data) => this.fileSearch(data),
 
-      // ==================== PLAYBACK (10 commands) ====================
+      // ==================== PLAYBACK (13 commands) ====================
       'playback_start': (data) => this.playbackStart(data),
       'playback_stop': () => this.playbackStop(),
       'playback_pause': () => this.playbackPause(),
@@ -65,6 +65,9 @@ class CommandHandler {
       'playback_set_tempo': (data) => this.playbackSetTempo(data),
       'playback_transpose': (data) => this.playbackTranspose(data),
       'playback_set_volume': (data) => this.playbackSetVolume(data),
+      'playback_get_channels': () => this.playbackGetChannels(),
+      'playback_set_channel_routing': (data) => this.playbackSetChannelRouting(data),
+      'playback_clear_channel_routing': () => this.playbackClearChannelRouting(),
 
       // ==================== LATENCY (8 commands) ====================
       'latency_measure': (data) => this.latencyMeasure(data),
@@ -455,6 +458,35 @@ class CommandHandler {
 
   async playbackSetVolume(data) {
     // Future implementation
+    return { success: true };
+  }
+
+  async playbackGetChannels() {
+    return {
+      channels: this.app.midiPlayer.getChannelRouting()
+    };
+  }
+
+  async playbackSetChannelRouting(data) {
+    if (!data.channel && data.channel !== 0) {
+      throw new Error('channel is required');
+    }
+    if (!data.deviceId) {
+      throw new Error('deviceId is required');
+    }
+
+    this.app.midiPlayer.setChannelRouting(data.channel, data.deviceId);
+
+    return {
+      success: true,
+      channel: data.channel,
+      channelDisplay: data.channel + 1,
+      deviceId: data.deviceId
+    };
+  }
+
+  async playbackClearChannelRouting() {
+    this.app.midiPlayer.clearChannelRouting();
     return { success: true };
   }
 
