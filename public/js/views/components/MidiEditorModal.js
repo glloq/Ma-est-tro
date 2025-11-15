@@ -352,36 +352,19 @@ class MidiEditorModal {
 
     /**
      * Mettre à jour la couleur des notes selon les canaux actifs
+     * NOTE: Désormais les notes sont colorées individuellement par canal dans drawColoredNotes()
+     * Cette fonction définit juste une couleur de base pour le piano roll
      */
     updatePianoRollColor() {
         if (!this.pianoRoll) return;
 
-        let noteColor = '#00FF00'; // Couleur par défaut éclatante (vert)
+        // Définir une couleur neutre de base (sera surchargée par notre rendu personnalisé)
+        const baseColor = '#404040'; // Gris foncé comme base
 
-        if (this.activeChannels.size === 1) {
-            // Un seul canal actif : utiliser sa couleur éclatante
-            const activeChannel = Array.from(this.activeChannels)[0];
-            noteColor = this.channelColors[activeChannel % this.channelColors.length];
-            this.log('info', `Piano roll color set to channel ${activeChannel}: ${noteColor}`);
-        } else if (this.activeChannels.size > 1) {
-            // Plusieurs canaux : couleur blanche éclatante pour contraste
-            noteColor = '#FFFFFF';
-            this.log('info', `Piano roll color set to multi-channel: ${noteColor}`);
-        }
+        this.pianoRoll.setAttribute('colnote', baseColor);
+        this.pianoRoll.setAttribute('colnotesel', '#606060');
 
-        // Appliquer les couleurs éclatantes
-        this.pianoRoll.setAttribute('colnote', noteColor);
-        // Version plus claire pour la sélection (ajoute de la luminosité)
-        this.pianoRoll.setAttribute('colnotesel', this.brightenColor(noteColor, 40));
-
-        // Forcer le redraw pour appliquer les nouvelles couleurs
-        if (typeof this.pianoRoll.redraw === 'function') {
-            // Petit délai pour s'assurer que les attributs sont bien appliqués
-            setTimeout(() => {
-                this.pianoRoll.redraw();
-                this.log('debug', `Piano roll colors updated and redrawn: ${noteColor}`);
-            }, 50);
-        }
+        this.log('debug', 'Piano roll base color set (will be overridden by per-channel colors)');
     }
 
     /**
@@ -850,7 +833,105 @@ class MidiEditorModal {
             }
         }, 1000);
 
+        // Activer le rendu coloré par canal
+        this.setupColoredNoteRendering();
+
         this.updateStats();
+    }
+
+    /**
+     * Configure le rendu des notes colorées par canal
+     * Intercepte le canvas de webaudio-pianoroll pour dessiner les notes avec les couleurs par canal
+     */
+    setupColoredNoteRendering() {
+        if (!this.pianoRoll) return;
+
+        try {
+            // Attendre un peu pour que le shadow DOM soit prêt
+            setTimeout(() => {
+                // Accéder au shadow root du web component
+                const shadowRoot = this.pianoRoll.shadowRoot;
+                if (!shadowRoot) {
+                    this.log('warn', 'Could not access piano roll shadow root');
+                    return;
+                }
+
+                // Trouver le canvas dans le shadow root
+                const canvas = shadowRoot.querySelector('canvas');
+                if (!canvas) {
+                    this.log('warn', 'Could not find canvas in piano roll');
+                    return;
+                }
+
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return;
+
+                // Sauvegarder la méthode originale de redraw
+                const originalRedraw = this.pianoRoll.redraw?.bind(this.pianoRoll);
+
+                // Remplacer la méthode redraw pour ajouter notre rendu coloré
+                this.pianoRoll.redraw = () => {
+                    // Appeler le redraw original
+                    if (originalRedraw) {
+                        originalRedraw();
+                    }
+
+                    // Attendre que le rendu original soit fait, puis appliquer nos couleurs
+                    setTimeout(() => {
+                        this.drawColoredNotes(canvas, ctx);
+                    }, 10);
+                };
+
+                // Forcer un premier redraw avec les couleurs
+                if (originalRedraw) {
+                    this.pianoRoll.redraw();
+                }
+
+                this.log('info', 'Colored note rendering enabled');
+            }, 200);
+        } catch (error) {
+            this.log('error', 'Failed to setup colored note rendering:', error);
+        }
+    }
+
+    /**
+     * Dessine les notes avec les couleurs par canal sur le canvas
+     */
+    drawColoredNotes(canvas, ctx) {
+        if (!this.pianoRoll || !this.pianoRoll.sequence) return;
+
+        try {
+            // Récupérer les propriétés du piano roll
+            const xrange = parseFloat(this.pianoRoll.getAttribute('xrange')) || 128;
+            const yrange = parseFloat(this.pianoRoll.getAttribute('yrange')) || 36;
+            const width = canvas.width;
+            const height = canvas.height;
+
+            // Dessiner chaque note avec sa couleur de canal
+            this.pianoRoll.sequence.forEach(note => {
+                if (!note) return;
+
+                const channel = note.c !== undefined ? note.c : 0;
+                const color = this.channelColors[channel % this.channelColors.length];
+
+                // Calculer les coordonnées de la note sur le canvas
+                const x = (note.t / xrange) * width;
+                const w = (note.g / xrange) * width;
+                const y = height - ((note.n / yrange) * height);
+                const h = height / yrange;
+
+                // Dessiner la note avec la couleur du canal
+                ctx.fillStyle = color;
+                ctx.fillRect(x, y - h, w, h);
+
+                // Ajouter une bordure légère pour la visibilité
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x, y - h, w, h);
+            });
+        } catch (error) {
+            this.log('error', 'Error drawing colored notes:', error);
+        }
     }
 
     /**
