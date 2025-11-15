@@ -26,12 +26,24 @@ class MidiEditorModal {
         this.activeChannels = new Set(); // Canaux actifs à afficher
         this.channels = []; // Informations sur les canaux disponibles
 
-        // Couleurs pour les 16 canaux MIDI
+        // Couleurs éclatantes pour les 16 canaux MIDI
         this.channelColors = [
-            '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A',
-            '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2',
-            '#F8B88B', '#FAD7A0', '#A9DFBF', '#D7BDE2',
-            '#AED6F1', '#F9E79F', '#FAB1A0', '#D5DBDB'
+            '#FF0066', // 1 - Rose/Magenta vif
+            '#00FFFF', // 2 - Cyan éclatant
+            '#FF00FF', // 3 - Magenta pur
+            '#FFFF00', // 4 - Jaune vif
+            '#00FF00', // 5 - Vert pur
+            '#FF6600', // 6 - Orange éclatant
+            '#9D00FF', // 7 - Violet vif
+            '#00FF99', // 8 - Vert menthe éclatant
+            '#FF0000', // 9 - Rouge pur
+            '#00BFFF', // 10 - Bleu ciel éclatant (Drums)
+            '#FFD700', // 11 - Or éclatant
+            '#FF1493', // 12 - Rose profond
+            '#00FFAA', // 13 - Turquoise éclatant
+            '#FF4500', // 14 - Orange-rouge vif
+            '#7FFF00', // 15 - Vert chartreuse
+            '#FF69B4'  // 16 - Rose chaud
         ];
 
         // Table des instruments General MIDI
@@ -344,27 +356,29 @@ class MidiEditorModal {
     updatePianoRollColor() {
         if (!this.pianoRoll) return;
 
-        let noteColor = '#4CAF50'; // Couleur par défaut
+        let noteColor = '#00FF00'; // Couleur par défaut éclatante (vert)
 
         if (this.activeChannels.size === 1) {
-            // Un seul canal actif : utiliser sa couleur
+            // Un seul canal actif : utiliser sa couleur éclatante
             const activeChannel = Array.from(this.activeChannels)[0];
             noteColor = this.channelColors[activeChannel % this.channelColors.length];
             this.log('info', `Piano roll color set to channel ${activeChannel}: ${noteColor}`);
         } else if (this.activeChannels.size > 1) {
-            // Plusieurs canaux : couleur neutre blanche/grise claire
-            noteColor = '#E0E0E0';
+            // Plusieurs canaux : couleur blanche éclatante pour contraste
+            noteColor = '#FFFFFF';
             this.log('info', `Piano roll color set to multi-channel: ${noteColor}`);
         }
 
+        // Appliquer les couleurs éclatantes
         this.pianoRoll.setAttribute('colnote', noteColor);
-        this.pianoRoll.setAttribute('colnotesel', this.lightenColor(noteColor, 30));
+        // Version plus claire pour la sélection (ajoute de la luminosité)
+        this.pianoRoll.setAttribute('colnotesel', this.brightenColor(noteColor, 40));
     }
 
     /**
-     * Éclaircir une couleur hexadécimale
+     * Éclaircir/éclairer une couleur hexadécimale pour la rendre plus éclatante
      */
-    lightenColor(color, percent) {
+    brightenColor(color, percent) {
         const num = parseInt(color.replace('#', ''), 16);
         const amt = Math.round(2.55 * percent);
         const R = Math.min(255, (num >> 16) + amt);
