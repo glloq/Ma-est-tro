@@ -881,8 +881,19 @@ class MidiEditorModal {
                 pr.redraw = function() {
                     if (!ctx) return;
 
+                    // Assurer que width/height sont définis (comme dans l'original)
+                    if (!pr.width) pr.width = canvas.width;
+                    if (!pr.height) pr.height = canvas.height;
+                    if (!pr.kbwidth) pr.kbwidth = 52;  // Largeur clavier par défaut
+                    if (!pr.yruler) pr.yruler = 24;    // Hauteur règle Y par défaut
+                    if (!pr.xruler) pr.xruler = 24;    // Hauteur règle X par défaut
+
+                    // Calculer swidth et sheight si nécessaire
+                    pr.swidth = pr.width - pr.kbwidth;
+                    pr.sheight = pr.height - pr.xruler;
+
                     // Effacer le canvas
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.clearRect(0, 0, pr.width, pr.height);
 
                     // Recalculer stepw et steph (IMPORTANT pour le zoom)
                     pr.stepw = pr.swidth / (parseFloat(pr.getAttribute('xrange')) || 128);
@@ -897,8 +908,10 @@ class MidiEditorModal {
                         ctx.fillRect(0, 0, canvas.width, canvas.height);
                     }
 
-                    // Dessiner les notes avec couleurs par canal (COPIE EXACTE de l'algorithme original)
+                    // Dessiner les notes avec couleurs par canal (COPIE EXACTE ligne par ligne de l'original)
                     const l = pr.sequence ? pr.sequence.length : 0;
+                    let x, w, y, x2, y2; // Variables comme dans l'original
+
                     for (let s = 0; s < l; ++s) {
                         const ev = pr.sequence[s];
                         if (!ev) continue;
@@ -907,37 +920,34 @@ class MidiEditorModal {
                         const channel = ev.c !== undefined ? ev.c : 0;
                         const channelColor = that.channelColors[channel % that.channelColors.length];
 
-                        // Couleur de remplissage : canal si non sélectionné, semi-transparent si sélectionné
-                        if (ev.f) {
-                            // Note sélectionnée : mixer avec blanc semi-transparent
-                            ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                        } else {
-                            // Note normale : couleur du canal
-                            ctx.fillStyle = channelColor;
-                        }
+                        // Couleur de remplissage selon sélection
+                        if (ev.f)
+                            ctx.fillStyle = pr.getAttribute('colnotesel') || 'rgba(255,255,255,0.3)';
+                        else
+                            ctx.fillStyle = channelColor; // COULEUR DU CANAL au lieu de colnote
 
-                        // Calculer les coordonnées (FORMULE EXACTE de l'original)
-                        const w = ev.g * pr.stepw;
-                        const x = (ev.t - pr.xoffset) * pr.stepw + pr.yruler + pr.kbwidth;
-                        const x2 = (x + w) | 0;
-                        const xInt = x | 0;
-                        const y = canvas.height - (ev.n - pr.yoffset) * pr.steph;
-                        const y2 = (y - pr.steph) | 0;
-                        const yInt = y | 0;
+                        // Calculer coordonnées - EXACTEMENT comme l'original ligne par ligne
+                        w = ev.g * pr.stepw;
+                        x = (ev.t - pr.xoffset) * pr.stepw + pr.yruler + pr.kbwidth;
+                        x2 = (x + w) | 0;  // Calculer x2 AVANT de modifier x
+                        x |= 0;             // Puis convertir x en int
+                        y = pr.height - (ev.n - pr.yoffset) * pr.steph;  // Utiliser pr.height, pas canvas.height
+                        y2 = (y - pr.steph) | 0;  // Calculer y2 AVANT de modifier y
+                        y |= 0;                    // Puis convertir y en int
 
-                        // Dessiner le remplissage
-                        ctx.fillRect(xInt, yInt, x2 - xInt, y2 - yInt);
+                        // Dessiner le remplissage - EXACTEMENT comme l'original
+                        ctx.fillRect(x, y, x2 - x, y2 - y);
 
-                        // Dessiner les bordures (4 rectangles comme l'original)
-                        if (ev.f) {
+                        // Dessiner les bordures - EXACTEMENT comme l'original
+                        if (ev.f)
                             ctx.fillStyle = pr.getAttribute('colnoteselborder') || '#fff';
-                        } else {
+                        else
                             ctx.fillStyle = pr.getAttribute('colnoteborder') || '#000';
-                        }
-                        ctx.fillRect(xInt, yInt, 1, y2 - yInt);           // Bordure gauche
-                        ctx.fillRect(x2, yInt, 1, y2 - yInt);             // Bordure droite
-                        ctx.fillRect(xInt, yInt, x2 - xInt, 1);           // Bordure haut
-                        ctx.fillRect(xInt, y2, x2 - xInt, 1);             // Bordure bas
+
+                        ctx.fillRect(x, y, 1, y2 - y);        // Bordure gauche
+                        ctx.fillRect(x2, y, 1, y2 - y);       // Bordure droite
+                        ctx.fillRect(x, y, x2 - x, 1);        // Bordure haut
+                        ctx.fillRect(x, y2, x2 - x, 1);       // Bordure bas
                     }
 
                     // Dessiner les overlays (utiliser les méthodes originales si disponibles)
