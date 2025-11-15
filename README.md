@@ -104,6 +104,22 @@ Or from another device on the network:
 http://<raspberry-pi-ip>:8080
 ```
 
+### Update from GitHub
+
+To pull the latest changes from GitHub and update your installation:
+
+```bash
+cd ~/Ma-est-tro
+./scripts/update.sh
+```
+
+The update script will:
+- ✅ Pull latest changes from GitHub
+- ✅ Update npm dependencies (if package.json changed)
+- ✅ Run database migrations (if needed)
+- ✅ Restart the server automatically
+- ✅ Verify the update was successful
+
 ---
 
 ## 📖 Usage
