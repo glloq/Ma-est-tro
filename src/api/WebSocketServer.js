@@ -2,18 +2,21 @@
 import { WebSocketServer as WSServer } from 'ws';
 
 class WebSocketServer {
-  constructor(app, port = 8080) {
+  constructor(app, httpServer) {
     this.app = app;
-    this.port = port;
+    this.httpServer = httpServer;
     this.wss = null;
     this.clients = new Set();
-    
+
     this.app.logger.info('WebSocketServer initialized');
   }
 
   start() {
-    this.wss = new WSServer({ port: this.port });
-    
+    // Attach WebSocket server to existing HTTP server
+    this.wss = new WSServer({
+      server: this.httpServer
+    });
+
     this.wss.on('connection', (ws, req) => {
       this.handleConnection(ws, req);
     });
@@ -22,7 +25,7 @@ class WebSocketServer {
       this.app.logger.error(`WebSocket server error: ${error.message}`);
     });
 
-    this.app.logger.info(`WebSocket server listening on port ${this.port}`);
+    this.app.logger.info(`WebSocket server attached to HTTP server`);
   }
 
   handleConnection(ws, req) {
