@@ -1,0 +1,476 @@
+/* ======================================================================================
+   THÈMES - MIDI ORCHESTRION
+   ======================================================================================
+   Thèmes clair et sombre pour l'application
+   ====================================================================================== */
+
+/* ===== VARIABLES CSS POUR LES THÈMES ===== */
+:root {
+    /* Thème clair (par défaut) */
+    --bg-primary: #f8f9fa;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #e9ecef;
+    
+    --text-primary: #2c3e50;
+    --text-secondary: #6c757d;
+    --text-muted: #adb5bd;
+    
+    --border-color: #e9ecef;
+    --border-light: #f1f3f4;
+    
+    --accent-primary: #667eea;
+    --accent-secondary: #764ba2;
+    --accent-gradient: linear-gradient(135deg, #667eea, #764ba2);
+    
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #17a2b8;
+    
+    --shadow-light: 0 2px 4px rgba(0,0,0,0.05);
+    --shadow-medium: 0 4px 20px rgba(0,0,0,0.08);
+    --shadow-heavy: 0 8px 30px rgba(0,0,0,0.12);
+}
+
+/* ===== THÈME SOMBRE ===== */
+body.dark-mode {
+    /* Variables pour le thème sombre */
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d3748;
+    --bg-tertiary: #4a5568;
+    
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0aec0;
+    --text-muted: #718096;
+    
+    --border-color: #4a5568;
+    --border-light: #2d3748;
+    
+    --shadow-light: 0 2px 4px rgba(0,0,0,0.3);
+    --shadow-medium: 0 4px 20px rgba(0,0,0,0.4);
+    --shadow-heavy: 0 8px 30px rgba(0,0,0,0.5);
+    
+    /* Application du thème sombre */
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+/* ===== OVERRIDE COMPLET POUR LE THÈME SOMBRE ===== */
+
+/* Header et navigation */
+body.dark-mode .header {
+    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+}
+
+body.dark-mode .nav-section {
+    background: var(--bg-secondary);
+    border-bottom-color: var(--border-color);
+}
+
+body.dark-mode .nav-link {
+    color: var(--text-secondary);
+}
+
+body.dark-mode .nav-link:hover {
+    color: var(--text-primary);
+    background: linear-gradient(135deg, rgba(102,126,234,0.2), rgba(118,75,162,0.2));
+}
+
+body.dark-mode .nav-link.active {
+    color: var(--accent-primary);
+    background: linear-gradient(135deg, rgba(102,126,234,0.25), rgba(118,75,162,0.25));
+}
+
+/* Cartes et composants */
+body.dark-mode .card,
+body.dark-mode .file-browser,
+body.dark-mode .file-details-panel,
+body.dark-mode .instruments-config,
+body.dark-mode .system-section {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+body.dark-mode .card-header {
+    border-bottom-color: var(--border-color);
+}
+
+/* Boutons */
+body.dark-mode .btn {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+body.dark-mode .btn:hover {
+    background: #718096;
+}
+
+body.dark-mode .btn-primary {
+    background: var(--accent-gradient);
+    border-color: transparent;
+    color: white;
+}
+
+body.dark-mode .btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+/* Formulaires */
+body.dark-mode .form-control {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+body.dark-mode .form-control:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.25);
+}
+
+body.dark-mode .form-label {
+    color: var(--text-secondary);
+}
+
+/* Page fichiers */
+body.dark-mode .file-item {
+    border-bottom-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+body.dark-mode .file-item:hover {
+    background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1));
+}
+
+body.dark-mode .file-item.selected {
+    background: linear-gradient(135deg, rgba(102,126,234,0.2), rgba(118,75,162,0.2));
+}
+
+body.dark-mode .file-name {
+    color: var(--text-primary);
+}
+
+body.dark-mode .file-meta {
+    color: var(--text-secondary);
+}
+
+body.dark-mode .file-browser-header {
+    background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+}
+
+body.dark-mode .file-upload-zone {
+    border-color: var(--accent-primary);
+    background: rgba(102,126,234,0.1);
+    color: var(--text-primary);
+}
+
+body.dark-mode .file-upload-zone:hover {
+    background: rgba(102,126,234,0.15);
+}
+
+body.dark-mode .upload-text {
+    color: var(--text-secondary);
+}
+
+/* Informations techniques */
+body.dark-mode .info-item {
+    background: var(--bg-tertiary);
+}
+
+body.dark-mode .info-label {
+    color: var(--text-secondary);
+}
+
+body.dark-mode .info-value {
+    color: var(--text-primary);
+}
+
+/* Piano roll et MIDI */
+body.dark-mode .piano-roll {
+    background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+    border-color: #444;
+}
+
+body.dark-mode .piano-roll-header {
+    background: var(--bg-tertiary);
+    border-bottom-color: var(--border-color);
+}
+
+body.dark-mode .visualizer-controls {
+    background: var(--bg-tertiary);
+    border-top-color: var(--border-color);
+}
+
+body.dark-mode .mode-btn {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+body.dark-mode .mode-btn:hover:not(.active) {
+    background: #718096;
+}
+
+/* Assignations d'instruments */
+body.dark-mode .instrument-assignment {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .channel-name {
+    color: var(--text-primary);
+}
+
+/* Clavier virtuel */
+body.dark-mode .keyboard-container {
+    background: linear-gradient(135deg, #1a1a1a, #2d3748);
+}
+
+body.dark-mode .octave-btn {
+    border-color: rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.1);
+}
+
+body.dark-mode .octave-btn:hover {
+    background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.4);
+}
+
+/* Notifications */
+body.dark-mode .notification {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-heavy);
+}
+
+body.dark-mode .notification-title {
+    color: var(--text-primary);
+}
+
+body.dark-mode .notification-message {
+    color: var(--text-secondary);
+}
+
+/* Modales */
+body.dark-mode .modal {
+    background-color: rgba(0,0,0,0.7);
+}
+
+body.dark-mode .modal-content {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+body.dark-mode .modal-header {
+    border-bottom-color: var(--border-color);
+}
+
+body.dark-mode .modal-title {
+    color: var(--text-primary);
+}
+
+body.dark-mode .close {
+    color: var(--text-secondary);
+}
+
+body.dark-mode .close:hover {
+    color: var(--text-primary);
+}
+
+/* Console de debug */
+body.dark-mode .debug-console {
+    background: #000;
+    border-top-color: #333;
+}
+
+body.dark-mode .debug-console-header {
+    background: #111;
+    border-bottom-color: #333;
+}
+
+body.dark-mode .debug-controls {
+    background: #111;
+    border-top-color: #333;
+}
+
+/* Onglets */
+body.dark-mode .tab-nav {
+    border-bottom-color: var(--border-color);
+}
+
+body.dark-mode .tab-btn {
+    color: var(--text-secondary);
+}
+
+body.dark-mode .tab-btn.active {
+    color: var(--accent-primary);
+    background: linear-gradient(135deg, rgba(102,126,234,0.2), rgba(118,75,162,0.2));
+}
+
+body.dark-mode .tab-btn:hover:not(.active) {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+/* Onglets miniatures */
+body.dark-mode .thumbnail-tabs {
+    border-bottom-color: var(--border-color);
+}
+
+body.dark-mode .thumbnail-tab-btn {
+    color: var(--text-secondary);
+}
+
+body.dark-mode .thumbnail-tab-btn:hover:not(.active) {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+/* Timeline */
+body.dark-mode .timeline-canvas {
+    border-color: var(--border-color);
+    background: linear-gradient(to bottom, var(--bg-secondary), var(--bg-tertiary));
+}
+
+/* Pistes */
+body.dark-mode .track-item {
+    background: var(--bg-secondary);
+    border-color: transparent;
+}
+
+body.dark-mode .track-item:hover {
+    border-color: var(--border-color);
+}
+
+body.dark-mode .track-name {
+    color: var(--text-primary);
+}
+
+body.dark-mode .track-details {
+    color: var(--text-secondary);
+}
+
+/* Miniatures */
+body.dark-mode .thumbnail-view {
+    background: var(--bg-tertiary);
+}
+
+body.dark-mode .thumbnail-view.active {
+    background: var(--bg-secondary);
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .waveform-thumbnail {
+    background: var(--bg-tertiary);
+}
+
+/* Page d'accueil */
+body.dark-mode .welcome-title {
+    color: var(--text-primary);
+}
+
+body.dark-mode .welcome-subtitle {
+    color: var(--text-secondary);
+}
+
+body.dark-mode .feature-card {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .feature-title {
+    color: var(--text-primary);
+}
+
+body.dark-mode .feature-description {
+    color: var(--text-secondary);
+}
+
+/* Configuration système */
+body.dark-mode .setting-item {
+    border-bottom-color: var(--border-color);
+}
+
+body.dark-mode .setting-label {
+    color: var(--text-primary);
+}
+
+body.dark-mode .setting-description {
+    color: var(--text-secondary);
+}
+
+body.dark-mode .compact-toggle {
+    background: var(--bg-tertiary);
+}
+
+body.dark-mode .compact-toggle.active {
+    background: var(--accent-primary);
+}
+
+/* Checkboxes personnalisées */
+body.dark-mode .checkmark {
+    background-color: var(--bg-tertiary);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .custom-checkbox:hover input ~ .checkmark {
+    background-color: var(--bg-tertiary);
+}
+
+/* Progress bars */
+body.dark-mode .progress {
+    background-color: var(--bg-tertiary);
+}
+
+/* Badges */
+body.dark-mode .badge-primary {
+    background: var(--accent-primary);
+}
+
+/* Scrollbars pour le thème sombre */
+body.dark-mode ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+body.dark-mode ::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb {
+    background: #718096;
+    border-radius: 4px;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}
+
+/* ===== TRANSITION SMOOTH ENTRE THÈMES ===== */
+* {
+    transition: background-color 0.3s ease, 
+                border-color 0.3s ease, 
+                color 0.3s ease,
+                box-shadow 0.3s ease;
+}
+
+/* Désactiver les transitions lors du changement de thème */
+body.theme-changing * {
+    transition: none !important;
+}
+
+/* ===== MEDIA QUERIES POUR LES PRÉFÉRENCES SYSTÈME ===== */
+@media (prefers-color-scheme: dark) {
+    /* Auto-détection du thème sombre si pas de préférence définie */
+    body:not([data-theme]) {
+        --bg-primary: #1a1a1a;
+        --bg-secondary: #2d3748;
+        --bg-tertiary: #4a5568;
+        --text-primary: #e0e0e0;
+        --text-secondary: #a0aec0;
+        --text-muted: #718096;
+        --border-color: #4a5568;
+        --border-light: #2d3748;
+    }
+}

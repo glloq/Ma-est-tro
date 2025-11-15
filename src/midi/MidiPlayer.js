@@ -1,0 +1,380 @@
+// src/midi/MidiPlayer.js
+import { parseMidi } from 'midi-file';
+
+class MidiPlayer {
+  constructor(app) {
+    this.app = app;
+    this.playing = false;
+    this.paused = false;
+    this.position = 0; // seconds
+    this.duration = 0; // seconds
+    this.tempo = 120; // BPM
+    this.ppq = 480; // Pulses per quarter note
+    this.tracks = [];
+    this.events = [];
+    this.currentEventIndex = 0;
+    this.scheduler = null;
+    this.startTime = 0;
+    this.pauseTime = 0;
+    this.outputDevice = null;
+    this.loop = false;
+    
+    this.app.logger.info('MidiPlayer initialized');
+  }
+
+  async loadFile(fileId) {
+    try {
+      const file = this.app.database.getFile(fileId);
+      if (!file) {
+        throw new Error(`File not found: ${fileId}`);
+      }
+
+      const buffer = Buffer.from(file.data, 'base64');
+      const midi = parseMidi(buffer);
+
+      this.ppq = midi.header.ticksPerBeat || 480;
+      this.parseTracks(midi);
+      this.extractTempo(midi);
+      this.buildEventList();
+      this.calculateDuration();
+
+      this.app.logger.info(`File loaded: ${file.filename} (${this.events.length} events, ${this.duration.toFixed(2)}s)`);
+      
+      return {
+        filename: file.filename,
+        duration: this.duration,
+        tracks: this.tracks.length,
+        events: this.events.length,
+        tempo: this.tempo
+      };
+    } catch (error) {
+      this.app.logger.error(`Failed to load file: ${error.message}`);
+      throw error;
+    }
+  }
+
+  parseTracks(midi) {
+    this.tracks = midi.tracks.map((track, index) => {
+      return {
+        index: index,
+        events: track,
+        name: this.extractTrackName(track)
+      };
+    });
+  }
+
+  extractTrackName(track) {
+    const nameEvent = track.find(e => e.type === 'trackName');
+    return nameEvent ? nameEvent.text : 'Unnamed Track';
+  }
+
+  extractTempo(midi) {
+    // Find first tempo event
+    for (const track of midi.tracks) {
+      const tempoEvent = track.find(e => e.type === 'setTempo');
+      if (tempoEvent) {
+        this.tempo = 60000000 / tempoEvent.microsecondsPerBeat;
+        return;
+      }
+    }
+    this.tempo = 120; // Default tempo
+  }
+
+  buildEventList() {
+    this.events = [];
+    let absoluteTime = 0;
+
+    // Combine all tracks into single event list
+    this.tracks.forEach(track => {
+      let trackTime = 0;
+      track.events.forEach(event => {
+        trackTime += event.deltaTime;
+        
+        // Convert ticks to seconds
+        const timeInSeconds = this.ticksToSeconds(trackTime);
+
+        // Only include note events and CC for now
+        if (event.type === 'noteOn' || event.type === 'noteOff' || event.type === 'controller') {
+          this.events.push({
+            time: timeInSeconds,
+            type: event.type,
+            channel: event.channel,
+            note: event.noteNumber,
+            velocity: event.velocity,
+            controller: event.controllerType,
+            value: event.value
+          });
+        }
+      });
+    });
+
+    // Sort events by time
+    this.events.sort((a, b) => a.time - b.time);
+  }
+
+  ticksToSeconds(ticks) {
+    const beatsPerSecond = this.tempo / 60;
+    const ticksPerSecond = beatsPerSecond * this.ppq;
+    return ticks / ticksPerSecond;
+  }
+
+  calculateDuration() {
+    if (this.events.length === 0) {
+      this.duration = 0;
+    } else {
+      this.duration = this.events[this.events.length - 1].time;
+    }
+  }
+
+  start(outputDevice) {
+    if (this.playing) {
+      this.app.logger.warn('Player already playing');
+      return;
+    }
+
+    if (!outputDevice) {
+      throw new Error('Output device required');
+    }
+
+    this.outputDevice = outputDevice;
+    this.playing = true;
+    this.paused = false;
+    this.position = 0;
+    this.currentEventIndex = 0;
+    this.startTime = Date.now();
+
+    this.startScheduler();
+    this.broadcastStatus();
+    
+    this.app.logger.info(`Playback started on ${outputDevice}`);
+  }
+
+  pause() {
+    if (!this.playing || this.paused) {
+      return;
+    }
+
+    this.paused = true;
+    this.pauseTime = Date.now();
+    this.stopScheduler();
+    this.broadcastStatus();
+    
+    this.app.logger.info('Playback paused');
+  }
+
+  resume() {
+    if (!this.playing || !this.paused) {
+      return;
+    }
+
+    this.paused = false;
+    const pauseDuration = Date.now() - this.pauseTime;
+    this.startTime += pauseDuration;
+    this.startScheduler();
+    this.broadcastStatus();
+    
+    this.app.logger.info('Playback resumed');
+  }
+
+  stop() {
+    if (!this.playing) {
+      return;
+    }
+
+    this.playing = false;
+    this.paused = false;
+    this.position = 0;
+    this.currentEventIndex = 0;
+    this.stopScheduler();
+    
+    // Send all notes off
+    this.sendAllNotesOff();
+    
+    this.broadcastStatus();
+    this.app.logger.info('Playback stopped');
+  }
+
+  seek(position) {
+    const wasPlaying = this.playing;
+    
+    if (this.playing) {
+      this.stop();
+    }
+
+    this.position = Math.max(0, Math.min(position, this.duration));
+    this.currentEventIndex = this.findEventIndexAtTime(this.position);
+
+    if (wasPlaying) {
+      this.start(this.outputDevice);
+    }
+
+    this.broadcastPosition();
+  }
+
+  findEventIndexAtTime(time) {
+    for (let i = 0; i < this.events.length; i++) {
+      if (this.events[i].time >= time) {
+        return i;
+      }
+    }
+    return this.events.length;
+  }
+
+  startScheduler() {
+    this.scheduler = setInterval(() => {
+      this.tick();
+    }, 10); // 10ms tick rate
+  }
+
+  stopScheduler() {
+    if (this.scheduler) {
+      clearInterval(this.scheduler);
+      this.scheduler = null;
+    }
+  }
+
+  tick() {
+    if (!this.playing || this.paused) {
+      return;
+    }
+
+    // Update position
+    const elapsed = (Date.now() - this.startTime) / 1000;
+    this.position = elapsed;
+
+    // Check if reached end
+    if (this.position >= this.duration) {
+      if (this.loop) {
+        this.seek(0);
+      } else {
+        this.stop();
+      }
+      return;
+    }
+
+    // Process events
+    const lookAhead = 0.1; // 100ms look-ahead
+    const targetTime = this.position + lookAhead;
+
+    while (this.currentEventIndex < this.events.length) {
+      const event = this.events[this.currentEventIndex];
+      
+      if (event.time > targetTime) {
+        break;
+      }
+
+      this.scheduleEvent(event);
+      this.currentEventIndex++;
+    }
+
+    // Broadcast position update (every 100ms)
+    if (Math.floor(this.position * 10) % 1 === 0) {
+      this.broadcastPosition();
+    }
+  }
+
+  scheduleEvent(event) {
+    const eventTime = event.time;
+    const currentTime = this.position;
+    const delay = Math.max(0, eventTime - currentTime);
+
+    // Get latency compensation
+    const latency = this.app.latencyCompensator 
+      ? this.app.latencyCompensator.getLatency(this.outputDevice) 
+      : 0;
+
+    const adjustedDelay = Math.max(0, delay - (latency / 1000));
+
+    setTimeout(() => {
+      this.sendEvent(event);
+    }, adjustedDelay * 1000);
+  }
+
+  sendEvent(event) {
+    if (!this.playing) {
+      return;
+    }
+
+    const device = this.app.deviceManager;
+    
+    if (event.type === 'noteOn') {
+      device.sendMessage(this.outputDevice, 'noteon', {
+        channel: event.channel,
+        note: event.note,
+        velocity: event.velocity
+      });
+    } else if (event.type === 'noteOff') {
+      device.sendMessage(this.outputDevice, 'noteoff', {
+        channel: event.channel,
+        note: event.note,
+        velocity: event.velocity
+      });
+    } else if (event.type === 'controller') {
+      device.sendMessage(this.outputDevice, 'cc', {
+        channel: event.channel,
+        controller: event.controller,
+        value: event.value
+      });
+    }
+  }
+
+  sendAllNotesOff() {
+    if (!this.outputDevice) {
+      return;
+    }
+
+    const device = this.app.deviceManager;
+    
+    // Send All Notes Off (CC 123) on all channels
+    for (let channel = 0; channel < 16; channel++) {
+      device.sendMessage(this.outputDevice, 'cc', {
+        channel: channel,
+        controller: 123,
+        value: 0
+      });
+    }
+  }
+
+  setLoop(enabled) {
+    this.loop = enabled;
+    this.app.logger.info(`Loop ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  broadcastStatus() {
+    if (this.app.wsServer) {
+      this.app.wsServer.broadcast('playback_status', {
+        playing: this.playing,
+        paused: this.paused,
+        position: this.position,
+        duration: this.duration,
+        percentage: this.duration > 0 ? (this.position / this.duration) * 100 : 0,
+        loop: this.loop
+      });
+    }
+  }
+
+  broadcastPosition() {
+    if (this.app.wsServer) {
+      this.app.wsServer.broadcast('playback_position', {
+        position: this.position,
+        percentage: this.duration > 0 ? (this.position / this.duration) * 100 : 0
+      });
+    }
+  }
+
+  getStatus() {
+    return {
+      playing: this.playing,
+      paused: this.paused,
+      position: this.position,
+      duration: this.duration,
+      percentage: this.duration > 0 ? (this.position / this.duration) * 100 : 0,
+      outputDevice: this.outputDevice,
+      loop: this.loop,
+      tempo: this.tempo,
+      events: this.events.length
+    };
+  }
+}
+
+export default MidiPlayer;

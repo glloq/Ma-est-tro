@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIDI Mind - v3.1</title>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/components.css">
+    <link rel="stylesheet" href="styles/pages.css">
+    <link rel="stylesheet" href="styles/home.css">
+    <link rel="stylesheet" href="styles/instruments.css">
+    <link rel="stylesheet" href="styles/keyboard.css">
+    <link rel="stylesheet" href="styles/midi.css">
+    <link rel="stylesheet" href="styles/editor.css">
+    <link rel="stylesheet" href="styles/routing.css">
+    <link rel="stylesheet" href="styles/visualizer.css">
+    <link rel="stylesheet" href="styles/playlist.css">
+    <link rel="stylesheet" href="styles/fileview-extended.css">
+    <link rel="stylesheet" href="styles/themes.css">
+</head>
+<body>
+    <div id="app" style="display: none;">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="header-logo">
+                    <div class="logo-icon">🎹</div>
+                    <div class="logo-text">
+                        <span class="logo-title">MIDI Mind</span>
+                        <span class="logo-version">v3.1</span>
+                    </div>
+                </div>
+                <div class="global-playback-bar">
+                    <div class="playback-info">
+                        <span class="current-file-name" id="globalFileName">Aucun fichier</span>
+                        <span class="current-time" id="globalTime">00:00</span>
+                        <span class="separator">/</span>
+                        <span class="total-time" id="globalDuration">00:00</span>
+                    </div>
+                    <div class="playback-controls">
+                        <button class="control-btn btn-play" id="globalPlay" title="Lecture">▶</button>
+                        <button class="control-btn btn-pause" id="globalPause" title="Pause" style="display: none;">⏸</button>
+                        <button class="control-btn btn-stop" id="globalStop" title="Stop">⏹</button>
+                    </div>
+                    <div class="playback-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="globalProgress"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-debug">
+                    <button class="btn-debug" id="btnToggleDebug" title="Debug">🐞</button>
+                    <div class="connection-status" id="connectionStatus">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Déconnecté</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="main-nav">
+            <a href="#home" class="nav-item active" data-page="home">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">Home</span>
+            </a>
+            <a href="#files" class="nav-item" data-page="files">
+                <span class="nav-icon">📁</span>
+                <span class="nav-label">Fichiers</span>
+            </a>
+            <a href="#instruments" class="nav-item" data-page="instruments">
+                <span class="nav-icon">🎸</span>
+                <span class="nav-label">Instruments</span>
+            </a>
+            <a href="#keyboard" class="nav-item" data-page="keyboard">
+                <span class="nav-icon">🎹</span>
+                <span class="nav-label">Keyboard</span>
+            </a>
+            <a href="#system" class="nav-item" data-page="system">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Système</span>
+            </a>
+        </nav>
+
+        <!-- Debug Console -->
+        <div class="debug-console" id="debugConsole" style="display: none;">
+            <div class="debug-header">
+                <span class="debug-title">🐞 Console de Debug</span>
+                <button class="btn-close-debug" id="btnCloseDebug">×</button>
+            </div>
+            <div class="debug-content" id="debugContent"></div>
+            <div class="debug-controls">
+                <button class="btn-clear-logs" id="btnClearLogs">Effacer</button>
+                <select class="log-level-select" id="logLevelSelect">
+                    <option value="all">Tous</option>
+                    <option value="error">Erreurs</option>
+                    <option value="warn">Avertissements</option>
+                    <option value="info" selected>Info</option>
+                    <option value="debug">Debug</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- PAGE HOME -->
+            <div id="home" class="page active">
+                <div id="home-view">
+                    <!-- Généré par HomeView -->
+                </div>
+            </div>
+            
+            <!-- PAGE FILES -->
+            <div id="files" class="page">
+                <div id="file-view">
+                    <!-- Généré par FileView -->
+                </div>
+            </div>
+            
+            <!-- PAGE INSTRUMENTS -->
+            <div id="instruments" class="page">
+                <div id="instrument-view">
+                    <!-- Généré par InstrumentView -->
+                </div>
+            </div>
+            
+            <!-- PAGE KEYBOARD -->
+            <div id="keyboard" class="page">
+                <div id="keyboard-view">
+                    <!-- Généré par KeyboardView -->
+                </div>
+            </div>
+            
+            <!-- PAGE SYSTEM -->
+            <div id="system" class="page">
+                <div id="system-view">
+                    <!-- Généré par SystemView -->
+                </div>
+            </div>
+            
+            <!-- PAGE EDITOR (Modal) -->
+            <div id="editor" class="page page-fullscreen" style="display: none;">
+                <div id="editor-view">
+                    <!-- Généré par EditorView -->
+                </div>
+            </div>
+            
+            <!-- PAGE ROUTING (Modal) -->
+            <div id="routing" class="page page-modal" style="display: none;">
+                <div id="routing-view">
+                    <!-- Généré par RoutingView -->
+                </div>
+            </div>
+            
+            <!-- PAGE PLAYLIST (Modal) -->
+            <div id="playlist" class="page page-modal" style="display: none;">
+                <div id="playlist-view">
+                    <!-- Généré par PlaylistView -->
+                </div>
+            </div>
+            
+            <!-- VISUALIZER (peut être intégré dans d'autres pages) -->
+            <div id="visualizer-view" style="display: none;">
+                <!-- Généré par VisualizerView -->
+            </div>
+        </main>
+
+        <!-- Modal Overlay -->
+        <div id="modal-overlay" class="modal-overlay" style="display: none;">
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading-indicator" class="loading-indicator">
+        <div class="spinner"></div>
+        <p>Chargement de MIDI Mind...</p>
+    </div>
+
+    <!-- Scripts - Ordre CRITIQUE ✅ CORRIGÉ Phase 1 -->
+    <!-- Config -->
+    <script src="js/config/AppConfig.js"></script>
+    <script src="js/config/PerformanceConfig.js"></script>
+
+    <!-- ✅ EventBus EN PREMIER! (CRITIQUE) -->
+    <script src="js/core/EventBus.js"></script>
+
+    <!-- Utils (après EventBus) -->
+    <script src="js/utils/Logger.js"></script>
+    <script src="js/utils/DebugConsole.js"></script>
+    <script src="js/utils/Constants.js"></script>
+    <script src="js/utils/MidiConstants.js"></script>
+    <script src="js/utils/Formatter.js"></script>
+    <script src="js/utils/Validator.js"></script>
+    <script src="js/utils/MidiUtils.js"></script>
+    <script src="js/utils/Notifications.js"></script>
+    <script src="js/utils/MidiParser.js"></script>
+    <script src="js/utils/KeyboardShortcuts.js"></script>
+    <script src="js/utils/ApiClient.js"></script>
+    <script src="js/utils/RoutingManager.js"></script>
+    <script src="js/utils/MetronomeEngine.js"></script>
+
+    <!-- UI -->
+    <script src="js/ui/NotificationManager.js"></script>
+
+    <!-- Monitoring -->
+    <script src="js/monitoring/PerformanceMonitor.js"></script>
+
+    <!-- Core Utils -->
+    <script src="js/core/MidiJsonConverter.js"></script>
+
+    <!-- Audio -->
+    <script src="js/audio/Metronome.js"></script>
+
+    <!-- Services -->
+    <script src="js/services/StorageService.js"></script>
+    <script src="js/services/FileService.js"></script>
+    <script src="js/services/MidiService.js"></script>
+    <script src="js/services/BackendService.js"></script>
+
+    <!-- Base Classes -->
+    <script src="js/core/BaseModel.js"></script>
+    <script src="js/core/BaseView.js"></script>
+    <script src="js/core/BaseController.js"></script>
+
+    <!-- Models -->
+    <script src="js/models/StateModel.js"></script>
+    <script src="js/models/FileModel.js"></script>
+    <script src="js/models/InstrumentModel.js"></script>
+    <script src="js/models/EditorModel.js"></script>
+    <script src="js/models/RoutingModel.js"></script>
+    <script src="js/models/SystemModel.js"></script>
+    <script src="js/models/PlaybackModel.js"></script>
+    <script src="js/models/PlaylistModel.js"></script>
+
+    <!-- Views -->
+    <script src="js/views/HomeView.js"></script>
+    <script src="js/views/FileView.js"></script>
+    <script src="js/views/InstrumentView.js"></script>
+    <script src="js/views/KeyboardView.js"></script>
+    <script src="js/views/SystemView.js"></script>
+    <script src="js/views/EditorView.js"></script>
+    <script src="js/views/RoutingView.js"></script>
+    <script src="js/views/PlaylistView.js"></script>
+    <script src="js/views/VisualizerView.js"></script>
+
+    <!-- Controllers -->
+    <script src="js/controllers/NavigationController.js"></script>
+    <script src="js/controllers/HomeController.js"></script>
+    <script src="js/controllers/FileController.js"></script>
+    <script src="js/controllers/InstrumentController.js"></script>
+    <script src="js/controllers/KeyboardController.js"></script>
+    <script src="js/controllers/SystemController.js"></script>
+    <script src="js/controllers/EditorController.js"></script>
+    <script src="js/controllers/RoutingController.js"></script>
+    <script src="js/controllers/PlaybackController.js"></script>
+    <script src="js/controllers/GlobalPlaybackController.js"></script>
+    <script src="js/controllers/PlaylistController.js"></script>
+    <script src="js/controllers/VisualizerController.js"></script>
+
+    <!-- Application -->
+    <script src="js/core/Application.js"></script>
+    <script src="js/core/Router.js"></script>
+
+    <!-- Init -->
+    <script src="js/main.js"></script>
+</body>
+</html>

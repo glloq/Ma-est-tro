@@ -1,0 +1,33 @@
+{
+  "server": {
+    "port": 8080,
+    "wsPort": 8080,
+    "staticPath": "./public"
+  },
+  "midi": {
+    "bufferSize": 1024,
+    "sampleRate": 44100,
+    "defaultLatency": 10
+  },
+  "database": {
+    "path": "./data/midimind.db"
+  },
+  "logging": {
+    "level": "info",
+    "file": "./logs/midimind.log",
+    "console": true
+  },
+  "playback": {
+    "defaultTempo": 120,
+    "defaultVolume": 100,
+    "lookahead": 100
+  },
+  "latency": {
+    "defaultIterations": 5,
+    "recalibrationDays": 7
+  },
+  "ble": {
+    "enabled": false,
+    "scanDuration": 10000
+  }
+}

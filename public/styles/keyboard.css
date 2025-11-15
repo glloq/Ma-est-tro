@@ -1,0 +1,266 @@
+/* ============================================================================
+   Fichier: frontend/styles/keyboard-styles.css (à ajouter à components.css)
+   Version: v3.1.0 - KEYBOARD MONITOR MODE
+   Date: 2025-10-16
+   ============================================================================
+   Styles pour le clavier MIDI (mode monitor)
+   ============================================================================ */
+
+/* ============================================================================
+   KEYBOARD PAGE
+   ============================================================================ */
+
+.keyboard-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+    height: 100%;
+    padding: var(--spacing-lg);
+}
+
+/* ============================================================================
+   CONTROLS
+   ============================================================================ */
+
+.keyboard-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+    background: var(--bg-medium);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.control-group label {
+    color: var(--text-secondary);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.instrument-select,
+.velocity-slider {
+    width: 100%;
+}
+
+.note-range-display {
+    background: var(--bg-light);
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius);
+    text-align: center;
+}
+
+.note-range-value {
+    color: var(--color-primary);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Velocity Control */
+.velocity-presets {
+    display: flex;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-xs);
+}
+
+.btn-preset {
+    flex: 1;
+    padding: var(--spacing-xs);
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-preset:hover {
+    background: var(--color-primary);
+    color: var(--bg-dark);
+}
+
+body.performance-mode .btn-preset:hover {
+    transition: none;
+}
+
+/* Actions */
+.control-group.actions {
+    flex-direction: row;
+    gap: var(--spacing-sm);
+}
+
+/* ============================================================================
+   CANVAS KEYBOARD
+   ============================================================================ */
+
+.keyboard-canvas-wrapper {
+    background: var(--bg-medium);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.keyboard-canvas {
+    display: block;
+    cursor: pointer;
+    min-width: 100%;
+}
+
+/* ============================================================================
+   LEGEND
+   ============================================================================ */
+
+.keyboard-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--bg-medium);
+    border-radius: var(--border-radius);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+
+.legend-item span {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+/* ============================================================================
+   KEYBOARD MAPPING INFO
+   ============================================================================ */
+
+.keyboard-mapping-info {
+    background: var(--bg-medium);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+}
+
+.keyboard-mapping-info h4 {
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+    font-size: 14px;
+}
+
+.keyboard-mapping-info p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-sm);
+    font-size: 13px;
+}
+
+.key-hints {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+}
+
+.key-hints kbd {
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--color-primary);
+}
+
+/* ============================================================================
+   STATS
+   ============================================================================ */
+
+.keyboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.stat-item {
+    background: var(--bg-medium);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-size: 12px;
+    text-transform: uppercase;
+    margin-bottom: var(--spacing-xs);
+}
+
+.stat-value {
+    color: var(--color-primary);
+    font-size: 24px;
+    font-weight: 600;
+}
+
+/* ============================================================================
+   WARNING BANNER (enregistrement désactivé)
+   ============================================================================ */
+
+.info-banner.warning {
+    background: rgba(255, 217, 61, 0.1);
+    border-left-color: var(--color-accent);
+}
+
+/* ============================================================================
+   RESPONSIVE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .keyboard-controls {
+        grid-template-columns: 1fr;
+    }
+    
+    .control-group.actions {
+        flex-direction: column;
+    }
+    
+    .keyboard-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================================================
+   ACCESSIBILITY
+   ============================================================================ */
+
+.keyboard-canvas:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 4px;
+}
+
+/* ============================================================================
+   PERFORMANCE MODE
+   ============================================================================ */
+
+body.performance-mode .keyboard-canvas,
+body.performance-mode .btn-preset {
+    transition: none !important;
+}

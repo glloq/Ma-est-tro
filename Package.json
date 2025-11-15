@@ -1,0 +1,44 @@
+{
+  "name": "midimind",
+  "version": "5.0.0",
+  "description": "MIDI orchestration system for Raspberry Pi",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "migrate": "node scripts/migrate-db.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop midimind",
+    "pm2:restart": "pm2 restart midimind",
+    "pm2:logs": "pm2 logs midimind",
+    "pm2:status": "pm2 status"
+  },
+  "keywords": [
+    "midi",
+    "music",
+    "raspberry-pi",
+    "orchestration"
+  ],
+  "author": "MidiMind Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.14.2",
+    "easymidi": "^2.0.1",
+    "better-sqlite3": "^9.2.2",
+    "midi-file": "^1.2.4",
+    "@abandonware/noble": "^1.9.2-15",
+    "node-schedule": "^2.1.1",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "eslint": "^8.55.0",
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

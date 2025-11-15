@@ -1,0 +1,351 @@
+/* ============================================================================
+   Fichier: frontend/styles/modal-playlist.css
+   Version: v1.0.0
+   Date: 2025-10-10
+   ============================================================================
+   Styles pour l'éditeur de playlists dans les modales
+   ============================================================================ */
+
+/* Conteneur éditeur playlist */
+.playlist-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-height: 70vh;
+}
+
+/* Header formulaire */
+.playlist-editor .playlist-header {
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.playlist-editor .form-group {
+    margin-bottom: 15px;
+}
+
+.playlist-editor .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.95rem;
+}
+
+.playlist-editor .form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+}
+
+.playlist-editor .form-control:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.playlist-editor textarea.form-control {
+    resize: vertical;
+    min-height: 60px;
+    font-family: inherit;
+}
+
+/* Contenu principal - 2 colonnes */
+.playlist-editor .playlist-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    flex: 1;
+    overflow: hidden;
+}
+
+.playlist-editor .available-files,
+.playlist-editor .playlist-files {
+    display: flex;
+    flex-direction: column;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    background: #f8f9fa;
+    overflow: hidden;
+}
+
+.playlist-editor h5 {
+    margin: 0;
+    padding: 12px 15px;
+    background: white;
+    border-bottom: 2px solid #dee2e6;
+    font-size: 1rem;
+    color: #2c3e50;
+}
+
+/* Barre de recherche */
+.file-search-box {
+    padding: 10px;
+    border-bottom: 1px solid #dee2e6;
+    background: white;
+}
+
+.file-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.file-search-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+/* Listes de fichiers */
+.available-files-list,
+.playlist-files-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+/* Items fichiers */
+.modal-file-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+}
+
+.modal-file-item:hover {
+    background: #f8f9fa;
+    border-color: #667eea;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.1);
+}
+
+.modal-file-item.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+}
+
+/* Icon fichier disponible */
+.file-item-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+/* Drag handle */
+.file-drag-handle {
+    cursor: grab;
+    color: #adb5bd;
+    font-weight: bold;
+    font-size: 1.2rem;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.file-drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Numéro fichier playlist */
+.file-item-number {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #667eea;
+    color: white;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+/* Info fichier */
+.file-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-item-name {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.9rem;
+}
+
+.file-item-meta {
+    display: flex;
+    gap: 10px;
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.file-item-duration {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* Boutons actions */
+.btn-add-file,
+.btn-remove-file {
+    padding: 6px 10px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 1.1rem;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-add-file:hover {
+    background: #d4edda;
+    transform: scale(1.1);
+}
+
+.btn-remove-file:hover {
+    background: #f8d7da;
+    transform: scale(1.1);
+}
+
+/* Empty states */
+.empty-file-list,
+.empty-playlist-editor {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+    color: #6c757d;
+}
+
+.empty-playlist-editor .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+}
+
+.empty-file-list p,
+.empty-playlist-editor p {
+    margin: 5px 0;
+    font-weight: 500;
+}
+
+.empty-playlist-editor small {
+    font-size: 0.85rem;
+    color: #adb5bd;
+}
+
+/* Statistiques playlist */
+.playlist-editor-stats {
+    padding: 10px;
+    background: white;
+    border-top: 1px solid #dee2e6;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #495057;
+    font-weight: 600;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+/* Actions modale */
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 20px;
+    border-top: 2px solid #e9ecef;
+}
+
+.modal-actions .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+}
+
+.modal-actions .btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.modal-actions .btn-primary:hover {
+    background: #5568d3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+.modal-actions .btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.modal-actions .btn-secondary:hover {
+    background: #5a6268;
+}
+
+/* Scrollbar custom */
+.available-files-list::-webkit-scrollbar,
+.playlist-files-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.available-files-list::-webkit-scrollbar-track,
+.playlist-files-list::-webkit-scrollbar-track {
+    background: #f1f3f5;
+    border-radius: 4px;
+}
+
+.available-files-list::-webkit-scrollbar-thumb,
+.playlist-files-list::-webkit-scrollbar-thumb {
+    background: #adb5bd;
+    border-radius: 4px;
+}
+
+.available-files-list::-webkit-scrollbar-thumb:hover,
+.playlist-files-list::-webkit-scrollbar-thumb:hover {
+    background: #868e96;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .playlist-editor .playlist-content {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .playlist-editor .available-files,
+    .playlist-editor .playlist-files {
+        max-height: 300px;
+    }
+}
+
+@media (max-width: 768px) {
+    .playlist-editor {
+        max-height: none;
+    }
+    
+    .modal-actions {
+        flex-direction: column;
+    }
+    
+    .modal-actions .btn {
+        width: 100%;
+    }
+}
