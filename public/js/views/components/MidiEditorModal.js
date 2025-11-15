@@ -189,21 +189,22 @@ class MidiEditorModal {
             this.log('debug', `Track ${trackIndex} summary: ${noteOnCount} note-ons, ${noteOffCount} note-offs, ${allNotes.length} complete notes`);
         });
 
-        // Convertir en format webaudio-pianoroll: [[tick, note, gate, velocity], ...]
-        this.sequence = allNotes.map(note => [
-            note.tick,
-            note.note,
-            note.gate,
-            note.velocity
-        ]);
+        // Convertir en format webaudio-pianoroll: {t: tick, g: gate, n: note}
+        this.sequence = allNotes.map(note => ({
+            t: note.tick,    // tick (position de départ)
+            g: note.gate,    // gate (durée)
+            n: note.note     // note (numéro MIDI)
+        }));
 
         // Trier par tick
-        this.sequence.sort((a, b) => a[0] - b[0]);
+        this.sequence.sort((a, b) => a.t - b.t);
 
         this.log('info', `Converted ${this.sequence.length} notes to sequence`);
 
         if (this.sequence.length === 0) {
             this.log('warn', 'No notes found! Check MIDI data structure.');
+        } else {
+            this.log('debug', 'Sample notes:', this.sequence.slice(0, 3));
         }
     }
 
@@ -222,7 +223,12 @@ class MidiEditorModal {
         const events = [];
 
         // Ajouter les événements de note
-        this.sequence.forEach(([tick, noteNumber, gate, velocity]) => {
+        this.sequence.forEach(note => {
+            const tick = note.t;
+            const noteNumber = note.n;
+            const gate = note.g;
+            const velocity = note.v || 100; // velocity par défaut si non présente
+
             // Note On
             events.push({
                 absoluteTime: tick,
@@ -419,11 +425,11 @@ class MidiEditorModal {
         let maxNote = 0;
 
         if (this.sequence && this.sequence.length > 0) {
-            this.sequence.forEach(([tick, note, gate, velocity]) => {
-                const endTick = tick + gate;
+            this.sequence.forEach(note => {
+                const endTick = note.t + note.g;
                 if (endTick > maxTick) maxTick = endTick;
-                if (note < minNote) minNote = note;
-                if (note > maxNote) maxNote = note;
+                if (note.n < minNote) minNote = note.n;
+                if (note.n > maxNote) maxNote = note.n;
             });
 
             this.log('info', `Sequence range: ticks 0-${maxTick}, notes ${minNote}-${maxNote}`);
@@ -458,17 +464,35 @@ class MidiEditorModal {
             this.log('info', `Loading ${this.sequence.length} notes into piano roll`);
 
             // DEBUG: Afficher les premières notes
-            this.log('debug', 'First 5 notes:', this.sequence.slice(0, 5));
+            this.log('debug', 'First 3 notes:', JSON.stringify(this.sequence.slice(0, 3)));
 
             // Assigner la sequence au piano roll
             this.pianoRoll.sequence = this.sequence;
 
+            // Attendre un peu avant le redraw
+            await new Promise(resolve => setTimeout(resolve, 50));
+
             // Forcer un redraw
-            if (this.pianoRoll.redraw) {
+            if (typeof this.pianoRoll.redraw === 'function') {
+                this.pianoRoll.redraw();
+                this.log('info', 'Piano roll redrawn');
+            }
+
+            // Vérifier que la sequence a bien été assignée
+            this.log('debug', `Piano roll sequence length: ${this.pianoRoll.sequence?.length || 0}`);
+        } else {
+            this.log('warn', 'No notes to display in piano roll - adding test notes');
+
+            // Ajouter quelques notes de test pour vérifier que le piano roll fonctionne
+            this.pianoRoll.sequence = [
+                { t: 0, g: 480, n: 60 },   // C4
+                { t: 480, g: 480, n: 64 }, // E4
+                { t: 960, g: 480, n: 67 }  // G4
+            ];
+
+            if (typeof this.pianoRoll.redraw === 'function') {
                 this.pianoRoll.redraw();
             }
-        } else {
-            this.log('warn', 'No notes to display in piano roll');
         }
 
         // Écouter les changements
