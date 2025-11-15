@@ -876,12 +876,46 @@ class MidiEditorModal {
                 const originalFillRect = ctx.fillRect.bind(ctx);
                 const that = this;
 
-                // Compteur de notes dessinées (plus rapide que formule inverse + find)
-                let noteDrawCount = 0;
+                // Map pour recherche rapide note par coordonnées (O(1))
+                let noteMap = new Map();
 
                 // Stocker les valeurs colnote et colnotesel pour détecter le dessin de notes
                 let colnote = 'rgba(0,0,0,0)';
                 let colnotesel = 'rgba(255,255,255,0.1)';
+
+                // Fonction pour créer la clé de coordonnée
+                function makeKey(x, y, w, h) {
+                    // Arrondir pour gérer les variations de virgule flottante
+                    return `${Math.round(x)},${Math.round(y)},${Math.round(w)},${Math.round(h)}`;
+                }
+
+                // Fonction pour reconstruire la Map avant chaque redraw
+                function rebuildNoteMap() {
+                    noteMap.clear();
+                    if (!that.pianoRoll || !that.pianoRoll.sequence) return;
+
+                    const xoffset = that.pianoRoll.xoffset || 0;
+                    const yoffset = that.pianoRoll.yoffset || 60;
+                    const kbwidth = that.pianoRoll.kbwidth || 0;
+                    const yruler = that.pianoRoll.yruler || 0;
+                    const stepw = that.pianoRoll.stepw;
+                    const steph = that.pianoRoll.steph;
+                    const height = that.pianoRoll.height || canvas.height;
+
+                    if (!stepw || !steph) return;
+
+                    // Pré-calculer les coordonnées de toutes les notes
+                    that.pianoRoll.sequence.forEach(note => {
+                        const w = note.g * stepw;
+                        const x = (note.t - xoffset) * stepw + yruler + kbwidth;
+                        const y = height - (note.n - yoffset) * steph;
+                        const y2 = Math.floor(y - steph);
+
+                        // Stocker dans la Map
+                        const key = makeKey(x, y2, w, steph);
+                        noteMap.set(key, note);
+                    });
+                }
 
                 // Intercepter setAttribute pour détecter les changements de couleur
                 const originalSetAttribute = that.pianoRoll.setAttribute.bind(that.pianoRoll);
@@ -891,14 +925,17 @@ class MidiEditorModal {
                     return originalSetAttribute(name, value);
                 };
 
-                // Intercepter redraw pour réinitialiser le compteur
+                // Intercepter redraw pour reconstruire la Map
                 if (typeof that.pianoRoll.redraw === 'function') {
                     const originalRedraw = that.pianoRoll.redraw.bind(that.pianoRoll);
                     that.pianoRoll.redraw = function() {
-                        noteDrawCount = 0; // Reset avant chaque redraw complet
+                        rebuildNoteMap(); // Reconstruire avant le redraw
                         return originalRedraw();
                     };
                 }
+
+                // Construire la Map initiale
+                rebuildNoteMap();
 
                 // Monkey-patch fillRect pour colorer par canal
                 ctx.fillRect = function(x, y, w, h) {
@@ -907,15 +944,16 @@ class MidiEditorModal {
                     // Détecter si c'est une note (basé sur la couleur et la taille)
                     const isNote = (currentColor === colnote || currentColor === colnotesel) && w > 2 && h > 3;
 
-                    if (isNote && that.pianoRoll && that.pianoRoll.sequence && noteDrawCount < that.pianoRoll.sequence.length) {
-                        // Utiliser le compteur pour récupérer la note directement (O(1) au lieu de O(n))
-                        const note = that.pianoRoll.sequence[noteDrawCount];
+                    if (isNote) {
+                        // Recherche O(1) dans la Map
+                        const key = makeKey(x, y, w, h);
+                        const note = noteMap.get(key);
+
                         if (note) {
                             const channel = note.c !== undefined ? note.c : 0;
                             const color = that.channelColors[channel % that.channelColors.length];
                             this.fillStyle = color;
                         }
-                        noteDrawCount++;
                     }
 
                     // Appeler la méthode originale
