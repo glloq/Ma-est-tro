@@ -139,8 +139,9 @@ class CommandHandler {
       // Execute handler
       const result = await handler(message.data || {});
 
-      // Send response
+      // Send response with request ID for client to match
       ws.send(JSON.stringify({
+        id: message.id, // Include request ID
         type: 'response',
         command: message.command,
         data: result,
@@ -151,8 +152,9 @@ class CommandHandler {
       this.app.logger.debug(`Command ${message.command} completed in ${Date.now() - startTime}ms`);
     } catch (error) {
       this.app.logger.error(`Command ${message.command} failed: ${error.message}`);
-      
+
       ws.send(JSON.stringify({
+        id: message.id, // Include request ID even in errors
         type: 'error',
         command: message.command,
         error: error.message,
