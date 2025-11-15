@@ -353,18 +353,16 @@ class MidiEditorModal {
     /**
      * Mettre à jour la couleur des notes selon les canaux actifs
      * NOTE: Désormais les notes sont colorées individuellement par canal dans drawColoredNotes()
-     * Cette fonction définit juste une couleur de base pour le piano roll
+     * Cette fonction rend les notes de base transparentes
      */
     updatePianoRollColor() {
         if (!this.pianoRoll) return;
 
-        // Définir une couleur neutre de base (sera surchargée par notre rendu personnalisé)
-        const baseColor = '#404040'; // Gris foncé comme base
+        // Rendre les notes de base transparentes (l'overlay dessinera les vraies couleurs)
+        this.pianoRoll.setAttribute('colnote', 'rgba(0,0,0,0)'); // Transparent
+        this.pianoRoll.setAttribute('colnotesel', 'rgba(255,255,255,0.1)'); // Très légèrement visible pour la sélection
 
-        this.pianoRoll.setAttribute('colnote', baseColor);
-        this.pianoRoll.setAttribute('colnotesel', '#606060');
-
-        this.log('debug', 'Piano roll base color set (will be overridden by per-channel colors)');
+        this.log('debug', 'Piano roll base notes set to transparent');
     }
 
     /**
@@ -903,7 +901,14 @@ class MidiEditorModal {
                     });
                 }
 
-                this.log('info', 'Color overlay canvas created');
+                // Redessiner en continu pour capturer les changements en temps réel
+                this.overlayRenderInterval = setInterval(() => {
+                    if (this.pianoRoll && this.pianoRoll.sequence) {
+                        this.drawColoredNotesOverlay();
+                    }
+                }, 100); // Toutes les 100ms
+
+                this.log('info', 'Color overlay canvas created with continuous refresh');
             }, 300);
         } catch (error) {
             this.log('error', 'Failed to setup color overlay:', error);
@@ -1186,6 +1191,12 @@ class MidiEditorModal {
                 'Voulez-vous vraiment fermer l\'éditeur ?'
             );
             if (!confirmClose) return;
+        }
+
+        // Nettoyer l'intervalle de rendu de l'overlay
+        if (this.overlayRenderInterval) {
+            clearInterval(this.overlayRenderInterval);
+            this.overlayRenderInterval = null;
         }
 
         // Nettoyer le color overlay
