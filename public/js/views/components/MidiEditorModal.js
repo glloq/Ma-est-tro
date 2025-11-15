@@ -124,22 +124,31 @@ class MidiEditorModal {
         }
 
         const ticksPerBeat = this.midiData.header?.ticksPerBeat || 480;
+        this.log('info', `Converting MIDI: ${this.midiData.tracks.length} tracks, ${ticksPerBeat} ticks/beat`);
 
         // Extraire toutes les notes de toutes les pistes
         const allNotes = [];
 
-        this.midiData.tracks.forEach(track => {
-            if (!track.events) return;
+        this.midiData.tracks.forEach((track, trackIndex) => {
+            if (!track.events) {
+                this.log('debug', `Track ${trackIndex}: no events`);
+                return;
+            }
+
+            this.log('debug', `Track ${trackIndex} (${track.name || 'unnamed'}): ${track.events.length} events`);
 
             // Tracker les notes actives pour calculer la durée
             const activeNotes = new Map();
             let currentTick = 0;
+            let noteOnCount = 0;
+            let noteOffCount = 0;
 
-            track.events.forEach(event => {
+            track.events.forEach((event, eventIndex) => {
                 currentTick += event.deltaTime || 0;
 
                 // Note On
                 if (event.type === 'noteOn' && event.velocity > 0) {
+                    noteOnCount++;
                     const key = `${event.channel}_${event.noteNumber}`;
                     activeNotes.set(key, {
                         tick: currentTick,
@@ -147,9 +156,20 @@ class MidiEditorModal {
                         velocity: event.velocity,
                         channel: event.channel || 0
                     });
+
+                    // Log first note on event for debugging
+                    if (noteOnCount === 1) {
+                        this.log('debug', `First noteOn in track ${trackIndex}:`, {
+                            tick: currentTick,
+                            note: event.noteNumber,
+                            velocity: event.velocity,
+                            channel: event.channel
+                        });
+                    }
                 }
                 // Note Off
                 else if (event.type === 'noteOff' || (event.type === 'noteOn' && event.velocity === 0)) {
+                    noteOffCount++;
                     const key = `${event.channel}_${event.noteNumber}`;
                     const noteOn = activeNotes.get(key);
 
@@ -165,6 +185,8 @@ class MidiEditorModal {
                     }
                 }
             });
+
+            this.log('debug', `Track ${trackIndex} summary: ${noteOnCount} note-ons, ${noteOffCount} note-offs, ${allNotes.length} complete notes`);
         });
 
         // Convertir en format webaudio-pianoroll: [[tick, note, gate, velocity], ...]
@@ -179,6 +201,10 @@ class MidiEditorModal {
         this.sequence.sort((a, b) => a[0] - b[0]);
 
         this.log('info', `Converted ${this.sequence.length} notes to sequence`);
+
+        if (this.sequence.length === 0) {
+            this.log('warn', 'No notes found! Check MIDI data structure.');
+        }
     }
 
     /**
@@ -387,25 +413,63 @@ class MidiEditorModal {
         const width = container.clientWidth || 1000;
         const height = container.clientHeight || 400;
 
+        // Calculer la plage de ticks depuis la séquence
+        let maxTick = 0;
+        let minNote = 127;
+        let maxNote = 0;
+
+        if (this.sequence && this.sequence.length > 0) {
+            this.sequence.forEach(([tick, note, gate, velocity]) => {
+                const endTick = tick + gate;
+                if (endTick > maxTick) maxTick = endTick;
+                if (note < minNote) minNote = note;
+                if (note > maxNote) maxNote = note;
+            });
+
+            this.log('info', `Sequence range: ticks 0-${maxTick}, notes ${minNote}-${maxNote}`);
+        }
+
+        // Définir une plage visible appropriée (arrondir au multiple de 128)
+        const xrange = Math.max(128, Math.ceil(maxTick / 128) * 128);
+        const noteRange = Math.max(36, maxNote - minNote + 12); // +12 pour marge
+
         this.pianoRoll.setAttribute('width', width);
         this.pianoRoll.setAttribute('height', height);
         this.pianoRoll.setAttribute('editmode', 'dragpoly');
-        this.pianoRoll.setAttribute('xrange', '128'); // 128 ticks visible
-        this.pianoRoll.setAttribute('yrange', '36'); // 3 octaves
+        this.pianoRoll.setAttribute('xrange', xrange.toString());
+        this.pianoRoll.setAttribute('yrange', noteRange.toString());
         this.pianoRoll.setAttribute('grid', '16'); // 16th notes
         this.pianoRoll.setAttribute('wheelzoom', '1');
         this.pianoRoll.setAttribute('xscroll', '1');
         this.pianoRoll.setAttribute('yscroll', '1');
         this.pianoRoll.setAttribute('markstart', '0');
-        this.pianoRoll.setAttribute('markend', '128');
+        this.pianoRoll.setAttribute('markend', maxTick.toString());
 
-        // Charger la sequence
-        if (this.sequence && this.sequence.length > 0) {
-            this.pianoRoll.sequence = this.sequence;
-        }
+        this.log('info', `Piano roll configured: xrange=${xrange}, yrange=${noteRange}, markend=${maxTick}`);
 
-        // Ajouter au conteneur
+        // Ajouter au conteneur AVANT de charger la sequence
         container.appendChild(this.pianoRoll);
+
+        // Attendre que le composant soit monté
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Charger la sequence SI elle existe et n'est pas vide
+        if (this.sequence && this.sequence.length > 0) {
+            this.log('info', `Loading ${this.sequence.length} notes into piano roll`);
+
+            // DEBUG: Afficher les premières notes
+            this.log('debug', 'First 5 notes:', this.sequence.slice(0, 5));
+
+            // Assigner la sequence au piano roll
+            this.pianoRoll.sequence = this.sequence;
+
+            // Forcer un redraw
+            if (this.pianoRoll.redraw) {
+                this.pianoRoll.redraw();
+            }
+        } else {
+            this.log('warn', 'No notes to display in piano roll');
+        }
 
         // Écouter les changements
         this.pianoRoll.addEventListener('change', () => {
@@ -413,14 +477,6 @@ class MidiEditorModal {
             this.updateSaveButton();
             this.updateStats();
         });
-
-        // Attendre que le composant soit prêt
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Forcer un redraw
-        if (this.pianoRoll.redraw) {
-            this.pianoRoll.redraw();
-        }
 
         this.updateStats();
     }
