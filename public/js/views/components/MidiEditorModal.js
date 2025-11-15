@@ -876,61 +876,46 @@ class MidiEditorModal {
                 const originalFillRect = ctx.fillRect.bind(ctx);
                 const that = this;
 
+                // Compteur de notes dessinées (plus rapide que formule inverse + find)
+                let noteDrawCount = 0;
+
                 // Stocker les valeurs colnote et colnotesel pour détecter le dessin de notes
-                let colnote = null;
-                let colnotesel = null;
+                let colnote = 'rgba(0,0,0,0)';
+                let colnotesel = 'rgba(255,255,255,0.1)';
+
+                // Intercepter setAttribute pour détecter les changements de couleur
+                const originalSetAttribute = that.pianoRoll.setAttribute.bind(that.pianoRoll);
+                that.pianoRoll.setAttribute = function(name, value) {
+                    if (name === 'colnote') colnote = value;
+                    if (name === 'colnotesel') colnotesel = value;
+                    return originalSetAttribute(name, value);
+                };
+
+                // Intercepter redraw pour réinitialiser le compteur
+                if (typeof that.pianoRoll.redraw === 'function') {
+                    const originalRedraw = that.pianoRoll.redraw.bind(that.pianoRoll);
+                    that.pianoRoll.redraw = function() {
+                        noteDrawCount = 0; // Reset avant chaque redraw complet
+                        return originalRedraw();
+                    };
+                }
 
                 // Monkey-patch fillRect pour colorer par canal
                 ctx.fillRect = function(x, y, w, h) {
                     const currentColor = this.fillStyle;
 
-                    // Mettre à jour les couleurs de référence
-                    if (that.pianoRoll) {
-                        const colnoteAttr = that.pianoRoll.getAttribute('colnote');
-                        const colnoteselAttr = that.pianoRoll.getAttribute('colnotesel');
-                        if (colnoteAttr) colnote = colnoteAttr;
-                        if (colnoteselAttr) colnotesel = colnoteselAttr;
-                    }
-
                     // Détecter si c'est une note (basé sur la couleur et la taille)
-                    const isNote = (currentColor === colnote || currentColor === colnotesel ||
-                                   currentColor === 'rgba(0,0,0,0)' || currentColor === 'rgba(0, 0, 0, 0)') &&
-                                   w > 2 && h > 3;
+                    const isNote = (currentColor === colnote || currentColor === colnotesel) && w > 2 && h > 3;
 
-                    if (isNote && that.pianoRoll && that.pianoRoll.sequence) {
-                        // Récupérer les propriétés internes pour la formule inverse
-                        const xoffset = that.pianoRoll.xoffset || 0;
-                        const yoffset = that.pianoRoll.yoffset || 60;
-                        const kbwidth = that.pianoRoll.kbwidth || 0;
-                        const yruler = that.pianoRoll.yruler || 0;
-                        const stepw = that.pianoRoll.stepw;
-                        const steph = that.pianoRoll.steph;
-                        const height = that.pianoRoll.height || canvas.height;
-
-                        if (stepw && steph) {
-                            // FORMULE INVERSE pour retrouver t, g, n depuis x, y, w, h
-                            // Note: y dans fillRect correspond à y2 = Math.floor(y - steph) dans le code original
-                            // Donc: y2 = height - (note.n - yoffset + 1) * steph
-                            // => note.n = yoffset + (height - y) / steph - 1
-                            const noteT = ((x - yruler - kbwidth) / stepw) + xoffset;
-                            const noteG = w / stepw;
-                            const noteN = yoffset + ((height - y) / steph) - 1;
-
-                            // Trouver la note correspondante dans la séquence
-                            const matchingNote = that.pianoRoll.sequence.find(note => {
-                                // Tolérance de ±2 pour les arrondis et conversions floor
-                                return Math.abs(note.t - noteT) < 2 &&
-                                       Math.abs(note.g - noteG) < 2 &&
-                                       Math.abs(note.n - noteN) < 2;
-                            });
-
-                            if (matchingNote) {
-                                // Appliquer la couleur du canal
-                                const channel = matchingNote.c !== undefined ? matchingNote.c : 0;
-                                const color = that.channelColors[channel % that.channelColors.length];
-                                this.fillStyle = color;
-                            }
+                    if (isNote && that.pianoRoll && that.pianoRoll.sequence && noteDrawCount < that.pianoRoll.sequence.length) {
+                        // Utiliser le compteur pour récupérer la note directement (O(1) au lieu de O(n))
+                        const note = that.pianoRoll.sequence[noteDrawCount];
+                        if (note) {
+                            const channel = note.c !== undefined ? note.c : 0;
+                            const color = that.channelColors[channel % that.channelColors.length];
+                            this.fillStyle = color;
                         }
+                        noteDrawCount++;
                     }
 
                     // Appeler la méthode originale
