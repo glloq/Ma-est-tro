@@ -345,24 +345,8 @@ class MidiEditorModal {
 
         // Mettre à jour le piano roll si il existe
         if (this.pianoRoll) {
-            this.updatePianoRollColor();
-            this.reloadPianoRoll();
+this.reloadPianoRoll();
         }
-    }
-
-    /**
-     * Mettre à jour la couleur des notes selon les canaux actifs
-     * NOTE: Désormais les notes sont colorées individuellement par canal dans drawColoredNotes()
-     * Cette fonction rend les notes de base transparentes
-     */
-    updatePianoRollColor() {
-        if (!this.pianoRoll) return;
-
-        // Rendre les notes de base transparentes (l'overlay dessinera les vraies couleurs)
-        this.pianoRoll.setAttribute('colnote', 'rgba(0,0,0,0)'); // Transparent
-        this.pianoRoll.setAttribute('colnotesel', 'rgba(255,255,255,0.1)'); // Très légèrement visible pour la sélection
-
-        this.log('debug', 'Piano roll base notes set to transparent');
     }
 
     /**
@@ -755,9 +739,6 @@ class MidiEditorModal {
         this.pianoRoll.setAttribute('markstart', '0');
         this.pianoRoll.setAttribute('markend', maxTick.toString());
 
-        // Appliquer la couleur selon les canaux actifs
-        this.updatePianoRollColor();
-
         this.log('info', `Piano roll configured: xrange=${xrange}, yrange=${noteRange}, markend=${maxTick}`);
 
         // Ajouter au conteneur AVANT de charger la sequence
@@ -831,306 +812,10 @@ class MidiEditorModal {
             }
         }, 1000);
 
-        // Activer le rendu coloré par canal
-        this.setupColoredNoteRendering();
+        // Définir les couleurs des canaux MIDI sur le piano roll (natif, pas de rustine)
+        this.pianoRoll.channelColors = this.channelColors;
 
         this.updateStats();
-    }
-
-    /**
-     * Configure le rendu des notes colorées par canal
-     * Approche: Remplacement complet de la méthode redraw() pour coloration directe
-     */
-    setupColoredNoteRendering() {
-        if (!this.pianoRoll) return;
-
-        try {
-            // Attendre un peu pour que le composant soit prêt
-            setTimeout(() => {
-                // Essayer d'accéder au Shadow DOM
-                const shadowRoot = this.pianoRoll.shadowRoot;
-                if (!shadowRoot) {
-                    this.log('warn', 'No shadow root found, trying fallback approach');
-                    this.setupColoredNoteRenderingFallback();
-                    return;
-                }
-
-                // Trouver le canvas dans le Shadow DOM
-                const canvas = shadowRoot.querySelector('canvas');
-                if (!canvas) {
-                    this.log('warn', 'No canvas found in shadow root, trying fallback');
-                    this.setupColoredNoteRenderingFallback();
-                    return;
-                }
-
-                this.log('info', 'Found internal canvas, replacing redraw() method');
-
-                const ctx = canvas.getContext('2d');
-                if (!ctx) {
-                    this.log('warn', 'Cannot get 2D context');
-                    return;
-                }
-
-                const that = this;
-                const pr = this.pianoRoll;
-
-                // Sauvegarder la méthode originale redraw
-                const originalRedraw = pr.redraw ? pr.redraw.bind(pr) : null;
-
-                // Marquer que le remplacement va être actif (utilisé dans les setters)
-                this.customRedrawActive = true;
-
-                // Flag pour requestAnimationFrame (évite les redraws trop fréquents - limite à 60fps)
-                let rafPending = false;
-
-                // CRITIQUE: Intercepter xoffset et yoffset pour appeler redraw() automatiquement
-                // Dans l'original, ces propriétés ont un observer qui appelle layout() → redraw()
-                let _xoffset = pr.xoffset !== undefined ? pr.xoffset : 0;
-                let _yoffset = pr.yoffset !== undefined ? pr.yoffset : 60;
-
-                // Supprimer les anciennes propriétés si elles existent
-                delete pr.xoffset;
-                delete pr.yoffset;
-
-                Object.defineProperty(pr, 'xoffset', {
-                    get: function() { return _xoffset; },
-                    set: function(value) {
-                        if (_xoffset !== value) {
-                            _xoffset = value;
-                            // Utiliser requestAnimationFrame pour limiter à 60fps
-                            if (that.customRedrawActive && pr.redraw && !rafPending) {
-                                rafPending = true;
-                                requestAnimationFrame(() => {
-                                    rafPending = false;
-                                    pr.redraw();
-                                });
-                            }
-                        }
-                    },
-                    configurable: true
-                });
-
-                Object.defineProperty(pr, 'yoffset', {
-                    get: function() { return _yoffset; },
-                    set: function(value) {
-                        if (_yoffset !== value) {
-                            _yoffset = value;
-                            // Utiliser requestAnimationFrame pour limiter à 60fps
-                            if (that.customRedrawActive && pr.redraw && !rafPending) {
-                                rafPending = true;
-                                requestAnimationFrame(() => {
-                                    rafPending = false;
-                                    pr.redraw();
-                                });
-                            }
-                        }
-                    },
-                    configurable: true
-                });
-
-                // Remplacer redraw() par une version OPTIMISÉE avec requestAnimationFrame (60fps max)
-                pr.redraw = function() {
-                    if (!ctx) return;
-
-                    // Initialiser les propriétés si nécessaire
-                    pr.width = pr.width || canvas.width;
-                    pr.height = pr.height || canvas.height;
-                    pr.kbwidth = pr.kbwidth || 52;
-                    pr.yruler = pr.yruler || 24;
-                    pr.xruler = pr.xruler || 24;
-                    pr.swidth = pr.width - pr.kbwidth;
-                    pr.sheight = pr.height - pr.xruler;
-
-                    // Utiliser les variables privées pour éviter de déclencher les setters
-                    const xoffset = _xoffset;
-                    const yoffset = _yoffset;
-
-                    // Recalculer stepw et steph à chaque redraw (CRITIQUE pour le zoom)
-                    pr.stepw = pr.swidth / (parseFloat(pr.getAttribute('xrange')) || 128);
-                    pr.steph = pr.sheight / (parseFloat(pr.getAttribute('yrange')) || 36);
-
-                    // 1. Effacer tout
-                    ctx.clearRect(0, 0, pr.width, pr.height);
-
-                    // 2. Dessiner fond simplifié (juste noir)
-                    ctx.fillStyle = '#222';
-                    ctx.fillRect(0, 0, pr.width, pr.height);
-
-                    // 3. Dessiner les notes avec couleurs par canal (ALGORITHME EXACT DE L'ORIGINAL)
-                    const l = pr.sequence ? pr.sequence.length : 0;
-                    let x, w, y, x2, y2;
-
-                    for (let s = 0; s < l; ++s) {
-                        const ev = pr.sequence[s];
-                        if (!ev) continue;
-
-                        // Obtenir la couleur du canal
-                        const channel = ev.c !== undefined ? ev.c : 0;
-                        const channelColor = that.channelColors[channel % that.channelColors.length];
-
-                        // Couleur de remplissage
-                        if (ev.f)
-                            ctx.fillStyle = pr.getAttribute('colnotesel') || 'rgba(255,255,255,0.3)';
-                        else
-                            ctx.fillStyle = channelColor;
-
-                        // Calculer coordonnées (EXACTEMENT comme l'original)
-                        w = ev.g * pr.stepw;
-                        x = (ev.t - xoffset) * pr.stepw + pr.yruler + pr.kbwidth;
-                        x2 = (x + w) | 0;
-                        x |= 0;
-                        y = pr.height - (ev.n - yoffset) * pr.steph;
-                        y2 = (y - pr.steph) | 0;
-                        y |= 0;
-
-                        // Dessiner le remplissage
-                        ctx.fillRect(x, y, x2 - x, y2 - y);
-
-                        // Dessiner les bordures
-                        if (ev.f)
-                            ctx.fillStyle = pr.getAttribute('colnoteselborder') || '#fff';
-                        else
-                            ctx.fillStyle = pr.getAttribute('colnoteborder') || '#000';
-
-                        ctx.fillRect(x, y, 1, y2 - y);
-                        ctx.fillRect(x2, y, 1, y2 - y);
-                        ctx.fillRect(x, y, x2 - x, 1);
-                        ctx.fillRect(x, y2, x2 - x, 1);
-                    }
-                };
-
-                // Forcer un redraw initial
-                pr.redraw();
-
-                this.log('info', 'Custom redraw() installed - direct coloring with zero lag!');
-            }, 300);
-        } catch (error) {
-            this.log('error', 'Failed to setup colored note rendering:', error);
-            this.setupColoredNoteRenderingFallback();
-        }
-    }
-
-    /**
-     * Approche de fallback: canvas overlay
-     */
-    setupColoredNoteRenderingFallback() {
-        const container = document.getElementById('piano-roll-container');
-        if (!container) return;
-
-        // DIAGNOSTIC: Afficher toutes les propriétés disponibles du piano roll
-        this.log('info', 'Piano roll properties:', {
-            xoffset: this.pianoRoll.xoffset,
-            yoffset: this.pianoRoll.yoffset,
-            stepw: this.pianoRoll.stepw,
-            steph: this.pianoRoll.steph,
-            kbwidth: this.pianoRoll.kbwidth,
-            yruler: this.pianoRoll.yruler,
-            height: this.pianoRoll.height,
-            width: this.pianoRoll.width,
-            xrange: this.pianoRoll.xrange,
-            yrange: this.pianoRoll.yrange
-        });
-
-        // Créer un canvas overlay
-        const overlay = document.createElement('canvas');
-        overlay.style.position = 'absolute';
-        overlay.style.top = '0';
-        overlay.style.left = '0';
-        overlay.style.pointerEvents = 'none';
-        overlay.style.zIndex = '10';
-        overlay.className = 'piano-roll-color-overlay';
-
-        // Dimensionner le overlay
-        const width = this.pianoRoll.getAttribute('width') || container.clientWidth;
-        const height = this.pianoRoll.getAttribute('height') || container.clientHeight;
-        overlay.width = width;
-        overlay.height = height;
-        overlay.style.width = width + 'px';
-        overlay.style.height = height + 'px';
-
-        // Ajouter au conteneur
-        container.style.position = 'relative';
-        container.appendChild(overlay);
-
-        this.colorOverlay = overlay;
-        this.colorOverlayCtx = overlay.getContext('2d');
-
-        // Dessiner les notes colorées
-        this.drawColoredNotesOverlay();
-
-        // Redessiner quand nécessaire
-        this.pianoRoll.addEventListener('change', () => this.drawColoredNotesOverlay());
-        this.pianoRoll.addEventListener('input', () => this.drawColoredNotesOverlay());
-
-        // Redessiner en continu
-        this.overlayRenderInterval = setInterval(() => {
-            if (this.pianoRoll && this.pianoRoll.sequence) {
-                this.drawColoredNotesOverlay();
-            }
-        }, 100);
-
-        this.log('info', 'Fallback color overlay created');
-    }
-
-    /**
-     * Dessine les notes colorées sur le canvas overlay
-     * Utilise la même formule que webaudio-pianoroll pour un alignement parfait
-     */
-    drawColoredNotesOverlay() {
-        if (!this.colorOverlay || !this.colorOverlayCtx || !this.pianoRoll || !this.pianoRoll.sequence) return;
-
-        const canvas = this.colorOverlay;
-        const ctx = this.colorOverlayCtx;
-
-        // Effacer le canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        try {
-            // Accéder DIRECTEMENT aux propriétés internes de webaudio-pianoroll
-            // Ces valeurs changent avec le zoom, le scroll, etc.
-            const xoffset = this.pianoRoll.xoffset !== undefined ? this.pianoRoll.xoffset : 0;
-            const yoffset = this.pianoRoll.yoffset !== undefined ? this.pianoRoll.yoffset : 60;
-            const kbwidth = this.pianoRoll.kbwidth !== undefined ? this.pianoRoll.kbwidth : 0;
-            const yruler = this.pianoRoll.yruler !== undefined ? this.pianoRoll.yruler : 0;
-
-            // IMPORTANT: Utiliser les valeurs DIRECTES de stepw, steph et height du piano roll
-            // au lieu de les recalculer, car elles peuvent différer selon l'implémentation interne
-            const stepw = this.pianoRoll.stepw !== undefined ? this.pianoRoll.stepw : (canvas.width - kbwidth) / (parseFloat(this.pianoRoll.getAttribute('xrange')) || 128);
-            const steph = this.pianoRoll.steph !== undefined ? this.pianoRoll.steph : (canvas.height - yruler) / (parseFloat(this.pianoRoll.getAttribute('yrange')) || 36);
-            const height = this.pianoRoll.height !== undefined ? this.pianoRoll.height : canvas.height;
-
-            this.log('debug', `Overlay params: xoffset=${xoffset}, yoffset=${yoffset}, stepw=${stepw}, steph=${steph}, kbwidth=${kbwidth}, yruler=${yruler}, height=${height}`);
-
-            // Dessiner chaque note avec sa couleur de canal
-            this.pianoRoll.sequence.forEach(note => {
-                if (!note) return;
-
-                const channel = note.c !== undefined ? note.c : 0;
-                const color = this.channelColors[channel % this.channelColors.length];
-
-                // FORMULE EXACTE de webaudio-pianoroll (code source ligne par ligne)
-                const w = note.g * stepw;
-                const x = (note.t - xoffset) * stepw + yruler + kbwidth;
-                const y = height - (note.n - yoffset) * steph;
-                const y2 = Math.floor(y - steph);
-
-                // Ne dessiner que si la note est visible dans le viewport
-                if (x + w >= kbwidth && x <= canvas.width && y2 >= yruler && y <= canvas.height) {
-                    // Dessiner la note avec la couleur du canal
-                    ctx.fillStyle = color;
-                    ctx.fillRect(x, y2, w, steph);
-
-                    // Bordure pour visibilité
-                    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-                    ctx.lineWidth = 0.5;
-                    ctx.strokeRect(x, y2, w, steph);
-                }
-            });
-
-            this.log('debug', `Color overlay drawn: ${this.pianoRoll.sequence.length} notes`);
-        } catch (error) {
-            this.log('error', 'Error drawing color overlay:', error);
-        }
     }
 
     /**
@@ -1260,9 +945,6 @@ class MidiEditorModal {
         this.pianoRoll.setAttribute('xrange', xrange.toString());
         this.pianoRoll.setAttribute('yrange', noteRange.toString());
 
-        // Appliquer la couleur selon les canaux actifs
-        this.updatePianoRollColor();
-
         // Recharger la séquence
         this.pianoRoll.sequence = this.sequence;
 
@@ -1270,11 +952,6 @@ class MidiEditorModal {
         if (typeof this.pianoRoll.redraw === 'function') {
             this.pianoRoll.redraw();
         }
-
-        // Redessiner le color overlay
-        setTimeout(() => {
-            this.drawColoredNotesOverlay();
-        }, 100);
 
         // Mettre à jour les stats
         this.updateStats();
@@ -1306,10 +983,6 @@ class MidiEditorModal {
             if (typeof this.pianoRoll.redraw === 'function') {
                 this.pianoRoll.redraw();
             }
-            // Synchroniser le canvas overlay avec le piano roll
-            this.syncOverlayCanvas();
-            // Redessiner le color overlay
-            this.drawColoredNotesOverlay();
         }, 50);
 
         this.log('info', `Horizontal zoom: ${currentRange} -> ${newRange}`);
@@ -1339,34 +1012,9 @@ class MidiEditorModal {
             if (typeof this.pianoRoll.redraw === 'function') {
                 this.pianoRoll.redraw();
             }
-            // Synchroniser le canvas overlay avec le piano roll
-            this.syncOverlayCanvas();
-            // Redessiner le color overlay
-            this.drawColoredNotesOverlay();
         }, 50);
 
         this.log('info', `Vertical zoom: ${currentRange} -> ${newRange}`);
-    }
-
-    /**
-     * Synchroniser les dimensions du canvas overlay avec le piano roll
-     */
-    syncOverlayCanvas() {
-        if (!this.colorOverlay || !this.pianoRoll) return;
-
-        const container = document.getElementById('piano-roll-container');
-        if (!container) return;
-
-        const width = this.pianoRoll.getAttribute('width') || container.clientWidth;
-        const height = this.pianoRoll.getAttribute('height') || container.clientHeight;
-
-        // Redimensionner le canvas overlay
-        this.colorOverlay.width = width;
-        this.colorOverlay.height = height;
-        this.colorOverlay.style.width = width + 'px';
-        this.colorOverlay.style.height = height + 'px';
-
-        this.log('debug', `Overlay canvas resized to ${width}x${height}`);
     }
 
     // ========================================================================
@@ -1384,19 +1032,6 @@ class MidiEditorModal {
                 'Voulez-vous vraiment fermer l\'éditeur ?'
             );
             if (!confirmClose) return;
-        }
-
-        // Nettoyer l'intervalle de rendu de l'overlay
-        if (this.overlayRenderInterval) {
-            clearInterval(this.overlayRenderInterval);
-            this.overlayRenderInterval = null;
-        }
-
-        // Nettoyer le color overlay
-        if (this.colorOverlay) {
-            this.colorOverlay.remove();
-            this.colorOverlay = null;
-            this.colorOverlayCtx = null;
         }
 
         // Nettoyer le piano roll
