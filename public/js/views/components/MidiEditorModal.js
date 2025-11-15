@@ -934,7 +934,29 @@ class MidiEditorModal {
             const width = canvas.width;
             const height = canvas.height;
 
-            this.log('debug', `Drawing ${this.pianoRoll.sequence.length} notes on overlay`);
+            // Calculer ou récupérer le yoffset (note MIDI la plus basse visible)
+            let yoffset = parseFloat(this.pianoRoll.getAttribute('yoffset'));
+
+            // Si yoffset n'est pas défini, le calculer depuis la séquence
+            if (isNaN(yoffset) || yoffset === null || yoffset === undefined) {
+                // Trouver la note la plus basse et la plus haute dans la séquence
+                let minNote = 127;
+                let maxNote = 0;
+
+                this.pianoRoll.sequence.forEach(note => {
+                    if (note.n < minNote) minNote = note.n;
+                    if (note.n > maxNote) maxNote = note.n;
+                });
+
+                // Le yoffset devrait être la note la plus basse moins une marge
+                // Pour centrer les notes, on peut calculer yoffset de sorte que
+                // les notes occupent bien la plage yrange
+                yoffset = Math.max(0, minNote - Math.floor((yrange - (maxNote - minNote)) / 2));
+
+                this.log('debug', `Calculated yoffset: ${yoffset} (minNote: ${minNote}, maxNote: ${maxNote}, yrange: ${yrange})`);
+            }
+
+            this.log('debug', `Drawing ${this.pianoRoll.sequence.length} notes on overlay (yoffset: ${yoffset})`);
 
             // Dessiner chaque note avec sa couleur de canal
             this.pianoRoll.sequence.forEach(note => {
@@ -943,20 +965,27 @@ class MidiEditorModal {
                 const channel = note.c !== undefined ? note.c : 0;
                 const color = this.channelColors[channel % this.channelColors.length];
 
-                // Calculer les coordonnées de la note
+                // Calculer les coordonnées de la note avec yoffset
                 const x = (note.t / xrange) * width;
                 const w = Math.max(2, (note.g / xrange) * width);
                 const noteHeight = height / yrange;
-                const y = height - ((note.n + 1) / yrange) * height;
 
-                // Dessiner la note avec la couleur du canal
-                ctx.fillStyle = color;
-                ctx.fillRect(x, y, w, noteHeight);
+                // Calculer y en tenant compte du yoffset
+                // Les notes sont numérotées de yoffset (en bas) à yoffset+yrange (en haut)
+                const notePosition = note.n - yoffset;
+                const y = height - ((notePosition + 1) * noteHeight);
 
-                // Bordure pour visibilité
-                ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-                ctx.lineWidth = 0.5;
-                ctx.strokeRect(x, y, w, noteHeight);
+                // Ne dessiner que si la note est dans la plage visible
+                if (notePosition >= 0 && notePosition < yrange) {
+                    // Dessiner la note avec la couleur du canal
+                    ctx.fillStyle = color;
+                    ctx.fillRect(x, y, w, noteHeight);
+
+                    // Bordure pour visibilité
+                    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+                    ctx.lineWidth = 0.5;
+                    ctx.strokeRect(x, y, w, noteHeight);
+                }
             });
 
             this.log('debug', 'Color overlay drawn successfully');
