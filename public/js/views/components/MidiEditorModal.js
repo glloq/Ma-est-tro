@@ -182,33 +182,72 @@ class MidiEditorModal {
     }
 
     /**
-     * Convertir la sequence en données MIDI
+     * Convertir la sequence en données MIDI pour le backend
+     * Format compatible avec la bibliothèque 'midi-file'
      */
     convertSequenceToMidi() {
         if (!this.sequence || this.sequence.length === 0) {
             return null;
         }
 
-        const ticksPerBeat = this.midiData?.division || 480;
-        const notes = [];
+        const ticksPerBeat = this.midiData?.header?.ticksPerBeat || 480;
 
-        this.sequence.forEach(([tick, pitch, gate, velocity]) => {
-            notes.push({
-                pitch: pitch,
-                velocity: velocity,
-                time: tick / ticksPerBeat,
-                duration: gate / ticksPerBeat,
-                channel: 0
+        // Convertir la sequence en événements MIDI
+        const events = [];
+
+        // Ajouter les événements de note
+        this.sequence.forEach(([tick, noteNumber, gate, velocity]) => {
+            // Note On
+            events.push({
+                absoluteTime: tick,
+                type: 'noteOn',
+                channel: 0,
+                noteNumber: noteNumber,
+                velocity: velocity
+            });
+
+            // Note Off
+            events.push({
+                absoluteTime: tick + gate,
+                type: 'noteOff',
+                channel: 0,
+                noteNumber: noteNumber,
+                velocity: 0
             });
         });
 
+        // Trier par temps absolu
+        events.sort((a, b) => a.absoluteTime - b.absoluteTime);
+
+        // Convertir temps absolu en deltaTime
+        let lastTime = 0;
+        const trackEvents = events.map(event => {
+            const deltaTime = event.absoluteTime - lastTime;
+            lastTime = event.absoluteTime;
+
+            return {
+                deltaTime: deltaTime,
+                type: event.type,
+                channel: event.channel,
+                noteNumber: event.noteNumber,
+                velocity: event.velocity
+            };
+        });
+
+        // Ajouter End of Track
+        trackEvents.push({
+            deltaTime: 0,
+            type: 'endOfTrack'
+        });
+
+        // Structure MIDI compatible avec midi-file
         return {
-            format: this.midiData?.format || 1,
-            division: ticksPerBeat,
-            tracks: [{
-                channel: 0,
-                notes: notes
-            }]
+            header: {
+                format: this.midiData?.header?.format || 1,
+                numTracks: 1,
+                ticksPerBeat: ticksPerBeat
+            },
+            tracks: [trackEvents]
         };
     }
 
