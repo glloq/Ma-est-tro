@@ -49,8 +49,8 @@ class Application {
       
       // Initialize API
       this.commandHandler = new CommandHandler(this);
-      this.wsServer = new WebSocketServer(this, this.config.server.wsPort);
-      this.httpServer = new HttpServer(this, this.config.server.port);
+      this.httpServer = new HttpServer(this);
+      this.wsServer = new WebSocketServer(this, null); // Will be initialized after HTTP server starts
 
       // Setup event handlers
       this.setupEventHandlers();
@@ -111,8 +111,11 @@ class Application {
       // Scan MIDI devices
       await this.deviceManager.scanDevices();
 
-      // Start servers
-      this.httpServer.start();
+      // Start HTTP server first
+      await this.httpServer.start();
+
+      // Now initialize WebSocket server with HTTP server instance
+      this.wsServer.httpServer = this.httpServer.server;
       this.wsServer.start();
       this.wsServer.startHeartbeat();
 

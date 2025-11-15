@@ -8,12 +8,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 class HttpServer {
-  constructor(app, port = 8080) {
+  constructor(app) {
     this.app = app;
-    this.port = port;
     this.server = null;
     this.expressApp = express();
-    
+
     this.setupRoutes();
     this.app.logger.info('HttpServer initialized');
   }
@@ -50,13 +49,20 @@ class HttpServer {
     });
   }
 
-  start() {
-    this.server = this.expressApp.listen(this.port, () => {
-      this.app.logger.info(`HTTP server listening on port ${this.port}`);
-    });
+  async start() {
+    return new Promise((resolve, reject) => {
+      const port = this.app.config.server.port;
+      const host = this.app.config.server.host || '0.0.0.0';
 
-    this.server.on('error', (error) => {
-      this.app.logger.error(`HTTP server error: ${error.message}`);
+      this.server = this.expressApp.listen(port, host, () => {
+        this.app.logger.info(`HTTP server listening on http://${host}:${port}`);
+        resolve();
+      });
+
+      this.server.on('error', (error) => {
+        this.app.logger.error(`HTTP server error: ${error.message}`);
+        reject(error);
+      });
     });
   }
 

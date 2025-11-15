@@ -38,8 +38,10 @@ class BackendAPIClient {
                 };
 
                 this.ws.onerror = (error) => {
-                    this.emit('error', error);
-                    reject(error);
+                    console.error('WebSocket error:', error);
+                    const errorMessage = error.message || error.type || 'WebSocket connection failed';
+                    this.emit('error', { message: errorMessage, error: error });
+                    reject(new Error(errorMessage));
                 };
 
                 this.ws.onmessage = (event) => {

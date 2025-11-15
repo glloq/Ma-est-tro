@@ -134,16 +134,30 @@ print_header "3. Pulling Latest Changes"
 CURRENT_BRANCH=$(git branch --show-current)
 print_info "Current branch: $CURRENT_BRANCH"
 
-# Fetch latest changes
-print_info "Fetching from remote..."
-git fetch origin
-
-# Pull changes
-print_info "Pulling changes..."
-if git pull origin "$CURRENT_BRANCH"; then
-    print_success "Successfully pulled latest changes"
+# Switch to main if not already on it
+if [ "$CURRENT_BRANCH" != "main" ]; then
+    print_warning "Not on main branch, switching to main..."
+    if git checkout main; then
+        print_success "Switched to main branch"
+    else
+        print_error "Failed to switch to main branch"
+        print_info "You may need to commit or stash changes first"
+        exit 1
+    fi
 else
-    print_error "Failed to pull changes"
+    print_success "Already on main branch"
+fi
+
+# Fetch latest changes
+print_info "Fetching from origin/main..."
+git fetch origin main
+
+# Pull changes from main
+print_info "Pulling latest changes from main..."
+if git pull origin main; then
+    print_success "Successfully pulled latest changes from main"
+else
+    print_error "Failed to pull changes from main"
     exit 1
 fi
 
