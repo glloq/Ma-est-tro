@@ -732,56 +732,95 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 8px 12px;
-    background: #2a2a2a;
-    border: 2px solid var(--channel-color, #555);
-    border-radius: 8px;
+    padding: 10px 14px;
+    background: #1a1a1a;
+    border: 3px solid var(--channel-color, #555);
+    border-radius: 10px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    min-width: 100px;
+    transition: all 0.3s ease;
+    min-width: 110px;
     gap: 4px;
-    opacity: 0.5;
+    position: relative;
+    overflow: hidden;
+}
+
+.midi-editor-modal .channel-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--channel-color, #555);
+    opacity: 0.15;
+    transition: opacity 0.3s ease;
 }
 
 .midi-editor-modal .channel-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    opacity: 0.8;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4),
+                0 0 15px var(--channel-color);
+    border-width: 4px;
+}
+
+.midi-editor-modal .channel-btn:hover::before {
+    opacity: 0.35;
 }
 
 .midi-editor-modal .channel-btn.active {
     background: var(--channel-color, #555);
+    border-color: var(--channel-color, #555);
+    box-shadow: 0 0 25px var(--channel-color),
+                0 4px 15px rgba(0,0,0,0.5),
+                inset 0 0 15px rgba(255,255,255,0.1);
+    border-width: 4px;
+}
+
+.midi-editor-modal .channel-btn.active::before {
     opacity: 1;
-    box-shadow: 0 0 15px var(--channel-color, #555);
 }
 
 .midi-editor-modal .channel-btn.active:hover {
-    opacity: 0.9;
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 0 30px var(--channel-color),
+                0 6px 20px rgba(0,0,0,0.6),
+                inset 0 0 20px rgba(255,255,255,0.15);
 }
 
 .midi-editor-modal .channel-number {
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: 1.2rem;
+    font-weight: 800;
     color: #fff;
+    position: relative;
+    z-index: 1;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8),
+                 0 0 10px rgba(0,0,0,0.5);
 }
 
 .midi-editor-modal .channel-name {
     font-size: 0.75rem;
-    color: #ddd;
+    color: #bbb;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 120px;
+    position: relative;
+    z-index: 1;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
 }
 
 .midi-editor-modal .channel-count {
     font-size: 0.7rem;
-    color: #999;
+    color: #888;
+    position: relative;
+    z-index: 1;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.6);
 }
 
 .midi-editor-modal .channel-btn.active .channel-name,
 .midi-editor-modal .channel-btn.active .channel-count {
     color: #fff;
+    font-weight: 600;
 }
 
 .midi-editor-modal .piano-roll-container {
