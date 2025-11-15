@@ -471,7 +471,7 @@
         let api;
         let currentFileId = null;
         let isPlaying = false;
-        let progressTimer = null;
+        let currentDuration = 0; // Durée totale du fichier en cours (en secondes)
 
         // 🆕 Stockage du routage configuré par fichier
         let fileRoutingConfig = {};
@@ -528,25 +528,46 @@
 
                 api.on('disconnected', () => {
                     log('❌ Déconnecté du serveur', 'error');
-                    stopProgressTracking();
                 });
 
                 api.on('error', (error) => {
                     log(`Erreur: ${error.message}`, 'error');
                 });
 
+                // Événement de statut de lecture (contient la durée)
+                api.on('playback_status', (data) => {
+                    if (data && data.duration !== undefined) {
+                        currentDuration = data.duration;
+                    }
+                    if (data && data.position !== undefined) {
+                        const percent = currentDuration > 0 ? (data.position / currentDuration) * 100 : 0;
+                        document.getElementById('headerProgressFill').style.width = `${percent}%`;
+                        const timeText = `${formatTime(data.position * 1000)} / ${formatTime(currentDuration * 1000)}`;
+                        document.getElementById('headerTime').textContent = timeText;
+                    }
+                });
+
+                // Événement de progression de lecture (mis à jour fréquemment)
+                api.on('playback_position', (data) => {
+                    if (data && data.position !== undefined) {
+                        const percent = currentDuration > 0 ? (data.position / currentDuration) * 100 : 0;
+                        document.getElementById('headerProgressFill').style.width = `${percent}%`;
+                        const timeText = `${formatTime(data.position * 1000)} / ${formatTime(currentDuration * 1000)}`;
+                        document.getElementById('headerTime').textContent = timeText;
+                    }
+                });
+
                 // Événements de lecture
                 api.on('playback_started', () => {
                     isPlaying = true;
                     updatePlaybackControls();
-                    startProgressTracking();
                     log('▶️ Lecture démarrée');
                 });
 
                 api.on('playback_stopped', () => {
                     isPlaying = false;
+                    currentDuration = 0;
                     updatePlaybackControls();
-                    stopProgressTracking();
                     document.getElementById('headerProgressFill').style.width = '0%';
                     document.getElementById('headerFileName').textContent = 'Aucun fichier sélectionné';
                     document.getElementById('headerTime').textContent = '00:00 / 00:00';
@@ -556,7 +577,6 @@
                 api.on('playback_paused', () => {
                     isPlaying = false;
                     updatePlaybackControls();
-                    stopProgressTracking();
                     log('⏸️ Lecture en pause');
                 });
 
@@ -926,33 +946,6 @@
                 // Ne pas réinitialiser currentFileId pour permettre de relancer
             } catch (error) {
                 log(`Erreur stop: ${error.message}`, 'error');
-            }
-        }
-
-        // Démarrer le suivi de la progression
-        function startProgressTracking() {
-            if (progressTimer) return;
-
-            progressTimer = setInterval(async () => {
-                try {
-                    const response = await api.sendCommand('playback_get_status');
-                    if (response && response.position !== undefined && response.duration !== undefined) {
-                        const percent = (response.position / response.duration) * 100;
-                        document.getElementById('headerProgressFill').style.width = `${percent}%`;
-                        const timeText = `${formatTime(response.position)} / ${formatTime(response.duration)}`;
-                        document.getElementById('headerTime').textContent = timeText;
-                    }
-                } catch (error) {
-                    // Ignorer les erreurs de polling silencieusement
-                }
-            }, 100); // Mise à jour toutes les 100ms
-        }
-
-        // Arrêter le suivi de la progression
-        function stopProgressTracking() {
-            if (progressTimer) {
-                clearInterval(progressTimer);
-                progressTimer = null;
             }
         }
 
