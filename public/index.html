@@ -467,6 +467,16 @@
 
     <!-- Scripts -->
     <script src="js/api/BackendAPIClient.js"></script>
+
+    <!-- Webaudio-pianoroll library from GitHub (g200kg) -->
+    <script src="https://g200kg.github.io/webaudio-pianoroll/webaudio-pianoroll.js"></script>
+
+    <!-- MIDI utilities -->
+    <script src="js/utils/MidiParser.js"></script>
+
+    <!-- MIDI Editor Modal Component -->
+    <script src="js/views/components/MidiEditorModal.js"></script>
+
     <script>
         let api;
         let currentFileId = null;
@@ -476,6 +486,9 @@
 
         // 🆕 Stockage du routage configuré par fichier
         let fileRoutingConfig = {};
+
+        // 🆕 Instance du modal d'édition MIDI
+        let midiEditorModal = null;
 
         // Charger la config depuis localStorage
         function loadRoutingConfig() {
@@ -757,10 +770,21 @@
             }
         }
 
-        // 🆕 Éditer un fichier (TODO: implémenter l'éditeur)
-        function editFile(fileId, filename) {
-            log(`📝 Édition de ${filename} - Fonctionnalité à implémenter`, 'info');
-            alert(`L'éditeur MIDI pour "${filename}" sera disponible prochainement.`);
+        // 🆕 Éditer un fichier avec le piano roll
+        async function editFile(fileId, filename) {
+            log(`📝 Édition de ${filename}...`, 'info');
+
+            if (!midiEditorModal) {
+                log('Initialisation de l\'éditeur MIDI...', 'info');
+                midiEditorModal = new MidiEditorModal(null, api);
+            }
+
+            try {
+                await midiEditorModal.show(filename);
+            } catch (error) {
+                log(`Erreur ouverture éditeur: ${error.message}`, 'error');
+                alert(`Impossible d'ouvrir l'éditeur pour "${filename}": ${error.message}`);
+            }
         }
 
         // 🆕 Configurer le routage d'un fichier

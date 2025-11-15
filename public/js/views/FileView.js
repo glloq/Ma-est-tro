@@ -39,6 +39,9 @@ class FileView extends BaseView {
         // âœ… NOUVEAU: Modale de configuration du routage
         this.routingModal = null;
 
+        // ✅ NOUVEAU: Modale d'édition MIDI
+        this.midiEditorModal = null;
+
         this.log('debug', 'FileView', 'âœ… FileView v4.4.0 constructed (with routing support)');
 
         // ✅ CRITIQUE: Appeler setupEventBusListeners immédiatement
@@ -68,6 +71,11 @@ class FileView extends BaseView {
             // âœ… NOUVEAU: Initialiser la modale de routage
             if (window.RoutingConfigModal && window.app?.backend) {
                 this.routingModal = new window.RoutingConfigModal(this.eventBus, window.app.backend);
+            }
+
+            // ✅ NOUVEAU: Initialiser la modale d'édition MIDI
+            if (window.MidiEditorModal && window.app?.backend) {
+                this.midiEditorModal = new window.MidiEditorModal(this.eventBus, window.app.backend);
             }
 
             // Rendre l'interface initiale
@@ -713,21 +721,42 @@ class FileView extends BaseView {
     }
     
     /**
-     * âœ… NOUVEAU: Ã‰diter le fichier dans l'Ã©diteur
+     * âœ… NOUVEAU: Ã‰diter le fichier dans l'Ã©diteur (en popup)
      */
-    handleEditFile(filePath) {
+    async handleEditFile(filePath) {
         this.log('info', 'FileView', `Edit requested: ${filePath}`);
-        
-        // Charger dans l'Ã©diteur
-        if (this.eventBus) {
-            this.eventBus.emit('file:load_in_editor', {
-                file_path: filePath
-            });
-        }
-        
-        // Naviguer vers l'Ã©diteur
-        if (window.app?.router) {
-            window.app.router.navigateTo('/editor');
+
+        // Ouvrir la modale d'édition MIDI
+        if (this.midiEditorModal) {
+            try {
+                await this.midiEditorModal.show(filePath);
+            } catch (error) {
+                this.log('error', 'FileView', 'Failed to open MIDI editor:', error);
+
+                // Fallback: naviguer vers l'éditeur classique
+                if (this.eventBus) {
+                    this.eventBus.emit('file:load_in_editor', {
+                        file_path: filePath
+                    });
+                }
+
+                if (window.app?.router) {
+                    window.app.router.navigateTo('/editor');
+                }
+            }
+        } else {
+            this.log('warn', 'FileView', 'MIDI editor modal not initialized, using classic editor');
+
+            // Fallback: utiliser l'éditeur classique
+            if (this.eventBus) {
+                this.eventBus.emit('file:load_in_editor', {
+                    file_path: filePath
+                });
+            }
+
+            if (window.app?.router) {
+                window.app.router.navigateTo('/editor');
+            }
         }
     }
     
