@@ -32,9 +32,15 @@ class FileView extends BaseView {
         
         // Flag pour rÃ©attachement Ã©vÃ©nements
         this.needsEventReattach = false;
-        
-        this.log('debug', 'FileView', 'âœ… FileView v4.3.0 constructed');
-        
+
+        // âœ… NOUVEAU: Service de routage par fichier
+        this.fileRoutingService = null;
+
+        // âœ… NOUVEAU: Modale de configuration du routage
+        this.routingModal = null;
+
+        this.log('debug', 'FileView', 'âœ… FileView v4.4.0 constructed (with routing support)');
+
         // ✅ CRITIQUE: Appeler setupEventBusListeners immédiatement
         this.setupEventBusListeners();
     }
@@ -54,20 +60,30 @@ class FileView extends BaseView {
         }
         
         try {
+            // âœ… NOUVEAU: Initialiser le service de routage
+            if (window.app?.services?.fileRouting) {
+                this.fileRoutingService = window.app.services.fileRouting;
+            }
+
+            // âœ… NOUVEAU: Initialiser la modale de routage
+            if (window.RoutingConfigModal && window.app?.backend) {
+                this.routingModal = new window.RoutingConfigModal(this.eventBus, window.app.backend);
+            }
+
             // Rendre l'interface initiale
             this.render();
-            
+
             // Attacher les Ã©vÃ©nements DOM
             this.attachEvents();
-            
+
             // Attacher les Ã©vÃ©nements EventBus
             this.setupEventBusListeners();
-            
+
             // Marquer comme initialisÃ©e
             this.state.initialized = true;
-            
-            this.log('info', 'FileView', 'âœ… FileView v4.3.0 initialized (Compact + Full buttons)');
-            
+
+            this.log('info', 'FileView', 'âœ… FileView v4.4.0 initialized (with routing support)');
+
         } catch (error) {
             this.log('error', 'FileView', 'Initialization failed:', error);
             this.state.error = error.message;
@@ -167,16 +183,21 @@ class FileView extends BaseView {
      */
     buildFileRow(file) {
         const isSelected = this.viewState.selectedFile?.path === file.path;
-        
+        const filePath = file.path || file.name;
+
+        // âœ… NOUVEAU: VÃ©rifier si le fichier a son routage configurÃ©
+        const isRouted = this.fileRoutingService?.isFileRouted(filePath) || false;
+
         return `
-            <div 
-                class="file-row ${isSelected ? 'selected' : ''}" 
-                data-file-path="${this.escapeHtml(file.path || file.name)}"
+            <div
+                class="file-row ${isSelected ? 'selected' : ''} ${isRouted ? 'routed' : ''}"
+                data-file-path="${this.escapeHtml(filePath)}"
             >
                 <div class="file-icon">ðŸŽµ</div>
                 <div class="file-info">
                     <div class="file-name" title="${this.escapeHtml(file.name)}">
                         ${this.escapeHtml(file.name)}
+                        ${isRouted ? '<span class="routing-indicator" title="Routage configurÃ©">âœ"</span>' : ''}
                     </div>
                     <div class="file-meta">
                         ${this.formatFileSize(file.size)} â€¢ ${this.formatDate(file.modified)}
@@ -190,10 +211,10 @@ class FileView extends BaseView {
                     <button class="btn-icon" data-action="edit-file" title="Ã‰diter">
                         âœï¸
                     </button>
-                    <button class="btn-icon" data-action="route-file" title="Router">
+                    <button class="btn-icon ${isRouted ? 'btn-success' : ''}" data-action="route-file" title="Configurer le routage MIDI">
                         ðŸ”€
                     </button>
-                    <button class="btn-icon" data-action="play-file" title="Jouer">
+                    <button class="btn-icon ${isRouted ? 'btn-success' : 'btn-warning'}" data-action="play-file" title="${isRouted ? 'Lire le fichier' : 'Configurer le routage avant de lire'}">
                         â–¶ï¸
                     </button>
                     <button class="btn-icon btn-danger" data-action="delete-file" title="Supprimer">
@@ -594,6 +615,22 @@ class FileView extends BaseView {
             this.viewState.isLoading = false;
             this.render();
         });
+
+        // âœ… NOUVEAU: Ã‰couter les changements de routage
+        this.eventBus.on('file_routing:updated', (data) => {
+            this.log('info', 'FileView', `Routing updated for: ${data.filePath}`);
+            this.render(); // RafraÃ®chir pour afficher l'indicateur âœ"
+        });
+
+        this.eventBus.on('file_routing:cleared', (data) => {
+            this.log('info', 'FileView', `Routing cleared for: ${data.filePath}`);
+            this.render(); // RafraÃ®chir pour retirer l'indicateur âœ"
+        });
+
+        this.eventBus.on('routing:configured', (data) => {
+            this.log('info', 'FileView', `Routing configured for: ${data.filePath}`);
+            this.render(); // RafraÃ®chir pour afficher l'indicateur âœ"
+        });
     }
     
     // ========================================================================
@@ -697,18 +734,58 @@ class FileView extends BaseView {
     /**
      * âœ… NOUVEAU: Configurer le routage pour ce fichier
      */
-    handleRouteFile(filePath) {
+    async handleRouteFile(filePath) {
         this.log('info', 'FileView', `Routing requested: ${filePath}`);
-        
-        // Ouvrir modal de configuration de routage
-        if (this.eventBus) {
-            this.eventBus.emit('routing:configure', {
-                file_path: filePath
-            });
+
+        // Ouvrir la modale de configuration du routage
+        if (this.routingModal) {
+            try {
+                const currentRouting = this.fileRoutingService?.getFileRouting(filePath);
+                await this.routingModal.show(filePath, currentRouting);
+            } catch (error) {
+                this.log('error', 'FileView', 'Failed to open routing modal:', error);
+            }
+        } else {
+            this.log('warn', 'FileView', 'Routing modal not initialized');
+
+            // Fallback: Ã©mettre Ã©vÃ©nement
+            if (this.eventBus) {
+                this.eventBus.emit('routing:configure', {
+                    file_path: filePath
+                });
+            }
         }
     }
     
-    handlePlayFile(filePath) {
+    async handlePlayFile(filePath) {
+        // âœ… VÃ©rifier si le routage est configurÃ©
+        const isRouted = this.fileRoutingService?.isFileRouted(filePath) || false;
+
+        if (!isRouted) {
+            // Demander Ã  l'utilisateur de configurer le routage
+            const shouldConfigure = confirm(
+                `Le routage MIDI n'est pas configurÃ© pour ce fichier.\n\n` +
+                `Voulez-vous le configurer maintenant ?`
+            );
+
+            if (shouldConfigure) {
+                await this.handleRouteFile(filePath);
+            }
+            return;
+        }
+
+        // Appliquer le routage avant de lancer la lecture
+        const routing = this.fileRoutingService.getFileRouting(filePath);
+        if (routing && routing.channels) {
+            // Ã‰mettre Ã©vÃ©nement pour appliquer le routage
+            if (this.eventBus) {
+                this.eventBus.emit('playback:apply_routing', {
+                    file_path: filePath,
+                    routing: routing.channels
+                });
+            }
+        }
+
         // Demander lecture via playback.load + playback.play
         if (this.eventBus) {
             this.eventBus.emit('file:play_requested', {

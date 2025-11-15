@@ -40,7 +40,8 @@ class Application {
             backend: null,
             storage: null,
             midi: null,
-            file: null
+            file: null,
+            fileRouting: null  // âœ… NOUVEAU: Service de routage par fichier
         };
         
         // ModÃƒÂ¨les
@@ -273,8 +274,15 @@ class Application {
             this.services.file = new FileService(this.services.backend, this.eventBus, this.logger);
             window.fileService = this.services.file;
         }
-        
-        this.log('info', 'Ã¢Å“â€œ Services initialized');
+
+        // âœ… NOUVEAU: FileRoutingService
+        if (window.FileRoutingService) {
+            this.services.fileRouting = new FileRoutingService(this.eventBus);
+            window.fileRoutingService = this.services.fileRouting;
+            this.log('info', 'Ã¢Å"â€œ FileRoutingService initialized');
+        }
+
+        this.log('info', 'Ã¢Å"â€œ Services initialized');
     }
     
     /**
