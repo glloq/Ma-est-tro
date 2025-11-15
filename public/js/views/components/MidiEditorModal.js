@@ -879,89 +879,72 @@ class MidiEditorModal {
 
                 // Remplacer redraw() par une version qui colore directement par canal
                 pr.redraw = function() {
-                    if (!pr.sequence || !ctx) return;
-
-                    // Récupérer toutes les propriétés nécessaires
-                    const width = canvas.width;
-                    const height = canvas.height;
-                    const xoffset = pr.xoffset || 0;
-                    const yoffset = pr.yoffset || 60;
-                    const xrange = parseFloat(pr.getAttribute('xrange')) || 128;
-                    const yrange = parseFloat(pr.getAttribute('yrange')) || 36;
-                    const kbwidth = pr.kbwidth || 52;
-                    const yruler = pr.yruler || 24;
-                    const swidth = width - kbwidth;
-                    const sheight = height - yruler;
-                    const stepw = swidth / xrange;
-                    const steph = sheight / yrange;
+                    if (!ctx) return;
 
                     // Effacer le canvas
-                    ctx.clearRect(0, 0, width, height);
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                    // Dessiner le fond
-                    ctx.fillStyle = pr.getAttribute('colbg') || '#000';
-                    ctx.fillRect(0, 0, width, height);
+                    // Recalculer stepw et steph (IMPORTANT pour le zoom)
+                    pr.stepw = pr.swidth / (parseFloat(pr.getAttribute('xrange')) || 128);
+                    pr.steph = pr.sheight / (parseFloat(pr.getAttribute('yrange')) || 36);
 
-                    // Dessiner la grille (si nécessaire - version simplifiée)
-                    ctx.strokeStyle = pr.getAttribute('colgrid') || '#333';
-                    ctx.lineWidth = 1;
-
-                    // Grille verticale
-                    const grid = parseInt(pr.getAttribute('grid')) || 16;
-                    const gridStep = stepw * (xrange / grid);
-                    for (let i = 0; i <= grid; ++i) {
-                        const x = kbwidth + yruler + i * gridStep;
-                        ctx.beginPath();
-                        ctx.moveTo(x, yruler);
-                        ctx.lineTo(x, height);
-                        ctx.stroke();
+                    // Dessiner la grille (utiliser la méthode originale si disponible)
+                    if (typeof pr.redrawGrid === 'function') {
+                        pr.redrawGrid();
+                    } else {
+                        // Fallback simplifié
+                        ctx.fillStyle = pr.getAttribute('colbg') || '#000';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
                     }
 
-                    // Grille horizontale
-                    for (let i = 0; i <= yrange; ++i) {
-                        const y = yruler + i * steph;
-                        ctx.beginPath();
-                        ctx.moveTo(kbwidth + yruler, y);
-                        ctx.lineTo(width, y);
-                        ctx.stroke();
+                    // Dessiner les notes avec couleurs par canal (COPIE EXACTE de l'algorithme original)
+                    const l = pr.sequence ? pr.sequence.length : 0;
+                    for (let s = 0; s < l; ++s) {
+                        const ev = pr.sequence[s];
+                        if (!ev) continue;
+
+                        // Obtenir la couleur du canal pour le remplissage
+                        const channel = ev.c !== undefined ? ev.c : 0;
+                        const channelColor = that.channelColors[channel % that.channelColors.length];
+
+                        // Couleur de remplissage : canal si non sélectionné, semi-transparent si sélectionné
+                        if (ev.f) {
+                            // Note sélectionnée : mixer avec blanc semi-transparent
+                            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                        } else {
+                            // Note normale : couleur du canal
+                            ctx.fillStyle = channelColor;
+                        }
+
+                        // Calculer les coordonnées (FORMULE EXACTE de l'original)
+                        const w = ev.g * pr.stepw;
+                        const x = (ev.t - pr.xoffset) * pr.stepw + pr.yruler + pr.kbwidth;
+                        const x2 = (x + w) | 0;
+                        const xInt = x | 0;
+                        const y = canvas.height - (ev.n - pr.yoffset) * pr.steph;
+                        const y2 = (y - pr.steph) | 0;
+                        const yInt = y | 0;
+
+                        // Dessiner le remplissage
+                        ctx.fillRect(xInt, yInt, x2 - xInt, y2 - yInt);
+
+                        // Dessiner les bordures (4 rectangles comme l'original)
+                        if (ev.f) {
+                            ctx.fillStyle = pr.getAttribute('colnoteselborder') || '#fff';
+                        } else {
+                            ctx.fillStyle = pr.getAttribute('colnoteborder') || '#000';
+                        }
+                        ctx.fillRect(xInt, yInt, 1, y2 - yInt);           // Bordure gauche
+                        ctx.fillRect(x2, yInt, 1, y2 - yInt);             // Bordure droite
+                        ctx.fillRect(xInt, yInt, x2 - xInt, 1);           // Bordure haut
+                        ctx.fillRect(xInt, y2, x2 - xInt, 1);             // Bordure bas
                     }
 
-                    // Dessiner les notes avec couleurs par canal
-                    if (pr.sequence && pr.sequence.length > 0) {
-                        pr.sequence.forEach(note => {
-                            if (!note) return;
-
-                            // Calculer les coordonnées
-                            const w = note.g * stepw;
-                            const x = (note.t - xoffset) * stepw + yruler + kbwidth;
-                            const y = height - (note.n - yoffset) * steph;
-                            const y2 = Math.floor(y - steph);
-
-                            // Vérifier si visible
-                            if (x + w < kbwidth + yruler || x > width || y2 > height || y < yruler) return;
-
-                            // Obtenir la couleur du canal
-                            const channel = note.c !== undefined ? note.c : 0;
-                            const noteColor = that.channelColors[channel % that.channelColors.length];
-
-                            // Dessiner le rectangle rempli avec la couleur du canal
-                            ctx.fillStyle = noteColor;
-                            ctx.fillRect(x, y2, w, steph);
-
-                            // Dessiner le contour noir
-                            ctx.strokeStyle = '#000';
-                            ctx.lineWidth = 1;
-                            ctx.strokeRect(x, y2, w, steph);
-                        });
-                    }
-
-                    // Dessiner le clavier (version simplifiée - rectangle noir)
-                    ctx.fillStyle = '#222';
-                    ctx.fillRect(0, yruler, kbwidth, height - yruler);
-
-                    // Dessiner la règle temporelle (rectangle noir)
-                    ctx.fillStyle = '#222';
-                    ctx.fillRect(kbwidth, 0, width - kbwidth, yruler);
+                    // Dessiner les overlays (utiliser les méthodes originales si disponibles)
+                    if (typeof pr.redrawYRuler === 'function') pr.redrawYRuler();
+                    if (typeof pr.redrawXRuler === 'function') pr.redrawXRuler();
+                    if (typeof pr.redrawMarker === 'function') pr.redrawMarker();
+                    if (typeof pr.redrawAreaSel === 'function') pr.redrawAreaSel();
                 };
 
                 // Marquer que le remplacement est actif
