@@ -135,6 +135,11 @@
             font-size: 14px;
             font-weight: 500;
             transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            white-space: nowrap;
         }
 
         .btn:hover {
@@ -304,6 +309,10 @@
 
         .btn-group .btn {
             flex: 1;
+            white-space: nowrap;
+            overflow: visible;
+            text-overflow: clip;
+            min-width: fit-content;
         }
 
         /* 🆕 Nouveaux styles pour les boutons et badges */
