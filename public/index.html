@@ -44,6 +44,32 @@
             font-size: 14px;
         }
 
+        .btn-keyboard-toggle {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: #f3f4f6;
+            border: 2px solid #e5e7eb;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            font-size: 22px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            z-index: 10;
+        }
+
+        .btn-keyboard-toggle:hover {
+            background: #10b981;
+            border-color: #10b981;
+            transform: scale(1.1) rotate(-5deg);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
         .btn-debug-toggle {
             position: absolute;
             top: 20px;
@@ -795,6 +821,10 @@
     <div id="app" class="hidden">
         <div class="container">
             <header>
+                <button class="btn-keyboard-toggle" id="openKeyboardBtn" title="Ouvrir le clavier MIDI">
+                    🎹
+                </button>
+
                 <button class="btn-debug-toggle" id="debugToggle" title="Afficher/Masquer les logs">
                     🐞
                 </button>
@@ -842,10 +872,6 @@
                         <button class="btn" id="scanDevicesBtn">🔌&nbsp;&nbsp;Scan USB</button>
                         <button class="btn" id="scanBluetoothBtn" style="background: #9b59b6 !important;">📡&nbsp;&nbsp;Scan Bluetooth</button>
                         <button class="btn" id="scanNetworkBtn" style="background: #3498db !important;">🌐&nbsp;&nbsp;Scan Réseau</button>
-                    </div>
-
-                    <div class="btn-group" style="margin-top: 8px;">
-                        <button class="btn" id="openKeyboardBtn" style="background: #10b981 !important;">🎹&nbsp;&nbsp;Clavier MIDI</button>
                     </div>
 
                     <ul class="device-list" id="deviceList">
