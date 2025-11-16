@@ -9,6 +9,7 @@ import MidiPlayer from '../midi/MidiPlayer.js';
 import LatencyCompensator from '../midi/LatencyCompensator.js';
 import FileManager from '../storage/FileManager.js';
 import BluetoothManager from '../managers/BluetoothManager.js';
+import NetworkManager from '../managers/NetworkManager.js';
 import WebSocketServer from '../api/WebSocketServer.js';
 import HttpServer from '../api/HttpServer.js';
 import CommandHandler from '../api/CommandHandler.js';
@@ -25,6 +26,7 @@ class Application {
     this.latencyCompensator = null;
     this.fileManager = null;
     this.bluetoothManager = null;
+    this.networkManager = null;
     this.wsServer = null;
     this.httpServer = null;
     this.commandHandler = null;
@@ -56,7 +58,15 @@ class Application {
       } catch (error) {
         this.logger.warn(`Bluetooth not available: ${error.message}`);
       }
-      
+
+      // Initialize Network Manager
+      try {
+        this.networkManager = new NetworkManager(this);
+        this.logger.info('Network manager initialized');
+      } catch (error) {
+        this.logger.warn(`Network manager not available: ${error.message}`);
+      }
+
       // Initialize API
       this.commandHandler = new CommandHandler(this);
       this.httpServer = new HttpServer(this);
