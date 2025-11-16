@@ -277,13 +277,15 @@ class DeviceManager {
 
     try {
       // Identity Request SysEx message
-      // F0 7E [device_id] 06 01 F7
-      // easymidi expects bytes without F0 and F7
+      // Format: F0 7E [device_id] 06 01 F7
+      // Note: easymidi requires F0 and F7 to be included
       const sysexData = [
+        0xF0,        // SysEx Start
         0x7E,        // Universal Non-Real Time
         deviceId,    // Device ID (0x7F = all devices)
         0x06,        // General Information
-        0x01         // Identity Request
+        0x01,        // Identity Request
+        0xF7         // SysEx End
       ];
 
       output.send('sysex', sysexData);
