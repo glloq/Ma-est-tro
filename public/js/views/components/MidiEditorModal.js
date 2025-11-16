@@ -790,18 +790,16 @@ class MidiEditorModal {
         // Calculer la résolution de grille appropriée en fonction du zoom
         // grid = pas en ticks entre les lignes (petit = beaucoup de lignes, grand = peu de lignes)
         let gridValue;
-        if (xrange < 500) {
+        if (xrange > 2000) {
+            gridValue = 100000; // Cacher grille si xrange > 2000
+        } else if (xrange < 500) {
             gridValue = 1;  // Ultra zoomé : ligne tous les 1 tick
-        } else if (xrange < 1500) {
+        } else if (xrange < 1000) {
             gridValue = 2;  // Très zoomé : ligne tous les 2 ticks
-        } else if (xrange < 4000) {
+        } else if (xrange < 1500) {
             gridValue = 4;  // Zoomé : ligne tous les 4 ticks
-        } else if (xrange < 10000) {
-            gridValue = 8;  // Normal : ligne tous les 8 ticks
-        } else if (xrange < 25000) {
-            gridValue = 16; // Dézoomé : ligne tous les 16 ticks
         } else {
-            gridValue = 32; // Très dézoomé : ligne tous les 32 ticks
+            gridValue = 8;  // Normal : ligne tous les 8 ticks
         }
 
         this.pianoRoll.setAttribute('width', width);
@@ -1079,21 +1077,21 @@ class MidiEditorModal {
 
         let gridValue;
 
+        // Cacher le quadrillage si zoom supérieur à 2000
+        if (xrange > 2000) {
+            gridValue = 100000; // Valeur très grande = grille invisible
+        }
         // Adapter la résolution de la grille selon le zoom
         // grid = pas en ticks entre les lignes (petit = beaucoup de lignes, grand = peu de lignes)
         // Donc: plus on est zoomé (petit xrange), plus grid doit être PETIT
-        if (xrange < 500) {
+        else if (xrange < 500) {
             gridValue = 1;  // Ultra zoomé : ligne tous les 1 tick (maximum de détails)
-        } else if (xrange < 1500) {
+        } else if (xrange < 1000) {
             gridValue = 2;  // Très zoomé : ligne tous les 2 ticks
-        } else if (xrange < 4000) {
+        } else if (xrange < 1500) {
             gridValue = 4;  // Zoomé : ligne tous les 4 ticks (quarter notes)
-        } else if (xrange < 10000) {
-            gridValue = 8;  // Normal : ligne tous les 8 ticks (8th notes)
-        } else if (xrange < 25000) {
-            gridValue = 16; // Dézoomé : ligne tous les 16 ticks (16th notes)
         } else {
-            gridValue = 32; // Très dézoomé : ligne tous les 32 ticks
+            gridValue = 8;  // Normal : ligne tous les 8 ticks
         }
 
         // Mettre à jour les deux : attribut ET propriété
