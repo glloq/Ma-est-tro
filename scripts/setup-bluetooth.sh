@@ -184,10 +184,41 @@ fi
 echo ""
 
 # =============================================================================
-# STEP 6: CHECK BLUETOOTH ADAPTER
+# STEP 6: CONFIGURE SUDOERS FOR HCICONFIG
 # =============================================================================
 
-print_info "Step 6: Checking Bluetooth adapter..."
+print_info "Step 6: Configuring sudoers for Bluetooth control..."
+echo ""
+
+SUDOERS_FILE="/etc/sudoers.d/bluetooth-hciconfig"
+
+if [ -f "$SUDOERS_FILE" ]; then
+    print_warning "sudoers file already exists"
+else
+    print_info "Creating sudoers configuration..."
+    echo "# Allow user to control Bluetooth adapter without password" | sudo tee "$SUDOERS_FILE" > /dev/null
+    echo "$USER ALL=(ALL) NOPASSWD: /usr/bin/hciconfig hci0 up" | sudo tee -a "$SUDOERS_FILE" > /dev/null
+    echo "$USER ALL=(ALL) NOPASSWD: /usr/bin/hciconfig hci0 down" | sudo tee -a "$SUDOERS_FILE" > /dev/null
+    sudo chmod 0440 "$SUDOERS_FILE"
+
+    # Validate sudoers file
+    if sudo visudo -c -f "$SUDOERS_FILE" > /dev/null 2>&1; then
+        print_success "sudoers configuration created and validated"
+        print_info "User $USER can now run: sudo hciconfig hci0 up/down"
+    else
+        print_error "sudoers file validation failed, removing..."
+        sudo rm -f "$SUDOERS_FILE"
+        print_warning "Manual configuration required"
+    fi
+fi
+
+echo ""
+
+# =============================================================================
+# STEP 7: CHECK BLUETOOTH ADAPTER
+# =============================================================================
+
+print_info "Step 7: Checking Bluetooth adapter..."
 echo ""
 
 if command -v hciconfig &> /dev/null; then

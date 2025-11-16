@@ -268,6 +268,24 @@ if [ "$OS" == "linux" ]; then
     echo 'KERNEL=="hci0", RUN+="/bin/hciconfig hci0 up"' | sudo tee /etc/udev/rules.d/99-bluetooth.rules > /dev/null
     sudo udevadm control --reload-rules 2>/dev/null || true
 
+    # Configure sudoers for hciconfig without password
+    print_info "Configuring sudoers for Bluetooth control..."
+    SUDOERS_FILE="/etc/sudoers.d/bluetooth-hciconfig"
+    if [ ! -f "$SUDOERS_FILE" ]; then
+        echo "# Allow user to control Bluetooth adapter without password" | sudo tee "$SUDOERS_FILE" > /dev/null
+        echo "$USER ALL=(ALL) NOPASSWD: /usr/bin/hciconfig hci0 up" | sudo tee -a "$SUDOERS_FILE" > /dev/null
+        echo "$USER ALL=(ALL) NOPASSWD: /usr/bin/hciconfig hci0 down" | sudo tee -a "$SUDOERS_FILE" > /dev/null
+        sudo chmod 0440 "$SUDOERS_FILE"
+
+        # Validate
+        if sudo visudo -c -f "$SUDOERS_FILE" > /dev/null 2>&1; then
+            print_success "sudoers configured for passwordless Bluetooth control"
+        else
+            sudo rm -f "$SUDOERS_FILE"
+            print_warning "sudoers validation failed"
+        fi
+    fi
+
     print_success "Bluetooth permissions configured"
     print_warning "You may need to logout/login for group changes to take effect"
     print_info "Or run: newgrp bluetooth"
