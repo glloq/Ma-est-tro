@@ -305,60 +305,6 @@
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
-/* Slider de navigation du clavier */
-.keyboard-scroll-control {
-    padding: 12px 20px;
-    background: #f9fafb;
-    border-bottom: 2px solid #e5e7eb;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.keyboard-scroll-control label {
-    color: #6b7280;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    white-space: nowrap;
-}
-
-.keyboard-scroll-slider {
-    flex: 1;
-    height: 6px;
-    border-radius: 3px;
-    background: #e5e7eb;
-    outline: none;
-    -webkit-appearance: none;
-    cursor: pointer;
-}
-
-.keyboard-scroll-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: #667eea;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.keyboard-scroll-slider::-webkit-slider-thumb:hover {
-    background: #5568d3;
-    transform: scale(1.2);
-}
-
-.keyboard-scroll-slider::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: #667eea;
-    cursor: pointer;
-    border: none;
-}
-
 .octave-controls {
     flex-direction: row !important;
     align-items: center;

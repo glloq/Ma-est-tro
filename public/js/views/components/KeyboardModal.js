@@ -224,23 +224,34 @@ class KeyboardModal {
         }
 
         try {
+            this.logger.info('KeyboardModal', 'Scanning devices...');
+
             // Scanner les devices
             const response = await this.backend.sendCommand('scan_devices');
+
+            this.logger.info('KeyboardModal', 'Scan response:', response);
 
             if (response && response.success && response.data) {
                 const devices = response.data.devices || [];
 
+                this.logger.info('KeyboardModal', `Total devices: ${devices.length}`, devices);
+
                 // Filtrer les devices actifs (status = 2)
                 this.availableDevices = devices.filter(d => d.status === 2);
 
-                this.logger.info('KeyboardModal', `Loaded ${this.availableDevices.length} devices`);
+                this.logger.info('KeyboardModal', `Active devices (status=2): ${this.availableDevices.length}`, this.availableDevices);
 
                 // Émettre l'événement pour la vue
                 if (this.eventBus) {
+                    this.logger.info('KeyboardModal', 'Emitting keyboard:devices-loaded event');
                     this.eventBus.emit('keyboard:devices-loaded', {
                         devices: this.availableDevices
                     });
+                } else {
+                    this.logger.error('KeyboardModal', 'EventBus not available!');
                 }
+            } else {
+                this.logger.warn('KeyboardModal', 'Invalid response from scan_devices');
             }
         } catch (error) {
             this.logger.error('KeyboardModal', 'Failed to load devices:', error);
