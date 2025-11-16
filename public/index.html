@@ -348,6 +348,153 @@
             margin-top: 8px;
         }
 
+        /* Styles pour les réglages d'instruments */
+        .device-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .device-info-section {
+            flex: 1;
+        }
+
+        .device-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn-icon {
+            padding: 6px 10px;
+            font-size: 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-icon:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+        }
+
+        /* Modale de réglages d'instrument */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            margin: 0 0 20px 0;
+            color: #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .form-group .form-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .identity-section {
+            background: #f9fafb;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .identity-section h3 {
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            color: #667eea;
+        }
+
+        .identity-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .info-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .info-value {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
         /* Contrôles de lecture dans le header */
         .header-playback {
             margin-top: 16px;
@@ -613,6 +760,42 @@
                     log('▶️ Lecture reprise');
                 });
 
+                // Événement de réception d'identité SysEx
+                api.on('device_identity', (data) => {
+                    if (data && data.identity) {
+                        log(`🔍 Identité reçue de ${data.device}: ${data.identity.manufacturerName || 'Unknown'}`, 'info');
+
+                        // Mettre à jour l'affichage dans la modale si elle est ouverte
+                        const identityInfo = document.getElementById('identityInfo');
+                        if (identityInfo && currentDeviceSettings && currentDeviceSettings.device.id === data.device) {
+                            // Ajouter le nom du fabricant pour l'affichage
+                            const settings = {
+                                sysex_manufacturer_name: data.identity.manufacturerName,
+                                sysex_manufacturer_id: data.identity.manufacturerId,
+                                sysex_family: data.identity.deviceFamily,
+                                sysex_model: data.identity.deviceFamilyMember,
+                                sysex_version: data.identity.softwareRevision,
+                                sysex_device_id: data.identity.deviceId,
+                                sysex_raw_response: data.identity.rawBytes
+                            };
+                            identityInfo.innerHTML = renderIdentityInfo(settings);
+
+                            // Sauvegarder automatiquement l'identité dans la base de données
+                            api.sendCommand('instrument_update_settings', {
+                                deviceId: data.device,
+                                custom_name: document.getElementById('customName')?.value.trim() || null,
+                                sync_delay: parseInt(document.getElementById('syncDelay')?.value) || 0,
+                                mac_address: document.getElementById('macAddress')?.value.trim() || null,
+                                name: currentDeviceSettings.device.name
+                            }).then(() => {
+                                log('✓ Identité SysEx sauvegardée', 'info');
+                            }).catch(error => {
+                                log(`Erreur sauvegarde identité: ${error.message}`, 'error');
+                            });
+                        }
+                    }
+                });
+
                 await api.connect();
 
             } catch (error) {
@@ -706,22 +889,46 @@
 
                 deviceList.innerHTML = '';
 
-                if (devices.length === 0) {
-                    deviceList.innerHTML = '<li class="info-text">Aucun périphérique</li>';
+                // Filtrer uniquement les périphériques connectés (status === 2)
+                const connectedDevices = devices.filter(d => d.status === 2 || d.connected);
+
+                if (connectedDevices.length === 0) {
+                    deviceList.innerHTML = '<li class="info-text">Aucun périphérique connecté</li>';
+                    // Sauvegarder tous les périphériques pour le routage
+                    availableDevices = devices;
+                    log(`${devices.length} périphérique(s) trouvé(s), ${connectedDevices.length} connecté(s)`);
                     return;
                 }
 
-                devices.forEach(device => {
+                connectedDevices.forEach(device => {
                     const li = document.createElement('li');
                     li.className = 'device-item';
-                    li.innerHTML = `
+
+                    const deviceInfo = document.createElement('div');
+                    deviceInfo.className = 'device-info-section';
+                    deviceInfo.innerHTML = `
                         <div class="device-name">${device.name}</div>
                         <div class="device-type">${device.type} • ${device.id}</div>
                     `;
+
+                    const deviceActions = document.createElement('div');
+                    deviceActions.className = 'device-actions';
+
+                    // Bouton Réglages
+                    const settingsBtn = document.createElement('button');
+                    settingsBtn.className = 'btn-icon';
+                    settingsBtn.title = 'Réglages de l\'instrument';
+                    settingsBtn.textContent = '⚙️';
+                    settingsBtn.onclick = () => showInstrumentSettings(device);
+
+                    deviceActions.appendChild(settingsBtn);
+
+                    li.appendChild(deviceInfo);
+                    li.appendChild(deviceActions);
                     deviceList.appendChild(li);
                 });
 
-                log(`${devices.length} périphérique(s) trouvé(s)`);
+                log(`${devices.length} périphérique(s) trouvé(s), ${connectedDevices.length} connecté(s)`);
 
                 // Sauvegarder les périphériques pour le routage de canaux
                 availableDevices = devices;
@@ -1053,6 +1260,181 @@
 
         // Variable pour stocker les périphériques disponibles
         let availableDevices = [];
+
+        // Variable pour stocker la modale actuelle
+        let currentSettingsModal = null;
+        let currentDeviceSettings = null;
+
+        // ========== RÉGLAGES D'INSTRUMENTS ==========
+
+        // Afficher la modale de réglages d'instrument
+        async function showInstrumentSettings(device) {
+            log(`⚙️ Ouverture des réglages pour ${device.name}...`);
+
+            try {
+                // Charger les réglages existants
+                const response = await api.sendCommand('instrument_get_settings', {
+                    deviceId: device.id
+                });
+
+                const settings = response.settings || {};
+                currentDeviceSettings = { device, settings };
+
+                // Créer la modale
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay';
+
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2>⚙️ Réglages de l'instrument</h2>
+                            <button class="modal-close" onclick="closeInstrumentSettings()">×</button>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Nom du périphérique</label>
+                            <input type="text" id="deviceNameDisplay" value="${device.name}" disabled>
+                            <small class="form-text">Nom détecté automatiquement</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Nom personnalisé</label>
+                            <input type="text" id="customName" value="${settings.custom_name || ''}" placeholder="Mon Synthétiseur">
+                            <small class="form-text">Nom d'affichage personnalisé (optionnel)</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Délai de synchronisation (μs)</label>
+                            <input type="number" id="syncDelay" value="${settings.sync_delay || 0}" min="-2147483648" max="2147483647">
+                            <small class="form-text">Positif = retarder, négatif = avancer (pour synchronisation multi-instruments)</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Adresse MAC (Bluetooth)</label>
+                            <input type="text" id="macAddress" value="${settings.mac_address || ''}" placeholder="AA:BB:CC:DD:EE:FF">
+                            <small class="form-text">Pour associer les réglages aux appareils Bluetooth</small>
+                        </div>
+
+                        <div class="identity-section">
+                            <h3>🔍 Identification SysEx</h3>
+                            <button class="btn" id="requestIdentityBtn" onclick="requestIdentity('${device.id.replace(/'/g, "\\'")}')">
+                                📡 Envoyer Identity Request
+                            </button>
+                            <div id="identityInfo" style="margin-top: 12px;">
+                                ${settings.sysex_manufacturer_id ? renderIdentityInfo(settings) : '<p class="info-text">Aucune information d\'identité disponible</p>'}
+                            </div>
+                        </div>
+
+                        <div class="modal-actions">
+                            <button class="btn btn-secondary" onclick="closeInstrumentSettings()">Annuler</button>
+                            <button class="btn" onclick="saveInstrumentSettings()">💾 Enregistrer</button>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+                currentSettingsModal = modal;
+
+            } catch (error) {
+                log(`Erreur chargement réglages: ${error.message}`, 'error');
+                alert(`Impossible de charger les réglages: ${error.message}`);
+            }
+        }
+
+        // Rendre les informations d'identité SysEx
+        function renderIdentityInfo(settings) {
+            return `
+                <div class="identity-info">
+                    <div class="info-group">
+                        <span class="info-label">Fabricant</span>
+                        <span class="info-value">${settings.sysex_manufacturer_name || settings.sysex_manufacturer_id || 'N/A'}</span>
+                    </div>
+                    <div class="info-group">
+                        <span class="info-label">ID Fabricant</span>
+                        <span class="info-value">${settings.sysex_manufacturer_id || 'N/A'}</span>
+                    </div>
+                    <div class="info-group">
+                        <span class="info-label">Famille</span>
+                        <span class="info-value">${settings.sysex_family || 'N/A'}</span>
+                    </div>
+                    <div class="info-group">
+                        <span class="info-label">Modèle</span>
+                        <span class="info-value">${settings.sysex_model || 'N/A'}</span>
+                    </div>
+                    <div class="info-group">
+                        <span class="info-label">Version</span>
+                        <span class="info-value">${settings.sysex_version || 'N/A'}</span>
+                    </div>
+                    <div class="info-group">
+                        <span class="info-label">Device ID</span>
+                        <span class="info-value">${settings.sysex_device_id || 'N/A'}</span>
+                    </div>
+                </div>
+                ${settings.sysex_raw_response ? `<div style="margin-top: 8px;"><span class="info-label">Réponse brute:</span><br><code style="font-size: 11px; color: #666;">${settings.sysex_raw_response}</code></div>` : ''}
+            `;
+        }
+
+        // Envoyer une requête SysEx Identity Request
+        async function requestIdentity(deviceId) {
+            try {
+                log(`📡 Envoi de Identity Request à ${deviceId}...`);
+
+                const response = await api.sendCommand('device_identity_request', {
+                    deviceName: deviceId,
+                    deviceId: 0x7F // Broadcast to all devices
+                });
+
+                log('✓ Identity Request envoyée', 'info');
+
+                // La réponse sera reçue via WebSocket event 'device_identity'
+                // On affiche un message pour indiquer que la requête a été envoyée
+                const identityInfo = document.getElementById('identityInfo');
+                if (identityInfo) {
+                    identityInfo.innerHTML = '<p class="info-text">⏳ En attente de la réponse...</p>';
+                }
+
+            } catch (error) {
+                log(`Erreur Identity Request: ${error.message}`, 'error');
+                alert(`Erreur lors de l'envoi de la requête: ${error.message}`);
+            }
+        }
+
+        // Fermer la modale de réglages
+        function closeInstrumentSettings() {
+            if (currentSettingsModal) {
+                currentSettingsModal.remove();
+                currentSettingsModal = null;
+                currentDeviceSettings = null;
+            }
+        }
+
+        // Sauvegarder les réglages d'instrument
+        async function saveInstrumentSettings() {
+            if (!currentDeviceSettings) return;
+
+            try {
+                const customName = document.getElementById('customName').value.trim();
+                const syncDelay = parseInt(document.getElementById('syncDelay').value) || 0;
+                const macAddress = document.getElementById('macAddress').value.trim();
+
+                log(`💾 Sauvegarde des réglages pour ${currentDeviceSettings.device.name}...`);
+
+                await api.sendCommand('instrument_update_settings', {
+                    deviceId: currentDeviceSettings.device.id,
+                    custom_name: customName || null,
+                    sync_delay: syncDelay,
+                    mac_address: macAddress || null,
+                    name: currentDeviceSettings.device.name
+                });
+
+                log('✓ Réglages sauvegardés', 'info');
+                closeInstrumentSettings();
+
+            } catch (error) {
+                log(`Erreur sauvegarde réglages: ${error.message}`, 'error');
+                alert(`Erreur lors de la sauvegarde: ${error.message}`);
+            }
+        }
 
         // ========== ÉVÉNEMENTS ==========
 
