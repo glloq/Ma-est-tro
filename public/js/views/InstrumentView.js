@@ -308,9 +308,12 @@ class InstrumentView extends BaseView {
     renderConnectedDeviceCard(device) {
         const typeIcon = device.type === 'usb' ? '🔌' :
                         device.type === 'bluetooth' ? '📡' :
-                        device.type === 'network' ? '🌐' : '🎹';
+                        device.type === 'network' ? '🌐' :
+                        device.type === 'virtual' ? '🎹' : '🎵';
 
-        const statusClass = device.active ? 'active' : 'idle';
+        // Device is active if status is 2 (connected) or if explicitly marked as active
+        const isActive = device.status === 2 || device.active;
+        const statusClass = isActive ? 'active' : 'idle';
 
         return `
             <div class="device-card connected ${statusClass}" data-device-id="${device.id}">
@@ -319,7 +322,7 @@ class InstrumentView extends BaseView {
                     <div class="device-name">${this.escapeHtml(device.name)}</div>
                     <div class="device-status">
                         <span class="status-indicator ${statusClass}"></span>
-                        <span class="status-text">${device.active ? 'Actif' : 'Inactif'}</span>
+                        <span class="status-text">${isActive ? 'Connecté' : 'Inactif'}</span>
                     </div>
                     ${device.ports ? `<div class="device-ports">${device.ports.in}→${device.ports.out}</div>` : ''}
                 </div>
@@ -505,8 +508,12 @@ class InstrumentView extends BaseView {
     // ========================================================================
 
     updateDevicesFromList(devices) {
-        this.viewState.connectedDevices = devices.filter(d => d.connected);
+        // Filter connected devices (status === 2 means connected)
+        this.viewState.connectedDevices = devices.filter(d => d.status === 2 || d.connected);
+        this.viewState.availableDevices = devices.filter(d => d.status !== 2 && !d.connected);
+
         this.renderConnectedDevicesList();
+        this.renderAvailableDevicesList();
     }
 
     handleDeviceConnected(data) {
