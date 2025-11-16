@@ -181,20 +181,6 @@ class KeyboardModal {
 
         // Attendre que le DOM soit mis à jour
         setTimeout(() => {
-            // Créer le controller si disponible
-            if (typeof KeyboardController !== 'undefined') {
-                this.keyboardController = new KeyboardController(
-                    this.eventBus,
-                    {},
-                    {},
-                    null,
-                    null,
-                    this.backend
-                );
-                this.keyboardController.init();
-                this.logger.info('KeyboardModal', 'KeyboardController created');
-            }
-
             this.keyboardView = new KeyboardView('keyboard-modal-container', this.eventBus);
 
             if (this.keyboardView) {
