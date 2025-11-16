@@ -214,6 +214,30 @@
             border-radius: 8px;
         }
 
+        .drop-zone-root {
+            padding: 16px;
+            margin-bottom: 12px;
+            background: #f9fafb;
+            border: 2px dashed #e5e7eb;
+            border-radius: 8px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: none; /* Caché par défaut */
+        }
+
+        .drop-zone-root.active {
+            display: block;
+        }
+
+        .drop-zone-root.drag-over {
+            background: #e0e7ff;
+            border-color: #667eea;
+            color: #667eea;
+            font-weight: 600;
+        }
+
         .file-item {
             padding: 12px;
             background: #f9fafb;
@@ -695,6 +719,10 @@
                     <div class="btn-group">
                         <button class="btn" id="uploadBtn">📤 Envoyer</button>
                         <button class="btn btn-secondary" id="createFolderBtn">📁 Nouveau dossier</button>
+                    </div>
+
+                    <div class="drop-zone-root" id="dropZoneRoot">
+                        📂 Déposer ici pour remettre à la racine
                     </div>
 
                     <ul class="file-list" id="fileList">
@@ -1230,6 +1258,12 @@
             e.currentTarget.classList.add('dragging');
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/html', e.currentTarget.innerHTML);
+
+            // Afficher la zone de drop racine
+            const dropZone = document.getElementById('dropZoneRoot');
+            if (dropZone) {
+                dropZone.classList.add('active');
+            }
         }
 
         // Gérer la fin du drag
@@ -1240,6 +1274,13 @@
             document.querySelectorAll('.drag-over').forEach(el => {
                 el.classList.remove('drag-over');
             });
+
+            // Masquer la zone de drop racine
+            const dropZone = document.getElementById('dropZoneRoot');
+            if (dropZone) {
+                dropZone.classList.remove('active');
+                dropZone.classList.remove('drag-over');
+            }
 
             draggedElement = null;
             draggedFileId = null;
@@ -1991,7 +2032,33 @@
             }
         });
 
-        // Event listeners pour la zone de drop (racine)
+        // Event listeners pour la zone de drop dédiée (racine)
+        const dropZoneRoot = document.getElementById('dropZoneRoot');
+
+        dropZoneRoot.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+            dropZoneRoot.classList.add('drag-over');
+        });
+
+        dropZoneRoot.addEventListener('dragleave', (e) => {
+            dropZoneRoot.classList.remove('drag-over');
+        });
+
+        dropZoneRoot.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            dropZoneRoot.classList.remove('drag-over');
+
+            if (draggedFileId) {
+                console.log('Drop sur la zone racine dédiée, fichier:', draggedFileId);
+                moveFileToFolder(draggedFileId, null); // null = racine
+            }
+        });
+
+        // Event listeners pour la zone de drop (racine) - zone vide de la liste
         const fileListElement = document.getElementById('fileList');
 
         fileListElement.addEventListener('dragover', (e) => {
@@ -2018,7 +2085,7 @@
                 fileListElement.classList.remove('drag-over-root');
 
                 if (draggedFileId) {
-                    console.log('Drop sur la racine, fichier:', draggedFileId);
+                    console.log('Drop sur la racine (zone vide), fichier:', draggedFileId);
                     moveFileToFolder(draggedFileId, null); // null = racine
                 }
             }
