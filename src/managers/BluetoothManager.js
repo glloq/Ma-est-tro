@@ -125,8 +125,21 @@ class BluetoothManager extends EventEmitter {
               );
             }
 
-            this.app.logger.info(`BLE scan completed: ${devices.length} devices found`);
-            resolve(devices);
+            // Retirer les objets peripheral pour éviter les références circulaires lors de la sérialisation JSON
+            const serializedDevices = devices.map(d => ({
+              id: d.id,
+              address: d.address,
+              name: d.name,
+              rssi: d.rssi,
+              signal: d.signal,
+              type: d.type,
+              isMidiDevice: d.isMidiDevice,
+              serviceUuids: d.serviceUuids
+              // peripheral: omis - contient des références circulaires
+            }));
+
+            this.app.logger.info(`BLE scan completed: ${serializedDevices.length} devices found`);
+            resolve(serializedDevices);
           }, duration * 1000);
         } else {
           // Scan continu

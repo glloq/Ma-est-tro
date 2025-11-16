@@ -89,7 +89,6 @@
     border-bottom: 2px solid var(--bluetooth-border);
     background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
     border-radius: 12px 12px 0 0;
-    flex-direction: row !important;
 }
 
 .bluetooth-scan-modal .modal-header h2 {
