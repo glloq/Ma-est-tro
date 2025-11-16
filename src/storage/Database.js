@@ -397,6 +397,12 @@ class DatabaseManager {
   updatePreset(presetId, updates) { return this.instrumentDB.updatePreset(presetId, updates); }
   deletePreset(presetId) { return this.instrumentDB.deletePreset(presetId); }
 
+  // Instrument Settings
+  updateInstrumentSettings(deviceId, settings) { return this.instrumentDB.updateInstrumentSettings(deviceId, settings); }
+  getInstrumentSettings(deviceId) { return this.instrumentDB.getInstrumentSettings(deviceId); }
+  saveSysExIdentity(deviceId, identity) { return this.instrumentDB.saveSysExIdentity(deviceId, identity); }
+  findInstrumentByMac(macAddress) { return this.instrumentDB.findInstrumentByMac(macAddress); }
+
   // ==================== UTILITIES ====================
 
   close() {
