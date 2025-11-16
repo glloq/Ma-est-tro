@@ -1073,9 +1073,21 @@
             deleteBtn.className = 'btn btn-danger btn-sm';
             deleteBtn.title = folderFiles.length > 0 ? 'Le dossier doit être vide' : 'Supprimer le dossier';
             deleteBtn.textContent = '🗑️';
-            deleteBtn.disabled = folderFiles.length > 0;
+
+            // Utiliser une classe au lieu de disabled pour permettre le clic
+            if (folderFiles.length > 0) {
+                deleteBtn.style.opacity = '0.5';
+                deleteBtn.style.cursor = 'not-allowed';
+            }
+
             deleteBtn.onclick = (e) => {
                 e.stopPropagation();
+                // Vérifier à nouveau au moment du clic
+                const currentFiles = folderStructure[folderPath].files || [];
+                if (currentFiles.length > 0) {
+                    alert('Le dossier doit être vide pour être supprimé');
+                    return;
+                }
                 deleteFolder(folderPath);
             };
 
@@ -1135,11 +1147,16 @@
 
         // Supprimer un dossier (seulement si vide)
         async function deleteFolder(folderPath) {
+            console.log('deleteFolder appelée pour:', folderPath);
+
             if (!folderStructure[folderPath]) {
+                console.log('Dossier non trouvé dans la structure');
                 return;
             }
 
             const folderFiles = folderStructure[folderPath].files || [];
+            console.log('Fichiers dans le dossier:', folderFiles, 'Longueur:', folderFiles.length);
+
             if (folderFiles.length > 0) {
                 alert('Le dossier doit être vide pour être supprimé');
                 return;
@@ -1211,29 +1228,37 @@
 
         // Gérer le drag leave
         function handleDragLeave(e) {
-            e.currentTarget.classList.remove('drag-over');
+            // Ne retirer la classe que si on quitte vraiment l'élément (pas un enfant)
+            const rect = e.currentTarget.getBoundingClientRect();
+            if (e.clientX < rect.left || e.clientX >= rect.right ||
+                e.clientY < rect.top || e.clientY >= rect.bottom) {
+                e.currentTarget.classList.remove('drag-over');
+            }
         }
 
         // Gérer le drop
         function handleDrop(e) {
-            if (e.preventDefault) {
-                e.preventDefault();
-            }
-            if (e.stopPropagation) {
-                e.stopPropagation();
-            }
+            e.preventDefault();
+            e.stopPropagation();
 
-            e.currentTarget.classList.remove('drag-over');
+            // Retirer toutes les classes drag-over
+            document.querySelectorAll('.drag-over').forEach(el => {
+                el.classList.remove('drag-over');
+            });
 
             if (!draggedFileId) {
+                console.log('Aucun fichier en cours de drag');
                 return false;
             }
 
             const targetFolder = e.currentTarget.dataset.folderPath;
+            console.log('Drop sur:', targetFolder, 'Fichier:', draggedFileId);
 
             if (targetFolder) {
                 // Déplacer le fichier vers le dossier
                 moveFileToFolder(draggedFileId, targetFolder);
+            } else {
+                console.log('Pas de dossier cible détecté');
             }
 
             return false;
@@ -1241,6 +1266,9 @@
 
         // Déplacer un fichier vers un dossier
         function moveFileToFolder(fileId, targetFolder) {
+            console.log('moveFileToFolder appelée:', fileId, targetFolder);
+            console.log('Structure actuelle:', JSON.stringify(folderStructure, null, 2));
+
             // Retirer le fichier de son dossier actuel
             for (const folderPath in folderStructure) {
                 const files = folderStructure[folderPath].files || [];
@@ -1248,14 +1276,22 @@
                 if (index > -1) {
                     files.splice(index, 1);
                     folderStructure[folderPath].files = files;
+                    console.log(`Fichier ${fileId} retiré de ${folderPath}`);
                 }
             }
 
             // Ajouter le fichier au nouveau dossier
+            if (!folderStructure[targetFolder]) {
+                console.error(`Dossier ${targetFolder} n'existe pas!`);
+                return;
+            }
+
             if (!folderStructure[targetFolder].files) {
                 folderStructure[targetFolder].files = [];
             }
             folderStructure[targetFolder].files.push(fileId);
+            console.log(`Fichier ${fileId} ajouté à ${targetFolder}`);
+            console.log('Nouvelle structure:', JSON.stringify(folderStructure, null, 2));
 
             saveFolderStructure();
             log(`📦 Fichier déplacé vers "${targetFolder}"`);
