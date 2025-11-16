@@ -648,13 +648,15 @@
     height: 100vh !important;
     background: rgba(0, 0, 0, 0.85) !important;
     backdrop-filter: blur(4px);
-    z-index: 10000 !important;
+    z-index: 999999 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     padding: 20px;
     animation: fadeIn 0.2s ease-out;
     margin: 0 !important;
+    transform: none !important;
+    overflow: auto !important;
 }
 
 @keyframes fadeIn {
