@@ -1089,9 +1089,13 @@ class MidiEditorModal {
             gridValue = 1;  // Très dézoomé : whole notes (rondes)
         }
 
+        // Mettre à jour les deux : attribut ET propriété
         this.pianoRoll.setAttribute('grid', gridValue.toString());
+        if (this.pianoRoll.grid !== undefined) {
+            this.pianoRoll.grid = gridValue;
+        }
 
-        this.log('debug', `Grid resolution updated: ${gridValue} (xrange=${xrange})`);
+        this.log('info', `Grid resolution updated: ${gridValue} (xrange=${xrange})`);
     }
 
     /**

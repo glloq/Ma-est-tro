@@ -1025,6 +1025,11 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             }
             // Sinon ygrid = 1 : très zoomé, afficher chaque note
 
+            // Log pour débogage
+            if(Math.random() < 0.01) { // Log seulement 1% du temps pour ne pas spammer
+                console.log('[PianoRoll Grid] yrange:', this.yrange, 'ygrid:', ygrid, 'xrange:', this.xrange, 'grid:', this.grid);
+            }
+
             for(let y=0;y<128;++y){
                 if(this.semiflag[y%12]&1)
                     this.ctx.fillStyle=this.coldk;
