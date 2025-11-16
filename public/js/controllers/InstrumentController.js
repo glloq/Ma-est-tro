@@ -129,11 +129,29 @@ class InstrumentController extends BaseController {
         this.eventBus.on('bluetooth:forget_requested', (data) => {
             this.handleBluetoothForgetRequest(data);
         });
-        
+
+        // Instrument settings
+        this.eventBus.on('instrument:settings:requested', (data) => {
+            this.handleInstrumentSettingsRequest(data);
+        });
+
+        this.eventBus.on('instrument:settings:save', (data) => {
+            this.handleInstrumentSettingsSave(data);
+        });
+
+        this.eventBus.on('instrument:identity:requested', (data) => {
+            this.handleInstrumentIdentityRequest(data);
+        });
+
+        // Backend events for device identity
+        this.eventBus.on('backend:device_identity', (data) => {
+            this.handleDeviceIdentityReceived(data);
+        });
+
         // Autres
         this.eventBus.on('instruments:request_refresh', () => this.refreshDeviceList());
-        
-        this.logger?.info?.('InstrumentController', 'âœ“ Events bound (v4.3.0 - COMPLET)');
+
+        this.logger?.info?.('InstrumentController', 'âœ" Events bound (v4.3.0 - COMPLET + Settings)');
     }
 
     async initialize() {
@@ -657,6 +675,105 @@ class InstrumentController extends BaseController {
         this.eventBus.emit('hotplug:status', {
             enabled: this.hotPlugEnabled
         });
+    }
+
+    // ========================================================================
+    // INSTRUMENT SETTINGS HANDLERS
+    // ========================================================================
+
+    /**
+     * Handle instrument settings request - load and send settings to view
+     */
+    async handleInstrumentSettingsRequest(data) {
+        try {
+            const { deviceId } = data;
+            if (!deviceId) {
+                throw new Error('deviceId required');
+            }
+
+            this.logger?.debug?.('InstrumentController', `Loading settings for ${deviceId}`);
+
+            // Get settings from model
+            const settings = await this.model.getSettings(deviceId);
+
+            // Send settings to view
+            if (this.view && typeof this.view.populateInstrumentSettings === 'function') {
+                this.view.populateInstrumentSettings(settings);
+            }
+
+            this.logger?.info?.('InstrumentController', `Settings loaded for ${deviceId}`);
+        } catch (error) {
+            this.logger?.error?.('InstrumentController', 'Failed to load instrument settings:', error);
+            this.notifications?.error('Erreur', 'Impossible de charger les réglages de l\'instrument');
+        }
+    }
+
+    /**
+     * Handle instrument settings save
+     */
+    async handleInstrumentSettingsSave(data) {
+        try {
+            const { deviceId, settings } = data;
+            if (!deviceId || !settings) {
+                throw new Error('deviceId and settings required');
+            }
+
+            this.logger?.debug?.('InstrumentController', `Saving settings for ${deviceId}`, settings);
+
+            // Save settings via model
+            await this.model.updateSettings(deviceId, settings);
+
+            this.logger?.info?.('InstrumentController', `Settings saved for ${deviceId}`);
+            this.notifications?.success('Réglages sauvegardés', 'Les réglages de l\'instrument ont été enregistrés');
+
+            // Refresh device list to show updated info
+            await this.refreshDeviceList();
+        } catch (error) {
+            this.logger?.error?.('InstrumentController', 'Failed to save instrument settings:', error);
+            this.notifications?.error('Erreur', 'Impossible de sauvegarder les réglages');
+        }
+    }
+
+    /**
+     * Handle SysEx Identity Request
+     */
+    async handleInstrumentIdentityRequest(data) {
+        try {
+            const { deviceName, deviceId } = data;
+            if (!deviceName) {
+                throw new Error('deviceName required');
+            }
+
+            this.logger?.debug?.('InstrumentController', `Requesting SysEx Identity for ${deviceName}`);
+
+            // Send identity request via model
+            await this.model.requestIdentity(deviceName, deviceId);
+
+            this.notifications?.info('Requête envoyée', 'Demande d\'identité SysEx envoyée. En attente de réponse...');
+        } catch (error) {
+            this.logger?.error?.('InstrumentController', 'Failed to request SysEx identity:', error);
+            this.notifications?.error('Erreur', 'Impossible d\'envoyer la requête SysEx Identity');
+        }
+    }
+
+    /**
+     * Handle device identity received from backend
+     */
+    handleDeviceIdentityReceived(data) {
+        try {
+            const { device, identity } = data;
+
+            this.logger?.info?.('InstrumentController', `Received identity for ${device}:`, identity);
+
+            // Update view with identity info
+            if (this.view && typeof this.view.updateSysExIdentityInfo === 'function') {
+                this.view.updateSysExIdentityInfo(identity);
+            }
+
+            this.notifications?.success('Identité reçue', `Instrument identifié: ${identity.manufacturerName || 'Unknown'}`);
+        } catch (error) {
+            this.logger?.error?.('InstrumentController', 'Failed to handle device identity:', error);
+        }
     }
 
     // ========================================================================

@@ -11,12 +11,15 @@ class CommandHandler {
 
   registerHandlers() {
     return {
-      // ==================== DEVICE MANAGEMENT (12 commands) ====================
+      // ==================== DEVICE MANAGEMENT (15 commands) ====================
       'device_list': () => this.deviceList(),
       'device_refresh': () => this.deviceRefresh(),
       'device_info': (data) => this.deviceInfo(data),
       'device_set_properties': (data) => this.deviceSetProperties(data),
       'device_enable': (data) => this.deviceEnable(data),
+      'device_identity_request': (data) => this.deviceIdentityRequest(data),
+      'instrument_update_settings': (data) => this.instrumentUpdateSettings(data),
+      'instrument_get_settings': (data) => this.instrumentGetSettings(data),
       'ble_scan_start': () => this.bleScanStart(),
       'ble_scan_stop': () => this.bleScanStop(),
       'ble_connect': (data) => this.bleConnect(data),
@@ -202,6 +205,52 @@ class CommandHandler {
   async deviceEnable(data) {
     this.app.deviceManager.enableDevice(data.deviceId, data.enabled);
     return { success: true };
+  }
+
+  async deviceIdentityRequest(data) {
+    const success = this.app.deviceManager.sendIdentityRequest(
+      data.deviceName,
+      data.deviceId || 0x7F
+    );
+
+    if (!success) {
+      throw new Error(`Failed to send Identity Request to ${data.deviceName}`);
+    }
+
+    return {
+      success: true,
+      message: 'Identity Request sent. Waiting for response...'
+    };
+  }
+
+  async instrumentUpdateSettings(data) {
+    if (!this.app.instrumentDb) {
+      throw new Error('Instrument database not available');
+    }
+
+    const id = this.app.instrumentDb.updateInstrumentSettings(data.deviceId, {
+      custom_name: data.custom_name,
+      sync_delay: data.sync_delay,
+      mac_address: data.mac_address,
+      name: data.name
+    });
+
+    return {
+      success: true,
+      id: id
+    };
+  }
+
+  async instrumentGetSettings(data) {
+    if (!this.app.instrumentDb) {
+      throw new Error('Instrument database not available');
+    }
+
+    const settings = this.app.instrumentDb.getInstrumentSettings(data.deviceId);
+
+    return {
+      settings: settings || null
+    };
   }
 
   async bleScanStart() {

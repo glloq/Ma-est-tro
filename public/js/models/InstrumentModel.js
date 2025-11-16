@@ -162,6 +162,83 @@ class InstrumentModel extends BaseModel {
     getConnectedInstruments() {
         return Array.from(this.instruments.values()).filter(i => i.connected);
     }
+
+    /**
+     * Send SysEx Identity Request to a device
+     * @param {string} deviceName - Name of the device
+     * @param {number} deviceId - MIDI device ID (default: 0x7F for broadcast)
+     * @returns {Promise<Object>} Response from backend
+     */
+    async requestIdentity(deviceName, deviceId = 0x7F) {
+        if (!this.backend) throw new Error('Backend not available');
+
+        try {
+            const response = await this.backend.sendCommand('device_identity_request', {
+                deviceName: deviceName,
+                deviceId: deviceId
+            });
+
+            this.log('info', 'InstrumentModel', `Identity request sent to ${deviceName}`);
+            return response;
+
+        } catch (error) {
+            this.log('error', 'InstrumentModel.requestIdentity', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update instrument settings (custom name, sync delay, MAC address)
+     * @param {string} deviceId - Device ID
+     * @param {Object} settings - Settings object
+     * @param {string} settings.custom_name - Custom name for the instrument
+     * @param {number} settings.sync_delay - Synchronization delay in microseconds
+     * @param {string} settings.mac_address - MAC address of the instrument
+     * @returns {Promise<Object>} Response from backend
+     */
+    async updateSettings(deviceId, settings) {
+        if (!this.backend) throw new Error('Backend not available');
+
+        try {
+            const response = await this.backend.sendCommand('instrument_update_settings', {
+                deviceId: deviceId,
+                custom_name: settings.custom_name,
+                sync_delay: settings.sync_delay,
+                mac_address: settings.mac_address,
+                name: settings.name
+            });
+
+            this.log('info', 'InstrumentModel', `Settings updated for ${deviceId}`);
+            this.eventBus?.emit('instrument:settings:updated', { deviceId, settings });
+
+            return response;
+
+        } catch (error) {
+            this.log('error', 'InstrumentModel.updateSettings', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get instrument settings
+     * @param {string} deviceId - Device ID
+     * @returns {Promise<Object>} Instrument settings
+     */
+    async getSettings(deviceId) {
+        if (!this.backend) throw new Error('Backend not available');
+
+        try {
+            const response = await this.backend.sendCommand('instrument_get_settings', {
+                deviceId: deviceId
+            });
+
+            return response.settings;
+
+        } catch (error) {
+            this.log('error', 'InstrumentModel.getSettings', error);
+            throw error;
+        }
+    }
 }
 
 if (typeof module !== 'undefined' && module.exports) {
