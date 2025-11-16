@@ -717,6 +717,10 @@ this.reloadPianoRoll();
             this.log('info', `Sequence range: ticks 0-${maxTick}, notes ${minNote}-${maxNote}`);
         }
 
+        // Stocker maxTick pour les sliders
+        if (!this.midiData) this.midiData = {};
+        this.midiData.maxTick = maxTick;
+
         // Zoom par défaut pour afficher ~20 secondes
         // Avec 480 ticks/beat et 120 BPM standard: 20s = 9600 ticks
         const ticksPerBeat = this.midiData.header?.ticksPerBeat || 480;
@@ -749,6 +753,9 @@ this.reloadPianoRoll();
 
         // Attendre que le composant soit monté
         await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Initialiser les sliders de navigation
+        this.initializeScrollSliders(maxTick, minNote, maxNote, xrange, noteRange, yoffset);
 
         // Charger la sequence SI elle existe et n'est pas vide
         if (this.sequence && this.sequence.length > 0) {
@@ -1035,13 +1042,40 @@ this.reloadPianoRoll();
     }
 
     /**
+     * Initialiser les sliders de navigation avec les bonnes valeurs
+     */
+    initializeScrollSliders(maxTick, minNote, maxNote, xrange, noteRange, yoffset) {
+        const scrollHSlider = document.getElementById('scroll-h-slider');
+        const scrollVSlider = document.getElementById('scroll-v-slider');
+
+        if (scrollHSlider) {
+            // Position initiale horizontale: 0 (début du fichier)
+            scrollHSlider.value = 0;
+            this.log('info', `Horizontal slider initialized: maxTick=${maxTick}, xrange=${xrange}`);
+        }
+
+        if (scrollVSlider) {
+            // Position initiale verticale: centrée
+            const totalMidiRange = 128;
+            const maxVOffset = Math.max(0, totalMidiRange - noteRange);
+            const initialVPercentage = maxVOffset > 0 ? (yoffset / maxVOffset) * 100 : 0;
+            scrollVSlider.value = initialVPercentage;
+            this.log('info', `Vertical slider initialized: yoffset=${yoffset}, percentage=${initialVPercentage.toFixed(1)}%`);
+        }
+    }
+
+    /**
      * Défilement horizontal (0-100%)
      */
     scrollHorizontal(percentage) {
         if (!this.pianoRoll) return;
 
+        // Calculer l'offset en fonction de la plage totale du fichier MIDI
+        const maxTick = this.midiData?.maxTick || 0;
         const xrange = this.pianoRoll.xrange || parseInt(this.pianoRoll.getAttribute('xrange')) || 128;
-        const maxOffset = Math.max(0, xrange - 32); // 32 = largeur visible minimale
+
+        // L'offset maximum = maxTick - xrange (pour permettre de voir la fin)
+        const maxOffset = Math.max(0, maxTick - xrange);
         const newOffset = Math.round((percentage / 100) * maxOffset);
 
         this.pianoRoll.xoffset = newOffset;
@@ -1059,7 +1093,10 @@ this.reloadPianoRoll();
         if (!this.pianoRoll) return;
 
         const yrange = this.pianoRoll.yrange || parseInt(this.pianoRoll.getAttribute('yrange')) || 36;
-        const maxOffset = Math.max(0, yrange - 12); // 12 = hauteur visible minimale
+
+        // Plage complète MIDI: 0-127 notes
+        const totalMidiRange = 128;
+        const maxOffset = Math.max(0, totalMidiRange - yrange);
         const newOffset = Math.round((percentage / 100) * maxOffset);
 
         this.pianoRoll.yoffset = newOffset;
