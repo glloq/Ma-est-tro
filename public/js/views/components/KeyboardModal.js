@@ -178,19 +178,27 @@ class KeyboardModal {
         // Créer le container avec l'ID attendu par KeyboardView
         keyboardContainer.innerHTML = '<div id="keyboard-modal-container"></div>';
 
-        this.keyboardView = new KeyboardView('keyboard-modal-container', this.eventBus);
+        // Attendre que le DOM soit mis à jour
+        setTimeout(() => {
+            this.keyboardView = new KeyboardView('keyboard-modal-container', this.eventBus);
 
-        if (this.keyboardView) {
-            this.keyboardView.init();
-            this.keyboardView.render();
+            if (this.keyboardView) {
+                // Initialiser et rendre
+                this.keyboardView.init();
 
-            // Demander la liste des devices
-            if (this.eventBus) {
-                this.eventBus.emit('keyboard:request-devices');
+                // S'assurer que le render est bien fait
+                setTimeout(() => {
+                    this.keyboardView.render();
+
+                    // Demander la liste des devices après le rendu
+                    if (this.eventBus) {
+                        this.eventBus.emit('keyboard:request-devices');
+                    }
+
+                    this.logger.info('KeyboardModal', 'Keyboard initialized and rendered');
+                }, 50);
             }
-
-            this.logger.info('KeyboardModal', 'Keyboard initialized');
-        }
+        }, 10);
     }
 
     // ========================================================================
