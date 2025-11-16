@@ -637,6 +637,16 @@ this.reloadPianoRoll();
                     <div class="channels-toolbar">
                         ${this.renderChannelButtons()}
                     </div>
+                    <div class="navigation-controls">
+                        <div class="slider-group">
+                            <label>Zoom horizontal</label>
+                            <input type="range" id="zoom-h-slider" min="1" max="200" value="100" step="1">
+                        </div>
+                        <div class="slider-group">
+                            <label>Zoom vertical</label>
+                            <input type="range" id="zoom-v-slider" min="1" max="200" value="100" step="1">
+                        </div>
+                    </div>
                     <div class="piano-roll-container" id="piano-roll-container">
                         <!-- webaudio-pianoroll sera inséré ici -->
                     </div>
@@ -714,10 +724,11 @@ this.reloadPianoRoll();
         this.pianoRoll.setAttribute('wheelzoom', '1');
         this.pianoRoll.setAttribute('xscroll', '1');
         this.pianoRoll.setAttribute('yscroll', '1');
-        this.pianoRoll.setAttribute('markstart', '0');
-        this.pianoRoll.setAttribute('markend', maxTick.toString());
+        // Pas de marqueurs (triangles vert/orange)
+        this.pianoRoll.setAttribute('markstart', '-1');
+        this.pianoRoll.setAttribute('markend', '-1');
 
-        this.log('info', `Piano roll configured: xrange=${xrange}, yrange=${noteRange}, markend=${maxTick}`);
+        this.log('info', `Piano roll configured: xrange=${xrange}, yrange=${noteRange}`);
 
         // Ajouter au conteneur AVANT de charger la sequence
         container.appendChild(this.pianoRoll);
@@ -861,6 +872,28 @@ this.reloadPianoRoll();
                 this.toggleChannel(channel);
             });
         });
+
+        // Sliders de zoom
+        const zoomHSlider = document.getElementById('zoom-h-slider');
+        const zoomVSlider = document.getElementById('zoom-v-slider');
+
+        if (zoomHSlider) {
+            zoomHSlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                // Convertir 1-200 en facteur de zoom (2.0 à 0.5)
+                // 100 = 1.0 (normal), 1 = 2.0 (max zoom out), 200 = 0.5 (max zoom in)
+                const zoomFactor = 2 - (value / 100);
+                this.zoomHorizontal(zoomFactor);
+            });
+        }
+
+        if (zoomVSlider) {
+            zoomVSlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                const zoomFactor = 2 - (value / 100);
+                this.zoomVertical(zoomFactor);
+            });
+        }
     }
 
     /**
@@ -892,7 +925,6 @@ this.reloadPianoRoll();
         const xrange = Math.max(128, Math.ceil(maxTick / 128) * 128);
         const noteRange = Math.max(36, maxNote - minNote + 12);
 
-        this.pianoRoll.setAttribute('markend', maxTick.toString());
         this.pianoRoll.setAttribute('xrange', xrange.toString());
         this.pianoRoll.setAttribute('yrange', noteRange.toString());
 
