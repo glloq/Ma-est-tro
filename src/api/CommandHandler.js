@@ -18,6 +18,7 @@ class CommandHandler {
       'device_set_properties': (data) => this.deviceSetProperties(data),
       'device_enable': (data) => this.deviceEnable(data),
       'device_identity_request': (data) => this.deviceIdentityRequest(data),
+      'device_save_sysex_identity': (data) => this.deviceSaveSysExIdentity(data),
       'instrument_update_settings': (data) => this.instrumentUpdateSettings(data),
       'instrument_get_settings': (data) => this.instrumentGetSettings(data),
       'ble_scan_start': () => this.bleScanStart(),
@@ -217,6 +218,19 @@ class CommandHandler {
     return {
       success: true,
       message: 'Identity Request sent. Waiting for response...'
+    };
+  }
+
+  async deviceSaveSysExIdentity(data) {
+    if (!this.app.database) {
+      throw new Error('Database not available');
+    }
+
+    const id = this.app.database.saveSysExIdentity(data.deviceId, data.identity);
+
+    return {
+      success: true,
+      id: id
     };
   }
 
