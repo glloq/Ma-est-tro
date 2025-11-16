@@ -109,19 +109,29 @@ class DeviceManager {
       return;
     }
 
-    const input = new easymidi.Input(name);
-    
-    // Handle MIDI messages
-    input.on('noteon', (msg) => this.handleMidiMessage(name, 'noteon', msg));
-    input.on('noteoff', (msg) => this.handleMidiMessage(name, 'noteoff', msg));
-    input.on('cc', (msg) => this.handleMidiMessage(name, 'cc', msg));
-    input.on('program', (msg) => this.handleMidiMessage(name, 'program', msg));
-    input.on('pitchbend', (msg) => this.handleMidiMessage(name, 'pitchbend', msg));
-    input.on('poly aftertouch', (msg) => this.handleMidiMessage(name, 'poly aftertouch', msg));
-    input.on('channel aftertouch', (msg) => this.handleMidiMessage(name, 'channel aftertouch', msg));
-    input.on('sysex', (msg) => this.handleMidiMessage(name, 'sysex', msg));
+    try {
+      const input = new easymidi.Input(name);
 
-    this.inputs.set(name, input);
+      // Add error listener to detect device issues
+      input.on('error', (error) => {
+        this.app.logger.error(`Input device error ${name}: ${error.message}`);
+      });
+
+      // Handle MIDI messages
+      input.on('noteon', (msg) => this.handleMidiMessage(name, 'noteon', msg));
+      input.on('noteoff', (msg) => this.handleMidiMessage(name, 'noteoff', msg));
+      input.on('cc', (msg) => this.handleMidiMessage(name, 'cc', msg));
+      input.on('program', (msg) => this.handleMidiMessage(name, 'program', msg));
+      input.on('pitchbend', (msg) => this.handleMidiMessage(name, 'pitchbend', msg));
+      input.on('poly aftertouch', (msg) => this.handleMidiMessage(name, 'poly aftertouch', msg));
+      input.on('channel aftertouch', (msg) => this.handleMidiMessage(name, 'channel aftertouch', msg));
+      input.on('sysex', (msg) => this.handleMidiMessage(name, 'sysex', msg));
+
+      this.inputs.set(name, input);
+    } catch (error) {
+      this.app.logger.error(`Cannot open input ${name}: ${error.message}`);
+      throw error;
+    }
   }
 
   addOutput(name) {
@@ -129,8 +139,15 @@ class DeviceManager {
       return;
     }
 
-    const output = new easymidi.Output(name);
-    this.outputs.set(name, output);
+    try {
+      const output = new easymidi.Output(name);
+
+      // Store with error tracking
+      this.outputs.set(name, output);
+    } catch (error) {
+      this.app.logger.error(`Cannot open output ${name}: ${error.message}`);
+      throw error;
+    }
   }
 
   updateDeviceMap() {
