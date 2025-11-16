@@ -268,13 +268,14 @@ if [ "$OS" == "linux" ]; then
     echo 'KERNEL=="hci0", RUN+="/bin/hciconfig hci0 up"' | sudo tee /etc/udev/rules.d/99-bluetooth.rules > /dev/null
     sudo udevadm control --reload-rules 2>/dev/null || true
 
-    # Configure sudoers for hciconfig without password
+    # Configure sudoers for hciconfig and rfkill without password
     print_info "Configuring sudoers for Bluetooth control..."
     SUDOERS_FILE="/etc/sudoers.d/bluetooth-hciconfig"
     if [ ! -f "$SUDOERS_FILE" ]; then
         echo "# Allow user to control Bluetooth adapter without password" | sudo tee "$SUDOERS_FILE" > /dev/null
         echo "$USER ALL=(ALL) NOPASSWD: /usr/bin/hciconfig hci0 up" | sudo tee -a "$SUDOERS_FILE" > /dev/null
         echo "$USER ALL=(ALL) NOPASSWD: /usr/bin/hciconfig hci0 down" | sudo tee -a "$SUDOERS_FILE" > /dev/null
+        echo "$USER ALL=(ALL) NOPASSWD: /usr/sbin/rfkill unblock bluetooth" | sudo tee -a "$SUDOERS_FILE" > /dev/null
         sudo chmod 0440 "$SUDOERS_FILE"
 
         # Validate
@@ -285,6 +286,10 @@ if [ "$OS" == "linux" ]; then
             print_warning "sudoers validation failed"
         fi
     fi
+
+    # Débloquer Bluetooth avec rfkill si bloqué
+    print_info "Unblocking Bluetooth with rfkill..."
+    sudo rfkill unblock bluetooth 2>/dev/null || true
 
     print_success "Bluetooth permissions configured"
     print_warning "You may need to logout/login for group changes to take effect"

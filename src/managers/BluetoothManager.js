@@ -306,6 +306,16 @@ class BluetoothManager extends EventEmitter {
       const execAsync = promisify(exec);
 
       try {
+        // Débloquer RF-kill d'abord (si bloqué)
+        this.app.logger.debug('Unblocking Bluetooth with rfkill...');
+        try {
+          await execAsync('sudo rfkill unblock bluetooth');
+        } catch (rfkillError) {
+          this.app.logger.warn(`rfkill unblock failed (may not be needed): ${rfkillError.message}`);
+        }
+
+        // Activer l'adaptateur hci0
+        this.app.logger.debug('Bringing up hci0 adapter...');
         await execAsync('sudo hciconfig hci0 up');
         this.app.logger.info('Bluetooth adapter powered on');
 
@@ -318,7 +328,13 @@ class BluetoothManager extends EventEmitter {
         };
       } catch (error) {
         this.app.logger.error(`Failed to power on Bluetooth: ${error.message}`);
-        throw new Error(`Failed to enable Bluetooth. Try running: sudo hciconfig hci0 up`);
+
+        // Messages d'aide détaillés selon l'erreur
+        if (error.message.includes('RF-kill')) {
+          throw new Error(`Bluetooth blocked by RF-kill. Try: sudo rfkill unblock bluetooth && sudo hciconfig hci0 up`);
+        } else {
+          throw new Error(`Failed to enable Bluetooth. Try running: sudo rfkill unblock bluetooth && sudo hciconfig hci0 up`);
+        }
       }
     } else {
       throw new Error('Bluetooth power control is only available on Linux');

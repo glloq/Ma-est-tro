@@ -83,11 +83,27 @@ Fichier : `/etc/sudoers.d/bluetooth-hciconfig`
 # Allow user to control Bluetooth adapter without password
 user ALL=(ALL) NOPASSWD: /usr/bin/hciconfig hci0 up
 user ALL=(ALL) NOPASSWD: /usr/bin/hciconfig hci0 down
+user ALL=(ALL) NOPASSWD: /usr/sbin/rfkill unblock bluetooth
 ```
 
 **Pourquoi ?** Cette configuration permet au serveur MidiMind d'activer/désactiver le Bluetooth via le bouton dans l'interface web sans demander de mot de passe.
 
-**Sécurité** : Seules les commandes `hciconfig hci0 up` et `hciconfig hci0 down` sont autorisées sans mot de passe. Aucun autre accès sudo n'est accordé.
+**Sécurité** : Seules les commandes `hciconfig hci0 up/down` et `rfkill unblock bluetooth` sont autorisées sans mot de passe. Aucun autre accès sudo n'est accordé.
+
+### 7. Débloquer RF-kill
+
+```bash
+sudo rfkill unblock bluetooth
+```
+
+**RF-kill** est un mécanisme de blocage des interfaces sans fil. Sur Raspberry Pi, le Bluetooth peut être bloqué par défaut.
+
+**Vérifier l'état** :
+```bash
+rfkill list bluetooth
+```
+
+Si le résultat montre `Soft blocked: yes` ou `Hard blocked: yes`, le Bluetooth doit être débloqué.
 
 ## ✅ Vérification
 
@@ -198,6 +214,31 @@ sudo setcap cap_net_raw+eip $(which node)
 getcap $(which node)
 ```
 
+### Erreur : "Operation not possible due to RF-kill (132)"
+
+**Cause** : Le Bluetooth est bloqué par RF-kill (mécanisme de sécurité matériel/logiciel).
+
+**Solution** :
+```bash
+# Vérifier l'état
+rfkill list bluetooth
+
+# Débloquer
+sudo rfkill unblock bluetooth
+
+# Vérifier à nouveau
+rfkill list bluetooth
+# Devrait montrer "Soft blocked: no"
+
+# Activer l'adaptateur
+sudo hciconfig hci0 up
+```
+
+**Note** : Si `Hard blocked: yes` persiste, vérifiez :
+- Interrupteur matériel Bluetooth (sur certains appareils)
+- Configuration BIOS/UEFI
+- Câblage interne (sur Raspberry Pi, très rare)
+
 ### Erreur : "noble warning: adapter state unauthorized"
 
 **Cause** : L'utilisateur n'est pas dans le groupe bluetooth.
@@ -282,10 +323,13 @@ Si vous rencontrez des problèmes :
 - [ ] Capacités Node.js configurées (cap_net_raw+eip)
 - [ ] Règle udev créée (/etc/udev/rules.d/99-bluetooth.rules)
 - [ ] **Sudoers configuré** (/etc/sudoers.d/bluetooth-hciconfig)
-- [ ] **Test sudo sans mot de passe réussi** (sudo hciconfig hci0 up)
+- [ ] **RF-kill débloqué** (rfkill list bluetooth → Soft blocked: no)
+- [ ] **Test sudo sans mot de passe réussi** (sudo rfkill unblock bluetooth && sudo hciconfig hci0 up)
 - [ ] Adaptateur Bluetooth UP (hciconfig hci0)
 - [ ] Test de scan réussi (sudo hcitool lescan)
 
 Une fois tous les éléments cochés, MidiMind devrait pouvoir scanner et connecter des instruments BLE MIDI ! 🎵
 
-**Note importante** : Si le bouton "Activer le Bluetooth" dans l'interface ne fonctionne pas, vérifiez en priorité la configuration sudoers (point 7 de la checklist).
+**Notes importantes** :
+- Si le bouton "Activer le Bluetooth" dans l'interface ne fonctionne pas, vérifiez en priorité la configuration sudoers (point 7)
+- Si vous obtenez l'erreur "RF-kill (132)", vérifiez le point 8 (RF-kill débloqué)
