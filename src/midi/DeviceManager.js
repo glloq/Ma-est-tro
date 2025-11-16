@@ -15,30 +15,39 @@ class DeviceManager {
   async scanDevices() {
     // Close all existing connections first to ensure clean state
     this.app.logger.info('Closing existing MIDI connections...');
-    this.inputs.forEach((input, name) => {
+
+    // Close inputs with error handling
+    const inputsToClose = Array.from(this.inputs.entries());
+    for (const [name, input] of inputsToClose) {
       try {
+        // Remove all listeners first to avoid issues
+        input.removeAllListeners();
         input.close();
         this.app.logger.info(`✓ Closed input: ${name}`);
       } catch (error) {
         this.app.logger.warn(`Failed to close input ${name}: ${error.message}`);
       }
-    });
+    }
 
-    this.outputs.forEach((output, name) => {
+    // Close outputs with error handling
+    const outputsToClose = Array.from(this.outputs.entries());
+    for (const [name, output] of outputsToClose) {
       try {
         output.close();
         this.app.logger.info(`✓ Closed output: ${name}`);
       } catch (error) {
         this.app.logger.warn(`Failed to close output ${name}: ${error.message}`);
       }
-    });
+    }
 
+    // Clear all maps
     this.inputs.clear();
     this.outputs.clear();
     this.devices.clear();
 
-    // Small delay to ensure ports are released
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Longer delay to ensure ports are properly released and system recognizes changes
+    this.app.logger.info('Waiting for ports to release...');
+    await new Promise(resolve => setTimeout(resolve, 250));
 
     // USB MIDI devices - get fresh list
     const inputs = easymidi.getInputs();
@@ -49,11 +58,11 @@ class DeviceManager {
     this.app.logger.info(`Output devices found: ${JSON.stringify(outputs)}`);
 
     // Add inputs (filter out system devices)
-    inputs.forEach(name => {
+    for (const name of inputs) {
       // Skip MIDI Through ports (system virtual ports)
       if (this.isSystemDevice(name)) {
         this.app.logger.info(`Skipping system device (input): ${name}`);
-        return;
+        continue;
       }
 
       try {
@@ -62,14 +71,14 @@ class DeviceManager {
       } catch (error) {
         this.app.logger.error(`✗ Failed to add input ${name}: ${error.message}`);
       }
-    });
+    }
 
     // Add outputs (filter out system devices)
-    outputs.forEach(name => {
+    for (const name of outputs) {
       // Skip MIDI Through ports (system virtual ports)
       if (this.isSystemDevice(name)) {
         this.app.logger.info(`Skipping system device (output): ${name}`);
-        return;
+        continue;
       }
 
       try {
@@ -78,7 +87,7 @@ class DeviceManager {
       } catch (error) {
         this.app.logger.error(`✗ Failed to add output ${name}: ${error.message}`);
       }
-    });
+    }
 
     // BLE MIDI (sera implémenté en Phase 7)
     // await this.scanBLE();
@@ -89,7 +98,10 @@ class DeviceManager {
     // Broadcast device list
     this.broadcastDeviceList();
 
-    return this.getDeviceList();
+    const deviceList = this.getDeviceList();
+    this.app.logger.info(`Scan complete: ${deviceList.length} device(s) found`);
+
+    return deviceList;
   }
 
   addInput(name) {
@@ -134,7 +146,8 @@ class DeviceManager {
           input: true,
           output: this.outputs.has(name),
           enabled: true,
-          connected: true
+          connected: true,
+          status: 2  // 0=disconnected, 1=connecting, 2=connected
         });
       }
     });
@@ -148,7 +161,8 @@ class DeviceManager {
           input: false,
           output: true,
           enabled: true,
-          connected: true
+          connected: true,
+          status: 2  // 0=disconnected, 1=connecting, 2=connected
         });
       }
     });
@@ -162,7 +176,8 @@ class DeviceManager {
         input: vdev.input !== null,
         output: vdev.output !== null,
         enabled: true,
-        connected: true
+        connected: true,
+        status: 2  // 0=disconnected, 1=connecting, 2=connected
       });
     });
   }
