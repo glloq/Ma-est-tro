@@ -12,9 +12,9 @@
 class InstrumentView extends BaseView {
     constructor(containerId, eventBus) {
         super(containerId, eventBus);
-        
+
         this.logger = window.logger || console;
-        
+
         // État interne
         this.viewState = {
             connectedDevices: [],
@@ -27,10 +27,13 @@ class InstrumentView extends BaseView {
             hotPlugEnabled: false,
             selectedDevice: null
         };
-        
+
         // Éléments DOM
         this.elements = {};
-        
+
+        // Modal Bluetooth
+        this.bluetoothModal = new BluetoothScanModal(eventBus);
+
         this.log('info', '[InstrumentView]', '✦ InstrumentView v4.1.2 initialized (UTF-8 Fix)');
     }
 
@@ -398,11 +401,13 @@ class InstrumentView extends BaseView {
     }
 
     scanBluetooth() {
-        this.viewState.scanning.bluetooth = true;
-        this.render();
-        
-        if (this.eventBus) {
-            this.eventBus.emit('bluetooth:scan_requested');
+        this.log('info', '[InstrumentView]', 'Opening Bluetooth scan modal');
+
+        // Ouvrir la modal Bluetooth au lieu d'afficher directement dans la page
+        if (this.bluetoothModal) {
+            this.bluetoothModal.open();
+        } else {
+            this.log('error', '[InstrumentView]', 'Bluetooth modal not initialized');
         }
     }
 

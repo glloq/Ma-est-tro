@@ -1,0 +1,412 @@
+/* ============================================================================
+   Fichier: frontend/styles/bluetooth-scan-modal.css
+   Version: 1.0.0
+   Date: 2025-11-16
+   ============================================================================
+   Description: Styles pour la modal de scan Bluetooth
+   ============================================================================ */
+
+/* ============================================================================
+   VARIABLES
+   ============================================================================ */
+:root {
+    --bluetooth-primary: #9b59b6;
+    --bluetooth-success: #2ecc71;
+    --bluetooth-danger: #e74c3c;
+    --bluetooth-border: #e0e0e0;
+    --bluetooth-shadow: rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================================================
+   MODAL OVERLAY
+   ============================================================================ */
+
+.bluetooth-scan-modal {
+    display: flex !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* ============================================================================
+   MODAL DIALOG
+   ============================================================================ */
+
+.bluetooth-scan-modal .modal-dialog {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    max-width: 700px;
+    width: 90%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.bluetooth-scan-modal .modal-dialog.modal-lg {
+    max-width: 800px;
+}
+
+/* ============================================================================
+   MODAL HEADER
+   ============================================================================ */
+
+.bluetooth-scan-modal .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 2px solid var(--bluetooth-border);
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+    border-radius: 12px 12px 0 0;
+}
+
+.bluetooth-scan-modal .modal-header h2 {
+    margin: 0;
+    font-size: 22px;
+    color: white;
+    font-weight: 600;
+}
+
+.bluetooth-scan-modal .modal-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    font-size: 28px;
+    color: white;
+    cursor: pointer;
+    padding: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.bluetooth-scan-modal .modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+/* ============================================================================
+   MODAL BODY
+   ============================================================================ */
+
+.bluetooth-scan-modal .modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* ============================================================================
+   SCAN SECTION
+   ============================================================================ */
+
+.scan-section {
+    margin-bottom: 24px;
+}
+
+.scan-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.scan-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #333;
+    font-weight: 600;
+}
+
+.btn-scan {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: var(--bluetooth-primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-scan:hover:not(:disabled) {
+    background: #8e44ad;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
+}
+
+.btn-scan:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-scan.scanning {
+    animation: pulse-button 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-button {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* ============================================================================
+   DEVICES LIST
+   ============================================================================ */
+
+.devices-list {
+    min-height: 200px;
+}
+
+.devices-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.bluetooth-device {
+    border: 2px solid var(--bluetooth-border) !important;
+    transition: all 0.3s;
+}
+
+.bluetooth-device:hover {
+    border-color: var(--bluetooth-primary) !important;
+    box-shadow: 0 4px 16px rgba(155, 89, 182, 0.2) !important;
+}
+
+.bluetooth-device.paired {
+    background: #f8f4fc;
+    border-color: var(--bluetooth-primary) !important;
+}
+
+.device-address {
+    font-size: 12px;
+    color: #999;
+    font-family: 'Courier New', monospace;
+    margin-top: 4px;
+}
+
+.device-signal {
+    font-size: 11px;
+    color: #666;
+    margin-top: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.paired {
+    background: #d4edda;
+    color: #155724;
+}
+
+/* ============================================================================
+   DEVICE ACTIONS
+   ============================================================================ */
+
+.btn-pair {
+    background: var(--bluetooth-primary) !important;
+    color: white !important;
+    border: none !important;
+    padding: 10px 16px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+    min-width: auto !important;
+}
+
+.btn-pair:hover {
+    background: #8e44ad !important;
+    box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3) !important;
+}
+
+.btn-connect {
+    background: var(--bluetooth-success) !important;
+    color: white !important;
+    border: none !important;
+}
+
+.btn-connect:hover {
+    background: #27ae60 !important;
+}
+
+.btn-unpair {
+    background: transparent !important;
+    color: var(--bluetooth-danger) !important;
+    border: 1px solid var(--bluetooth-danger) !important;
+}
+
+.btn-unpair:hover {
+    background: var(--bluetooth-danger) !important;
+    color: white !important;
+}
+
+/* ============================================================================
+   PAIRED SECTION
+   ============================================================================ */
+
+.paired-section {
+    margin-bottom: 24px;
+    padding-top: 24px;
+    border-top: 2px solid var(--bluetooth-border);
+}
+
+.paired-section h3 {
+    margin: 0 0 16px;
+    font-size: 18px;
+    color: #333;
+    font-weight: 600;
+}
+
+/* ============================================================================
+   INFO SECTION
+   ============================================================================ */
+
+.info-section {
+    margin-top: 24px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid var(--bluetooth-primary);
+}
+
+.info-section p {
+    margin: 0;
+    font-size: 13px;
+    color: #666;
+    line-height: 1.5;
+}
+
+.info-section strong {
+    color: var(--bluetooth-primary);
+}
+
+/* ============================================================================
+   MODAL FOOTER
+   ============================================================================ */
+
+.bluetooth-scan-modal .modal-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding: 16px 24px;
+    border-top: 2px solid var(--bluetooth-border);
+    background: #f8f9fa;
+    border-radius: 0 0 12px 12px;
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+
+.bluetooth-device {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Stagger animation for multiple devices */
+.bluetooth-device:nth-child(1) { animation-delay: 0.05s; }
+.bluetooth-device:nth-child(2) { animation-delay: 0.1s; }
+.bluetooth-device:nth-child(3) { animation-delay: 0.15s; }
+.bluetooth-device:nth-child(4) { animation-delay: 0.2s; }
+.bluetooth-device:nth-child(5) { animation-delay: 0.25s; }
+
+/* ============================================================================
+   RESPONSIVE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .bluetooth-scan-modal .modal-dialog {
+        max-width: 95%;
+        max-height: 90vh;
+    }
+
+    .bluetooth-scan-modal .modal-header {
+        padding: 16px 20px;
+    }
+
+    .bluetooth-scan-modal .modal-header h2 {
+        font-size: 18px;
+    }
+
+    .bluetooth-scan-modal .modal-body {
+        padding: 20px;
+    }
+
+    .devices-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .scan-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .btn-scan {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ============================================================================
+   FIN bluetooth-scan-modal.css
+   ============================================================================ */
