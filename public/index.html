@@ -881,13 +881,17 @@
         // Charger les périphériques
         async function loadDevices() {
             try {
+                console.log('🔄 loadDevices() called');
                 const devices = await api.listDevices();
+                console.log('📋 Devices received from server:', devices.length, devices);
+
                 const deviceList = document.getElementById('deviceList');
 
                 deviceList.innerHTML = '';
 
                 // Filtrer uniquement les périphériques connectés (status === 2)
                 const connectedDevices = devices.filter(d => d.status === 2 || d.connected);
+                console.log('✅ Connected devices after filter:', connectedDevices.length, connectedDevices);
 
                 if (connectedDevices.length === 0) {
                     deviceList.innerHTML = '<li class="info-text">Aucun périphérique connecté</li>';
