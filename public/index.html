@@ -534,15 +534,6 @@
             padding-top: 0;
         }
 
-        .header-playback-info {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            margin-bottom: 12px;
-            font-size: 14px;
-        }
-
         .header-file-name {
             font-weight: 600;
             color: #667eea;
@@ -555,7 +546,9 @@
 
         .header-controls {
             display: flex;
-            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
             margin-bottom: 12px;
         }
 
@@ -599,12 +592,9 @@
                 </button>
 
                 <div class="header-playback">
-                    <div class="header-playback-info">
+                    <div class="header-controls">
                         <span class="header-file-name" id="headerFileName">Aucun fichier sélectionné</span>
                         <span class="header-time" id="headerTime">00:00 / 00:00</span>
-                    </div>
-
-                    <div class="header-controls">
                         <button class="btn" id="headerPlayPauseBtn" disabled>▶️ Lecture</button>
                         <button class="btn btn-danger" id="headerStopBtn" disabled>⏹️ Stop</button>
                     </div>
