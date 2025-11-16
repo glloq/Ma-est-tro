@@ -171,7 +171,7 @@ class KeyboardModalNew {
                                     <div class="control-group">
                                         <div class="info-item">
                                             <span class="info-label">Touches PC:</span>
-                                            <span class="info-value" id="keyboard-help-text">SDFFGHJKLM (blanches) / ZETYUOP (noires)</span>
+                                            <span class="info-value" id="keyboard-help-text">SDFGHJKLM (blanches) / ZETYUOP (noires)</span>
                                         </div>
                                     </div>
                                 </div>
@@ -351,7 +351,7 @@ class KeyboardModalNew {
             const helpText = document.getElementById('keyboard-help-text');
             if (helpText) {
                 if (this.keyboardLayout === 'azerty') {
-                    helpText.textContent = 'SDFFGHJKLM (blanches) / ZETYUOP (noires)';
+                    helpText.textContent = 'SDFGHJKLM (blanches) / ZETYUOP (noires)';
                 } else {
                     helpText.textContent = 'SDFGHJKL; (blanches) / WETYUOP (noires)';
                 }
