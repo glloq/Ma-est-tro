@@ -402,6 +402,7 @@ class DatabaseManager {
   getInstrumentSettings(deviceId) { return this.instrumentDB.getInstrumentSettings(deviceId); }
   saveSysExIdentity(deviceId, identity) { return this.instrumentDB.saveSysExIdentity(deviceId, identity); }
   findInstrumentByMac(macAddress) { return this.instrumentDB.findInstrumentByMac(macAddress); }
+  findInstrumentByUsbSerial(usbSerialNumber) { return this.instrumentDB.findInstrumentByUsbSerial(usbSerialNumber); }
 
   // ==================== UTILITIES ====================
 

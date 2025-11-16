@@ -922,9 +922,10 @@
 
                     const deviceInfo = document.createElement('div');
                     deviceInfo.className = 'device-info-section';
+                    const serialInfo = device.usbSerialNumber ? ` • 🔢 SN: ${device.usbSerialNumber.substring(0, 8)}${device.usbSerialNumber.length > 8 ? '...' : ''}` : '';
                     deviceInfo.innerHTML = `
                         <div class="device-name">${displayName}</div>
-                        <div class="device-type">${device.type} • ${device.id}</div>
+                        <div class="device-type">${device.type} • ${device.id}${serialInfo}</div>
                     `;
 
                     const deviceActions = document.createElement('div');
@@ -1312,6 +1313,14 @@
                             <input type="text" id="deviceNameDisplay" value="${device.name}" disabled>
                             <small class="form-text">Nom détecté automatiquement</small>
                         </div>
+
+                        ${device.usbSerialNumber ? `
+                        <div class="form-group">
+                            <label>Numéro de série USB</label>
+                            <input type="text" id="usbSerialNumber" value="${device.usbSerialNumber}" disabled>
+                            <small class="form-text">Identifiant unique pour différencier les appareils identiques</small>
+                        </div>
+                        ` : ''}
 
                         <div class="form-group">
                             <label>Nom personnalisé</label>
