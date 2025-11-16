@@ -787,13 +787,27 @@ class MidiEditorModal {
         const centerNote = Math.floor((minNote + maxNote) / 2);
         const yoffset = Math.max(0, centerNote - Math.floor(noteRange / 2)); // Centrer verticalement
 
+        // Calculer la résolution de grille appropriée en fonction du zoom
+        let gridValue;
+        if (xrange < 2000) {
+            gridValue = 16; // Très zoomé : 16th notes
+        } else if (xrange < 5000) {
+            gridValue = 8;  // Zoomé : 8th notes
+        } else if (xrange < 10000) {
+            gridValue = 4;  // Normal : quarter notes
+        } else if (xrange < 20000) {
+            gridValue = 2;  // Dézoomé : half notes
+        } else {
+            gridValue = 1;  // Très dézoomé : whole notes
+        }
+
         this.pianoRoll.setAttribute('width', width);
         this.pianoRoll.setAttribute('height', height);
         this.pianoRoll.setAttribute('editmode', 'dragpoly');
         this.pianoRoll.setAttribute('xrange', xrange.toString());
         this.pianoRoll.setAttribute('yrange', noteRange.toString());
         this.pianoRoll.setAttribute('yoffset', yoffset.toString()); // Centrer verticalement
-        this.pianoRoll.setAttribute('grid', '16'); // 16th notes
+        this.pianoRoll.setAttribute('grid', gridValue.toString()); // Grille adaptée au zoom
         this.pianoRoll.setAttribute('wheelzoom', '1');
         this.pianoRoll.setAttribute('xscroll', '1');
         this.pianoRoll.setAttribute('yscroll', '1');
@@ -1054,6 +1068,33 @@ class MidiEditorModal {
     }
 
     /**
+     * Ajuster la grille en fonction du niveau de zoom horizontal
+     * Plus on dézoome, moins on affiche de lignes de grille
+     */
+    updateGridResolution(xrange) {
+        if (!this.pianoRoll) return;
+
+        let gridValue;
+
+        // Adapter la résolution de la grille selon le zoom
+        if (xrange < 2000) {
+            gridValue = 16; // Très zoomé : 16th notes (doubles croches)
+        } else if (xrange < 5000) {
+            gridValue = 8;  // Zoomé : 8th notes (croches)
+        } else if (xrange < 10000) {
+            gridValue = 4;  // Normal : quarter notes (noires)
+        } else if (xrange < 20000) {
+            gridValue = 2;  // Dézoomé : half notes (blanches)
+        } else {
+            gridValue = 1;  // Très dézoomé : whole notes (rondes)
+        }
+
+        this.pianoRoll.setAttribute('grid', gridValue.toString());
+
+        this.log('debug', `Grid resolution updated: ${gridValue} (xrange=${xrange})`);
+    }
+
+    /**
      * Zoom horizontal
      */
     zoomHorizontal(factor) {
@@ -1064,13 +1105,16 @@ class MidiEditorModal {
 
         // Essayer d'accéder à la propriété directement
         const currentRange = this.pianoRoll.xrange || parseInt(this.pianoRoll.getAttribute('xrange')) || 128;
-        const newRange = Math.max(16, Math.min(10000, Math.round(currentRange * factor)));
+        const newRange = Math.max(16, Math.min(100000, Math.round(currentRange * factor)));
 
         // Essayer les deux méthodes
         this.pianoRoll.setAttribute('xrange', newRange.toString());
         if (this.pianoRoll.xrange !== undefined) {
             this.pianoRoll.xrange = newRange;
         }
+
+        // Ajuster la grille en fonction du nouveau zoom
+        this.updateGridResolution(newRange);
 
         // Forcer le redraw avec un court délai
         setTimeout(() => {
