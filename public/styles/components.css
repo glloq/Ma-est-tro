@@ -637,23 +637,24 @@
    MIDI EDITOR MODAL - Piano Roll Editor Popup (Fullscreen Overlay)
    ====================================================================================== */
 
-/* Overlay plein écran au premier plan */
+/* Overlay plein écran au premier plan - !important pour surcharger autres modal-overlay */
 .modal-overlay.midi-editor-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.85);
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.85) !important;
     backdrop-filter: blur(4px);
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    z-index: 10000 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     padding: 20px;
     animation: fadeIn 0.2s ease-out;
+    margin: 0 !important;
 }
 
 @keyframes fadeIn {
@@ -667,15 +668,16 @@
 
 /* Dialog centré avec taille maximale optimale */
 .midi-editor-modal .modal-dialog {
-    width: 98vw;
-    max-width: 1800px;
-    height: 95vh;
-    max-height: none;
-    margin: 0;
+    width: 98vw !important;
+    max-width: 1800px !important;
+    height: 95vh !important;
+    max-height: none !important;
+    margin: 0 !important;
     background: #fff;
     border-radius: 12px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     animation: scaleIn 0.2s ease-out;
+    position: relative !important;
 }
 
 @keyframes scaleIn {
