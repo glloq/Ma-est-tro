@@ -15,6 +15,7 @@ class KeyboardModal {
     constructor(eventBus) {
         this.eventBus = eventBus || window.eventBus || null;
         this.logger = window.logger || console;
+        this.backend = window.api || null;
 
         this.container = null;
         this.isOpen = false;
@@ -180,6 +181,20 @@ class KeyboardModal {
 
         // Attendre que le DOM soit mis à jour
         setTimeout(() => {
+            // Créer le controller si disponible
+            if (typeof KeyboardController !== 'undefined') {
+                this.keyboardController = new KeyboardController(
+                    this.eventBus,
+                    {},
+                    {},
+                    null,
+                    null,
+                    this.backend
+                );
+                this.keyboardController.init();
+                this.logger.info('KeyboardModal', 'KeyboardController created');
+            }
+
             this.keyboardView = new KeyboardView('keyboard-modal-container', this.eventBus);
 
             if (this.keyboardView) {
@@ -190,15 +205,53 @@ class KeyboardModal {
                 setTimeout(() => {
                     this.keyboardView.render();
 
-                    // Demander la liste des devices après le rendu
-                    if (this.eventBus) {
-                        this.eventBus.emit('keyboard:request-devices');
-                    }
+                    // Charger les devices disponibles
+                    this.loadDevices();
 
                     this.logger.info('KeyboardModal', 'Keyboard initialized and rendered');
                 }, 50);
             }
         }, 10);
+    }
+
+    /**
+     * Charge les devices MIDI disponibles
+     */
+    async loadDevices() {
+        if (!this.backend) {
+            this.logger.warn('KeyboardModal', 'Backend not available');
+            return;
+        }
+
+        try {
+            // Scanner les devices
+            const response = await this.backend.sendCommand('scan_devices');
+
+            if (response && response.success && response.data) {
+                const devices = response.data.devices || [];
+
+                // Filtrer les devices actifs (status = 2)
+                this.availableDevices = devices.filter(d => d.status === 2);
+
+                this.logger.info('KeyboardModal', `Loaded ${this.availableDevices.length} devices`);
+
+                // Émettre l'événement pour la vue
+                if (this.eventBus) {
+                    this.eventBus.emit('keyboard:devices-loaded', {
+                        devices: this.availableDevices
+                    });
+                }
+            }
+        } catch (error) {
+            this.logger.error('KeyboardModal', 'Failed to load devices:', error);
+
+            // Émettre quand même un événement vide
+            if (this.eventBus) {
+                this.eventBus.emit('keyboard:devices-loaded', {
+                    devices: []
+                });
+            }
+        }
     }
 
     // ========================================================================

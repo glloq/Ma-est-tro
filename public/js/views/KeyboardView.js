@@ -42,11 +42,12 @@ class KeyboardView extends BaseView {
         // Configuration Canvas
         this.canvas = null;
         this.ctx = null;
-        this.keyWidth = 24;
-        this.whiteKeyHeight = 140;
-        this.blackKeyHeight = 90;
-        this.minKeyWidth = 18;
-        this.maxKeyWidth = 32;
+        this.keyWidth = 40; // Plus large pour mieux voir
+        this.whiteKeyHeight = 160; // Plus haut
+        this.blackKeyHeight = 100;
+        this.minKeyWidth = 30;
+        this.maxKeyWidth = 50;
+        this.scrollOffset = 0; // Position du scroll
         
         // Keyboard mapping (touches ordinateur → notes MIDI)
         // Mapping AZERTY pour 2 octaves
@@ -120,68 +121,86 @@ class KeyboardView extends BaseView {
     buildHTML(state = {}) {
         return `
             <div class="keyboard-view">
-                <div class="keyboard-header">
-                    <h2>🎹 Clavier MIDI</h2>
-                    <div class="keyboard-controls">
-                        <div class="control-group">
-                            <label>Device de sortie:</label>
-                            <select class="device-select" data-action="select-device">
-                                <option value="">-- Sélectionner un device --</option>
-                                ${(state.devices || []).map(d => `
-                                    <option value="${d.device_id}" 
-                                            ${state.selectedDevice?.device_id === d.device_id ? 'selected' : ''}>
-                                        ${this.escapeHtml(d.name || `Device ${d.device_id}`)}
-                                    </option>
-                                `).join('')}
-                            </select>
+                <div class="keyboard-layout">
+                    <!-- Slider vélocité vertical à gauche -->
+                    <div class="velocity-control-vertical">
+                        <label class="velocity-label-vertical">Vélocité</label>
+                        <div class="velocity-slider-wrapper">
+                            <input type="range"
+                                   class="velocity-slider-vertical"
+                                   min="1"
+                                   max="127"
+                                   value="${state.velocity}"
+                                   data-action="set-velocity"
+                                   orient="vertical" />
                         </div>
-                        
-                        <div class="control-group">
-                            <label>
-                                Vélocité: 
-                                <input type="range" 
-                                       class="velocity-slider"
-                                       min="1" 
-                                       max="127" 
-                                       value="${state.velocity}" 
-                                       data-action="set-velocity" />
-                                <span class="velocity-value">${state.velocity}</span>
-                            </label>
+                        <div class="velocity-value-vertical">${state.velocity}</div>
+                    </div>
+
+                    <!-- Zone principale du clavier -->
+                    <div class="keyboard-main">
+                        <div class="keyboard-header">
+                            <div class="keyboard-controls">
+                                <div class="control-group">
+                                    <label>Instrument:</label>
+                                    <select class="device-select" data-action="select-device">
+                                        <option value="">-- Sélectionner un instrument --</option>
+                                        ${(state.devices || []).map(d => `
+                                            <option value="${d.device_id}"
+                                                    ${state.selectedDevice?.device_id === d.device_id ? 'selected' : ''}>
+                                                ${this.escapeHtml(d.name || `Device ${d.device_id}`)}
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+
+                                <div class="control-group octave-controls">
+                                    <button class="btn-octave-down"
+                                            data-action="octave-down"
+                                            title="Octave -1">◄</button>
+                                    <span class="octave-display">Octave: ${state.octaveOffset > 0 ? '+' : ''}${state.octaveOffset}</span>
+                                    <button class="btn-octave-up"
+                                            data-action="octave-up"
+                                            title="Octave +1">►</button>
+                                </div>
+
+                                <div class="info-item">
+                                    <span class="info-label">Notes actives:</span>
+                                    <span class="info-value">${state.activeNotes.size}</span>
+                                </div>
+                            </div>
                         </div>
-                        
-                        <div class="control-group octave-controls">
-                            <button class="btn-octave-down" 
-                                    data-action="octave-down" 
-                                    title="Octave -1">◄</button>
-                            <span class="octave-display">Octave: ${state.octaveOffset > 0 ? '+' : ''}${state.octaveOffset}</span>
-                            <button class="btn-octave-up" 
-                                    data-action="octave-up" 
-                                    title="Octave +1">►</button>
+
+                        <!-- Slider de navigation horizontal -->
+                        <div class="keyboard-scroll-control">
+                            <label>Navigation:</label>
+                            <input type="range"
+                                   class="keyboard-scroll-slider"
+                                   min="0"
+                                   max="88"
+                                   value="${this.scrollOffset}"
+                                   data-action="scroll-keyboard" />
+                        </div>
+
+                        <div class="keyboard-canvas-container">
+                            <canvas id="keyboardCanvas"
+                                    class="keyboard-canvas"
+                                    tabindex="0"
+                                    aria-label="Clavier MIDI interactif"></canvas>
+                        </div>
+
+                        <div class="keyboard-info-bottom">
+                            ${!state.selectedDevice ? `
+                                <div class="info-warning">
+                                    ⚠️ Sélectionnez un instrument pour jouer
+                                </div>
+                            ` : `
+                                <div class="info-help">
+                                    💡 Utilisez les touches ZXCVBNM / QWERTY pour jouer
+                                </div>
+                            `}
                         </div>
                     </div>
-                </div>
-                
-                <div class="keyboard-canvas-container">
-                    <canvas id="keyboardCanvas" 
-                            class="keyboard-canvas" 
-                            tabindex="0"
-                            aria-label="Clavier MIDI interactif"></canvas>
-                </div>
-                
-                <div class="keyboard-info">
-                    <div class="info-item">
-                        <span class="info-label">Notes actives:</span>
-                        <span class="info-value">${state.activeNotes.size}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Raccourcis:</span>
-                        <span class="info-value">Touches ZXCVBNM / QWERTY pour jouer</span>
-                    </div>
-                    ${!state.selectedDevice ? `
-                        <div class="info-warning">
-                            ⚠️ Sélectionnez un device de sortie pour jouer
-                        </div>
-                    ` : ''}
                 </div>
             </div>
         `;
@@ -220,6 +239,8 @@ class KeyboardView extends BaseView {
                 this.handleDeviceSelect(e.target.value);
             } else if (action === 'set-velocity') {
                 this.handleVelocityChange(parseInt(e.target.value, 10));
+            } else if (action === 'scroll-keyboard') {
+                this.handleScrollChange(parseInt(e.target.value, 10));
             }
         });
         
@@ -344,17 +365,29 @@ class KeyboardView extends BaseView {
      */
     handleVelocityChange(newVelocity) {
         this.viewState.velocity = Math.max(1, Math.min(127, newVelocity));
-        
-        // Mettre à jour l'affichage
-        const valueSpan = this.container.querySelector('.velocity-value');
+
+        // Mettre à jour l'affichage (vertical)
+        const valueSpan = this.container.querySelector('.velocity-value-vertical');
         if (valueSpan) {
             valueSpan.textContent = this.viewState.velocity;
         }
-        
+
         // ✅ Émettre événement vers controller
         this.emit('velocity-changed', { velocity: this.viewState.velocity });
-        
+
         this.log('debug', `Velocity changed to ${this.viewState.velocity}`);
+    }
+
+    /**
+     * Change le scroll du clavier
+     */
+    handleScrollChange(offset) {
+        this.scrollOffset = Math.max(0, Math.min(88, offset));
+
+        // Redessiner le clavier avec le nouvel offset
+        this.drawKeyboard();
+
+        this.log('debug', `Scroll offset: ${this.scrollOffset}`);
     }
     
     /**
@@ -664,40 +697,64 @@ class KeyboardView extends BaseView {
      */
     drawKeyboard() {
         if (!this.ctx) return;
-        
+
         const ctx = this.ctx;
         const width = this.canvas.width;
         const height = this.canvas.height;
-        
+
         // Clear canvas
         ctx.clearRect(0, 0, width, height);
-        
-        // Calculer plage de notes affichées
-        const baseNote = 60; // C4
-        const startNote = Math.max(21, baseNote + this.viewState.octaveOffset * 12 - 12);
-        const endNote = Math.min(108, startNote + 24);
-        
+
         // Dessiner fond
         ctx.fillStyle = '#f5f5f5';
         ctx.fillRect(0, 0, width, height);
-        
-        // Dessiner touches blanches
+
+        // Calculer combien de touches blanches on peut afficher
+        const visibleWhiteKeys = Math.floor(width / this.keyWidth);
+
+        // Note de départ basée sur le scroll (21 = A0)
+        const allNotes = [];
+        for (let i = 21; i <= 108; i++) {
+            allNotes.push(i);
+        }
+
+        // Trouver la note de départ en fonction du scrollOffset
+        let whiteKeyCount = 0;
+        let startNote = 21;
+
+        for (let note = 21; note <= 108; note++) {
+            if (this.isWhiteKey(note)) {
+                if (whiteKeyCount >= this.scrollOffset) {
+                    startNote = note;
+                    break;
+                }
+                whiteKeyCount++;
+            }
+        }
+
+        // Dessiner touches blanches visibles
         let x = 0;
-        for (let note = startNote; note <= endNote; note++) {
+        let displayedKeys = 0;
+
+        for (let note = startNote; note <= 108 && displayedKeys < visibleWhiteKeys; note++) {
             if (this.isWhiteKey(note)) {
                 this.drawWhiteKey(x, note);
                 x += this.keyWidth;
+                displayedKeys++;
             }
         }
-        
+
         // Dessiner touches noires (par-dessus les blanches)
         x = 0;
-        for (let note = startNote; note <= endNote; note++) {
+        displayedKeys = 0;
+
+        for (let note = startNote; note <= 108 && displayedKeys < visibleWhiteKeys; note++) {
             if (this.isWhiteKey(note)) {
                 if (this.hasBlackKey(note)) {
                     this.drawBlackKey(x + this.keyWidth * 0.65, note + 1);
                 }
                 x += this.keyWidth;
+                displayedKeys++;
             }
         }
     }
