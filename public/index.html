@@ -2509,6 +2509,51 @@
                     }
                 });
 
+                // Demande d'état Bluetooth
+                api.on('bluetooth:status_requested', async () => {
+                    try {
+                        const response = await api.sendCommand('ble_status', {});
+                        api.emit('bluetooth:status', response);
+                    } catch (error) {
+                        log(`❌ Erreur récupération état Bluetooth: ${error.message}`, 'error');
+                    }
+                });
+
+                // Activation Bluetooth
+                api.on('bluetooth:power_on_requested', async () => {
+                    try {
+                        log('🔌 Activation du Bluetooth...', 'info');
+                        const response = await api.sendCommand('ble_power_on', {});
+
+                        if (response.success) {
+                            api.emit('bluetooth:powered_on', response.data);
+                            log('✓ Bluetooth activé avec succès', 'info');
+                        } else {
+                            throw new Error(response.error || 'Erreur d\'activation');
+                        }
+                    } catch (error) {
+                        log(`❌ Erreur activation Bluetooth: ${error.message}`, 'error');
+                        log('💡 Essayez: sudo hciconfig hci0 up', 'info');
+                    }
+                });
+
+                // Désactivation Bluetooth
+                api.on('bluetooth:power_off_requested', async () => {
+                    try {
+                        log('🔌 Désactivation du Bluetooth...', 'info');
+                        const response = await api.sendCommand('ble_power_off', {});
+
+                        if (response.success) {
+                            api.emit('bluetooth:powered_off', response.data);
+                            log('✓ Bluetooth désactivé', 'info');
+                        } else {
+                            throw new Error(response.error || 'Erreur de désactivation');
+                        }
+                    } catch (error) {
+                        log(`❌ Erreur désactivation Bluetooth: ${error.message}`, 'error');
+                    }
+                });
+
                 // Gérer les événements de réponse Bluetooth
                 api.on('bluetooth:scanned', (data) => {
                     log(`✓ Scan Bluetooth terminé: ${(data.devices || []).length} périphériques trouvés`, 'info');

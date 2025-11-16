@@ -293,6 +293,98 @@ class BluetoothManager extends EventEmitter {
   }
 
   /**
+   * Active l'adaptateur Bluetooth
+   * @returns {Promise<Object>} Résultat de l'activation
+   */
+  async powerOn() {
+    this.app.logger.info('Powering on Bluetooth adapter...');
+
+    // Sur Linux, utiliser hciconfig pour activer l'adaptateur
+    if (process.platform === 'linux') {
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+
+      try {
+        await execAsync('sudo hciconfig hci0 up');
+        this.app.logger.info('Bluetooth adapter powered on');
+
+        // Attendre que Noble détecte le changement d'état
+        await this.waitForState('poweredOn', 5000);
+
+        return {
+          success: true,
+          state: noble.state
+        };
+      } catch (error) {
+        this.app.logger.error(`Failed to power on Bluetooth: ${error.message}`);
+        throw new Error(`Failed to enable Bluetooth. Try running: sudo hciconfig hci0 up`);
+      }
+    } else {
+      throw new Error('Bluetooth power control is only available on Linux');
+    }
+  }
+
+  /**
+   * Désactive l'adaptateur Bluetooth
+   * @returns {Promise<Object>} Résultat de la désactivation
+   */
+  async powerOff() {
+    this.app.logger.info('Powering off Bluetooth adapter...');
+
+    // Arrêter le scan d'abord
+    if (this.scanning) {
+      this.stopScan();
+    }
+
+    // Sur Linux, utiliser hciconfig pour désactiver l'adaptateur
+    if (process.platform === 'linux') {
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+
+      try {
+        await execAsync('sudo hciconfig hci0 down');
+        this.app.logger.info('Bluetooth adapter powered off');
+
+        return {
+          success: true,
+          state: 'poweredOff'
+        };
+      } catch (error) {
+        this.app.logger.error(`Failed to power off Bluetooth: ${error.message}`);
+        throw new Error(`Failed to disable Bluetooth. Try running: sudo hciconfig hci0 down`);
+      }
+    } else {
+      throw new Error('Bluetooth power control is only available on Linux');
+    }
+  }
+
+  /**
+   * Attend que Bluetooth atteigne un certain état
+   * @param {string} targetState - État cible
+   * @param {number} timeout - Timeout en ms
+   * @returns {Promise<void>}
+   */
+  async waitForState(targetState, timeout = 5000) {
+    const startTime = Date.now();
+
+    return new Promise((resolve, reject) => {
+      const checkState = () => {
+        if (noble.state === targetState) {
+          resolve();
+        } else if (Date.now() - startTime > timeout) {
+          reject(new Error(`Timeout waiting for Bluetooth state: ${targetState}`));
+        } else {
+          setTimeout(checkState, 100);
+        }
+      };
+
+      checkState();
+    });
+  }
+
+  /**
    * Arrête tous les scans et déconnecte tous les périphériques
    */
   async shutdown() {
