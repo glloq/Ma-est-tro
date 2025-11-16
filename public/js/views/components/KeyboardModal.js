@@ -60,7 +60,7 @@ class KeyboardModal {
     /**
      * Ouvre la modal et initialise le clavier
      */
-    open() {
+    async open() {
         if (this.isOpen) {
             this.logger.warn('KeyboardModal', 'Modal already open');
             return;
@@ -69,10 +69,11 @@ class KeyboardModal {
         this.isOpen = true;
         this.createModal();
 
-        // Initialiser le clavier après que le DOM soit créé
-        setTimeout(() => {
-            this.initializeKeyboard();
-        }, 100);
+        // ✅ FIX #4: Utiliser async/await au lieu de setTimeout
+        // Attendre le prochain tick pour que le DOM soit créé
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        await this.initializeKeyboard();
 
         this.logger.info('KeyboardModal', 'Modal opened');
     }
@@ -157,7 +158,7 @@ class KeyboardModal {
     /**
      * Initialise le KeyboardView dans la modal
      */
-    initializeKeyboard() {
+    async initializeKeyboard() {
         const keyboardContainer = document.getElementById('keyboard-modal-view');
 
         if (!keyboardContainer) {
@@ -174,42 +175,39 @@ class KeyboardModal {
         // Créer le container avec l'ID attendu par KeyboardView
         keyboardContainer.innerHTML = '<div id="keyboard-modal-container"></div>';
 
-        // Attendre que le DOM soit mis à jour
-        setTimeout(() => {
-            // Créer le KeyboardView
-            this.keyboardView = new KeyboardView('keyboard-modal-container', this.eventBus);
+        // ✅ FIX #4: Utiliser async/await au lieu de setTimeout imbriqués
+        // Attendre le prochain tick pour que le DOM soit mis à jour
+        await new Promise(resolve => setTimeout(resolve, 0));
 
-            // Créer le KeyboardController
-            if (typeof KeyboardController !== 'undefined') {
-                this.keyboardController = new KeyboardController(
-                    this.eventBus,
-                    {}, // viewConfig
-                    {}, // controllerConfig
-                    null, // display
-                    null, // logger
-                    this.backend
-                );
-                this.keyboardController.init();
-                this.logger.info('KeyboardModal', 'KeyboardController created and initialized');
-            } else {
-                this.logger.warn('KeyboardModal', 'KeyboardController class not available');
-            }
+        // Créer le KeyboardView
+        this.keyboardView = new KeyboardView('keyboard-modal-container', this.eventBus);
 
-            if (this.keyboardView) {
-                // Initialiser et rendre
-                this.keyboardView.init();
+        // Créer le KeyboardController
+        if (typeof KeyboardController !== 'undefined') {
+            this.keyboardController = new KeyboardController(
+                this.eventBus,
+                {}, // viewConfig
+                {}, // controllerConfig
+                null, // display
+                null, // logger
+                this.backend
+            );
+            this.keyboardController.init();
+            this.logger.info('KeyboardModal', 'KeyboardController created and initialized');
+        } else {
+            this.logger.warn('KeyboardModal', 'KeyboardController class not available');
+        }
 
-                // S'assurer que le render est bien fait
-                setTimeout(() => {
-                    this.keyboardView.render();
+        if (this.keyboardView) {
+            // Initialiser et rendre
+            this.keyboardView.init();
+            this.keyboardView.render();
 
-                    // Charger les devices disponibles
-                    this.loadDevices();
+            // Charger les devices disponibles
+            await this.loadDevices();
 
-                    this.logger.info('KeyboardModal', 'Keyboard initialized and rendered');
-                }, 50);
-            }
-        }, 10);
+            this.logger.info('KeyboardModal', 'Keyboard initialized and rendered');
+        }
     }
 
     /**
