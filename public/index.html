@@ -1107,6 +1107,7 @@
 
                 log(`Connexion à ${wsUrl}...`);
                 api = new BackendAPIClient(wsUrl);
+                window.api = api; // Expose api globally for components
 
                 let connectedCount = 0;
                 api.on('connected', () => {
