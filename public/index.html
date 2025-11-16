@@ -208,6 +208,12 @@
             background: #555;
         }
 
+        .file-list.drag-over-root {
+            background: #e0e7ff;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+        }
+
         .file-item {
             padding: 12px;
             background: #f9fafb;
@@ -1314,6 +1320,15 @@
                 }
             }
 
+            // Si targetFolder est null, le fichier retourne à la racine
+            if (!targetFolder) {
+                console.log(`Fichier ${fileIdStr} déplacé vers la racine`);
+                saveFolderStructure();
+                log(`📦 Fichier déplacé vers la racine`);
+                loadFiles();
+                return;
+            }
+
             // Ajouter le fichier au nouveau dossier
             if (!folderStructure[targetFolder]) {
                 console.error(`Dossier ${targetFolder} n'existe pas!`);
@@ -1973,6 +1988,39 @@
                 setTimeout(() => {
                     debugConsole.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }, 100);
+            }
+        });
+
+        // Event listeners pour la zone de drop (racine)
+        const fileListElement = document.getElementById('fileList');
+
+        fileListElement.addEventListener('dragover', (e) => {
+            // Vérifier qu'on est bien sur la zone vide (pas sur un dossier)
+            if (e.target === fileListElement || e.target.classList.contains('info-text')) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                fileListElement.classList.add('drag-over-root');
+            }
+        });
+
+        fileListElement.addEventListener('dragleave', (e) => {
+            if (e.target === fileListElement) {
+                fileListElement.classList.remove('drag-over-root');
+            }
+        });
+
+        fileListElement.addEventListener('drop', (e) => {
+            // Vérifier qu'on est bien sur la zone vide (pas sur un dossier ou un fichier)
+            if (e.target === fileListElement || e.target.classList.contains('info-text')) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                fileListElement.classList.remove('drag-over-root');
+
+                if (draggedFileId) {
+                    console.log('Drop sur la racine, fichier:', draggedFileId);
+                    moveFileToFolder(draggedFileId, null); // null = racine
+                }
             }
         });
 
