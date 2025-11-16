@@ -1,5 +1,8 @@
 // src/midi/DeviceManager.js
 import easymidi from 'easymidi';
+import { execSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 class DeviceManager {
   constructor(app) {
@@ -99,7 +102,7 @@ class DeviceManager {
     // await this.scanBLE();
 
     // Update devices map
-    this.updateDeviceMap();
+    await this.updateDeviceMap();
 
     // Broadcast device list
     this.broadcastDeviceList();
@@ -159,12 +162,17 @@ class DeviceManager {
     }
   }
 
-  updateDeviceMap() {
+  async updateDeviceMap() {
     this.devices.clear();
 
+    // Get USB serial numbers for all connected devices
+    const serialNumbers = await this.getUsbSerialNumbers();
+
     // Add USB devices
-    this.inputs.forEach((input, name) => {
+    for (const [name, input] of this.inputs) {
       if (!this.devices.has(name)) {
+        const serialNumber = await this.findSerialNumberForDevice(name);
+
         this.devices.set(name, {
           id: name,
           name: name,
@@ -173,13 +181,20 @@ class DeviceManager {
           output: this.outputs.has(name),
           enabled: true,
           connected: true,
-          status: 2  // 0=disconnected, 1=connecting, 2=connected
+          status: 2,  // 0=disconnected, 1=connecting, 2=connected
+          usbSerialNumber: serialNumber || null
         });
-      }
-    });
 
-    this.outputs.forEach((output, name) => {
+        if (serialNumber) {
+          this.app.logger.info(`USB device ${name} has serial number: ${serialNumber}`);
+        }
+      }
+    }
+
+    for (const [name, output] of this.outputs) {
       if (!this.devices.has(name)) {
+        const serialNumber = await this.findSerialNumberForDevice(name);
+
         this.devices.set(name, {
           id: name,
           name: name,
@@ -188,10 +203,15 @@ class DeviceManager {
           output: true,
           enabled: true,
           connected: true,
-          status: 2  // 0=disconnected, 1=connecting, 2=connected
+          status: 2,  // 0=disconnected, 1=connecting, 2=connected
+          usbSerialNumber: serialNumber || null
         });
+
+        if (serialNumber) {
+          this.app.logger.info(`USB device ${name} has serial number: ${serialNumber}`);
+        }
       }
-    });
+    }
 
     // Add virtual devices
     this.virtualDevices.forEach((vdev, name) => {
@@ -203,7 +223,8 @@ class DeviceManager {
         output: vdev.output !== null,
         enabled: true,
         connected: true,
-        status: 2  // 0=disconnected, 1=connecting, 2=connected
+        status: 2,  // 0=disconnected, 1=connecting, 2=connected
+        usbSerialNumber: null
       });
     });
   }
@@ -426,7 +447,7 @@ class DeviceManager {
     return manufacturers[id] || 'Unknown';
   }
 
-  createVirtualDevice(name) {
+  async createVirtualDevice(name) {
     if (this.virtualDevices.has(name)) {
       throw new Error(`Virtual device already exists: ${name}`);
     }
@@ -440,14 +461,14 @@ class DeviceManager {
     input.on('cc', (msg) => this.handleMidiMessage(name, 'cc', msg));
 
     this.virtualDevices.set(name, { input, output });
-    this.updateDeviceMap();
+    await this.updateDeviceMap();
     this.broadcastDeviceList();
 
     this.app.logger.info(`Virtual device created: ${name}`);
     return name;
   }
 
-  deleteVirtualDevice(name) {
+  async deleteVirtualDevice(name) {
     const vdev = this.virtualDevices.get(name);
     if (!vdev) {
       throw new Error(`Virtual device not found: ${name}`);
@@ -456,7 +477,7 @@ class DeviceManager {
     vdev.input.close();
     vdev.output.close();
     this.virtualDevices.delete(name);
-    this.updateDeviceMap();
+    await this.updateDeviceMap();
     this.broadcastDeviceList();
 
     this.app.logger.info(`Virtual device deleted: ${name}`);
@@ -497,6 +518,116 @@ class DeviceManager {
     ];
 
     return systemPatterns.some(pattern => pattern.test(name));
+  }
+
+  /**
+   * Get USB serial numbers for connected devices
+   * Returns a map of device paths to serial numbers
+   */
+  async getUsbSerialNumbers() {
+    const serialNumbers = {};
+
+    try {
+      // Method 1: Check /dev/serial/by-id/ (most reliable on Linux)
+      const serialByIdPath = '/dev/serial/by-id';
+      if (fs.existsSync(serialByIdPath)) {
+        const devices = fs.readdirSync(serialByIdPath);
+
+        for (const device of devices) {
+          try {
+            const fullPath = path.join(serialByIdPath, device);
+            const realPath = fs.realpathSync(fullPath);
+
+            // Extract serial number from device name
+            // Format: usb-<vendor>_<product>_<serial>-if00-port0
+            const match = device.match(/usb-(.+?)_(.+?)_([^-]+)/);
+            if (match) {
+              const serialNumber = match[3];
+              serialNumbers[realPath] = serialNumber;
+              serialNumbers[path.basename(realPath)] = serialNumber;
+
+              this.app.logger.debug(`Found USB device: ${device} -> ${serialNumber}`);
+            }
+          } catch (error) {
+            this.app.logger.warn(`Failed to read serial device ${device}: ${error.message}`);
+          }
+        }
+      }
+
+      // Method 2: Use udevadm for additional info (if available)
+      try {
+        // List all tty devices
+        const ttyDevices = fs.readdirSync('/sys/class/tty')
+          .filter(d => d.startsWith('ttyUSB') || d.startsWith('ttyACM'));
+
+        for (const tty of ttyDevices) {
+          try {
+            const cmd = `udevadm info --name=/dev/${tty} --query=property 2>/dev/null | grep -E "ID_SERIAL_SHORT|ID_SERIAL"`;
+            const output = execSync(cmd, { encoding: 'utf8', timeout: 1000 });
+
+            const lines = output.split('\n');
+            let serialShort = null;
+            let serial = null;
+
+            for (const line of lines) {
+              if (line.startsWith('ID_SERIAL_SHORT=')) {
+                serialShort = line.split('=')[1];
+              } else if (line.startsWith('ID_SERIAL=')) {
+                serial = line.split('=')[1];
+              }
+            }
+
+            const serialNum = serialShort || serial;
+            if (serialNum) {
+              serialNumbers[`/dev/${tty}`] = serialNum;
+              serialNumbers[tty] = serialNum;
+              this.app.logger.debug(`Found USB serial for ${tty}: ${serialNum}`);
+            }
+          } catch (error) {
+            // Ignore errors for individual devices
+          }
+        }
+      } catch (error) {
+        this.app.logger.warn(`udevadm not available: ${error.message}`);
+      }
+
+    } catch (error) {
+      this.app.logger.warn(`Failed to get USB serial numbers: ${error.message}`);
+    }
+
+    return serialNumbers;
+  }
+
+  /**
+   * Try to find USB serial number for a MIDI device
+   */
+  async findSerialNumberForDevice(deviceName) {
+    const serialNumbers = await this.getUsbSerialNumbers();
+
+    // Try to match device name with serial port
+    // ALSA MIDI devices often contain the card number
+    // Example: "USB MIDI Device MIDI 1" -> card 1
+
+    for (const [devicePath, serialNumber] of Object.entries(serialNumbers)) {
+      // Check if the device path or name matches
+      if (deviceName.includes(path.basename(devicePath)) ||
+          devicePath.includes(deviceName.toLowerCase())) {
+        return serialNumber;
+      }
+    }
+
+    // If no match found, try to extract card number and match
+    const cardMatch = deviceName.match(/card\s*(\d+)/i) || deviceName.match(/MIDI\s*(\d+)/i);
+    if (cardMatch) {
+      const cardNum = cardMatch[1];
+      // Try to find matching serial number (this is a heuristic)
+      const keys = Object.keys(serialNumbers);
+      if (keys.length > 0 && parseInt(cardNum) < keys.length) {
+        return serialNumbers[keys[parseInt(cardNum)]];
+      }
+    }
+
+    return null;
   }
 
   broadcastDeviceList() {
@@ -618,7 +749,7 @@ class DeviceManager {
 
       // If there were changes, update the device map and broadcast
       if (hasChanges) {
-        this.updateDeviceMap();
+        await this.updateDeviceMap();
         this.broadcastDeviceList();
         this.app.logger.info(`Device list updated: ${this.devices.size} device(s)`);
       }

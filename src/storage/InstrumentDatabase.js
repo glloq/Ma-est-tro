@@ -352,6 +352,10 @@ class InstrumentDatabase {
           fields.push('mac_address = ?');
           values.push(settings.mac_address);
         }
+        if (settings.usb_serial_number !== undefined) {
+          fields.push('usb_serial_number = ?');
+          values.push(settings.usb_serial_number);
+        }
         if (settings.name !== undefined) {
           fields.push('name = ?');
           values.push(settings.name);
@@ -373,8 +377,8 @@ class InstrumentDatabase {
         // Insert new entry
         const stmt = this.db.prepare(`
           INSERT INTO instruments_latency (
-            id, device_id, channel, name, custom_name, sync_delay, mac_address
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            id, device_id, channel, name, custom_name, sync_delay, mac_address, usb_serial_number
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
         const id = `${deviceId}_0`; // Default channel 0
@@ -385,7 +389,8 @@ class InstrumentDatabase {
           settings.name || 'Unnamed Instrument',
           settings.custom_name || null,
           settings.sync_delay || 0,
-          settings.mac_address || null
+          settings.mac_address || null,
+          settings.usb_serial_number || null
         );
 
         return id;
@@ -490,6 +495,19 @@ class InstrumentDatabase {
       return stmt.get(macAddress);
     } catch (error) {
       this.logger.error(`Failed to find instrument by MAC: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Find instrument by USB serial number
+   */
+  findInstrumentByUsbSerial(usbSerialNumber) {
+    try {
+      const stmt = this.db.prepare('SELECT * FROM instruments_latency WHERE usb_serial_number = ?');
+      return stmt.get(usbSerialNumber);
+    } catch (error) {
+      this.logger.error(`Failed to find instrument by USB serial: ${error.message}`);
       throw error;
     }
   }

@@ -228,10 +228,20 @@ class CommandHandler {
       throw new Error('Database not available');
     }
 
+    // Get USB serial number from data or from DeviceManager
+    let usbSerialNumber = data.usb_serial_number;
+    if (!usbSerialNumber && this.app.deviceManager) {
+      const device = this.app.deviceManager.getDeviceInfo(data.deviceId);
+      if (device && device.usbSerialNumber) {
+        usbSerialNumber = device.usbSerialNumber;
+      }
+    }
+
     const id = this.app.database.updateInstrumentSettings(data.deviceId, {
       custom_name: data.custom_name,
       sync_delay: data.sync_delay,
       mac_address: data.mac_address,
+      usb_serial_number: usbSerialNumber,
       name: data.name
     });
 
