@@ -701,9 +701,9 @@
     overflow: hidden;
 }
 
-/* Header avec bouton de fermeture */
+/* Header avec bouton de fermeture - Compact pour plus d'espace */
 .midi-editor-modal .modal-header {
-    padding: 16px 24px;
+    padding: 10px 20px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border-radius: 12px 12px 0 0;
@@ -791,22 +791,23 @@
     font-weight: 600;
 }
 
-/* Toolbar des canaux */
+/* Toolbar des canaux - Compact pour plus d'espace */
 .midi-editor-modal .channels-toolbar {
     display: flex;
-    gap: 8px;
-    padding: 12px 16px;
+    gap: 6px;
+    padding: 8px 12px;
     background: #252525;
     border-bottom: 1px solid #3a3a3a;
     overflow-x: auto;
     overflow-y: hidden;
-    max-height: 80px;
+    max-height: 60px;
+    flex-shrink: 0;
 }
 
 .midi-editor-modal .channel-buttons {
     display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
+    gap: 6px;
+    flex-wrap: nowrap;
 }
 
 .midi-editor-modal .channel-btn {
@@ -814,16 +815,17 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 10px 14px;
+    padding: 6px 10px;
     background: #0a0a0a;
-    border: 4px solid #555;
-    border-radius: 12px;
+    border: 3px solid #555;
+    border-radius: 8px;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    min-width: 110px;
-    gap: 4px;
+    transition: all 0.2s ease;
+    min-width: 70px;
+    gap: 2px;
     position: relative;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .midi-editor-modal .channel-btn::before {
@@ -861,7 +863,7 @@
 }
 
 .midi-editor-modal .channel-number {
-    font-size: 1.3rem;
+    font-size: 1.1rem;
     font-weight: 900;
     color: #fff;
     position: relative;
@@ -873,20 +875,21 @@
 }
 
 .midi-editor-modal .channel-name {
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     color: #ddd;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 120px;
+    max-width: 90px;
     position: relative;
     z-index: 1;
     text-shadow: 0 0 8px rgba(0,0,0,1),
                  0 2px 4px rgba(0,0,0,0.9);
 }
 
+/* Suppression des styles .channel-count (élément retiré) */
 .midi-editor-modal .channel-count {
-    font-size: 0.7rem;
+    display: none;
     color: #aaa;
     position: relative;
     z-index: 1;
@@ -920,12 +923,13 @@
 }
 
 .midi-editor-modal .modal-footer {
-    padding: 16px 24px;
+    padding: 10px 20px;
     background: #f8f9fa;
     border-top: 1px solid #dee2e6;
     display: flex;
     justify-content: flex-end;
     gap: 12px;
+    flex-shrink: 0;
 }
 
 .midi-editor-modal .btn-sm {

@@ -578,7 +578,6 @@ this.reloadPianoRoll();
                 >
                     <span class="channel-number">${ch.channel + 1}</span>
                     <span class="channel-name">${ch.instrument}</span>
-                    <span class="channel-count">${ch.noteCount}</span>
                 </button>
             `;
         });
@@ -635,27 +634,6 @@ this.reloadPianoRoll();
                     <button class="modal-close" data-action="close">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <div class="editor-toolbar">
-                        <div class="toolbar-group">
-                            <label>Mode:
-                                <select id="edit-mode">
-                                    <option value="dragpoly">Drag Poly</option>
-                                    <option value="dragmono">Drag Mono</option>
-                                    <option value="gridpoly">Grid Poly</option>
-                                    <option value="gridmono">Grid Mono</option>
-                                </select>
-                            </label>
-                        </div>
-                        <div class="toolbar-group">
-                            <button class="btn btn-sm" data-action="zoom-in" title="Zoom horizontal +">🔍+</button>
-                            <button class="btn btn-sm" data-action="zoom-out" title="Zoom horizontal -">🔍−</button>
-                            <button class="btn btn-sm" data-action="vzoom-in" title="Zoom vertical +">⬆️</button>
-                            <button class="btn btn-sm" data-action="vzoom-out" title="Zoom vertical -">⬇️</button>
-                        </div>
-                        <div class="toolbar-group">
-                            <span class="toolbar-label">Notes: <span id="note-count">${this.sequence.length}</span></span>
-                        </div>
-                    </div>
                     <div class="channels-toolbar">
                         ${this.renderChannelButtons()}
                     </div>
@@ -723,9 +701,9 @@ this.reloadPianoRoll();
             this.log('info', `Sequence range: ticks 0-${maxTick}, notes ${minNote}-${maxNote}`);
         }
 
-        // Définir une plage visible appropriée (arrondir au multiple de 128)
-        const xrange = Math.max(128, Math.ceil(maxTick / 128) * 128);
-        const noteRange = Math.max(36, maxNote - minNote + 12); // +12 pour marge
+        // Définir une plage visible appropriée - augmentée pour plus de zoom/défilement
+        const xrange = Math.max(256, Math.ceil(maxTick / 128) * 128 * 2); // x2 pour plus de zoom horizontal
+        const noteRange = Math.max(48, maxNote - minNote + 24); // +24 pour marge verticale étendue
 
         this.pianoRoll.setAttribute('width', width);
         this.pianoRoll.setAttribute('height', height);
@@ -820,16 +798,11 @@ this.reloadPianoRoll();
 
     /**
      * Mettre à jour les statistiques affichées
+     * Note: Fonction simplifiée - l'élément note-count a été retiré pour plus d'espace
      */
     updateStats() {
-        if (!this.pianoRoll) return;
-
-        const noteCountEl = document.getElementById('note-count');
-
-        if (noteCountEl) {
-            const sequence = this.pianoRoll.sequence || [];
-            noteCountEl.textContent = sequence.length;
-        }
+        // Anciennement affichait le nombre de notes, retiré pour optimiser l'espace
+        // L'information est toujours visible dans le tooltip des boutons de canal
     }
 
     /**
@@ -876,30 +849,8 @@ this.reloadPianoRoll();
                 case 'save':
                     this.saveMidiFile();
                     break;
-                case 'zoom-in':
-                    this.zoomHorizontal(0.8);
-                    break;
-                case 'zoom-out':
-                    this.zoomHorizontal(1.2);
-                    break;
-                case 'vzoom-in':
-                    this.zoomVertical(0.8);
-                    break;
-                case 'vzoom-out':
-                    this.zoomVertical(1.2);
-                    break;
             }
         });
-
-        // Changement de mode d'édition
-        const editModeSelect = document.getElementById('edit-mode');
-        if (editModeSelect) {
-            editModeSelect.addEventListener('change', (e) => {
-                if (this.pianoRoll) {
-                    this.pianoRoll.setAttribute('editmode', e.target.value);
-                }
-            });
-        }
 
         // Clic sur les boutons de canal
         const channelButtons = this.container.querySelectorAll('.channel-btn');
