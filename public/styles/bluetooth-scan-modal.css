@@ -127,7 +127,8 @@
     padding: 24px !important;
     overflow-y: auto !important;
     flex: 1 !important;
-    display: block !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
 
 /* ============================================================================
@@ -136,6 +137,7 @@
 
 .scan-section {
     margin-bottom: 20px;
+    flex-shrink: 0;
 }
 
 .scan-header {
@@ -364,6 +366,7 @@
     margin-bottom: 20px;
     padding-top: 20px;
     border-top: 2px solid #f0f0f0;
+    flex-shrink: 0;
 }
 
 .paired-section h3 {
