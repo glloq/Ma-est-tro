@@ -80,6 +80,14 @@ class KeyboardModal {
 
         this.isOpen = false;
 
+        // Détruire le KeyboardController si existant
+        if (this.keyboardController) {
+            if (typeof this.keyboardController.destroy === 'function') {
+                this.keyboardController.destroy();
+            }
+            this.keyboardController = null;
+        }
+
         // Détruire le KeyboardView si existant
         if (this.keyboardView) {
             this.keyboardView.destroy();
@@ -181,7 +189,24 @@ class KeyboardModal {
 
         // Attendre que le DOM soit mis à jour
         setTimeout(() => {
+            // Créer le KeyboardView
             this.keyboardView = new KeyboardView('keyboard-modal-container', this.eventBus);
+
+            // Créer le KeyboardController
+            if (typeof KeyboardController !== 'undefined') {
+                this.keyboardController = new KeyboardController(
+                    this.eventBus,
+                    {}, // viewConfig
+                    {}, // controllerConfig
+                    null, // display
+                    null, // logger
+                    this.backend
+                );
+                this.keyboardController.init();
+                this.logger.info('KeyboardModal', 'KeyboardController created and initialized');
+            } else {
+                this.logger.warn('KeyboardModal', 'KeyboardController class not available');
+            }
 
             if (this.keyboardView) {
                 // Initialiser et rendre
@@ -210,34 +235,26 @@ class KeyboardModal {
         }
 
         try {
-            this.logger.info('KeyboardModal', 'Scanning devices...');
+            this.logger.info('KeyboardModal', 'Loading devices...');
 
-            // Scanner les devices
-            const response = await this.backend.sendCommand('scan_devices');
+            // Charger les devices via l'API
+            const devices = await this.backend.listDevices();
 
-            this.logger.info('KeyboardModal', 'Scan response:', response);
+            this.logger.info('KeyboardModal', `Total devices: ${devices.length}`, devices);
 
-            if (response && response.success && response.data) {
-                const devices = response.data.devices || [];
+            // Filtrer les devices actifs (status = 2)
+            this.availableDevices = devices.filter(d => d.status === 2);
 
-                this.logger.info('KeyboardModal', `Total devices: ${devices.length}`, devices);
+            this.logger.info('KeyboardModal', `Active devices (status=2): ${this.availableDevices.length}`, this.availableDevices);
 
-                // Filtrer les devices actifs (status = 2)
-                this.availableDevices = devices.filter(d => d.status === 2);
-
-                this.logger.info('KeyboardModal', `Active devices (status=2): ${this.availableDevices.length}`, this.availableDevices);
-
-                // Émettre l'événement pour la vue
-                if (this.eventBus) {
-                    this.logger.info('KeyboardModal', 'Emitting keyboard:devices-loaded event');
-                    this.eventBus.emit('keyboard:devices-loaded', {
-                        devices: this.availableDevices
-                    });
-                } else {
-                    this.logger.error('KeyboardModal', 'EventBus not available!');
-                }
+            // Émettre l'événement pour la vue
+            if (this.eventBus) {
+                this.logger.info('KeyboardModal', 'Emitting keyboard:devices-loaded event');
+                this.eventBus.emit('keyboard:devices-loaded', {
+                    devices: this.availableDevices
+                });
             } else {
-                this.logger.warn('KeyboardModal', 'Invalid response from scan_devices');
+                this.logger.error('KeyboardModal', 'EventBus not available!');
             }
         } catch (error) {
             this.logger.error('KeyboardModal', 'Failed to load devices:', error);

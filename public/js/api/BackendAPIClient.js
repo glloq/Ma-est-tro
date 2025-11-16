@@ -266,6 +266,40 @@ class BackendAPIClient {
     }
 
     // ========================================================================
+    // MIDI MESSAGES
+    // ========================================================================
+
+    /**
+     * Send MIDI Note On message
+     * @param {string} deviceId - Target device ID
+     * @param {number} note - MIDI note number (0-127)
+     * @param {number} velocity - Note velocity (1-127)
+     * @param {number} channel - MIDI channel (0-15)
+     */
+    async sendNoteOn(deviceId, note, velocity, channel = 0) {
+        return this.sendCommand('midi_note_on', {
+            device_id: deviceId,
+            note: note,
+            velocity: velocity,
+            channel: channel
+        });
+    }
+
+    /**
+     * Send MIDI Note Off message
+     * @param {string} deviceId - Target device ID
+     * @param {number} note - MIDI note number (0-127)
+     * @param {number} channel - MIDI channel (0-15)
+     */
+    async sendNoteOff(deviceId, note, channel = 0) {
+        return this.sendCommand('midi_note_off', {
+            device_id: deviceId,
+            note: note,
+            channel: channel
+        });
+    }
+
+    // ========================================================================
     // PLAYBACK
     // ========================================================================
 
