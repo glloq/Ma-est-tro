@@ -48,8 +48,8 @@ class KeyboardView extends BaseView {
         this.canvas = null;
         this.ctx = null;
         this.keyWidth = 40; // Plus large pour mieux voir
-        this.whiteKeyHeight = 160; // Plus haut
-        this.blackKeyHeight = 100;
+        this.whiteKeyHeight = 320; // Hauteur doublée
+        this.blackKeyHeight = 200; // Hauteur doublée
         this.minKeyWidth = 30;
         this.maxKeyWidth = 50;
         this.scrollOffset = 0; // Position du scroll
@@ -117,13 +117,16 @@ class KeyboardView extends BaseView {
             this.log('error', 'Cannot render: container not found');
             return;
         }
-        
+
+        // ✅ FIX #2: Détacher les listeners AVANT de recréer le DOM
+        this.detachEvents();
+
         // Fusionner données
         const renderData = { ...this.viewState, ...data };
-        
+
         // Construire et injecter HTML
         this.container.innerHTML = this.buildHTML(renderData);
-        
+
         // Attacher les événements après rendu
         this.attachEvents();
         
@@ -285,18 +288,21 @@ class KeyboardView extends BaseView {
      */
     attachCanvasEvents() {
         if (!this.canvas) return;
-        
+
+        // ✅ FIX #3: Détacher d'abord pour éviter les doublons
+        this.detachCanvasEvents();
+
         // Mouse events
         this.canvas.addEventListener('mousedown', this.handleMouseDown);
         this.canvas.addEventListener('mouseup', this.handleMouseUp);
         this.canvas.addEventListener('mousemove', this.handleMouseMove);
         this.canvas.addEventListener('mouseleave', this.handleMouseLeave);
-        
+
         // Touch events pour mobile
         this.canvas.addEventListener('touchstart', this.handleTouchStart, { passive: false });
         this.canvas.addEventListener('touchend', this.handleTouchEnd, { passive: false });
         this.canvas.addEventListener('touchmove', this.handleTouchMove, { passive: false });
-        
+
         this.log('debug', 'Canvas events attached');
     }
     
@@ -332,10 +338,45 @@ class KeyboardView extends BaseView {
             this.log('info', `Device selected: ${data.device_id}`);
         });
         this.eventSubscriptions.push(deviceSelectedSub);
-        
+
         this.log('debug', 'EventBus listeners attached');
     }
-    
+
+    /**
+     * ✅ FIX #2: Détache tous les listeners DOM
+     */
+    detachEvents() {
+        // Retirer resize listener
+        window.removeEventListener('resize', this.handleResize);
+
+        // Retirer canvas listeners si existants
+        if (this.canvas) {
+            this.detachCanvasEvents();
+        }
+
+        this.log('debug', 'Events detached');
+    }
+
+    /**
+     * ✅ FIX #3: Détache tous les listeners canvas
+     */
+    detachCanvasEvents() {
+        if (!this.canvas) return;
+
+        // Mouse events
+        this.canvas.removeEventListener('mousedown', this.handleMouseDown);
+        this.canvas.removeEventListener('mouseup', this.handleMouseUp);
+        this.canvas.removeEventListener('mousemove', this.handleMouseMove);
+        this.canvas.removeEventListener('mouseleave', this.handleMouseLeave);
+
+        // Touch events
+        this.canvas.removeEventListener('touchstart', this.handleTouchStart);
+        this.canvas.removeEventListener('touchend', this.handleTouchEnd);
+        this.canvas.removeEventListener('touchmove', this.handleTouchMove);
+
+        this.log('debug', 'Canvas events detached');
+    }
+
     // ========================================================================
     // HANDLERS - CONTRÔLES UI
     // ========================================================================
@@ -348,21 +389,28 @@ class KeyboardView extends BaseView {
             this.viewState.selectedDevice = null;
             return;
         }
-        
+
         // Trouver le device
         const device = this.viewState.devices.find(d => d.device_id === deviceId);
-        
+
         if (!device) {
             this.log('warn', `Device ${deviceId} not found`);
             return;
         }
-        
-        this.viewState.selectedDevice = device;
+
+        // ✅ FIX #7: Assurer que device_id est toujours défini
+        const normalizedDevice = {
+            ...device,
+            device_id: device.device_id || device.id,
+            id: device.id || device.device_id
+        };
+
+        this.viewState.selectedDevice = normalizedDevice;
 
         // ✅ Émettre événement vers controller
-        this.emit('select-device', { device_id: deviceId });
+        this.emit('select-device', { device_id: normalizedDevice.device_id });
 
-        this.log('info', `Selected device: ${device.displayName || device.name || deviceId}`);
+        this.log('info', `Selected device: ${normalizedDevice.displayName || normalizedDevice.name || deviceId} (ID: ${normalizedDevice.device_id})`);
     }
     
     /**
@@ -444,14 +492,18 @@ class KeyboardView extends BaseView {
     handleDevicesLoaded(data) {
         this.log('info', 'handleDevicesLoaded called with:', data);
 
-        this.viewState.devices = data.devices || [];
+        const newDevices = data.devices || [];
+        const oldDevicesLength = this.viewState.devices.length;
 
-        this.log('info', `Received ${this.viewState.devices.length} devices from event`);
+        // ✅ FIX #9: Ne re-render que si devices ont vraiment changé
+        if (oldDevicesLength === newDevices.length && oldDevicesLength > 0) {
+            this.log('info', `Devices unchanged (${newDevices.length}), skipping render`);
+            return;
+        }
 
-        // Les devices sont déjà filtrés par la modal, pas besoin de re-filtrer
-        // this.viewState.devices = this.viewState.devices.filter(d => d.status === 2);
+        this.viewState.devices = newDevices;
 
-        this.log('info', `Devices to display: ${this.viewState.devices.length}`, this.viewState.devices);
+        this.log('info', `Received ${this.viewState.devices.length} devices from event (was ${oldDevicesLength})`);
 
         // Re-render pour mettre à jour le select
         this.render();
@@ -1007,8 +1059,8 @@ class KeyboardView extends BaseView {
     init() {
         super.init();
 
-        // S'assurer que les listeners EventBus sont en place
-        this.setupEventBusListeners();
+        // ✅ FIX #1: setupEventBusListeners() déjà appelé dans attachEvents()
+        // Ne pas appeler 2x pour éviter double listeners
 
         // Demander la liste des devices
         if (this.eventBus) {
