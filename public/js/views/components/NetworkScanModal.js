@@ -134,6 +134,35 @@ class NetworkScanModal {
                 </div>
 
                 <div class="modal-body">
+                    <!-- Section ajout manuel d'IP -->
+                    <div class="manual-ip-section">
+                        <div class="manual-ip-header">
+                            <h3>🎯 Connexion manuelle</h3>
+                            <p class="text-muted" style="margin: 0; font-size: 12px;">Pour les instruments sans détection automatique</p>
+                        </div>
+                        <div class="manual-ip-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="manualIp">Adresse IP</label>
+                                    <input type="text"
+                                           id="manualIp"
+                                           placeholder="ex: 192.168.1.100"
+                                           pattern="^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$">
+                                </div>
+                                <div class="form-group">
+                                    <label for="manualPort">Port (optionnel)</label>
+                                    <input type="text"
+                                           id="manualPort"
+                                           placeholder="5004"
+                                           value="5004">
+                                </div>
+                                <button class="btn-connect-manual" data-action="connect-manual">
+                                    🔌 Connecter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Section scan -->
                     <div class="scan-section">
                         <div class="scan-header">
@@ -307,6 +336,22 @@ class NetworkScanModal {
             scanButton.addEventListener('click', () => this.startScan());
         }
 
+        // Bouton de connexion manuelle
+        const connectManualButton = this.container.querySelector('[data-action="connect-manual"]');
+        if (connectManualButton) {
+            connectManualButton.addEventListener('click', () => this.connectManual());
+        }
+
+        // Validation IP en temps réel
+        const manualIpInput = this.container.querySelector('#manualIp');
+        if (manualIpInput) {
+            manualIpInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.connectManual();
+                }
+            });
+        }
+
         // Délégation d'événements pour les actions sur les périphériques
         this.container.addEventListener('click', (e) => {
             const action = e.target.dataset.action;
@@ -351,6 +396,47 @@ class NetworkScanModal {
             this.scanning = false;
             this.updateModalContent();
         }
+    }
+
+    /**
+     * Connecte manuellement via IP
+     */
+    connectManual() {
+        const ipInput = this.container.querySelector('#manualIp');
+        const portInput = this.container.querySelector('#manualPort');
+
+        if (!ipInput) {
+            this.logger.error('NetworkScanModal', 'IP input not found');
+            return;
+        }
+
+        const ip = ipInput.value.trim();
+        const port = portInput ? portInput.value.trim() : '5004';
+
+        // Validation de l'adresse IP
+        if (!ip) {
+            alert('⚠️ Veuillez entrer une adresse IP');
+            ipInput.focus();
+            return;
+        }
+
+        // Regex pour valider l'IP
+        const ipPattern = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+        if (!ipPattern.test(ip)) {
+            alert('⚠️ Adresse IP invalide\nFormat attendu: xxx.xxx.xxx.xxx\nExemple: 192.168.1.100');
+            ipInput.focus();
+            return;
+        }
+
+        this.logger.info('NetworkScanModal', `Manual connection to: ${ip}:${port}`);
+
+        // Connecter le périphérique
+        const deviceName = `Instrument réseau (${ip})`;
+        this.connectDevice(ip, port, deviceName);
+
+        // Vider les champs après connexion
+        ipInput.value = '';
+        if (portInput) portInput.value = '5004';
     }
 
     /**
