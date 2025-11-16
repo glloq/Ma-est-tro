@@ -336,6 +336,10 @@ class MidiEditorModal {
      * Mettre à jour la séquence depuis les canaux actifs
      */
     updateSequenceFromActiveChannels() {
+        // D'ABORD: synchroniser fullSequence avec le piano roll actuel
+        // pour ne pas perdre les modifications
+        this.syncFullSequenceFromPianoRoll();
+
         if (this.activeChannels.size === 0) {
             this.sequence = [];
         } else {
@@ -346,8 +350,41 @@ class MidiEditorModal {
 
         // Mettre à jour le piano roll si il existe
         if (this.pianoRoll) {
-this.reloadPianoRoll();
+            this.reloadPianoRoll();
         }
+    }
+
+    /**
+     * Synchroniser fullSequence avec les notes actuelles du piano roll
+     * pour ne pas perdre les modifications (suppressions, ajouts, etc.)
+     */
+    syncFullSequenceFromPianoRoll() {
+        if (!this.pianoRoll || !this.pianoRoll.sequence) return;
+
+        const currentSequence = this.pianoRoll.sequence;
+
+        // Reconstruire fullSequence en fusionnant:
+        // - Les notes des canaux actuellement visibles (depuis le piano roll)
+        // - Les notes des canaux invisibles (depuis fullSequence)
+
+        // 1. Garder les notes des canaux invisibles
+        const invisibleNotes = this.fullSequence.filter(note => !this.activeChannels.has(note.c));
+
+        // 2. Prendre les notes du piano roll (canaux visibles, potentiellement modifiées)
+        const visibleNotes = currentSequence.map(note => ({
+            t: note.t,
+            g: note.g,
+            n: note.n,
+            c: note.c
+        }));
+
+        // 3. Fusionner
+        this.fullSequence = [...invisibleNotes, ...visibleNotes];
+
+        // 4. Trier par tick
+        this.fullSequence.sort((a, b) => a.t - b.t);
+
+        this.log('debug', `Synced fullSequence: ${invisibleNotes.length} invisible + ${visibleNotes.length} visible = ${this.fullSequence.length} total`);
     }
 
     /**
@@ -802,6 +839,9 @@ this.reloadPianoRoll();
             this.isDirty = true;
             this.updateSaveButton();
             this.updateStats();
+
+            // Synchroniser immédiatement fullSequence pour ne pas perdre les modifications
+            this.syncFullSequenceFromPianoRoll();
         });
 
         // Écouter également l'événement input (certains composants l'utilisent)
@@ -810,6 +850,9 @@ this.reloadPianoRoll();
             this.isDirty = true;
             this.updateSaveButton();
             this.updateStats();
+
+            // Synchroniser immédiatement fullSequence pour ne pas perdre les modifications
+            this.syncFullSequenceFromPianoRoll();
         });
 
         // Observer les mutations du sequence pour détecter les changements
@@ -822,6 +865,9 @@ this.reloadPianoRoll();
                 this.updateSaveButton();
                 this.updateStats();
                 lastSequenceLength = currentLength;
+
+                // Synchroniser immédiatement fullSequence
+                this.syncFullSequenceFromPianoRoll();
             }
         }, 1000);
 
