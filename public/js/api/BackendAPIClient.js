@@ -277,11 +277,15 @@ class BackendAPIClient {
      * @param {number} channel - MIDI channel (0-15)
      */
     async sendNoteOn(deviceId, note, velocity, channel = 0) {
-        return this.sendCommand('midi_note_on', {
+        // Envoyer raw MIDI data comme MidiBridge
+        // 0x90 = Note On, ajouter channel (0-15)
+        const midiData = [0x90 + channel, note & 0x7F, velocity & 0x7F];
+
+        return this.send({
+            type: 'midi_out',
+            data: midiData,
             device_id: deviceId,
-            note: note,
-            velocity: velocity,
-            channel: channel
+            timestamp: Date.now()
         });
     }
 
@@ -292,10 +296,15 @@ class BackendAPIClient {
      * @param {number} channel - MIDI channel (0-15)
      */
     async sendNoteOff(deviceId, note, channel = 0) {
-        return this.sendCommand('midi_note_off', {
+        // Envoyer raw MIDI data comme MidiBridge
+        // 0x80 = Note Off, ajouter channel (0-15)
+        const midiData = [0x80 + channel, note & 0x7F, 0];
+
+        return this.send({
+            type: 'midi_out',
+            data: midiData,
             device_id: deviceId,
-            note: note,
-            channel: channel
+            timestamp: Date.now()
         });
     }
 
