@@ -757,6 +757,9 @@ this.reloadPianoRoll();
         // Initialiser les sliders de navigation
         this.initializeScrollSliders(maxTick, minNote, maxNote, xrange, noteRange, yoffset);
 
+        // Synchroniser les sliders avec la navigation native du piano roll
+        this.setupScrollSynchronization();
+
         // Charger la sequence SI elle existe et n'est pas vide
         if (this.sequence && this.sequence.length > 0) {
             this.log('info', `Loading ${this.sequence.length} notes into piano roll`);
@@ -1065,6 +1068,75 @@ this.reloadPianoRoll();
     }
 
     /**
+     * Synchroniser les sliders avec la navigation native du piano roll
+     * (clic sur timeline/clavier)
+     */
+    setupScrollSynchronization() {
+        if (!this.pianoRoll) return;
+
+        // Utiliser setInterval pour vérifier les changements (polling à 60fps)
+        // Car webaudio-pianoroll ne déclenche pas toujours d'événements pour xoffset/yoffset
+        let lastXOffset = this.pianoRoll.xoffset || 0;
+        let lastYOffset = this.pianoRoll.yoffset || 0;
+
+        this.syncInterval = setInterval(() => {
+            if (!this.pianoRoll) {
+                clearInterval(this.syncInterval);
+                return;
+            }
+
+            const currentXOffset = this.pianoRoll.xoffset || 0;
+            const currentYOffset = this.pianoRoll.yoffset || 0;
+
+            // Si xoffset a changé, mettre à jour le slider horizontal
+            if (currentXOffset !== lastXOffset) {
+                this.updateHorizontalSlider(currentXOffset);
+                lastXOffset = currentXOffset;
+            }
+
+            // Si yoffset a changé, mettre à jour le slider vertical
+            if (currentYOffset !== lastYOffset) {
+                this.updateVerticalSlider(currentYOffset);
+                lastYOffset = currentYOffset;
+            }
+        }, 16); // ~60fps
+    }
+
+    /**
+     * Mettre à jour le slider horizontal selon xoffset actuel
+     */
+    updateHorizontalSlider(xoffset) {
+        const scrollHSlider = document.getElementById('scroll-h-slider');
+        if (!scrollHSlider) return;
+
+        const maxTick = this.midiData?.maxTick || 0;
+        const xrange = this.pianoRoll.xrange || parseInt(this.pianoRoll.getAttribute('xrange')) || 128;
+        const maxOffset = Math.max(0, maxTick - xrange);
+
+        if (maxOffset > 0) {
+            const percentage = (xoffset / maxOffset) * 100;
+            scrollHSlider.value = percentage;
+        }
+    }
+
+    /**
+     * Mettre à jour le slider vertical selon yoffset actuel
+     */
+    updateVerticalSlider(yoffset) {
+        const scrollVSlider = document.getElementById('scroll-v-slider');
+        if (!scrollVSlider) return;
+
+        const yrange = this.pianoRoll.yrange || parseInt(this.pianoRoll.getAttribute('yrange')) || 36;
+        const totalMidiRange = 128;
+        const maxOffset = Math.max(0, totalMidiRange - yrange);
+
+        if (maxOffset > 0) {
+            const percentage = (yoffset / maxOffset) * 100;
+            scrollVSlider.value = percentage;
+        }
+    }
+
+    /**
      * Défilement horizontal (0-100%)
      */
     scrollHorizontal(percentage) {
@@ -1122,6 +1194,12 @@ this.reloadPianoRoll();
                 'Voulez-vous vraiment fermer l\'éditeur ?'
             );
             if (!confirmClose) return;
+        }
+
+        // Arrêter la synchronisation des sliders
+        if (this.syncInterval) {
+            clearInterval(this.syncInterval);
+            this.syncInterval = null;
         }
 
         // Nettoyer le piano roll
