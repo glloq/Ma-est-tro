@@ -780,13 +780,10 @@
                             };
                             identityInfo.innerHTML = renderIdentityInfo(settings);
 
-                            // Sauvegarder automatiquement l'identité dans la base de données
-                            api.sendCommand('instrument_update_settings', {
+                            // Sauvegarder automatiquement l'identité SysEx dans la base de données
+                            api.sendCommand('device_save_sysex_identity', {
                                 deviceId: data.device,
-                                custom_name: document.getElementById('customName')?.value.trim() || null,
-                                sync_delay: parseInt(document.getElementById('syncDelay')?.value) || 0,
-                                mac_address: document.getElementById('macAddress')?.value.trim() || null,
-                                name: currentDeviceSettings.device.name
+                                identity: data.identity
                             }).then(() => {
                                 log('✓ Identité SysEx sauvegardée', 'info');
                             }).catch(error => {
@@ -1417,6 +1414,20 @@
                 if (identityInfo) {
                     identityInfo.innerHTML = '<p class="info-text">⏳ En attente de la réponse...</p>';
                 }
+
+                // Timeout après 5 secondes si aucune réponse
+                setTimeout(() => {
+                    const identityInfo = document.getElementById('identityInfo');
+                    if (identityInfo && identityInfo.innerHTML.includes('En attente')) {
+                        identityInfo.innerHTML = `
+                            <p class="info-text" style="color: #f59e0b;">
+                                ⚠️ Aucune réponse reçue après 5 secondes.<br>
+                                <small>Vérifiez que l'appareil supporte les messages SysEx Identity Request.</small>
+                            </p>
+                        `;
+                        log(`⚠️ Timeout: ${deviceId} n'a pas répondu à la requête Identity`, 'warning');
+                    }
+                }, 5000);
 
             } catch (error) {
                 log(`Erreur Identity Request: ${error.message}`, 'error');

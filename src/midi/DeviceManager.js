@@ -302,6 +302,10 @@ class DeviceManager {
 
     // Parse SysEx Identity Reply if applicable
     if (type === 'sysex') {
+      // Log ALL SysEx messages for debugging
+      const bytes = Array.isArray(msg) ? msg : (msg.bytes || []);
+      this.app.logger.info(`SysEx message received from ${deviceName}: ${bytes.map(b => '0x' + b.toString(16).toUpperCase()).join(' ')} (${bytes.length} bytes)`);
+
       const identityInfo = this.parseIdentityReply(msg);
       if (identityInfo) {
         this.app.logger.info(`Identity Reply received from ${deviceName}:`, identityInfo);
@@ -314,6 +318,8 @@ class DeviceManager {
             timestamp: timestamp
           });
         }
+      } else {
+        this.app.logger.debug(`SysEx message from ${deviceName} is not an Identity Reply`);
       }
     }
 
