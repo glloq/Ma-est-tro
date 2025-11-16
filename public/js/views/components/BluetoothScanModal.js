@@ -18,6 +18,8 @@ class BluetoothScanModal {
         this.container = null;
         this.isOpen = false;
         this.scanning = false;
+        this.bluetoothEnabled = true; // État du Bluetooth
+        this.bluetoothState = 'unknown'; // État détaillé
         this.availableDevices = [];
         this.pairedDevices = [];
 
@@ -53,6 +55,21 @@ class BluetoothScanModal {
             this.handleScanError(data);
         });
 
+        // État du Bluetooth
+        this.eventBus.on('bluetooth:status', (data) => {
+            this.handleBluetoothStatus(data);
+        });
+
+        // Bluetooth activé
+        this.eventBus.on('bluetooth:powered_on', (data) => {
+            this.handleBluetoothPoweredOn(data);
+        });
+
+        // Bluetooth désactivé
+        this.eventBus.on('bluetooth:powered_off', (data) => {
+            this.handleBluetoothPoweredOff(data);
+        });
+
         this.logger.debug('BluetoothScanModal', 'Event listeners configured');
     }
 
@@ -74,8 +91,7 @@ class BluetoothScanModal {
         this.pairedDevices = [];
 
         this.createModal();
-        this.startScan();
-        this.loadPairedDevices();
+        this.checkBluetoothStatus(); // Vérifier l'état du Bluetooth
 
         this.logger.info('BluetoothScanModal', 'Modal opened');
     }
@@ -129,6 +145,9 @@ class BluetoothScanModal {
                 </div>
 
                 <div class="modal-body">
+                    <!-- État du Bluetooth -->
+                    ${!this.bluetoothEnabled ? this.renderBluetoothDisabled() : ''}
+
                     <!-- Section scan -->
                     <div class="scan-section">
                         <div class="scan-header">
@@ -302,6 +321,12 @@ class BluetoothScanModal {
             scanButton.addEventListener('click', () => this.startScan());
         }
 
+        // Bouton d'activation Bluetooth
+        const powerOnButton = this.container.querySelector('[data-action="power_on"]');
+        if (powerOnButton) {
+            powerOnButton.addEventListener('click', () => this.powerOnBluetooth());
+        }
+
         // Délégation d'événements pour les actions sur les périphériques
         this.container.addEventListener('click', (e) => {
             const action = e.target.dataset.action;
@@ -463,7 +488,136 @@ class BluetoothScanModal {
 
         this.logger.error('BluetoothScanModal', 'Scan error:', data.error);
 
+        // Vérifier si c'est une erreur de Bluetooth désactivé
+        if (data.error && data.error.includes('poweredOff')) {
+            this.bluetoothEnabled = false;
+            this.bluetoothState = 'poweredOff';
+        }
+
         this.updateModalContent();
+    }
+
+    /**
+     * Gère l'état du Bluetooth
+     */
+    handleBluetoothStatus(data) {
+        this.bluetoothEnabled = data.enabled || false;
+        this.bluetoothState = data.state || 'unknown';
+
+        this.logger.info('BluetoothScanModal', `Bluetooth status: ${this.bluetoothState}`);
+
+        this.updateModalContent();
+
+        // Si Bluetooth est activé, lancer le scan et charger les périphériques appairés
+        if (this.bluetoothEnabled) {
+            this.startScan();
+            this.loadPairedDevices();
+        }
+    }
+
+    /**
+     * Gère l'activation du Bluetooth
+     */
+    handleBluetoothPoweredOn(data) {
+        this.bluetoothEnabled = true;
+        this.bluetoothState = 'poweredOn';
+
+        this.logger.info('BluetoothScanModal', 'Bluetooth powered on');
+
+        this.updateModalContent();
+
+        // Lancer automatiquement le scan
+        this.startScan();
+        this.loadPairedDevices();
+    }
+
+    /**
+     * Gère la désactivation du Bluetooth
+     */
+    handleBluetoothPoweredOff(data) {
+        this.bluetoothEnabled = false;
+        this.bluetoothState = 'poweredOff';
+        this.scanning = false;
+
+        this.logger.info('BluetoothScanModal', 'Bluetooth powered off');
+
+        this.updateModalContent();
+    }
+
+    // ========================================================================
+    // BLUETOOTH POWER CONTROL
+    // ========================================================================
+
+    /**
+     * Vérifie l'état du Bluetooth
+     */
+    checkBluetoothStatus() {
+        this.logger.debug('BluetoothScanModal', 'Checking Bluetooth status');
+
+        if (this.eventBus) {
+            this.eventBus.emit('bluetooth:status_requested');
+        }
+    }
+
+    /**
+     * Active le Bluetooth
+     */
+    powerOnBluetooth() {
+        this.logger.info('BluetoothScanModal', 'Requesting Bluetooth power on');
+
+        if (this.eventBus) {
+            this.eventBus.emit('bluetooth:power_on_requested');
+        }
+    }
+
+    /**
+     * Désactive le Bluetooth
+     */
+    powerOffBluetooth() {
+        this.logger.info('BluetoothScanModal', 'Requesting Bluetooth power off');
+
+        if (this.eventBus) {
+            this.eventBus.emit('bluetooth:power_off_requested');
+        }
+    }
+
+    /**
+     * Rendu du message Bluetooth désactivé
+     */
+    renderBluetoothDisabled() {
+        return `
+            <div class="bluetooth-disabled-section" style="
+                background: linear-gradient(135deg, #fff3cd 0%, #ffe5b4 100%);
+                border: 2px solid #ffc107;
+                border-radius: 12px;
+                padding: 20px;
+                margin-bottom: 20px;
+                text-align: center;
+            ">
+                <div style="font-size: 48px; margin-bottom: 12px;">⚠️</div>
+                <h3 style="margin: 0 0 12px; color: #856404; font-size: 18px;">
+                    Bluetooth désactivé
+                </h3>
+                <p style="margin: 0 0 16px; color: #856404; font-size: 14px;">
+                    L'adaptateur Bluetooth est actuellement désactivé.<br>
+                    Veuillez l'activer pour scanner les périphériques disponibles.
+                </p>
+                <button class="btn-power-on" data-action="power_on" style="
+                    padding: 12px 24px;
+                    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+                    color: #fff;
+                    border: none;
+                    border-radius: 8px;
+                    font-size: 15px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.4);
+                ">
+                    🔌 Activer le Bluetooth
+                </button>
+            </div>
+        `;
     }
 
     // ========================================================================

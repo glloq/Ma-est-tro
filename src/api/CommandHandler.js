@@ -28,6 +28,8 @@ class CommandHandler {
       'ble_forget': (data) => this.bleForget(data),
       'ble_paired': () => this.blePaired(),
       'ble_status': () => this.bleStatus(),
+      'ble_power_on': () => this.blePowerOn(),
+      'ble_power_off': () => this.blePowerOff(),
       'virtual_create': (data) => this.virtualCreate(data),
       'virtual_delete': (data) => this.virtualDelete(data),
       'virtual_list': () => this.virtualList(),
@@ -378,6 +380,32 @@ class CommandHandler {
     }
 
     return this.app.bluetoothManager.getStatus();
+  }
+
+  async blePowerOn() {
+    if (!this.app.bluetoothManager) {
+      throw new Error('Bluetooth not available');
+    }
+
+    const result = await this.app.bluetoothManager.powerOn();
+
+    return {
+      success: true,
+      data: result
+    };
+  }
+
+  async blePowerOff() {
+    if (!this.app.bluetoothManager) {
+      throw new Error('Bluetooth not available');
+    }
+
+    const result = await this.app.bluetoothManager.powerOff();
+
+    return {
+      success: true,
+      data: result
+    };
   }
 
   async virtualCreate(data) {
