@@ -367,7 +367,7 @@
     display: flex;
     height: 320px;
     width: 100%;
-    max-width: 900px;
+    max-width: 100%;
     background: #2c2c2c;
     border-radius: 8px;
     padding: 10px;

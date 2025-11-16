@@ -19,27 +19,55 @@ class KeyboardModalNew {
         // Piano config
         this.whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
         this.blackKeyPositions = [1, 2, 4, 5, 6]; // Position des touches noires (après C, D, F, G, A)
-        this.octaves = 2; // Nombre d'octaves à afficher (2 octaves = 14 touches blanches)
+        this.octaves = 3; // 3 octaves complètes = 21 touches blanches
+        this.baseOctave = 3; // Commence à C3
 
-        // Keyboard mappings
+        // Keyboard mappings - touches blanches: s d f g h j k l m
+        // Note: KeyW = w, KeyX = x, etc.
         this.keyMaps = {
             azerty: {
-                'KeyW': 0, 'KeyS': 1, 'KeyX': 2, 'KeyD': 3, 'KeyC': 4,
-                'KeyV': 5, 'KeyG': 6, 'KeyB': 7, 'KeyH': 8, 'KeyN': 9,
-                'KeyJ': 10, 'Comma': 11,
-                'KeyA': 12, 'Digit2': 13, 'KeyZ': 14, 'Digit3': 15, 'KeyE': 16,
-                'KeyR': 17, 'Digit5': 18, 'KeyT': 19, 'Digit6': 20, 'KeyY': 21,
-                'Digit7': 22, 'KeyU': 23, 'KeyI': 24, 'Digit9': 25, 'KeyO': 26,
-                'Digit0': 27, 'KeyP': 28
+                // Touches blanches: s d f g h j k l m (C D E F G A B C D)
+                'KeyS': 0,  // C
+                'KeyD': 2,  // D
+                'KeyF': 4,  // E
+                'KeyG': 5,  // F
+                'KeyH': 7,  // G
+                'KeyJ': 9,  // A
+                'KeyK': 11, // B
+                'KeyL': 12, // C (octave suivante)
+                'KeyM': 14, // D (octave suivante)
+
+                // Touches noires (rangée du dessus)
+                'KeyZ': 1,  // C#
+                'KeyE': 3,  // D#
+                // pas de noir entre E et F
+                'KeyT': 6,  // F#
+                'KeyY': 8,  // G#
+                'KeyU': 10, // A#
+                // pas de noir entre B et C
+                'KeyO': 13, // C# (octave suivante)
+                'KeyP': 15  // D# (octave suivante)
             },
             qwerty: {
-                'KeyZ': 0, 'KeyS': 1, 'KeyX': 2, 'KeyD': 3, 'KeyC': 4,
-                'KeyV': 5, 'KeyG': 6, 'KeyB': 7, 'KeyH': 8, 'KeyN': 9,
-                'KeyJ': 10, 'KeyM': 11,
-                'KeyQ': 12, 'Digit2': 13, 'KeyW': 14, 'Digit3': 15, 'KeyE': 16,
-                'KeyR': 17, 'Digit5': 18, 'KeyT': 19, 'Digit6': 20, 'KeyY': 21,
-                'Digit7': 22, 'KeyU': 23, 'KeyI': 24, 'Digit9': 25, 'KeyO': 26,
-                'Digit0': 27, 'KeyP': 28
+                // Touches blanches: s d f g h j k l ; (même que azerty mais dernière touche différente)
+                'KeyS': 0,  // C
+                'KeyD': 2,  // D
+                'KeyF': 4,  // E
+                'KeyG': 5,  // F
+                'KeyH': 7,  // G
+                'KeyJ': 9,  // A
+                'KeyK': 11, // B
+                'KeyL': 12, // C (octave suivante)
+                'Semicolon': 14, // D (octave suivante) - ; key
+
+                // Touches noires (rangée du dessus)
+                'KeyW': 1,  // C#
+                'KeyE': 3,  // D#
+                'KeyT': 6,  // F#
+                'KeyY': 8,  // G#
+                'KeyU': 10, // A#
+                'KeyO': 13, // C# (octave suivante)
+                'KeyP': 15  // D# (octave suivante)
             }
         };
         this.currentKeyMap = this.keyMaps.azerty;
@@ -139,6 +167,13 @@ class KeyboardModalNew {
                                             <option value="qwerty">QWERTY</option>
                                         </select>
                                     </div>
+
+                                    <div class="control-group">
+                                        <div class="info-item">
+                                            <span class="info-label">Touches PC:</span>
+                                            <span class="info-value" id="keyboard-help-text">SDFFGHJKLM (blanches) / ZETYUOP (noires)</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -174,21 +209,31 @@ class KeyboardModalNew {
         const totalWhiteKeys = this.whiteKeys.length * this.octaves;
         let whiteKeyIndex = 0;
 
+        // Calculer l'octave de départ en tenant compte de octaveOffset
+        const startOctave = this.baseOctave + this.octaveOffset;
+
         for (let octave = 0; octave < this.octaves; octave++) {
+            const currentOctave = startOctave + octave;
+
             for (let i = 0; i < this.whiteKeys.length; i++) {
                 const noteName = this.whiteKeys[i];
-                const noteNumber = 60 + (octave * 12) + this.getNoteOffset(noteName);
+                const noteOffset = this.getNoteOffset(noteName);
+
+                // Calculer le numéro MIDI: C4 = 60
+                // Formule: (octave + 1) * 12 + noteOffset
+                const noteNumber = (currentOctave + 1) * 12 + noteOffset;
 
                 // Touche blanche
                 const whiteKey = document.createElement('div');
                 whiteKey.className = 'piano-key white-key';
                 whiteKey.dataset.note = noteNumber;
-                whiteKey.dataset.noteName = noteName + (4 + octave);
+                whiteKey.dataset.baseNote = noteNumber; // Note fixe sans octaveOffset
+                whiteKey.dataset.noteName = noteName + currentOctave;
 
-                // Label
+                // Label avec nom + octave
                 const label = document.createElement('span');
                 label.className = 'key-label';
-                label.textContent = noteName;
+                label.textContent = noteName + currentOctave;
                 whiteKey.appendChild(label);
 
                 pianoContainer.appendChild(whiteKey);
@@ -199,7 +244,8 @@ class KeyboardModalNew {
                     const blackKey = document.createElement('div');
                     blackKey.className = 'piano-key black-key';
                     blackKey.dataset.note = blackNoteNumber;
-                    blackKey.dataset.noteName = noteName + '#' + (4 + octave);
+                    blackKey.dataset.baseNote = blackNoteNumber;
+                    blackKey.dataset.noteName = noteName + '#' + currentOctave;
 
                     // Positionner la touche noire
                     blackKey.style.left = `calc(${whiteKeyIndex * (100 / totalWhiteKeys)}% + ${(100 / totalWhiteKeys) * 0.7}%)`;
@@ -222,19 +268,40 @@ class KeyboardModalNew {
     updatePianoDisplay() {
         const allKeys = document.querySelectorAll('.piano-key');
         allKeys.forEach(key => {
-            const baseNote = parseInt(key.dataset.note);
-            const adjustedNote = baseNote + (this.octaveOffset * 12);
-
-            // Update note number
-            key.dataset.adjustedNote = adjustedNote;
+            const note = parseInt(key.dataset.note);
 
             // Highlight if active
-            if (this.activeNotes.has(adjustedNote)) {
+            if (this.activeNotes.has(note)) {
                 key.classList.add('active');
             } else {
                 key.classList.remove('active');
             }
         });
+    }
+
+    regeneratePianoKeys() {
+        // Régénérer tout le clavier avec le nouvel octaveOffset
+        this.generatePianoKeys();
+
+        // Ré-attacher les events sur les nouvelles touches
+        const pianoKeys = document.querySelectorAll('.piano-key');
+        pianoKeys.forEach(key => {
+            key.addEventListener('mousedown', (e) => this.handlePianoKeyDown(e));
+            key.addEventListener('mouseup', (e) => this.handlePianoKeyUp(e));
+            key.addEventListener('mouseleave', (e) => this.handlePianoKeyUp(e));
+
+            // Touch support
+            key.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.handlePianoKeyDown(e);
+            });
+            key.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                this.handlePianoKeyUp(e);
+            });
+        });
+
+        this.updatePianoDisplay();
     }
 
     // ========================================================================
@@ -250,14 +317,16 @@ class KeyboardModalNew {
             this.octaveOffset = Math.min(3, this.octaveOffset + 1);
             const display = this.octaveOffset > 0 ? `+${this.octaveOffset}` : this.octaveOffset;
             document.getElementById('keyboard-octave-display').textContent = `Octave: ${display}`;
-            this.updatePianoDisplay();
+            this.regeneratePianoKeys();
+            this.logger.info(`[KeyboardModal] Octave +: offset=${this.octaveOffset}`);
         });
 
         document.getElementById('keyboard-octave-down')?.addEventListener('click', () => {
             this.octaveOffset = Math.max(-3, this.octaveOffset - 1);
             const display = this.octaveOffset > 0 ? `+${this.octaveOffset}` : this.octaveOffset;
             document.getElementById('keyboard-octave-display').textContent = `Octave: ${display}`;
-            this.updatePianoDisplay();
+            this.regeneratePianoKeys();
+            this.logger.info(`[KeyboardModal] Octave -: offset=${this.octaveOffset}`);
         });
 
         // Device select
@@ -277,6 +346,18 @@ class KeyboardModalNew {
         document.getElementById('keyboard-layout-select')?.addEventListener('change', (e) => {
             this.keyboardLayout = e.target.value;
             this.currentKeyMap = this.keyMaps[this.keyboardLayout];
+
+            // Mettre à jour le texte d'aide
+            const helpText = document.getElementById('keyboard-help-text');
+            if (helpText) {
+                if (this.keyboardLayout === 'azerty') {
+                    helpText.textContent = 'SDFFGHJKLM (blanches) / ZETYUOP (noires)';
+                } else {
+                    helpText.textContent = 'SDFGHJKL; (blanches) / WETYUOP (noires)';
+                }
+            }
+
+            this.logger.info(`[KeyboardModal] Layout changed to: ${this.keyboardLayout}`);
         });
 
         // Piano keys
@@ -312,8 +393,7 @@ class KeyboardModalNew {
 
     handlePianoKeyDown(e) {
         const key = e.currentTarget;
-        const baseNote = parseInt(key.dataset.note);
-        const note = baseNote + (this.octaveOffset * 12);
+        const note = parseInt(key.dataset.note);
 
         if (!this.activeNotes.has(note)) {
             this.playNote(note);
@@ -322,8 +402,7 @@ class KeyboardModalNew {
 
     handlePianoKeyUp(e) {
         const key = e.currentTarget;
-        const baseNote = parseInt(key.dataset.note);
-        const note = baseNote + (this.octaveOffset * 12);
+        const note = parseInt(key.dataset.note);
 
         this.stopNote(note);
     }
@@ -335,7 +414,14 @@ class KeyboardModalNew {
         if (noteOffset === undefined) return;
 
         e.preventDefault();
-        const note = 60 + noteOffset + (this.octaveOffset * 12);
+
+        // Note de base: C du baseOctave avec octaveOffset appliqué
+        // Par exemple: baseOctave=3, octaveOffset=0 → C3 = 48
+        // C4 = 60, donc C3 = 48
+        const baseNoteNumber = (this.baseOctave + this.octaveOffset + 1) * 12;
+        const note = baseNoteNumber + noteOffset;
+
+        this.logger.info(`[KeyboardModal] PC Key ${e.code}: offset=${noteOffset}, base=${baseNoteNumber}, note=${note}`);
 
         if (!this.activeNotes.has(note)) {
             this.playNote(note);
@@ -349,7 +435,10 @@ class KeyboardModalNew {
         if (noteOffset === undefined) return;
 
         e.preventDefault();
-        const note = 60 + noteOffset + (this.octaveOffset * 12);
+
+        const baseNoteNumber = (this.baseOctave + this.octaveOffset + 1) * 12;
+        const note = baseNoteNumber + noteOffset;
+
         this.stopNote(note);
     }
 
