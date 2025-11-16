@@ -1012,18 +1012,21 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             this.markendimg.style.left=(end+this.markendoffset)+"px";
         };
         this.redrawGrid=function(){
-            // Calculer le pas de grille vertical adaptatif en fonction du zoom
+            // Calculer le pas de grille vertical adaptatif en fonction du zoom (transition progressive)
             let ygrid = 1; // Par défaut, afficher chaque note
-            if(this.yrange > 80) {
-                ygrid = 12; // Très dézoomé : afficher seulement les octaves
-            } else if(this.yrange > 60) {
-                ygrid = 6; // Dézoomé : afficher tous les demi-octaves (tritons)
-            } else if(this.yrange > 40) {
-                ygrid = 4; // Normal : afficher toutes les 4 notes
-            } else if(this.yrange > 24) {
-                ygrid = 2; // Zoomé : afficher toutes les 2 notes
+            if(this.yrange > 90) {
+                ygrid = 6; // Très dézoomé : afficher tous les demi-octaves (tritons)
+            } else if(this.yrange > 70) {
+                ygrid = 4; // Dézoomé : afficher toutes les 4 notes (tierces)
+            } else if(this.yrange > 50) {
+                ygrid = 3; // Normal-dézoomé : afficher toutes les 3 notes
+            } else if(this.yrange > 35) {
+                ygrid = 2; // Normal : afficher toutes les 2 notes (secondes)
+            } else if(this.yrange > 20) {
+                ygrid = 1; // Zoomé : afficher chaque note
+            } else {
+                ygrid = 1; // Très zoomé : afficher chaque note
             }
-            // Sinon ygrid = 1 : très zoomé, afficher chaque note
 
             // Log pour débogage
             if(Math.random() < 0.01) { // Log seulement 1% du temps pour ne pas spammer

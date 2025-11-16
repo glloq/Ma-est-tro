@@ -787,18 +787,20 @@ class MidiEditorModal {
         const centerNote = Math.floor((minNote + maxNote) / 2);
         const yoffset = Math.max(0, centerNote - Math.floor(noteRange / 2)); // Centrer verticalement
 
-        // Calculer la résolution de grille appropriée en fonction du zoom
+        // Calculer la résolution de grille appropriée en fonction du zoom (transition progressive)
         let gridValue;
-        if (xrange < 2000) {
+        if (xrange < 1000) {
             gridValue = 16; // Très zoomé : 16th notes
-        } else if (xrange < 5000) {
+        } else if (xrange < 2500) {
             gridValue = 8;  // Zoomé : 8th notes
-        } else if (xrange < 10000) {
+        } else if (xrange < 6000) {
             gridValue = 4;  // Normal : quarter notes
-        } else if (xrange < 20000) {
+        } else if (xrange < 15000) {
             gridValue = 2;  // Dézoomé : half notes
-        } else {
+        } else if (xrange < 30000) {
             gridValue = 1;  // Très dézoomé : whole notes
+        } else {
+            gridValue = 2;  // Ultra dézoomé : revenir à half notes pour garder des repères
         }
 
         this.pianoRoll.setAttribute('width', width);
@@ -1076,17 +1078,19 @@ class MidiEditorModal {
 
         let gridValue;
 
-        // Adapter la résolution de la grille selon le zoom
-        if (xrange < 2000) {
+        // Adapter la résolution de la grille selon le zoom (transition progressive)
+        if (xrange < 1000) {
             gridValue = 16; // Très zoomé : 16th notes (doubles croches)
-        } else if (xrange < 5000) {
+        } else if (xrange < 2500) {
             gridValue = 8;  // Zoomé : 8th notes (croches)
-        } else if (xrange < 10000) {
+        } else if (xrange < 6000) {
             gridValue = 4;  // Normal : quarter notes (noires)
-        } else if (xrange < 20000) {
+        } else if (xrange < 15000) {
             gridValue = 2;  // Dézoomé : half notes (blanches)
-        } else {
+        } else if (xrange < 30000) {
             gridValue = 1;  // Très dézoomé : whole notes (rondes)
+        } else {
+            gridValue = 2;  // Ultra dézoomé : revenir à half notes pour garder des repères
         }
 
         // Mettre à jour les deux : attribut ET propriété
