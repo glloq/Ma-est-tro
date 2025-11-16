@@ -1712,8 +1712,30 @@
 
                 log(`${devices.length} périphérique(s) trouvé(s), ${connectedDevices.length} connecté(s)`);
 
-                // Sauvegarder les périphériques pour le routage de canaux
-                availableDevices = devices;
+                // Enrichir tous les périphériques avec leur nom personnalisé pour le routage
+                const enrichedDevices = await Promise.all(devices.map(async (device) => {
+                    try {
+                        const response = await api.sendCommand('instrument_get_settings', {
+                            deviceId: device.id
+                        });
+                        const settings = response.settings || {};
+                        return {
+                            ...device,
+                            displayName: settings.custom_name || device.name,
+                            customName: settings.custom_name
+                        };
+                    } catch (error) {
+                        // Si on ne peut pas charger les settings, utiliser le nom par défaut
+                        return {
+                            ...device,
+                            displayName: device.name,
+                            customName: null
+                        };
+                    }
+                }));
+
+                // Sauvegarder les périphériques enrichis pour le routage de canaux
+                availableDevices = enrichedDevices;
 
             } catch (error) {
                 log(`Erreur chargement périphériques: ${error.message}`, 'error');
@@ -1878,7 +1900,7 @@
                         <select id="channel_${ch.channel}" style="flex: 1; padding: 8px;">
                             <option value="">-- Aucun --</option>
                             ${availableDevices.filter(d => d.type !== 'input').map(device =>
-                                `<option value="${device.id}" ${currentDevice === device.id ? 'selected' : ''}>${device.name}</option>`
+                                `<option value="${device.id}" ${currentDevice === device.id ? 'selected' : ''}>${device.displayName || device.name}</option>`
                             ).join('')}
                         </select>
                     </div>
