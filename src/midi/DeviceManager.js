@@ -344,22 +344,42 @@ class DeviceManager {
   /**
    * Parse SysEx Identity Reply message
    * Format: F0 7E [device_id] 06 02 [manufacturer_id] [device_family] [device_family_member] [software_version] F7
-   * @param {Array|Object} msg - SysEx message data (without F0 and F7)
+   * @param {Array|Object} msg - SysEx message data (includes F0 and F7)
    * @returns {Object|null} Parsed identity info or null if not an identity reply
    */
   parseIdentityReply(msg) {
     // Convert to array if necessary
     const bytes = Array.isArray(msg) ? msg : (msg.bytes || []);
 
-    // Check minimum length and identity reply signature
-    // 7E [device_id] 06 02 [manufacturer] [family] [member] [version]
-    if (bytes.length < 6) return null;
-    if (bytes[0] !== 0x7E) return null;  // Universal Non-Real Time
-    if (bytes[2] !== 0x06) return null;  // General Information
-    if (bytes[3] !== 0x02) return null;  // Identity Reply
+    // Debug: log received SysEx message
+    this.app.logger.debug(`Received SysEx message: ${bytes.map(b => '0x' + b.toString(16).toUpperCase()).join(' ')}`);
+    this.app.logger.debug(`Length: ${bytes.length}, First: 0x${bytes[0]?.toString(16).toUpperCase()}, Last: 0x${bytes[bytes.length - 1]?.toString(16).toUpperCase()}`);
 
-    const deviceId = bytes[1];
-    let pos = 4;
+    // Check minimum length and identity reply signature
+    // F0 7E [device_id] 06 02 [manufacturer] [family] [member] [version] F7
+    if (bytes.length < 8) {
+      this.app.logger.debug('SysEx message too short (< 8 bytes)');
+      return null;
+    }
+    if (bytes[0] !== 0xF0) {
+      this.app.logger.debug(`Not a SysEx message (first byte: 0x${bytes[0]?.toString(16).toUpperCase()})`);
+      return null;
+    }
+    if (bytes[1] !== 0x7E) {
+      this.app.logger.debug(`Not a Universal Non-Real Time message (byte[1]: 0x${bytes[1]?.toString(16).toUpperCase()})`);
+      return null;
+    }
+    if (bytes[3] !== 0x06) {
+      this.app.logger.debug(`Not a General Information message (byte[3]: 0x${bytes[3]?.toString(16).toUpperCase()})`);
+      return null;
+    }
+    if (bytes[4] !== 0x02) {
+      this.app.logger.debug(`Not an Identity Reply (byte[4]: 0x${bytes[4]?.toString(16).toUpperCase()})`);
+      return null;
+    }
+
+    const deviceId = bytes[2];
+    let pos = 5;
 
     // Parse manufacturer ID (1 or 3 bytes)
     let manufacturerId;
