@@ -921,6 +921,22 @@
 
                 fileList.innerHTML = '';
 
+                // Nettoyer les fichiers orphelins (fichiers dans la structure mais qui n'existent plus)
+                const fileIds = new Set(files.map(f => String(f.id))); // Convertir en string pour comparaison cohérente
+                let cleaned = false;
+                for (const folderPath in folderStructure) {
+                    const originalFiles = folderStructure[folderPath].files || [];
+                    const cleanedFiles = originalFiles.filter(fileId => fileIds.has(String(fileId)));
+                    if (cleanedFiles.length !== originalFiles.length) {
+                        console.log(`Nettoyage dossier "${folderPath}": ${originalFiles.length} -> ${cleanedFiles.length} fichiers`);
+                        folderStructure[folderPath].files = cleanedFiles;
+                        cleaned = true;
+                    }
+                }
+                if (cleaned) {
+                    saveFolderStructure();
+                }
+
                 // Créer une structure de dossiers et fichiers
                 const rootItems = [];
                 const foldersMap = {};
@@ -971,9 +987,13 @@
 
         // Obtenir le dossier d'un fichier
         function getFileFolder(fileId) {
+            const fileIdStr = String(fileId); // Convertir en string pour comparaison cohérente
             for (const folderPath in folderStructure) {
-                if (folderStructure[folderPath].files && folderStructure[folderPath].files.includes(fileId)) {
-                    return folderPath;
+                if (folderStructure[folderPath].files) {
+                    // Comparer en convertissant tous les IDs en string
+                    if (folderStructure[folderPath].files.some(id => String(id) === fileIdStr)) {
+                        return folderPath;
+                    }
                 }
             }
             return null;
@@ -1108,14 +1128,15 @@
                 console.log('Fichiers disponibles:', allFiles.map(f => ({ id: f.id, type: typeof f.id, filename: f.filename })));
 
                 folderFiles.forEach(fileId => {
-                    console.log(`Recherche de fileId: "${fileId}" (type: ${typeof fileId})`);
-                    // Essayer avec comparaison stricte et comparaison non stricte
-                    const file = allFiles.find(f => f.id == fileId); // Utiliser == au lieu de ===
-                    console.log(`Recherche fichier ${fileId}:`, file ? 'Trouvé' : 'NON TROUVÉ');
+                    const fileIdStr = String(fileId);
+                    console.log(`Recherche de fileId: "${fileIdStr}" (type: ${typeof fileId})`);
+                    // Comparer en convertissant tous les IDs en string
+                    const file = allFiles.find(f => String(f.id) === fileIdStr);
+                    console.log(`Recherche fichier ${fileIdStr}:`, file ? `Trouvé (${file.filename})` : 'NON TROUVÉ');
                     if (file) {
                         childrenDiv.appendChild(createFileElement(file));
                     } else {
-                        console.warn(`Fichier ${fileId} dans la structure mais pas dans allFiles!`);
+                        console.warn(`Fichier ${fileIdStr} dans la structure mais pas dans allFiles!`);
                     }
                 });
 
@@ -1275,17 +1296,21 @@
 
         // Déplacer un fichier vers un dossier
         function moveFileToFolder(fileId, targetFolder) {
-            console.log('moveFileToFolder appelée:', fileId, targetFolder);
+            // Normaliser fileId en string pour cohérence
+            const fileIdStr = String(fileId);
+
+            console.log('moveFileToFolder appelée:', fileIdStr, targetFolder);
             console.log('Structure actuelle:', JSON.stringify(folderStructure, null, 2));
 
             // Retirer le fichier de son dossier actuel
             for (const folderPath in folderStructure) {
                 const files = folderStructure[folderPath].files || [];
-                const index = files.indexOf(fileId);
+                // Chercher avec comparaison de string
+                const index = files.findIndex(id => String(id) === fileIdStr);
                 if (index > -1) {
                     files.splice(index, 1);
                     folderStructure[folderPath].files = files;
-                    console.log(`Fichier ${fileId} retiré de ${folderPath}`);
+                    console.log(`Fichier ${fileIdStr} retiré de ${folderPath}`);
                 }
             }
 
@@ -1298,8 +1323,15 @@
             if (!folderStructure[targetFolder].files) {
                 folderStructure[targetFolder].files = [];
             }
-            folderStructure[targetFolder].files.push(fileId);
-            console.log(`Fichier ${fileId} ajouté à ${targetFolder}`);
+
+            // Vérifier si le fichier n'est pas déjà dans le dossier
+            if (!folderStructure[targetFolder].files.some(id => String(id) === fileIdStr)) {
+                folderStructure[targetFolder].files.push(fileIdStr);
+                console.log(`Fichier ${fileIdStr} ajouté à ${targetFolder}`);
+            } else {
+                console.log(`Fichier ${fileIdStr} déjà dans ${targetFolder}`);
+            }
+
             console.log('Nouvelle structure:', JSON.stringify(folderStructure, null, 2));
 
             saveFolderStructure();
