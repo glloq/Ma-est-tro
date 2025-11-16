@@ -787,20 +787,20 @@ class MidiEditorModal {
         const centerNote = Math.floor((minNote + maxNote) / 2);
         const yoffset = Math.max(0, centerNote - Math.floor(noteRange / 2)); // Centrer verticalement
 
-        // Calculer la résolution de grille appropriée en fonction du zoom (transition progressive)
+        // Calculer la résolution de grille appropriée en fonction du zoom (transition très progressive)
         let gridValue;
-        if (xrange < 1000) {
-            gridValue = 16; // Très zoomé : 16th notes
-        } else if (xrange < 2500) {
-            gridValue = 8;  // Zoomé : 8th notes
-        } else if (xrange < 6000) {
-            gridValue = 4;  // Normal : quarter notes
-        } else if (xrange < 15000) {
-            gridValue = 2;  // Dézoomé : half notes
-        } else if (xrange < 30000) {
-            gridValue = 1;  // Très dézoomé : whole notes
+        if (xrange < 500) {
+            gridValue = 16; // Ultra zoomé : 16th notes
+        } else if (xrange < 1500) {
+            gridValue = 8;  // Très zoomé : 8th notes
+        } else if (xrange < 4000) {
+            gridValue = 4;  // Zoomé : quarter notes
+        } else if (xrange < 10000) {
+            gridValue = 2;  // Normal : half notes
+        } else if (xrange < 25000) {
+            gridValue = 1;  // Dézoomé : whole notes
         } else {
-            gridValue = 2;  // Ultra dézoomé : revenir à half notes pour garder des repères
+            gridValue = 2;  // Très dézoomé : revenir à half notes pour visibilité
         }
 
         this.pianoRoll.setAttribute('width', width);
@@ -1078,19 +1078,20 @@ class MidiEditorModal {
 
         let gridValue;
 
-        // Adapter la résolution de la grille selon le zoom (transition progressive)
-        if (xrange < 1000) {
-            gridValue = 16; // Très zoomé : 16th notes (doubles croches)
-        } else if (xrange < 2500) {
-            gridValue = 8;  // Zoomé : 8th notes (croches)
-        } else if (xrange < 6000) {
-            gridValue = 4;  // Normal : quarter notes (noires)
-        } else if (xrange < 15000) {
-            gridValue = 2;  // Dézoomé : half notes (blanches)
-        } else if (xrange < 30000) {
-            gridValue = 1;  // Très dézoomé : whole notes (rondes)
+        // Adapter la résolution de la grille selon le zoom (transition très progressive)
+        // Les seuils sont choisis pour éviter des sauts brusques
+        if (xrange < 500) {
+            gridValue = 16; // Ultra zoomé : 16th notes (doubles croches)
+        } else if (xrange < 1500) {
+            gridValue = 8;  // Très zoomé : 8th notes (croches)
+        } else if (xrange < 4000) {
+            gridValue = 4;  // Zoomé : quarter notes (noires)
+        } else if (xrange < 10000) {
+            gridValue = 2;  // Normal : half notes (blanches)
+        } else if (xrange < 25000) {
+            gridValue = 1;  // Dézoomé : whole notes (rondes)
         } else {
-            gridValue = 2;  // Ultra dézoomé : revenir à half notes pour garder des repères
+            gridValue = 2;  // Très dézoomé : revenir à half notes pour visibilité
         }
 
         // Mettre à jour les deux : attribut ET propriété
