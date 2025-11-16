@@ -21,10 +21,13 @@ class CommandHandler {
       'device_save_sysex_identity': (data) => this.deviceSaveSysExIdentity(data),
       'instrument_update_settings': (data) => this.instrumentUpdateSettings(data),
       'instrument_get_settings': (data) => this.instrumentGetSettings(data),
-      'ble_scan_start': () => this.bleScanStart(),
+      'ble_scan_start': (data) => this.bleScanStart(data),
       'ble_scan_stop': () => this.bleScanStop(),
       'ble_connect': (data) => this.bleConnect(data),
       'ble_disconnect': (data) => this.bleDisconnect(data),
+      'ble_forget': (data) => this.bleForget(data),
+      'ble_paired': () => this.blePaired(),
+      'ble_status': () => this.bleStatus(),
       'virtual_create': (data) => this.virtualCreate(data),
       'virtual_delete': (data) => this.virtualDelete(data),
       'virtual_list': () => this.virtualList(),
@@ -274,21 +277,107 @@ class CommandHandler {
     };
   }
 
-  async bleScanStart() {
-    // Will be implemented in Phase 7
-    throw new Error('BLE MIDI not yet implemented');
+  async bleScanStart(data) {
+    if (!this.app.bluetoothManager) {
+      throw new Error('Bluetooth not available');
+    }
+
+    const duration = data.duration || 5;
+    const filter = data.filter || '';
+
+    const devices = await this.app.bluetoothManager.startScan(duration, filter);
+
+    return {
+      success: true,
+      data: {
+        devices: devices
+      }
+    };
   }
 
   async bleScanStop() {
-    throw new Error('BLE MIDI not yet implemented');
+    if (!this.app.bluetoothManager) {
+      throw new Error('Bluetooth not available');
+    }
+
+    this.app.bluetoothManager.stopScan();
+    return { success: true };
   }
 
   async bleConnect(data) {
-    throw new Error('BLE MIDI not yet implemented');
+    if (!this.app.bluetoothManager) {
+      throw new Error('Bluetooth not available');
+    }
+
+    if (!data.address) {
+      throw new Error('Device address is required');
+    }
+
+    const result = await this.app.bluetoothManager.connect(data.address);
+
+    return {
+      success: true,
+      data: result
+    };
   }
 
   async bleDisconnect(data) {
-    throw new Error('BLE MIDI not yet implemented');
+    if (!this.app.bluetoothManager) {
+      throw new Error('Bluetooth not available');
+    }
+
+    if (!data.address) {
+      throw new Error('Device address is required');
+    }
+
+    const result = await this.app.bluetoothManager.disconnect(data.address);
+
+    return {
+      success: true,
+      data: result
+    };
+  }
+
+  async bleForget(data) {
+    if (!this.app.bluetoothManager) {
+      throw new Error('Bluetooth not available');
+    }
+
+    if (!data.address) {
+      throw new Error('Device address is required');
+    }
+
+    await this.app.bluetoothManager.forget(data.address);
+
+    return {
+      success: true
+    };
+  }
+
+  async blePaired() {
+    if (!this.app.bluetoothManager) {
+      throw new Error('Bluetooth not available');
+    }
+
+    const devices = this.app.bluetoothManager.getPairedDevices();
+
+    return {
+      success: true,
+      data: {
+        devices: devices
+      }
+    };
+  }
+
+  async bleStatus() {
+    if (!this.app.bluetoothManager) {
+      return {
+        enabled: false,
+        available: false
+      };
+    }
+
+    return this.app.bluetoothManager.getStatus();
   }
 
   async virtualCreate(data) {
