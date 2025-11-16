@@ -50,29 +50,30 @@
 
 .bluetooth-scan-modal .modal-dialog {
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    max-width: 700px;
-    width: 90%;
-    max-height: 85vh;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(155, 89, 182, 0.3);
+    max-width: 650px;
+    width: 92%;
+    max-height: 90vh;
     display: flex;
     flex-direction: column;
-    animation: slideUp 0.3s ease-out;
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
 }
 
 @keyframes slideUp {
     from {
-        transform: translateY(20px);
+        transform: translateY(30px) scale(0.95);
         opacity: 0;
     }
     to {
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
         opacity: 1;
     }
 }
 
 .bluetooth-scan-modal .modal-dialog.modal-lg {
-    max-width: 800px;
+    max-width: 750px;
 }
 
 /* ============================================================================
@@ -132,21 +133,31 @@
    ============================================================================ */
 
 .scan-section {
-    margin-bottom: 24px;
+    margin-bottom: 20px;
 }
 
 .scan-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #f0f0f0;
 }
 
 .scan-header h3 {
     margin: 0;
-    font-size: 18px;
-    color: #333;
-    font-weight: 600;
+    font-size: 17px;
+    color: #2c3e50;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.scan-header h3::before {
+    content: '📱';
+    font-size: 20px;
 }
 
 .btn-scan {
@@ -193,41 +204,76 @@
    ============================================================================ */
 
 .devices-list {
-    min-height: 200px;
+    min-height: 180px;
 }
 
 .devices-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .bluetooth-device {
-    border: 2px solid var(--bluetooth-border) !important;
-    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    background: #fafbfc;
+    border: 2px solid #e8eaed;
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .bluetooth-device:hover {
-    border-color: var(--bluetooth-primary) !important;
-    box-shadow: 0 4px 16px rgba(155, 89, 182, 0.2) !important;
+    border-color: var(--bluetooth-primary);
+    background: white;
+    box-shadow: 0 4px 20px rgba(155, 89, 182, 0.15);
+    transform: translateY(-2px);
 }
 
 .bluetooth-device.paired {
-    background: #f8f4fc;
-    border-color: var(--bluetooth-primary) !important;
+    background: linear-gradient(135deg, #f8f4fc 0%, #f0e8fc 100%);
+    border-color: var(--bluetooth-primary);
+}
+
+.device-icon {
+    font-size: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
+}
+
+.device-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.device-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .device-address {
-    font-size: 12px;
-    color: #999;
+    font-size: 13px;
+    color: #7f8c8d;
     font-family: 'Courier New', monospace;
-    margin-top: 4px;
+    margin-bottom: 6px;
 }
 
 .device-signal {
-    font-size: 11px;
-    color: #666;
-    margin-top: 4px;
+    font-size: 12px;
+    color: #95a5a6;
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -252,41 +298,60 @@
    DEVICE ACTIONS
    ============================================================================ */
 
-.btn-pair {
-    background: var(--bluetooth-primary) !important;
-    color: white !important;
-    border: none !important;
-    padding: 10px 16px !important;
-    font-size: 13px !important;
+.device-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.btn-pair,
+.btn-connect,
+.btn-unpair {
+    padding: 10px 20px !important;
+    font-size: 14px !important;
     font-weight: 600 !important;
-    border-radius: 6px !important;
-    min-width: auto !important;
+    border-radius: 8px !important;
+    min-width: 100px !important;
+    border: none !important;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.btn-pair {
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%) !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3);
 }
 
 .btn-pair:hover {
-    background: #8e44ad !important;
-    box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(155, 89, 182, 0.4) !important;
 }
 
 .btn-connect {
-    background: var(--bluetooth-success) !important;
+    background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%) !important;
     color: white !important;
-    border: none !important;
+    box-shadow: 0 2px 8px rgba(46, 204, 113, 0.3);
 }
 
 .btn-connect:hover {
-    background: #27ae60 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(46, 204, 113, 0.4) !important;
 }
 
 .btn-unpair {
-    background: transparent !important;
+    background: white !important;
     color: var(--bluetooth-danger) !important;
-    border: 1px solid var(--bluetooth-danger) !important;
+    border: 2px solid var(--bluetooth-danger) !important;
+    padding: 8px 16px !important;
+    min-width: 80px !important;
 }
 
 .btn-unpair:hover {
     background: var(--bluetooth-danger) !important;
     color: white !important;
+    transform: translateY(-2px);
 }
 
 /* ============================================================================
@@ -294,16 +359,27 @@
    ============================================================================ */
 
 .paired-section {
-    margin-bottom: 24px;
-    padding-top: 24px;
-    border-top: 2px solid var(--bluetooth-border);
+    margin-bottom: 20px;
+    padding-top: 20px;
+    border-top: 2px solid #f0f0f0;
 }
 
 .paired-section h3 {
-    margin: 0 0 16px;
-    font-size: 18px;
-    color: #333;
-    font-weight: 600;
+    margin: 0 0 20px;
+    font-size: 17px;
+    color: #2c3e50;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.paired-section h3::before {
+    content: '✓';
+    font-size: 20px;
+    color: var(--bluetooth-success);
 }
 
 /* ============================================================================
@@ -311,22 +387,27 @@
    ============================================================================ */
 
 .info-section {
-    margin-top: 24px;
-    padding: 16px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border-left: 4px solid var(--bluetooth-primary);
+    margin-top: 20px;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+    border-radius: 10px;
+    border-left: 4px solid #4caf50;
 }
 
 .info-section p {
     margin: 0;
     font-size: 13px;
-    color: #666;
-    line-height: 1.5;
+    color: #2e7d32;
+    line-height: 1.6;
 }
 
 .info-section strong {
-    color: var(--bluetooth-primary);
+    color: #1b5e20;
+    font-weight: 600;
+}
+
+.text-muted {
+    color: #5a6c5b !important;
 }
 
 /* ============================================================================
@@ -341,6 +422,66 @@
     border-top: 2px solid var(--bluetooth-border);
     background: #f8f9fa;
     border-radius: 0 0 12px 12px;
+}
+
+/* ============================================================================
+   EMPTY AND SCANNING STATES
+   ============================================================================ */
+
+.devices-empty {
+    padding: 50px 30px;
+    text-align: center;
+    background: #fafbfc;
+    border-radius: 12px;
+    border: 2px dashed #d0d7de;
+}
+
+.devices-empty .empty-icon {
+    font-size: 56px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+    filter: grayscale(30%);
+}
+
+.devices-empty p {
+    color: #57606a;
+    margin: 8px 0;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.devices-empty .text-muted {
+    color: #8b949e !important;
+    font-size: 13px;
+}
+
+.devices-scanning {
+    padding: 50px 30px;
+    text-align: center;
+    background: linear-gradient(135deg, #f6f8ff 0%, #fff5f8 100%);
+    border-radius: 12px;
+}
+
+.devices-scanning .spinner {
+    margin: 0 auto 20px;
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(155, 89, 182, 0.2);
+    border-top-color: var(--bluetooth-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.devices-scanning p {
+    color: #57606a;
+    font-size: 15px;
+    font-weight: 500;
+    margin: 12px 0;
+}
+
+.devices-scanning .text-muted {
+    color: #8b949e !important;
+    font-size: 13px;
 }
 
 /* ============================================================================
