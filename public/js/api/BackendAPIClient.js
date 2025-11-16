@@ -271,7 +271,7 @@ class BackendAPIClient {
 
     /**
      * Send MIDI Note On message
-     * @param {string} deviceId - Target device ID
+     * @param {string} deviceId - Target device ID (optional, if null sends to all)
      * @param {number} note - MIDI note number (0-127)
      * @param {number} velocity - Note velocity (1-127)
      * @param {number} channel - MIDI channel (0-15)
@@ -291,17 +291,16 @@ class BackendAPIClient {
             timestamp: Date.now()
         };
 
-        // MidiBridge utilise outputId, pas device_id
-        if (deviceId) {
-            message.outputId = deviceId;
-        }
+        // Ne pas inclure outputId - envoyer à tous les outputs actifs
+        // comme fait MidiBridge.sendToBackend() par défaut
 
+        console.log('[BackendAPIClient] Sending MIDI:', JSON.stringify(message));
         this.ws.send(JSON.stringify(message));
     }
 
     /**
      * Send MIDI Note Off message
-     * @param {string} deviceId - Target device ID
+     * @param {string} deviceId - Target device ID (optional, if null sends to all)
      * @param {number} note - MIDI note number (0-127)
      * @param {number} channel - MIDI channel (0-15)
      */
@@ -320,10 +319,7 @@ class BackendAPIClient {
             timestamp: Date.now()
         };
 
-        // MidiBridge utilise outputId, pas device_id
-        if (deviceId) {
-            message.outputId = deviceId;
-        }
+        // Ne pas inclure outputId - envoyer à tous les outputs actifs
 
         this.ws.send(JSON.stringify(message));
     }
