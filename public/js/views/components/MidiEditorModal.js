@@ -304,12 +304,16 @@ class MidiEditorModal {
         this.log('info', `Converted ${this.fullSequence.length} notes to sequence`);
         this.log('info', `Found ${this.channels.length} channels:`, this.channels);
 
-        // Afficher TOUS les canaux par défaut
+        // Afficher TOUS les canaux par défaut et construire la séquence
         this.activeChannels.clear();
         if (this.channels.length > 0) {
             this.channels.forEach(ch => this.activeChannels.add(ch.channel));
-            this.updateSequenceFromActiveChannels();
+
+            // Construire la séquence filtrée MAINTENANT (avant la création du piano roll)
+            this.sequence = this.fullSequence.filter(note => this.activeChannels.has(note.c));
+
             this.log('info', `All ${this.channels.length} channels activated by default`);
+            this.log('info', `Initial sequence: ${this.sequence.length} notes visible`);
         } else {
             this.log('warn', 'No notes found! Check MIDI data structure.');
             this.sequence = [];
