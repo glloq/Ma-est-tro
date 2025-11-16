@@ -480,9 +480,20 @@ class DeviceManager {
   isSystemDevice(name) {
     // Filter out system MIDI Through ports and other virtual system devices
     const systemPatterns = [
-      /^Midi Through/i,           // ALSA MIDI Through ports
-      /^Through Port/i,           // macOS MIDI Through
-      /^Microsoft GS Wavetable/i  // Windows system synth
+      /^Midi Through/i,                    // ALSA MIDI Through ports
+      /^Through Port/i,                    // macOS MIDI Through
+      /^Microsoft GS Wavetable/i,          // Windows system synth
+      /^RtMidi Output/i,                   // RtMidi virtual outputs (easymidi library)
+      /^RtMidi Input/i,                    // RtMidi virtual inputs (easymidi library)
+      /^RtMidi.*Client/i,                  // RtMidi client ports
+      /^IAC Driver/i,                      // macOS Inter-Application Communication
+      /^Bus \d+/i,                         // Generic virtual bus ports
+      /^Midi.*Virtual/i,                   // Generic virtual MIDI ports
+      /^CoreMIDI/i,                        // macOS CoreMIDI system ports
+      /^FLUID Synth/i,                     // FluidSynth virtual ports
+      /^Gervill/i,                         // Java Gervill soft synth
+      /^LoopBe/i,                          // LoopBe virtual MIDI cable
+      /^loopMIDI/i                         // loopMIDI virtual ports
     ];
 
     return systemPatterns.some(pattern => pattern.test(name));
