@@ -188,11 +188,6 @@ class KeyboardView extends BaseView {
                                         <option value="qwerty" ${state.keyboardLayout === 'qwerty' ? 'selected' : ''}>QWERTY</option>
                                     </select>
                                 </div>
-
-                                <div class="info-item">
-                                    <span class="info-label">Notes actives:</span>
-                                    <span class="info-value">${state.activeNotes.size}</span>
-                                </div>
                             </div>
                         </div>
 

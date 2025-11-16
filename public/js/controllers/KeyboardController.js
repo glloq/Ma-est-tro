@@ -118,12 +118,20 @@ class KeyboardController extends BaseController {
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         // ÉVÉNEMENTS DEPUIS LA VIEW
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        
+
         // User demande à charger les devices
         this.eventBus.on('keyboard:request-devices', async () => {
             await this.loadAvailableDevices();
         });
-        
+
+        // Recevoir les devices chargés (par la modal ou autre)
+        this.eventBus.on('keyboard:devices-loaded', (data) => {
+            if (data && data.devices) {
+                this.availableDevices = data.devices;
+                this.logDebug('keyboard', `✓ Received ${this.availableDevices.length} devices from external source`);
+            }
+        });
+
         // User sélectionne un device
         this.eventBus.on('keyboard:select-device', async (data) => {
             await this.selectDevice(data.device_id);
@@ -181,28 +189,26 @@ class KeyboardController extends BaseController {
             this.logDebug('keyboard', 'Backend not connected, cannot load devices', 'warn');
             return;
         }
-        
+
         try {
             this.logDebug('keyboard', 'Loading available devices...');
-            
-            // Appeler backend pour scanner devices
-            const response = await this.backend.scanDevices();
-            
-            this.availableDevices = response.devices || [];
-            
+
+            // Appeler backend pour lister les devices
+            const devices = await this.backend.listDevices();
+
             // Filtrer devices actifs (status = 2)
-            this.availableDevices = this.availableDevices.filter(d => d.status === 2);
-            
+            this.availableDevices = devices.filter(d => d.status === 2);
+
             this.logDebug('keyboard', `✓ Loaded ${this.availableDevices.length} active devices`);
-            
+
             // Notifier la vue
             this.eventBus.emit('keyboard:devices-loaded', {
                 devices: this.availableDevices
             });
-            
+
         } catch (error) {
             this.handleError(error, 'Failed to load devices');
-            
+
             // Émettre quand même pour que la vue ne reste pas bloquée
             this.eventBus.emit('keyboard:devices-loaded', {
                 devices: []
@@ -216,23 +222,28 @@ class KeyboardController extends BaseController {
      */
     async selectDevice(device_id) {
         try {
-            // Vérifier que le device existe
-            const device = this.availableDevices.find(d => d.device_id === device_id);
-            
+            // Vérifier que le device existe (support device_id et id)
+            const device = this.availableDevices.find(d =>
+                d.device_id === device_id || d.id === device_id
+            );
+
             if (!device) {
+                this.logDebug('keyboard', `Device ${device_id} not found in available devices`, 'error');
+                this.logDebug('keyboard', `Available devices:`, 'debug', this.availableDevices);
                 throw new Error(`Device ${device_id} not found`);
             }
-            
-            this.selectedDevice = device_id;
-            
-            this.logDebug('keyboard', `✓ Device selected: ${device.name || device_id}`);
-            
+
+            // Utiliser l'ID normalisé (device.id ou device.device_id)
+            this.selectedDevice = device.id || device.device_id;
+
+            this.logDebug('keyboard', `✓ Device selected: ${device.displayName || device.name || device_id}`);
+
             // Notifier la vue
             this.eventBus.emit('keyboard:device-selected', {
-                device_id: device_id,
+                device_id: this.selectedDevice,
                 noteRange: this.noteRange
             });
-            
+
         } catch (error) {
             this.handleError(error, `Failed to select device ${device_id}`);
         }
@@ -250,26 +261,30 @@ class KeyboardController extends BaseController {
      * @param {number} channel - Canal MIDI (0-15)
      */
     sendNoteOn(noteNumber, velocity = null, channel = 0) {
+        this.logDebug('keyboard', `sendNoteOn called: note=${noteNumber}, vel=${velocity}, ch=${channel}`, 'debug');
+
         // Vérifier qu'un device est sélectionné
         if (!this.selectedDevice) {
             this.logDebug('keyboard', 'No device selected, cannot send note', 'warn');
             return;
         }
-        
+
+        this.logDebug('keyboard', `Selected device: ${this.selectedDevice}`, 'debug');
+
         // Appliquer note mapping si défini
-        const mappedNote = this.noteMapping ? 
-            (this.noteMapping[noteNumber] || noteNumber) : 
+        const mappedNote = this.noteMapping ?
+            (this.noteMapping[noteNumber] || noteNumber) :
             noteNumber;
-        
+
         // Vérifier plage de notes
         if (mappedNote < this.noteRange.min || mappedNote > this.noteRange.max) {
             this.logDebug('keyboard', `Note ${mappedNote} outside valid range [${this.noteRange.min}-${this.noteRange.max}]`, 'warn');
             return;
         }
-        
+
         // Vélocité finale
         const finalVelocity = velocity !== null ? velocity : this.currentVelocity;
-        
+
         // Enregistrer note active
         this.activeNotes.set(noteNumber, {
             note: mappedNote,
@@ -277,9 +292,10 @@ class KeyboardController extends BaseController {
             startTime: Date.now(),
             channel: channel
         });
-        
+
         // Envoyer au backend si playback activé
         if (this.enablePlayback && this.backend?.isConnected()) {
+            this.logDebug('keyboard', `Sending MIDI note-on: device=${this.selectedDevice}, note=${mappedNote}, vel=${finalVelocity}, ch=${channel}`, 'info');
             this.backend.sendNoteOn(
                 this.selectedDevice,
                 mappedNote,
@@ -289,6 +305,8 @@ class KeyboardController extends BaseController {
                 this.logDebug('keyboard', `Note-on failed: ${err.message}`, 'error');
                 this.stats.errors++;
             });
+        } else {
+            this.logDebug('keyboard', `Note-on NOT sent: enablePlayback=${this.enablePlayback}, backendConnected=${this.backend?.isConnected()}`, 'warn');
         }
         
         // Émettre événement de feedback vers la vue
