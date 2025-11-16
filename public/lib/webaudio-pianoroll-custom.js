@@ -1014,12 +1014,8 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
         this.redrawGrid=function(){
             // Calculer le pas de grille vertical adaptatif en fonction du zoom (transition progressive)
             let ygrid = 1; // Par défaut, afficher chaque note
-            if(this.yrange > 90) {
-                ygrid = 6; // Très dézoomé : afficher tous les demi-octaves (tritons)
-            } else if(this.yrange > 70) {
-                ygrid = 4; // Dézoomé : afficher toutes les 4 notes (tierces)
-            } else if(this.yrange > 50) {
-                ygrid = 3; // Normal-dézoomé : afficher toutes les 3 notes
+            if(this.yrange > 50) {
+                ygrid = 1000; // Cacher grille verticale si yrange > 50
             } else if(this.yrange > 35) {
                 ygrid = 2; // Normal : afficher toutes les 2 notes (secondes)
             } else if(this.yrange > 20) {
