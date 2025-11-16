@@ -1012,6 +1012,19 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             this.markendimg.style.left=(end+this.markendoffset)+"px";
         };
         this.redrawGrid=function(){
+            // Calculer le pas de grille vertical adaptatif en fonction du zoom
+            let ygrid = 1; // Par défaut, afficher chaque note
+            if(this.yrange > 80) {
+                ygrid = 12; // Très dézoomé : afficher seulement les octaves
+            } else if(this.yrange > 60) {
+                ygrid = 6; // Dézoomé : afficher tous les demi-octaves (tritons)
+            } else if(this.yrange > 40) {
+                ygrid = 4; // Normal : afficher toutes les 4 notes
+            } else if(this.yrange > 24) {
+                ygrid = 2; // Zoomé : afficher toutes les 2 notes
+            }
+            // Sinon ygrid = 1 : très zoomé, afficher chaque note
+
             for(let y=0;y<128;++y){
                 if(this.semiflag[y%12]&1)
                     this.ctx.fillStyle=this.coldk;
@@ -1019,8 +1032,12 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                     this.ctx.fillStyle=this.collt;
                 let ys = this.height - (y - this.yoffset) * this.steph;
                 this.ctx.fillRect(this.yruler+this.kbwidth, ys|0, this.swidth,-this.steph);
-                this.ctx.fillStyle=this.colgrid;
-                this.ctx.fillRect(this.yruler+this.kbwidth, ys|0, this.swidth,1);
+
+                // Dessiner la ligne de grille seulement selon le pas adaptatif
+                if(y % ygrid === 0) {
+                    this.ctx.fillStyle=this.colgrid;
+                    this.ctx.fillRect(this.yruler+this.kbwidth, ys|0, this.swidth,1);
+                }
             }
             for(let t=0;;t+=this.grid){
                 let x=this.stepw*(t-this.xoffset)+this.yruler+this.kbwidth;
