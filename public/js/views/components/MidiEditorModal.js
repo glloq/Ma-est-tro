@@ -381,10 +381,14 @@ class MidiEditorModal {
         // - Les notes des canaux actuellement visibles (depuis le piano roll)
         // - Les notes des canaux invisibles (depuis fullSequence)
 
-        // 1. Garder les notes des canaux invisibles
-        const invisibleNotes = this.fullSequence.filter(note => !this.activeChannels.has(note.c));
+        // 1. Déterminer quels canaux sont RÉELLEMENT dans le piano roll actuellement
+        //    (ne pas utiliser this.activeChannels car il a déjà été modifié par le toggle)
+        const visibleChannels = new Set(currentSequence.map(note => note.c));
 
-        // 2. Prendre les notes du piano roll (canaux visibles, potentiellement modifiées)
+        // 2. Garder les notes des canaux qui ne sont PAS dans le piano roll
+        const invisibleNotes = this.fullSequence.filter(note => !visibleChannels.has(note.c));
+
+        // 3. Prendre les notes du piano roll (canaux visibles, potentiellement modifiées)
         const visibleNotes = currentSequence.map(note => ({
             t: note.t,
             g: note.g,
@@ -392,10 +396,10 @@ class MidiEditorModal {
             c: note.c
         }));
 
-        // 3. Fusionner
+        // 4. Fusionner
         this.fullSequence = [...invisibleNotes, ...visibleNotes];
 
-        // 4. Trier par tick
+        // 5. Trier par tick
         this.fullSequence.sort((a, b) => a.t - b.t);
 
         this.log('debug', `Synced fullSequence: ${invisibleNotes.length} invisible + ${visibleNotes.length} visible = ${this.fullSequence.length} total`);
