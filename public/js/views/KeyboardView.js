@@ -165,7 +165,7 @@ class KeyboardView extends BaseView {
                                         ${(state.devices || []).map(d => `
                                             <option value="${d.device_id}"
                                                     ${state.selectedDevice?.device_id === d.device_id ? 'selected' : ''}>
-                                                ${this.escapeHtml(d.name || `Device ${d.device_id}`)}
+                                                ${this.escapeHtml(d.displayName || d.name || `Device ${d.device_id}`)}
                                             </option>
                                         `).join('')}
                                     </select>
@@ -355,11 +355,11 @@ class KeyboardView extends BaseView {
         }
         
         this.viewState.selectedDevice = device;
-        
+
         // ✅ Émettre événement vers controller
         this.emit('select-device', { device_id: deviceId });
-        
-        this.log('info', `Selected device: ${device.name || deviceId}`);
+
+        this.log('info', `Selected device: ${device.displayName || device.name || deviceId}`);
     }
     
     /**

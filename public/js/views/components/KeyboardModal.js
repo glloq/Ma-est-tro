@@ -243,9 +243,34 @@ class KeyboardModal {
             this.logger.info('KeyboardModal', `Total devices: ${devices.length}`, devices);
 
             // Filtrer les devices actifs (status = 2)
-            this.availableDevices = devices.filter(d => d.status === 2);
+            const activeDevices = devices.filter(d => d.status === 2);
 
-            this.logger.info('KeyboardModal', `Active devices (status=2): ${this.availableDevices.length}`, this.availableDevices);
+            this.logger.info('KeyboardModal', `Active devices (status=2): ${activeDevices.length}`, activeDevices);
+
+            // Enrichir avec les noms personnalisés
+            this.availableDevices = await Promise.all(activeDevices.map(async (device) => {
+                try {
+                    const response = await this.backend.sendCommand('instrument_get_settings', {
+                        deviceId: device.device_id
+                    });
+                    const settings = response.settings || {};
+                    return {
+                        ...device,
+                        displayName: settings.custom_name || device.name,
+                        customName: settings.custom_name
+                    };
+                } catch (error) {
+                    // Si on ne peut pas charger les settings, utiliser le nom par défaut
+                    this.logger.warn('KeyboardModal', `Cannot load settings for ${device.device_id}:`, error);
+                    return {
+                        ...device,
+                        displayName: device.name,
+                        customName: null
+                    };
+                }
+            }));
+
+            this.logger.info('KeyboardModal', 'Devices enriched with custom names:', this.availableDevices);
 
             // Émettre l'événement pour la vue
             if (this.eventBus) {
