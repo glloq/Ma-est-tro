@@ -912,12 +912,8 @@
     <!-- Network Scan Modal Component -->
     <script src="js/views/components/NetworkScanModal.js"></script>
 
-    <!-- Keyboard View and Controller -->
-    <script src="js/views/KeyboardView.js"></script>
-    <script src="js/controllers/KeyboardController.js"></script>
-
-    <!-- Keyboard Modal Component -->
-    <script src="js/views/components/KeyboardModal.js"></script>
+    <!-- Keyboard Modal Component (Simplified version) -->
+    <script src="js/views/components/KeyboardModal_NEW.js"></script>
 
     <script>
         // ========== SYSTÈME DE MODAL DE CONFIRMATION ==========
@@ -2744,11 +2740,11 @@
             }
 
             // 🆕 Initialiser la modal clavier MIDI après connexion WebSocket
-            if (typeof KeyboardModal !== 'undefined') {
-                keyboardModal = new KeyboardModal(api);
-                log('✓ Modal clavier MIDI initialisée', 'info');
+            if (typeof KeyboardModalNew !== 'undefined') {
+                keyboardModal = new KeyboardModalNew();
+                log('✓ Modal clavier MIDI initialisée (version simplifiée)', 'info');
             } else {
-                log('⚠️ KeyboardModal non disponible', 'warning');
+                log('⚠️ KeyboardModalNew non disponible', 'warning');
             }
 
             // Afficher l'app
