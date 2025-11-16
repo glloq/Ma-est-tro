@@ -39,6 +39,10 @@ class KeyboardView extends BaseView {
             lastPlayedNote: null,
             keyboardLayout: 'azerty' // azerty ou qwerty
         };
+
+        // Debounce pour les boutons octave
+        this.octaveChangeDebounce = null;
+        this.octaveChangeDelay = 200; // ms
         
         // Configuration Canvas
         this.canvas = null;
@@ -396,7 +400,13 @@ class KeyboardView extends BaseView {
      * Change l'octave offset
      */
     handleOctaveChange(delta) {
-        this.log('debug', `handleOctaveChange called with delta=${delta}, current offset=${this.viewState.octaveOffset}`);
+        // Debounce pour éviter les clics multiples
+        if (this.octaveChangeDebounce) {
+            this.log('warn', 'Octave change debounced - ignoring multiple calls');
+            return;
+        }
+
+        this.log('info', `handleOctaveChange called with delta=${delta}, current offset=${this.viewState.octaveOffset}`);
 
         const newOffset = this.viewState.octaveOffset + delta;
 
@@ -421,6 +431,11 @@ class KeyboardView extends BaseView {
         this.emit('octave-changed', { offset: newOffset });
 
         this.log('info', `Octave changed: ${newOffset > 0 ? '+' : ''}${newOffset}`);
+
+        // Activer le debounce
+        this.octaveChangeDebounce = setTimeout(() => {
+            this.octaveChangeDebounce = null;
+        }, this.octaveChangeDelay);
     }
     
     /**
