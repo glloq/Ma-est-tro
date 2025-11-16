@@ -199,12 +199,14 @@ else
     echo "# Allow user to control Bluetooth adapter without password" | sudo tee "$SUDOERS_FILE" > /dev/null
     echo "$USER ALL=(ALL) NOPASSWD: /usr/bin/hciconfig hci0 up" | sudo tee -a "$SUDOERS_FILE" > /dev/null
     echo "$USER ALL=(ALL) NOPASSWD: /usr/bin/hciconfig hci0 down" | sudo tee -a "$SUDOERS_FILE" > /dev/null
+    echo "$USER ALL=(ALL) NOPASSWD: /usr/sbin/rfkill unblock bluetooth" | sudo tee -a "$SUDOERS_FILE" > /dev/null
     sudo chmod 0440 "$SUDOERS_FILE"
 
     # Validate sudoers file
     if sudo visudo -c -f "$SUDOERS_FILE" > /dev/null 2>&1; then
         print_success "sudoers configuration created and validated"
         print_info "User $USER can now run: sudo hciconfig hci0 up/down"
+        print_info "User $USER can now run: sudo rfkill unblock bluetooth"
     else
         print_error "sudoers file validation failed, removing..."
         sudo rm -f "$SUDOERS_FILE"
@@ -215,10 +217,44 @@ fi
 echo ""
 
 # =============================================================================
-# STEP 7: CHECK BLUETOOTH ADAPTER
+# STEP 7: UNBLOCK BLUETOOTH WITH RFKILL
 # =============================================================================
 
-print_info "Step 7: Checking Bluetooth adapter..."
+print_info "Step 7: Unblocking Bluetooth with rfkill..."
+echo ""
+
+# Check rfkill status
+if command -v rfkill &> /dev/null; then
+    print_info "Checking rfkill status..."
+    RFKILL_STATUS=$(rfkill list bluetooth 2>&1)
+
+    if echo "$RFKILL_STATUS" | grep -q "Soft blocked: yes\|Hard blocked: yes"; then
+        print_warning "Bluetooth is blocked by rfkill"
+        print_info "Unblocking..."
+        sudo rfkill unblock bluetooth
+
+        # Verify
+        sleep 1
+        RFKILL_STATUS_AFTER=$(rfkill list bluetooth 2>&1)
+        if echo "$RFKILL_STATUS_AFTER" | grep -q "Soft blocked: no"; then
+            print_success "Bluetooth unblocked successfully"
+        else
+            print_warning "Bluetooth may still be hard-blocked (hardware switch)"
+        fi
+    else
+        print_success "Bluetooth is not blocked by rfkill"
+    fi
+else
+    print_warning "rfkill command not found"
+fi
+
+echo ""
+
+# =============================================================================
+# STEP 8: CHECK BLUETOOTH ADAPTER
+# =============================================================================
+
+print_info "Step 8: Checking Bluetooth adapter..."
 echo ""
 
 if command -v hciconfig &> /dev/null; then
