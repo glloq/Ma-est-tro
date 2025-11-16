@@ -143,7 +143,8 @@
         }
 
         .btn:disabled {
-            background: #ccc;
+            background: #e5e7eb;
+            color: #9ca3af;
             cursor: not-allowed;
             transform: none;
         }
@@ -699,8 +700,8 @@
                     <div class="header-controls">
                         <span class="header-file-name" id="headerFileName">Aucun fichier sélectionné</span>
                         <span class="header-time" id="headerTime">00:00 / 00:00</span>
-                        <button class="btn" id="headerPlayPauseBtn" disabled>▶️ Lecture</button>
-                        <button class="btn btn-danger" id="headerStopBtn" disabled>⏹️ Stop</button>
+                        <button class="btn" id="headerPlayPauseBtn" disabled>▶️&nbsp;&nbsp;Lecture</button>
+                        <button class="btn btn-danger" id="headerStopBtn" disabled>⏹️&nbsp;&nbsp;Stop</button>
                     </div>
 
                     <div class="header-progress">
@@ -717,8 +718,8 @@
                     <input type="file" id="fileInput" accept=".mid,.midi" multiple>
 
                     <div class="btn-group">
-                        <button class="btn" id="uploadBtn">📤 Envoyer</button>
-                        <button class="btn btn-secondary" id="createFolderBtn">📁 Nouveau dossier</button>
+                        <button class="btn" id="uploadBtn">📤&nbsp;&nbsp;Envoyer</button>
+                        <button class="btn btn-secondary" id="createFolderBtn">📁&nbsp;&nbsp;Nouveau dossier</button>
                     </div>
 
                     <div class="drop-zone-root" id="dropZoneRoot">
@@ -734,7 +735,7 @@
                 <div class="card">
                     <h2>🎛️ Périphériques MIDI</h2>
 
-                    <button class="btn" id="scanDevicesBtn">🔍 Scanner</button>
+                    <button class="btn" id="scanDevicesBtn">🔍&nbsp;&nbsp;Scanner</button>
 
                     <ul class="device-list" id="deviceList">
                         <li class="info-text">Aucun périphérique</li>
