@@ -208,14 +208,11 @@ class CommandHandler {
   }
 
   async deviceIdentityRequest(data) {
-    const success = this.app.deviceManager.sendIdentityRequest(
+    // sendIdentityRequest() will throw an exception if it fails
+    this.app.deviceManager.sendIdentityRequest(
       data.deviceName,
       data.deviceId || 0x7F
     );
-
-    if (!success) {
-      throw new Error(`Failed to send Identity Request to ${data.deviceName}`);
-    }
 
     return {
       success: true,
