@@ -165,6 +165,10 @@ class DeviceManager {
   async updateDeviceMap() {
     this.devices.clear();
 
+    this.app.logger.debug(`Updating device map: ${this.inputs.size} inputs, ${this.outputs.size} outputs`);
+    this.app.logger.debug(`Input names: ${Array.from(this.inputs.keys()).join(', ')}`);
+    this.app.logger.debug(`Output names: ${Array.from(this.outputs.keys()).join(', ')}`);
+
     // Get USB serial numbers for all connected devices
     const serialNumbers = await this.getUsbSerialNumbers();
 
