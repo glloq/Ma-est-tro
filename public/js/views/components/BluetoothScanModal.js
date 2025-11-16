@@ -156,9 +156,9 @@ class BluetoothScanModal {
 
                     <!-- Informations -->
                     <div class="info-section">
-                        <p class="text-muted">
+                        <p>
                             💡 <strong>Astuce:</strong> Assurez-vous que votre instrument Bluetooth est en mode appairage
-                            et à portée avant de lancer la recherche.
+                            et à portée (10-15m max) avant de lancer la recherche.
                         </p>
                     </div>
                 </div>
@@ -205,19 +205,22 @@ class BluetoothScanModal {
      * Rendu d'un périphérique disponible
      */
     renderAvailableDevice(device) {
+        const deviceName = this.escapeHtml(device.name || 'Appareil Bluetooth');
+        const deviceAddress = device.address || device.id || 'Adresse inconnue';
+
         return `
             <div class="device-card bluetooth-device" data-device-id="${device.id || device.address}">
                 <div class="device-icon">📡</div>
                 <div class="device-info">
-                    <div class="device-name">${this.escapeHtml(device.name || 'Appareil Bluetooth')}</div>
-                    <div class="device-address">${device.address || device.id || 'Adresse inconnue'}</div>
-                    ${device.signal ? `<div class="device-signal">Signal: ${device.signal}%</div>` : ''}
-                    ${device.rssi ? `<div class="device-signal">RSSI: ${device.rssi} dBm</div>` : ''}
+                    <div class="device-name">${deviceName}</div>
+                    <div class="device-address">${deviceAddress}</div>
+                    ${device.signal ? `<div class="device-signal">📶 Signal: ${device.signal}%</div>` : ''}
+                    ${device.rssi ? `<div class="device-signal">📡 RSSI: ${device.rssi} dBm</div>` : ''}
                 </div>
                 <div class="device-actions">
-                    <button class="btn-primary btn-pair" data-action="pair"
+                    <button class="btn-pair" data-action="pair"
                             data-device-id="${device.id || device.address}"
-                            data-device-name="${this.escapeHtml(device.name || 'Appareil Bluetooth')}">
+                            data-device-name="${deviceName}">
                         🔗 Appairer
                     </button>
                 </div>
@@ -244,24 +247,26 @@ class BluetoothScanModal {
      * Rendu d'un périphérique appairé
      */
     renderPairedDevice(device) {
+        const deviceName = this.escapeHtml(device.name || device.address);
+
         return `
             <div class="device-card bluetooth-device paired" data-device-address="${device.address}">
-                <div class="device-icon">📡</div>
+                <div class="device-icon">✓</div>
                 <div class="device-info">
-                    <div class="device-name">${this.escapeHtml(device.name || device.address)}</div>
+                    <div class="device-name">${deviceName}</div>
                     <div class="device-address">${device.address}</div>
                     <div class="device-status">
-                        <span class="status-badge paired">Appairé</span>
+                        <span class="status-badge paired">✓ Appairé</span>
                     </div>
                 </div>
                 <div class="device-actions">
-                    <button class="btn-primary btn-connect" data-action="connect"
+                    <button class="btn-connect" data-action="connect"
                             data-device-address="${device.address}">
                         🔌 Connecter
                     </button>
-                    <button class="btn-danger btn-unpair" data-action="unpair"
+                    <button class="btn-unpair" data-action="unpair"
                             data-device-address="${device.address}">
-                        🗑️ Oublier
+                        Oublier
                     </button>
                 </div>
             </div>

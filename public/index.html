@@ -2423,8 +2423,10 @@
                 api.on('bluetooth:scan_requested', async () => {
                     try {
                         log('🔍 Lancement du scan Bluetooth...', 'info');
-                        const response = await api.sendCommand('bluetooth.scan', { duration: 5 });
-                        const devices = response.devices || [];
+                        const response = await api.sendCommand('bluetooth.scan', { duration: 5, filter: '' });
+
+                        // Le backend retourne { success: true, data: { devices: [...] } }
+                        const devices = (response.success && response.data && response.data.devices) ? response.data.devices : [];
 
                         // Émettre les résultats pour la modal
                         api.emit('bluetooth:scanned', { devices: devices });
@@ -2438,7 +2440,9 @@
                 api.on('bluetooth:paired_requested', async () => {
                     try {
                         const response = await api.sendCommand('bluetooth.paired', {});
-                        const devices = response.devices || [];
+
+                        // Le backend retourne { success: true, data: { devices: [...] } }
+                        const devices = (response.success && response.data && response.data.devices) ? response.data.devices : [];
 
                         // Émettre la liste pour la modal
                         api.emit('bluetooth:paired_list', { devices: devices });
@@ -2454,12 +2458,15 @@
                         const name = data.name || 'Appareil Bluetooth';
 
                         log(`🔗 Appairage de ${name}...`, 'info');
-                        await api.sendCommand('bluetooth.pair', { address: address, pin: data.pin || '' });
+                        const response = await api.sendCommand('bluetooth.pair', { address: address, pin: data.pin || '' });
 
-                        api.emit('bluetooth:paired', { device_id: address, address: address });
-                        log(`✓ ${name} appairé avec succès`, 'info');
-
-                        loadDevices(); // Rafraîchir la liste des périphériques
+                        if (response.success) {
+                            api.emit('bluetooth:paired', { device_id: address, address: address });
+                            log(`✓ ${name} appairé avec succès`, 'info');
+                            loadDevices(); // Rafraîchir la liste des périphériques
+                        } else {
+                            throw new Error(response.error || 'Erreur d\'appairage');
+                        }
                     } catch (error) {
                         log(`❌ Erreur appairage: ${error.message}`, 'error');
                     }
@@ -2470,10 +2477,14 @@
                         const address = data.address || data.device_id;
 
                         log(`🔓 Désappairage de ${address}...`, 'info');
-                        await api.sendCommand('bluetooth.unpair', { address: address });
+                        const response = await api.sendCommand('bluetooth.unpair', { address: address });
 
-                        api.emit('bluetooth:unpaired', { device_id: address });
-                        log(`✓ Appareil désappairé`, 'info');
+                        if (response.success) {
+                            api.emit('bluetooth:unpaired', { device_id: address });
+                            log(`✓ Appareil désappairé`, 'info');
+                        } else {
+                            throw new Error(response.error || 'Erreur de désappairage');
+                        }
                     } catch (error) {
                         log(`❌ Erreur désappairage: ${error.message}`, 'error');
                     }
@@ -2484,12 +2495,15 @@
                         const address = data.address || data.device_id;
 
                         log(`🔌 Connexion à ${address}...`, 'info');
-                        await api.sendCommand('bluetooth.connect', { address: address });
+                        const response = await api.sendCommand('bluetooth.connect', { address: address });
 
-                        api.emit('bluetooth:connected', { device_id: address });
-                        log(`✓ Connecté à ${address}`, 'info');
-
-                        loadDevices(); // Rafraîchir la liste des périphériques
+                        if (response.success) {
+                            api.emit('bluetooth:connected', { device_id: address });
+                            log(`✓ Connecté à ${address}`, 'info');
+                            loadDevices(); // Rafraîchir la liste des périphériques
+                        } else {
+                            throw new Error(response.error || 'Erreur de connexion');
+                        }
                     } catch (error) {
                         log(`❌ Erreur connexion: ${error.message}`, 'error');
                     }
