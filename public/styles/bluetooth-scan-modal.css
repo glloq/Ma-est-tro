@@ -82,13 +82,15 @@
 
 .bluetooth-scan-modal .modal-header {
     display: flex !important;
+    flex-direction: column !important;
     align-items: center !important;
-    justify-content: space-between !important;
+    justify-content: center !important;
     padding: 20px 24px !important;
     margin: 0 !important;
     border-bottom: 2px solid var(--bluetooth-border);
     background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
     border-radius: 12px 12px 0 0;
+    position: relative !important;
 }
 
 .bluetooth-scan-modal .modal-header h2 {
@@ -112,6 +114,9 @@
     justify-content: center;
     border-radius: 50%;
     transition: all 0.2s;
+    position: absolute !important;
+    top: 20px !important;
+    right: 24px !important;
 }
 
 .bluetooth-scan-modal .modal-close:hover {
