@@ -804,6 +804,69 @@
     flex-shrink: 0;
 }
 
+/* Navigation controls avec sliders */
+.midi-editor-modal .navigation-controls {
+    display: flex;
+    gap: 24px;
+    padding: 8px 16px;
+    background: #2a2a2a;
+    border-bottom: 1px solid #3a3a3a;
+    flex-shrink: 0;
+}
+
+.midi-editor-modal .slider-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    max-width: 300px;
+}
+
+.midi-editor-modal .slider-group label {
+    color: #aaa;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    min-width: 100px;
+}
+
+.midi-editor-modal .slider-group input[type="range"] {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: #444;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.midi-editor-modal .slider-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.midi-editor-modal .slider-group input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.midi-editor-modal .slider-group input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    cursor: pointer;
+    border: none;
+    transition: transform 0.2s ease;
+}
+
+.midi-editor-modal .slider-group input[type="range"]::-moz-range-thumb:hover {
+    transform: scale(1.2);
+}
+
 .midi-editor-modal .channel-buttons {
     display: flex;
     gap: 6px;
@@ -821,7 +884,7 @@
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
-    min-width: 70px;
+    min-width: 85px;
     gap: 2px;
     position: relative;
     overflow: hidden;
@@ -875,16 +938,17 @@
 }
 
 .midi-editor-modal .channel-name {
-    font-size: 0.65rem;
+    font-size: 0.68rem;
     color: #ddd;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 90px;
+    max-width: 100px;
     position: relative;
     z-index: 1;
     text-shadow: 0 0 8px rgba(0,0,0,1),
                  0 2px 4px rgba(0,0,0,0.9);
+    display: block;
 }
 
 /* Suppression des styles .channel-count (élément retiré) */
