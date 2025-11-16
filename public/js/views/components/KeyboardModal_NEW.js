@@ -1,5 +1,5 @@
 // ============================================================================
-// Fichier: KeyboardModal_NEW.js - VERSION SIMPLIFIÉE ET FONCTIONNELLE
+// Fichier: KeyboardModal_NEW.js - VERSION DIVs (Pas de Canvas!)
 // ============================================================================
 
 class KeyboardModalNew {
@@ -7,13 +7,6 @@ class KeyboardModalNew {
         this.backend = window.api;
         this.logger = console;
         this.isOpen = false;
-
-        // Canvas
-        this.canvas = null;
-        this.ctx = null;
-        this.keyWidth = 40;
-        this.whiteKeyHeight = 320;
-        this.blackKeyHeight = 200;
 
         // État
         this.devices = [];
@@ -23,16 +16,21 @@ class KeyboardModalNew {
         this.octaveOffset = 0;
         this.keyboardLayout = 'azerty';
 
+        // Piano config
+        this.whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+        this.blackKeyPositions = [1, 2, 4, 5, 6]; // Position des touches noires (après C, D, F, G, A)
+        this.octaves = 2; // Nombre d'octaves à afficher (2 octaves = 14 touches blanches)
+
         // Keyboard mappings
         this.keyMaps = {
             azerty: {
-                'KeyZ': 0, 'KeyS': 1, 'KeyX': 2, 'KeyD': 3, 'KeyC': 4,
+                'KeyW': 0, 'KeyS': 1, 'KeyX': 2, 'KeyD': 3, 'KeyC': 4,
                 'KeyV': 5, 'KeyG': 6, 'KeyB': 7, 'KeyH': 8, 'KeyN': 9,
                 'KeyJ': 10, 'Comma': 11,
-                'KeyA': 12, 'Digit2': 13, 'KeyQ': 14, 'Digit3': 15, 'KeyW': 16,
-                'KeyE': 17, 'Digit5': 18, 'KeyR': 19, 'Digit6': 20, 'KeyT': 21,
-                'Digit7': 22, 'KeyY': 23, 'KeyU': 24, 'Digit9': 25, 'KeyI': 26,
-                'Digit0': 27, 'KeyO': 28, 'KeyP': 29
+                'KeyA': 12, 'Digit2': 13, 'KeyZ': 14, 'Digit3': 15, 'KeyE': 16,
+                'KeyR': 17, 'Digit5': 18, 'KeyT': 19, 'Digit6': 20, 'KeyY': 21,
+                'Digit7': 22, 'KeyU': 23, 'KeyI': 24, 'Digit9': 25, 'KeyO': 26,
+                'Digit0': 27, 'KeyP': 28
             },
             qwerty: {
                 'KeyZ': 0, 'KeyS': 1, 'KeyX': 2, 'KeyD': 3, 'KeyC': 4,
@@ -49,28 +47,26 @@ class KeyboardModalNew {
         // Bind handlers
         this.handleKeyDown = this.handleKeyDown.bind(this);
         this.handleKeyUp = this.handleKeyUp.bind(this);
-        this.handleMouseDown = this.handleMouseDown.bind(this);
-        this.handleMouseUp = this.handleMouseUp.bind(this);
 
-        this.logger.info('[KeyboardModal] Initialized');
+        this.container = null;
     }
 
     // ========================================================================
-    // MODAL
+    // OPEN / CLOSE
     // ========================================================================
 
     async open() {
         if (this.isOpen) return;
 
-        this.isOpen = true;
         this.createModal();
+        this.isOpen = true;
 
-        // Attendre que le DOM soit créé
-        await new Promise(resolve => setTimeout(resolve, 0));
-
-        this.setupCanvas();
-        this.attachEvents();
+        // Load devices
         await this.loadDevices();
+        this.populateDeviceSelect();
+
+        // Attach events
+        this.attachEvents();
 
         this.logger.info('[KeyboardModal] Opened');
     }
@@ -78,17 +74,17 @@ class KeyboardModalNew {
     close() {
         if (!this.isOpen) return;
 
-        this.isOpen = false;
         this.detachEvents();
+
+        // Stop toutes les notes actives
+        this.activeNotes.forEach(note => this.stopNote(note));
 
         if (this.container) {
             this.container.remove();
             this.container = null;
         }
 
-        this.canvas = null;
-        this.ctx = null;
-
+        this.isOpen = false;
         this.logger.info('[KeyboardModal] Closed');
     }
 
@@ -147,7 +143,7 @@ class KeyboardModalNew {
                             </div>
 
                             <div class="keyboard-canvas-container">
-                                <canvas id="keyboard-canvas" class="keyboard-canvas"></canvas>
+                                <div id="piano-container" class="piano-container"></div>
                             </div>
                         </div>
                     </div>
@@ -160,102 +156,85 @@ class KeyboardModalNew {
         `;
 
         document.body.appendChild(this.container);
+
+        // Générer les touches du piano
+        this.generatePianoKeys();
     }
 
     // ========================================================================
-    // CANVAS
+    // PIANO KEYS GENERATION (DIVs)
     // ========================================================================
 
-    setupCanvas() {
-        this.canvas = document.getElementById('keyboard-canvas');
-        if (!this.canvas) {
-            this.logger.error('[KeyboardModal] Canvas not found');
-            return;
-        }
+    generatePianoKeys() {
+        const pianoContainer = document.getElementById('piano-container');
+        if (!pianoContainer) return;
 
-        this.ctx = this.canvas.getContext('2d');
+        pianoContainer.innerHTML = ''; // Clear
 
-        // Définir une taille par défaut si offsetWidth n'est pas encore disponible
-        const width = this.canvas.offsetWidth || 1000;
-        this.canvas.width = width;
-        this.canvas.height = this.whiteKeyHeight;
+        const totalWhiteKeys = this.whiteKeys.length * this.octaves;
+        let whiteKeyIndex = 0;
 
-        this.logger.info(`[KeyboardModal] Canvas setup: ${this.canvas.width}x${this.canvas.height}`);
+        for (let octave = 0; octave < this.octaves; octave++) {
+            for (let i = 0; i < this.whiteKeys.length; i++) {
+                const noteName = this.whiteKeys[i];
+                const noteNumber = 60 + (octave * 12) + this.getNoteOffset(noteName);
 
-        this.drawKeyboard();
-    }
+                // Touche blanche
+                const whiteKey = document.createElement('div');
+                whiteKey.className = 'piano-key white-key';
+                whiteKey.dataset.note = noteNumber;
+                whiteKey.dataset.noteName = noteName + (4 + octave);
 
-    drawKeyboard() {
-        if (!this.ctx) return;
+                // Label
+                const label = document.createElement('span');
+                label.className = 'key-label';
+                label.textContent = noteName;
+                whiteKey.appendChild(label);
 
-        const ctx = this.ctx;
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                pianoContainer.appendChild(whiteKey);
 
-        const baseNote = 60 + (this.octaveOffset * 12);
-        const visibleKeys = Math.floor(this.canvas.width / this.keyWidth);
+                // Touche noire (si applicable)
+                if (this.blackKeyPositions.includes(i + 1)) {
+                    const blackNoteNumber = noteNumber + 1;
+                    const blackKey = document.createElement('div');
+                    blackKey.className = 'piano-key black-key';
+                    blackKey.dataset.note = blackNoteNumber;
+                    blackKey.dataset.noteName = noteName + '#' + (4 + octave);
 
-        // Dessiner touches blanches
-        let x = 0;
-        for (let i = 0; i < visibleKeys; i++) {
-            const note = baseNote + i;
-            const isBlackKey = this.isBlackKey(note % 12);
+                    // Positionner la touche noire
+                    blackKey.style.left = `calc(${whiteKeyIndex * (100 / totalWhiteKeys)}% + ${(100 / totalWhiteKeys) * 0.7}%)`;
 
-            if (!isBlackKey) {
-                this.drawWhiteKey(x, note);
-                x += this.keyWidth;
-            }
-        }
-
-        // Dessiner touches noires
-        x = 0;
-        for (let i = 0; i < visibleKeys; i++) {
-            const note = baseNote + i;
-            const noteInOctave = note % 12;
-
-            if (!this.isBlackKey(noteInOctave)) {
-                // Dessiner touche noire après cette touche blanche si applicable
-                const nextNote = note + 1;
-                if (this.isBlackKey(nextNote % 12)) {
-                    this.drawBlackKey(x + this.keyWidth - (this.keyWidth * 0.3), nextNote);
+                    pianoContainer.appendChild(blackKey);
                 }
-                x += this.keyWidth;
+
+                whiteKeyIndex++;
             }
         }
+
+        this.logger.info('[KeyboardModal] Piano keys generated');
     }
 
-    isBlackKey(noteInOctave) {
-        return [1, 3, 6, 8, 10].includes(noteInOctave);
+    getNoteOffset(noteName) {
+        const offsets = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+        return offsets[noteName] || 0;
     }
 
-    drawWhiteKey(x, note) {
-        const ctx = this.ctx;
-        const isActive = this.activeNotes.has(note);
+    updatePianoDisplay() {
+        const allKeys = document.querySelectorAll('.piano-key');
+        allKeys.forEach(key => {
+            const baseNote = parseInt(key.dataset.note);
+            const adjustedNote = baseNote + (this.octaveOffset * 12);
 
-        ctx.fillStyle = isActive ? '#cccccc' : '#ffffff';
-        ctx.fillRect(x, 0, this.keyWidth - 1, this.whiteKeyHeight);
+            // Update note number
+            key.dataset.adjustedNote = adjustedNote;
 
-        ctx.strokeStyle = isActive ? '#ff0000' : '#333333';
-        ctx.lineWidth = isActive ? 2 : 1;
-        ctx.strokeRect(x, 0, this.keyWidth - 1, this.whiteKeyHeight);
-    }
-
-    drawBlackKey(x, note) {
-        const ctx = this.ctx;
-        const isActive = this.activeNotes.has(note);
-        const blackKeyWidth = this.keyWidth * 0.6;
-
-        ctx.fillStyle = isActive ? '#666666' : '#000000';
-        ctx.fillRect(x, 0, blackKeyWidth, this.blackKeyHeight);
-
-        ctx.strokeStyle = isActive ? '#ff0000' : '#333333';
-        ctx.lineWidth = isActive ? 2 : 1;
-        ctx.strokeRect(x, 0, blackKeyWidth, this.blackKeyHeight);
-    }
-
-    getNoteAtPosition(x, y) {
-        const baseNote = 60 + (this.octaveOffset * 12);
-        const keyIndex = Math.floor(x / this.keyWidth);
-        return baseNote + keyIndex;
+            // Highlight if active
+            if (this.activeNotes.has(adjustedNote)) {
+                key.classList.add('active');
+            } else {
+                key.classList.remove('active');
+            }
+        });
     }
 
     // ========================================================================
@@ -268,24 +247,24 @@ class KeyboardModalNew {
         document.getElementById('keyboard-close-btn-footer')?.addEventListener('click', () => this.close());
 
         document.getElementById('keyboard-octave-up')?.addEventListener('click', () => {
-            this.octaveOffset = Math.min(5, this.octaveOffset + 1);
+            this.octaveOffset = Math.min(3, this.octaveOffset + 1);
             const display = this.octaveOffset > 0 ? `+${this.octaveOffset}` : this.octaveOffset;
             document.getElementById('keyboard-octave-display').textContent = `Octave: ${display}`;
-            this.drawKeyboard();
+            this.updatePianoDisplay();
         });
 
         document.getElementById('keyboard-octave-down')?.addEventListener('click', () => {
-            this.octaveOffset = Math.max(-5, this.octaveOffset - 1);
+            this.octaveOffset = Math.max(-3, this.octaveOffset - 1);
             const display = this.octaveOffset > 0 ? `+${this.octaveOffset}` : this.octaveOffset;
             document.getElementById('keyboard-octave-display').textContent = `Octave: ${display}`;
-            this.drawKeyboard();
+            this.updatePianoDisplay();
         });
 
         // Device select
         document.getElementById('keyboard-device-select')?.addEventListener('change', (e) => {
             const deviceId = e.target.value;
-            this.selectedDevice = this.devices.find(d => d.device_id === deviceId) || null;
-            this.logger.info('[KeyboardModal] Device selected:', this.selectedDevice?.displayName);
+            this.selectedDevice = this.devices.find(d => d.device_id === deviceId || d.id === deviceId) || null;
+            this.logger.info('[KeyboardModal] Device selected:', this.selectedDevice);
         });
 
         // Velocity
@@ -300,13 +279,25 @@ class KeyboardModalNew {
             this.currentKeyMap = this.keyMaps[this.keyboardLayout];
         });
 
-        // Canvas
-        if (this.canvas) {
-            this.canvas.addEventListener('mousedown', this.handleMouseDown);
-            this.canvas.addEventListener('mouseup', this.handleMouseUp);
-        }
+        // Piano keys
+        const pianoKeys = document.querySelectorAll('.piano-key');
+        pianoKeys.forEach(key => {
+            key.addEventListener('mousedown', (e) => this.handlePianoKeyDown(e));
+            key.addEventListener('mouseup', (e) => this.handlePianoKeyUp(e));
+            key.addEventListener('mouseleave', (e) => this.handlePianoKeyUp(e));
 
-        // Clavier
+            // Touch support
+            key.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.handlePianoKeyDown(e);
+            });
+            key.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                this.handlePianoKeyUp(e);
+            });
+        });
+
+        // Clavier PC
         window.addEventListener('keydown', this.handleKeyDown);
         window.addEventListener('keyup', this.handleKeyUp);
 
@@ -314,29 +305,27 @@ class KeyboardModalNew {
     }
 
     detachEvents() {
-        if (this.canvas) {
-            this.canvas.removeEventListener('mousedown', this.handleMouseDown);
-            this.canvas.removeEventListener('mouseup', this.handleMouseUp);
-        }
-
         window.removeEventListener('keydown', this.handleKeyDown);
         window.removeEventListener('keyup', this.handleKeyUp);
-
         this.logger.info('[KeyboardModal] Events detached');
     }
 
-    handleMouseDown(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+    handlePianoKeyDown(e) {
+        const key = e.currentTarget;
+        const baseNote = parseInt(key.dataset.note);
+        const note = baseNote + (this.octaveOffset * 12);
 
-        const note = this.getNoteAtPosition(x, y);
-        this.playNote(note);
+        if (!this.activeNotes.has(note)) {
+            this.playNote(note);
+        }
     }
 
-    handleMouseUp(e) {
-        // Arrêter toutes les notes actives
-        this.activeNotes.forEach(note => this.stopNote(note));
+    handlePianoKeyUp(e) {
+        const key = e.currentTarget;
+        const baseNote = parseInt(key.dataset.note);
+        const note = baseNote + (this.octaveOffset * 12);
+
+        this.stopNote(note);
     }
 
     handleKeyDown(e) {
@@ -347,7 +336,10 @@ class KeyboardModalNew {
 
         e.preventDefault();
         const note = 60 + noteOffset + (this.octaveOffset * 12);
-        this.playNote(note);
+
+        if (!this.activeNotes.has(note)) {
+            this.playNote(note);
+        }
     }
 
     handleKeyUp(e) {
@@ -372,11 +364,7 @@ class KeyboardModalNew {
 
         // Ajouter aux notes actives
         this.activeNotes.add(note);
-        this.drawKeyboard();
-
-        // Logs de debug
-        this.logger.info(`[KeyboardModal] backend available: ${!!this.backend}`);
-        this.logger.info(`[KeyboardModal] selectedDevice: ${JSON.stringify(this.selectedDevice)}`);
+        this.updatePianoDisplay();
 
         // Envoyer MIDI si device sélectionné
         if (this.selectedDevice && this.backend) {
@@ -385,18 +373,13 @@ class KeyboardModalNew {
 
             this.backend.sendNoteOn(deviceId, note, this.velocity, 0)
                 .then(() => {
-                    this.logger.info(`[KeyboardModal] ✓ Note ON sent successfully: ${note}`);
+                    this.logger.info(`[KeyboardModal] ✓ Note ON sent: ${note}`);
                 })
                 .catch(err => {
                     this.logger.error('[KeyboardModal] ✗ Note ON failed:', err);
                 });
         } else {
-            if (!this.backend) {
-                this.logger.warn('[KeyboardModal] Backend not available');
-            }
-            if (!this.selectedDevice) {
-                this.logger.warn('[KeyboardModal] No device selected - note not sent');
-            }
+            this.logger.warn('[KeyboardModal] No device/backend - note not sent');
         }
     }
 
@@ -405,16 +388,18 @@ class KeyboardModalNew {
 
         // Retirer des notes actives
         this.activeNotes.delete(note);
-        this.drawKeyboard();
+        this.updatePianoDisplay();
 
         // Envoyer MIDI si device sélectionné
         if (this.selectedDevice && this.backend) {
-            this.backend.sendNoteOff(this.selectedDevice.device_id, note, 0)
+            const deviceId = this.selectedDevice.device_id || this.selectedDevice.id;
+
+            this.backend.sendNoteOff(deviceId, note, 0)
                 .then(() => {
-                    this.logger.info(`[KeyboardModal] Note OFF sent: ${note}`);
+                    this.logger.info(`[KeyboardModal] ✓ Note OFF sent: ${note}`);
                 })
                 .catch(err => {
-                    this.logger.error('[KeyboardModal] Note OFF failed:', err);
+                    this.logger.error('[KeyboardModal] ✗ Note OFF failed:', err);
                 });
         }
     }
@@ -424,19 +409,12 @@ class KeyboardModalNew {
     // ========================================================================
 
     async loadDevices() {
-        if (!this.backend) {
-            this.logger.warn('[KeyboardModal] Backend not available');
-            return;
-        }
-
         try {
-            this.logger.info('[KeyboardModal] Loading devices...');
-
             const devices = await this.backend.listDevices();
-            const activeDevices = devices.filter(d => d.status === 2);
+            this.devices = devices.filter(d => d.status === 2); // Actifs seulement
 
             // Enrichir avec noms personnalisés
-            this.devices = await Promise.all(activeDevices.map(async (device) => {
+            this.devices = await Promise.all(this.devices.map(async (device) => {
                 const deviceId = device.id || device.device_id;
                 const normalizedDevice = {
                     ...device,
@@ -451,25 +429,26 @@ class KeyboardModalNew {
                     const settings = response.settings || {};
                     return {
                         ...normalizedDevice,
-                        displayName: settings.custom_name || device.name
+                        displayName: settings.custom_name || device.name,
+                        customName: settings.custom_name
                     };
-                } catch {
+                } catch (error) {
                     return {
                         ...normalizedDevice,
-                        displayName: device.name
+                        displayName: device.name,
+                        customName: null
                     };
                 }
             }));
 
             this.logger.info(`[KeyboardModal] Loaded ${this.devices.length} devices`);
-            this.updateDeviceSelect();
-
         } catch (error) {
             this.logger.error('[KeyboardModal] Failed to load devices:', error);
+            this.devices = [];
         }
     }
 
-    updateDeviceSelect() {
+    populateDeviceSelect() {
         const select = document.getElementById('keyboard-device-select');
         if (!select) return;
 
@@ -478,13 +457,10 @@ class KeyboardModalNew {
         this.devices.forEach(device => {
             const option = document.createElement('option');
             option.value = device.device_id;
-            option.textContent = device.displayName;
+            option.textContent = device.displayName || device.name;
             select.appendChild(option);
         });
-    }
-}
 
-// Export global
-if (typeof window !== 'undefined') {
-    window.KeyboardModalNew = KeyboardModalNew;
+        this.logger.info('[KeyboardModal] Device select populated');
+    }
 }

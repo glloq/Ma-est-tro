@@ -351,14 +351,92 @@
     border-radius: 8px;
 }
 
-/* Canvas */
+/* Piano Container (DIVs) */
 .keyboard-canvas-container {
     flex: 1;
     background: white;
     padding: 20px;
     overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
+.piano-container {
+    position: relative;
+    display: flex;
+    height: 320px;
+    width: 100%;
+    max-width: 900px;
+    background: #2c2c2c;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Touches du piano */
+.piano-key {
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.05s ease;
+    border-radius: 0 0 4px 4px;
+}
+
+.white-key {
+    flex: 1;
+    background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
+    border: 1px solid #333;
+    border-radius: 0 0 4px 4px;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.white-key:hover {
+    background: linear-gradient(to bottom, #f8f8f8 0%, #e8e8e8 100%);
+}
+
+.white-key.active {
+    background: linear-gradient(to bottom, #10b981 0%, #059669 100%) !important;
+    border-color: #047857;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.black-key {
+    position: absolute;
+    width: 5%;
+    height: 65%;
+    background: linear-gradient(to bottom, #2c2c2c 0%, #1a1a1a 100%);
+    border: 1px solid #000;
+    border-radius: 0 0 3px 3px;
+    z-index: 10;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5);
+}
+
+.black-key:hover {
+    background: linear-gradient(to bottom, #3c3c3c 0%, #2a2a2a 100%);
+}
+
+.black-key.active {
+    background: linear-gradient(to bottom, #059669 0%, #047857 100%) !important;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.key-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    pointer-events: none;
+}
+
+.white-key.active .key-label {
+    color: white;
+}
+
+/* Old canvas styles (kept for backward compatibility) */
 .keyboard-canvas {
     display: block;
     width: 100%;
