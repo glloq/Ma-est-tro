@@ -558,6 +558,29 @@ class BackendService {
     async systemStatus() { return this.sendCommand('system.status'); }
     async systemVersion() { return this.sendCommand('system.version'); }
     async systemCommands() { return this.sendCommand('system.commands'); }
+
+    // Bluetooth
+    async bluetoothScan(duration = 5, filter = '') {
+        return this.sendCommand('bluetooth.scan', { duration, filter });
+    }
+    async bluetoothPair(address, pin = '') {
+        return this.sendCommand('bluetooth.pair', { address, pin });
+    }
+    async bluetoothUnpair(address) {
+        return this.sendCommand('bluetooth.unpair', { address });
+    }
+    async bluetoothConnect(address) {
+        return this.sendCommand('bluetooth.connect', { address });
+    }
+    async bluetoothDisconnect(address) {
+        return this.sendCommand('bluetooth.disconnect', { address });
+    }
+    async bluetoothPaired() {
+        return this.sendCommand('bluetooth.paired', {});
+    }
+    async bluetoothStatus() {
+        return this.sendCommand('bluetooth.status', {});
+    }
     
     // ========================================================================
     // UTILS

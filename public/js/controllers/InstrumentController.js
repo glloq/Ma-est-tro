@@ -130,6 +130,21 @@ class InstrumentController extends BaseController {
             this.handleBluetoothForgetRequest(data);
         });
 
+        // Bluetooth pair
+        this.eventBus.on('bluetooth:pair_requested', (data) => {
+            this.handleBluetoothPairRequest(data);
+        });
+
+        // Bluetooth unpair
+        this.eventBus.on('bluetooth:unpair_requested', (data) => {
+            this.handleBluetoothUnpairRequest(data);
+        });
+
+        // Bluetooth connect
+        this.eventBus.on('bluetooth:connect_requested', (data) => {
+            this.handleBluetoothConnectRequest(data);
+        });
+
         // Instrument settings
         this.eventBus.on('instrument:settings:requested', (data) => {
             this.handleInstrumentSettingsRequest(data);
@@ -294,38 +309,168 @@ class InstrumentController extends BaseController {
     async handleBluetoothScanRequest() {
         try {
             this.logger?.debug?.('InstrumentController', 'Handling Bluetooth scan request');
-            // TODO: ImplÃ©menter le scan Bluetooth quand backend sera prÃªt
+
+            if (!this.backend) {
+                throw new Error('Backend not available');
+            }
+
+            // Lancer le scan Bluetooth via le backend
+            const response = await this.backend.bluetoothScan();
+            const devices = response.devices || [];
+
+            this.logger?.info?.('InstrumentController', `Bluetooth scan complete: ${devices.length} devices found`);
+
+            // Émettre les résultats pour la modal
             this.eventBus.emit('bluetooth:scanned', {
-                devices: []
+                devices: devices
             });
         } catch (error) {
             this.logger?.error?.('InstrumentController', 'handleBluetoothScanRequest failed:', error);
             this.eventBus.emit('bluetooth:scan_error', { error: error.message });
+            this.notifications?.error('Scan Bluetooth échoué', error.message);
         }
     }
 
     async handleBluetoothPairedRequest() {
         try {
             this.logger?.debug?.('InstrumentController', 'Handling Bluetooth paired request');
-            // TODO: ImplÃ©menter la liste des devices Bluetooth pairÃ©s
+
+            if (!this.backend) {
+                throw new Error('Backend not available');
+            }
+
+            // Récupérer la liste des appareils appairés
+            const response = await this.backend.bluetoothPaired();
+            const devices = response.devices || [];
+
+            this.logger?.info?.('InstrumentController', `Bluetooth paired devices: ${devices.length}`);
+
+            // Émettre la liste pour la modal
             this.eventBus.emit('bluetooth:paired_list', {
-                devices: []
+                devices: devices
             });
         } catch (error) {
             this.logger?.error?.('InstrumentController', 'handleBluetoothPairedRequest failed:', error);
+            this.eventBus.emit('bluetooth:paired_list', { devices: [] });
         }
     }
 
     async handleBluetoothForgetRequest(data) {
         try {
-            const device_id = data.device_id;
-            if (!device_id) throw new Error('device_id required');
-            
-            this.logger?.debug?.('InstrumentController', `Handling Bluetooth forget request: ${device_id}`);
-            // TODO: ImplÃ©menter l'oubli du device Bluetooth
-            this.eventBus.emit('bluetooth:forgotten', { device_id });
+            const address = data.address || data.device_id;
+            if (!address) throw new Error('address required');
+
+            this.logger?.debug?.('InstrumentController', `Handling Bluetooth forget request: ${address}`);
+
+            if (!this.backend) {
+                throw new Error('Backend not available');
+            }
+
+            // Oublier l'appareil Bluetooth
+            await this.backend.bluetoothUnpair(address);
+
+            this.logger?.info?.('InstrumentController', `Bluetooth device forgotten: ${address}`);
+
+            // Émettre l'événement de succès
+            this.eventBus.emit('bluetooth:forgotten', { device_id: address });
+            this.notifications?.success('Appareil oublié', `L'appareil ${address} a été oublié`);
+
+            // Recharger la liste des appareils appairés
+            this.handleBluetoothPairedRequest();
         } catch (error) {
             this.logger?.error?.('InstrumentController', 'handleBluetoothForgetRequest failed:', error);
+            this.notifications?.error('Erreur', error.message);
+        }
+    }
+
+    async handleBluetoothPairRequest(data) {
+        try {
+            const address = data.address || data.device_id;
+            const name = data.name || 'Appareil Bluetooth';
+            const pin = data.pin || '';
+
+            if (!address) throw new Error('address required');
+
+            this.logger?.debug?.('InstrumentController', `Handling Bluetooth pair request: ${address}`);
+
+            if (!this.backend) {
+                throw new Error('Backend not available');
+            }
+
+            this.notifications?.info('Appairage en cours', `Appairage de ${name}...`);
+
+            // Appairer l'appareil Bluetooth
+            await this.backend.bluetoothPair(address, pin);
+
+            this.logger?.info?.('InstrumentController', `Bluetooth device paired: ${address}`);
+
+            // Émettre l'événement de succès
+            this.eventBus.emit('bluetooth:paired', { device_id: address, address: address });
+            this.notifications?.success('Appareil appairé', `${name} a été appairé avec succès`);
+
+            // Recharger la liste des appareils appairés
+            this.handleBluetoothPairedRequest();
+        } catch (error) {
+            this.logger?.error?.('InstrumentController', 'handleBluetoothPairRequest failed:', error);
+            this.notifications?.error('Appairage échoué', error.message);
+        }
+    }
+
+    async handleBluetoothUnpairRequest(data) {
+        try {
+            const address = data.address || data.device_id;
+            if (!address) throw new Error('address required');
+
+            this.logger?.debug?.('InstrumentController', `Handling Bluetooth unpair request: ${address}`);
+
+            if (!this.backend) {
+                throw new Error('Backend not available');
+            }
+
+            // Désappairer l'appareil Bluetooth
+            await this.backend.bluetoothUnpair(address);
+
+            this.logger?.info?.('InstrumentController', `Bluetooth device unpaired: ${address}`);
+
+            // Émettre l'événement de succès
+            this.eventBus.emit('bluetooth:unpaired', { device_id: address });
+            this.notifications?.success('Appareil désappairé', `L'appareil ${address} a été désappairé`);
+
+            // Recharger la liste des appareils appairés
+            this.handleBluetoothPairedRequest();
+        } catch (error) {
+            this.logger?.error?.('InstrumentController', 'handleBluetoothUnpairRequest failed:', error);
+            this.notifications?.error('Erreur', error.message);
+        }
+    }
+
+    async handleBluetoothConnectRequest(data) {
+        try {
+            const address = data.address || data.device_id;
+            if (!address) throw new Error('address required');
+
+            this.logger?.debug?.('InstrumentController', `Handling Bluetooth connect request: ${address}`);
+
+            if (!this.backend) {
+                throw new Error('Backend not available');
+            }
+
+            this.notifications?.info('Connexion en cours', `Connexion à ${address}...`);
+
+            // Connecter l'appareil Bluetooth
+            await this.backend.bluetoothConnect(address);
+
+            this.logger?.info?.('InstrumentController', `Bluetooth device connected: ${address}`);
+
+            // Émettre l'événement de succès
+            this.eventBus.emit('bluetooth:connected', { device_id: address });
+            this.notifications?.success('Appareil connecté', `Connecté à ${address}`);
+
+            // Rafraîchir la liste des appareils
+            this.refreshDeviceList();
+        } catch (error) {
+            this.logger?.error?.('InstrumentController', 'handleBluetoothConnectRequest failed:', error);
+            this.notifications?.error('Connexion échouée', error.message);
         }
     }
 
