@@ -30,6 +30,10 @@ class CommandHandler {
       'ble_status': () => this.bleStatus(),
       'ble_power_on': () => this.blePowerOn(),
       'ble_power_off': () => this.blePowerOff(),
+      'network_scan': (data) => this.networkScan(data),
+      'network_connected_list': () => this.networkConnectedList(),
+      'network_connect': (data) => this.networkConnect(data),
+      'network_disconnect': (data) => this.networkDisconnect(data),
       'virtual_create': (data) => this.virtualCreate(data),
       'virtual_delete': (data) => this.virtualDelete(data),
       'virtual_list': () => this.virtualList(),
@@ -401,6 +405,77 @@ class CommandHandler {
     }
 
     const result = await this.app.bluetoothManager.powerOff();
+
+    return {
+      success: true,
+      data: result
+    };
+  }
+
+  async networkScan(data) {
+    if (!this.app.networkManager) {
+      throw new Error('Network manager not available');
+    }
+
+    const timeout = data.timeout || 5;
+
+    const devices = await this.app.networkManager.startScan(timeout);
+
+    return {
+      success: true,
+      data: {
+        devices: devices
+      }
+    };
+  }
+
+  async networkConnectedList() {
+    if (!this.app.networkManager) {
+      throw new Error('Network manager not available');
+    }
+
+    const devices = this.app.networkManager.getConnectedDevices();
+
+    return {
+      success: true,
+      data: {
+        devices: devices
+      }
+    };
+  }
+
+  async networkConnect(data) {
+    if (!this.app.networkManager) {
+      throw new Error('Network manager not available');
+    }
+
+    if (!data.ip && !data.address) {
+      throw new Error('Device IP address is required');
+    }
+
+    const ip = data.ip || data.address;
+    const port = data.port || '5004';
+
+    const result = await this.app.networkManager.connect(ip, port);
+
+    return {
+      success: true,
+      data: result
+    };
+  }
+
+  async networkDisconnect(data) {
+    if (!this.app.networkManager) {
+      throw new Error('Network manager not available');
+    }
+
+    if (!data.ip && !data.address) {
+      throw new Error('Device IP address is required');
+    }
+
+    const ip = data.ip || data.address;
+
+    const result = await this.app.networkManager.disconnect(ip);
 
     return {
       success: true,
