@@ -171,17 +171,6 @@ class KeyboardView extends BaseView {
                             </div>
                         </div>
 
-                        <!-- Slider de navigation horizontal -->
-                        <div class="keyboard-scroll-control">
-                            <label>Navigation:</label>
-                            <input type="range"
-                                   class="keyboard-scroll-slider"
-                                   min="0"
-                                   max="88"
-                                   value="${this.scrollOffset}"
-                                   data-action="scroll-keyboard" />
-                        </div>
-
                         <div class="keyboard-canvas-container">
                             <canvas id="keyboardCanvas"
                                     class="keyboard-canvas"
@@ -239,8 +228,6 @@ class KeyboardView extends BaseView {
                 this.handleDeviceSelect(e.target.value);
             } else if (action === 'set-velocity') {
                 this.handleVelocityChange(parseInt(e.target.value, 10));
-            } else if (action === 'scroll-keyboard') {
-                this.handleScrollChange(parseInt(e.target.value, 10));
             }
         });
         
@@ -379,18 +366,6 @@ class KeyboardView extends BaseView {
     }
 
     /**
-     * Change le scroll du clavier
-     */
-    handleScrollChange(offset) {
-        this.scrollOffset = Math.max(0, Math.min(88, offset));
-
-        // Redessiner le clavier avec le nouvel offset
-        this.drawKeyboard();
-
-        this.log('debug', `Scroll offset: ${this.scrollOffset}`);
-    }
-    
-    /**
      * Change l'octave offset
      */
     handleOctaveChange(delta) {
@@ -423,15 +398,21 @@ class KeyboardView extends BaseView {
      * Gère le chargement des devices
      */
     handleDevicesLoaded(data) {
+        this.log('info', 'handleDevicesLoaded called with:', data);
+
         this.viewState.devices = data.devices || [];
-        
-        // Filtrer devices actifs (status = 2)
-        this.viewState.devices = this.viewState.devices.filter(d => d.status === 2);
-        
-        this.log('info', `Loaded ${this.viewState.devices.length} active devices`);
-        
+
+        this.log('info', `Received ${this.viewState.devices.length} devices from event`);
+
+        // Les devices sont déjà filtrés par la modal, pas besoin de re-filtrer
+        // this.viewState.devices = this.viewState.devices.filter(d => d.status === 2);
+
+        this.log('info', `Devices to display: ${this.viewState.devices.length}`, this.viewState.devices);
+
         // Re-render pour mettre à jour le select
         this.render();
+
+        this.log('info', 'KeyboardView re-rendered with devices');
     }
     
     // ========================================================================
@@ -712,25 +693,9 @@ class KeyboardView extends BaseView {
         // Calculer combien de touches blanches on peut afficher
         const visibleWhiteKeys = Math.floor(width / this.keyWidth);
 
-        // Note de départ basée sur le scroll (21 = A0)
-        const allNotes = [];
-        for (let i = 21; i <= 108; i++) {
-            allNotes.push(i);
-        }
-
-        // Trouver la note de départ en fonction du scrollOffset
-        let whiteKeyCount = 0;
-        let startNote = 21;
-
-        for (let note = 21; note <= 108; note++) {
-            if (this.isWhiteKey(note)) {
-                if (whiteKeyCount >= this.scrollOffset) {
-                    startNote = note;
-                    break;
-                }
-                whiteKeyCount++;
-            }
-        }
+        // Note de départ basée sur l'octave offset
+        const baseNote = 60; // C4
+        const startNote = Math.max(21, baseNote + this.viewState.octaveOffset * 12 - 12);
 
         // Dessiner touches blanches visibles
         let x = 0;
@@ -997,12 +962,15 @@ class KeyboardView extends BaseView {
      */
     init() {
         super.init();
-        
+
+        // S'assurer que les listeners EventBus sont en place
+        this.setupEventBusListeners();
+
         // Demander la liste des devices
         if (this.eventBus) {
             this.emit('request-devices', {});
         }
-        
+
         this.log('info', 'KeyboardView initialized');
     }
     
