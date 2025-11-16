@@ -804,67 +804,55 @@
     flex-shrink: 0;
 }
 
-/* Navigation controls avec sliders */
-.midi-editor-modal .navigation-controls {
+/* Zoom controls avec boutons */
+.midi-editor-modal .zoom-controls {
     display: flex;
-    gap: 24px;
+    gap: 20px;
     padding: 8px 16px;
     background: #2a2a2a;
     border-bottom: 1px solid #3a3a3a;
     flex-shrink: 0;
+    align-items: center;
 }
 
-.midi-editor-modal .slider-group {
+.midi-editor-modal .zoom-group {
     display: flex;
     align-items: center;
-    gap: 12px;
-    flex: 1;
-    max-width: 300px;
+    gap: 8px;
 }
 
-.midi-editor-modal .slider-group label {
+.midi-editor-modal .zoom-label {
     color: #aaa;
     font-size: 0.85rem;
-    white-space: nowrap;
-    min-width: 100px;
+    font-weight: 500;
 }
 
-.midi-editor-modal .slider-group input[type="range"] {
-    flex: 1;
-    height: 6px;
-    border-radius: 3px;
+.midi-editor-modal .btn-zoom {
     background: #444;
-    outline: none;
-    -webkit-appearance: none;
-}
-
-.midi-editor-modal .slider-group input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 4px 12px;
+    font-size: 1.1rem;
+    font-weight: bold;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    transition: all 0.2s ease;
+    min-width: 32px;
 }
 
-.midi-editor-modal .slider-group input[type="range"]::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
-}
-
-.midi-editor-modal .slider-group input[type="range"]::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
+.midi-editor-modal .btn-zoom:hover {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    cursor: pointer;
-    border: none;
-    transition: transform 0.2s ease;
+    border-color: #667eea;
+    transform: translateY(-1px);
 }
 
-.midi-editor-modal .slider-group input[type="range"]::-moz-range-thumb:hover {
-    transform: scale(1.2);
+/* Wrapper pour piano roll + scrollbars */
+.midi-editor-modal .piano-roll-wrapper {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .midi-editor-modal .channel-buttons {
@@ -984,6 +972,79 @@
     position: relative;
     overflow: hidden;
     background: #1a1a1a;
+}
+
+/* Scrollbars style page web */
+.midi-editor-modal .scroll-slider {
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    outline: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.midi-editor-modal .scroll-horizontal {
+    width: 100%;
+    height: 14px;
+    order: 2;
+}
+
+.midi-editor-modal .scroll-vertical {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 14px;
+    width: 14px;
+    height: calc(100% - 14px);
+    writing-mode: bt-lr;
+    -webkit-appearance: slider-vertical;
+}
+
+.midi-editor-modal .scroll-slider::-webkit-slider-track {
+    background: #2a2a2a;
+    border-radius: 0;
+}
+
+.midi-editor-modal .scroll-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    background: #555;
+    border: 1px solid #444;
+    cursor: pointer;
+}
+
+.midi-editor-modal .scroll-horizontal::-webkit-slider-thumb {
+    width: 80px;
+    height: 12px;
+    border-radius: 2px;
+}
+
+.midi-editor-modal .scroll-vertical::-webkit-slider-thumb {
+    width: 12px;
+    height: 60px;
+    border-radius: 2px;
+}
+
+.midi-editor-modal .scroll-slider::-webkit-slider-thumb:hover {
+    background: #667eea;
+    border-color: #667eea;
+}
+
+.midi-editor-modal .scroll-slider::-moz-range-track {
+    background: #2a2a2a;
+    border-radius: 0;
+}
+
+.midi-editor-modal .scroll-slider::-moz-range-thumb {
+    background: #555;
+    border: 1px solid #444;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.midi-editor-modal .scroll-slider::-moz-range-thumb:hover {
+    background: #667eea;
+    border-color: #667eea;
 }
 
 .midi-editor-modal .modal-footer {

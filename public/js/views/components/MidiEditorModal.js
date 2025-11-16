@@ -637,18 +637,24 @@ this.reloadPianoRoll();
                     <div class="channels-toolbar">
                         ${this.renderChannelButtons()}
                     </div>
-                    <div class="navigation-controls">
-                        <div class="slider-group">
-                            <label>Zoom horizontal</label>
-                            <input type="range" id="zoom-h-slider" min="1" max="200" value="100" step="1">
+                    <div class="zoom-controls">
+                        <div class="zoom-group">
+                            <span class="zoom-label">Zoom H:</span>
+                            <button class="btn btn-zoom" data-action="zoom-h-out" title="Dézoomer horizontal">−</button>
+                            <button class="btn btn-zoom" data-action="zoom-h-in" title="Zoomer horizontal">+</button>
                         </div>
-                        <div class="slider-group">
-                            <label>Zoom vertical</label>
-                            <input type="range" id="zoom-v-slider" min="1" max="200" value="100" step="1">
+                        <div class="zoom-group">
+                            <span class="zoom-label">Zoom V:</span>
+                            <button class="btn btn-zoom" data-action="zoom-v-out" title="Dézoomer vertical">−</button>
+                            <button class="btn btn-zoom" data-action="zoom-v-in" title="Zoomer vertical">+</button>
                         </div>
                     </div>
-                    <div class="piano-roll-container" id="piano-roll-container">
-                        <!-- webaudio-pianoroll sera inséré ici -->
+                    <div class="piano-roll-wrapper">
+                        <div class="piano-roll-container" id="piano-roll-container">
+                            <!-- webaudio-pianoroll sera inséré ici -->
+                        </div>
+                        <input type="range" class="scroll-slider scroll-horizontal" id="scroll-h-slider" min="0" max="100" value="0" step="1">
+                        <input type="range" class="scroll-slider scroll-vertical" id="scroll-v-slider" min="0" max="100" value="0" step="1" orient="vertical">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -860,6 +866,18 @@ this.reloadPianoRoll();
                 case 'save':
                     this.saveMidiFile();
                     break;
+                case 'zoom-h-in':
+                    this.zoomHorizontal(0.8);
+                    break;
+                case 'zoom-h-out':
+                    this.zoomHorizontal(1.25);
+                    break;
+                case 'zoom-v-in':
+                    this.zoomVertical(0.8);
+                    break;
+                case 'zoom-v-out':
+                    this.zoomVertical(1.25);
+                    break;
             }
         });
 
@@ -873,25 +891,33 @@ this.reloadPianoRoll();
             });
         });
 
-        // Sliders de zoom
-        const zoomHSlider = document.getElementById('zoom-h-slider');
-        const zoomVSlider = document.getElementById('zoom-v-slider');
+        // Sliders de navigation (scroll) avec throttle à 15fps
+        const scrollHSlider = document.getElementById('scroll-h-slider');
+        const scrollVSlider = document.getElementById('scroll-v-slider');
 
-        if (zoomHSlider) {
-            zoomHSlider.addEventListener('input', (e) => {
+        let lastScrollUpdateH = 0;
+        let lastScrollUpdateV = 0;
+        const throttleDelay = 66; // ~15fps (1000ms / 15 = 66.67ms)
+
+        if (scrollHSlider) {
+            scrollHSlider.addEventListener('input', (e) => {
+                const now = Date.now();
+                if (now - lastScrollUpdateH < throttleDelay) return;
+                lastScrollUpdateH = now;
+
                 const value = parseInt(e.target.value);
-                // Convertir 1-200 en facteur de zoom (2.0 à 0.5)
-                // 100 = 1.0 (normal), 1 = 2.0 (max zoom out), 200 = 0.5 (max zoom in)
-                const zoomFactor = 2 - (value / 100);
-                this.zoomHorizontal(zoomFactor);
+                this.scrollHorizontal(value);
             });
         }
 
-        if (zoomVSlider) {
-            zoomVSlider.addEventListener('input', (e) => {
+        if (scrollVSlider) {
+            scrollVSlider.addEventListener('input', (e) => {
+                const now = Date.now();
+                if (now - lastScrollUpdateV < throttleDelay) return;
+                lastScrollUpdateV = now;
+
                 const value = parseInt(e.target.value);
-                const zoomFactor = 2 - (value / 100);
-                this.zoomVertical(zoomFactor);
+                this.scrollVertical(value);
             });
         }
     }
@@ -998,6 +1024,42 @@ this.reloadPianoRoll();
         }, 50);
 
         this.log('info', `Vertical zoom: ${currentRange} -> ${newRange}`);
+    }
+
+    /**
+     * Défilement horizontal (0-100%)
+     */
+    scrollHorizontal(percentage) {
+        if (!this.pianoRoll) return;
+
+        const xrange = this.pianoRoll.xrange || parseInt(this.pianoRoll.getAttribute('xrange')) || 128;
+        const maxOffset = Math.max(0, xrange - 32); // 32 = largeur visible minimale
+        const newOffset = Math.round((percentage / 100) * maxOffset);
+
+        this.pianoRoll.xoffset = newOffset;
+        this.pianoRoll.setAttribute('xoffset', newOffset.toString());
+
+        if (typeof this.pianoRoll.redraw === 'function') {
+            this.pianoRoll.redraw();
+        }
+    }
+
+    /**
+     * Défilement vertical (0-100%)
+     */
+    scrollVertical(percentage) {
+        if (!this.pianoRoll) return;
+
+        const yrange = this.pianoRoll.yrange || parseInt(this.pianoRoll.getAttribute('yrange')) || 36;
+        const maxOffset = Math.max(0, yrange - 12); // 12 = hauteur visible minimale
+        const newOffset = Math.round((percentage / 100) * maxOffset);
+
+        this.pianoRoll.yoffset = newOffset;
+        this.pianoRoll.setAttribute('yoffset', newOffset.toString());
+
+        if (typeof this.pianoRoll.redraw === 'function') {
+            this.pianoRoll.redraw();
+        }
     }
 
     // ========================================================================
