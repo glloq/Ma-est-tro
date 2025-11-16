@@ -684,7 +684,10 @@
                 log(`Connexion à ${wsUrl}...`);
                 api = new BackendAPIClient(wsUrl);
 
+                let connectedCount = 0;
                 api.on('connected', () => {
+                    connectedCount++;
+                    console.log(`🔌 'connected' event triggered (count: ${connectedCount})`);
                     log('✅ Connecté au serveur', 'info');
                     loadFiles();
                     loadDevices();
@@ -879,8 +882,16 @@
         }
 
         // Charger les périphériques
+        let isLoadingDevices = false;
         async function loadDevices() {
+            // Éviter les appels multiples simultanés
+            if (isLoadingDevices) {
+                console.log('⚠️ loadDevices() already in progress, skipping');
+                return;
+            }
+
             try {
+                isLoadingDevices = true;
                 console.log('🔄 loadDevices() called');
                 const devices = await api.listDevices();
                 console.log('📋 Devices received from server:', devices.length, devices);
@@ -953,6 +964,8 @@
 
             } catch (error) {
                 log(`Erreur chargement périphériques: ${error.message}`, 'error');
+            } finally {
+                isLoadingDevices = false;
             }
         }
 
