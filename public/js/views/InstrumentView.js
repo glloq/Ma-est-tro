@@ -306,12 +306,12 @@ class InstrumentView extends BaseView {
     }
 
     renderConnectedDeviceCard(device) {
-        const typeIcon = device.type === 'usb' ? '🔌' : 
-                        device.type === 'bluetooth' ? '📡' : 
+        const typeIcon = device.type === 'usb' ? '🔌' :
+                        device.type === 'bluetooth' ? '📡' :
                         device.type === 'network' ? '🌐' : '🎹';
-        
+
         const statusClass = device.active ? 'active' : 'idle';
-        
+
         return `
             <div class="device-card connected ${statusClass}" data-device-id="${device.id}">
                 <div class="device-icon">${typeIcon}</div>
@@ -324,6 +324,7 @@ class InstrumentView extends BaseView {
                     ${device.ports ? `<div class="device-ports">${device.ports.in}→${device.ports.out}</div>` : ''}
                 </div>
                 <div class="device-actions">
+                    <button class="btn-settings" data-action="settings" title="Réglages">⚙️</button>
                     <button class="btn-test" data-action="test" title="Tester">🎵</button>
                     <button class="btn-disconnect" data-action="disconnect" title="Déconnecter">🔌</button>
                 </div>
@@ -431,13 +432,16 @@ class InstrumentView extends BaseView {
     handleConnectedDeviceAction(e) {
         const action = e.target.dataset.action;
         if (!action) return;
-        
+
         const card = e.target.closest('.device-card');
         const deviceId = card?.dataset.deviceId;
-        
+
         if (!deviceId) return;
-        
+
         switch (action) {
+            case 'settings':
+                this.showInstrumentSettingsModal(deviceId);
+                break;
             case 'test':
                 this.testDevice(deviceId);
                 break;
@@ -551,6 +555,242 @@ class InstrumentView extends BaseView {
     checkHotPlugStatus() {
         if (this.eventBus) {
             this.eventBus.emit('hotplug:status_requested');
+        }
+    }
+
+    // ========================================================================
+    // INSTRUMENT SETTINGS MODAL
+    // ========================================================================
+
+    showInstrumentSettingsModal(deviceId) {
+        const device = this.viewState.connectedDevices.find(d => d.id === deviceId);
+        if (!device) {
+            this.log('error', '[InstrumentView]', `Device not found: ${deviceId}`);
+            return;
+        }
+
+        // Create modal container if it doesn't exist
+        let modal = document.getElementById('instrumentSettingsModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'instrumentSettingsModal';
+            modal.className = 'modal';
+            document.body.appendChild(modal);
+        }
+
+        // Emit event to request current settings
+        this.eventBus?.emit('instrument:settings:requested', { deviceId });
+
+        // Render modal content
+        modal.innerHTML = `
+            <div class="modal-content instrument-settings-modal">
+                <div class="modal-header">
+                    <h2>⚙️ Réglages de l'instrument</h2>
+                    <button class="modal-close" data-action="close-modal">&times;</button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="settings-section">
+                        <h3>Informations</h3>
+                        <div class="form-group">
+                            <label>Nom du périphérique</label>
+                            <input type="text" id="deviceOriginalName" value="${this.escapeHtml(device.name)}" disabled class="form-control" />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Nom personnalisé</label>
+                            <input type="text" id="deviceCustomName" placeholder="Mon Piano, Mon Synthé..." class="form-control" />
+                            <small class="form-text">Optionnel : donnez un nom personnalisé à votre instrument</small>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Synchronisation</h3>
+                        <div class="form-group">
+                            <label>Délai de synchronisation (ms)</label>
+                            <input type="number" id="deviceSyncDelay" value="0" step="0.1" class="form-control" />
+                            <small class="form-text">
+                                Délai en millisecondes pour synchroniser cet instrument avec d'autres.<br/>
+                                Valeur positive = retarder, négative = avancer
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Adresse MAC (Bluetooth)</h3>
+                        <div class="form-group">
+                            <label>Adresse MAC</label>
+                            <input type="text" id="deviceMacAddress" placeholder="XX:XX:XX:XX:XX:XX" class="form-control"
+                                   pattern="^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$" />
+                            <small class="form-text">
+                                L'adresse MAC permet de retrouver les réglages même si le périphérique change de nom
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Identification SysEx</h3>
+                        <div class="form-group">
+                            <button class="btn-primary" id="btnRequestIdentity">
+                                📨 Demander l'identité (SysEx)
+                            </button>
+                            <small class="form-text">
+                                Envoie une requête SysEx Identity Request pour identifier automatiquement l'instrument
+                            </small>
+                        </div>
+
+                        <div id="sysexIdentityInfo" class="identity-info" style="display: none;">
+                            <div class="info-group">
+                                <label>Fabricant</label>
+                                <div id="sysexManufacturer" class="info-value">-</div>
+                            </div>
+                            <div class="info-group">
+                                <label>Famille</label>
+                                <div id="sysexFamily" class="info-value">-</div>
+                            </div>
+                            <div class="info-group">
+                                <label>Modèle</label>
+                                <div id="sysexModel" class="info-value">-</div>
+                            </div>
+                            <div class="info-group">
+                                <label>Version</label>
+                                <div id="sysexVersion" class="info-value">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn-secondary" data-action="close-modal">Annuler</button>
+                    <button class="btn-primary" data-action="save-settings">💾 Sauvegarder</button>
+                </div>
+            </div>
+        `;
+
+        // Show modal
+        modal.style.display = 'flex';
+
+        // Attach event listeners
+        this.attachModalEvents(modal, deviceId, device.name);
+    }
+
+    attachModalEvents(modal, deviceId, deviceName) {
+        // Close modal
+        modal.querySelectorAll('[data-action="close-modal"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+        });
+
+        // Request SysEx Identity
+        const btnRequestIdentity = modal.querySelector('#btnRequestIdentity');
+        if (btnRequestIdentity) {
+            btnRequestIdentity.addEventListener('click', () => {
+                this.log('info', '[InstrumentView]', `Requesting SysEx Identity for ${deviceName}`);
+                this.eventBus?.emit('instrument:identity:requested', {
+                    deviceName: deviceName,
+                    deviceId: deviceId
+                });
+                btnRequestIdentity.disabled = true;
+                btnRequestIdentity.textContent = '⏳ Envoi en cours...';
+
+                // Re-enable after 3 seconds
+                setTimeout(() => {
+                    btnRequestIdentity.disabled = false;
+                    btnRequestIdentity.textContent = '📨 Demander l\'identité (SysEx)';
+                }, 3000);
+            });
+        }
+
+        // Save settings
+        const btnSave = modal.querySelector('[data-action="save-settings"]');
+        if (btnSave) {
+            btnSave.addEventListener('click', () => {
+                const customName = modal.querySelector('#deviceCustomName').value;
+                const syncDelay = parseFloat(modal.querySelector('#deviceSyncDelay').value) * 1000; // Convert ms to microseconds
+                const macAddress = modal.querySelector('#deviceMacAddress').value;
+
+                this.log('info', '[InstrumentView]', `Saving settings for ${deviceId}`, {
+                    customName,
+                    syncDelay,
+                    macAddress
+                });
+
+                this.eventBus?.emit('instrument:settings:save', {
+                    deviceId: deviceId,
+                    settings: {
+                        custom_name: customName || null,
+                        sync_delay: syncDelay || 0,
+                        mac_address: macAddress || null
+                    }
+                });
+
+                modal.style.display = 'none';
+            });
+        }
+
+        // Close modal on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    }
+
+    updateSysExIdentityInfo(identity) {
+        const modal = document.getElementById('instrumentSettingsModal');
+        if (!modal) return;
+
+        const infoSection = modal.querySelector('#sysexIdentityInfo');
+        if (!infoSection) return;
+
+        // Update info values
+        const manufacturerEl = modal.querySelector('#sysexManufacturer');
+        const familyEl = modal.querySelector('#sysexFamily');
+        const modelEl = modal.querySelector('#sysexModel');
+        const versionEl = modal.querySelector('#sysexVersion');
+
+        if (manufacturerEl) manufacturerEl.textContent = identity.manufacturerName || identity.manufacturerId || '-';
+        if (familyEl) familyEl.textContent = identity.deviceFamily || '-';
+        if (modelEl) modelEl.textContent = identity.deviceFamilyMember || '-';
+        if (versionEl) versionEl.textContent = identity.softwareRevision || '-';
+
+        // Show info section
+        infoSection.style.display = 'block';
+
+        this.log('info', '[InstrumentView]', 'SysEx Identity info updated', identity);
+    }
+
+    populateInstrumentSettings(settings) {
+        const modal = document.getElementById('instrumentSettingsModal');
+        if (!modal || !settings) return;
+
+        const customNameInput = modal.querySelector('#deviceCustomName');
+        const syncDelayInput = modal.querySelector('#deviceSyncDelay');
+        const macAddressInput = modal.querySelector('#deviceMacAddress');
+
+        if (customNameInput && settings.custom_name) {
+            customNameInput.value = settings.custom_name;
+        }
+
+        if (syncDelayInput && settings.sync_delay !== undefined) {
+            // Convert microseconds to milliseconds for display
+            syncDelayInput.value = (settings.sync_delay / 1000).toFixed(1);
+        }
+
+        if (macAddressInput && settings.mac_address) {
+            macAddressInput.value = settings.mac_address;
+        }
+
+        // Populate SysEx identity if available
+        if (settings.sysex_manufacturer_id) {
+            this.updateSysExIdentityInfo({
+                manufacturerId: settings.sysex_manufacturer_id,
+                manufacturerName: settings.sysex_manufacturer_name || 'Unknown',
+                deviceFamily: settings.sysex_family,
+                deviceFamilyMember: settings.sysex_model,
+                softwareRevision: settings.sysex_version
+            });
         }
     }
 

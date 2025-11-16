@@ -321,6 +321,178 @@ class InstrumentDatabase {
       throw error;
     }
   }
+
+  // ==================== INSTRUMENT SETTINGS ====================
+
+  /**
+   * Update instrument settings (custom name, sync delay, MAC address)
+   * Uses instruments_latency table
+   */
+  updateInstrumentSettings(deviceId, settings) {
+    try {
+      // Check if entry exists for this device
+      const existing = this.db.prepare(
+        'SELECT id FROM instruments_latency WHERE device_id = ?'
+      ).get(deviceId);
+
+      if (existing) {
+        // Update existing entry
+        const fields = [];
+        const values = [];
+
+        if (settings.custom_name !== undefined) {
+          fields.push('custom_name = ?');
+          values.push(settings.custom_name);
+        }
+        if (settings.sync_delay !== undefined) {
+          fields.push('sync_delay = ?');
+          values.push(settings.sync_delay);
+        }
+        if (settings.mac_address !== undefined) {
+          fields.push('mac_address = ?');
+          values.push(settings.mac_address);
+        }
+        if (settings.name !== undefined) {
+          fields.push('name = ?');
+          values.push(settings.name);
+        }
+
+        if (fields.length === 0) {
+          return existing.id;
+        }
+
+        values.push(deviceId);
+
+        const stmt = this.db.prepare(`
+          UPDATE instruments_latency SET ${fields.join(', ')} WHERE device_id = ?
+        `);
+
+        stmt.run(...values);
+        return existing.id;
+      } else {
+        // Insert new entry
+        const stmt = this.db.prepare(`
+          INSERT INTO instruments_latency (
+            id, device_id, channel, name, custom_name, sync_delay, mac_address
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        const id = `${deviceId}_0`; // Default channel 0
+        const result = stmt.run(
+          id,
+          deviceId,
+          0, // Default channel
+          settings.name || 'Unnamed Instrument',
+          settings.custom_name || null,
+          settings.sync_delay || 0,
+          settings.mac_address || null
+        );
+
+        return id;
+      }
+    } catch (error) {
+      this.logger.error(`Failed to update instrument settings: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Get instrument settings
+   */
+  getInstrumentSettings(deviceId) {
+    try {
+      const stmt = this.db.prepare('SELECT * FROM instruments_latency WHERE device_id = ?');
+      return stmt.get(deviceId);
+    } catch (error) {
+      this.logger.error(`Failed to get instrument settings: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Save SysEx Identity information for an instrument
+   */
+  saveSysExIdentity(deviceId, identity) {
+    try {
+      // Check if entry exists
+      const existing = this.db.prepare(
+        'SELECT id FROM instruments_latency WHERE device_id = ?'
+      ).get(deviceId);
+
+      const now = new Date().toISOString();
+
+      if (existing) {
+        // Update existing entry
+        const stmt = this.db.prepare(`
+          UPDATE instruments_latency
+          SET sysex_manufacturer_id = ?,
+              sysex_family = ?,
+              sysex_model = ?,
+              sysex_version = ?,
+              sysex_device_id = ?,
+              sysex_raw_response = ?,
+              sysex_last_request = ?
+          WHERE device_id = ?
+        `);
+
+        stmt.run(
+          identity.manufacturerId || null,
+          identity.deviceFamily || null,
+          identity.deviceFamilyMember || null,
+          identity.softwareRevision || null,
+          identity.deviceId || null,
+          identity.rawBytes || null,
+          now,
+          deviceId
+        );
+
+        return existing.id;
+      } else {
+        // Insert new entry
+        const stmt = this.db.prepare(`
+          INSERT INTO instruments_latency (
+            id, device_id, channel, name,
+            sysex_manufacturer_id, sysex_family, sysex_model,
+            sysex_version, sysex_device_id, sysex_raw_response,
+            sysex_last_request
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        const id = `${deviceId}_0`;
+        stmt.run(
+          id,
+          deviceId,
+          0,
+          'Unnamed Instrument',
+          identity.manufacturerId || null,
+          identity.deviceFamily || null,
+          identity.deviceFamilyMember || null,
+          identity.softwareRevision || null,
+          identity.deviceId || null,
+          identity.rawBytes || null,
+          now
+        );
+
+        return id;
+      }
+    } catch (error) {
+      this.logger.error(`Failed to save SysEx identity: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Find instrument by MAC address
+   */
+  findInstrumentByMac(macAddress) {
+    try {
+      const stmt = this.db.prepare('SELECT * FROM instruments_latency WHERE mac_address = ?');
+      return stmt.get(macAddress);
+    } catch (error) {
+      this.logger.error(`Failed to find instrument by MAC: ${error.message}`);
+      throw error;
+    }
+  }
 }
 
 export default InstrumentDatabase;
