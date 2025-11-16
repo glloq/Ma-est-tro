@@ -13,19 +13,40 @@ class DeviceManager {
   }
 
   async scanDevices() {
-    // USB MIDI devices
+    // Close all existing connections first to ensure clean state
+    this.app.logger.info('Closing existing MIDI connections...');
+    this.inputs.forEach((input, name) => {
+      try {
+        input.close();
+        this.app.logger.info(`✓ Closed input: ${name}`);
+      } catch (error) {
+        this.app.logger.warn(`Failed to close input ${name}: ${error.message}`);
+      }
+    });
+
+    this.outputs.forEach((output, name) => {
+      try {
+        output.close();
+        this.app.logger.info(`✓ Closed output: ${name}`);
+      } catch (error) {
+        this.app.logger.warn(`Failed to close output ${name}: ${error.message}`);
+      }
+    });
+
+    this.inputs.clear();
+    this.outputs.clear();
+    this.devices.clear();
+
+    // Small delay to ensure ports are released
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // USB MIDI devices - get fresh list
     const inputs = easymidi.getInputs();
     const outputs = easymidi.getOutputs();
 
     this.app.logger.info(`Scanning devices: ${inputs.length} inputs, ${outputs.length} outputs`);
     this.app.logger.info(`Input devices found: ${JSON.stringify(inputs)}`);
     this.app.logger.info(`Output devices found: ${JSON.stringify(outputs)}`);
-
-    // Clear previous devices
-    this.inputs.forEach(input => input.close());
-    this.outputs.forEach(output => output.close());
-    this.inputs.clear();
-    this.outputs.clear();
 
     // Add inputs (filter out system devices)
     inputs.forEach(name => {
