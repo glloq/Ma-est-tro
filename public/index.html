@@ -992,8 +992,6 @@
             // Événements drag and drop
             li.addEventListener('dragstart', handleDragStart);
             li.addEventListener('dragend', handleDragEnd);
-            li.addEventListener('dragover', handleDragOver);
-            li.addEventListener('drop', handleDrop);
 
             const fileNameSpan = document.createElement('span');
             fileNameSpan.className = 'file-name';
@@ -1218,6 +1216,9 @@
 
         // Gérer le drop
         function handleDrop(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
             if (e.stopPropagation) {
                 e.stopPropagation();
             }
