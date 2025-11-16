@@ -224,11 +224,11 @@ class CommandHandler {
   }
 
   async instrumentUpdateSettings(data) {
-    if (!this.app.instrumentDb) {
-      throw new Error('Instrument database not available');
+    if (!this.app.database) {
+      throw new Error('Database not available');
     }
 
-    const id = this.app.instrumentDb.updateInstrumentSettings(data.deviceId, {
+    const id = this.app.database.updateInstrumentSettings(data.deviceId, {
       custom_name: data.custom_name,
       sync_delay: data.sync_delay,
       mac_address: data.mac_address,
@@ -242,11 +242,11 @@ class CommandHandler {
   }
 
   async instrumentGetSettings(data) {
-    if (!this.app.instrumentDb) {
-      throw new Error('Instrument database not available');
+    if (!this.app.database) {
+      throw new Error('Database not available');
     }
 
-    const settings = this.app.instrumentDb.getInstrumentSettings(data.deviceId);
+    const settings = this.app.database.getInstrumentSettings(data.deviceId);
 
     return {
       settings: settings || null
