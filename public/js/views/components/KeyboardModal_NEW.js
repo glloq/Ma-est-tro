@@ -94,47 +94,62 @@ class KeyboardModalNew {
 
     createModal() {
         this.container = document.createElement('div');
-        this.container.className = 'modal-overlay';
+        this.container.className = 'keyboard-modal';
         this.container.innerHTML = `
-            <div class="modal-dialog modal-xl">
+            <div class="modal-dialog">
                 <div class="modal-header">
                     <h2>🎹 Clavier MIDI Virtuel</h2>
                     <button class="modal-close" id="keyboard-close-btn">&times;</button>
                 </div>
 
                 <div class="modal-body">
-                    <div class="keyboard-controls-bar">
-                        <div class="control-group">
-                            <label>Instrument:</label>
-                            <select id="keyboard-device-select">
-                                <option value="">-- Sélectionner --</option>
-                            </select>
+                    <div class="keyboard-layout">
+                        <!-- Slider vélocité vertical à gauche -->
+                        <div class="velocity-control-vertical">
+                            <div class="velocity-label-vertical">Vélocité</div>
+                            <div class="velocity-slider-wrapper">
+                                <input type="range"
+                                       id="keyboard-velocity"
+                                       class="velocity-slider-vertical"
+                                       min="1"
+                                       max="127"
+                                       value="80"
+                                       orient="vertical">
+                            </div>
+                            <div class="velocity-value-vertical" id="keyboard-velocity-display">80</div>
                         </div>
 
-                        <div class="control-group">
-                            <label>Octave:</label>
-                            <button id="keyboard-octave-down">◄</button>
-                            <span id="keyboard-octave-display">0</span>
-                            <button id="keyboard-octave-up">►</button>
-                        </div>
+                        <!-- Zone principale du clavier -->
+                        <div class="keyboard-main">
+                            <div class="keyboard-header">
+                                <div class="keyboard-controls">
+                                    <div class="control-group">
+                                        <label>Instrument:</label>
+                                        <select class="device-select" id="keyboard-device-select">
+                                            <option value="">-- Sélectionner --</option>
+                                        </select>
+                                    </div>
 
-                        <div class="control-group">
-                            <label>Vélocité:</label>
-                            <input type="range" id="keyboard-velocity" min="1" max="127" value="80">
-                            <span id="keyboard-velocity-display">80</span>
-                        </div>
+                                    <div class="control-group octave-controls">
+                                        <button class="btn-octave-down" id="keyboard-octave-down">◄</button>
+                                        <span class="octave-display" id="keyboard-octave-display">Octave: 0</span>
+                                        <button class="btn-octave-up" id="keyboard-octave-up">►</button>
+                                    </div>
 
-                        <div class="control-group">
-                            <label>Layout:</label>
-                            <select id="keyboard-layout-select">
-                                <option value="azerty">AZERTY</option>
-                                <option value="qwerty">QWERTY</option>
-                            </select>
-                        </div>
-                    </div>
+                                    <div class="control-group">
+                                        <label>Layout clavier:</label>
+                                        <select class="layout-select" id="keyboard-layout-select">
+                                            <option value="azerty">AZERTY</option>
+                                            <option value="qwerty">QWERTY</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
 
-                    <div class="keyboard-canvas-wrapper">
-                        <canvas id="keyboard-canvas" width="800" height="320"></canvas>
+                            <div class="keyboard-canvas-container">
+                                <canvas id="keyboard-canvas" class="keyboard-canvas"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -159,8 +174,13 @@ class KeyboardModalNew {
         }
 
         this.ctx = this.canvas.getContext('2d');
-        this.canvas.width = this.canvas.offsetWidth;
+
+        // Définir une taille par défaut si offsetWidth n'est pas encore disponible
+        const width = this.canvas.offsetWidth || 1000;
+        this.canvas.width = width;
         this.canvas.height = this.whiteKeyHeight;
+
+        this.logger.info(`[KeyboardModal] Canvas setup: ${this.canvas.width}x${this.canvas.height}`);
 
         this.drawKeyboard();
     }
@@ -249,13 +269,15 @@ class KeyboardModalNew {
 
         document.getElementById('keyboard-octave-up')?.addEventListener('click', () => {
             this.octaveOffset = Math.min(5, this.octaveOffset + 1);
-            document.getElementById('keyboard-octave-display').textContent = this.octaveOffset;
+            const display = this.octaveOffset > 0 ? `+${this.octaveOffset}` : this.octaveOffset;
+            document.getElementById('keyboard-octave-display').textContent = `Octave: ${display}`;
             this.drawKeyboard();
         });
 
         document.getElementById('keyboard-octave-down')?.addEventListener('click', () => {
             this.octaveOffset = Math.max(-5, this.octaveOffset - 1);
-            document.getElementById('keyboard-octave-display').textContent = this.octaveOffset;
+            const display = this.octaveOffset > 0 ? `+${this.octaveOffset}` : this.octaveOffset;
+            document.getElementById('keyboard-octave-display').textContent = `Octave: ${display}`;
             this.drawKeyboard();
         });
 
@@ -352,17 +374,29 @@ class KeyboardModalNew {
         this.activeNotes.add(note);
         this.drawKeyboard();
 
+        // Logs de debug
+        this.logger.info(`[KeyboardModal] backend available: ${!!this.backend}`);
+        this.logger.info(`[KeyboardModal] selectedDevice: ${JSON.stringify(this.selectedDevice)}`);
+
         // Envoyer MIDI si device sélectionné
         if (this.selectedDevice && this.backend) {
-            this.backend.sendNoteOn(this.selectedDevice.device_id, note, this.velocity, 0)
+            const deviceId = this.selectedDevice.device_id || this.selectedDevice.id;
+            this.logger.info(`[KeyboardModal] Sending noteOn to device ${deviceId}, note=${note}, vel=${this.velocity}`);
+
+            this.backend.sendNoteOn(deviceId, note, this.velocity, 0)
                 .then(() => {
-                    this.logger.info(`[KeyboardModal] Note ON sent: ${note}`);
+                    this.logger.info(`[KeyboardModal] ✓ Note ON sent successfully: ${note}`);
                 })
                 .catch(err => {
-                    this.logger.error('[KeyboardModal] Note ON failed:', err);
+                    this.logger.error('[KeyboardModal] ✗ Note ON failed:', err);
                 });
         } else {
-            this.logger.warn('[KeyboardModal] No device selected - note not sent');
+            if (!this.backend) {
+                this.logger.warn('[KeyboardModal] Backend not available');
+            }
+            if (!this.selectedDevice) {
+                this.logger.warn('[KeyboardModal] No device selected - note not sent');
+            }
         }
     }
 
