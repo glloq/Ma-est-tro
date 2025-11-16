@@ -946,12 +946,7 @@ class KeyboardView extends BaseView {
      * Joue une note
      */
     playNote(note, velocity) {
-        if (!this.viewState.selectedDevice) {
-            this.log('warn', 'No device selected, cannot play note');
-            return;
-        }
-
-        this.log('info', `playNote called: note=${note}, vel=${velocity}, device=${this.viewState.selectedDevice.id || this.viewState.selectedDevice.device_id}`);
+        this.log('info', `playNote called: note=${note}, vel=${velocity}`);
 
         // Vérifier plage
         if (note < this.viewState.noteRange.min || note > this.viewState.noteRange.max) {
@@ -959,11 +954,20 @@ class KeyboardView extends BaseView {
             return;
         }
 
+        // ✅ FIX: TOUJOURS ajouter aux notes actives et redessiner, même si pas de device
         // Ajouter aux notes actives
         this.viewState.activeNotes.add(note);
 
-        // Redessiner
+        // Redessiner pour voir le highlight
         this.drawKeyboard();
+
+        // Envoyer MIDI seulement si device sélectionné
+        if (!this.viewState.selectedDevice) {
+            this.log('warn', 'No device selected, note highlighted but not sent');
+            return;
+        }
+
+        this.log('info', `Sending to device: ${this.viewState.selectedDevice.id || this.viewState.selectedDevice.device_id}`);
 
         // ✅ Émettre événement vers controller
         this.emit('play-note', {
@@ -980,23 +984,26 @@ class KeyboardView extends BaseView {
      * Arrête une note
      */
     stopNote(note) {
-        if (!this.viewState.selectedDevice) {
-            return;
-        }
-        
+        // ✅ FIX: TOUJOURS retirer des notes actives et redessiner
         // Retirer des notes actives
         this.viewState.activeNotes.delete(note);
-        
-        // Redessiner
+
+        // Redessiner pour enlever le highlight
         this.drawKeyboard();
-        
+
+        // Envoyer MIDI seulement si device sélectionné
+        if (!this.viewState.selectedDevice) {
+            this.log('debug', `Stop note (no device): ${this.getNoteNameFromMidi(note)} (${note})`);
+            return;
+        }
+
         // ✅ Émettre événement vers controller
         this.emit('stop-note', {
             note: note,
             channel: 0
         });
-        
-        this.log('debug', `Stop note: ${this.getNoteNameFromMidi(note)} (${note})`);
+
+        this.log('debug', `Stop note sent: ${this.getNoteNameFromMidi(note)} (${note})`);
     }
     
     // ========================================================================
