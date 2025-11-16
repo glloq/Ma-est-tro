@@ -285,12 +285,18 @@ class BackendAPIClient {
         // 0x90 = Note On, ajouter channel (0-15)
         const midiData = [0x90 + channel, note & 0x7F, velocity & 0x7F];
 
-        this.ws.send(JSON.stringify({
+        const message = {
             type: 'midi_out',
-            data: midiData,
-            device_id: deviceId,
+            data: Array.from(midiData),
             timestamp: Date.now()
-        }));
+        };
+
+        // MidiBridge utilise outputId, pas device_id
+        if (deviceId) {
+            message.outputId = deviceId;
+        }
+
+        this.ws.send(JSON.stringify(message));
     }
 
     /**
@@ -308,12 +314,18 @@ class BackendAPIClient {
         // 0x80 = Note Off, ajouter channel (0-15)
         const midiData = [0x80 + channel, note & 0x7F, 0];
 
-        this.ws.send(JSON.stringify({
+        const message = {
             type: 'midi_out',
-            data: midiData,
-            device_id: deviceId,
+            data: Array.from(midiData),
             timestamp: Date.now()
-        }));
+        };
+
+        // MidiBridge utilise outputId, pas device_id
+        if (deviceId) {
+            message.outputId = deviceId;
+        }
+
+        this.ws.send(JSON.stringify(message));
     }
 
     // ========================================================================
