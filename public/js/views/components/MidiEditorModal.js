@@ -304,11 +304,12 @@ class MidiEditorModal {
         this.log('info', `Converted ${this.fullSequence.length} notes to sequence`);
         this.log('info', `Found ${this.channels.length} channels:`, this.channels);
 
-        // Activer le premier canal par défaut (économise la mémoire)
+        // Afficher TOUS les canaux par défaut
+        this.activeChannels.clear();
         if (this.channels.length > 0) {
-            this.activeChannels.clear();
-            this.activeChannels.add(this.channels[0].channel);
+            this.channels.forEach(ch => this.activeChannels.add(ch.channel));
             this.updateSequenceFromActiveChannels();
+            this.log('info', `All ${this.channels.length} channels activated by default`);
         } else {
             this.log('warn', 'No notes found! Check MIDI data structure.');
             this.sequence = [];
@@ -574,10 +575,9 @@ this.reloadPianoRoll();
                     data-channel="${ch.channel}"
                     data-color="${color}"
                     style="${inlineStyles}"
-                    title="${ch.instrument} (${ch.noteCount} notes)"
+                    title="${ch.noteCount} notes"
                 >
-                    <span class="channel-number">${ch.channel + 1}</span>
-                    <span class="channel-name">${ch.instrument}</span>
+                    <span class="channel-label">${ch.channel + 1} : ${ch.instrument}</span>
                 </button>
             `;
         });
@@ -717,15 +717,23 @@ this.reloadPianoRoll();
             this.log('info', `Sequence range: ticks 0-${maxTick}, notes ${minNote}-${maxNote}`);
         }
 
-        // Définir une plage visible appropriée - augmentée pour plus de zoom/défilement
-        const xrange = Math.max(256, Math.ceil(maxTick / 128) * 128 * 2); // x2 pour plus de zoom horizontal
-        const noteRange = Math.max(48, maxNote - minNote + 24); // +24 pour marge verticale étendue
+        // Zoom par défaut pour afficher ~20 secondes
+        // Avec 480 ticks/beat et 120 BPM standard: 20s = 9600 ticks
+        const ticksPerBeat = this.midiData.header?.ticksPerBeat || 480;
+        const twentySeconds = ticksPerBeat * 40; // ~20 secondes à 120 BPM
+        const xrange = Math.max(twentySeconds, Math.min(maxTick, twentySeconds)); // Vue sur 20 premières secondes
+
+        // Vue centrée verticalement pour voir toutes les notes des canaux visibles
+        const noteRange = Math.max(24, maxNote - minNote + 4); // +4 notes de marge au lieu de +24
+        const centerNote = Math.floor((minNote + maxNote) / 2);
+        const yoffset = Math.max(0, centerNote - Math.floor(noteRange / 2)); // Centrer verticalement
 
         this.pianoRoll.setAttribute('width', width);
         this.pianoRoll.setAttribute('height', height);
         this.pianoRoll.setAttribute('editmode', 'dragpoly');
         this.pianoRoll.setAttribute('xrange', xrange.toString());
         this.pianoRoll.setAttribute('yrange', noteRange.toString());
+        this.pianoRoll.setAttribute('yoffset', yoffset.toString()); // Centrer verticalement
         this.pianoRoll.setAttribute('grid', '16'); // 16th notes
         this.pianoRoll.setAttribute('wheelzoom', '1');
         this.pianoRoll.setAttribute('xscroll', '1');
@@ -734,7 +742,7 @@ this.reloadPianoRoll();
         this.pianoRoll.setAttribute('markstart', '-1');
         this.pianoRoll.setAttribute('markend', '-1');
 
-        this.log('info', `Piano roll configured: xrange=${xrange}, yrange=${noteRange}`);
+        this.log('info', `Piano roll configured: xrange=${xrange}, yrange=${noteRange}, yoffset=${yoffset} (centered)`);
 
         // Ajouter au conteneur AVANT de charger la sequence
         container.appendChild(this.pianoRoll);
