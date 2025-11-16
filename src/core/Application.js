@@ -8,6 +8,7 @@ import MidiRouter from '../midi/MidiRouter.js';
 import MidiPlayer from '../midi/MidiPlayer.js';
 import LatencyCompensator from '../midi/LatencyCompensator.js';
 import FileManager from '../storage/FileManager.js';
+import BluetoothManager from '../managers/BluetoothManager.js';
 import WebSocketServer from '../api/WebSocketServer.js';
 import HttpServer from '../api/HttpServer.js';
 import CommandHandler from '../api/CommandHandler.js';
@@ -23,6 +24,7 @@ class Application {
     this.midiPlayer = null;
     this.latencyCompensator = null;
     this.fileManager = null;
+    this.bluetoothManager = null;
     this.wsServer = null;
     this.httpServer = null;
     this.commandHandler = null;
@@ -43,9 +45,17 @@ class Application {
       this.midiRouter = new MidiRouter(this);
       this.midiPlayer = new MidiPlayer(this);
       this.latencyCompensator = new LatencyCompensator(this);
-      
+
       // Initialize storage
       this.fileManager = new FileManager(this);
+
+      // Initialize Bluetooth (optional - may not be available on all systems)
+      try {
+        this.bluetoothManager = new BluetoothManager(this);
+        this.logger.info('Bluetooth initialized');
+      } catch (error) {
+        this.logger.warn(`Bluetooth not available: ${error.message}`);
+      }
       
       // Initialize API
       this.commandHandler = new CommandHandler(this);
@@ -150,6 +160,11 @@ class Application {
       // Close MIDI devices
       if (this.deviceManager) {
         this.deviceManager.close();
+      }
+
+      // Close Bluetooth
+      if (this.bluetoothManager) {
+        await this.bluetoothManager.shutdown();
       }
 
       // Close database

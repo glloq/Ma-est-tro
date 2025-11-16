@@ -235,7 +235,43 @@ print_step "7. Setting Permissions"
 chmod +x scripts/*.sh 2>/dev/null || true
 chmod 755 data logs uploads backups 2>/dev/null || true
 
-print_success "Permissions set"
+print_success "File permissions set"
+
+# =============================================================================
+# BLUETOOTH PERMISSIONS (for BLE MIDI with Noble)
+# =============================================================================
+
+if [ "$OS" == "linux" ]; then
+    print_step "7b. Configuring Bluetooth Permissions"
+
+    # Enable and start Bluetooth service
+    print_info "Enabling Bluetooth service..."
+    sudo systemctl enable bluetooth 2>/dev/null || true
+    sudo systemctl start bluetooth 2>/dev/null || true
+
+    # Add user to bluetooth group
+    print_info "Adding user to bluetooth group..."
+    sudo usermod -a -G bluetooth $USER 2>/dev/null || true
+
+    # Set capabilities on Node.js for BLE access without root
+    print_info "Setting Node.js capabilities for BLE access..."
+    NODE_PATH=$(eval readlink -f $(which node))
+    if [ -n "$NODE_PATH" ]; then
+        sudo setcap cap_net_raw+eip "$NODE_PATH" || {
+            print_warning "Failed to set capabilities on Node.js"
+            print_info "BLE MIDI may require running as root or manual capability setup"
+        }
+    fi
+
+    # Create udev rule for automatic Bluetooth adapter initialization
+    print_info "Creating udev rule for Bluetooth adapter..."
+    echo 'KERNEL=="hci0", RUN+="/bin/hciconfig hci0 up"' | sudo tee /etc/udev/rules.d/99-bluetooth.rules > /dev/null
+    sudo udevadm control --reload-rules 2>/dev/null || true
+
+    print_success "Bluetooth permissions configured"
+    print_warning "You may need to logout/login for group changes to take effect"
+    print_info "Or run: newgrp bluetooth"
+fi
 
 # =============================================================================
 # SYSTEMD / PM2 SETUP
