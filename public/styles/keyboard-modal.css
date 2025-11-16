@@ -1,0 +1,132 @@
+/* ============================================================================
+   Fichier: frontend/styles/keyboard-modal.css
+   Version: v1.0.0
+   Date: 2025-11-16
+   ============================================================================
+   Styles pour la modal du clavier MIDI virtuel
+   ============================================================================ */
+
+/* Container de la modal */
+.keyboard-modal .modal-dialog {
+    max-width: 1200px;
+    width: 95%;
+}
+
+/* Ajustement pour très grands écrans */
+@media (min-width: 1400px) {
+    .keyboard-modal .modal-dialog {
+        max-width: 1400px;
+    }
+}
+
+/* Corps de la modal */
+.keyboard-modal .modal-body {
+    padding: 24px;
+    background: #f9fafb;
+}
+
+/* Container du clavier */
+#keyboard-modal-view {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+#keyboard-modal-container {
+    min-height: 400px;
+}
+
+/* Informations en bas de la modal */
+.keyboard-modal-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.keyboard-modal-info .info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: white;
+    padding: 16px;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.keyboard-modal-info .info-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.keyboard-modal-info .info-text {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #4b5563;
+}
+
+.keyboard-modal-info .info-text strong {
+    color: #1f2937;
+    font-weight: 600;
+}
+
+/* Responsive - Mobile */
+@media (max-width: 768px) {
+    .keyboard-modal .modal-dialog {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        border-radius: 0;
+        min-height: 100vh;
+    }
+
+    .keyboard-modal .modal-body {
+        padding: 16px;
+    }
+
+    #keyboard-modal-view {
+        padding: 12px;
+    }
+
+    .keyboard-modal-info .info-item {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .keyboard-modal-info .info-icon {
+        font-size: 20px;
+    }
+
+    .keyboard-modal-info .info-text {
+        font-size: 13px;
+    }
+}
+
+/* Animation d'ouverture */
+@keyframes slideInFromBottom {
+    from {
+        opacity: 0;
+        transform: translateY(50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.keyboard-modal .modal-dialog {
+    animation: slideInFromBottom 0.3s ease-out;
+}
+
+/* Classe modal-xl pour grandes modals */
+.modal-xl {
+    max-width: 1200px;
+}
+
+@media (min-width: 1400px) {
+    .modal-xl {
+        max-width: 1400px;
+    }
+}

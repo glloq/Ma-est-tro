@@ -767,6 +767,9 @@
     <link rel="stylesheet" href="styles/components.css">
     <link rel="stylesheet" href="styles/bluetooth-scan-modal.css">
     <link rel="stylesheet" href="styles/network-scan-modal.css">
+    <link rel="stylesheet" href="styles/keyboard.css">
+    <link rel="stylesheet" href="styles/keyboard-polish.css">
+    <link rel="stylesheet" href="styles/keyboard-modal.css">
 </head>
 <body>
     <!-- Modal de confirmation personnalisée -->
@@ -841,6 +844,10 @@
                         <button class="btn" id="scanNetworkBtn" style="background: #3498db !important;">🌐&nbsp;&nbsp;Scan Réseau</button>
                     </div>
 
+                    <div class="btn-group" style="margin-top: 8px;">
+                        <button class="btn" id="openKeyboardBtn" style="background: #10b981 !important;">🎹&nbsp;&nbsp;Clavier MIDI</button>
+                    </div>
+
                     <ul class="device-list" id="deviceList">
                         <li class="info-text">Aucun périphérique</li>
                     </ul>
@@ -873,6 +880,9 @@
 
     <!-- Network Scan Modal Component -->
     <script src="js/views/components/NetworkScanModal.js"></script>
+
+    <!-- Keyboard Modal Component -->
+    <script src="js/views/components/KeyboardModal.js"></script>
 
     <script>
         // ========== SYSTÈME DE MODAL DE CONFIRMATION ==========
@@ -1016,6 +1026,9 @@
 
         // 🆕 Instance du modal de scan réseau
         let networkScanModal = null;
+
+        // 🆕 Instance du modal clavier MIDI
+        let keyboardModal = null;
 
         // Charger la config depuis localStorage
         function loadRoutingConfig() {
@@ -2343,6 +2356,15 @@
             }
         });
 
+        // Event listener pour le bouton clavier MIDI
+        document.getElementById('openKeyboardBtn').addEventListener('click', () => {
+            if (keyboardModal) {
+                keyboardModal.open();
+            } else {
+                log('Keyboard modal not initialized', 'error');
+            }
+        });
+
         // Event listeners pour les contrôles du header
         document.getElementById('headerPlayPauseBtn').addEventListener('click', togglePlayPause);
         document.getElementById('headerStopBtn').addEventListener('click', stopPlayback);
@@ -2683,6 +2705,14 @@
                 });
             } else {
                 log('⚠️ NetworkScanModal non disponible', 'warning');
+            }
+
+            // 🆕 Initialiser la modal clavier MIDI après connexion WebSocket
+            if (typeof KeyboardModal !== 'undefined') {
+                keyboardModal = new KeyboardModal(api);
+                log('✓ Modal clavier MIDI initialisée', 'info');
+            } else {
+                log('⚠️ KeyboardModal non disponible', 'warning');
             }
 
             // Afficher l'app
