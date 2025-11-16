@@ -141,24 +141,6 @@ class KeyboardModal {
                 <div class="modal-body">
                     <!-- Container pour le KeyboardView -->
                     <div id="keyboard-modal-view"></div>
-
-                    <!-- Informations -->
-                    <div class="keyboard-modal-info">
-                        <div class="info-item">
-                            <span class="info-icon">💡</span>
-                            <span class="info-text">
-                                <strong>Astuce:</strong> Utilisez les touches de votre clavier (ZXCVBNM, QWERTY)
-                                ou cliquez directement sur les touches du clavier virtuel pour jouer des notes.
-                            </span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-icon">🎛️</span>
-                            <span class="info-text">
-                                <strong>Contrôles:</strong> Utilisez les boutons ◄ ► pour changer d'octave,
-                                et le slider pour ajuster la vélocité des notes.
-                            </span>
-                        </div>
-                    </div>
                 </div>
 
                 <div class="modal-footer">

@@ -48,8 +48,8 @@ class KeyboardView extends BaseView {
         this.canvas = null;
         this.ctx = null;
         this.keyWidth = 40; // Plus large pour mieux voir
-        this.whiteKeyHeight = 160; // Plus haut
-        this.blackKeyHeight = 100;
+        this.whiteKeyHeight = 320; // Hauteur doublée
+        this.blackKeyHeight = 200; // Hauteur doublée
         this.minKeyWidth = 30;
         this.maxKeyWidth = 50;
         this.scrollOffset = 0; // Position du scroll
