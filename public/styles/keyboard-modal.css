@@ -153,38 +153,134 @@
     padding: 0;
 }
 
-.keyboard-header {
-    background: white;
-    padding: 20px;
-    border-bottom: 2px solid #e5e7eb;
-    margin-bottom: 20px;
+/* Layout principal avec slider vélocité à gauche */
+.keyboard-layout {
+    display: flex;
+    gap: 0;
+    height: 100%;
 }
 
-.keyboard-header h2 {
-    color: #1f2937;
-    font-size: 20px;
-    margin: 0 0 16px 0;
+/* Slider vélocité vertical à gauche */
+.velocity-control-vertical {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #f9fafb;
+    padding: 20px 12px;
+    border-right: 2px solid #e5e7eb;
+    min-width: 80px;
+}
+
+.velocity-label-vertical {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 12px;
     font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 16px;
+}
+
+.velocity-slider-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+}
+
+.velocity-slider-vertical {
+    -webkit-appearance: slider-vertical;
+    width: 6px;
+    height: 100%;
+    min-height: 200px;
+    writing-mode: bt-lr;
+    background: #e5e7eb;
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.velocity-slider-vertical::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #10b981;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.velocity-slider-vertical::-webkit-slider-thumb:hover {
+    background: #059669;
+    transform: scale(1.2);
+}
+
+.velocity-slider-vertical::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #10b981;
+    cursor: pointer;
+    border: none;
+}
+
+.velocity-value-vertical {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: white;
+    border: 2px solid #10b981;
+    border-radius: 8px;
+    font-weight: 700;
+    color: #10b981;
+    font-size: 16px;
+    text-align: center;
+    min-width: 50px;
+}
+
+/* Zone principale du clavier */
+.keyboard-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.keyboard-header {
+    background: white;
+    padding: 16px 20px;
+    border-bottom: 2px solid #e5e7eb;
 }
 
 .keyboard-controls {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 16px;
+    align-items: center;
 }
 
 .control-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
 .control-group label {
     color: #6b7280;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f9fafb;
+    border-radius: 6px;
 }
 
 .device-select {
@@ -209,50 +305,58 @@
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
-.velocity-slider {
-    width: 100%;
+/* Slider de navigation du clavier */
+.keyboard-scroll-control {
+    padding: 12px 20px;
+    background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.keyboard-scroll-control label {
+    color: #6b7280;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.keyboard-scroll-slider {
+    flex: 1;
     height: 6px;
     border-radius: 3px;
     background: #e5e7eb;
     outline: none;
     -webkit-appearance: none;
+    cursor: pointer;
 }
 
-.velocity-slider::-webkit-slider-thumb {
+.keyboard-scroll-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #10b981;
+    background: #667eea;
     cursor: pointer;
     transition: all 0.2s;
 }
 
-.velocity-slider::-webkit-slider-thumb:hover {
-    background: #059669;
+.keyboard-scroll-slider::-webkit-slider-thumb:hover {
+    background: #5568d3;
     transform: scale(1.2);
 }
 
-.velocity-slider::-moz-range-thumb {
+.keyboard-scroll-slider::-moz-range-thumb {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #10b981;
+    background: #667eea;
     cursor: pointer;
     border: none;
-}
-
-.velocity-value {
-    display: inline-block;
-    min-width: 35px;
-    padding: 4px 8px;
-    background: #f3f4f6;
-    border-radius: 6px;
-    font-weight: 600;
-    color: #1f2937;
-    text-align: center;
-    margin-left: 8px;
 }
 
 .octave-controls {
@@ -300,10 +404,10 @@
 
 /* Canvas */
 .keyboard-canvas-container {
+    flex: 1;
     background: white;
     padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 16px;
+    overflow: hidden;
 }
 
 .keyboard-canvas {
@@ -314,43 +418,33 @@
     background: white;
 }
 
-/* Info section */
-.keyboard-info {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    padding: 16px;
+/* Info section en bas */
+.keyboard-info-bottom {
+    padding: 12px 20px;
     background: #f9fafb;
-    border-radius: 8px;
+    border-top: 2px solid #e5e7eb;
 }
 
-.keyboard-info .info-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.keyboard-info .info-label {
-    color: #6b7280;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.keyboard-info .info-value {
-    color: #1f2937;
-    font-size: 13px;
-    font-weight: 500;
-}
-
-.keyboard-info .info-warning {
-    width: 100%;
-    padding: 12px;
+.keyboard-info-bottom .info-warning {
+    padding: 12px 16px;
     background: #fef3c7;
     border-left: 4px solid #f59e0b;
     border-radius: 6px;
     color: #92400e;
     font-size: 14px;
     font-weight: 500;
+    text-align: center;
+}
+
+.keyboard-info-bottom .info-help {
+    padding: 12px 16px;
+    background: #f0fdf4;
+    border-left: 4px solid #10b981;
+    border-radius: 6px;
+    color: #065f46;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
 }
 
 /* ============================================================================
