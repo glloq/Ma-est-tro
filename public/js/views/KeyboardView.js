@@ -36,7 +36,8 @@ class KeyboardView extends BaseView {
             activeNotes: new Set(),
             octaveOffset: 0,
             isMouseDown: false,
-            lastPlayedNote: null
+            lastPlayedNote: null,
+            keyboardLayout: 'azerty' // azerty ou qwerty
         };
         
         // Configuration Canvas
@@ -50,18 +51,34 @@ class KeyboardView extends BaseView {
         this.scrollOffset = 0; // Position du scroll
         
         // Keyboard mapping (touches ordinateur → notes MIDI)
-        // Mapping AZERTY pour 2 octaves
-        this.keyMap = {
-            // Octave inférieure (touches ZXCVBNM,;:!)
-            'KeyZ': 0, 'KeyS': 1, 'KeyX': 2, 'KeyD': 3, 'KeyC': 4,
-            'KeyV': 5, 'KeyG': 6, 'KeyB': 7, 'KeyH': 8, 'KeyN': 9,
-            'KeyJ': 10, 'Comma': 11,
-            
-            // Octave supérieure (touches QWERTY)
-            'KeyQ': 12, 'Digit2': 13, 'KeyW': 14, 'Digit3': 15, 'KeyE': 16,
-            'KeyR': 17, 'Digit5': 18, 'KeyT': 19, 'Digit6': 20, 'KeyY': 21,
-            'Digit7': 22, 'KeyU': 23, 'KeyI': 24
+        this.keyMaps = {
+            azerty: {
+                // Octave inférieure (touches ZXCVBNM,;:!)
+                'KeyZ': 0, 'KeyS': 1, 'KeyX': 2, 'KeyD': 3, 'KeyC': 4,
+                'KeyV': 5, 'KeyG': 6, 'KeyB': 7, 'KeyH': 8, 'KeyN': 9,
+                'KeyJ': 10, 'Comma': 11,
+
+                // Octave supérieure (touches AZERTYUIOP)
+                'KeyA': 12, 'Digit2': 13, 'KeyQ': 14, 'Digit3': 15, 'KeyW': 16,
+                'KeyE': 17, 'Digit5': 18, 'KeyR': 19, 'Digit6': 20, 'KeyT': 21,
+                'Digit7': 22, 'KeyY': 23, 'KeyU': 24, 'Digit9': 25, 'KeyI': 26,
+                'Digit0': 27, 'KeyO': 28, 'KeyP': 29
+            },
+            qwerty: {
+                // Octave inférieure (touches ZXCVBNM,)
+                'KeyZ': 0, 'KeyS': 1, 'KeyX': 2, 'KeyD': 3, 'KeyC': 4,
+                'KeyV': 5, 'KeyG': 6, 'KeyB': 7, 'KeyH': 8, 'KeyN': 9,
+                'KeyJ': 10, 'KeyM': 11,
+
+                // Octave supérieure (touches QWERTYUIOP)
+                'KeyQ': 12, 'Digit2': 13, 'KeyW': 14, 'Digit3': 15, 'KeyE': 16,
+                'KeyR': 17, 'Digit5': 18, 'KeyT': 19, 'Digit6': 20, 'KeyY': 21,
+                'Digit7': 22, 'KeyU': 23, 'KeyI': 24, 'Digit9': 25, 'KeyO': 26,
+                'Digit0': 27, 'KeyP': 28
+            }
         };
+
+        this.keyMap = this.keyMaps.azerty; // Par défaut AZERTY
         
         // État des touches pressées (éviter répétitions)
         this.pressedKeys = new Set();
@@ -164,6 +181,14 @@ class KeyboardView extends BaseView {
                                             title="Octave +1">►</button>
                                 </div>
 
+                                <div class="control-group">
+                                    <label>Layout clavier:</label>
+                                    <select class="layout-select" data-action="change-layout">
+                                        <option value="azerty" ${state.keyboardLayout === 'azerty' ? 'selected' : ''}>AZERTY</option>
+                                        <option value="qwerty" ${state.keyboardLayout === 'qwerty' ? 'selected' : ''}>QWERTY</option>
+                                    </select>
+                                </div>
+
                                 <div class="info-item">
                                     <span class="info-label">Notes actives:</span>
                                     <span class="info-value">${state.activeNotes.size}</span>
@@ -176,18 +201,6 @@ class KeyboardView extends BaseView {
                                     class="keyboard-canvas"
                                     tabindex="0"
                                     aria-label="Clavier MIDI interactif"></canvas>
-                        </div>
-
-                        <div class="keyboard-info-bottom">
-                            ${!state.selectedDevice ? `
-                                <div class="info-warning">
-                                    ⚠️ Sélectionnez un instrument pour jouer
-                                </div>
-                            ` : `
-                                <div class="info-help">
-                                    💡 Utilisez les touches ZXCVBNM / QWERTY pour jouer
-                                </div>
-                            `}
                         </div>
                     </div>
                 </div>
@@ -228,6 +241,8 @@ class KeyboardView extends BaseView {
                 this.handleDeviceSelect(e.target.value);
             } else if (action === 'set-velocity') {
                 this.handleVelocityChange(parseInt(e.target.value, 10));
+            } else if (action === 'change-layout') {
+                this.handleLayoutChange(e.target.value);
             }
         });
         
@@ -363,6 +378,19 @@ class KeyboardView extends BaseView {
         this.emit('velocity-changed', { velocity: this.viewState.velocity });
 
         this.log('debug', `Velocity changed to ${this.viewState.velocity}`);
+    }
+
+    /**
+     * Change le layout du clavier (AZERTY/QWERTY)
+     */
+    handleLayoutChange(layout) {
+        this.viewState.keyboardLayout = layout;
+        this.keyMap = this.keyMaps[layout] || this.keyMaps.azerty;
+
+        this.log('info', `Keyboard layout changed to ${layout.toUpperCase()}`);
+
+        // Émettre événement
+        this.emit('layout-changed', { layout: layout });
     }
 
     /**

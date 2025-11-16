@@ -283,7 +283,8 @@
     border-radius: 6px;
 }
 
-.device-select {
+.device-select,
+.layout-select {
     width: 100%;
     padding: 10px 12px;
     border: 2px solid #e5e7eb;
@@ -295,11 +296,13 @@
     transition: all 0.2s;
 }
 
-.device-select:hover {
+.device-select:hover,
+.layout-select:hover {
     border-color: #10b981;
 }
 
-.device-select:focus {
+.device-select:focus,
+.layout-select:focus {
     outline: none;
     border-color: #10b981;
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
@@ -364,33 +367,17 @@
     background: white;
 }
 
-/* Info section en bas */
-.keyboard-info-bottom {
-    padding: 12px 20px;
-    background: #f9fafb;
-    border-top: 2px solid #e5e7eb;
+/* Info label and value */
+.info-label {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
 }
 
-.keyboard-info-bottom .info-warning {
-    padding: 12px 16px;
-    background: #fef3c7;
-    border-left: 4px solid #f59e0b;
-    border-radius: 6px;
-    color: #92400e;
-    font-size: 14px;
+.info-value {
+    color: #1f2937;
+    font-size: 13px;
     font-weight: 500;
-    text-align: center;
-}
-
-.keyboard-info-bottom .info-help {
-    padding: 12px 16px;
-    background: #f0fdf4;
-    border-left: 4px solid #10b981;
-    border-radius: 6px;
-    color: #065f46;
-    font-size: 14px;
-    font-weight: 500;
-    text-align: center;
 }
 
 /* ============================================================================
