@@ -249,21 +249,29 @@ class KeyboardModal {
 
             // Enrichir avec les noms personnalisés
             this.availableDevices = await Promise.all(activeDevices.map(async (device) => {
+                // Normaliser : s'assurer que device.id et device.device_id sont définis
+                const deviceId = device.id || device.device_id;
+                const normalizedDevice = {
+                    ...device,
+                    id: deviceId,
+                    device_id: deviceId
+                };
+
                 try {
                     const response = await this.backend.sendCommand('instrument_get_settings', {
-                        deviceId: device.device_id
+                        deviceId: deviceId
                     });
                     const settings = response.settings || {};
                     return {
-                        ...device,
+                        ...normalizedDevice,
                         displayName: settings.custom_name || device.name,
                         customName: settings.custom_name
                     };
                 } catch (error) {
                     // Si on ne peut pas charger les settings, utiliser le nom par défaut
-                    this.logger.warn('KeyboardModal', `Cannot load settings for ${device.device_id}:`, error);
+                    this.logger.warn('KeyboardModal', `Cannot load settings for ${deviceId}:`, error);
                     return {
-                        ...device,
+                        ...normalizedDevice,
                         displayName: device.name,
                         customName: null
                     };

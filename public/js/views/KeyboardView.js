@@ -249,10 +249,14 @@ class KeyboardView extends BaseView {
         // Clicks sur boutons
         this.container.addEventListener('click', (e) => {
             const action = e.target.dataset.action;
-            
+
             if (action === 'octave-up') {
+                e.preventDefault();
+                e.stopPropagation();
                 this.handleOctaveChange(1);
             } else if (action === 'octave-down') {
+                e.preventDefault();
+                e.stopPropagation();
                 this.handleOctaveChange(-1);
             }
         });
@@ -397,29 +401,31 @@ class KeyboardView extends BaseView {
      * Change l'octave offset
      */
     handleOctaveChange(delta) {
+        this.log('debug', `handleOctaveChange called with delta=${delta}, current offset=${this.viewState.octaveOffset}`);
+
         const newOffset = this.viewState.octaveOffset + delta;
-        
+
         // Limiter l'offset pour rester dans la plage MIDI valide
         if (newOffset < -5 || newOffset > 5) {
             this.log('warn', 'Octave offset limit reached');
             return;
         }
-        
+
         this.viewState.octaveOffset = newOffset;
-        
+
         // Mettre à jour l'affichage
         const display = this.container.querySelector('.octave-display');
         if (display) {
             display.textContent = `Octave: ${newOffset > 0 ? '+' : ''}${newOffset}`;
         }
-        
+
         // Redessiner le clavier
         this.drawKeyboard();
-        
+
         // ✅ Émettre événement vers controller
         this.emit('octave-changed', { offset: newOffset });
-        
-        this.log('debug', `Octave offset: ${newOffset}`);
+
+        this.log('info', `Octave changed: ${newOffset > 0 ? '+' : ''}${newOffset}`);
     }
     
     /**
