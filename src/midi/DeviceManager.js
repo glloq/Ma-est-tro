@@ -8,7 +8,13 @@ class DeviceManager {
     this.inputs = new Map();
     this.outputs = new Map();
     this.virtualDevices = new Map();
-    
+
+    // Hot-plug detection
+    this.hotPlugInterval = null;
+    this.hotPlugCheckIntervalMs = 2000; // Check every 2 seconds
+    this.knownInputs = new Set();
+    this.knownOutputs = new Set();
+
     this.app.logger.info('DeviceManager initialized');
   }
 
@@ -100,6 +106,9 @@ class DeviceManager {
 
     const deviceList = this.getDeviceList();
     this.app.logger.info(`Scan complete: ${deviceList.length} device(s) found`);
+
+    // Start hot-plug monitoring
+    this.startHotPlugMonitoring();
 
     return deviceList;
   }
@@ -487,7 +496,131 @@ class DeviceManager {
     }
   }
 
+  // ==================== HOT-PLUG MONITORING ====================
+
+  /**
+   * Start automatic hot-plug monitoring
+   */
+  startHotPlugMonitoring() {
+    if (this.hotPlugInterval) {
+      return; // Already running
+    }
+
+    this.app.logger.info(`Starting hot-plug monitoring (check every ${this.hotPlugCheckIntervalMs}ms)`);
+
+    // Initialize known devices
+    this.knownInputs = new Set(easymidi.getInputs().filter(name => !this.isSystemDevice(name)));
+    this.knownOutputs = new Set(easymidi.getOutputs().filter(name => !this.isSystemDevice(name)));
+
+    // Start periodic checking
+    this.hotPlugInterval = setInterval(() => {
+      this.checkDeviceChanges();
+    }, this.hotPlugCheckIntervalMs);
+  }
+
+  /**
+   * Stop automatic hot-plug monitoring
+   */
+  stopHotPlugMonitoring() {
+    if (this.hotPlugInterval) {
+      clearInterval(this.hotPlugInterval);
+      this.hotPlugInterval = null;
+      this.app.logger.info('Hot-plug monitoring stopped');
+    }
+  }
+
+  /**
+   * Check for device changes without closing existing connections
+   */
+  async checkDeviceChanges() {
+    try {
+      // Get current system ports
+      const currentInputs = new Set(easymidi.getInputs().filter(name => !this.isSystemDevice(name)));
+      const currentOutputs = new Set(easymidi.getOutputs().filter(name => !this.isSystemDevice(name)));
+
+      let hasChanges = false;
+
+      // Check for new inputs
+      for (const name of currentInputs) {
+        if (!this.knownInputs.has(name)) {
+          this.app.logger.info(`🔌 New MIDI input detected: ${name}`);
+          try {
+            this.addInput(name);
+            this.knownInputs.add(name);
+            hasChanges = true;
+          } catch (error) {
+            this.app.logger.error(`Failed to add new input ${name}: ${error.message}`);
+          }
+        }
+      }
+
+      // Check for removed inputs
+      for (const name of this.knownInputs) {
+        if (!currentInputs.has(name)) {
+          this.app.logger.info(`🔌 MIDI input disconnected: ${name}`);
+          const input = this.inputs.get(name);
+          if (input) {
+            try {
+              input.removeAllListeners();
+              input.close();
+            } catch (error) {
+              this.app.logger.warn(`Error closing disconnected input ${name}: ${error.message}`);
+            }
+            this.inputs.delete(name);
+          }
+          this.knownInputs.delete(name);
+          hasChanges = true;
+        }
+      }
+
+      // Check for new outputs
+      for (const name of currentOutputs) {
+        if (!this.knownOutputs.has(name)) {
+          this.app.logger.info(`🔌 New MIDI output detected: ${name}`);
+          try {
+            this.addOutput(name);
+            this.knownOutputs.add(name);
+            hasChanges = true;
+          } catch (error) {
+            this.app.logger.error(`Failed to add new output ${name}: ${error.message}`);
+          }
+        }
+      }
+
+      // Check for removed outputs
+      for (const name of this.knownOutputs) {
+        if (!currentOutputs.has(name)) {
+          this.app.logger.info(`🔌 MIDI output disconnected: ${name}`);
+          const output = this.outputs.get(name);
+          if (output) {
+            try {
+              output.close();
+            } catch (error) {
+              this.app.logger.warn(`Error closing disconnected output ${name}: ${error.message}`);
+            }
+            this.outputs.delete(name);
+          }
+          this.knownOutputs.delete(name);
+          hasChanges = true;
+        }
+      }
+
+      // If there were changes, update the device map and broadcast
+      if (hasChanges) {
+        this.updateDeviceMap();
+        this.broadcastDeviceList();
+        this.app.logger.info(`Device list updated: ${this.devices.size} device(s)`);
+      }
+
+    } catch (error) {
+      this.app.logger.error(`Error checking device changes: ${error.message}`);
+    }
+  }
+
   close() {
+    // Stop hot-plug monitoring
+    this.stopHotPlugMonitoring();
+
     // Close all inputs
     this.inputs.forEach(input => {
       try {
