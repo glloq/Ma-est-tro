@@ -257,10 +257,22 @@ class DeviceManager {
    * @returns {boolean} Success status
    */
   sendIdentityRequest(deviceName, deviceId = 0x7F) {
+    // Debug: log available outputs
+    this.app.logger.debug(`Looking for output: ${deviceName}`);
+    this.app.logger.debug(`Available outputs: ${Array.from(this.outputs.keys()).join(', ')}`);
+
     const output = this.outputs.get(deviceName);
     if (!output) {
-      this.app.logger.warn(`Output device not found: ${deviceName}`);
-      return false;
+      // Check if device exists as input only
+      const hasInput = this.inputs.has(deviceName);
+      if (hasInput) {
+        this.app.logger.warn(`Device ${deviceName} is input-only, cannot send SysEx messages`);
+        throw new Error(`Device ${deviceName} is input-only. Cannot send SysEx messages to input-only devices.`);
+      } else {
+        this.app.logger.warn(`Output device not found: ${deviceName}`);
+        this.app.logger.warn(`Available outputs: ${Array.from(this.outputs.keys()).join(', ')}`);
+        throw new Error(`Output device not found: ${deviceName}`);
+      }
     }
 
     try {
@@ -279,7 +291,7 @@ class DeviceManager {
       return true;
     } catch (error) {
       this.app.logger.error(`Failed to send Identity Request: ${error.message}`);
-      return false;
+      throw error;
     }
   }
 
