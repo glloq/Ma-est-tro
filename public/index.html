@@ -687,12 +687,99 @@
             width: 0%;
             transition: width 0.3s;
         }
+
+        /* Modal de confirmation personnalisée */
+        .confirm-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .confirm-modal-overlay.show {
+            display: flex;
+        }
+
+        .confirm-modal {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+            animation: modalFadeIn 0.2s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .confirm-modal-icon {
+            font-size: 48px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .confirm-modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .confirm-modal-message {
+            font-size: 15px;
+            color: #666;
+            text-align: center;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .confirm-modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .confirm-modal-buttons .btn {
+            min-width: 120px;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 600;
+        }
     </style>
 
     <!-- Fichier CSS externe pour les composants (Modal MIDI Editor, etc.) -->
     <link rel="stylesheet" href="styles/components.css">
 </head>
 <body>
+    <!-- Modal de confirmation personnalisée -->
+    <div class="confirm-modal-overlay" id="confirmModal">
+        <div class="confirm-modal">
+            <div class="confirm-modal-icon" id="confirmIcon">⚠️</div>
+            <div class="confirm-modal-title" id="confirmTitle">Confirmation</div>
+            <div class="confirm-modal-message" id="confirmMessage">Êtes-vous sûr de vouloir continuer ?</div>
+            <div class="confirm-modal-buttons" id="confirmButtons">
+                <button class="btn btn-secondary" id="confirmCancelBtn">Annuler</button>
+                <button class="btn btn-danger" id="confirmOkBtn">Confirmer</button>
+            </div>
+        </div>
+    </div>
+
     <div id="loading" class="loading">
         <div class="loading-content">
             <div class="spinner"></div>
@@ -776,6 +863,130 @@
     <script src="js/views/components/MidiEditorModal.js"></script>
 
     <script>
+        // ========== SYSTÈME DE MODAL DE CONFIRMATION ==========
+
+        /**
+         * Affiche une modal de confirmation personnalisée
+         * @param {string} message - Le message à afficher
+         * @param {Object} options - Options de configuration
+         * @returns {Promise<boolean>} - true si confirmé, false si annulé
+         */
+        function showConfirm(message, options = {}) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('confirmModal');
+                const icon = document.getElementById('confirmIcon');
+                const title = document.getElementById('confirmTitle');
+                const messageEl = document.getElementById('confirmMessage');
+                const okBtn = document.getElementById('confirmOkBtn');
+                const cancelBtn = document.getElementById('confirmCancelBtn');
+
+                // Configuration par défaut
+                const config = {
+                    title: options.title || 'Confirmation',
+                    icon: options.icon || '⚠️',
+                    okText: options.okText || 'Confirmer',
+                    cancelText: options.cancelText || 'Annuler',
+                    danger: options.danger !== false // true par défaut
+                };
+
+                // Appliquer la configuration
+                icon.textContent = config.icon;
+                title.textContent = config.title;
+                messageEl.textContent = message;
+                okBtn.textContent = config.okText;
+                cancelBtn.textContent = config.cancelText;
+
+                // Appliquer le style danger ou normal au bouton OK
+                okBtn.className = config.danger ? 'btn btn-danger' : 'btn';
+
+                // Gestionnaires d'événements
+                const handleOk = () => {
+                    cleanup();
+                    resolve(true);
+                };
+
+                const handleCancel = () => {
+                    cleanup();
+                    resolve(false);
+                };
+
+                const cleanup = () => {
+                    modal.classList.remove('show');
+                    okBtn.removeEventListener('click', handleOk);
+                    cancelBtn.removeEventListener('click', handleCancel);
+                };
+
+                // Attacher les événements
+                okBtn.addEventListener('click', handleOk);
+                cancelBtn.addEventListener('click', handleCancel);
+
+                // Afficher la modal
+                modal.classList.add('show');
+
+                // Focus sur le bouton annuler par défaut (pour éviter les suppressions accidentelles)
+                cancelBtn.focus();
+            });
+        }
+
+        /**
+         * Affiche une modal d'alerte personnalisée
+         * @param {string} message - Le message à afficher
+         * @param {Object} options - Options de configuration
+         * @returns {Promise<void>}
+         */
+        function showAlert(message, options = {}) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('confirmModal');
+                const icon = document.getElementById('confirmIcon');
+                const title = document.getElementById('confirmTitle');
+                const messageEl = document.getElementById('confirmMessage');
+                const buttons = document.getElementById('confirmButtons');
+
+                // Configuration par défaut
+                const config = {
+                    title: options.title || 'Information',
+                    icon: options.icon || 'ℹ️',
+                    okText: options.okText || 'OK'
+                };
+
+                // Appliquer la configuration
+                icon.textContent = config.icon;
+                title.textContent = config.title;
+                messageEl.textContent = message;
+
+                // Créer un seul bouton OK
+                buttons.innerHTML = `<button class="btn" id="alertOkBtn">${config.okText}</button>`;
+
+                const okBtn = document.getElementById('alertOkBtn');
+
+                const handleOk = () => {
+                    cleanup();
+                    resolve();
+                };
+
+                const cleanup = () => {
+                    modal.classList.remove('show');
+                    okBtn.removeEventListener('click', handleOk);
+                    // Restaurer les deux boutons pour les prochains confirms
+                    buttons.innerHTML = `
+                        <button class="btn btn-secondary" id="confirmCancelBtn">Annuler</button>
+                        <button class="btn btn-danger" id="confirmOkBtn">Confirmer</button>
+                    `;
+                };
+
+                // Attacher l'événement
+                okBtn.addEventListener('click', handleOk);
+
+                // Afficher la modal
+                modal.classList.add('show');
+
+                // Focus sur le bouton OK
+                okBtn.focus();
+            });
+        }
+
+        // ========== VARIABLES GLOBALES ==========
+
         let api;
         let currentFileId = null;
         let isPlaying = false;
@@ -1146,12 +1357,15 @@
                 deleteBtn.style.cursor = 'not-allowed';
             }
 
-            deleteBtn.onclick = (e) => {
+            deleteBtn.onclick = async (e) => {
                 e.stopPropagation();
                 // Vérifier à nouveau au moment du clic
                 const currentFiles = folderStructure[folderPath].files || [];
                 if (currentFiles.length > 0) {
-                    alert('Le dossier doit être vide pour être supprimé');
+                    await showAlert('Le dossier doit être vide pour être supprimé', {
+                        title: 'Impossible de supprimer',
+                        icon: '⚠️'
+                    });
                     return;
                 }
                 deleteFolder(folderPath);
@@ -1204,7 +1418,10 @@
 
             // Vérifier si le dossier existe déjà
             if (folderStructure[cleanName]) {
-                alert(`Le dossier "${cleanName}" existe déjà`);
+                await showAlert(`Le dossier "${cleanName}" existe déjà`, {
+                    title: 'Dossier existant',
+                    icon: '⚠️'
+                });
                 return;
             }
 
@@ -1233,11 +1450,21 @@
             console.log('Fichiers dans le dossier:', folderFiles, 'Longueur:', folderFiles.length);
 
             if (folderFiles.length > 0) {
-                alert('Le dossier doit être vide pour être supprimé');
+                await showAlert('Le dossier doit être vide pour être supprimé', {
+                    title: 'Impossible de supprimer',
+                    icon: '⚠️'
+                });
                 return;
             }
 
-            if (!confirm(`Supprimer le dossier "${folderPath}" ?`)) {
+            const confirmed = await showConfirm(`Voulez-vous vraiment supprimer le dossier "${folderPath}" ?`, {
+                title: 'Supprimer le dossier',
+                icon: '📁🗑️',
+                okText: 'Supprimer',
+                cancelText: 'Annuler'
+            });
+
+            if (!confirmed) {
                 return;
             }
 
@@ -1521,7 +1748,14 @@
 
         // Supprimer fichier
         async function deleteFile(fileId) {
-            if (!confirm('Supprimer ce fichier ?')) return;
+            const confirmed = await showConfirm('Voulez-vous vraiment supprimer ce fichier ?', {
+                title: 'Supprimer le fichier',
+                icon: '🗑️',
+                okText: 'Supprimer',
+                cancelText: 'Annuler'
+            });
+
+            if (!confirmed) return;
 
             try {
                 await api.sendCommand('file_delete', { fileId });
@@ -1551,7 +1785,10 @@
                 await midiEditorModal.show(fileId, filename);
             } catch (error) {
                 log(`Erreur ouverture éditeur: ${error.message}`, 'error');
-                alert(`Impossible d'ouvrir l'éditeur pour "${filename}": ${error.message}`);
+                await showAlert(`Impossible d'ouvrir l'éditeur pour "${filename}": ${error.message}`, {
+                    title: 'Erreur d\'ouverture',
+                    icon: '❌'
+                });
             }
         }
 
@@ -1576,7 +1813,10 @@
                 const outputDevices = availableDevices.filter(d => d.type !== 'input');
 
                 if (outputDevices.length === 0) {
-                    alert('Aucun périphérique de sortie MIDI disponible.\n\nVeuillez connecter un périphérique MIDI ou créer un port virtuel.');
+                    await showAlert('Aucun périphérique de sortie MIDI disponible.\n\nVeuillez connecter un périphérique MIDI ou créer un port virtuel.', {
+                        title: 'Périphérique requis',
+                        icon: '🎛️'
+                    });
                     return;
                 }
 
@@ -1596,7 +1836,10 @@
                 updatePlaybackControls();
 
                 if (channels.length === 0) {
-                    alert(`Aucun canal MIDI trouvé dans "${filename}"`);
+                    await showAlert(`Aucun canal MIDI trouvé dans "${filename}"`, {
+                        title: 'Aucun canal MIDI',
+                        icon: '⚠️'
+                    });
                     return;
                 }
 
@@ -1607,7 +1850,10 @@
 
             } catch (error) {
                 log(`Erreur configuration routage: ${error.message}`, 'error');
-                alert(`Erreur lors du chargement du fichier: ${error.message}`);
+                await showAlert(`Erreur lors du chargement du fichier: ${error.message}`, {
+                    title: 'Erreur de chargement',
+                    icon: '❌'
+                });
             }
         }
 
@@ -1711,9 +1957,15 @@
             const routed = isFileRouted(fileId);
 
             if (!routed) {
-                const shouldConfigure = confirm(
-                    `Le routage MIDI n'est pas configuré pour "${filename}".\n\n` +
-                    `Voulez-vous le configurer maintenant ?`
+                const shouldConfigure = await showConfirm(
+                    `Le routage MIDI n'est pas configuré pour "${filename}".\n\nVoulez-vous le configurer maintenant ?`,
+                    {
+                        title: 'Routage requis',
+                        icon: '🔀',
+                        okText: 'Configurer',
+                        cancelText: 'Annuler',
+                        danger: false
+                    }
                 );
 
                 if (shouldConfigure) {
@@ -1902,7 +2154,10 @@
 
             } catch (error) {
                 log(`Erreur chargement réglages: ${error.message}`, 'error');
-                alert(`Impossible de charger les réglages: ${error.message}`);
+                await showAlert(`Impossible de charger les réglages: ${error.message}`, {
+                    title: 'Erreur de chargement',
+                    icon: '❌'
+                });
             }
         }
 
@@ -1974,7 +2229,10 @@
 
             } catch (error) {
                 log(`Erreur Identity Request: ${error.message}`, 'error');
-                alert(`Erreur lors de l'envoi de la requête: ${error.message}`);
+                await showAlert(`Erreur lors de l'envoi de la requête: ${error.message}`, {
+                    title: 'Erreur d\'envoi',
+                    icon: '❌'
+                });
             }
         }
 
@@ -2014,7 +2272,10 @@
 
             } catch (error) {
                 log(`Erreur sauvegarde réglages: ${error.message}`, 'error');
-                alert(`Erreur lors de la sauvegarde: ${error.message}`);
+                await showAlert(`Erreur lors de la sauvegarde: ${error.message}`, {
+                    title: 'Erreur de sauvegarde',
+                    icon: '❌'
+                });
             }
         }
 
