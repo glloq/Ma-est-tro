@@ -1,15 +1,64 @@
 /* ============================================================================
    Fichier: frontend/styles/keyboard-modal.css
-   Version: v1.0.0
+   Version: v1.1.0
    Date: 2025-11-16
    ============================================================================
    Styles pour la modal du clavier MIDI virtuel
    ============================================================================ */
 
-/* Container de la modal */
+/* ============================================================================
+   MODAL OVERLAY
+   ============================================================================ */
+
+.keyboard-modal {
+    display: flex !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* ============================================================================
+   MODAL DIALOG
+   ============================================================================ */
+
 .keyboard-modal .modal-dialog {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(16, 185, 129, 0.3);
     max-width: 1200px;
     width: 95%;
+    max-height: 90vh;
+    display: flex !important;
+    flex-direction: column !important;
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px) scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
 }
 
 /* Ajustement pour très grands écrans */
@@ -19,23 +68,321 @@
     }
 }
 
-/* Corps de la modal */
+/* ============================================================================
+   MODAL HEADER
+   ============================================================================ */
+
+.keyboard-modal .modal-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 20px 24px !important;
+    margin: 0 !important;
+    border-bottom: 2px solid #e0e0e0;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-radius: 12px 12px 0 0;
+    position: relative !important;
+}
+
+.keyboard-modal .modal-header h2 {
+    margin: 0;
+    font-size: 22px;
+    color: white;
+    font-weight: 600;
+}
+
+.keyboard-modal .modal-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    font-size: 28px;
+    color: white;
+    cursor: pointer;
+    padding: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+    position: absolute !important;
+    top: 20px !important;
+    right: 24px !important;
+}
+
+.keyboard-modal .modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+/* ============================================================================
+   MODAL BODY
+   ============================================================================ */
+
 .keyboard-modal .modal-body {
-    padding: 24px;
-    background: #f9fafb;
+    padding: 24px !important;
+    background: white;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
 }
 
 /* Container du clavier */
 #keyboard-modal-view {
     background: white;
     border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 0;
     margin-bottom: 20px;
 }
 
 #keyboard-modal-container {
     min-height: 400px;
+    background: white;
+}
+
+/* ============================================================================
+   KEYBOARD VIEW STYLES
+   ============================================================================ */
+
+.keyboard-view {
+    background: white;
+    padding: 0;
+}
+
+.keyboard-header {
+    background: white;
+    padding: 20px;
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 20px;
+}
+
+.keyboard-header h2 {
+    color: #1f2937;
+    font-size: 20px;
+    margin: 0 0 16px 0;
+    font-weight: 600;
+}
+
+.keyboard-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.control-group label {
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.device-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1f2937;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.device-select:hover {
+    border-color: #10b981;
+}
+
+.device-select:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.velocity-slider {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #e5e7eb;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.velocity-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #10b981;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.velocity-slider::-webkit-slider-thumb:hover {
+    background: #059669;
+    transform: scale(1.2);
+}
+
+.velocity-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #10b981;
+    cursor: pointer;
+    border: none;
+}
+
+.velocity-value {
+    display: inline-block;
+    min-width: 35px;
+    padding: 4px 8px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    font-weight: 600;
+    color: #1f2937;
+    text-align: center;
+    margin-left: 8px;
+}
+
+.octave-controls {
+    flex-direction: row !important;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-octave-down,
+.btn-octave-up {
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.btn-octave-down:hover,
+.btn-octave-up:hover {
+    background: #059669;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+.btn-octave-down:active,
+.btn-octave-up:active {
+    transform: translateY(0);
+}
+
+.octave-display {
+    flex: 1;
+    text-align: center;
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 14px;
+    background: #f3f4f6;
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+
+/* Canvas */
+.keyboard-canvas-container {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+}
+
+.keyboard-canvas {
+    display: block;
+    width: 100%;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    background: white;
+}
+
+/* Info section */
+.keyboard-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.keyboard-info .info-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.keyboard-info .info-label {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.keyboard-info .info-value {
+    color: #1f2937;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.keyboard-info .info-warning {
+    width: 100%;
+    padding: 12px;
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    border-radius: 6px;
+    color: #92400e;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* ============================================================================
+   MODAL FOOTER
+   ============================================================================ */
+
+.keyboard-modal .modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 16px 24px;
+    background: #f9fafb;
+    border-top: 2px solid #e5e7eb;
+    gap: 12px;
+}
+
+.keyboard-modal .btn-secondary {
+    background: #6b7280;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.keyboard-modal .btn-secondary:hover {
+    background: #4b5563;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
 }
 
 /* Informations en bas de la modal */
@@ -49,10 +396,10 @@
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    background: white;
+    background: #f0fdf4;
     padding: 16px;
     border-radius: 8px;
-    border-left: 4px solid #667eea;
+    border-left: 4px solid #10b981;
 }
 
 .keyboard-modal-info .info-icon {
@@ -72,7 +419,10 @@
     font-weight: 600;
 }
 
-/* Responsive - Mobile */
+/* ============================================================================
+   RESPONSIVE - MOBILE
+   ============================================================================ */
+
 @media (max-width: 768px) {
     .keyboard-modal .modal-dialog {
         width: 100%;
@@ -86,7 +436,15 @@
         padding: 16px;
     }
 
-    #keyboard-modal-view {
+    .keyboard-header {
+        padding: 16px;
+    }
+
+    .keyboard-controls {
+        grid-template-columns: 1fr;
+    }
+
+    .keyboard-canvas-container {
         padding: 12px;
     }
 
@@ -101,32 +459,5 @@
 
     .keyboard-modal-info .info-text {
         font-size: 13px;
-    }
-}
-
-/* Animation d'ouverture */
-@keyframes slideInFromBottom {
-    from {
-        opacity: 0;
-        transform: translateY(50px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.keyboard-modal .modal-dialog {
-    animation: slideInFromBottom 0.3s ease-out;
-}
-
-/* Classe modal-xl pour grandes modals */
-.modal-xl {
-    max-width: 1200px;
-}
-
-@media (min-width: 1400px) {
-    .modal-xl {
-        max-width: 1400px;
     }
 }
