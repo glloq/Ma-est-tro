@@ -354,7 +354,17 @@ class MidiEditorModal {
 
         // Mettre à jour le piano roll si il existe
         if (this.pianoRoll) {
-            this.reloadPianoRoll();
+            // Recharger le piano roll avec la nouvelle séquence
+            this.pianoRoll.sequence = this.sequence;
+
+            // S'assurer que les couleurs sont toujours définies
+            this.pianoRoll.channelColors = this.channelColors;
+
+            // Forcer un redraw
+            if (typeof this.pianoRoll.redraw === 'function') {
+                this.pianoRoll.redraw();
+                this.log('debug', 'Piano roll redrawn after channel toggle');
+            }
         }
     }
 
@@ -795,6 +805,9 @@ class MidiEditorModal {
         // Attendre que le composant soit monté
         await new Promise(resolve => setTimeout(resolve, 100));
 
+        // Définir les couleurs des canaux MIDI sur le piano roll AVANT de charger la séquence
+        this.pianoRoll.channelColors = this.channelColors;
+
         // Initialiser les sliders de navigation
         this.initializeScrollSliders(maxTick, minNote, maxNote, xrange, noteRange, yoffset);
 
@@ -814,10 +827,10 @@ class MidiEditorModal {
             // Attendre un peu avant le redraw
             await new Promise(resolve => setTimeout(resolve, 50));
 
-            // Forcer un redraw
+            // Forcer un redraw pour appliquer les couleurs
             if (typeof this.pianoRoll.redraw === 'function') {
                 this.pianoRoll.redraw();
-                this.log('info', 'Piano roll redrawn');
+                this.log('info', 'Piano roll redrawn with channel colors');
             }
 
             // Vérifier que la sequence a bien été assignée
@@ -874,9 +887,6 @@ class MidiEditorModal {
                 this.syncFullSequenceFromPianoRoll();
             }
         }, 1000);
-
-        // Définir les couleurs des canaux MIDI sur le piano roll (natif, pas de rustine)
-        this.pianoRoll.channelColors = this.channelColors;
 
         this.updateStats();
     }
@@ -1024,6 +1034,9 @@ class MidiEditorModal {
 
         // Recharger la séquence
         this.pianoRoll.sequence = this.sequence;
+
+        // S'assurer que les couleurs sont toujours définies
+        this.pianoRoll.channelColors = this.channelColors;
 
         // Forcer le redraw
         if (typeof this.pianoRoll.redraw === 'function') {
