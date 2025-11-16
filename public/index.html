@@ -900,14 +900,30 @@
                     return;
                 }
 
-                connectedDevices.forEach(device => {
+                // Charger les réglages pour afficher les noms personnalisés
+                for (const device of connectedDevices) {
                     const li = document.createElement('li');
                     li.className = 'device-item';
+
+                    // Charger les réglages pour obtenir le nom personnalisé
+                    let displayName = device.name;
+                    try {
+                        const response = await api.sendCommand('instrument_get_settings', {
+                            deviceId: device.id
+                        });
+                        const settings = response.settings || {};
+                        if (settings.custom_name) {
+                            displayName = settings.custom_name;
+                        }
+                    } catch (error) {
+                        // Si on ne peut pas charger les settings, on utilise le nom par défaut
+                        console.warn(`Cannot load settings for ${device.id}:`, error);
+                    }
 
                     const deviceInfo = document.createElement('div');
                     deviceInfo.className = 'device-info-section';
                     deviceInfo.innerHTML = `
-                        <div class="device-name">${device.name}</div>
+                        <div class="device-name">${displayName}</div>
                         <div class="device-type">${device.type} • ${device.id}</div>
                     `;
 
@@ -926,7 +942,7 @@
                     li.appendChild(deviceInfo);
                     li.appendChild(deviceActions);
                     deviceList.appendChild(li);
-                });
+                }
 
                 log(`${devices.length} périphérique(s) trouvé(s), ${connectedDevices.length} connecté(s)`);
 
@@ -1429,6 +1445,9 @@
 
                 log('✓ Réglages sauvegardés', 'info');
                 closeInstrumentSettings();
+
+                // Rafraîchir la liste des périphériques pour afficher le nouveau nom
+                await loadDevices();
 
             } catch (error) {
                 log(`Erreur sauvegarde réglages: ${error.message}`, 'error');
