@@ -28,6 +28,11 @@ class KeyboardModal {
         this.availableDevices = [];
         this.selectedDevice = null;
 
+        // Cache pour optimiser les rechargements
+        this.devicesCache = null;
+        this.cacheTimestamp = 0;
+        this.CACHE_DURATION = 30000; // 30 secondes
+
         this.setupEventListeners();
 
         this.logger.info('KeyboardModal', '✓ Modal initialized v1.0.0');
@@ -235,17 +240,26 @@ class KeyboardModal {
         }
 
         try {
-            this.logger.info('KeyboardModal', 'Loading devices...');
+            // Vérifier si on peut utiliser le cache
+            const now = Date.now();
+            if (this.devicesCache && (now - this.cacheTimestamp) < this.CACHE_DURATION) {
+                this.logger.info('KeyboardModal', 'Using cached devices');
+                this.availableDevices = this.devicesCache;
+                this.emitDevicesLoaded();
+                return;
+            }
+
+            this.logger.info('KeyboardModal', 'Loading devices from backend...');
 
             // Charger les devices via l'API
             const devices = await this.backend.listDevices();
 
-            this.logger.info('KeyboardModal', `Total devices: ${devices.length}`, devices);
+            this.logger.info('KeyboardModal', `Total devices: ${devices.length}`);
 
             // Filtrer les devices actifs (status = 2)
             const activeDevices = devices.filter(d => d.status === 2);
 
-            this.logger.info('KeyboardModal', `Active devices (status=2): ${activeDevices.length}`, activeDevices);
+            this.logger.info('KeyboardModal', `Active devices (status=2): ${activeDevices.length}`);
 
             // Enrichir avec les noms personnalisés
             this.availableDevices = await Promise.all(activeDevices.map(async (device) => {
@@ -278,26 +292,35 @@ class KeyboardModal {
                 }
             }));
 
+            // Mettre en cache
+            this.devicesCache = this.availableDevices;
+            this.cacheTimestamp = now;
+
             this.logger.info('KeyboardModal', 'Devices enriched with custom names:', this.availableDevices);
 
             // Émettre l'événement pour la vue
-            if (this.eventBus) {
-                this.logger.info('KeyboardModal', 'Emitting keyboard:devices-loaded event');
-                this.eventBus.emit('keyboard:devices-loaded', {
-                    devices: this.availableDevices
-                });
-            } else {
-                this.logger.error('KeyboardModal', 'EventBus not available!');
-            }
+            this.emitDevicesLoaded();
+
         } catch (error) {
             this.logger.error('KeyboardModal', 'Failed to load devices:', error);
 
             // Émettre quand même un événement vide
-            if (this.eventBus) {
-                this.eventBus.emit('keyboard:devices-loaded', {
-                    devices: []
-                });
-            }
+            this.availableDevices = [];
+            this.emitDevicesLoaded();
+        }
+    }
+
+    /**
+     * Émet l'événement devices-loaded
+     */
+    emitDevicesLoaded() {
+        if (this.eventBus) {
+            this.logger.info('KeyboardModal', 'Emitting keyboard:devices-loaded event');
+            this.eventBus.emit('keyboard:devices-loaded', {
+                devices: this.availableDevices
+            });
+        } else {
+            this.logger.error('KeyboardModal', 'EventBus not available!');
         }
     }
 

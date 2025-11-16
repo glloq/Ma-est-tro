@@ -39,6 +39,10 @@ class KeyboardView extends BaseView {
             lastPlayedNote: null,
             keyboardLayout: 'azerty' // azerty ou qwerty
         };
+
+        // Debounce pour les boutons octave
+        this.octaveChangeDebounce = null;
+        this.octaveChangeDelay = 200; // ms
         
         // Configuration Canvas
         this.canvas = null;
@@ -396,7 +400,13 @@ class KeyboardView extends BaseView {
      * Change l'octave offset
      */
     handleOctaveChange(delta) {
-        this.log('debug', `handleOctaveChange called with delta=${delta}, current offset=${this.viewState.octaveOffset}`);
+        // Debounce pour éviter les clics multiples
+        if (this.octaveChangeDebounce) {
+            this.log('warn', 'Octave change debounced - ignoring multiple calls');
+            return;
+        }
+
+        this.log('info', `handleOctaveChange called with delta=${delta}, current offset=${this.viewState.octaveOffset}`);
 
         const newOffset = this.viewState.octaveOffset + delta;
 
@@ -421,6 +431,11 @@ class KeyboardView extends BaseView {
         this.emit('octave-changed', { offset: newOffset });
 
         this.log('info', `Octave changed: ${newOffset > 0 ? '+' : ''}${newOffset}`);
+
+        // Activer le debounce
+        this.octaveChangeDebounce = setTimeout(() => {
+            this.octaveChangeDebounce = null;
+        }, this.octaveChangeDelay);
     }
     
     /**
@@ -759,14 +774,14 @@ class KeyboardView extends BaseView {
     drawWhiteKey(x, note) {
         const ctx = this.ctx;
         const isActive = this.viewState.activeNotes.has(note);
-        
-        // Couleur
-        ctx.fillStyle = isActive ? '#4a9eff' : '#ffffff';
+
+        // Couleur - grisée quand active
+        ctx.fillStyle = isActive ? '#cccccc' : '#ffffff';
         ctx.fillRect(x, 0, this.keyWidth - 1, this.whiteKeyHeight);
-        
-        // Bordure
-        ctx.strokeStyle = '#333333';
-        ctx.lineWidth = 1;
+
+        // Bordure - plus marquée quand active
+        ctx.strokeStyle = isActive ? '#ff0000' : '#333333';
+        ctx.lineWidth = isActive ? 2 : 1;
         ctx.strokeRect(x, 0, this.keyWidth - 1, this.whiteKeyHeight);
         
         // Nom de la note (optionnel si espace suffisant)
@@ -785,19 +800,17 @@ class KeyboardView extends BaseView {
     drawBlackKey(x, note) {
         const ctx = this.ctx;
         const isActive = this.viewState.activeNotes.has(note);
-        
+
         const blackKeyWidth = this.keyWidth * 0.6;
-        
-        // Couleur
-        ctx.fillStyle = isActive ? '#4a9eff' : '#000000';
+
+        // Couleur - gris foncé quand active
+        ctx.fillStyle = isActive ? '#666666' : '#000000';
         ctx.fillRect(x, 0, blackKeyWidth, this.blackKeyHeight);
-        
-        // Bordure subtile
-        if (!isActive) {
-            ctx.strokeStyle = '#333333';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(x, 0, blackKeyWidth, this.blackKeyHeight);
-        }
+
+        // Bordure - rouge quand active
+        ctx.strokeStyle = isActive ? '#ff0000' : '#333333';
+        ctx.lineWidth = isActive ? 2 : 1;
+        ctx.strokeRect(x, 0, blackKeyWidth, this.blackKeyHeight);
     }
     
     // ========================================================================
@@ -885,27 +898,29 @@ class KeyboardView extends BaseView {
             this.log('warn', 'No device selected, cannot play note');
             return;
         }
-        
+
+        this.log('info', `playNote called: note=${note}, vel=${velocity}, device=${this.viewState.selectedDevice.id || this.viewState.selectedDevice.device_id}`);
+
         // Vérifier plage
         if (note < this.viewState.noteRange.min || note > this.viewState.noteRange.max) {
             this.log('warn', `Note ${note} outside valid range`);
             return;
         }
-        
+
         // Ajouter aux notes actives
         this.viewState.activeNotes.add(note);
-        
+
         // Redessiner
         this.drawKeyboard();
-        
+
         // ✅ Émettre événement vers controller
         this.emit('play-note', {
             note: note,
             velocity: velocity,
             channel: 0
         });
-        
-        this.log('debug', `Play note: ${this.getNoteNameFromMidi(note)} (${note}) vel=${velocity}`);
+
+        this.log('info', `Emitted keyboard:play-note for ${this.getNoteNameFromMidi(note)} (${note}) vel=${velocity}`);
     }
     
     /**
