@@ -185,6 +185,27 @@
         .file-list {
             list-style: none;
             margin-top: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .file-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .file-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .file-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .file-list::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
 
         .file-item {
@@ -195,10 +216,63 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            cursor: grab;
+            transition: all 0.2s;
         }
 
         .file-item:hover {
             background: #f3f4f6;
+        }
+
+        .file-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .file-item.drag-over {
+            border: 2px dashed #667eea;
+            background: #e0e7ff;
+        }
+
+        .folder-item {
+            padding: 12px;
+            background: #fef3c7;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .folder-item:hover {
+            background: #fde68a;
+        }
+
+        .folder-item.drag-over {
+            border: 2px dashed #f59e0b;
+            background: #fcd34d;
+        }
+
+        .folder-item.open {
+            background: #fde68a;
+        }
+
+        .folder-children {
+            margin-left: 20px;
+            padding-left: 12px;
+            border-left: 2px solid #e5e7eb;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .btn-group .btn {
+            flex: 1;
         }
 
         /* 🆕 Nouveaux styles pour les boutons et badges */
@@ -611,7 +685,11 @@
                     <h2>📁 Fichiers MIDI</h2>
 
                     <input type="file" id="fileInput" accept=".mid,.midi" multiple>
-                    <button class="btn" id="uploadBtn">📤 Envoyer</button>
+
+                    <div class="btn-group">
+                        <button class="btn" id="uploadBtn">📤 Envoyer</button>
+                        <button class="btn btn-secondary" id="createFolderBtn">📁 Nouveau dossier</button>
+                    </div>
 
                     <ul class="file-list" id="fileList">
                         <li class="info-text">Aucun fichier</li>
@@ -827,6 +905,14 @@
             }
         }
 
+        // Variable pour stocker la structure des dossiers
+        let folderStructure = JSON.parse(localStorage.getItem('midi_folders') || '{}');
+
+        // Sauvegarder la structure des dossiers
+        function saveFolderStructure() {
+            localStorage.setItem('midi_folders', JSON.stringify(folderStructure));
+        }
+
         // Charger les fichiers
         async function loadFiles() {
             try {
@@ -835,67 +921,45 @@
 
                 fileList.innerHTML = '';
 
-                if (files.length === 0) {
+                // Créer une structure de dossiers et fichiers
+                const rootItems = [];
+                const foldersMap = {};
+
+                // Créer tous les dossiers d'abord
+                for (const folderPath in folderStructure) {
+                    if (folderStructure[folderPath].parent === null) {
+                        rootItems.push({
+                            type: 'folder',
+                            name: folderPath,
+                            path: folderPath
+                        });
+                    }
+                    foldersMap[folderPath] = folderStructure[folderPath];
+                }
+
+                // Ajouter les fichiers
+                files.forEach(file => {
+                    const fileFolder = getFileFolder(file.id);
+                    if (!fileFolder) {
+                        rootItems.push({
+                            type: 'file',
+                            data: file
+                        });
+                    }
+                });
+
+                if (rootItems.length === 0) {
                     fileList.innerHTML = '<li class="info-text">Aucun fichier</li>';
                     return;
                 }
 
-                files.forEach(file => {
-                    // 🆕 Vérifier si le fichier est routé
-                    const routed = isFileRouted(file.id);
-
-                    // Échapper le nom de fichier pour l'utiliser en toute sécurité
-                    const escapedName = file.filename.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-
-                    // Liste
-                    const li = document.createElement('li');
-                    li.className = 'file-item' + (routed ? ' routed' : '');
-
-                    // Créer le contenu
-                    const fileNameSpan = document.createElement('span');
-                    fileNameSpan.className = 'file-name';
-                    fileNameSpan.innerHTML = `${file.filename}${routed ? '<span class="routed-badge">✓</span>' : ''}`;
-
-                    const actionsDiv = document.createElement('div');
-                    actionsDiv.className = 'file-actions';
-
-                    // Bouton Éditer
-                    const editBtn = document.createElement('button');
-                    editBtn.className = 'btn btn-secondary btn-sm';
-                    editBtn.title = 'Éditer';
-                    editBtn.textContent = '✏️';
-                    editBtn.onclick = () => editFile(file.id, file.filename);
-
-                    // Bouton Router
-                    const routeBtn = document.createElement('button');
-                    routeBtn.className = `btn ${routed ? 'btn-success' : 'btn-secondary'} btn-sm`;
-                    routeBtn.title = 'Configurer le routage';
-                    routeBtn.textContent = '🔀';
-                    routeBtn.onclick = () => configureRouting(file.id, file.filename);
-
-                    // Bouton Play
-                    const playBtn = document.createElement('button');
-                    playBtn.className = `btn ${routed ? 'btn-success' : 'btn-warning'} btn-sm`;
-                    playBtn.title = routed ? 'Lire le fichier' : 'Configurer le routage avant de lire';
-                    playBtn.textContent = routed ? '▶️' : '⚠️▶️';
-                    playBtn.onclick = () => playFile(file.id, file.filename);
-
-                    // Bouton Supprimer
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'btn btn-danger btn-sm';
-                    deleteBtn.title = 'Supprimer';
-                    deleteBtn.textContent = '🗑️';
-                    deleteBtn.onclick = () => deleteFile(file.id);
-
-                    actionsDiv.appendChild(editBtn);
-                    actionsDiv.appendChild(routeBtn);
-                    actionsDiv.appendChild(playBtn);
-                    actionsDiv.appendChild(deleteBtn);
-
-                    li.appendChild(fileNameSpan);
-                    li.appendChild(actionsDiv);
-
-                    fileList.appendChild(li);
+                // Afficher les éléments
+                rootItems.forEach(item => {
+                    if (item.type === 'folder') {
+                        fileList.appendChild(createFolderElement(item.path, files));
+                    } else {
+                        fileList.appendChild(createFileElement(item.data));
+                    }
                 });
 
                 log(`${files.length} fichier(s) chargé(s)`);
@@ -903,6 +967,298 @@
             } catch (error) {
                 log(`Erreur chargement fichiers: ${error.message}`, 'error');
             }
+        }
+
+        // Obtenir le dossier d'un fichier
+        function getFileFolder(fileId) {
+            for (const folderPath in folderStructure) {
+                if (folderStructure[folderPath].files && folderStructure[folderPath].files.includes(fileId)) {
+                    return folderPath;
+                }
+            }
+            return null;
+        }
+
+        // Créer l'élément HTML pour un fichier
+        function createFileElement(file) {
+            const routed = isFileRouted(file.id);
+
+            const li = document.createElement('li');
+            li.className = 'file-item' + (routed ? ' routed' : '');
+            li.draggable = true;
+            li.dataset.fileId = file.id;
+            li.dataset.fileName = file.filename;
+
+            // Événements drag and drop
+            li.addEventListener('dragstart', handleDragStart);
+            li.addEventListener('dragend', handleDragEnd);
+            li.addEventListener('dragover', handleDragOver);
+            li.addEventListener('drop', handleDrop);
+
+            const fileNameSpan = document.createElement('span');
+            fileNameSpan.className = 'file-name';
+            fileNameSpan.innerHTML = `${file.filename}${routed ? '<span class="routed-badge">✓</span>' : ''}`;
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'file-actions';
+
+            // Bouton Éditer
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-secondary btn-sm';
+            editBtn.title = 'Éditer';
+            editBtn.textContent = '✏️';
+            editBtn.onclick = () => editFile(file.id, file.filename);
+
+            // Bouton Router
+            const routeBtn = document.createElement('button');
+            routeBtn.className = `btn ${routed ? 'btn-success' : 'btn-secondary'} btn-sm`;
+            routeBtn.title = 'Configurer le routage';
+            routeBtn.textContent = '🔀';
+            routeBtn.onclick = () => configureRouting(file.id, file.filename);
+
+            // Bouton Play
+            const playBtn = document.createElement('button');
+            playBtn.className = `btn ${routed ? 'btn-success' : 'btn-warning'} btn-sm`;
+            playBtn.title = routed ? 'Lire le fichier' : 'Configurer le routage avant de lire';
+            playBtn.textContent = routed ? '▶️' : '⚠️▶️';
+            playBtn.onclick = () => playFile(file.id, file.filename);
+
+            // Bouton Supprimer
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-danger btn-sm';
+            deleteBtn.title = 'Supprimer';
+            deleteBtn.textContent = '🗑️';
+            deleteBtn.onclick = () => deleteFile(file.id);
+
+            actionsDiv.appendChild(editBtn);
+            actionsDiv.appendChild(routeBtn);
+            actionsDiv.appendChild(playBtn);
+            actionsDiv.appendChild(deleteBtn);
+
+            li.appendChild(fileNameSpan);
+            li.appendChild(actionsDiv);
+
+            return li;
+        }
+
+        // Créer l'élément HTML pour un dossier
+        function createFolderElement(folderPath, allFiles) {
+            const li = document.createElement('li');
+            li.className = 'folder-item';
+            li.dataset.folderPath = folderPath;
+
+            // Événements drag and drop
+            li.addEventListener('dragover', handleDragOver);
+            li.addEventListener('drop', handleDrop);
+            li.addEventListener('dragleave', handleDragLeave);
+
+            const folderNameSpan = document.createElement('span');
+            folderNameSpan.className = 'file-name';
+            folderNameSpan.textContent = `📁 ${folderPath}`;
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'file-actions';
+
+            // Bouton pour ouvrir/fermer
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = 'btn btn-secondary btn-sm';
+            toggleBtn.title = 'Ouvrir/Fermer';
+            toggleBtn.textContent = '▼';
+            toggleBtn.onclick = (e) => {
+                e.stopPropagation();
+                toggleFolder(folderPath);
+            };
+
+            // Bouton Supprimer (seulement si vide)
+            const folderFiles = folderStructure[folderPath].files || [];
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-danger btn-sm';
+            deleteBtn.title = folderFiles.length > 0 ? 'Le dossier doit être vide' : 'Supprimer le dossier';
+            deleteBtn.textContent = '🗑️';
+            deleteBtn.disabled = folderFiles.length > 0;
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                deleteFolder(folderPath);
+            };
+
+            actionsDiv.appendChild(toggleBtn);
+            actionsDiv.appendChild(deleteBtn);
+
+            li.appendChild(folderNameSpan);
+            li.appendChild(actionsDiv);
+
+            // Ajouter les fichiers du dossier (si ouvert)
+            if (folderStructure[folderPath].open) {
+                const childrenDiv = document.createElement('div');
+                childrenDiv.className = 'folder-children';
+                childrenDiv.id = `folder-${folderPath}`;
+
+                const folderFiles = folderStructure[folderPath].files || [];
+                folderFiles.forEach(fileId => {
+                    const file = allFiles.find(f => f.id === fileId);
+                    if (file) {
+                        childrenDiv.appendChild(createFileElement(file));
+                    }
+                });
+
+                li.appendChild(childrenDiv);
+                toggleBtn.textContent = '▲';
+            }
+
+            return li;
+        }
+
+        // Créer un nouveau dossier
+        async function createFolder() {
+            const folderName = prompt('Nom du dossier:');
+            if (!folderName || folderName.trim() === '') {
+                return;
+            }
+
+            const cleanName = folderName.trim();
+
+            // Vérifier si le dossier existe déjà
+            if (folderStructure[cleanName]) {
+                alert(`Le dossier "${cleanName}" existe déjà`);
+                return;
+            }
+
+            // Créer le dossier
+            folderStructure[cleanName] = {
+                parent: null,
+                files: [],
+                open: false
+            };
+
+            saveFolderStructure();
+            log(`📁 Dossier "${cleanName}" créé`);
+            loadFiles();
+        }
+
+        // Supprimer un dossier (seulement si vide)
+        async function deleteFolder(folderPath) {
+            if (!folderStructure[folderPath]) {
+                return;
+            }
+
+            const folderFiles = folderStructure[folderPath].files || [];
+            if (folderFiles.length > 0) {
+                alert('Le dossier doit être vide pour être supprimé');
+                return;
+            }
+
+            if (!confirm(`Supprimer le dossier "${folderPath}" ?`)) {
+                return;
+            }
+
+            delete folderStructure[folderPath];
+            saveFolderStructure();
+            log(`🗑️ Dossier "${folderPath}" supprimé`);
+            loadFiles();
+        }
+
+        // Ouvrir/fermer un dossier
+        function toggleFolder(folderPath) {
+            if (!folderStructure[folderPath]) {
+                return;
+            }
+
+            folderStructure[folderPath].open = !folderStructure[folderPath].open;
+            saveFolderStructure();
+            loadFiles();
+        }
+
+        // Variables pour le drag and drop
+        let draggedElement = null;
+        let draggedFileId = null;
+
+        // Gérer le début du drag
+        function handleDragStart(e) {
+            draggedElement = e.currentTarget;
+            draggedFileId = e.currentTarget.dataset.fileId;
+            e.currentTarget.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', e.currentTarget.innerHTML);
+        }
+
+        // Gérer la fin du drag
+        function handleDragEnd(e) {
+            e.currentTarget.classList.remove('dragging');
+
+            // Retirer toutes les classes drag-over
+            document.querySelectorAll('.drag-over').forEach(el => {
+                el.classList.remove('drag-over');
+            });
+
+            draggedElement = null;
+            draggedFileId = null;
+        }
+
+        // Gérer le drag over
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+
+            e.dataTransfer.dropEffect = 'move';
+
+            // Ajouter la classe drag-over
+            const target = e.currentTarget;
+            if (target !== draggedElement) {
+                target.classList.add('drag-over');
+            }
+
+            return false;
+        }
+
+        // Gérer le drag leave
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        // Gérer le drop
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+
+            e.currentTarget.classList.remove('drag-over');
+
+            if (!draggedFileId) {
+                return false;
+            }
+
+            const targetFolder = e.currentTarget.dataset.folderPath;
+
+            if (targetFolder) {
+                // Déplacer le fichier vers le dossier
+                moveFileToFolder(draggedFileId, targetFolder);
+            }
+
+            return false;
+        }
+
+        // Déplacer un fichier vers un dossier
+        function moveFileToFolder(fileId, targetFolder) {
+            // Retirer le fichier de son dossier actuel
+            for (const folderPath in folderStructure) {
+                const files = folderStructure[folderPath].files || [];
+                const index = files.indexOf(fileId);
+                if (index > -1) {
+                    files.splice(index, 1);
+                    folderStructure[folderPath].files = files;
+                }
+            }
+
+            // Ajouter le fichier au nouveau dossier
+            if (!folderStructure[targetFolder].files) {
+                folderStructure[targetFolder].files = [];
+            }
+            folderStructure[targetFolder].files.push(fileId);
+
+            saveFolderStructure();
+            log(`📦 Fichier déplacé vers "${targetFolder}"`);
+            loadFiles();
         }
 
         // Charger les périphériques
@@ -1519,6 +1875,7 @@
         // ========== ÉVÉNEMENTS ==========
 
         document.getElementById('uploadBtn').addEventListener('click', uploadFile);
+        document.getElementById('createFolderBtn').addEventListener('click', createFolder);
         document.getElementById('scanDevicesBtn').addEventListener('click', loadDevices);
 
         // Event listeners pour les contrôles du header
