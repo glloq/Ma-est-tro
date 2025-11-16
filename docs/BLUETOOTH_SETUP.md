@@ -75,6 +75,20 @@ KERNEL=="hci0", RUN+="/bin/hciconfig hci0 up"
 
 Cette règle garantit que l'adaptateur Bluetooth est automatiquement activé au démarrage.
 
+### 6. Configuration sudoers pour le contrôle Bluetooth
+
+Fichier : `/etc/sudoers.d/bluetooth-hciconfig`
+
+```bash
+# Allow user to control Bluetooth adapter without password
+user ALL=(ALL) NOPASSWD: /usr/bin/hciconfig hci0 up
+user ALL=(ALL) NOPASSWD: /usr/bin/hciconfig hci0 down
+```
+
+**Pourquoi ?** Cette configuration permet au serveur MidiMind d'activer/désactiver le Bluetooth via le bouton dans l'interface web sans demander de mot de passe.
+
+**Sécurité** : Seules les commandes `hciconfig hci0 up` et `hciconfig hci0 down` sont autorisées sans mot de passe. Aucun autre accès sudo n'est accordé.
+
 ## ✅ Vérification
 
 ### 1. Vérifier le service Bluetooth
@@ -109,7 +123,27 @@ getcap $(which node)
 
 Sortie attendue : `cap_net_raw+eip`
 
-### 5. Scanner les périphériques BLE (test)
+### 5. Vérifier les permissions sudoers
+
+```bash
+sudo -l | grep hciconfig
+```
+
+Sortie attendue :
+```
+NOPASSWD: /usr/bin/hciconfig hci0 up
+NOPASSWD: /usr/bin/hciconfig hci0 down
+```
+
+### 6. Tester l'activation Bluetooth sans mot de passe
+
+```bash
+sudo hciconfig hci0 up
+```
+
+Devrait s'exécuter **sans demander de mot de passe**.
+
+### 7. Scanner les périphériques BLE (test)
 
 ```bash
 sudo hcitool lescan
@@ -241,13 +275,17 @@ Si vous rencontrez des problèmes :
 
 ## 📋 Checklist de configuration
 
-- [ ] Packages Bluetooth installés
-- [ ] Service Bluetooth actif
+- [ ] Packages Bluetooth installés (bluez, bluetooth, libbluetooth-dev)
+- [ ] Service Bluetooth actif (systemctl status bluetooth)
 - [ ] Utilisateur ajouté au groupe bluetooth
-- [ ] Session rechargée (logout/login ou newgrp)
-- [ ] Capacités Node.js configurées
-- [ ] Règle udev créée
-- [ ] Adaptateur Bluetooth UP
-- [ ] Test de scan réussi
+- [ ] Session rechargée (logout/login ou newgrp bluetooth)
+- [ ] Capacités Node.js configurées (cap_net_raw+eip)
+- [ ] Règle udev créée (/etc/udev/rules.d/99-bluetooth.rules)
+- [ ] **Sudoers configuré** (/etc/sudoers.d/bluetooth-hciconfig)
+- [ ] **Test sudo sans mot de passe réussi** (sudo hciconfig hci0 up)
+- [ ] Adaptateur Bluetooth UP (hciconfig hci0)
+- [ ] Test de scan réussi (sudo hcitool lescan)
 
 Une fois tous les éléments cochés, MidiMind devrait pouvoir scanner et connecter des instruments BLE MIDI ! 🎵
+
+**Note importante** : Si le bouton "Activer le Bluetooth" dans l'interface ne fonctionne pas, vérifiez en priorité la configuration sudoers (point 7 de la checklist).
