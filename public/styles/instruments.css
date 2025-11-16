@@ -913,6 +913,419 @@
 }
 
 /* ============================================================================
+   DEVICE CARDS & ACTIONS
+   ============================================================================ */
+
+.devices-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 10px 0;
+}
+
+.device-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: white;
+    border: 1px solid var(--instrument-border);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px var(--instrument-shadow);
+    transition: all 0.2s;
+}
+
+.device-card:hover {
+    box-shadow: 0 4px 12px var(--instrument-shadow);
+    transform: translateY(-2px);
+}
+
+.device-card.connected {
+    border-left: 4px solid var(--instrument-success);
+}
+
+.device-card.available {
+    border-left: 4px solid var(--instrument-primary);
+}
+
+.device-icon {
+    font-size: 32px;
+    flex-shrink: 0;
+}
+
+.device-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.device-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.device-type {
+    font-size: 11px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.device-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ccc;
+}
+
+.status-indicator.active {
+    background: var(--instrument-success);
+    box-shadow: 0 0 8px rgba(46, 204, 113, 0.5);
+}
+
+.status-indicator.idle {
+    background: var(--instrument-warning);
+}
+
+.status-text {
+    font-size: 12px;
+    color: #666;
+}
+
+.device-ports {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+}
+
+.device-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.device-actions button {
+    padding: 8px 12px;
+    border: 1px solid var(--instrument-border);
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+}
+
+.device-actions button:hover {
+    background: #f8f9fa;
+    transform: scale(1.05);
+}
+
+.device-actions .btn-settings {
+    border-color: var(--instrument-primary);
+    color: var(--instrument-primary);
+}
+
+.device-actions .btn-settings:hover {
+    background: var(--instrument-primary);
+    color: white;
+}
+
+.device-actions .btn-test {
+    border-color: var(--instrument-success);
+    color: var(--instrument-success);
+}
+
+.device-actions .btn-test:hover {
+    background: var(--instrument-success);
+    color: white;
+}
+
+.device-actions .btn-disconnect {
+    border-color: var(--instrument-error);
+    color: var(--instrument-error);
+}
+
+.device-actions .btn-disconnect:hover {
+    background: var(--instrument-error);
+    color: white;
+}
+
+.device-actions .btn-connect {
+    border-color: var(--instrument-primary);
+    color: var(--instrument-primary);
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+.device-actions .btn-connect:hover {
+    background: var(--instrument-primary);
+    color: white;
+}
+
+.devices-empty {
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.devices-empty .empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.4;
+}
+
+.devices-empty p {
+    color: #666;
+    margin: 8px 0;
+}
+
+.devices-empty .text-muted {
+    color: #999;
+    font-size: 14px;
+}
+
+.devices-scanning {
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.devices-scanning .spinner {
+    margin: 0 auto 20px;
+}
+
+.devices-scanning p {
+    color: #666;
+    font-size: 14px;
+}
+
+/* ============================================================================
+   INSTRUMENT SETTINGS MODAL
+   ============================================================================ */
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.instrument-settings-modal .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    border-bottom: 1px solid var(--instrument-border);
+}
+
+.instrument-settings-modal .modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    color: #333;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.modal-close:hover {
+    background: #f8f9fa;
+    color: #333;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.settings-section {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--instrument-border);
+}
+
+.settings-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.settings-section h3 {
+    margin: 0 0 16px;
+    font-size: 16px;
+    color: var(--instrument-primary);
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--instrument-border);
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--instrument-primary);
+}
+
+.form-control:disabled {
+    background: #f8f9fa;
+    color: #999;
+    cursor: not-allowed;
+}
+
+.form-text {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #666;
+    line-height: 1.4;
+}
+
+.identity-info {
+    margin-top: 16px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border-left: 4px solid var(--instrument-success);
+}
+
+.info-group {
+    margin-bottom: 8px;
+}
+
+.info-group:last-child {
+    margin-bottom: 0;
+}
+
+.info-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.info-value {
+    font-size: 13px;
+    color: #333;
+    font-weight: 500;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding: 16px 20px;
+    border-top: 1px solid var(--instrument-border);
+    background: #f8f9fa;
+}
+
+.btn-primary {
+    padding: 10px 20px;
+    background: var(--instrument-primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary:hover {
+    background: #5568d3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-secondary {
+    padding: 10px 20px;
+    background: white;
+    color: #666;
+    border: 1px solid var(--instrument-border);
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background: #f8f9fa;
+    border-color: #999;
+}
+
+/* ============================================================================
    RESPONSIVE
    ============================================================================ */
 
