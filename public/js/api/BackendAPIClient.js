@@ -277,16 +277,20 @@ class BackendAPIClient {
      * @param {number} channel - MIDI channel (0-15)
      */
     async sendNoteOn(deviceId, note, velocity, channel = 0) {
+        if (!this.isConnected()) {
+            throw new Error('WebSocket not connected');
+        }
+
         // Envoyer raw MIDI data comme MidiBridge
         // 0x90 = Note On, ajouter channel (0-15)
         const midiData = [0x90 + channel, note & 0x7F, velocity & 0x7F];
 
-        return this.send({
+        this.ws.send(JSON.stringify({
             type: 'midi_out',
             data: midiData,
             device_id: deviceId,
             timestamp: Date.now()
-        });
+        }));
     }
 
     /**
@@ -296,16 +300,20 @@ class BackendAPIClient {
      * @param {number} channel - MIDI channel (0-15)
      */
     async sendNoteOff(deviceId, note, channel = 0) {
+        if (!this.isConnected()) {
+            throw new Error('WebSocket not connected');
+        }
+
         // Envoyer raw MIDI data comme MidiBridge
         // 0x80 = Note Off, ajouter channel (0-15)
         const midiData = [0x80 + channel, note & 0x7F, 0];
 
-        return this.send({
+        this.ws.send(JSON.stringify({
             type: 'midi_out',
             data: midiData,
             device_id: deviceId,
             timestamp: Date.now()
-        });
+        }));
     }
 
     // ========================================================================
