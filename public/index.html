@@ -834,7 +834,10 @@
                 <div class="card">
                     <h2>🎛️ Périphériques MIDI</h2>
 
-                    <button class="btn" id="scanDevicesBtn">🔍&nbsp;&nbsp;Scanner</button>
+                    <div class="btn-group">
+                        <button class="btn" id="scanDevicesBtn">🔌&nbsp;&nbsp;Scan USB</button>
+                        <button class="btn" id="scanBluetoothBtn" style="background: #9b59b6 !important;">📡&nbsp;&nbsp;Scan Bluetooth</button>
+                    </div>
 
                     <ul class="device-list" id="deviceList">
                         <li class="info-text">Aucun périphérique</li>
@@ -1002,6 +1005,9 @@
 
         // 🆕 Instance du modal d'édition MIDI
         let midiEditorModal = null;
+
+        // 🆕 Instance du modal de scan Bluetooth
+        let bluetoothScanModal = null;
 
         // Charger la config depuis localStorage
         function loadRoutingConfig() {
@@ -2311,6 +2317,15 @@
         document.getElementById('createFolderBtn').addEventListener('click', createFolder);
         document.getElementById('scanDevicesBtn').addEventListener('click', loadDevices);
 
+        // Event listener pour le bouton de scan Bluetooth
+        document.getElementById('scanBluetoothBtn').addEventListener('click', () => {
+            if (bluetoothScanModal) {
+                bluetoothScanModal.open();
+            } else {
+                log('Bluetooth modal not initialized', 'error');
+            }
+        });
+
         // Event listeners pour les contrôles du header
         document.getElementById('headerPlayPauseBtn').addEventListener('click', togglePlayPause);
         document.getElementById('headerStopBtn').addEventListener('click', stopPlayback);
@@ -2398,6 +2413,103 @@
             loadRoutingConfig();
 
             await connectWebSocket();
+
+            // 🆕 Initialiser la modal Bluetooth après connexion WebSocket
+            if (typeof BluetoothScanModal !== 'undefined') {
+                bluetoothScanModal = new BluetoothScanModal(api);
+                log('✓ Modal Bluetooth initialisée', 'info');
+
+                // Handlers pour les requêtes de la modal vers le backend
+                api.on('bluetooth:scan_requested', async () => {
+                    try {
+                        log('🔍 Lancement du scan Bluetooth...', 'info');
+                        const response = await api.sendCommand('bluetooth.scan', { duration: 5 });
+                        const devices = response.devices || [];
+
+                        // Émettre les résultats pour la modal
+                        api.emit('bluetooth:scanned', { devices: devices });
+                        log(`✓ Scan Bluetooth terminé: ${devices.length} périphériques trouvés`, 'info');
+                    } catch (error) {
+                        log(`❌ Erreur scan Bluetooth: ${error.message}`, 'error');
+                        api.emit('bluetooth:scan_error', { error: error.message });
+                    }
+                });
+
+                api.on('bluetooth:paired_requested', async () => {
+                    try {
+                        const response = await api.sendCommand('bluetooth.paired', {});
+                        const devices = response.devices || [];
+
+                        // Émettre la liste pour la modal
+                        api.emit('bluetooth:paired_list', { devices: devices });
+                    } catch (error) {
+                        log(`❌ Erreur récupération appareils appairés: ${error.message}`, 'error');
+                        api.emit('bluetooth:paired_list', { devices: [] });
+                    }
+                });
+
+                api.on('bluetooth:pair_requested', async (data) => {
+                    try {
+                        const address = data.address || data.device_id;
+                        const name = data.name || 'Appareil Bluetooth';
+
+                        log(`🔗 Appairage de ${name}...`, 'info');
+                        await api.sendCommand('bluetooth.pair', { address: address, pin: data.pin || '' });
+
+                        api.emit('bluetooth:paired', { device_id: address, address: address });
+                        log(`✓ ${name} appairé avec succès`, 'info');
+
+                        loadDevices(); // Rafraîchir la liste des périphériques
+                    } catch (error) {
+                        log(`❌ Erreur appairage: ${error.message}`, 'error');
+                    }
+                });
+
+                api.on('bluetooth:unpair_requested', async (data) => {
+                    try {
+                        const address = data.address || data.device_id;
+
+                        log(`🔓 Désappairage de ${address}...`, 'info');
+                        await api.sendCommand('bluetooth.unpair', { address: address });
+
+                        api.emit('bluetooth:unpaired', { device_id: address });
+                        log(`✓ Appareil désappairé`, 'info');
+                    } catch (error) {
+                        log(`❌ Erreur désappairage: ${error.message}`, 'error');
+                    }
+                });
+
+                api.on('bluetooth:connect_requested', async (data) => {
+                    try {
+                        const address = data.address || data.device_id;
+
+                        log(`🔌 Connexion à ${address}...`, 'info');
+                        await api.sendCommand('bluetooth.connect', { address: address });
+
+                        api.emit('bluetooth:connected', { device_id: address });
+                        log(`✓ Connecté à ${address}`, 'info');
+
+                        loadDevices(); // Rafraîchir la liste des périphériques
+                    } catch (error) {
+                        log(`❌ Erreur connexion: ${error.message}`, 'error');
+                    }
+                });
+
+                // Gérer les événements de réponse Bluetooth
+                api.on('bluetooth:scanned', (data) => {
+                    log(`✓ Scan Bluetooth terminé: ${(data.devices || []).length} périphériques trouvés`, 'info');
+                });
+
+                api.on('bluetooth:paired', (data) => {
+                    log(`✓ Appareil Bluetooth appairé: ${data.device_id}`, 'info');
+                });
+
+                api.on('bluetooth:connected', (data) => {
+                    log(`✓ Appareil Bluetooth connecté: ${data.device_id}`, 'info');
+                });
+            } else {
+                log('⚠️ BluetoothScanModal non disponible', 'warning');
+            }
 
             // Afficher l'app
             document.getElementById('loading').classList.add('hidden');
