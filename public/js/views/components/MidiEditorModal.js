@@ -787,20 +787,21 @@ class MidiEditorModal {
         const centerNote = Math.floor((minNote + maxNote) / 2);
         const yoffset = Math.max(0, centerNote - Math.floor(noteRange / 2)); // Centrer verticalement
 
-        // Calculer la résolution de grille appropriée en fonction du zoom (transition progressive)
+        // Calculer la résolution de grille appropriée en fonction du zoom
+        // grid = pas en ticks entre les lignes (petit = beaucoup de lignes, grand = peu de lignes)
         let gridValue;
-        if (xrange < 1000) {
-            gridValue = 16; // Très zoomé : 16th notes
-        } else if (xrange < 2500) {
-            gridValue = 8;  // Zoomé : 8th notes
-        } else if (xrange < 6000) {
-            gridValue = 4;  // Normal : quarter notes
-        } else if (xrange < 15000) {
-            gridValue = 2;  // Dézoomé : half notes
-        } else if (xrange < 30000) {
-            gridValue = 1;  // Très dézoomé : whole notes
+        if (xrange < 500) {
+            gridValue = 1;  // Ultra zoomé : ligne tous les 1 tick
+        } else if (xrange < 1500) {
+            gridValue = 2;  // Très zoomé : ligne tous les 2 ticks
+        } else if (xrange < 4000) {
+            gridValue = 4;  // Zoomé : ligne tous les 4 ticks
+        } else if (xrange < 10000) {
+            gridValue = 8;  // Normal : ligne tous les 8 ticks
+        } else if (xrange < 25000) {
+            gridValue = 16; // Dézoomé : ligne tous les 16 ticks
         } else {
-            gridValue = 2;  // Ultra dézoomé : revenir à half notes pour garder des repères
+            gridValue = 32; // Très dézoomé : ligne tous les 32 ticks
         }
 
         this.pianoRoll.setAttribute('width', width);
@@ -1078,19 +1079,21 @@ class MidiEditorModal {
 
         let gridValue;
 
-        // Adapter la résolution de la grille selon le zoom (transition progressive)
-        if (xrange < 1000) {
-            gridValue = 16; // Très zoomé : 16th notes (doubles croches)
-        } else if (xrange < 2500) {
-            gridValue = 8;  // Zoomé : 8th notes (croches)
-        } else if (xrange < 6000) {
-            gridValue = 4;  // Normal : quarter notes (noires)
-        } else if (xrange < 15000) {
-            gridValue = 2;  // Dézoomé : half notes (blanches)
-        } else if (xrange < 30000) {
-            gridValue = 1;  // Très dézoomé : whole notes (rondes)
+        // Adapter la résolution de la grille selon le zoom
+        // grid = pas en ticks entre les lignes (petit = beaucoup de lignes, grand = peu de lignes)
+        // Donc: plus on est zoomé (petit xrange), plus grid doit être PETIT
+        if (xrange < 500) {
+            gridValue = 1;  // Ultra zoomé : ligne tous les 1 tick (maximum de détails)
+        } else if (xrange < 1500) {
+            gridValue = 2;  // Très zoomé : ligne tous les 2 ticks
+        } else if (xrange < 4000) {
+            gridValue = 4;  // Zoomé : ligne tous les 4 ticks (quarter notes)
+        } else if (xrange < 10000) {
+            gridValue = 8;  // Normal : ligne tous les 8 ticks (8th notes)
+        } else if (xrange < 25000) {
+            gridValue = 16; // Dézoomé : ligne tous les 16 ticks (16th notes)
         } else {
-            gridValue = 2;  // Ultra dézoomé : revenir à half notes pour garder des repères
+            gridValue = 32; // Très dézoomé : ligne tous les 32 ticks
         }
 
         // Mettre à jour les deux : attribut ET propriété
