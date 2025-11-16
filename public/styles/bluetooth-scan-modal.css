@@ -55,8 +55,8 @@
     max-width: 650px;
     width: 92%;
     max-height: 90vh;
-    display: flex;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
     animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
 }
@@ -81,13 +81,15 @@
    ============================================================================ */
 
 .bluetooth-scan-modal .modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 24px;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 20px 24px !important;
+    margin: 0 !important;
     border-bottom: 2px solid var(--bluetooth-border);
     background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
     border-radius: 12px 12px 0 0;
+    flex-direction: row !important;
 }
 
 .bluetooth-scan-modal .modal-header h2 {
@@ -123,9 +125,10 @@
    ============================================================================ */
 
 .bluetooth-scan-modal .modal-body {
-    padding: 24px;
-    overflow-y: auto;
-    flex: 1;
+    padding: 24px !important;
+    overflow-y: auto !important;
+    flex: 1 !important;
+    display: block !important;
 }
 
 /* ============================================================================
