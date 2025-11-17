@@ -12,74 +12,95 @@ Gérez vos appareils MIDI, routez les canaux, éditez les fichiers MIDI et jouez
 
 ## 🎯 Capacités de l'Application
 
-MidiMind 5.0 est un système d'orchestration MIDI professionnel conçu pour Raspberry Pi, permettant de :
+MidiMind 5.0 est un système de gestion MIDI pour Raspberry Pi avec interface web moderne.
 
-### 🎹 Gestion Complète des Périphériques MIDI
-- **Détection Automatique** : Scan des périphériques USB, Bluetooth (BLE) et réseau (RTP-MIDI)
-- **Support Multi-Connexions** : Gérez plusieurs claviers, synthétiseurs, contrôleurs simultanément
-- **Périphériques Virtuels** : Créez des ports MIDI virtuels pour le routage inter-applications
-- **Clavier MIDI Virtuel** : Interface de clavier jouable directement dans le navigateur
-- **Surveillance en Temps Réel** : Visualisez tous les messages MIDI (Note On/Off, Control Change, Program Change, etc.)
+### 🎹 Gestion des Périphériques MIDI
+- **Scan USB** : Détection des périphériques MIDI connectés en USB
+- **Scan Bluetooth** : Découverte et connexion de périphériques MIDI BLE
+- **Scan Réseau** : Découverte de périphériques RTP-MIDI sur le réseau local
+- **Affichage en Temps Réel** : Liste des périphériques disponibles avec leur statut
+- **Clavier MIDI Virtuel** : Clavier jouable directement dans le navigateur pour tester les périphériques
 
-### 🎵 Édition et Lecture de Fichiers MIDI
-- **Gestionnaire de Fichiers** : Upload/download de fichiers MIDI (.mid, .midi)
-- **Organisation** : Création de dossiers, tri, recherche de fichiers
-- **Éditeur Piano Roll** : Édition visuelle avec zoom, déplacement, ajout/suppression de notes
-- **Lecture Avancée** :
-  - Contrôle du tempo (30-300 BPM)
-  - Transposition (-24 à +24 demi-tons)
-  - Mode boucle
-  - Compensation automatique de latence par canal
-- **Playlists** : Files d'attente de lecture avec lecture consécutive
+### 📁 Gestion des Fichiers MIDI
+- **Upload de Fichiers** : Envoi de fichiers .mid et .midi depuis votre ordinateur
+- **Organisation en Dossiers** : Créez des dossiers pour organiser vos fichiers
+- **Drag & Drop** : Déplacez les fichiers entre dossiers par glisser-déposer
+- **Suppression** : Supprimez fichiers et dossiers avec confirmation
+- **Éditeur Piano Roll** : Visualisez et éditez vos fichiers MIDI avec un éditeur graphique
+  - Visualisation des notes par canal avec coloration
+  - Zoom et défilement
+  - Édition des notes (ajout, déplacement, suppression)
 
-### 🔀 Routage MIDI Avancé
+### 🎵 Lecture de Fichiers MIDI
+- **Contrôles de Lecture** : Play, Pause, Stop depuis l'interface
+- **Barre de Progression** : Visualisez la position de lecture en temps réel
+- **Affichage du Temps** : Position actuelle et durée totale
 - **Routage par Canal** : Assignez chaque canal MIDI (1-16) à un périphérique différent
-- **Filtrage** : Filtrez les types de messages (notes, CC, pitch bend, etc.)
-- **Mapping de Canaux** : Redirigez un canal source vers un canal destination différent
-- **Latence par Périphérique** : Compensation individuelle de 0 à 500ms par canal
-- **Presets** : Sauvegardez et chargez des configurations de routage
+  - Configuration sauvegardée par fichier
+  - Sélection du périphérique de sortie pour chaque canal
+  - Indicateur visuel des canaux routés
+- **Compensation de Latence par Instrument** : Synchronisation précise
+  - Configurez un délai (`sync_delay`) pour chaque instrument via le bouton ⚙️ Réglages
+  - Chaque canal utilise le délai de son instrument assigné
+  - Permet de compenser les différences de latence entre instruments (USB, Bluetooth, etc.)
+  - Délai ajustable de -2147483648 à +2147483647 ms (valeurs négatives pour avancer l'instrument)
 
-### 🌐 Interface Web Moderne
-- **Responsive** : Fonctionne sur PC, tablette, smartphone
-- **Temps Réel** : Mise à jour instantanée via WebSocket
-- **Drag & Drop** : Glissez-déposez vos fichiers MIDI
-- **Console de Debug** : Logs en temps réel pour le diagnostic
-- **Commandes Clavier** : Raccourcis pour lecture, pause, stop
+### 🌐 Interface Web
+- **Responsive** : Interface adaptée pour PC, tablette et smartphone
+- **Temps Réel** : Communication WebSocket pour mises à jour instantanées
+- **Drag & Drop** : Glissez-déposez vos fichiers MIDI pour les uploader
+- **Console de Debug** : Logs en temps réel pour diagnostic (bouton 🐞)
+- **Design Moderne** : Interface colorée et intuitive
 
-### 🔧 Fonctionnalités Système
-- **Base de Données SQLite** : Stockage des configurations, presets, historique
-- **Sessions** : Sauvegarde complète de l'état de l'application
-- **Backup/Restore** : Sauvegarde automatique des données
-- **API WebSocket** : 87+ commandes pour intégration personnalisée
-- **Logging** : Système de logs rotatifs pour monitoring
+### 🔧 Fonctionnalités Techniques
+- **Base de Données SQLite** : Stockage local des fichiers et configurations
+- **API WebSocket** : Architecture client-serveur avec 95+ commandes backend
+- **Logging** : Système de logs pour monitoring et debug
 
 ---
 
-## ✨ Features Détaillées
+## 💡 Fonctionnalités Avancées (API Backend)
 
-### 🎛️ MIDI Management
-- **Device Management**: USB, Virtual, and BLE MIDI devices
-- **Advanced Routing**: Channel mapping, filters, and multi-device support
-- **Latency Compensation**: Automatic calibration per device/channel
-- **Real-time Monitoring**: MIDI message inspection and logging
+L'API backend supporte des fonctionnalités additionnelles accessibles via WebSocket :
 
-### 🎵 File & Playback
-- **File Upload/Download**: Manage MIDI files via web interface
-- **Piano Roll Editor**: Visual editing powered by webaudio-pianoroll
-- **Smart Playback**: Tempo control, loop, transpose with latency compensation
-- **Playlist Support**: Queue multiple files
+- **Contrôle de Tempo** : Modification du tempo de lecture (commandes API)
+- **Transposition** : Transposition des notes (commandes API)
+- **Mode Boucle** : Lecture en boucle (commandes API)
+- **Compensation de Latence Automatique** : Calibration par mesure roundtrip (commandes API)
+- **Sessions** : Sauvegarde/chargement de l'état complet (commandes API)
+- **Presets** : Configurations de routage réutilisables (commandes API)
+- **Playlists** : Files d'attente de lecture (commandes API)
 
-### 🌐 Modern Web Interface
-- **High-Performance UI**: 60 FPS canvas rendering
-- **WebMIDI Integration**: Use browser MIDI devices + hardware MIDI
-- **Touch-Friendly**: Works on tablets and mobile
-- **Real-time Updates**: WebSocket-based live communication
+> **Note** : Ces fonctionnalités sont disponibles via l'API WebSocket (95+ commandes) mais ne sont pas encore intégrées dans l'interface web. Elles peuvent être utilisées en développant une interface personnalisée ou en envoyant des commandes directement via WebSocket.
 
-### 🔧 Developer Features
-- **87+ API Commands**: Complete WebSocket API
-- **Session Management**: Save and restore setups
-- **Preset System**: Store routing configurations
-- **SQLite Database**: Lightweight and portable
+---
+
+## ✅ Corrections Récentes
+
+### Compensation de Latence par Instrument
+
+**Statut** : ✅ **Corrigé et fonctionnel**
+
+**Problème précédent** : Le délai de synchronisation (`sync_delay`) configuré via le bouton ⚙️ Réglages n'était pas appliqué lors de la lecture MIDI.
+
+**Correction apportée** (`src/midi/MidiPlayer.js:317-354`) :
+- La fonction `scheduleEvent()` récupère maintenant le périphérique cible AVANT de calculer la latence
+- Le `sync_delay` est lu depuis la base de données pour chaque canal
+- Chaque canal applique le délai de son instrument assigné, pas du périphérique par défaut
+
+**Résultat** :
+- ✅ Les canaux routés vers différents instruments avec des latences différentes sont maintenant parfaitement synchronisés
+- ✅ La compensation est appliquée individuellement pour chaque canal selon son instrument
+- ✅ Logs de debug disponibles pour vérifier l'application des délais (niveau `debug`)
+
+**Comment utiliser** :
+1. Scannez vos périphériques MIDI
+2. Cliquez sur ⚙️ Réglages pour chaque instrument
+3. Configurez le `Délai de synchronisation` (en millisecondes)
+   - Valeurs positives : retarder l'instrument (ex: 80ms pour Bluetooth)
+   - Valeurs négatives : avancer l'instrument (ex: -20ms)
+4. Jouez un fichier MIDI avec routage par canal
+5. Les délais sont appliqués automatiquement !
 
 ---
 
@@ -406,60 +427,106 @@ tail -f logs/midimind.log
 
 ---
 
-## 📖 Usage
+## 📖 Guide d'Utilisation
 
-### 1️⃣ Upload MIDI Files
+### 1️⃣ Scanner les Périphériques MIDI
 
-- Click **"Files"** in the navigation
-- Upload `.mid` or `.midi` files
-- Files are stored on the Raspberry Pi
+1. Cliquez sur **"🔌 Scan USB"** pour détecter les périphériques USB
+2. Cliquez sur **"📡 Scan Bluetooth"** pour rechercher des périphériques BLE
+3. Cliquez sur **"🌐 Scan Réseau"** pour découvrir les périphériques RTP-MIDI
+4. Les périphériques trouvés s'affichent dans la liste **"Périphériques MIDI"**
 
-### 2️⃣ Edit MIDI Files
+### 2️⃣ Uploader des Fichiers MIDI
 
-- Select a file
-- Click **"Edit"**
-- Use the piano roll to:
-  - Add notes (click)
-  - Move notes (drag)
-  - Delete notes (select + Delete)
-  - Zoom (Ctrl + Wheel)
+1. Cliquez sur **"📁 Fichiers MIDI"**
+2. Cliquez sur le bouton **"📤 Envoyer"** ou glissez-déposez vos fichiers `.mid` / `.midi`
+3. Créez des dossiers avec **"📁 Nouveau dossier"**
+4. Organisez vos fichiers par glisser-déposer entre dossiers
 
-### 3️⃣ Route MIDI Channels
+### 3️⃣ Éditer un Fichier MIDI
 
-- Go to **"Instruments"**
-- For each MIDI channel (1-16):
-  - Select target instrument
-  - Set latency compensation (ms)
-- Click **"Apply Routing"**
+1. Cliquez sur l'icône **"✏️ Éditer"** à côté d'un fichier
+2. L'éditeur Piano Roll s'ouvre avec :
+   - Visualisation des notes par canal (colorées)
+   - Zoom : molette de la souris
+   - Édition : ajout, déplacement, suppression de notes
+3. Cliquez sur **"💾 Sauvegarder"** pour enregistrer vos modifications
 
-### 4️⃣ Play with Latency Compensation
+### 4️⃣ Configurer le Routage par Canal
 
-- Select a file
-- Click **"Play"**
-- MidiMind automatically compensates for device latency
-- Each channel plays in perfect sync!
+1. Cliquez sur l'icône **"🔀 Router"** à côté d'un fichier
+2. Pour chaque canal MIDI (1-16), sélectionnez le périphérique de sortie
+3. Cliquez sur **"💾 Sauvegarder le routage"**
+4. La configuration est sauvegardée pour ce fichier
+
+### 5️⃣ Jouer un Fichier MIDI
+
+1. Cliquez sur **"▶️ Jouer"** à côté d'un fichier
+2. Les contrôles de lecture s'affichent en haut :
+   - **▶️ Lecture** : Lire/Pauser
+   - **⏹️ Stop** : Arrêter la lecture
+   - Barre de progression avec temps écoulé / durée totale
+3. Les notes sont envoyées vers les périphériques configurés
+
+### 6️⃣ Utiliser le Clavier MIDI Virtuel
+
+1. Cliquez sur le bouton **"🎹"** en haut à gauche
+2. Jouez des notes avec la souris ou le clavier de l'ordinateur
+3. Testez vos périphériques MIDI connectés
+
+### 7️⃣ Configurer les Délais de Synchronisation (Latence)
+
+1. Dans la liste **"Périphériques MIDI"**, cliquez sur ⚙️ **Réglages** à côté d'un instrument
+2. Dans la section **"Délai de synchronisation (ms)"**, entrez le délai en millisecondes :
+   - **Valeur positive** (ex: `80`) : retarde cet instrument (utile pour Bluetooth)
+   - **Valeur négative** (ex: `-20`) : avance cet instrument
+   - **Zéro** (défaut) : aucune compensation
+3. Cliquez sur **💾 Enregistrer**
+4. Le délai sera automatiquement appliqué lors de la lecture MIDI
+
+**Exemple d'utilisation** :
+- Piano USB (latence faible) : `0 ms`
+- Synthé Bluetooth (latence élevée) : `80 ms`
+- Résultat : Les deux instruments jouent parfaitement synchronisés !
+
+**Astuce** : Testez différentes valeurs pour trouver le meilleur réglage pour vos instruments.
+
+### 8️⃣ Console de Debug
+
+1. Cliquez sur le bouton **"🐞"** en haut à droite
+2. Visualisez les logs en temps réel :
+   - Messages d'information (bleu)
+   - Avertissements (orange)
+   - Erreurs (rouge)
+3. Utile pour diagnostiquer les problèmes de connexion
+4. Les logs de debug montrent l'application des délais de synchronisation
 
 ---
 
-## 🧪 Testing
+## 🧪 Tests et Exemples
 
-### Functionality Test Suite
+### Test de l'Interface
 
-Open in your browser:
+Accédez à l'application :
 ```
-examples/functionality-test.html
+http://<IP-Raspberry-Pi>:8080
 ```
 
-Tests all features:
-- ✅ File upload
-- ✅ File selection
-- ✅ Piano roll editing
-- ✅ Saving modifications
-- ✅ Channel routing
-- ✅ Latency compensation
-- ✅ Playback
+Fonctionnalités testables :
+- ✅ Upload de fichiers MIDI
+- ✅ Scan de périphériques (USB, Bluetooth, Réseau)
+- ✅ Édition avec Piano Roll
+- ✅ Routage par canal
+- ✅ Lecture MIDI
+- ✅ Clavier virtuel
+- ✅ Organisation en dossiers
 
-See [TESTING.md](./TESTING.md) for detailed testing guide.
+### Exemples et Documentation
+
+Consultez les fichiers de documentation pour plus de détails :
+- `TESTING.md` : Guide de test détaillé
+- `INTEGRATION_GUIDE.md` : Guide d'architecture et d'intégration
+- `examples/` : Exemples de code
 
 ---
 
@@ -474,43 +541,57 @@ See [TESTING.md](./TESTING.md) for detailed testing guide.
 
 ---
 
-## 🎯 Key Functionalities
+## 🎯 Exemples d'Utilisation de l'API WebSocket
 
-### File Management
+### Upload et Gestion de Fichiers
 ```javascript
-// Upload MIDI file
-await fileManager.uploadFile(file);
+// Upload d'un fichier MIDI
+const response = await api.uploadMidiFile(file, '/');
 
-// List files
-const files = await fileManager.refreshFileList();
+// Lister les fichiers
+const response = await api.sendCommand('file_list', {});
 
-// Open in editor
-await fileManager.openInEditor(fileId);
-
-// Save modifications
-await fileManager.saveModifications();
+// Supprimer un fichier
+await api.sendCommand('file_delete', { fileId: 'file123' });
 ```
 
-### MIDI Routing
+### Scan de Périphériques
 ```javascript
-// Route channel to instrument
-await routingManager.routeChannelToInstrument(0, 'piano-id');
+// Scanner les périphériques USB
+const response = await api.sendCommand('device_refresh', {});
 
-// Set latency compensation
-await routingManager.setDeviceLatency('piano-id', 30); // 30ms
+// Scanner Bluetooth
+await api.sendCommand('ble_scan_start', { duration: 5 });
+
+// Scanner réseau
+await api.sendCommand('network_scan', { timeout: 5 });
 ```
 
-### Playback
+### Lecture MIDI
 ```javascript
-// Start playback with options
-await apiClient.startPlayback(fileId, {
-    tempo: 120,
-    loop: false,
-    transpose: 0
+// Démarrer la lecture
+await api.sendCommand('playback_start', { fileId: 'file123' });
+
+// Pause
+await api.sendCommand('playback_pause', {});
+
+// Stop
+await api.sendCommand('playback_stop', {});
+
+// Obtenir les canaux du fichier
+const response = await api.sendCommand('playback_get_channels', {});
+```
+
+### Routage par Canal
+```javascript
+// Configurer le routage d'un canal vers un périphérique
+await api.sendCommand('playback_set_channel_routing', {
+    channel: 0,
+    deviceId: 'device-id-123'
 });
 ```
 
-See [TESTING.md](./TESTING.md) for complete API documentation.
+> **Note** : L'API WebSocket supporte 95+ commandes. Consultez `TESTING.md` pour la documentation complète de l'API.
 
 ---
 
@@ -569,7 +650,7 @@ Ma-est-tro/
 │   └── Install.sh           # Complete installation script
 ├── src/                     # Backend (Node.js)
 │   ├── api/
-│   │   ├── CommandHandler.js  # 87+ API commands
+│   │   ├── CommandHandler.js  # 95+ commandes WebSocket
 │   │   ├── WebSocketServer.js
 │   │   └── HttpServer.js
 │   ├── midi/
@@ -607,38 +688,37 @@ Ma-est-tro/
 MidiMind integrates proven open-source libraries:
 
 ### Frontend
-- [WebMidi.js](https://github.com/djipco/webmidi) - Browser MIDI access
-- [Tone.js](https://github.com/Tonejs/Tone.js) - Audio synthesis
-- [webaudio-pianoroll](https://github.com/g200kg/webaudio-pianoroll) - Piano roll editor
-- [webaudio-controls](https://github.com/g200kg/webaudio-controls) - UI controls
+- **[webaudio-pianoroll](https://github.com/g200kg/webaudio-pianoroll)** - Éditeur Piano Roll visuel (version personnalisée avec coloration par canal)
+- **Vanilla JavaScript** - Pas de framework, code léger et rapide
 
 ### Backend
-- [easymidi](https://www.npmjs.com/package/easymidi) - Node.js MIDI
-- [ws](https://github.com/websockets/ws) - WebSocket server
-- [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) - SQLite database
-
-All libraries loaded from CDN with auto-fallback.
+- **[easymidi](https://www.npmjs.com/package/easymidi)** - Gestion des périphériques MIDI sous Node.js
+- **[ws](https://github.com/websockets/ws)** - Serveur WebSocket pour communication temps réel
+- **[better-sqlite3](https://github.com/WiseLibs/better-sqlite3)** - Base de données SQLite locale
+- **[@abandonware/noble](https://www.npmjs.com/package/@abandonware/noble)** - Support Bluetooth Low Energy (BLE MIDI)
 
 ---
 
-## 🔌 API Commands
+## 🔌 API WebSocket Backend
 
-MidiMind provides **87+ WebSocket commands** organized in categories:
+MidiMind fournit une **API WebSocket complète avec 95+ commandes** réparties en catégories :
 
-| Category | Commands | Examples |
+| Catégorie | Commandes | Exemples |
 |----------|----------|----------|
-| **Devices** | 12 | `device_list`, `device_refresh`, `ble_scan_start` |
-| **Routing** | 15 | `route_create`, `channel_map`, `filter_set` |
-| **Files** | 10 | `file_upload`, `file_load`, `file_save` |
-| **Playback** | 10 | `playback_start`, `playback_set_tempo` |
-| **Latency** | 8 | `latency_set`, `latency_auto_calibrate` |
-| **MIDI Messages** | 8 | `midi_send_note`, `midi_send_cc`, `midi_panic` |
-| **System** | 8 | `system_status`, `system_backup` |
-| **Sessions** | 6 | `session_save`, `session_load` |
-| **Presets** | 6 | `preset_save`, `preset_load` |
-| **Playlists** | 4 | `playlist_create`, `playlist_add_file` |
+| **Devices** | ~24 | `device_list`, `device_refresh`, `ble_scan_start`, `network_scan`, `virtual_create` |
+| **Routing** | 15 | `route_create`, `channel_map`, `filter_set`, `monitor_start` |
+| **Files** | 12 | `file_upload`, `file_load`, `file_save`, `file_delete`, `file_rename` |
+| **Playback** | 13 | `playback_start`, `playback_pause`, `playback_stop`, `playback_set_channel_routing` |
+| **Latency** | 8 | `latency_set`, `latency_measure`, `latency_auto_calibrate` |
+| **MIDI Messages** | 8 | `midi_send_note`, `midi_send_cc`, `midi_panic`, `midi_all_notes_off` |
+| **System** | 8 | `system_status`, `system_info`, `system_backup`, `system_logs` |
+| **Sessions** | 6 | `session_save`, `session_load`, `session_list`, `session_delete` |
+| **Presets** | 6 | `preset_save`, `preset_load`, `preset_list`, `preset_delete` |
+| **Playlists** | 4 | `playlist_create`, `playlist_list`, `playlist_add_file` |
 
-See backend code for complete API reference: `src/api/CommandHandler.js`
+> **Note** : Toutes ces commandes sont implémentées dans le backend, mais seules certaines sont utilisées par l'interface web actuelle. Pour utiliser les commandes avancées (tempo, transposition, sessions, presets, etc.), vous devez envoyer des commandes WebSocket directement ou développer votre propre interface.
+
+Référence complète : `src/api/CommandHandler.js`
 
 ---
 
