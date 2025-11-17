@@ -1414,6 +1414,8 @@ class MidiEditorModal {
                 case 'mode-select':
                 case 'mode-drag-notes':
                 case 'mode-drag-view':
+                case 'mode-add-note':
+                case 'mode-resize-note':
                     const mode = btn.dataset.mode;
                     if (mode) {
                         this.setEditMode(mode);

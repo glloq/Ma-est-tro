@@ -740,14 +740,15 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 }
             }
             else if(ht.m=="s"&&ht.t>=0){
-                // Ne créer des notes QUE en mode 'select' ou si uiMode n'est pas défini (comportement par défaut)
-                if(this.uiMode === 'select' || !this.uiMode) {
+                // Ne créer des notes QUE en mode 'select', 'add-note' ou si uiMode n'est pas défini
+                if(this.uiMode === 'select' || this.uiMode === 'add-note' || !this.uiMode) {
                     // Sauvegarder snapshot avant d'ajouter une note
                     this.saveSnapshot();
 
                     this.clearSel();
                     var t=((ht.t/this.snap)|0)*this.snap;
-                    this.sequence.push({t:t, n:ht.n|0, g:1, f:1});
+                    const n = Math.round(ht.n); // Arrondir pour aligner sur grille
+                    this.sequence.push({t:t, n:n, g:1, f:1});
                     this.dragging={o:"D",m:"E",i:this.sequence.length-1, t:t, g:1, ev:[{t:t,g:1,ev:this.sequence[this.sequence.length-1]}]};
                     this.redraw();
                 }
@@ -1142,14 +1143,49 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 this.rcTarget=this.canvas.getBoundingClientRect();
                 const pos=this.getPos(e);
                 const ht=this.hitTest(pos);
+
+                // Adapter les curseurs selon le mode UI
                 switch(ht.m){
-                    case "E": this.canvas.style.cursor="e-resize"; break;
-                    case "B": this.canvas.style.cursor="w-resize"; break;
-                    case "N": this.canvas.style.cursor="move"; break;
-                    case "n": this.canvas.style.cursor="pointer"; break;
-                    case "s": this.canvas.style.cursor="pointer"; break;
-                    }
+                    case "E":
+                    case "B":
+                        // En mode drag-notes : afficher move (pas resize)
+                        if(this.uiMode === 'drag-notes') {
+                            this.canvas.style.cursor="move";
+                        }
+                        // En mode resize-note : afficher resize
+                        else if(this.uiMode === 'resize-note') {
+                            this.canvas.style.cursor = ht.m === "E" ? "e-resize" : "w-resize";
+                        }
+                        // Par défaut : resize
+                        else {
+                            this.canvas.style.cursor = ht.m === "E" ? "e-resize" : "w-resize";
+                        }
+                        break;
+                    case "N":
+                        // En mode drag-notes ou resize-note : move
+                        if(this.uiMode === 'drag-notes' || this.uiMode === 'resize-note') {
+                            this.canvas.style.cursor="move";
+                        } else {
+                            this.canvas.style.cursor="move";
+                        }
+                        break;
+                    case "n":
+                        this.canvas.style.cursor="pointer";
+                        break;
+                    case "s":
+                        // En mode add-note : crosshair
+                        if(this.uiMode === 'add-note') {
+                            this.canvas.style.cursor="crosshair";
+                        } else {
+                            this.canvas.style.cursor="pointer";
+                        }
+                        break;
+                    default:
+                        // Utiliser le curseur par défaut du mode
+                        this.updateCursor();
+                        break;
                 }
+            }
         };
         this.pointermove=function(ev) {
             let e;
