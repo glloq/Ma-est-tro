@@ -739,6 +739,14 @@ class MidiEditorModal {
                                 <span class="icon">👁</span>
                                 <span class="btn-label">Vue</span>
                             </button>
+                            <button class="tool-btn" data-action="mode-add-note" data-mode="add-note" title="Mode Ajouter Note">
+                                <span class="icon">➕</span>
+                                <span class="btn-label">Ajouter</span>
+                            </button>
+                            <button class="tool-btn" data-action="mode-resize-note" data-mode="resize-note" title="Mode Modifier Durée">
+                                <span class="icon">↔</span>
+                                <span class="btn-label">Durée</span>
+                            </button>
                         </div>
 
                         <div class="toolbar-divider"></div>

@@ -288,6 +288,12 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 case 'drag-view':
                     canvas.style.cursor = 'grab';
                     break;
+                case 'add-note':
+                    canvas.style.cursor = 'crosshair';
+                    break;
+                case 'resize-note':
+                    canvas.style.cursor = 'col-resize';
+                    break;
                 default:
                     canvas.style.cursor = 'default';
             }
@@ -647,7 +653,11 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 const ev=this.sequence[i];
                 if(ev.f){
                     ev.t=(((ev.ot+dt)/this.snap+.5)|0)*this.snap;
-                    ev.n=ev.on+dn;
+                    // Arrondir ev.n pour aligner sur les barres horizontales (grille de notes)
+                    ev.n=Math.round(ev.on+dn);
+                    // Limiter aux notes MIDI valides (0-127)
+                    if(ev.n < 0) ev.n = 0;
+                    if(ev.n > 127) ev.n = 127;
                 }
             }
         };
@@ -689,18 +699,42 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 this.redraw();
             }
             else if(ht.m=="E"){
-                // Sauvegarder snapshot avant resize
-                this.saveSnapshot();
-
-                const ev = this.sequence[ht.i];
-                this.dragging={o:"D", m:"E", i:ht.i, t:ev.t, g:ev.g, ev:this.selectedNotes()};
+                // En mode drag-notes : traiter E comme N (déplacement, pas resize)
+                if(this.uiMode === 'drag-notes') {
+                    this.saveSnapshot();
+                    ev=this.sequence[ht.i];
+                    this.dragging={o:"D",m:"N",i:ht.i,t:ht.t,n:ev.n,dt:ht.t-ev.t};
+                    for(let i=0,l=this.sequence.length;i<l;++i){
+                        ev=this.sequence[i];
+                        if(ev.f)
+                            ev.on=ev.n, ev.ot=ev.t, ev.og=ev.g;
+                    }
+                    this.redraw();
+                } else {
+                    // Mode resize-note ou défaut : resize
+                    this.saveSnapshot();
+                    const ev = this.sequence[ht.i];
+                    this.dragging={o:"D", m:"E", i:ht.i, t:ev.t, g:ev.g, ev:this.selectedNotes()};
+                }
             }
             else if(ht.m=="B"){
-                // Sauvegarder snapshot avant resize
-                this.saveSnapshot();
-
-                const ev = this.sequence[ht.i];
-                this.dragging={o:"D", m:"B", i:ht.i, t:ev.t, g:ev.g, ev:this.selectedNotes()};
+                // En mode drag-notes : traiter B comme N (déplacement, pas resize)
+                if(this.uiMode === 'drag-notes') {
+                    this.saveSnapshot();
+                    ev=this.sequence[ht.i];
+                    this.dragging={o:"D",m:"N",i:ht.i,t:ht.t,n:ev.n,dt:ht.t-ev.t};
+                    for(let i=0,l=this.sequence.length;i<l;++i){
+                        ev=this.sequence[i];
+                        if(ev.f)
+                            ev.on=ev.n, ev.ot=ev.t, ev.og=ev.g;
+                    }
+                    this.redraw();
+                } else {
+                    // Mode resize-note ou défaut : resize
+                    this.saveSnapshot();
+                    const ev = this.sequence[ht.i];
+                    this.dragging={o:"D", m:"B", i:ht.i, t:ev.t, g:ev.g, ev:this.selectedNotes()};
+                }
             }
             else if(ht.m=="s"&&ht.t>=0){
                 // Ne créer des notes QUE en mode 'select' ou si uiMode n'est pas défini (comportement par défaut)
@@ -973,7 +1007,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 return false;
             }
 
-            // Gérer les 3 modes UI de manière claire et explicite
+            // Gérer les 5 modes UI de manière claire et explicite
             if(this.uiMode === 'select') {
                 // MODE SELECT : Sélection par zone ou clic sur note pour sélectionner
                 if(this.editmode=="dragmono"||this.editmode=="dragpoly") {
@@ -1006,15 +1040,18 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 }
             }
             else if(this.uiMode === 'drag-notes') {
-                // MODE DRAG-NOTES : Déplacer les notes (sélectionnées ou cliquées)
+                // MODE DRAG-NOTES : Déplacer les notes UNIQUEMENT (pas de resize)
                 if(this.editmode=="dragmono"||this.editmode=="dragpoly") {
                     const hasSelection = this.selectedNotes().length > 0;
 
                     switch(this.downht.m){
                     case "N":
+                        // Clic sur une note : déplacer via editDragDown (sans B/E pour éviter resize)
+                        this.editDragDown(this.downpos);
+                        break;
                     case "B":
                     case "E":
-                        // Clic sur une note : déplacer via editDragDown
+                        // En mode drag-notes, les bords ne font PAS de resize, ils déplacent
                         this.editDragDown(this.downpos);
                         break;
                     default:
@@ -1036,6 +1073,46 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 // MODE DRAG-VIEW : Déplacer la vue
                 this.dragging.o = "V";
                 this.canvas.style.cursor = 'grabbing';
+            }
+            else if(this.uiMode === 'add-note') {
+                // MODE ADD-NOTE : Créer des notes en cliquant
+                if(this.editmode=="dragmono"||this.editmode=="dragpoly") {
+                    if(this.downht.m=="s" && this.downht.t>=0){
+                        // Clic dans le vide : créer une note
+                        this.saveSnapshot();
+                        this.clearSel();
+                        const t=((this.downht.t/this.snap)|0)*this.snap;
+                        const n = Math.round(this.downht.n); // Arrondir pour aligner sur grille
+                        this.sequence.push({t:t, n:n, g:1, f:1});
+                        this.dragging={o:"D",m:"E",i:this.sequence.length-1, t:t, g:1, ev:[{t:t,g:1,ev:this.sequence[this.sequence.length-1]}]};
+                        this.redraw();
+                    }
+                }
+            }
+            else if(this.uiMode === 'resize-note') {
+                // MODE RESIZE-NOTE : Modifier la durée des notes (bords B/E)
+                if(this.editmode=="dragmono"||this.editmode=="dragpoly") {
+                    switch(this.downht.m){
+                    case "B":
+                    case "E":
+                        // Clic sur bord : resize via editDragDown
+                        this.editDragDown(this.downpos);
+                        break;
+                    case "N":
+                    case "n":
+                        // Clic sur note : sélectionner
+                        const evNote = this.sequence[this.downht.i];
+                        if(!evNote.f) {
+                            this.clearSel();
+                            evNote.f = 1;
+                        }
+                        this.redraw();
+                        break;
+                    default:
+                        // Clic dans le vide : ne rien faire
+                        break;
+                    }
+                }
             }
             else {
                 // Pas de mode UI défini : comportement par défaut
