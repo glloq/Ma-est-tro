@@ -199,7 +199,26 @@ class MidiEditorModal {
         }
 
         const ticksPerBeat = this.midiData.header?.ticksPerBeat || 480;
-        this.log('info', `Converting MIDI: ${this.midiData.tracks.length} tracks, ${ticksPerBeat} ticks/beat`);
+        this.ticksPerBeat = ticksPerBeat; // Sauvegarder pour utilisation ultérieure
+
+        // Extraire le tempo du fichier MIDI (généralement dans la première piste)
+        let tempo = 120; // Tempo par défaut
+        if (this.midiData.tracks && this.midiData.tracks.length > 0) {
+            for (const track of this.midiData.tracks) {
+                if (track.events) {
+                    const tempoEvent = track.events.find(e => e.type === 'setTempo');
+                    if (tempoEvent && tempoEvent.microsecondsPerBeat) {
+                        // Convertir microsecondes par beat en BPM
+                        tempo = Math.round(60000000 / tempoEvent.microsecondsPerBeat);
+                        this.log('info', `Tempo found: ${tempo} BPM`);
+                        break;
+                    }
+                }
+            }
+        }
+        this.tempo = tempo; // Sauvegarder pour utilisation ultérieure
+
+        this.log('info', `Converting MIDI: ${this.midiData.tracks.length} tracks, ${ticksPerBeat} ticks/beat, ${tempo} BPM`);
 
         // Informations sur les instruments par canal
         const channelInstruments = new Map(); // canal -> program number
@@ -913,11 +932,14 @@ class MidiEditorModal {
         this.pianoRoll.setAttribute('wheelzoom', '1');
         this.pianoRoll.setAttribute('xscroll', '1');
         this.pianoRoll.setAttribute('yscroll', '1');
+        // Tempo et timebase du fichier MIDI (importants pour l'affichage du temps en secondes)
+        this.pianoRoll.setAttribute('tempo', (this.tempo || 120).toString());
+        this.pianoRoll.setAttribute('timebase', (this.ticksPerBeat || 480).toString());
         // Pas de marqueurs (triangles vert/orange)
         this.pianoRoll.setAttribute('markstart', '-1');
         this.pianoRoll.setAttribute('markend', '-1');
 
-        this.log('info', `Piano roll configured: xrange=${xrange}, yrange=${noteRange}, yoffset=${yoffset} (centered)`);
+        this.log('info', `Piano roll configured: xrange=${xrange}, yrange=${noteRange}, yoffset=${yoffset} (centered), tempo=${this.tempo || 120} BPM, timebase=${this.ticksPerBeat || 480} ticks/beat`);
 
         // Ajouter au conteneur AVANT de charger la sequence
         container.appendChild(this.pianoRoll);

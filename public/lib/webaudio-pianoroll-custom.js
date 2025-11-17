@@ -313,7 +313,10 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             this.cursor=tick;
         };
         this.updateTimer=function(){
-            this.tick2time=4*60/this.tempo/this.timebase;
+            // Formule correcte : tick2time = secondes_par_beat / ticks_par_beat
+            // secondes_par_beat = 60 / tempo (BPM)
+            // donc : tick2time = 60 / tempo / timebase
+            this.tick2time = 60 / this.tempo / this.timebase;
         };
         this.play=function(actx,playcallback,tick){
             function Interval(){
@@ -1391,7 +1394,9 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 this.ctx.fillStyle=this.colrulerfg;
 
                 // Calculer la conversion tick vers secondes
-                const tick2time = (4 * 60) / this.tempo / this.timebase;
+                // Formule : tick2time = secondes_par_beat / ticks_par_beat
+                // où secondes_par_beat = 60 / tempo (BPM)
+                const tick2time = 60 / this.tempo / this.timebase;
 
                 // Adapter l'intervalle d'affichage selon le zoom (xrange)
                 let secondInterval = 1; // Par défaut : 1 seconde
