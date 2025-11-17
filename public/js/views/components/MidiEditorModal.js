@@ -841,9 +841,13 @@ class MidiEditorModal {
         this.container.innerHTML = `
             <div class="modal-dialog modal-xl">
                 <div class="modal-header">
-                    <div class="modal-title">
-                        <h3>🎹 Éditeur MIDI</h3>
-                        <span class="file-name">${this.escapeHtml(this.currentFilename || this.currentFile || '')}</span>
+                    <div class="modal-header-content">
+                        <div class="file-info-compact">
+                            <span class="file-info-item" title="Fichier">${this.escapeHtml(this.currentFilename || this.currentFile || '')}</span>
+                        </div>
+                        <div class="modal-title">
+                            <h3>🎹 Éditeur MIDI</h3>
+                        </div>
                     </div>
                     <button class="modal-close" data-action="close">&times;</button>
                 </div>
@@ -864,6 +868,20 @@ class MidiEditorModal {
 
                         <div class="toolbar-divider"></div>
 
+                        <!-- Section Navigation et Zoom -->
+                        <div class="toolbar-section">
+                            <button class="tool-btn" data-action="mode-drag-view" data-mode="drag-view" title="Mode Déplacer Vue">
+                                <span class="icon">👁️</span>
+                                <span class="btn-label">Vue</span>
+                            </button>
+                            <button class="tool-btn-compact" data-action="zoom-h-out" title="Dézoomer horizontal">H−</button>
+                            <button class="tool-btn-compact" data-action="zoom-h-in" title="Zoomer horizontal">H+</button>
+                            <button class="tool-btn-compact" data-action="zoom-v-out" title="Dézoomer vertical">V−</button>
+                            <button class="tool-btn-compact" data-action="zoom-v-in" title="Zoomer vertical">V+</button>
+                        </div>
+
+                        <div class="toolbar-divider"></div>
+
                         <!-- Section Mode d'édition -->
                         <div class="toolbar-section">
                             <button class="tool-btn active" data-action="mode-select" data-mode="select" title="Mode Sélection">
@@ -873,10 +891,6 @@ class MidiEditorModal {
                             <button class="tool-btn" data-action="mode-drag-notes" data-mode="drag-notes" title="Mode Déplacer Notes">
                                 <span class="icon">🎵</span>
                                 <span class="btn-label">Déplacer</span>
-                            </button>
-                            <button class="tool-btn" data-action="mode-drag-view" data-mode="drag-view" title="Mode Déplacer Vue">
-                                <span class="icon">👁️</span>
-                                <span class="btn-label">Vue</span>
                             </button>
                             <button class="tool-btn" data-action="mode-add-note" data-mode="add-note" title="Mode Ajouter Note">
                                 <span class="icon">➕</span>
@@ -904,16 +918,6 @@ class MidiEditorModal {
                                 <span class="icon">🗑</span>
                                 <span class="btn-label">Supprimer</span>
                             </button>
-                        </div>
-
-                        <div class="toolbar-divider"></div>
-
-                        <!-- Section Zoom -->
-                        <div class="toolbar-section">
-                            <button class="tool-btn-compact" data-action="zoom-h-out" title="Dézoomer horizontal">H−</button>
-                            <button class="tool-btn-compact" data-action="zoom-h-in" title="Zoomer horizontal">H+</button>
-                            <button class="tool-btn-compact" data-action="zoom-v-out" title="Dézoomer vertical">V−</button>
-                            <button class="tool-btn-compact" data-action="zoom-v-in" title="Zoomer vertical">V+</button>
                         </div>
 
                         <div class="toolbar-divider"></div>
