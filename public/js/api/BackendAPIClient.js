@@ -277,13 +277,14 @@ class BackendAPIClient {
      * @param {number} channel - MIDI channel (0-15, maps to 1-16)
      */
     async sendNoteOn(deviceId, note, velocity, channel = 0) {
-        // Utiliser la commande backend 'midi_send' avec données raw MIDI
-        const midiData = [0x90 + channel, note & 0x7F, velocity & 0x7F];
+        // Utiliser la commande backend 'midi_send_note'
+        console.log(`[BackendAPI] sendNoteOn: device=${deviceId}, note=${note}, vel=${velocity}, ch=${channel}`);
 
-        return this.sendCommand('midi_send', {
+        return this.sendCommand('midi_send_note', {
             deviceId: deviceId,
-            type: 'raw',
-            data: midiData
+            channel: channel,
+            note: note,
+            velocity: velocity
         });
     }
 
@@ -294,13 +295,12 @@ class BackendAPIClient {
      * @param {number} channel - MIDI channel (0-15, maps to 1-16)
      */
     async sendNoteOff(deviceId, note, channel = 0) {
-        // Utiliser la commande backend 'midi_send' avec données raw MIDI
-        const midiData = [0x80 + channel, note & 0x7F, 0];
-
-        return this.sendCommand('midi_send', {
+        // Note OFF = Note ON avec velocity 0
+        return this.sendCommand('midi_send_note', {
             deviceId: deviceId,
-            type: 'raw',
-            data: midiData
+            channel: channel,
+            note: note,
+            velocity: 0
         });
     }
 

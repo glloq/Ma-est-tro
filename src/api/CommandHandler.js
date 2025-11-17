@@ -832,11 +832,20 @@ class CommandHandler {
   }
 
   async midiSendNote(data) {
-    this.app.deviceManager.sendMessage(data.deviceId, 'noteon', {
+    this.app.logger.info(`[CommandHandler] midiSendNote called with:`, {
+      deviceId: data.deviceId,
       channel: data.channel,
       note: data.note,
       velocity: data.velocity
     });
+
+    const result = this.app.deviceManager.sendMessage(data.deviceId, 'noteon', {
+      channel: data.channel,
+      note: data.note,
+      velocity: data.velocity
+    });
+
+    this.app.logger.info(`[CommandHandler] deviceManager.sendMessage returned:`, result);
     return { success: true };
   }
 
