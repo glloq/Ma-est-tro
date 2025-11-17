@@ -109,8 +109,9 @@ class KeyboardModalNew {
         // Stop toutes les notes actives
         this.activeNotes.forEach(note => this.stopNote(note));
 
-        // Reset mouse state
+        // Reset state
         this.isMouseDown = false;
+        this.selectedDevice = null;
 
         if (this.container) {
             this.container.remove();
