@@ -703,7 +703,7 @@
 
 /* Header avec bouton de fermeture - Compact pour plus d'espace */
 .midi-editor-modal .modal-header {
-    padding: 8px 16px;
+    padding: 6px 12px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border-radius: 12px 12px 0 0;
@@ -711,6 +711,33 @@
     align-items: center;
     justify-content: space-between;
     flex-shrink: 0;
+}
+
+.midi-editor-modal .modal-header-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.midi-editor-modal .file-info-compact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.7rem;
+    opacity: 0.85;
+    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.midi-editor-modal .file-info-item {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Bouton de fermeture (croix) */
@@ -740,20 +767,13 @@
 
 .midi-editor-modal .modal-title {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: center;
 }
 
 .midi-editor-modal .modal-title h3 {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
-}
-
-.midi-editor-modal .file-name {
-    font-size: 0.75rem;
-    opacity: 0.9;
-    font-weight: 400;
 }
 
 .midi-editor-modal .modal-body {
@@ -767,8 +787,8 @@
 
 .midi-editor-modal .editor-toolbar {
     display: flex;
-    gap: 12px;
-    padding: 8px 12px;
+    gap: 8px;
+    padding: 4px 8px;
     background: #2a2a2a;
     border-bottom: 1px solid #3a3a3a;
     align-items: center;
@@ -795,13 +815,13 @@
 /* Toolbar des canaux - Compact pour plus d'espace */
 .midi-editor-modal .channels-toolbar {
     display: flex;
-    gap: 6px;
-    padding: 6px 12px;
+    gap: 4px;
+    padding: 4px 8px;
     background: #252525;
     border-bottom: 1px solid #3a3a3a;
     overflow-x: auto;
     overflow-y: hidden;
-    max-height: 50px;
+    max-height: 42px;
     flex-shrink: 0;
 }
 
@@ -1100,12 +1120,12 @@
 }
 
 .midi-editor-modal .modal-footer {
-    padding: 10px 20px;
+    padding: 6px 12px;
     background: #f8f9fa;
     border-top: 1px solid #dee2e6;
     display: flex;
     justify-content: flex-end;
-    gap: 12px;
+    gap: 8px;
     flex-shrink: 0;
 }
 
