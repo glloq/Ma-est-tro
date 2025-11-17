@@ -962,58 +962,32 @@ class MidiEditorModal {
             }
         }
 
-        // Écouter les changements
-        this.pianoRoll.addEventListener('change', () => {
-            this.log('debug', 'Piano roll changed (change event)');
-            this.isDirty = true;
-            this.updateSaveButton();
-            this.updateStats();
+        // Optimisation : utiliser un debounce pour éviter les appels multiples
+        let changeTimeout = null;
+        const handleChange = () => {
+            if (changeTimeout) clearTimeout(changeTimeout);
+            changeTimeout = setTimeout(() => {
+                this.isDirty = true;
+                this.updateSaveButton();
+                this.syncFullSequenceFromPianoRoll();
+                this.updateUndoRedoButtonsState(); // Mettre à jour undo/redo quand la séquence change
+            }, 100); // Debounce de 100ms
+        };
 
-            // Synchroniser immédiatement fullSequence pour ne pas perdre les modifications
-            this.syncFullSequenceFromPianoRoll();
-        });
+        // Écouter les changements avec debounce
+        this.pianoRoll.addEventListener('change', handleChange);
 
-        // Écouter également l'événement input (certains composants l'utilisent)
-        this.pianoRoll.addEventListener('input', () => {
-            this.log('debug', 'Piano roll changed (input event)');
-            this.isDirty = true;
-            this.updateSaveButton();
-            this.updateStats();
-
-            // Synchroniser immédiatement fullSequence pour ne pas perdre les modifications
-            this.syncFullSequenceFromPianoRoll();
-        });
-
-        // Observer les mutations du sequence pour détecter les changements
-        let lastSequenceLength = this.pianoRoll.sequence?.length || 0;
+        // Observer les mutations du sequence pour détecter les changements de sélection uniquement
         let lastSelectionCount = 0;
 
         this.selectionCheckInterval = setInterval(() => {
-            const currentLength = this.pianoRoll.sequence?.length || 0;
+            // Vérifier UNIQUEMENT le changement de sélection (beaucoup plus léger)
             const currentSelectionCount = this.getSelectionCount();
-
-            // Vérifier changement de longueur de sequence
-            if (currentLength !== lastSequenceLength) {
-                this.log('debug', `Piano roll sequence changed: ${lastSequenceLength} -> ${currentLength}`);
-                this.isDirty = true;
-                this.updateSaveButton();
-                this.updateStats();
-                lastSequenceLength = currentLength;
-
-                // Synchroniser immédiatement fullSequence
-                this.syncFullSequenceFromPianoRoll();
-            }
-
-            // Vérifier changement de sélection
             if (currentSelectionCount !== lastSelectionCount) {
-                this.log('debug', `Selection changed: ${lastSelectionCount} -> ${currentSelectionCount}`);
                 this.updateEditButtons();
                 lastSelectionCount = currentSelectionCount;
             }
-
-            // Mettre à jour les boutons undo/redo
-            this.updateUndoRedoButtonsState();
-        }, 500); // Vérifier toutes les 500ms (réduit de 200ms pour améliorer la performance)
+        }, 1000); // Réduit à 1 seconde pour réduire la charge
 
         this.updateStats();
         this.updateEditButtons(); // État initial
