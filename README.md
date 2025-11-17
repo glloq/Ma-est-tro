@@ -40,6 +40,8 @@ MidiMind 5.0 est un système de gestion MIDI pour Raspberry Pi avec interface we
   - Sélection du périphérique de sortie pour chaque canal
   - Indicateur visuel des canaux routés
 
+> ⚠️ **Note sur la compensation de latence** : L'interface permet de configurer un délai de synchronisation par instrument (bouton ⚙️ Réglages), mais cette fonctionnalité n'est pas encore appliquée lors de la lecture. La compensation de latence par canal nécessite une correction dans le code backend.
+
 ### 🌐 Interface Web
 - **Responsive** : Interface adaptée pour PC, tablette et smartphone
 - **Temps Réel** : Communication WebSocket pour mises à jour instantanées
@@ -61,12 +63,35 @@ L'API backend supporte des fonctionnalités additionnelles accessibles via WebSo
 - **Contrôle de Tempo** : Modification du tempo de lecture (commandes API)
 - **Transposition** : Transposition des notes (commandes API)
 - **Mode Boucle** : Lecture en boucle (commandes API)
-- **Compensation de Latence** : Réglage fin par périphérique (commandes API)
+- **Compensation de Latence Automatique** : Calibration par mesure roundtrip (commandes API)
 - **Sessions** : Sauvegarde/chargement de l'état complet (commandes API)
 - **Presets** : Configurations de routage réutilisables (commandes API)
 - **Playlists** : Files d'attente de lecture (commandes API)
 
 > **Note** : Ces fonctionnalités sont disponibles via l'API WebSocket (95+ commandes) mais ne sont pas encore intégrées dans l'interface web. Elles peuvent être utilisées en développant une interface personnalisée ou en envoyant des commandes directement via WebSocket.
+
+---
+
+## ⚠️ Limitations et Bugs Connus
+
+### Compensation de Latence par Instrument
+
+**Statut** : ⚠️ **Non fonctionnelle**
+
+**Problème** : L'interface permet de configurer un délai de synchronisation (`sync_delay`) pour chaque instrument via le bouton ⚙️ Réglages, mais ce délai n'est pas appliqué lors de la lecture MIDI.
+
+**Détails techniques** :
+- Le `sync_delay` est sauvegardé en base de données mais jamais lu lors de la lecture
+- Le système `LatencyCompensator` utilise une table différente (`instrument_latency` vs `instruments_latency`)
+- Bug dans `MidiPlayer.js` : la compensation est calculée pour le périphérique par défaut, pas pour le périphérique spécifique du canal
+
+**Impact** :
+- Si vous routez différents canaux vers différents instruments avec des latences différentes, ils ne seront pas parfaitement synchronisés
+- La fonctionnalité "Réglages de l'instrument" stocke les données mais elles ne sont pas utilisées
+
+**Workaround** : Pour l'instant, utilisez des instruments ayant des latences similaires, ou routez tous les canaux vers le même instrument.
+
+**Fichier à corriger** : `src/midi/MidiPlayer.js:317-332` - la fonction `scheduleEvent()` doit récupérer la latence du périphérique du canal, pas du périphérique par défaut.
 
 ---
 
