@@ -169,6 +169,36 @@
     opacity: 0.5;
 }
 
+/* Boutons compacts pour zoom et actions rapides */
+.tool-btn-compact {
+    padding: 6px 10px;
+    background: var(--secondary-color);
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    min-width: 36px;
+}
+
+.tool-btn-compact:hover:not(:disabled) {
+    background: #404040;
+    border-color: #667eea;
+    transform: translateY(-1px);
+}
+
+.tool-btn-compact:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.tool-btn-compact:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 /* Tool Groups Specific Styles */
 .tool-group .tool-btn {
     min-width: 40px;

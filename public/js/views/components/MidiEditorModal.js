@@ -32,6 +32,9 @@ class MidiEditorModal {
         // Mode d'édition actuel
         this.editMode = 'select'; // 'select', 'drag-notes', 'drag-view'
 
+        // Instrument sélectionné pour les nouveaux canaux (program MIDI GM)
+        this.selectedInstrument = 0; // Piano par défaut
+
         // Couleurs éclatantes pour les 16 canaux MIDI
         this.channelColors = [
             '#FF0066', // 1 - Rose/Magenta vif
@@ -681,6 +684,45 @@ class MidiEditorModal {
     }
 
     /**
+     * Rendre les options d'instruments MIDI GM
+     */
+    renderInstrumentOptions() {
+        let options = '';
+
+        // Groupes d'instruments MIDI GM
+        const groups = [
+            { name: 'Piano', start: 0, count: 8 },
+            { name: 'Chromatic Percussion', start: 8, count: 8 },
+            { name: 'Organ', start: 16, count: 8 },
+            { name: 'Guitar', start: 24, count: 8 },
+            { name: 'Bass', start: 32, count: 8 },
+            { name: 'Strings', start: 40, count: 8 },
+            { name: 'Ensemble', start: 48, count: 8 },
+            { name: 'Brass', start: 56, count: 8 },
+            { name: 'Reed', start: 64, count: 8 },
+            { name: 'Pipe', start: 72, count: 8 },
+            { name: 'Synth Lead', start: 80, count: 8 },
+            { name: 'Synth Pad', start: 88, count: 8 },
+            { name: 'Synth Effects', start: 96, count: 8 },
+            { name: 'Ethnic', start: 104, count: 8 },
+            { name: 'Percussive', start: 112, count: 8 },
+            { name: 'Sound Effects', start: 120, count: 8 }
+        ];
+
+        groups.forEach(group => {
+            options += `<optgroup label="${group.name}">`;
+            for (let i = 0; i < group.count; i++) {
+                const program = group.start + i;
+                const instrument = this.gmInstruments[program];
+                options += `<option value="${program}">${program}: ${instrument}</option>`;
+            }
+            options += `</optgroup>`;
+        });
+
+        return options;
+    }
+
+    /**
      * Mettre à jour l'état visuel des boutons de canal
      */
     updateChannelButtons() {
@@ -751,11 +793,11 @@ class MidiEditorModal {
                                 <span class="btn-label">Sélection</span>
                             </button>
                             <button class="tool-btn" data-action="mode-drag-notes" data-mode="drag-notes" title="Mode Déplacer Notes">
-                                <span class="icon">✋</span>
+                                <span class="icon">🎵</span>
                                 <span class="btn-label">Déplacer</span>
                             </button>
                             <button class="tool-btn" data-action="mode-drag-view" data-mode="drag-view" title="Mode Déplacer Vue">
-                                <span class="icon">👁</span>
+                                <span class="icon">👁️</span>
                                 <span class="btn-label">Vue</span>
                             </button>
                             <button class="tool-btn" data-action="mode-add-note" data-mode="add-note" title="Mode Ajouter Note">
@@ -788,36 +830,39 @@ class MidiEditorModal {
 
                         <div class="toolbar-divider"></div>
 
+                        <!-- Section Zoom -->
+                        <div class="toolbar-section">
+                            <button class="tool-btn-compact" data-action="zoom-h-out" title="Dézoomer horizontal">H−</button>
+                            <button class="tool-btn-compact" data-action="zoom-h-in" title="Zoomer horizontal">H+</button>
+                            <button class="tool-btn-compact" data-action="zoom-v-out" title="Dézoomer vertical">V−</button>
+                            <button class="tool-btn-compact" data-action="zoom-v-in" title="Zoomer vertical">V+</button>
+                        </div>
+
+                        <div class="toolbar-divider"></div>
+
                         <!-- Section Canal -->
                         <div class="toolbar-section">
                             <label class="snap-label">Canal:</label>
                             <select class="snap-select" id="channel-selector" title="Changer le canal des notes sélectionnées">
                                 ${this.renderChannelOptions()}
                             </select>
-                            <button class="tool-btn" data-action="change-channel" id="change-channel-btn" title="Appliquer le canal" disabled>
-                                <span class="icon">→</span>
-                                <span class="btn-label">Appliquer</span>
-                            </button>
+                            <button class="tool-btn-compact" data-action="change-channel" id="change-channel-btn" title="Appliquer le canal" disabled>→</button>
+                        </div>
+
+                        <div class="toolbar-divider"></div>
+
+                        <!-- Section Instrument (nouveau canal) -->
+                        <div class="toolbar-section">
+                            <label class="snap-label">Instrument:</label>
+                            <select class="snap-select" id="instrument-selector" title="Instrument pour nouveaux canaux">
+                                ${this.renderInstrumentOptions()}
+                            </select>
                         </div>
                     </div>
 
                     <!-- Toolbar des canaux -->
                     <div class="channels-toolbar">
                         ${this.renderChannelButtons()}
-                    </div>
-
-                    <!-- Contrôles de zoom -->
-                    <div class="zoom-controls">
-                        <div class="zoom-group">
-                            <span class="zoom-label">Zoom H:</span>
-                            <button class="btn btn-zoom" data-action="zoom-h-out" title="Dézoomer horizontal">−</button>
-                            <button class="btn btn-zoom" data-action="zoom-h-in" title="Zoomer horizontal">+</button>
-                        </div>
-                        <div class="zoom-group">
-                            <span class="zoom-label">Zoom V:</span>
-                            <button class="btn btn-zoom" data-action="zoom-v-out" title="Dézoomer vertical">−</button>
-                            <button class="btn btn-zoom" data-action="zoom-v-in" title="Zoomer vertical">+</button>
-                        </div>
                     </div>
 
                     <!-- Piano Roll -->
@@ -1495,6 +1540,15 @@ class MidiEditorModal {
 
                 const value = parseInt(e.target.value);
                 this.scrollVertical(value);
+            });
+        }
+
+        // Sélecteur d'instrument pour nouveaux canaux
+        const instrumentSelector = document.getElementById('instrument-selector');
+        if (instrumentSelector) {
+            instrumentSelector.addEventListener('change', (e) => {
+                this.selectedInstrument = parseInt(e.target.value);
+                this.log('info', `Selected instrument changed to: ${this.gmInstruments[this.selectedInstrument]} (${this.selectedInstrument})`);
             });
         }
     }
