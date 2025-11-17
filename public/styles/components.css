@@ -974,19 +974,78 @@
 
 .midi-editor-modal .scroll-horizontal {
     width: 100%;
-    height: 25px;
+    height: 40px;
     order: 2;
 }
 
 .midi-editor-modal .scroll-vertical {
+    width: 40px;
+    height: 100%;
+    writing-mode: bt-lr;
+    -webkit-appearance: slider-vertical;
+}
+
+/* Conteneurs des sliders avec boutons */
+.midi-editor-modal .scroll-controls {
+    display: flex;
+    align-items: center;
+    background: #1a1a1a;
+    border: 1px solid #444;
+}
+
+.midi-editor-modal .scroll-controls-horizontal {
+    width: 100%;
+    height: 40px;
+    flex-direction: row;
+    order: 2;
+}
+
+.midi-editor-modal .scroll-controls-vertical {
     position: absolute;
     right: 0;
     top: 0;
-    bottom: 25px;
-    width: 25px;
-    height: calc(100% - 25px);
-    writing-mode: bt-lr;
-    -webkit-appearance: slider-vertical;
+    bottom: 40px;
+    width: 40px;
+    height: calc(100% - 40px);
+    flex-direction: column;
+}
+
+/* Boutons de navigation des sliders */
+.midi-editor-modal .scroll-btn {
+    background: #2a2a2a;
+    border: 1px solid #555;
+    color: #d0d0d0;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+    margin: 0;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.midi-editor-modal .scroll-btn:hover {
+    background: #3a3a3a;
+    color: #ffffff;
+    border-color: #667eea;
+}
+
+.midi-editor-modal .scroll-btn:active {
+    background: #1a1a1a;
+}
+
+.midi-editor-modal .scroll-btn-left,
+.midi-editor-modal .scroll-btn-right {
+    width: 40px;
+    height: 38px;
+}
+
+.midi-editor-modal .scroll-btn-up,
+.midi-editor-modal .scroll-btn-down {
+    width: 38px;
+    height: 40px;
 }
 
 .midi-editor-modal .scroll-slider::-webkit-slider-track {
@@ -1003,15 +1062,15 @@
 }
 
 .midi-editor-modal .scroll-horizontal::-webkit-slider-thumb {
-    width: 120px;
-    height: 23px;
-    border-radius: 3px;
+    width: 150px;
+    height: 36px;
+    border-radius: 4px;
 }
 
 .midi-editor-modal .scroll-vertical::-webkit-slider-thumb {
-    width: 23px;
-    height: 100px;
-    border-radius: 3px;
+    width: 36px;
+    height: 120px;
+    border-radius: 4px;
 }
 
 .midi-editor-modal .scroll-slider::-webkit-slider-thumb:hover {
