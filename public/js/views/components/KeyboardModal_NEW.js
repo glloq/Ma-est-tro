@@ -397,6 +397,7 @@ class KeyboardModalNew {
     }
 
     handlePianoKeyDown(e) {
+        console.log('[DEBUG] handlePianoKeyDown called, event:', e.type);
         this.isMouseDown = true;
         const key = e.currentTarget;
         const note = parseInt(key.dataset.note);
@@ -407,6 +408,7 @@ class KeyboardModalNew {
     }
 
     handlePianoKeyUp(e) {
+        console.log('[DEBUG] handlePianoKeyUp called, event:', e.type);
         const key = e.currentTarget;
         const note = parseInt(key.dataset.note);
 
@@ -414,6 +416,7 @@ class KeyboardModalNew {
     }
 
     handlePianoKeyEnter(e) {
+        console.log('[DEBUG] handlePianoKeyEnter called, isMouseDown:', this.isMouseDown);
         // Jouer la note seulement si la souris est enfoncée (drag)
         if (!this.isMouseDown) return;
 
