@@ -26,6 +26,15 @@ class MidiEditorModal {
         this.activeChannels = new Set(); // Canaux actifs à afficher
         this.channels = []; // Informations sur les canaux disponibles
 
+        // Système Undo/Redo
+        this.commandHistory = null;
+
+        // Clipboard pour copy/paste
+        this.clipboard = [];
+
+        // Mode d'édition actuel
+        this.editMode = 'select'; // 'select', 'drag-notes', 'drag-view'
+
         // Couleurs éclatantes pour les 16 canaux MIDI
         this.channelColors = [
             '#FF0066', // 1 - Rose/Magenta vif
@@ -108,6 +117,16 @@ class MidiEditorModal {
         this.currentFile = fileId;
         this.currentFilename = filename || fileId;
         this.isDirty = false;
+
+        // Initialiser le système Undo/Redo
+        if (window.CommandHistory) {
+            this.commandHistory = new window.CommandHistory(100);
+            this.commandHistory.onHistoryChange = (state) => {
+                this.updateUndoRedoButtons(state);
+            };
+        } else {
+            this.log('warn', 'CommandHistory not loaded');
+        }
 
         try {
             // Charger le fichier MIDI
@@ -642,6 +661,18 @@ class MidiEditorModal {
     }
 
     /**
+     * Rendre les options du sélecteur de canal
+     */
+    renderChannelOptions() {
+        let options = '';
+        for (let i = 0; i < 16; i++) {
+            const instrumentName = i === 9 ? 'Drums' : this.gmInstruments[0];
+            options += `<option value="${i}">Canal ${i + 1}${i === 9 ? ' (Drums)' : ''}</option>`;
+        }
+        return options;
+    }
+
+    /**
      * Mettre à jour l'état visuel des boutons de canal
      */
     updateChannelButtons() {
@@ -689,9 +720,77 @@ class MidiEditorModal {
                     <button class="modal-close" data-action="close">&times;</button>
                 </div>
                 <div class="modal-body">
+                    <!-- Toolbar d'édition -->
+                    <div class="editor-toolbar">
+                        <!-- Section Undo/Redo -->
+                        <div class="toolbar-section">
+                            <button class="tool-btn" data-action="undo" id="undo-btn" title="Annuler (Ctrl+Z)" disabled>
+                                <span class="icon">↶</span>
+                                <span class="btn-label">Annuler</span>
+                            </button>
+                            <button class="tool-btn" data-action="redo" id="redo-btn" title="Refaire (Ctrl+Y)" disabled>
+                                <span class="icon">↷</span>
+                                <span class="btn-label">Refaire</span>
+                            </button>
+                        </div>
+
+                        <div class="toolbar-divider"></div>
+
+                        <!-- Section Mode d'édition -->
+                        <div class="toolbar-section">
+                            <button class="tool-btn active" data-action="mode-select" data-mode="select" title="Mode Sélection">
+                                <span class="icon">⊕</span>
+                                <span class="btn-label">Sélection</span>
+                            </button>
+                            <button class="tool-btn" data-action="mode-drag-notes" data-mode="drag-notes" title="Mode Déplacer Notes">
+                                <span class="icon">✋</span>
+                                <span class="btn-label">Déplacer</span>
+                            </button>
+                            <button class="tool-btn" data-action="mode-drag-view" data-mode="drag-view" title="Mode Déplacer Vue">
+                                <span class="icon">👁</span>
+                                <span class="btn-label">Vue</span>
+                            </button>
+                        </div>
+
+                        <div class="toolbar-divider"></div>
+
+                        <!-- Section Édition -->
+                        <div class="toolbar-section">
+                            <button class="tool-btn" data-action="copy" id="copy-btn" title="Copier (Ctrl+C)" disabled>
+                                <span class="icon">📋</span>
+                                <span class="btn-label">Copier</span>
+                            </button>
+                            <button class="tool-btn" data-action="paste" id="paste-btn" title="Coller (Ctrl+V)" disabled>
+                                <span class="icon">📄</span>
+                                <span class="btn-label">Coller</span>
+                            </button>
+                            <button class="tool-btn" data-action="delete" id="delete-btn" title="Supprimer (Del)">
+                                <span class="icon">🗑</span>
+                                <span class="btn-label">Supprimer</span>
+                            </button>
+                        </div>
+
+                        <div class="toolbar-divider"></div>
+
+                        <!-- Section Canal -->
+                        <div class="toolbar-section">
+                            <label class="snap-label">Canal:</label>
+                            <select class="snap-select" id="channel-selector" title="Changer le canal des notes sélectionnées">
+                                ${this.renderChannelOptions()}
+                            </select>
+                            <button class="tool-btn" data-action="change-channel" id="change-channel-btn" title="Appliquer le canal" disabled>
+                                <span class="icon">→</span>
+                                <span class="btn-label">Appliquer</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Toolbar des canaux -->
                     <div class="channels-toolbar">
                         ${this.renderChannelButtons()}
                     </div>
+
+                    <!-- Contrôles de zoom -->
                     <div class="zoom-controls">
                         <div class="zoom-group">
                             <span class="zoom-label">Zoom H:</span>
@@ -704,6 +803,8 @@ class MidiEditorModal {
                             <button class="btn btn-zoom" data-action="zoom-v-in" title="Zoomer vertical">+</button>
                         </div>
                     </div>
+
+                    <!-- Piano Roll -->
                     <div class="piano-roll-wrapper">
                         <div class="piano-roll-container" id="piano-roll-container">
                             <!-- webaudio-pianoroll sera inséré ici -->
@@ -731,6 +832,9 @@ class MidiEditorModal {
             if (e.key === 'Escape') this.close();
         };
         document.addEventListener('keydown', this.escapeHandler);
+
+        // Raccourcis clavier
+        this.setupKeyboardShortcuts();
     }
 
     /**
@@ -936,6 +1040,382 @@ class MidiEditorModal {
     }
 
     // ========================================================================
+    // ACTIONS D'ÉDITION
+    // ========================================================================
+
+    /**
+     * Mettre à jour les boutons Undo/Redo
+     */
+    updateUndoRedoButtons(state) {
+        const undoBtn = document.getElementById('undo-btn');
+        const redoBtn = document.getElementById('redo-btn');
+
+        if (undoBtn) {
+            undoBtn.disabled = !state.canUndo;
+            undoBtn.title = state.undoDescription
+                ? `Annuler: ${state.undoDescription} (Ctrl+Z)`
+                : 'Annuler (Ctrl+Z)';
+        }
+
+        if (redoBtn) {
+            redoBtn.disabled = !state.canRedo;
+            redoBtn.title = state.redoDescription
+                ? `Refaire: ${state.redoDescription} (Ctrl+Y)`
+                : 'Refaire (Ctrl+Y)';
+        }
+
+        this.log('debug', `History updated: ${state.undoCount} undo, ${state.redoCount} redo`);
+    }
+
+    /**
+     * Annuler la dernière action
+     */
+    undo() {
+        if (!this.commandHistory) {
+            this.log('warn', 'CommandHistory not initialized');
+            return;
+        }
+
+        if (this.commandHistory.undo()) {
+            this.log('info', 'Undo successful');
+            this.isDirty = true;
+            this.updateSaveButton();
+            this.syncFullSequenceFromPianoRoll();
+        }
+    }
+
+    /**
+     * Refaire la dernière action annulée
+     */
+    redo() {
+        if (!this.commandHistory) {
+            this.log('warn', 'CommandHistory not initialized');
+            return;
+        }
+
+        if (this.commandHistory.redo()) {
+            this.log('info', 'Redo successful');
+            this.isDirty = true;
+            this.updateSaveButton();
+            this.syncFullSequenceFromPianoRoll();
+        }
+    }
+
+    /**
+     * Obtenir les notes sélectionnées du piano roll
+     */
+    getSelectedNotes() {
+        if (!this.pianoRoll || !this.pianoRoll.sequence) {
+            return [];
+        }
+
+        // webaudio-pianoroll ne fournit pas directement les notes sélectionnées
+        // On va utiliser une méthode alternative si disponible
+        if (typeof this.pianoRoll.getSelectedNotes === 'function') {
+            return this.pianoRoll.getSelectedNotes();
+        }
+
+        // Sinon, retourner un tableau vide (nécessite sélection manuelle)
+        this.log('warn', 'Piano roll does not support getSelectedNotes');
+        return [];
+    }
+
+    /**
+     * Copier les notes sélectionnées
+     */
+    copy() {
+        const selectedNotes = this.getSelectedNotes();
+
+        if (selectedNotes.length === 0) {
+            this.showNotification('Aucune note sélectionnée', 'info');
+            return;
+        }
+
+        // Copier les notes dans le clipboard
+        this.clipboard = selectedNotes.map(note => ({ ...note }));
+
+        this.log('info', `Copied ${this.clipboard.length} notes`);
+        this.showNotification(`${this.clipboard.length} note(s) copiée(s)`, 'success');
+
+        // Activer le bouton Paste
+        const pasteBtn = document.getElementById('paste-btn');
+        if (pasteBtn) {
+            pasteBtn.disabled = false;
+        }
+
+        this.updateEditButtons();
+    }
+
+    /**
+     * Coller les notes du clipboard
+     */
+    paste() {
+        if (!this.clipboard || this.clipboard.length === 0) {
+            this.showNotification('Clipboard vide', 'info');
+            return;
+        }
+
+        if (!this.pianoRoll || !this.pianoRoll.sequence) {
+            return;
+        }
+
+        // Trouver le temps minimum des notes copiées
+        const minTime = Math.min(...this.clipboard.map(n => n.t));
+
+        // Obtenir la position actuelle du curseur (ou utiliser la fin de la séquence)
+        const currentTime = this.pianoRoll.xoffset || 0;
+
+        // Calculer le décalage temporel
+        const deltaT = currentTime - minTime;
+
+        // Créer de nouvelles notes avec le décalage
+        const newNotes = this.clipboard.map(note => ({
+            t: note.t + deltaT,
+            g: note.g,
+            n: note.n,
+            c: note.c,
+            v: note.v || 100
+        }));
+
+        // Ajouter les notes via CommandHistory
+        if (this.commandHistory && window.DeleteNotesCommand) {
+            // On utilise DeleteNotesCommand en mode "inverse" pour ajouter des notes
+            const addCommand = new window.DeleteNotesCommand(this.pianoRoll, []);
+            addCommand.undo = function() {
+                newNotes.forEach(note => {
+                    const index = this.pianoRoll.sequence.findIndex(n =>
+                        n.t === note.t && n.n === note.n && n.c === note.c
+                    );
+                    if (index >= 0) {
+                        this.pianoRoll.sequence.splice(index, 1);
+                    }
+                });
+                if (typeof this.pianoRoll.redraw === 'function') {
+                    this.pianoRoll.redraw();
+                }
+                return true;
+            };
+            addCommand.execute = function() {
+                newNotes.forEach(note => {
+                    this.pianoRoll.sequence.push({ ...note });
+                });
+                if (typeof this.pianoRoll.redraw === 'function') {
+                    this.pianoRoll.redraw();
+                }
+                return true;
+            };
+            addCommand.toString = () => `Coller ${newNotes.length} note(s)`;
+
+            this.commandHistory.execute(addCommand);
+        } else {
+            // Fallback sans undo
+            newNotes.forEach(note => {
+                this.pianoRoll.sequence.push(note);
+            });
+            if (typeof this.pianoRoll.redraw === 'function') {
+                this.pianoRoll.redraw();
+            }
+        }
+
+        this.log('info', `Pasted ${newNotes.length} notes`);
+        this.showNotification(`${newNotes.length} note(s) collée(s)`, 'success');
+
+        this.isDirty = true;
+        this.updateSaveButton();
+        this.syncFullSequenceFromPianoRoll();
+    }
+
+    /**
+     * Supprimer les notes sélectionnées
+     */
+    deleteSelectedNotes() {
+        const selectedNotes = this.getSelectedNotes();
+
+        if (selectedNotes.length === 0) {
+            this.showNotification('Aucune note sélectionnée', 'info');
+            return;
+        }
+
+        if (!this.pianoRoll || !this.pianoRoll.sequence) {
+            return;
+        }
+
+        // Supprimer via CommandHistory
+        if (this.commandHistory && window.DeleteNotesCommand) {
+            const deleteCommand = new window.DeleteNotesCommand(this.pianoRoll, selectedNotes);
+            this.commandHistory.execute(deleteCommand);
+        } else {
+            // Fallback sans undo
+            selectedNotes.forEach(note => {
+                const index = this.pianoRoll.sequence.findIndex(n =>
+                    n.t === note.t && n.n === note.n && n.c === note.c
+                );
+                if (index >= 0) {
+                    this.pianoRoll.sequence.splice(index, 1);
+                }
+            });
+            if (typeof this.pianoRoll.redraw === 'function') {
+                this.pianoRoll.redraw();
+            }
+        }
+
+        this.log('info', `Deleted ${selectedNotes.length} notes`);
+        this.showNotification(`${selectedNotes.length} note(s) supprimée(s)`, 'success');
+
+        this.isDirty = true;
+        this.updateSaveButton();
+        this.syncFullSequenceFromPianoRoll();
+        this.updateEditButtons();
+    }
+
+    /**
+     * Changer le canal des notes sélectionnées
+     */
+    changeChannel() {
+        const selectedNotes = this.getSelectedNotes();
+
+        if (selectedNotes.length === 0) {
+            this.showNotification('Aucune note sélectionnée', 'info');
+            return;
+        }
+
+        const channelSelector = document.getElementById('channel-selector');
+        if (!channelSelector) return;
+
+        const newChannel = parseInt(channelSelector.value);
+
+        // Changer le canal via CommandHistory
+        if (this.commandHistory && window.ChangeChannelCommand) {
+            const changeCommand = new window.ChangeChannelCommand(
+                this.pianoRoll,
+                selectedNotes,
+                newChannel
+            );
+            this.commandHistory.execute(changeCommand);
+        } else {
+            // Fallback sans undo
+            selectedNotes.forEach(note => {
+                note.c = newChannel;
+            });
+            if (typeof this.pianoRoll.redraw === 'function') {
+                this.pianoRoll.redraw();
+            }
+        }
+
+        this.log('info', `Changed channel of ${selectedNotes.length} notes to ${newChannel}`);
+        this.showNotification(`Canal changé pour ${selectedNotes.length} note(s)`, 'success');
+
+        this.isDirty = true;
+        this.updateSaveButton();
+        this.syncFullSequenceFromPianoRoll();
+    }
+
+    /**
+     * Changer le mode d'édition
+     */
+    setEditMode(mode) {
+        this.editMode = mode;
+
+        // Mettre à jour l'attribut editmode du piano roll si disponible
+        if (this.pianoRoll) {
+            switch (mode) {
+                case 'select':
+                    this.pianoRoll.setAttribute('editmode', 'dragpoly');
+                    break;
+                case 'drag-notes':
+                    this.pianoRoll.setAttribute('editmode', 'dragpoly');
+                    break;
+                case 'drag-view':
+                    // Désactiver l'édition de notes pour ne faire que du pan
+                    this.pianoRoll.setAttribute('editmode', 'dragpoly');
+                    break;
+            }
+        }
+
+        // Mettre à jour l'UI
+        this.updateModeButtons();
+
+        this.log('info', `Edit mode changed to: ${mode}`);
+    }
+
+    /**
+     * Mettre à jour les boutons de mode
+     */
+    updateModeButtons() {
+        const modeButtons = this.container?.querySelectorAll('[data-mode]');
+        if (!modeButtons) return;
+
+        modeButtons.forEach(btn => {
+            const btnMode = btn.dataset.mode;
+            if (btnMode === this.editMode) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
+
+    /**
+     * Mettre à jour les boutons d'édition (copy, paste, delete, change channel)
+     */
+    updateEditButtons() {
+        const selectedNotes = this.getSelectedNotes();
+        const hasSelection = selectedNotes.length > 0;
+
+        const copyBtn = document.getElementById('copy-btn');
+        const deleteBtn = document.getElementById('delete-btn');
+        const changeChannelBtn = document.getElementById('change-channel-btn');
+
+        if (copyBtn) copyBtn.disabled = !hasSelection;
+        if (deleteBtn) deleteBtn.disabled = !hasSelection;
+        if (changeChannelBtn) changeChannelBtn.disabled = !hasSelection;
+    }
+
+    /**
+     * Configurer les raccourcis clavier
+     */
+    setupKeyboardShortcuts() {
+        this.keyboardHandler = (e) => {
+            // Ignorer si on est dans un input/textarea
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            // Ctrl/Cmd + Z = Undo
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                this.undo();
+            }
+
+            // Ctrl/Cmd + Y = Redo (ou Ctrl/Cmd + Shift + Z)
+            else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                e.preventDefault();
+                this.redo();
+            }
+
+            // Ctrl/Cmd + C = Copy
+            else if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+                e.preventDefault();
+                this.copy();
+            }
+
+            // Ctrl/Cmd + V = Paste
+            else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+                e.preventDefault();
+                this.paste();
+            }
+
+            // Delete ou Backspace = Delete
+            else if (e.key === 'Delete' || e.key === 'Backspace') {
+                e.preventDefault();
+                this.deleteSelectedNotes();
+            }
+        };
+
+        document.addEventListener('keydown', this.keyboardHandler);
+    }
+
+    // ========================================================================
     // ÉVÉNEMENTS
     // ========================================================================
 
@@ -974,6 +1454,36 @@ class MidiEditorModal {
                     break;
                 case 'zoom-v-out':
                     this.zoomVertical(1.25);
+                    break;
+
+                // Nouveaux boutons d'édition
+                case 'undo':
+                    this.undo();
+                    break;
+                case 'redo':
+                    this.redo();
+                    break;
+                case 'copy':
+                    this.copy();
+                    break;
+                case 'paste':
+                    this.paste();
+                    break;
+                case 'delete':
+                    this.deleteSelectedNotes();
+                    break;
+                case 'change-channel':
+                    this.changeChannel();
+                    break;
+
+                // Modes d'édition
+                case 'mode-select':
+                case 'mode-drag-notes':
+                case 'mode-drag-view':
+                    const mode = btn.dataset.mode;
+                    if (mode) {
+                        this.setEditMode(mode);
+                    }
                     break;
             }
         });
@@ -1334,6 +1844,18 @@ class MidiEditorModal {
             this.escapeHandler = null;
         }
 
+        // Retirer les raccourcis clavier
+        if (this.keyboardHandler) {
+            document.removeEventListener('keydown', this.keyboardHandler);
+            this.keyboardHandler = null;
+        }
+
+        // Nettoyer le CommandHistory
+        if (this.commandHistory) {
+            this.commandHistory.clear();
+            this.commandHistory = null;
+        }
+
         // Retirer le conteneur
         if (this.container) {
             this.container.remove();
@@ -1349,6 +1871,7 @@ class MidiEditorModal {
         this.fullSequence = [];
         this.activeChannels.clear();
         this.channels = [];
+        this.clipboard = [];
 
         // Émettre événement
         if (this.eventBus) {
