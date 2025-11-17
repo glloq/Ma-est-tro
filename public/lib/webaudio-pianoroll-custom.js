@@ -748,9 +748,11 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                     this.clearSel();
                     var t=((ht.t/this.snap)|0)*this.snap;
                     const n = Math.round(ht.n); // Arrondir pour aligner sur grille
-                    this.sequence.push({t:t, n:n, g:1, f:1});
+                    const c = this.defaultChannel !== undefined ? this.defaultChannel : 0; // Utiliser le canal par défaut
+                    this.sequence.push({t:t, n:n, g:1, f:1, c:c});
                     this.dragging={o:"D",m:"E",i:this.sequence.length-1, t:t, g:1, ev:[{t:t,g:1,ev:this.sequence[this.sequence.length-1]}]};
                     this.redraw();
+                    this.sendEvent('change'); // Signaler le changement
                 }
             }
         };
@@ -1087,9 +1089,11 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                         this.clearSel();
                         const t=((this.downht.t/this.snap)|0)*this.snap;
                         const n = Math.round(this.downht.n); // Arrondir pour aligner sur grille
-                        this.sequence.push({t:t, n:n, g:1, f:1});
+                        const c = this.defaultChannel !== undefined ? this.defaultChannel : 0; // Utiliser le canal par défaut
+                        this.sequence.push({t:t, n:n, g:1, f:1, c:c});
                         this.dragging={o:"D",m:"E",i:this.sequence.length-1, t:t, g:1, ev:[{t:t,g:1,ev:this.sequence[this.sequence.length-1]}]};
                         this.redraw();
+                        this.sendEvent('change'); // Signaler le changement
                     }
                 }
             }

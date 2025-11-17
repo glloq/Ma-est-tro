@@ -390,6 +390,12 @@ class MidiEditorModal {
             // S'assurer que les couleurs sont toujours définies
             this.pianoRoll.channelColors = this.channelColors;
 
+            // Définir le canal par défaut pour les nouvelles notes (premier canal actif)
+            if (this.activeChannels.size > 0) {
+                this.pianoRoll.defaultChannel = Array.from(this.activeChannels)[0];
+                this.log('debug', `Default channel for new notes: ${this.pianoRoll.defaultChannel}`);
+            }
+
             // Forcer un redraw
             if (typeof this.pianoRoll.redraw === 'function') {
                 this.pianoRoll.redraw();
@@ -408,22 +414,25 @@ class MidiEditorModal {
         const currentSequence = this.pianoRoll.sequence;
 
         // Reconstruire fullSequence en fusionnant:
-        // - Les notes des canaux actuellement visibles (depuis le piano roll)
-        // - Les notes des canaux invisibles (depuis fullSequence)
+        // - Les notes des canaux actuellement visibles (depuis le piano roll, potentiellement modifiées)
+        // - Les notes des canaux invisibles (depuis fullSequence, non modifiées)
 
-        // 1. Déterminer quels canaux sont RÉELLEMENT dans le piano roll actuellement
-        //    (ne pas utiliser this.activeChannels car il a déjà été modifié par le toggle)
-        const visibleChannels = new Set(currentSequence.map(note => note.c));
+        // 1. Utiliser this.activeChannels pour savoir quels canaux sont affichés dans le piano roll
+        //    (Ces canaux ont pu être modifiés : notes déplacées, canal changé, notes ajoutées/supprimées)
+        const visibleChannels = this.activeChannels;
 
-        // 2. Garder les notes des canaux qui ne sont PAS dans le piano roll
+        // 2. Garder les notes des canaux qui ne sont PAS visibles dans le piano roll
+        //    (Ces notes n'ont pas été touchées)
         const invisibleNotes = this.fullSequence.filter(note => !visibleChannels.has(note.c));
 
-        // 3. Prendre les notes du piano roll (canaux visibles, potentiellement modifiées)
+        // 3. Prendre TOUTES les notes du piano roll
+        //    (Elles ont potentiellement des canaux modifiés via changeChannelSelection)
         const visibleNotes = currentSequence.map(note => ({
             t: note.t,
             g: note.g,
             n: note.n,
-            c: note.c
+            c: note.c !== undefined ? note.c : Array.from(this.activeChannels)[0] || 0, // Assurer que c existe
+            v: note.v || 100 // Préserver velocity
         }));
 
         // 4. Fusionner
@@ -433,6 +442,50 @@ class MidiEditorModal {
         this.fullSequence.sort((a, b) => a.t - b.t);
 
         this.log('debug', `Synced fullSequence: ${invisibleNotes.length} invisible + ${visibleNotes.length} visible = ${this.fullSequence.length} total`);
+    }
+
+    /**
+     * Mettre à jour la liste des canaux basée sur fullSequence
+     */
+    updateChannelsFromSequence() {
+        const channelNoteCount = new Map();
+        const channelPrograms = new Map();
+
+        // Compter les notes par canal et préserver les programmes existants
+        this.fullSequence.forEach(note => {
+            const channel = note.c !== undefined ? note.c : 0;
+            channelNoteCount.set(channel, (channelNoteCount.get(channel) || 0) + 1);
+
+            // Trouver le programme pour ce canal (depuis this.channels existants)
+            if (!channelPrograms.has(channel)) {
+                const existingChannel = this.channels.find(ch => ch.channel === channel);
+                if (existingChannel) {
+                    channelPrograms.set(channel, existingChannel.program);
+                } else {
+                    // Nouveau canal : utiliser l'instrument sélectionné
+                    channelPrograms.set(channel, this.selectedInstrument || 0);
+                }
+            }
+        });
+
+        // Reconstruire this.channels
+        this.channels = [];
+        channelNoteCount.forEach((count, channel) => {
+            const program = channelPrograms.get(channel) || 0;
+            const instrumentName = channel === 9 ? 'Drums' : this.gmInstruments[program];
+
+            this.channels.push({
+                channel: channel,
+                program: program,
+                instrument: instrumentName,
+                noteCount: count
+            });
+        });
+
+        // Trier par numéro de canal
+        this.channels.sort((a, b) => a.channel - b.channel);
+
+        this.log('debug', `Updated channels: ${this.channels.length} channels found`);
     }
 
     /**
@@ -466,6 +519,31 @@ class MidiEditorModal {
 
         // Convertir la sequence en événements MIDI
         const events = [];
+
+        // Déterminer quels canaux sont utilisés et leurs instruments
+        const usedChannels = new Map(); // canal -> program
+        fullSequenceToSave.forEach(note => {
+            const channel = note.c !== undefined ? note.c : 0;
+            if (!usedChannels.has(channel)) {
+                // Trouver l'instrument pour ce canal
+                const channelInfo = this.channels.find(ch => ch.channel === channel);
+                const program = channelInfo ? channelInfo.program : this.selectedInstrument || 0;
+                usedChannels.set(channel, program);
+            }
+        });
+
+        // Ajouter les événements programChange au début (tick 0) pour chaque canal
+        usedChannels.forEach((program, channel) => {
+            if (channel !== 9) { // Canal 10 (index 9) est pour drums, pas de programChange
+                events.push({
+                    absoluteTime: 0,
+                    type: 'programChange',
+                    channel: channel,
+                    programNumber: program
+                });
+                this.log('debug', `Added programChange for channel ${channel}: ${this.gmInstruments[program]}`);
+            }
+        });
 
         // Ajouter les événements de note
         fullSequenceToSave.forEach(note => {
@@ -542,52 +620,13 @@ class MidiEditorModal {
         try {
             this.log('info', `Saving MIDI file: ${this.currentFile}`);
 
-            // Récupérer la sequence depuis le piano roll
-            const editedSequence = this.pianoRoll.sequence || [];
+            // Synchroniser fullSequence avec le piano roll actuel (gère les canaux, ajouts, suppressions, etc.)
+            this.syncFullSequenceFromPianoRoll();
 
-            this.log('info', `Sequence length from piano roll: ${editedSequence.length}`);
+            // Mettre à jour la liste des canaux pour refléter la séquence actuelle
+            this.updateChannelsFromSequence();
 
-            // IMPORTANT: Restaurer la propriété canal (c) sur les notes éditées
-            // car webaudio-pianoroll ne la préserve pas
-            const editedSequenceWithChannels = editedSequence.map(note => {
-                // Si la note a déjà un canal, le garder
-                if (note.c !== undefined) {
-                    return note;
-                }
-
-                // Sinon, attribuer le canal basé sur les canaux actifs
-                // Si un seul canal actif, utiliser celui-ci
-                if (this.activeChannels.size === 1) {
-                    const activeChannel = Array.from(this.activeChannels)[0];
-                    return { ...note, c: activeChannel };
-                }
-
-                // Si plusieurs canaux actifs, essayer de retrouver le canal d'origine
-                // en cherchant dans fullSequence
-                const originalNote = this.fullSequence.find(
-                    fn => fn.t === note.t && fn.n === note.n && this.activeChannels.has(fn.c)
-                );
-
-                return {
-                    ...note,
-                    c: originalNote ? originalNote.c : Array.from(this.activeChannels)[0]
-                };
-            });
-
-            this.log('debug', `Restored channels on ${editedSequenceWithChannels.length} notes`);
-
-            // Mettre à jour this.sequence pour la conversion MIDI
-            this.sequence = editedSequenceWithChannels;
-
-            // Mettre à jour fullSequence avec les notes éditées
-            // Supprimer les anciennes notes des canaux actifs
-            this.fullSequence = this.fullSequence.filter(note => !this.activeChannels.has(note.c));
-
-            // Ajouter les notes éditées
-            this.fullSequence = [...this.fullSequence, ...editedSequenceWithChannels];
-            this.fullSequence.sort((a, b) => a.t - b.t);
-
-            this.log('info', `Updated fullSequence: ${this.fullSequence.length} total notes`);
+            this.log('info', `Saving ${this.fullSequence.length} notes across ${this.channels.length} channels`);
 
             // Convertir en format MIDI
             const midiData = this.convertSequenceToMidi();
@@ -1014,6 +1053,11 @@ class MidiEditorModal {
 
         // Définir les couleurs des canaux MIDI sur le piano roll AVANT de charger la séquence
         this.pianoRoll.channelColors = this.channelColors;
+
+        // Définir le canal par défaut pour les nouvelles notes (premier canal actif)
+        if (this.activeChannels.size > 0) {
+            this.pianoRoll.defaultChannel = Array.from(this.activeChannels)[0];
+        }
 
         // Initialiser les sliders de navigation
         this.initializeScrollSliders(maxTick, minNote, maxNote, xrange, noteRange, yoffset);
