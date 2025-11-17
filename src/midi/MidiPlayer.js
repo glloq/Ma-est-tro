@@ -198,8 +198,12 @@ class MidiPlayer {
     this.paused = true;
     this.pauseTime = Date.now();
     this.stopScheduler();
+
+    // Send all notes off to avoid stuck notes
+    this.sendAllNotesOff();
+
     this.broadcastStatus();
-    
+
     this.app.logger.info('Playback paused');
   }
 
