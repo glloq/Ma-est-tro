@@ -949,6 +949,15 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             this.dragging={o:null,x:this.downpos.x,y:this.downpos.y,offsx:this.xoffset,offsy:this.yoffset};
             this.canvas.focus();
 
+            // Empêcher le déplacement de la vue depuis la barre de temps (xruler)
+            if(this.downht.m === "x") {
+                // Bloquer le dragging depuis le ruler horizontal
+                this.dragging.o = "blocked";
+                ev.preventDefault();
+                ev.stopPropagation();
+                return false;
+            }
+
             // Gérer le mode drag-view spécifiquement
             if(this.uiMode === 'drag-view') {
                 this.dragging.o = "V"; // V pour View drag
@@ -1245,10 +1254,14 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 this.ctx.fillRect(0,this.xruler-1,this.width,1);
                 this.ctx.fillRect(this.width-1,0,1,this.xruler);
                 this.ctx.fillStyle=this.colrulerfg;
+                // Calculer la conversion tick vers secondes : tick2time = 4*60/tempo/timebase
+                const tick2time = (4 * 60) / this.tempo / this.timebase;
                 for(let t=0;;t+=this.timebase){
                     let x=(t-this.xoffset)*this.stepw+this.yruler+this.kbwidth;
                     this.ctx.fillRect(x,0,1,this.xruler);
-                    this.ctx.fillText(t/this.timebase+1,x+4,this.xruler-8);
+                    // Afficher le temps en secondes au lieu du numéro de mesure
+                    const timeInSeconds = (t * tick2time).toFixed(1);
+                    this.ctx.fillText(timeInSeconds + "s",x+4,this.xruler-8);
                     if(x>=this.width)
                         break;
                 }
