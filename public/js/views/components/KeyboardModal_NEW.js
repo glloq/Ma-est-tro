@@ -412,7 +412,10 @@ class KeyboardModalNew {
         const key = e.currentTarget;
         const note = parseInt(key.dataset.note);
 
-        this.stopNote(note);
+        // Arrêter la note seulement si elle est active
+        if (this.activeNotes.has(note)) {
+            this.stopNote(note);
+        }
     }
 
     handlePianoKeyEnter(e) {
