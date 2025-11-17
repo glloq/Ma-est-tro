@@ -703,7 +703,7 @@
 
 /* Header avec bouton de fermeture - Compact pour plus d'espace */
 .midi-editor-modal .modal-header {
-    padding: 10px 20px;
+    padding: 8px 16px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border-radius: 12px 12px 0 0;
@@ -718,10 +718,10 @@
     background: rgba(255, 255, 255, 0.2);
     border: 2px solid rgba(255, 255, 255, 0.3);
     color: white;
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
-    font-size: 28px;
+    font-size: 24px;
     line-height: 1;
     cursor: pointer;
     display: flex;
@@ -741,17 +741,17 @@
 .midi-editor-modal .modal-title {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
 }
 
 .midi-editor-modal .modal-title h3 {
     margin: 0;
-    font-size: 1.3rem;
+    font-size: 1.1rem;
     font-weight: 600;
 }
 
 .midi-editor-modal .file-name {
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     opacity: 0.9;
     font-weight: 400;
 }
@@ -767,11 +767,12 @@
 
 .midi-editor-modal .editor-toolbar {
     display: flex;
-    gap: 16px;
-    padding: 12px 16px;
+    gap: 12px;
+    padding: 8px 12px;
     background: #2a2a2a;
     border-bottom: 1px solid #3a3a3a;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .midi-editor-modal .toolbar-group {
@@ -795,55 +796,53 @@
 .midi-editor-modal .channels-toolbar {
     display: flex;
     gap: 6px;
-    padding: 8px 12px;
+    padding: 6px 12px;
     background: #252525;
     border-bottom: 1px solid #3a3a3a;
     overflow-x: auto;
     overflow-y: hidden;
-    max-height: 60px;
+    max-height: 50px;
     flex-shrink: 0;
 }
 
-/* Zoom controls avec boutons */
-.midi-editor-modal .zoom-controls {
+/* Sections de la toolbar */
+.midi-editor-modal .toolbar-section {
     display: flex;
-    gap: 20px;
-    padding: 8px 16px;
-    background: #2a2a2a;
-    border-bottom: 1px solid #3a3a3a;
-    flex-shrink: 0;
+    gap: 6px;
     align-items: center;
 }
 
-.midi-editor-modal .zoom-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.midi-editor-modal .zoom-label {
-    color: #aaa;
-    font-size: 0.85rem;
-    font-weight: 500;
-}
-
-.midi-editor-modal .btn-zoom {
+.midi-editor-modal .toolbar-divider {
+    width: 1px;
+    height: 24px;
     background: #444;
-    color: #fff;
-    border: 1px solid #555;
-    border-radius: 4px;
-    padding: 4px 12px;
-    font-size: 1.1rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    min-width: 32px;
+    margin: 0 4px;
 }
 
-.midi-editor-modal .btn-zoom:hover {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.midi-editor-modal .snap-label {
+    color: #aaa;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.midi-editor-modal .snap-select {
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #fff;
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    max-width: 180px;
+}
+
+.midi-editor-modal .snap-select:hover {
     border-color: #667eea;
-    transform: translateY(-1px);
+}
+
+.midi-editor-modal .snap-select:focus {
+    outline: none;
+    border-color: #667eea;
 }
 
 /* Wrapper pour piano roll + scrollbars */
