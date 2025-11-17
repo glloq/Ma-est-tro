@@ -364,6 +364,7 @@ class MidiEditorModal {
 
         this.updateSequenceFromActiveChannels();
         this.updateChannelButtons();
+        this.updateInstrumentSelector();
     }
 
     /**
@@ -762,6 +763,44 @@ class MidiEditorModal {
     }
 
     /**
+     * Mettre à jour le sélecteur d'instrument selon les canaux actifs
+     */
+    updateInstrumentSelector() {
+        const instrumentSelector = document.getElementById('instrument-selector');
+        const instrumentLabel = document.getElementById('instrument-label');
+        const applyBtn = document.getElementById('apply-instrument-btn');
+
+        if (!instrumentSelector) return;
+
+        if (this.activeChannels.size === 0) {
+            // Aucun canal actif : afficher "Instrument:" et désactiver
+            if (instrumentLabel) instrumentLabel.textContent = 'Instrument:';
+            if (applyBtn) applyBtn.disabled = true;
+        } else {
+            // Au moins un canal actif : afficher l'instrument de ce canal
+            const firstActiveChannel = Array.from(this.activeChannels)[0];
+            const channelInfo = this.channels.find(ch => ch.channel === firstActiveChannel);
+
+            if (channelInfo) {
+                // Mettre à jour le label
+                if (instrumentLabel) {
+                    if (this.activeChannels.size === 1) {
+                        instrumentLabel.textContent = `Instrument canal ${firstActiveChannel + 1}:`;
+                    } else {
+                        instrumentLabel.textContent = `Instrument canaux (${this.activeChannels.size}):`;
+                    }
+                }
+
+                // Mettre à jour le sélecteur pour afficher l'instrument actuel
+                instrumentSelector.value = channelInfo.program.toString();
+
+                // Activer le bouton
+                if (applyBtn) applyBtn.disabled = false;
+            }
+        }
+    }
+
+    /**
      * Mettre à jour l'état visuel des boutons de canal
      */
     updateChannelButtons() {
@@ -890,12 +929,13 @@ class MidiEditorModal {
 
                         <div class="toolbar-divider"></div>
 
-                        <!-- Section Instrument (nouveau canal) -->
+                        <!-- Section Instrument -->
                         <div class="toolbar-section">
-                            <label class="snap-label">Instrument:</label>
-                            <select class="snap-select" id="instrument-selector" title="Instrument pour nouveaux canaux">
+                            <label class="snap-label" id="instrument-label">Instrument:</label>
+                            <select class="snap-select" id="instrument-selector" title="Instrument du canal actif">
                                 ${this.renderInstrumentOptions()}
                             </select>
+                            <button class="tool-btn-compact" data-action="apply-instrument" id="apply-instrument-btn" title="Appliquer l'instrument au canal">✓</button>
                         </div>
                     </div>
 
@@ -1131,6 +1171,7 @@ class MidiEditorModal {
         this.updateStats();
         this.updateEditButtons(); // État initial
         this.updateUndoRedoButtonsState(); // État initial undo/redo
+        this.updateInstrumentSelector(); // État initial sélecteur d'instrument
     }
 
     /**
@@ -1361,6 +1402,57 @@ class MidiEditorModal {
     }
 
     /**
+     * Appliquer l'instrument sélectionné aux canaux actifs
+     */
+    applyInstrument() {
+        if (this.activeChannels.size === 0) {
+            this.showNotification('Aucun canal actif', 'info');
+            return;
+        }
+
+        const instrumentSelector = document.getElementById('instrument-selector');
+        if (!instrumentSelector) return;
+
+        const selectedProgram = parseInt(instrumentSelector.value);
+        const instrumentName = this.gmInstruments[selectedProgram];
+
+        // Appliquer l'instrument à tous les canaux actifs
+        let count = 0;
+        this.activeChannels.forEach(channel => {
+            // Mettre à jour this.channels
+            const channelInfo = this.channels.find(ch => ch.channel === channel);
+            if (channelInfo) {
+                channelInfo.program = selectedProgram;
+                channelInfo.instrument = channel === 9 ? 'Drums' : instrumentName;
+                count++;
+            }
+        });
+
+        this.log('info', `Applied instrument ${instrumentName} to ${count} channel(s)`);
+        this.showNotification(`Instrument changé: ${instrumentName}`, 'success');
+
+        // Mettre à jour l'affichage des boutons de canal (pour refléter le nouvel instrument)
+        // Régénérer complètement les boutons avec les nouveaux noms d'instrument
+        const channelsToolbar = this.container?.querySelector('.channels-toolbar');
+        if (channelsToolbar) {
+            channelsToolbar.innerHTML = this.renderChannelButtons();
+
+            // Réattacher les événements sur les nouveaux boutons
+            const channelButtons = this.container.querySelectorAll('.channel-btn');
+            channelButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const channel = parseInt(btn.dataset.channel);
+                    this.toggleChannel(channel);
+                });
+            });
+        }
+
+        this.isDirty = true;
+        this.updateSaveButton();
+    }
+
+    /**
      * Changer le mode d'édition
      */
     setEditMode(mode) {
@@ -1531,6 +1623,9 @@ class MidiEditorModal {
                     break;
                 case 'change-channel':
                     this.changeChannel();
+                    break;
+                case 'apply-instrument':
+                    this.applyInstrument();
                     break;
 
                 // Modes d'édition
