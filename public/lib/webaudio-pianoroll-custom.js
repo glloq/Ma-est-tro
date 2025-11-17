@@ -963,10 +963,12 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 this.dragging.o = "V"; // V pour View drag
                 this.canvas.style.cursor = 'grabbing';
             }
-            // Gérer le mode select : sélection par zone avec clic gauche
+            // Gérer le mode select : déplacer les notes sélectionnées ou sélection par zone
             else if(this.uiMode === 'select') {
-                // Utiliser la même logique que le clic droit pour la sélection par zone
                 if(this.editmode=="dragmono"||this.editmode=="dragpoly") {
+                    // Vérifier si on a des notes sélectionnées
+                    const hasSelection = this.selectedNotes().length > 0;
+
                     switch(this.downht.m){
                     case "N":
                     case "B":
@@ -975,8 +977,23 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                         this.editDragDown(this.downpos);
                         break;
                     default:
-                        // Sinon, activer la sélection par zone
-                        this.dragging={o:"A",p:this.downpos,p2:this.downpos,t1:this.downht.t,n1:this.downht.n};
+                        // Si on a des notes sélectionnées, permettre de les déplacer en cliquant n'importe où
+                        if(hasSelection) {
+                            // Sauvegarder snapshot avant déplacement
+                            this.saveSnapshot();
+                            // Activer le mode drag pour les notes sélectionnées
+                            // Sauvegarder les positions originales
+                            for(let i=0,l=this.sequence.length;i<l;++i){
+                                const ev=this.sequence[i];
+                                if(ev.f)
+                                    ev.on=ev.n, ev.ot=ev.t, ev.og=ev.g;
+                            }
+                            // Mode drag sans note spécifique (on déplace toutes les sélectionnées)
+                            this.dragging={o:"D",m:"N",i:-1,t:this.downht.t,n:this.downht.n,dt:0};
+                        } else {
+                            // Sinon, activer la sélection par zone
+                            this.dragging={o:"A",p:this.downpos,p2:this.downpos,t1:this.downht.t,n1:this.downht.n};
+                        }
                         break;
                     }
                 }
