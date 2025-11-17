@@ -271,57 +271,37 @@ class BackendAPIClient {
 
     /**
      * Send MIDI Note On message
-     * @param {string} deviceId - Target device ID (optional, if null sends to all)
+     * @param {string} deviceId - Target device ID
      * @param {number} note - MIDI note number (0-127)
      * @param {number} velocity - Note velocity (1-127)
-     * @param {number} channel - MIDI channel (0-15)
+     * @param {number} channel - MIDI channel (0-15, maps to 1-16)
      */
     async sendNoteOn(deviceId, note, velocity, channel = 0) {
-        if (!this.isConnected()) {
-            throw new Error('WebSocket not connected');
-        }
-
-        // Envoyer raw MIDI data comme MidiBridge
-        // 0x90 = Note On, ajouter channel (0-15)
+        // Utiliser la commande backend 'midi_send' avec données raw MIDI
         const midiData = [0x90 + channel, note & 0x7F, velocity & 0x7F];
 
-        const message = {
-            type: 'midi_out',
-            data: Array.from(midiData),
-            timestamp: Date.now()
-        };
-
-        // Ne pas inclure outputId - envoyer à tous les outputs actifs
-        // comme fait MidiBridge.sendToBackend() par défaut
-
-        console.log('[BackendAPIClient] Sending MIDI:', JSON.stringify(message));
-        this.ws.send(JSON.stringify(message));
+        return this.sendCommand('midi_send', {
+            deviceId: deviceId,
+            type: 'raw',
+            data: midiData
+        });
     }
 
     /**
      * Send MIDI Note Off message
-     * @param {string} deviceId - Target device ID (optional, if null sends to all)
+     * @param {string} deviceId - Target device ID
      * @param {number} note - MIDI note number (0-127)
-     * @param {number} channel - MIDI channel (0-15)
+     * @param {number} channel - MIDI channel (0-15, maps to 1-16)
      */
     async sendNoteOff(deviceId, note, channel = 0) {
-        if (!this.isConnected()) {
-            throw new Error('WebSocket not connected');
-        }
-
-        // Envoyer raw MIDI data comme MidiBridge
-        // 0x80 = Note Off, ajouter channel (0-15)
+        // Utiliser la commande backend 'midi_send' avec données raw MIDI
         const midiData = [0x80 + channel, note & 0x7F, 0];
 
-        const message = {
-            type: 'midi_out',
-            data: Array.from(midiData),
-            timestamp: Date.now()
-        };
-
-        // Ne pas inclure outputId - envoyer à tous les outputs actifs
-
-        this.ws.send(JSON.stringify(message));
+        return this.sendCommand('midi_send', {
+            deviceId: deviceId,
+            type: 'raw',
+            data: midiData
+        });
     }
 
     // ========================================================================
