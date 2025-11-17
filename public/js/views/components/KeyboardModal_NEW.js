@@ -256,8 +256,6 @@ class KeyboardModalNew {
                 whiteKeyIndex++;
             }
         }
-
-        this.logger.info('[KeyboardModal] Piano keys generated');
     }
 
     getNoteOffset(noteName) {
@@ -318,7 +316,6 @@ class KeyboardModalNew {
             const display = this.octaveOffset > 0 ? `+${this.octaveOffset}` : this.octaveOffset;
             document.getElementById('keyboard-octave-display').textContent = `Octave: ${display}`;
             this.regeneratePianoKeys();
-            this.logger.info(`[KeyboardModal] Octave +: offset=${this.octaveOffset}`);
         });
 
         document.getElementById('keyboard-octave-down')?.addEventListener('click', () => {
@@ -326,14 +323,12 @@ class KeyboardModalNew {
             const display = this.octaveOffset > 0 ? `+${this.octaveOffset}` : this.octaveOffset;
             document.getElementById('keyboard-octave-display').textContent = `Octave: ${display}`;
             this.regeneratePianoKeys();
-            this.logger.info(`[KeyboardModal] Octave -: offset=${this.octaveOffset}`);
         });
 
         // Device select
         document.getElementById('keyboard-device-select')?.addEventListener('change', (e) => {
             const deviceId = e.target.value;
             this.selectedDevice = this.devices.find(d => d.device_id === deviceId || d.id === deviceId) || null;
-            this.logger.info('[KeyboardModal] Device selected:', this.selectedDevice);
         });
 
         // Velocity
@@ -356,8 +351,6 @@ class KeyboardModalNew {
                     helpText.textContent = 'SDFGHJKL; (blanches) / WETYUOP (noires)';
                 }
             }
-
-            this.logger.info(`[KeyboardModal] Layout changed to: ${this.keyboardLayout}`);
         });
 
         // Piano keys
@@ -381,14 +374,11 @@ class KeyboardModalNew {
         // Clavier PC
         window.addEventListener('keydown', this.handleKeyDown);
         window.addEventListener('keyup', this.handleKeyUp);
-
-        this.logger.info('[KeyboardModal] Events attached');
     }
 
     detachEvents() {
         window.removeEventListener('keydown', this.handleKeyDown);
         window.removeEventListener('keyup', this.handleKeyUp);
-        this.logger.info('[KeyboardModal] Events detached');
     }
 
     handlePianoKeyDown(e) {
@@ -421,8 +411,6 @@ class KeyboardModalNew {
         const baseNoteNumber = (this.baseOctave + this.octaveOffset + 1) * 12;
         const note = baseNoteNumber + noteOffset;
 
-        this.logger.info(`[KeyboardModal] PC Key ${e.code}: offset=${noteOffset}, base=${baseNoteNumber}, note=${note}`);
-
         if (!this.activeNotes.has(note)) {
             this.playNote(note);
         }
@@ -449,8 +437,6 @@ class KeyboardModalNew {
     playNote(note) {
         if (note < 21 || note > 108) return;
 
-        this.logger.info(`[KeyboardModal] Play note: ${note} vel=${this.velocity}`);
-
         // Ajouter aux notes actives
         this.activeNotes.add(note);
         this.updatePianoDisplay();
@@ -458,23 +444,15 @@ class KeyboardModalNew {
         // Envoyer MIDI si device sélectionné
         if (this.selectedDevice && this.backend) {
             const deviceId = this.selectedDevice.device_id || this.selectedDevice.id;
-            this.logger.info(`[KeyboardModal] Sending noteOn to device ${deviceId}, note=${note}, vel=${this.velocity}`);
 
             this.backend.sendNoteOn(deviceId, note, this.velocity, 0)
-                .then(() => {
-                    this.logger.info(`[KeyboardModal] ✓ Note ON sent: ${note}`);
-                })
                 .catch(err => {
-                    this.logger.error('[KeyboardModal] ✗ Note ON failed:', err);
+                    this.logger.error('[KeyboardModal] Note ON failed:', err);
                 });
-        } else {
-            this.logger.warn('[KeyboardModal] No device/backend - note not sent');
         }
     }
 
     stopNote(note) {
-        this.logger.info(`[KeyboardModal] Stop note: ${note}`);
-
         // Retirer des notes actives
         this.activeNotes.delete(note);
         this.updatePianoDisplay();
@@ -484,11 +462,8 @@ class KeyboardModalNew {
             const deviceId = this.selectedDevice.device_id || this.selectedDevice.id;
 
             this.backend.sendNoteOff(deviceId, note, 0)
-                .then(() => {
-                    this.logger.info(`[KeyboardModal] ✓ Note OFF sent: ${note}`);
-                })
                 .catch(err => {
-                    this.logger.error('[KeyboardModal] ✗ Note OFF failed:', err);
+                    this.logger.error('[KeyboardModal] Note OFF failed:', err);
                 });
         }
     }
@@ -529,8 +504,6 @@ class KeyboardModalNew {
                     };
                 }
             }));
-
-            this.logger.info(`[KeyboardModal] Loaded ${this.devices.length} devices`);
         } catch (error) {
             this.logger.error('[KeyboardModal] Failed to load devices:', error);
             this.devices = [];
@@ -549,7 +522,5 @@ class KeyboardModalNew {
             option.textContent = device.displayName || device.name;
             select.appendChild(option);
         });
-
-        this.logger.info('[KeyboardModal] Device select populated');
     }
 }

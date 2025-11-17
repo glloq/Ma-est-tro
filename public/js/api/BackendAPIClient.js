@@ -278,8 +278,6 @@ class BackendAPIClient {
      */
     async sendNoteOn(deviceId, note, velocity, channel = 0) {
         // Utiliser la commande backend 'midi_send_note'
-        console.log(`[BackendAPI] sendNoteOn: device=${deviceId}, note=${note}, vel=${velocity}, ch=${channel}`);
-
         return this.sendCommand('midi_send_note', {
             deviceId: deviceId,
             channel: channel,

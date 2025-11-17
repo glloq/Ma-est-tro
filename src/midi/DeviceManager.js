@@ -238,24 +238,14 @@ class DeviceManager {
   }
 
   sendMessage(deviceName, type, data) {
-    this.app.logger.info(`[DeviceManager] sendMessage called:`, {
-      deviceName,
-      type,
-      data,
-      availableOutputs: Array.from(this.outputs.keys())
-    });
-
     const output = this.outputs.get(deviceName);
     if (!output) {
       this.app.logger.warn(`Output device not found: ${deviceName}`);
-      this.app.logger.warn(`Available outputs: ${Array.from(this.outputs.keys()).join(', ')}`);
       return false;
     }
 
     try {
-      this.app.logger.info(`[DeviceManager] Sending MIDI ${type} to ${deviceName}:`, data);
       output.send(type, data);
-      this.app.logger.info(`[DeviceManager] ✓ MIDI message sent successfully`);
       return true;
     } catch (error) {
       this.app.logger.error(`Failed to send MIDI message: ${error.message}`);
