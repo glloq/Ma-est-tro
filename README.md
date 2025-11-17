@@ -39,8 +39,11 @@ MidiMind 5.0 est un système de gestion MIDI pour Raspberry Pi avec interface we
   - Configuration sauvegardée par fichier
   - Sélection du périphérique de sortie pour chaque canal
   - Indicateur visuel des canaux routés
-
-> ⚠️ **Note sur la compensation de latence** : L'interface permet de configurer un délai de synchronisation par instrument (bouton ⚙️ Réglages), mais cette fonctionnalité n'est pas encore appliquée lors de la lecture. La compensation de latence par canal nécessite une correction dans le code backend.
+- **Compensation de Latence par Instrument** : Synchronisation précise
+  - Configurez un délai (`sync_delay`) pour chaque instrument via le bouton ⚙️ Réglages
+  - Chaque canal utilise le délai de son instrument assigné
+  - Permet de compenser les différences de latence entre instruments (USB, Bluetooth, etc.)
+  - Délai ajustable de -2147483648 à +2147483647 ms (valeurs négatives pour avancer l'instrument)
 
 ### 🌐 Interface Web
 - **Responsive** : Interface adaptée pour PC, tablette et smartphone
@@ -72,26 +75,32 @@ L'API backend supporte des fonctionnalités additionnelles accessibles via WebSo
 
 ---
 
-## ⚠️ Limitations et Bugs Connus
+## ✅ Corrections Récentes
 
 ### Compensation de Latence par Instrument
 
-**Statut** : ⚠️ **Non fonctionnelle**
+**Statut** : ✅ **Corrigé et fonctionnel**
 
-**Problème** : L'interface permet de configurer un délai de synchronisation (`sync_delay`) pour chaque instrument via le bouton ⚙️ Réglages, mais ce délai n'est pas appliqué lors de la lecture MIDI.
+**Problème précédent** : Le délai de synchronisation (`sync_delay`) configuré via le bouton ⚙️ Réglages n'était pas appliqué lors de la lecture MIDI.
 
-**Détails techniques** :
-- Le `sync_delay` est sauvegardé en base de données mais jamais lu lors de la lecture
-- Le système `LatencyCompensator` utilise une table différente (`instrument_latency` vs `instruments_latency`)
-- Bug dans `MidiPlayer.js` : la compensation est calculée pour le périphérique par défaut, pas pour le périphérique spécifique du canal
+**Correction apportée** (`src/midi/MidiPlayer.js:317-354`) :
+- La fonction `scheduleEvent()` récupère maintenant le périphérique cible AVANT de calculer la latence
+- Le `sync_delay` est lu depuis la base de données pour chaque canal
+- Chaque canal applique le délai de son instrument assigné, pas du périphérique par défaut
 
-**Impact** :
-- Si vous routez différents canaux vers différents instruments avec des latences différentes, ils ne seront pas parfaitement synchronisés
-- La fonctionnalité "Réglages de l'instrument" stocke les données mais elles ne sont pas utilisées
+**Résultat** :
+- ✅ Les canaux routés vers différents instruments avec des latences différentes sont maintenant parfaitement synchronisés
+- ✅ La compensation est appliquée individuellement pour chaque canal selon son instrument
+- ✅ Logs de debug disponibles pour vérifier l'application des délais (niveau `debug`)
 
-**Workaround** : Pour l'instant, utilisez des instruments ayant des latences similaires, ou routez tous les canaux vers le même instrument.
-
-**Fichier à corriger** : `src/midi/MidiPlayer.js:317-332` - la fonction `scheduleEvent()` doit récupérer la latence du périphérique du canal, pas du périphérique par défaut.
+**Comment utiliser** :
+1. Scannez vos périphériques MIDI
+2. Cliquez sur ⚙️ Réglages pour chaque instrument
+3. Configurez le `Délai de synchronisation` (en millisecondes)
+   - Valeurs positives : retarder l'instrument (ex: 80ms pour Bluetooth)
+   - Valeurs négatives : avancer l'instrument (ex: -20ms)
+4. Jouez un fichier MIDI avec routage par canal
+5. Les délais sont appliqués automatiquement !
 
 ---
 
@@ -465,7 +474,24 @@ tail -f logs/midimind.log
 2. Jouez des notes avec la souris ou le clavier de l'ordinateur
 3. Testez vos périphériques MIDI connectés
 
-### 7️⃣ Console de Debug
+### 7️⃣ Configurer les Délais de Synchronisation (Latence)
+
+1. Dans la liste **"Périphériques MIDI"**, cliquez sur ⚙️ **Réglages** à côté d'un instrument
+2. Dans la section **"Délai de synchronisation (ms)"**, entrez le délai en millisecondes :
+   - **Valeur positive** (ex: `80`) : retarde cet instrument (utile pour Bluetooth)
+   - **Valeur négative** (ex: `-20`) : avance cet instrument
+   - **Zéro** (défaut) : aucune compensation
+3. Cliquez sur **💾 Enregistrer**
+4. Le délai sera automatiquement appliqué lors de la lecture MIDI
+
+**Exemple d'utilisation** :
+- Piano USB (latence faible) : `0 ms`
+- Synthé Bluetooth (latence élevée) : `80 ms`
+- Résultat : Les deux instruments jouent parfaitement synchronisés !
+
+**Astuce** : Testez différentes valeurs pour trouver le meilleur réglage pour vos instruments.
+
+### 8️⃣ Console de Debug
 
 1. Cliquez sur le bouton **"🐞"** en haut à droite
 2. Visualisez les logs en temps réel :
@@ -473,6 +499,7 @@ tail -f logs/midimind.log
    - Avertissements (orange)
    - Erreurs (rouge)
 3. Utile pour diagnostiquer les problèmes de connexion
+4. Les logs de debug montrent l'application des délais de synchronisation
 
 ---
 

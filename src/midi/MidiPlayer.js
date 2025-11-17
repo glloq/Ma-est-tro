@@ -319,12 +319,34 @@ class MidiPlayer {
     const currentTime = this.position;
     const delay = Math.max(0, eventTime - currentTime);
 
-    // Get latency compensation
-    const latency = this.app.latencyCompensator 
-      ? this.app.latencyCompensator.getLatency(this.outputDevice) 
-      : 0;
+    // ✅ FIX: Get the target device for this channel BEFORE calculating latency
+    const targetDevice = this.getOutputForChannel(event.channel);
 
-    const adjustedDelay = Math.max(0, delay - (latency / 1000));
+    if (!targetDevice) {
+      this.app.logger.warn(`No output device for channel ${event.channel + 1}, skipping event`);
+      return;
+    }
+
+    // Get sync_delay from instrument settings (in milliseconds)
+    let syncDelay = 0;
+
+    if (this.app.database) {
+      try {
+        const settings = this.app.database.getInstrumentSettings(targetDevice);
+        if (settings && settings.sync_delay !== undefined && settings.sync_delay !== null) {
+          syncDelay = settings.sync_delay;
+          // Log only for non-zero delays to avoid spam
+          if (syncDelay !== 0) {
+            this.app.logger.debug(`Using sync_delay ${syncDelay}ms for device ${targetDevice}, channel ${event.channel + 1}`);
+          }
+        }
+      } catch (error) {
+        this.app.logger.warn(`Failed to get sync_delay for device ${targetDevice}: ${error.message}`);
+      }
+    }
+
+    // Apply sync_delay compensation (convert ms to seconds)
+    const adjustedDelay = Math.max(0, delay - (syncDelay / 1000));
 
     setTimeout(() => {
       this.sendEvent(event);
