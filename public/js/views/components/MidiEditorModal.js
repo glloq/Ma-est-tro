@@ -981,13 +981,13 @@ class MidiEditorModal {
         let lastSelectionCount = 0;
 
         this.selectionCheckInterval = setInterval(() => {
-            // Vérifier UNIQUEMENT le changement de sélection (beaucoup plus léger)
+            // Vérifier UNIQUEMENT le changement de sélection (très léger)
             const currentSelectionCount = this.getSelectionCount();
             if (currentSelectionCount !== lastSelectionCount) {
                 this.updateEditButtons();
                 lastSelectionCount = currentSelectionCount;
             }
-        }, 1000); // Réduit à 1 seconde pour réduire la charge
+        }, 2000); // Réduit à 2 secondes pour minimiser la charge
 
         this.updateStats();
         this.updateEditButtons(); // État initial

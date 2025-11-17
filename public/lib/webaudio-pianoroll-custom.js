@@ -156,6 +156,21 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
         this.maxUndoSize = 50;
         this.uiMode = 'select'; // 'select', 'drag-notes', 'drag-view'
 
+        // OPTIMISATION: Throttle pour redraw pendant le drag
+        this.pendingRedraw = false;
+        this.scheduledRedraw = null;
+
+        // Fonction throttled pour redraw (limite à 60fps)
+        this.redrawThrottled = function() {
+            if (!this.pendingRedraw) {
+                this.pendingRedraw = true;
+                requestAnimationFrame(() => {
+                    this.redraw();
+                    this.pendingRedraw = false;
+                });
+            }
+        };
+
         this.saveSnapshot = function() {
             // Sauvegarder un snapshot de la séquence actuelle
             const snapshot = this.sequence.map(note => ({
@@ -720,7 +735,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                         }
 
                     }
-                    this.redraw();
+                    this.redrawThrottled();
                     break;
                 case "B":
                     if(this.dragging.ev){
@@ -737,7 +752,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                         }
 
                     }
-                    this.redraw();
+                    this.redrawThrottled();
                     break;
 
                 ev=this.sequence[this.dragging.i];
@@ -753,12 +768,12 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                         ev.t=t-1;
                         ev.g=1;
                     }
-                    this.redraw();
+                    this.redrawThrottled();
                     break;
                 case "N":
                     ev=this.sequence[this.dragging.i];
                     this.moveSelectedNote((ht.t-this.dragging.t)|0, (ht.n|0)-this.dragging.n);
-                    this.redraw();
+                    this.redrawThrottled();
                     break;
                 }
             }
@@ -958,47 +973,72 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 return false;
             }
 
-            // Gérer le mode drag-view spécifiquement
-            if(this.uiMode === 'drag-view') {
-                this.dragging.o = "V"; // V pour View drag
-                this.canvas.style.cursor = 'grabbing';
-            }
-            // Gérer le mode select : déplacer les notes sélectionnées ou sélection par zone
-            else if(this.uiMode === 'select') {
+            // Gérer les 3 modes UI de manière claire et explicite
+            if(this.uiMode === 'select') {
+                // MODE SELECT : Sélection par zone ou clic sur note pour sélectionner
                 if(this.editmode=="dragmono"||this.editmode=="dragpoly") {
-                    // Vérifier si on a des notes sélectionnées
+                    switch(this.downht.m){
+                    case "N":
+                    case "n":
+                        // Clic sur une note : sélectionner la note (sans déplacer)
+                        const ev = this.sequence[this.downht.i];
+                        if(!ev.f) {
+                            this.clearSel();
+                            ev.f = 1;
+                        }
+                        this.redraw();
+                        break;
+                    case "B":
+                    case "E":
+                        // Clic sur bord de note : sélectionner
+                        const evEdge = this.sequence[this.downht.i];
+                        if(!evEdge.f) {
+                            this.clearSel();
+                            evEdge.f = 1;
+                        }
+                        this.redraw();
+                        break;
+                    default:
+                        // Clic dans le vide : sélection par zone
+                        this.dragging={o:"A",p:this.downpos,p2:this.downpos,t1:this.downht.t,n1:this.downht.n};
+                        break;
+                    }
+                }
+            }
+            else if(this.uiMode === 'drag-notes') {
+                // MODE DRAG-NOTES : Déplacer les notes (sélectionnées ou cliquées)
+                if(this.editmode=="dragmono"||this.editmode=="dragpoly") {
                     const hasSelection = this.selectedNotes().length > 0;
 
                     switch(this.downht.m){
                     case "N":
                     case "B":
                     case "E":
-                        // Si on clique sur une note, laisser editDragDown gérer
+                        // Clic sur une note : déplacer via editDragDown
                         this.editDragDown(this.downpos);
                         break;
                     default:
-                        // Si on a des notes sélectionnées, permettre de les déplacer en cliquant n'importe où
+                        // Clic dans le vide avec sélection : déplacer la sélection
                         if(hasSelection) {
-                            // Sauvegarder snapshot avant déplacement
                             this.saveSnapshot();
-                            // Activer le mode drag pour les notes sélectionnées
-                            // Sauvegarder les positions originales
                             for(let i=0,l=this.sequence.length;i<l;++i){
                                 const ev=this.sequence[i];
                                 if(ev.f)
                                     ev.on=ev.n, ev.ot=ev.t, ev.og=ev.g;
                             }
-                            // Mode drag sans note spécifique (on déplace toutes les sélectionnées)
                             this.dragging={o:"D",m:"N",i:-1,t:this.downht.t,n:this.downht.n,dt:0};
-                        } else {
-                            // Sinon, activer la sélection par zone
-                            this.dragging={o:"A",p:this.downpos,p2:this.downpos,t1:this.downht.t,n1:this.downht.n};
                         }
                         break;
                     }
                 }
             }
+            else if(this.uiMode === 'drag-view') {
+                // MODE DRAG-VIEW : Déplacer la vue
+                this.dragging.o = "V";
+                this.canvas.style.cursor = 'grabbing';
+            }
             else {
+                // Pas de mode UI défini : comportement par défaut
                 switch(this.editmode){
                 case "gridpoly":
                 case "gridmono":
@@ -1044,10 +1084,10 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             const ht=this.hitTest(pos);
             switch(this.dragging.o){
             case "V":
-                // Mode drag-view: toujours déplacer la vue
+                // Mode drag-view: toujours déplacer la vue (throttled pour performance)
                 this.xoffset=this.dragging.offsx+(this.dragging.x-pos.x)*(this.xrange/this.width);
                 this.yoffset=this.dragging.offsy+(pos.y-this.dragging.y)*(this.yrange/this.height);
-                this.redraw();
+                this.redrawThrottled();
                 break;
             case null:
                 if(this.xscroll)
@@ -1064,10 +1104,11 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 }
                 break;
             case "A":
+                // Sélection par zone (throttled pour performance)
                 this.dragging.p2=pos;
                 this.dragging.t2=ht.t;
                 this.dragging.n2=ht.n;
-                this.redraw();
+                this.redrawThrottled();
                 break;
             case "E":
                 var p=Math.max(1,(this.dragging.m+(pos.x-this.dragging.x)/this.stepw+.5)|0);
@@ -1271,16 +1312,38 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 this.ctx.fillRect(0,this.xruler-1,this.width,1);
                 this.ctx.fillRect(this.width-1,0,1,this.xruler);
                 this.ctx.fillStyle=this.colrulerfg;
-                // Calculer la conversion tick vers secondes : tick2time = 4*60/tempo/timebase
+
+                // Calculer la conversion tick vers secondes
                 const tick2time = (4 * 60) / this.tempo / this.timebase;
-                for(let t=0;;t+=this.timebase){
+
+                // Adapter l'intervalle d'affichage selon le zoom (xrange)
+                let secondInterval = 1; // Par défaut : 1 seconde
+                if(this.xrange > 64) {
+                    secondInterval = 30; // Très dézoomé : toutes les 30s
+                } else if(this.xrange > 48) {
+                    secondInterval = 15; // Dézoomé : toutes les 15s
+                } else if(this.xrange > 32) {
+                    secondInterval = 10; // Moyen : toutes les 10s
+                } else if(this.xrange > 24) {
+                    secondInterval = 5; // Normal : toutes les 5s
+                } else if(this.xrange > 16) {
+                    secondInterval = 2; // Zoomé : toutes les 2s
+                } else {
+                    secondInterval = 1; // Très zoomé : toutes les 1s
+                }
+
+                // Calculer l'intervalle en ticks correspondant à secondInterval
+                const tickInterval = secondInterval / tick2time;
+
+                // Dessiner les marqueurs de temps
+                for(let t=0;;t+=tickInterval){
                     let x=(t-this.xoffset)*this.stepw+this.yruler+this.kbwidth;
-                    this.ctx.fillRect(x,0,1,this.xruler);
-                    // Afficher le temps en secondes au lieu du numéro de mesure
-                    const timeInSeconds = (t * tick2time).toFixed(1);
-                    this.ctx.fillText(timeInSeconds + "s",x+4,this.xruler-8);
-                    if(x>=this.width)
-                        break;
+                    if(x>=this.width) break;
+                    if(x >= this.yruler+this.kbwidth) {
+                        this.ctx.fillRect(x,0,1,this.xruler);
+                        const timeInSeconds = Math.round(t * tick2time);
+                        this.ctx.fillText(timeInSeconds + "s",x+4,this.xruler-8);
+                    }
                 }
             }
         };
