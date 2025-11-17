@@ -26,9 +26,6 @@ class MidiEditorModal {
         this.activeChannels = new Set(); // Canaux actifs à afficher
         this.channels = []; // Informations sur les canaux disponibles
 
-        // Système Undo/Redo
-        this.commandHistory = null;
-
         // Clipboard pour copy/paste
         this.clipboard = [];
 
@@ -118,15 +115,7 @@ class MidiEditorModal {
         this.currentFilename = filename || fileId;
         this.isDirty = false;
 
-        // Initialiser le système Undo/Redo
-        if (window.CommandHistory) {
-            this.commandHistory = new window.CommandHistory(100);
-            this.commandHistory.onHistoryChange = (state) => {
-                this.updateUndoRedoButtons(state);
-            };
-        } else {
-            this.log('warn', 'CommandHistory not loaded');
-        }
+        // CommandHistory n'est plus utilisé - le piano roll gère undo/redo nativement
 
         try {
             // Charger le fichier MIDI
@@ -1021,10 +1010,14 @@ class MidiEditorModal {
                 this.updateEditButtons();
                 lastSelectionCount = currentSelectionCount;
             }
+
+            // Mettre à jour les boutons undo/redo
+            this.updateUndoRedoButtonsState();
         }, 200); // Vérifier toutes les 200ms
 
         this.updateStats();
         this.updateEditButtons(); // État initial
+        this.updateUndoRedoButtonsState(); // État initial undo/redo
     }
 
     /**
@@ -1057,43 +1050,20 @@ class MidiEditorModal {
     // ========================================================================
 
     /**
-     * Mettre à jour les boutons Undo/Redo
-     */
-    updateUndoRedoButtons(state) {
-        const undoBtn = document.getElementById('undo-btn');
-        const redoBtn = document.getElementById('redo-btn');
-
-        if (undoBtn) {
-            undoBtn.disabled = !state.canUndo;
-            undoBtn.title = state.undoDescription
-                ? `Annuler: ${state.undoDescription} (Ctrl+Z)`
-                : 'Annuler (Ctrl+Z)';
-        }
-
-        if (redoBtn) {
-            redoBtn.disabled = !state.canRedo;
-            redoBtn.title = state.redoDescription
-                ? `Refaire: ${state.redoDescription} (Ctrl+Y)`
-                : 'Refaire (Ctrl+Y)';
-        }
-
-        this.log('debug', `History updated: ${state.undoCount} undo, ${state.redoCount} redo`);
-    }
-
-    /**
      * Annuler la dernière action
      */
     undo() {
-        if (!this.commandHistory) {
-            this.log('warn', 'CommandHistory not initialized');
+        if (!this.pianoRoll || typeof this.pianoRoll.undo !== 'function') {
+            this.log('warn', 'Undo not available');
             return;
         }
 
-        if (this.commandHistory.undo()) {
+        if (this.pianoRoll.undo()) {
             this.log('info', 'Undo successful');
             this.isDirty = true;
             this.updateSaveButton();
             this.syncFullSequenceFromPianoRoll();
+            this.updateUndoRedoButtonsState();
         }
     }
 
@@ -1101,16 +1071,34 @@ class MidiEditorModal {
      * Refaire la dernière action annulée
      */
     redo() {
-        if (!this.commandHistory) {
-            this.log('warn', 'CommandHistory not initialized');
+        if (!this.pianoRoll || typeof this.pianoRoll.redo !== 'function') {
+            this.log('warn', 'Redo not available');
             return;
         }
 
-        if (this.commandHistory.redo()) {
+        if (this.pianoRoll.redo()) {
             this.log('info', 'Redo successful');
             this.isDirty = true;
             this.updateSaveButton();
             this.syncFullSequenceFromPianoRoll();
+            this.updateUndoRedoButtonsState();
+        }
+    }
+
+    /**
+     * Mettre à jour l'état des boutons undo/redo
+     */
+    updateUndoRedoButtonsState() {
+        if (!this.pianoRoll) return;
+
+        const undoBtn = document.getElementById('undo-btn');
+        const redoBtn = document.getElementById('redo-btn');
+
+        if (undoBtn) {
+            undoBtn.disabled = !this.pianoRoll.canUndo();
+        }
+        if (redoBtn) {
+            redoBtn.disabled = !this.pianoRoll.canRedo();
         }
     }
 
@@ -1265,20 +1253,9 @@ class MidiEditorModal {
     setEditMode(mode) {
         this.editMode = mode;
 
-        // Mettre à jour l'attribut editmode du piano roll si disponible
-        if (this.pianoRoll) {
-            switch (mode) {
-                case 'select':
-                    this.pianoRoll.setAttribute('editmode', 'dragpoly');
-                    break;
-                case 'drag-notes':
-                    this.pianoRoll.setAttribute('editmode', 'dragpoly');
-                    break;
-                case 'drag-view':
-                    // Désactiver l'édition de notes pour ne faire que du pan
-                    this.pianoRoll.setAttribute('editmode', 'dragpoly');
-                    break;
-            }
+        // Utiliser la méthode setUIMode du piano roll
+        if (this.pianoRoll && typeof this.pianoRoll.setUIMode === 'function') {
+            this.pianoRoll.setUIMode(mode);
         }
 
         // Mettre à jour l'UI
@@ -1807,10 +1784,9 @@ class MidiEditorModal {
             this.keyboardHandler = null;
         }
 
-        // Nettoyer le CommandHistory
-        if (this.commandHistory) {
-            this.commandHistory.clear();
-            this.commandHistory = null;
+        // Nettoyer l'historique du piano roll
+        if (this.pianoRoll && typeof this.pianoRoll.clearHistory === 'function') {
+            this.pianoRoll.clearHistory();
         }
 
         // Retirer le conteneur
