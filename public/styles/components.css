@@ -972,14 +972,16 @@
 }
 
 .midi-editor-modal .scroll-horizontal {
-    width: 100%;
+    width: auto;
+    flex: 1;
     height: 40px;
     order: 2;
 }
 
 .midi-editor-modal .scroll-vertical {
     width: 40px;
-    height: 100%;
+    height: auto;
+    flex: 1;
     writing-mode: bt-lr;
     -webkit-appearance: slider-vertical;
 }

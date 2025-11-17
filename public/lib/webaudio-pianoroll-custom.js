@@ -1435,19 +1435,24 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 const tick2time = 60 / this.tempo / this.timebase;
 
                 // Adapter l'intervalle d'affichage selon le zoom (xrange)
+                // Calculer combien de secondes sont visibles à l'écran
+                const visibleSeconds = this.xrange * tick2time;
+
                 let secondInterval = 1; // Par défaut : 1 seconde
-                if(this.xrange > 64) {
-                    secondInterval = 30; // Très dézoomé : toutes les 30s
-                } else if(this.xrange > 48) {
-                    secondInterval = 15; // Dézoomé : toutes les 15s
-                } else if(this.xrange > 32) {
-                    secondInterval = 10; // Moyen : toutes les 10s
-                } else if(this.xrange > 24) {
-                    secondInterval = 5; // Normal : toutes les 5s
-                } else if(this.xrange > 16) {
-                    secondInterval = 2; // Zoomé : toutes les 2s
+                if(visibleSeconds > 300) {
+                    secondInterval = 60; // Très dézoomé (>5min) : toutes les 60s
+                } else if(visibleSeconds > 180) {
+                    secondInterval = 30; // Dézoomé (>3min) : toutes les 30s
+                } else if(visibleSeconds > 120) {
+                    secondInterval = 20; // (>2min) : toutes les 20s
+                } else if(visibleSeconds > 60) {
+                    secondInterval = 10; // (>1min) : toutes les 10s
+                } else if(visibleSeconds > 30) {
+                    secondInterval = 5; // (>30s) : toutes les 5s
+                } else if(visibleSeconds > 15) {
+                    secondInterval = 2; // (>15s) : toutes les 2s
                 } else {
-                    secondInterval = 1; // Très zoomé : toutes les 1s
+                    secondInterval = 1; // Zoomé (<15s) : toutes les 1s
                 }
 
                 // Calculer l'intervalle en ticks correspondant à secondInterval
