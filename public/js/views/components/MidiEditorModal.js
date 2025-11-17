@@ -997,8 +997,13 @@ class MidiEditorModal {
 
         // Observer les mutations du sequence pour détecter les changements
         let lastSequenceLength = this.pianoRoll.sequence?.length || 0;
-        setInterval(() => {
+        let lastSelectionCount = 0;
+
+        this.selectionCheckInterval = setInterval(() => {
             const currentLength = this.pianoRoll.sequence?.length || 0;
+            const currentSelectionCount = this.getSelectionCount();
+
+            // Vérifier changement de longueur de sequence
             if (currentLength !== lastSequenceLength) {
                 this.log('debug', `Piano roll sequence changed: ${lastSequenceLength} -> ${currentLength}`);
                 this.isDirty = true;
@@ -1009,9 +1014,17 @@ class MidiEditorModal {
                 // Synchroniser immédiatement fullSequence
                 this.syncFullSequenceFromPianoRoll();
             }
-        }, 1000);
+
+            // Vérifier changement de sélection
+            if (currentSelectionCount !== lastSelectionCount) {
+                this.log('debug', `Selection changed: ${lastSelectionCount} -> ${currentSelectionCount}`);
+                this.updateEditButtons();
+                lastSelectionCount = currentSelectionCount;
+            }
+        }, 200); // Vérifier toutes les 200ms
 
         this.updateStats();
+        this.updateEditButtons(); // État initial
     }
 
     /**
@@ -1105,34 +1118,46 @@ class MidiEditorModal {
      * Obtenir les notes sélectionnées du piano roll
      */
     getSelectedNotes() {
-        if (!this.pianoRoll || !this.pianoRoll.sequence) {
+        if (!this.pianoRoll) {
             return [];
         }
 
-        // webaudio-pianoroll ne fournit pas directement les notes sélectionnées
-        // On va utiliser une méthode alternative si disponible
+        // Utiliser la méthode publique du piano roll
         if (typeof this.pianoRoll.getSelectedNotes === 'function') {
             return this.pianoRoll.getSelectedNotes();
         }
 
-        // Sinon, retourner un tableau vide (nécessite sélection manuelle)
         this.log('warn', 'Piano roll does not support getSelectedNotes');
         return [];
+    }
+
+    /**
+     * Obtenir le nombre de notes sélectionnées
+     */
+    getSelectionCount() {
+        if (!this.pianoRoll || typeof this.pianoRoll.getSelectionCount !== 'function') {
+            return 0;
+        }
+        return this.pianoRoll.getSelectionCount();
     }
 
     /**
      * Copier les notes sélectionnées
      */
     copy() {
-        const selectedNotes = this.getSelectedNotes();
+        if (!this.pianoRoll || typeof this.pianoRoll.copySelection !== 'function') {
+            this.showNotification('Fonction copier non disponible', 'error');
+            return;
+        }
 
-        if (selectedNotes.length === 0) {
+        const count = this.getSelectionCount();
+        if (count === 0) {
             this.showNotification('Aucune note sélectionnée', 'info');
             return;
         }
 
-        // Copier les notes dans le clipboard
-        this.clipboard = selectedNotes.map(note => ({ ...note }));
+        // Utiliser la méthode du piano roll
+        this.clipboard = this.pianoRoll.copySelection();
 
         this.log('info', `Copied ${this.clipboard.length} notes`);
         this.showNotification(`${this.clipboard.length} note(s) copiée(s)`, 'success');
@@ -1155,112 +1180,46 @@ class MidiEditorModal {
             return;
         }
 
-        if (!this.pianoRoll || !this.pianoRoll.sequence) {
+        if (!this.pianoRoll || typeof this.pianoRoll.pasteNotes !== 'function') {
+            this.showNotification('Fonction coller non disponible', 'error');
             return;
         }
 
-        // Trouver le temps minimum des notes copiées
-        const minTime = Math.min(...this.clipboard.map(n => n.t));
-
-        // Obtenir la position actuelle du curseur (ou utiliser la fin de la séquence)
+        // Obtenir la position actuelle du curseur
         const currentTime = this.pianoRoll.xoffset || 0;
 
-        // Calculer le décalage temporel
-        const deltaT = currentTime - minTime;
+        // Utiliser la méthode du piano roll
+        this.pianoRoll.pasteNotes(this.clipboard, currentTime);
 
-        // Créer de nouvelles notes avec le décalage
-        const newNotes = this.clipboard.map(note => ({
-            t: note.t + deltaT,
-            g: note.g,
-            n: note.n,
-            c: note.c,
-            v: note.v || 100
-        }));
-
-        // Ajouter les notes via CommandHistory
-        if (this.commandHistory && window.DeleteNotesCommand) {
-            // On utilise DeleteNotesCommand en mode "inverse" pour ajouter des notes
-            const addCommand = new window.DeleteNotesCommand(this.pianoRoll, []);
-            addCommand.undo = function() {
-                newNotes.forEach(note => {
-                    const index = this.pianoRoll.sequence.findIndex(n =>
-                        n.t === note.t && n.n === note.n && n.c === note.c
-                    );
-                    if (index >= 0) {
-                        this.pianoRoll.sequence.splice(index, 1);
-                    }
-                });
-                if (typeof this.pianoRoll.redraw === 'function') {
-                    this.pianoRoll.redraw();
-                }
-                return true;
-            };
-            addCommand.execute = function() {
-                newNotes.forEach(note => {
-                    this.pianoRoll.sequence.push({ ...note });
-                });
-                if (typeof this.pianoRoll.redraw === 'function') {
-                    this.pianoRoll.redraw();
-                }
-                return true;
-            };
-            addCommand.toString = () => `Coller ${newNotes.length} note(s)`;
-
-            this.commandHistory.execute(addCommand);
-        } else {
-            // Fallback sans undo
-            newNotes.forEach(note => {
-                this.pianoRoll.sequence.push(note);
-            });
-            if (typeof this.pianoRoll.redraw === 'function') {
-                this.pianoRoll.redraw();
-            }
-        }
-
-        this.log('info', `Pasted ${newNotes.length} notes`);
-        this.showNotification(`${newNotes.length} note(s) collée(s)`, 'success');
+        this.log('info', `Pasted ${this.clipboard.length} notes`);
+        this.showNotification(`${this.clipboard.length} note(s) collée(s)`, 'success');
 
         this.isDirty = true;
         this.updateSaveButton();
         this.syncFullSequenceFromPianoRoll();
+        this.updateEditButtons();
     }
 
     /**
      * Supprimer les notes sélectionnées
      */
     deleteSelectedNotes() {
-        const selectedNotes = this.getSelectedNotes();
+        if (!this.pianoRoll || typeof this.pianoRoll.deleteSelection !== 'function') {
+            this.showNotification('Fonction supprimer non disponible', 'error');
+            return;
+        }
 
-        if (selectedNotes.length === 0) {
+        const count = this.getSelectionCount();
+        if (count === 0) {
             this.showNotification('Aucune note sélectionnée', 'info');
             return;
         }
 
-        if (!this.pianoRoll || !this.pianoRoll.sequence) {
-            return;
-        }
+        // Utiliser la méthode du piano roll
+        this.pianoRoll.deleteSelection();
 
-        // Supprimer via CommandHistory
-        if (this.commandHistory && window.DeleteNotesCommand) {
-            const deleteCommand = new window.DeleteNotesCommand(this.pianoRoll, selectedNotes);
-            this.commandHistory.execute(deleteCommand);
-        } else {
-            // Fallback sans undo
-            selectedNotes.forEach(note => {
-                const index = this.pianoRoll.sequence.findIndex(n =>
-                    n.t === note.t && n.n === note.n && n.c === note.c
-                );
-                if (index >= 0) {
-                    this.pianoRoll.sequence.splice(index, 1);
-                }
-            });
-            if (typeof this.pianoRoll.redraw === 'function') {
-                this.pianoRoll.redraw();
-            }
-        }
-
-        this.log('info', `Deleted ${selectedNotes.length} notes`);
-        this.showNotification(`${selectedNotes.length} note(s) supprimée(s)`, 'success');
+        this.log('info', `Deleted ${count} notes`);
+        this.showNotification(`${count} note(s) supprimée(s)`, 'success');
 
         this.isDirty = true;
         this.updateSaveButton();
@@ -1272,9 +1231,13 @@ class MidiEditorModal {
      * Changer le canal des notes sélectionnées
      */
     changeChannel() {
-        const selectedNotes = this.getSelectedNotes();
+        if (!this.pianoRoll || typeof this.pianoRoll.changeChannelSelection !== 'function') {
+            this.showNotification('Fonction changer canal non disponible', 'error');
+            return;
+        }
 
-        if (selectedNotes.length === 0) {
+        const count = this.getSelectionCount();
+        if (count === 0) {
             this.showNotification('Aucune note sélectionnée', 'info');
             return;
         }
@@ -1284,30 +1247,16 @@ class MidiEditorModal {
 
         const newChannel = parseInt(channelSelector.value);
 
-        // Changer le canal via CommandHistory
-        if (this.commandHistory && window.ChangeChannelCommand) {
-            const changeCommand = new window.ChangeChannelCommand(
-                this.pianoRoll,
-                selectedNotes,
-                newChannel
-            );
-            this.commandHistory.execute(changeCommand);
-        } else {
-            // Fallback sans undo
-            selectedNotes.forEach(note => {
-                note.c = newChannel;
-            });
-            if (typeof this.pianoRoll.redraw === 'function') {
-                this.pianoRoll.redraw();
-            }
-        }
+        // Utiliser la méthode du piano roll
+        this.pianoRoll.changeChannelSelection(newChannel);
 
-        this.log('info', `Changed channel of ${selectedNotes.length} notes to ${newChannel}`);
-        this.showNotification(`Canal changé pour ${selectedNotes.length} note(s)`, 'success');
+        this.log('info', `Changed channel of ${count} notes to ${newChannel}`);
+        this.showNotification(`Canal changé pour ${count} note(s)`, 'success');
 
         this.isDirty = true;
         this.updateSaveButton();
         this.syncFullSequenceFromPianoRoll();
+        this.updateEditButtons();
     }
 
     /**
@@ -1359,8 +1308,8 @@ class MidiEditorModal {
      * Mettre à jour les boutons d'édition (copy, paste, delete, change channel)
      */
     updateEditButtons() {
-        const selectedNotes = this.getSelectedNotes();
-        const hasSelection = selectedNotes.length > 0;
+        const selectionCount = this.getSelectionCount();
+        const hasSelection = selectionCount > 0;
 
         const copyBtn = document.getElementById('copy-btn');
         const deleteBtn = document.getElementById('delete-btn');
@@ -1369,6 +1318,8 @@ class MidiEditorModal {
         if (copyBtn) copyBtn.disabled = !hasSelection;
         if (deleteBtn) deleteBtn.disabled = !hasSelection;
         if (changeChannelBtn) changeChannelBtn.disabled = !hasSelection;
+
+        this.log('debug', `Selection: ${selectionCount} notes`);
     }
 
     /**
@@ -1830,6 +1781,12 @@ class MidiEditorModal {
         if (this.syncInterval) {
             clearInterval(this.syncInterval);
             this.syncInterval = null;
+        }
+
+        // Arrêter la vérification de sélection
+        if (this.selectionCheckInterval) {
+            clearInterval(this.selectionCheckInterval);
+            this.selectionCheckInterval = null;
         }
 
         // Nettoyer le piano roll

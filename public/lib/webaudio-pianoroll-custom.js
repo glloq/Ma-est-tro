@@ -1167,6 +1167,120 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
         };
         this.ready();
     }
+
+    // ========================================================================
+    // MÉTHODES PUBLIQUES POUR ÉDITION AVANCÉE
+    // ========================================================================
+
+    /**
+     * Obtenir les notes sélectionnées (format simplifié)
+     */
+    getSelectedNotes() {
+        const selected = this.selectedNotes();
+        return selected.map(item => item.ev);
+    }
+
+    /**
+     * Copier les notes dans le clipboard
+     */
+    copySelection() {
+        const selected = this.getSelectedNotes();
+        return selected.map(note => ({
+            t: note.t,
+            g: note.g,
+            n: note.n,
+            c: note.c !== undefined ? note.c : 0,
+            v: note.v || 100
+        }));
+    }
+
+    /**
+     * Coller des notes à la position courante
+     */
+    pasteNotes(notes, offsetTime = 0) {
+        if (!notes || notes.length === 0) return;
+
+        // Trouver le temps minimum des notes à coller
+        const minTime = Math.min(...notes.map(n => n.t));
+
+        // Calculer le décalage
+        const deltaT = offsetTime - minTime;
+
+        // Désélectionner tout
+        this.clearSel();
+
+        // Ajouter les nouvelles notes
+        notes.forEach(note => {
+            const newNote = {
+                t: note.t + deltaT,
+                g: note.g,
+                n: note.n,
+                c: note.c !== undefined ? note.c : 0,
+                v: note.v || 100,
+                f: 1  // Sélectionner la note collée
+            };
+            this.sequence.push(newNote);
+        });
+
+        this.redraw();
+        this.sendEvent('change');
+    }
+
+    /**
+     * Supprimer les notes sélectionnées
+     */
+    deleteSelection() {
+        this.delSelectedNote();
+        this.redraw();
+        this.sendEvent('change');
+    }
+
+    /**
+     * Changer le canal des notes sélectionnées
+     */
+    changeChannelSelection(newChannel) {
+        const l = this.sequence.length;
+        for (let i = 0; i < l; ++i) {
+            const ev = this.sequence[i];
+            if (ev.f) {
+                ev.c = newChannel;
+            }
+        }
+        this.redraw();
+        this.sendEvent('change');
+    }
+
+    /**
+     * Sélectionner toutes les notes
+     */
+    selectAll() {
+        const l = this.sequence.length;
+        for (let i = 0; i < l; ++i) {
+            this.sequence[i].f = 1;
+        }
+        this.redraw();
+    }
+
+    /**
+     * Désélectionner toutes les notes
+     */
+    deselectAll() {
+        this.clearSel();
+        this.redraw();
+    }
+
+    /**
+     * Obtenir le nombre de notes sélectionnées
+     */
+    getSelectionCount() {
+        let count = 0;
+        const l = this.sequence.length;
+        for (let i = 0; i < l; ++i) {
+            if (this.sequence[i].f) count++;
+        }
+        return count;
+    }
+
     sendEvent(ev){
         let event;
         event=document.createEvent("HTMLEvents");
