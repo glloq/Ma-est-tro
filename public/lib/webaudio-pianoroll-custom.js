@@ -688,14 +688,17 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 this.dragging={o:"D", m:"B", i:ht.i, t:ev.t, g:ev.g, ev:this.selectedNotes()};
             }
             else if(ht.m=="s"&&ht.t>=0){
-                // Sauvegarder snapshot avant d'ajouter une note
-                this.saveSnapshot();
+                // Ne créer des notes QUE en mode 'select' ou si uiMode n'est pas défini (comportement par défaut)
+                if(this.uiMode === 'select' || !this.uiMode) {
+                    // Sauvegarder snapshot avant d'ajouter une note
+                    this.saveSnapshot();
 
-                this.clearSel();
-                var t=((ht.t/this.snap)|0)*this.snap;
-                this.sequence.push({t:t, n:ht.n|0, g:1, f:1});
-                this.dragging={o:"D",m:"E",i:this.sequence.length-1, t:t, g:1, ev:[{t:t,g:1,ev:this.sequence[this.sequence.length-1]}]};
-                this.redraw();
+                    this.clearSel();
+                    var t=((ht.t/this.snap)|0)*this.snap;
+                    this.sequence.push({t:t, n:ht.n|0, g:1, f:1});
+                    this.dragging={o:"D",m:"E",i:this.sequence.length-1, t:t, g:1, ev:[{t:t,g:1,ev:this.sequence[this.sequence.length-1]}]};
+                    this.redraw();
+                }
             }
         };
         this.editDragMove=function(pos){

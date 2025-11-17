@@ -1013,7 +1013,7 @@ class MidiEditorModal {
 
             // Mettre à jour les boutons undo/redo
             this.updateUndoRedoButtonsState();
-        }, 200); // Vérifier toutes les 200ms
+        }, 500); // Vérifier toutes les 500ms (réduit de 200ms pour améliorer la performance)
 
         this.updateStats();
         this.updateEditButtons(); // État initial
