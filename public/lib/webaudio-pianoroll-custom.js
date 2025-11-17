@@ -147,6 +147,137 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
         this.sortSequence=function(){
             this.sequence.sort((x,y)=>{return x.t-y.t;});
         };
+
+        // ========================================================================
+        // SYSTÈME UNDO/REDO
+        // ========================================================================
+        this.undoStack = [];
+        this.redoStack = [];
+        this.maxUndoSize = 50;
+        this.uiMode = 'select'; // 'select', 'drag-notes', 'drag-view'
+
+        this.saveSnapshot = function() {
+            // Sauvegarder un snapshot de la séquence actuelle
+            const snapshot = this.sequence.map(note => ({
+                t: note.t,
+                g: note.g,
+                n: note.n,
+                c: note.c !== undefined ? note.c : 0,
+                v: note.v || 100,
+                f: note.f || 0
+            }));
+
+            this.undoStack.push(snapshot);
+            this.redoStack = []; // Clear redo sur nouvelle action
+
+            // Limiter la taille
+            if (this.undoStack.length > this.maxUndoSize) {
+                this.undoStack.shift();
+            }
+
+            console.log('[PianoRoll] Snapshot saved, undo stack:', this.undoStack.length);
+        };
+
+        this.undo = function() {
+            if (this.undoStack.length === 0) {
+                console.log('[PianoRoll] Nothing to undo');
+                return false;
+            }
+
+            // Sauvegarder l'état actuel dans redo
+            const currentSnapshot = this.sequence.map(note => ({
+                t: note.t,
+                g: note.g,
+                n: note.n,
+                c: note.c !== undefined ? note.c : 0,
+                v: note.v || 100,
+                f: note.f || 0
+            }));
+            this.redoStack.push(currentSnapshot);
+
+            // Restaurer le dernier snapshot
+            const snapshot = this.undoStack.pop();
+            this.sequence = snapshot.map(note => ({...note}));
+
+            this.redraw();
+            this.sendEvent('change');
+            console.log('[PianoRoll] Undo performed, undo stack:', this.undoStack.length);
+            return true;
+        };
+
+        this.redo = function() {
+            if (this.redoStack.length === 0) {
+                console.log('[PianoRoll] Nothing to redo');
+                return false;
+            }
+
+            // Sauvegarder l'état actuel dans undo
+            const currentSnapshot = this.sequence.map(note => ({
+                t: note.t,
+                g: note.g,
+                n: note.n,
+                c: note.c !== undefined ? note.c : 0,
+                v: note.v || 100,
+                f: note.f || 0
+            }));
+            this.undoStack.push(currentSnapshot);
+
+            // Restaurer le snapshot
+            const snapshot = this.redoStack.pop();
+            this.sequence = snapshot.map(note => ({...note}));
+
+            this.redraw();
+            this.sendEvent('change');
+            console.log('[PianoRoll] Redo performed, redo stack:', this.redoStack.length);
+            return true;
+        };
+
+        this.canUndo = function() {
+            return this.undoStack.length > 0;
+        };
+
+        this.canRedo = function() {
+            return this.redoStack.length > 0;
+        };
+
+        this.clearHistory = function() {
+            this.undoStack = [];
+            this.redoStack = [];
+        };
+
+        // ========================================================================
+        // MODES D'ÉDITION UI
+        // ========================================================================
+
+        this.setUIMode = function(mode) {
+            this.uiMode = mode;
+            this.updateCursor();
+            console.log('[PianoRoll] UI Mode set to:', mode);
+        };
+
+        this.getUIMode = function() {
+            return this.uiMode;
+        };
+
+        this.updateCursor = function() {
+            const canvas = this.waveCanvas;
+            if (!canvas) return;
+
+            switch (this.uiMode) {
+                case 'select':
+                    canvas.style.cursor = 'default';
+                    break;
+                case 'drag-notes':
+                    canvas.style.cursor = 'move';
+                    break;
+                case 'drag-view':
+                    canvas.style.cursor = 'grab';
+                    break;
+                default:
+                    canvas.style.cursor = 'default';
+            }
+        };
+
         this.findNextEv=function(tick){
             for(let i=0;i<this.sequence.length;++i){
                 const nev=this.sequence[i];
@@ -524,6 +655,9 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             const ht=this.hitTest(pos);
             let ev;
             if(ht.m=="N"){
+                // Sauvegarder snapshot avant de déplacer des notes
+                this.saveSnapshot();
+
                 ev=this.sequence[ht.i];
                 this.dragging={o:"D",m:"N",i:ht.i,t:ht.t,n:ev.n,dt:ht.t-ev.t};
                 for(let i=0,l=this.sequence.length;i<l;++i){
@@ -540,14 +674,23 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 this.redraw();
             }
             else if(ht.m=="E"){
+                // Sauvegarder snapshot avant resize
+                this.saveSnapshot();
+
                 const ev = this.sequence[ht.i];
                 this.dragging={o:"D", m:"E", i:ht.i, t:ev.t, g:ev.g, ev:this.selectedNotes()};
             }
             else if(ht.m=="B"){
+                // Sauvegarder snapshot avant resize
+                this.saveSnapshot();
+
                 const ev = this.sequence[ht.i];
                 this.dragging={o:"D", m:"B", i:ht.i, t:ev.t, g:ev.g, ev:this.selectedNotes()};
             }
             else if(ht.m=="s"&&ht.t>=0){
+                // Sauvegarder snapshot avant d'ajouter une note
+                this.saveSnapshot();
+
                 this.clearSel();
                 var t=((ht.t/this.snap)|0)*this.snap;
                 this.sequence.push({t:t, n:ht.n|0, g:1, f:1});
@@ -802,15 +945,23 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             }
             this.dragging={o:null,x:this.downpos.x,y:this.downpos.y,offsx:this.xoffset,offsy:this.yoffset};
             this.canvas.focus();
-            switch(this.editmode){
-            case "gridpoly":
-            case "gridmono":
-                this.editGridDown(this.downpos);
-                break;
-            case "dragpoly":
-            case "dragmono":
-                this.editDragDown(this.downpos);
-                break;
+
+            // Gérer le mode drag-view spécifiquement
+            if(this.uiMode === 'drag-view') {
+                this.dragging.o = "V"; // V pour View drag
+                this.canvas.style.cursor = 'grabbing';
+            }
+            else {
+                switch(this.editmode){
+                case "gridpoly":
+                case "gridmono":
+                    this.editGridDown(this.downpos);
+                    break;
+                case "dragpoly":
+                case "dragmono":
+                    this.editDragDown(this.downpos);
+                    break;
+                }
             }
             this.press = 1;
             if(ev.preventDefault)
@@ -845,6 +996,12 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             const pos=this.getPos(e);
             const ht=this.hitTest(pos);
             switch(this.dragging.o){
+            case "V":
+                // Mode drag-view: toujours déplacer la vue
+                this.xoffset=this.dragging.offsx+(this.dragging.x-pos.x)*(this.xrange/this.width);
+                this.yoffset=this.dragging.offsy+(pos.y-this.dragging.y)*(this.yrange/this.height);
+                this.redraw();
+                break;
             case null:
                 if(this.xscroll)
                     this.xoffset=this.dragging.offsx+(this.dragging.x-pos.x)*(this.xrange/this.width);
@@ -910,6 +1067,10 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 if(pos.t==this.menu)
                     this.delSelectedNote();
                 this.redraw();
+            }
+            if(this.dragging.o=="V"){
+                // Fin du drag-view: remettre le curseur
+                this.updateCursor();
             }
             if(this.dragging.o=="A"){
                 this.selAreaNote(this.dragging.t1,this.dragging.t2,this.dragging.n1,this.dragging.n2);
@@ -1200,6 +1361,9 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
     pasteNotes(notes, offsetTime = 0) {
         if (!notes || notes.length === 0) return;
 
+        // Sauvegarder l'état avant modification
+        this.saveSnapshot();
+
         // Trouver le temps minimum des notes à coller
         const minTime = Math.min(...notes.map(n => n.t));
 
@@ -1230,6 +1394,9 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
      * Supprimer les notes sélectionnées
      */
     deleteSelection() {
+        // Sauvegarder l'état avant modification
+        this.saveSnapshot();
+
         this.delSelectedNote();
         this.redraw();
         this.sendEvent('change');
@@ -1239,6 +1406,9 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
      * Changer le canal des notes sélectionnées
      */
     changeChannelSelection(newChannel) {
+        // Sauvegarder l'état avant modification
+        this.saveSnapshot();
+
         const l = this.sequence.length;
         for (let i = 0; i < l; ++i) {
             const ev = this.sequence[i];
