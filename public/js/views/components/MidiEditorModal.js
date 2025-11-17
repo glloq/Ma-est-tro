@@ -825,8 +825,18 @@ class MidiEditorModal {
                         <div class="piano-roll-container" id="piano-roll-container">
                             <!-- webaudio-pianoroll sera inséré ici -->
                         </div>
-                        <input type="range" class="scroll-slider scroll-horizontal" id="scroll-h-slider" min="0" max="100" value="0" step="1">
-                        <input type="range" class="scroll-slider scroll-vertical" id="scroll-v-slider" min="0" max="100" value="0" step="1" orient="vertical">
+                        <!-- Slider horizontal avec boutons -->
+                        <div class="scroll-controls scroll-controls-horizontal">
+                            <button class="scroll-btn scroll-btn-left" data-action="scroll-left">◄</button>
+                            <input type="range" class="scroll-slider scroll-horizontal" id="scroll-h-slider" min="0" max="100" value="0" step="1">
+                            <button class="scroll-btn scroll-btn-right" data-action="scroll-right">►</button>
+                        </div>
+                        <!-- Slider vertical avec boutons -->
+                        <div class="scroll-controls scroll-controls-vertical">
+                            <button class="scroll-btn scroll-btn-up" data-action="scroll-up">▲</button>
+                            <input type="range" class="scroll-slider scroll-vertical" id="scroll-v-slider" min="0" max="100" value="0" step="1" orient="vertical">
+                            <button class="scroll-btn scroll-btn-down" data-action="scroll-down">▼</button>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -932,9 +942,6 @@ class MidiEditorModal {
         this.pianoRoll.setAttribute('wheelzoom', '1');
         this.pianoRoll.setAttribute('xscroll', '1');
         this.pianoRoll.setAttribute('yscroll', '1');
-        // Tempo et timebase du fichier MIDI (importants pour l'affichage du temps en secondes)
-        this.pianoRoll.setAttribute('tempo', (this.tempo || 120).toString());
-        this.pianoRoll.setAttribute('timebase', (this.ticksPerBeat || 480).toString());
         // Pas de marqueurs (triangles vert/orange)
         this.pianoRoll.setAttribute('markstart', '-1');
         this.pianoRoll.setAttribute('markend', '-1');
@@ -943,6 +950,19 @@ class MidiEditorModal {
 
         // Ajouter au conteneur AVANT de charger la sequence
         container.appendChild(this.pianoRoll);
+
+        // Tempo et timebase du fichier MIDI (importants pour l'affichage du temps en secondes)
+        // Assigner APRÈS avoir ajouté au DOM pour que les propriétés soient bien initialisées
+        this.pianoRoll.tempo = this.tempo || 120;
+        this.pianoRoll.timebase = this.ticksPerBeat || 480;
+
+        // Forcer updateTimer() et redraw pour afficher les secondes
+        if (typeof this.pianoRoll.updateTimer === 'function') {
+            this.pianoRoll.updateTimer();
+        }
+        if (typeof this.pianoRoll.redrawXRuler === 'function') {
+            this.pianoRoll.redrawXRuler();
+        }
 
         // Attendre que le composant soit monté
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -1390,6 +1410,20 @@ class MidiEditorModal {
                     this.zoomVertical(1.25);
                     break;
 
+                // Boutons de navigation des sliders
+                case 'scroll-left':
+                    this.scrollByHalf('left');
+                    break;
+                case 'scroll-right':
+                    this.scrollByHalf('right');
+                    break;
+                case 'scroll-up':
+                    this.scrollByHalf('up');
+                    break;
+                case 'scroll-down':
+                    this.scrollByHalf('down');
+                    break;
+
                 // Nouveaux boutons d'édition
                 case 'undo':
                     this.undo();
@@ -1742,6 +1776,63 @@ class MidiEditorModal {
 
         if (typeof this.pianoRoll.redraw === 'function') {
             this.pianoRoll.redraw();
+        }
+    }
+
+    /**
+     * Déplacer la vue de moitié dans une direction
+     * @param {string} direction - 'left', 'right', 'up', 'down'
+     */
+    scrollByHalf(direction) {
+        if (!this.pianoRoll) return;
+
+        if (direction === 'left' || direction === 'right') {
+            // Déplacement horizontal
+            const currentXOffset = this.pianoRoll.xoffset || 0;
+            const xrange = this.pianoRoll.xrange || parseInt(this.pianoRoll.getAttribute('xrange')) || 128;
+            const maxTick = this.midiData?.maxTick || 0;
+            const maxOffset = Math.max(0, maxTick - xrange);
+
+            // Déplacer de la moitié de xrange
+            const halfRange = xrange / 2;
+            let newOffset;
+
+            if (direction === 'left') {
+                newOffset = Math.max(0, currentXOffset - halfRange);
+            } else { // right
+                newOffset = Math.min(maxOffset, currentXOffset + halfRange);
+            }
+
+            // Convertir en pourcentage et utiliser scrollHorizontal
+            const percentage = maxOffset > 0 ? (newOffset / maxOffset) * 100 : 0;
+            this.scrollHorizontal(percentage);
+
+            // Mettre à jour le slider
+            this.updateHorizontalSlider(newOffset);
+
+        } else if (direction === 'up' || direction === 'down') {
+            // Déplacement vertical
+            const currentYOffset = this.pianoRoll.yoffset || 0;
+            const yrange = this.pianoRoll.yrange || parseInt(this.pianoRoll.getAttribute('yrange')) || 36;
+            const totalMidiRange = 128;
+            const maxOffset = Math.max(0, totalMidiRange - yrange);
+
+            // Déplacer de la moitié de yrange
+            const halfRange = yrange / 2;
+            let newOffset;
+
+            if (direction === 'up') {
+                newOffset = Math.min(maxOffset, currentYOffset + halfRange);
+            } else { // down
+                newOffset = Math.max(0, currentYOffset - halfRange);
+            }
+
+            // Convertir en pourcentage et utiliser scrollVertical
+            const percentage = maxOffset > 0 ? (newOffset / maxOffset) * 100 : 0;
+            this.scrollVertical(percentage);
+
+            // Mettre à jour le slider
+            this.updateVerticalSlider(newOffset);
         }
     }
 
