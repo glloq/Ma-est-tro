@@ -300,26 +300,19 @@ fi
 # SYSTEMD / PM2 SETUP
 # =============================================================================
 
-print_step "8. Process Manager Setup"
+print_step "8. Configuration du Démarrage Automatique"
 
-echo ""
-print_info "Choose startup method:"
-echo "  1) Systemd service (recommended for production on Linux)"
-echo "  2) PM2 (recommended for development)"
-echo "  3) Manual start (npm start)"
-echo ""
+if [ "$OS" == "linux" ]; then
+    # Sur Linux/Raspberry Pi, on configure automatiquement systemd
+    print_info "Configuration de systemd pour le démarrage automatique..."
 
-read -p "Enter choice [1-3]: " -n 1 -r
-echo ""
+    SERVICE_FILE="/etc/systemd/system/midimind.service"
 
-case $REPLY in
-    1)
-        if [ "$OS" == "linux" ]; then
-            print_info "Creating systemd service..."
+    # Détecter le chemin absolu de Node.js
+    NODE_PATH=$(which node)
+    WORKING_DIR=$(pwd)
 
-            SERVICE_FILE="/etc/systemd/system/midimind.service"
-
-            sudo tee $SERVICE_FILE > /dev/null <<EOF
+    sudo tee $SERVICE_FILE > /dev/null <<EOF
 [Unit]
 Description=MidiMind 5.0 MIDI Orchestration System
 After=network.target
@@ -327,8 +320,8 @@ After=network.target
 [Service]
 Type=simple
 User=$USER
-WorkingDirectory=$(pwd)
-ExecStart=$(which node) $(pwd)/src/Server.js
+WorkingDirectory=$WORKING_DIR
+ExecStart=$NODE_PATH $WORKING_DIR/server.js
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -341,55 +334,63 @@ Environment=NODE_ENV=production
 WantedBy=multi-user.target
 EOF
 
-            sudo systemctl daemon-reload
-            sudo systemctl enable midimind
+    # Recharger systemd et activer le service
+    sudo systemctl daemon-reload
+    sudo systemctl enable midimind
 
-            print_success "Systemd service installed"
-            print_info "Commands:"
-            echo "    Start:   sudo systemctl start midimind"
-            echo "    Stop:    sudo systemctl stop midimind"
-            echo "    Restart: sudo systemctl restart midimind"
-            echo "    Status:  sudo systemctl status midimind"
-            echo "    Logs:    sudo journalctl -u midimind -f"
+    print_success "Service systemd configuré et activé"
+    print_info "Le service MidiMind démarrera automatiquement au boot"
+
+    echo ""
+    print_info "Commandes utiles :"
+    echo "    ${GREEN}sudo systemctl start midimind${NC}     - Démarrer le service"
+    echo "    ${GREEN}sudo systemctl stop midimind${NC}      - Arrêter le service"
+    echo "    ${GREEN}sudo systemctl restart midimind${NC}   - Redémarrer le service"
+    echo "    ${GREEN}sudo systemctl status midimind${NC}    - Voir le statut"
+    echo "    ${GREEN}sudo journalctl -u midimind -f${NC}    - Voir les logs en temps réel"
+    echo ""
+
+    # Demander si on veut démarrer le service maintenant
+    echo ""
+    read -p "Démarrer le service MidiMind maintenant ? (y/n) " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        sudo systemctl start midimind
+        sleep 2
+        if sudo systemctl is-active --quiet midimind; then
+            print_success "Service MidiMind démarré avec succès !"
         else
-            print_warning "Systemd not available on macOS"
-            print_info "Using PM2 instead..."
-            REPLY=2
+            print_error "Erreur lors du démarrage du service"
+            print_info "Vérifiez les logs avec : sudo journalctl -u midimind -n 50"
         fi
-        ;;
+    else
+        print_info "Vous pouvez démarrer le service plus tard avec : sudo systemctl start midimind"
+    fi
 
-    2)
-        print_info "Setting up PM2..."
-        pm2 delete midimind 2>/dev/null || true
-        pm2 start ecosystem.config.cjs
-        pm2 save
+elif [ "$OS" == "macos" ]; then
+    # Sur macOS, on propose PM2
+    print_warning "Systemd n'est pas disponible sur macOS"
+    print_info "Configuration de PM2 pour le démarrage automatique..."
 
-        print_success "PM2 configured"
-        print_info "Commands:"
-        echo "    Start:   pm2 start midimind"
-        echo "    Stop:    pm2 stop midimind"
-        echo "    Restart: pm2 restart midimind"
-        echo "    Status:  pm2 status"
-        echo "    Logs:    pm2 logs midimind"
+    pm2 delete midimind 2>/dev/null || true
+    pm2 start ecosystem.config.cjs
+    pm2 save
 
-        echo ""
-        read -p "Setup PM2 to start on boot? (y/n) " -n 1 -r
-        echo ""
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            pm2 startup
-            print_info "Run the command above to complete PM2 startup configuration"
-        fi
-        ;;
+    print_success "PM2 configuré"
+    print_info "Commandes utiles :"
+    echo "    ${GREEN}pm2 start midimind${NC}    - Démarrer"
+    echo "    ${GREEN}pm2 stop midimind${NC}     - Arrêter"
+    echo "    ${GREEN}pm2 restart midimind${NC}  - Redémarrer"
+    echo "    ${GREEN}pm2 logs midimind${NC}     - Voir les logs"
+    echo ""
 
-    3)
-        print_info "Manual start selected"
-        print_info "Start with: npm start"
-        ;;
-
-    *)
-        print_warning "Invalid choice, skipping"
-        ;;
-esac
+    read -p "Configurer PM2 pour démarrer au boot ? (y/n) " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        pm2 startup
+        print_info "Exécutez la commande ci-dessus pour terminer la configuration"
+    fi
+fi
 
 # =============================================================================
 # VERIFICATION
@@ -450,52 +451,78 @@ echo "║                                                               ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo ""
 
-print_success "MidiMind 5.0 is ready to use!"
+print_success "MidiMind 5.0 est prêt à l'emploi !"
 echo ""
 
-print_info "Quick Start Commands:"
+if [ "$OS" == "linux" ]; then
+    print_info "Gestion du Service :"
+    echo "  ${GREEN}sudo systemctl start midimind${NC}     - Démarrer MidiMind"
+    echo "  ${GREEN}sudo systemctl stop midimind${NC}      - Arrêter MidiMind"
+    echo "  ${GREEN}sudo systemctl status midimind${NC}    - Voir l'état"
+    echo "  ${GREEN}sudo journalctl -u midimind -f${NC}    - Voir les logs"
+    echo ""
+    print_info "Le service démarre automatiquement au démarrage du Raspberry Pi"
+    echo ""
+fi
+
+print_info "Modes de Démarrage Manuel :"
 echo ""
-echo "  Development Mode:"
+echo "  Mode Développement :"
 echo "    ${GREEN}npm run dev${NC}"
 echo ""
-echo "  Production Mode:"
+echo "  Mode Production :"
 echo "    ${GREEN}npm start${NC}"
 echo ""
-echo "  With PM2:"
+echo "  Avec PM2 :"
 echo "    ${GREEN}npm run pm2:start${NC}"
 echo "    ${GREEN}npm run pm2:logs${NC}"
 echo ""
 
-print_info "Access the Web Interface:"
+print_info "Accès à l'Interface Web :"
+echo "    ${BLUE}http://$LOCAL_IP:8080${NC}"
+echo ""
+print_info "Depuis un autre appareil :"
 echo "    ${BLUE}http://$LOCAL_IP:8080${NC}"
 echo ""
 
-print_info "Test Suite:"
-echo "    Open: ${BLUE}examples/functionality-test.html${NC}"
+print_info "Suite de Tests :"
+echo "    Ouvrir : ${BLUE}examples/functionality-test.html${NC}"
 echo ""
 
-print_info "Documentation:"
-echo "    README.md              - Main documentation"
-echo "    QUICK_START.md         - Quick start guide"
-echo "    INTEGRATION_GUIDE.md   - Full integration guide"
-echo "    TESTING.md             - Testing documentation"
+print_info "Documentation :"
+echo "    README.md              - Documentation principale"
+echo "    QUICK_START.md         - Guide de démarrage rapide"
+echo "    INTEGRATION_GUIDE.md   - Guide d'intégration complet"
+echo "    TESTING.md             - Documentation des tests"
 echo ""
 
-print_info "Next Steps:"
-echo "  1. Connect MIDI devices (USB, Virtual, or Bluetooth)"
-echo "  2. Start the server (npm start)"
-echo "  3. Open web interface (http://$LOCAL_IP:8080)"
-echo "  4. Scan for MIDI devices"
-echo "  5. Upload MIDI files"
-echo "  6. Create routes and play!"
+print_info "Prochaines Étapes :"
+echo "  1. Connecter vos périphériques MIDI (USB, Virtual, ou Bluetooth)"
+if [ "$OS" == "linux" ]; then
+    echo "  2. Le service est déjà démarré (si vous avez répondu 'y')"
+else
+    echo "  2. Démarrer le serveur (npm start ou pm2 start)"
+fi
+echo "  3. Ouvrir l'interface web (http://$LOCAL_IP:8080)"
+echo "  4. Scanner les périphériques MIDI"
+echo "  5. Uploader des fichiers MIDI"
+echo "  6. Créer des routes et jouer !"
+echo ""
+
+print_info "Commandes Utiles Raspberry Pi :"
+echo "  ${BLUE}hostname -I${NC}                  - Voir l'IP du Raspberry Pi"
+echo "  ${BLUE}vcgencmd measure_temp${NC}        - Voir la température CPU"
+echo "  ${BLUE}free -h${NC}                      - Voir l'utilisation mémoire"
+echo "  ${BLUE}aconnect -l${NC}                  - Lister les périphériques MIDI"
 echo ""
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "  Need help? Check the documentation or open an issue on GitHub"
+echo "  Besoin d'aide ? Consultez la documentation ou ouvrez une issue"
+echo "  GitHub : https://github.com/glloq/Ma-est-tro"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-print_success "Happy MIDI orchestrating! 🎵🎹🎶"
+print_success "Bonne orchestration MIDI ! 🎵🎹🎶"
 echo ""
