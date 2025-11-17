@@ -15,6 +15,7 @@ class KeyboardModalNew {
         this.velocity = 80;
         this.octaveOffset = 0;
         this.keyboardLayout = 'azerty';
+        this.isMouseDown = false; // Pour le drag sur le clavier
 
         // Piano config
         this.whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
@@ -75,6 +76,7 @@ class KeyboardModalNew {
         // Bind handlers
         this.handleKeyDown = this.handleKeyDown.bind(this);
         this.handleKeyUp = this.handleKeyUp.bind(this);
+        this.handleGlobalMouseUp = this.handleGlobalMouseUp.bind(this);
 
         this.container = null;
     }
@@ -106,6 +108,9 @@ class KeyboardModalNew {
 
         // Stop toutes les notes actives
         this.activeNotes.forEach(note => this.stopNote(note));
+
+        // Reset mouse state
+        this.isMouseDown = false;
 
         if (this.container) {
             this.container.remove();
@@ -287,6 +292,7 @@ class KeyboardModalNew {
             key.addEventListener('mousedown', (e) => this.handlePianoKeyDown(e));
             key.addEventListener('mouseup', (e) => this.handlePianoKeyUp(e));
             key.addEventListener('mouseleave', (e) => this.handlePianoKeyUp(e));
+            key.addEventListener('mouseenter', (e) => this.handlePianoKeyEnter(e));
 
             // Touch support
             key.addEventListener('touchstart', (e) => {
@@ -359,6 +365,7 @@ class KeyboardModalNew {
             key.addEventListener('mousedown', (e) => this.handlePianoKeyDown(e));
             key.addEventListener('mouseup', (e) => this.handlePianoKeyUp(e));
             key.addEventListener('mouseleave', (e) => this.handlePianoKeyUp(e));
+            key.addEventListener('mouseenter', (e) => this.handlePianoKeyEnter(e));
 
             // Touch support
             key.addEventListener('touchstart', (e) => {
@@ -371,17 +378,26 @@ class KeyboardModalNew {
             });
         });
 
+        // Gestion globale du mouseup pour le drag
+        document.addEventListener('mouseup', this.handleGlobalMouseUp);
+
         // Clavier PC
         window.addEventListener('keydown', this.handleKeyDown);
         window.addEventListener('keyup', this.handleKeyUp);
     }
 
     detachEvents() {
+        document.removeEventListener('mouseup', this.handleGlobalMouseUp);
         window.removeEventListener('keydown', this.handleKeyDown);
         window.removeEventListener('keyup', this.handleKeyUp);
     }
 
+    handleGlobalMouseUp() {
+        this.isMouseDown = false;
+    }
+
     handlePianoKeyDown(e) {
+        this.isMouseDown = true;
         const key = e.currentTarget;
         const note = parseInt(key.dataset.note);
 
@@ -395,6 +411,18 @@ class KeyboardModalNew {
         const note = parseInt(key.dataset.note);
 
         this.stopNote(note);
+    }
+
+    handlePianoKeyEnter(e) {
+        // Jouer la note seulement si la souris est enfoncée (drag)
+        if (!this.isMouseDown) return;
+
+        const key = e.currentTarget;
+        const note = parseInt(key.dataset.note);
+
+        if (!this.activeNotes.has(note)) {
+            this.playNote(note);
+        }
     }
 
     handleKeyDown(e) {
