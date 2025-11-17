@@ -951,6 +951,24 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 this.dragging.o = "V"; // V pour View drag
                 this.canvas.style.cursor = 'grabbing';
             }
+            // Gérer le mode select : sélection par zone avec clic gauche
+            else if(this.uiMode === 'select') {
+                // Utiliser la même logique que le clic droit pour la sélection par zone
+                if(this.editmode=="dragmono"||this.editmode=="dragpoly") {
+                    switch(this.downht.m){
+                    case "N":
+                    case "B":
+                    case "E":
+                        // Si on clique sur une note, laisser editDragDown gérer
+                        this.editDragDown(this.downpos);
+                        break;
+                    default:
+                        // Sinon, activer la sélection par zone
+                        this.dragging={o:"A",p:this.downpos,p2:this.downpos,t1:this.downht.t,n1:this.downht.n};
+                        break;
+                    }
+                }
+            }
             else {
                 switch(this.editmode){
                 case "gridpoly":

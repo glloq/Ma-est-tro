@@ -1275,8 +1275,10 @@ class MidiEditorModal {
             const btnMode = btn.dataset.mode;
             if (btnMode === this.editMode) {
                 btn.classList.add('active');
+                btn.disabled = true; // Griser le bouton du mode actif
             } else {
                 btn.classList.remove('active');
+                btn.disabled = false;
             }
         });
     }
