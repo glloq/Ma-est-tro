@@ -1,15 +1,61 @@
 # 🎹 MidiMind 5.0
 
-> **Complete MIDI orchestration system for Raspberry Pi with modern web interface**
+> **Système complet d'orchestration MIDI pour Raspberry Pi avec interface web moderne**
 
-Manage MIDI devices, route channels, edit MIDI files, and play with latency compensation - all from a web browser.
+Gérez vos appareils MIDI, routez les canaux, éditez les fichiers MIDI et jouez avec compensation de latence - le tout depuis un navigateur web.
 
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-3B%2B%2F4-red)](https://www.raspberrypi.org/)
 
 ---
 
-## ✨ Features
+## 🎯 Capacités de l'Application
+
+MidiMind 5.0 est un système d'orchestration MIDI professionnel conçu pour Raspberry Pi, permettant de :
+
+### 🎹 Gestion Complète des Périphériques MIDI
+- **Détection Automatique** : Scan des périphériques USB, Bluetooth (BLE) et réseau (RTP-MIDI)
+- **Support Multi-Connexions** : Gérez plusieurs claviers, synthétiseurs, contrôleurs simultanément
+- **Périphériques Virtuels** : Créez des ports MIDI virtuels pour le routage inter-applications
+- **Clavier MIDI Virtuel** : Interface de clavier jouable directement dans le navigateur
+- **Surveillance en Temps Réel** : Visualisez tous les messages MIDI (Note On/Off, Control Change, Program Change, etc.)
+
+### 🎵 Édition et Lecture de Fichiers MIDI
+- **Gestionnaire de Fichiers** : Upload/download de fichiers MIDI (.mid, .midi)
+- **Organisation** : Création de dossiers, tri, recherche de fichiers
+- **Éditeur Piano Roll** : Édition visuelle avec zoom, déplacement, ajout/suppression de notes
+- **Lecture Avancée** :
+  - Contrôle du tempo (30-300 BPM)
+  - Transposition (-24 à +24 demi-tons)
+  - Mode boucle
+  - Compensation automatique de latence par canal
+- **Playlists** : Files d'attente de lecture avec lecture consécutive
+
+### 🔀 Routage MIDI Avancé
+- **Routage par Canal** : Assignez chaque canal MIDI (1-16) à un périphérique différent
+- **Filtrage** : Filtrez les types de messages (notes, CC, pitch bend, etc.)
+- **Mapping de Canaux** : Redirigez un canal source vers un canal destination différent
+- **Latence par Périphérique** : Compensation individuelle de 0 à 500ms par canal
+- **Presets** : Sauvegardez et chargez des configurations de routage
+
+### 🌐 Interface Web Moderne
+- **Responsive** : Fonctionne sur PC, tablette, smartphone
+- **Temps Réel** : Mise à jour instantanée via WebSocket
+- **Drag & Drop** : Glissez-déposez vos fichiers MIDI
+- **Console de Debug** : Logs en temps réel pour le diagnostic
+- **Commandes Clavier** : Raccourcis pour lecture, pause, stop
+
+### 🔧 Fonctionnalités Système
+- **Base de Données SQLite** : Stockage des configurations, presets, historique
+- **Sessions** : Sauvegarde complète de l'état de l'application
+- **Backup/Restore** : Sauvegarde automatique des données
+- **API WebSocket** : 87+ commandes pour intégration personnalisée
+- **Logging** : Système de logs rotatifs pour monitoring
+
+---
+
+## ✨ Features Détaillées
 
 ### 🎛️ MIDI Management
 - **Device Management**: USB, Virtual, and BLE MIDI devices
@@ -37,88 +83,326 @@ Manage MIDI devices, route channels, edit MIDI files, and play with latency comp
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Installation sur Raspberry Pi
 
-### One-Line Installation (Raspberry Pi / Linux)
+### 📋 Prérequis
+
+- **Matériel** : Raspberry Pi 3B+ ou 4 (recommandé)
+- **RAM** : Minimum 2GB (4GB recommandé)
+- **OS** : Raspberry Pi OS Lite (64-bit) ou Raspberry Pi OS Desktop
+- **Stockage** : Carte SD 8GB minimum
+- **Réseau** : Connexion Ethernet ou WiFi
+
+### 🎯 Installation Automatique (Recommandée)
+
+**Option 1 : Installation complète avec une seule commande**
 
 ```bash
-git clone https://github.com/yourusername/Ma-est-tro.git
+# Cloner le repository
+git clone https://github.com/glloq/Ma-est-tro.git
 cd Ma-est-tro
+
+# Rendre le script exécutable
 chmod +x scripts/Install.sh
+
+# Lancer l'installation
 ./scripts/Install.sh
 ```
 
-The install script will:
-- ✅ Install system dependencies (ALSA, Bluetooth, build tools)
-- ✅ Install Node.js 18 LTS
-- ✅ Install PM2 process manager
-- ✅ Install npm dependencies
-- ✅ Initialize SQLite database
-- ✅ Create configuration files
-- ✅ Set up systemd service or PM2 startup
+Le script d'installation va automatiquement :
+- ✅ Mettre à jour le système (`apt-get update`)
+- ✅ Installer les dépendances système (ALSA, Bluetooth, build tools)
+- ✅ Installer Node.js 18 LTS
+- ✅ Installer PM2 (gestionnaire de processus)
+- ✅ Installer les dépendances npm
+- ✅ Créer les dossiers nécessaires (data, logs, uploads, backups)
+- ✅ Initialiser la base de données SQLite
+- ✅ Créer le fichier de configuration
+- ✅ Configurer les permissions Bluetooth
+- ✅ Configurer systemd pour démarrage automatique
+- ✅ Afficher l'IP locale pour accéder à l'interface web
 
-### Manual Installation
+### ⚙️ Installation Manuelle (Détails des Commandes)
 
+Si vous préférez installer manuellement, voici les commandes exactes :
+
+**Étape 1 : Mise à jour du système**
 ```bash
-# 1. System dependencies
 sudo apt-get update
-sudo apt-get install -y libasound2-dev bluetooth bluez libbluetooth-dev build-essential
+sudo apt-get upgrade -y
+```
 
-# 2. Node.js 18 LTS
+**Étape 2 : Installation des dépendances système**
+```bash
+sudo apt-get install -y \
+  libasound2-dev \
+  bluetooth \
+  bluez \
+  libbluetooth-dev \
+  build-essential \
+  git \
+  curl \
+  python3 \
+  sqlite3
+```
+
+**Étape 3 : Installation de Node.js 18 LTS**
+```bash
+# Télécharger et installer Node.js 18
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
-# 3. Install project
+# Vérifier l'installation
+node --version  # Doit afficher v18.x.x
+npm --version   # Doit afficher 9.x.x ou supérieur
+```
+
+**Étape 4 : Installation de PM2 (gestionnaire de processus)**
+```bash
+sudo npm install -g pm2
+pm2 --version
+```
+
+**Étape 5 : Cloner et installer le projet**
+```bash
+# Cloner le repository
+cd ~
+git clone https://github.com/glloq/Ma-est-tro.git
+cd Ma-est-tro
+
+# Installer les dépendances npm
 npm install
 
-# 4. Initialize database
-npm run migrate
-
-# 5. Start server
-npm start
+# Créer les dossiers nécessaires
+mkdir -p data logs uploads backups public/uploads examples
 ```
 
-### Start the Server
-
+**Étape 6 : Initialiser la base de données**
 ```bash
-# Development mode (with auto-reload)
+npm run migrate
+```
+
+**Étape 7 : Configuration Bluetooth (pour MIDI BLE)**
+```bash
+# Activer le service Bluetooth
+sudo systemctl enable bluetooth
+sudo systemctl start bluetooth
+
+# Ajouter l'utilisateur au groupe bluetooth
+sudo usermod -a -G bluetooth $USER
+
+# Définir les permissions pour Node.js
+sudo setcap cap_net_raw+eip $(eval readlink -f `which node`)
+
+# Débloquer le Bluetooth
+sudo rfkill unblock bluetooth
+
+# Redémarrer pour appliquer les changements de groupe
+# (ou exécuter : newgrp bluetooth)
+```
+
+**Étape 8 : Configuration du démarrage automatique**
+
+**Option A : Avec systemd (recommandé pour Raspberry Pi)**
+```bash
+# Créer le service systemd
+sudo nano /etc/systemd/system/midimind.service
+```
+
+Coller le contenu suivant :
+```ini
+[Unit]
+Description=MidiMind 5.0 MIDI Orchestration System
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/Ma-est-tro
+ExecStart=/usr/bin/node /home/pi/Ma-est-tro/server.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=midimind
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Puis activer et démarrer le service :
+```bash
+# Recharger systemd
+sudo systemctl daemon-reload
+
+# Activer le démarrage automatique
+sudo systemctl enable midimind
+
+# Démarrer le service
+sudo systemctl start midimind
+
+# Vérifier le statut
+sudo systemctl status midimind
+
+# Voir les logs
+sudo journalctl -u midimind -f
+```
+
+**Option B : Avec PM2**
+```bash
+# Démarrer l'application
+pm2 start ecosystem.config.cjs
+
+# Sauvegarder la configuration
+pm2 save
+
+# Configurer le démarrage automatique
+pm2 startup
+# Exécuter la commande affichée par PM2
+
+# Vérifier
+pm2 list
+pm2 logs midimind
+```
+
+### 🎮 Démarrage de l'Application
+
+**Démarrage manuel (développement)**
+```bash
+# Mode développement (avec rechargement automatique)
 npm run dev
 
-# Production mode
+# Mode production
 npm start
-
-# With PM2 (recommended for production)
-npm run pm2:start
-npm run pm2:logs
 ```
 
-### Access the Web Interface
+**Avec PM2 (recommandé)**
+```bash
+# Démarrer
+npm run pm2:start
 
-Open your browser to:
+# Voir les logs
+npm run pm2:logs
+
+# Arrêter
+npm run pm2:stop
+
+# Redémarrer
+npm run pm2:restart
+
+# Statut
+npm run pm2:status
+```
+
+**Avec systemd (si configuré)**
+```bash
+# Démarrer
+sudo systemctl start midimind
+
+# Arrêter
+sudo systemctl stop midimind
+
+# Redémarrer
+sudo systemctl restart midimind
+
+# Statut
+sudo systemctl status midimind
+
+# Logs en temps réel
+sudo journalctl -u midimind -f
+```
+
+### 🌐 Accès à l'Interface Web
+
+**En local sur le Raspberry Pi**
 ```
 http://localhost:8080
 ```
 
-Or from another device on the network:
+**Depuis un autre appareil sur le réseau**
 ```
-http://<raspberry-pi-ip>:8080
+http://<IP-du-Raspberry-Pi>:8080
 ```
 
-### Update from GitHub
+Pour connaître l'IP de votre Raspberry Pi :
+```bash
+hostname -I
+```
 
-To pull the latest changes from GitHub and update your installation:
+Exemple : `http://192.168.1.100:8080`
+
+### 🔄 Mise à jour depuis GitHub
+
+Pour récupérer les dernières modifications :
 
 ```bash
 cd ~/Ma-est-tro
 ./scripts/update.sh
 ```
 
-The update script will:
-- ✅ Pull latest changes from GitHub
-- ✅ Update npm dependencies (if package.json changed)
-- ✅ Run database migrations (if needed)
-- ✅ Restart the server automatically
-- ✅ Verify the update was successful
+Le script de mise à jour va :
+- ✅ Récupérer les dernières modifications (`git pull`)
+- ✅ Mettre à jour les dépendances npm (si nécessaire)
+- ✅ Exécuter les migrations de base de données
+- ✅ Redémarrer automatiquement le serveur
+- ✅ Vérifier que la mise à jour s'est bien déroulée
+
+### 📱 Commandes Utiles Raspberry Pi
+
+**Vérifier l'état du système**
+```bash
+# Température du CPU
+vcgencmd measure_temp
+
+# Utilisation mémoire
+free -h
+
+# Espace disque
+df -h
+
+# Processus Node.js
+ps aux | grep node
+```
+
+**Gérer les périphériques MIDI**
+```bash
+# Lister les périphériques MIDI USB
+aconnect -l
+
+# Lister les périphériques ALSA
+amidi -l
+
+# Tester un périphérique MIDI
+amidi -p hw:1,0 -d
+```
+
+**Gérer le Bluetooth**
+```bash
+# Statut Bluetooth
+sudo systemctl status bluetooth
+
+# Scanner les périphériques Bluetooth
+bluetoothctl scan on
+
+# Vérifier l'adaptateur Bluetooth
+hciconfig -a
+```
+
+**Logs et Diagnostic**
+```bash
+# Logs du système
+sudo journalctl -xe
+
+# Logs MidiMind (systemd)
+sudo journalctl -u midimind -n 100
+
+# Logs PM2
+pm2 logs midimind --lines 100
+
+# Logs de l'application
+tail -f logs/midimind.log
+```
 
 ---
 
