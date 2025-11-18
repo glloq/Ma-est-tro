@@ -582,13 +582,21 @@ class MidiEditorModal {
             const deltaTime = event.absoluteTime - lastTime;
             lastTime = event.absoluteTime;
 
-            return {
+            const trackEvent = {
                 deltaTime: deltaTime,
                 type: event.type,
-                channel: event.channel,
-                noteNumber: event.noteNumber,
-                velocity: event.velocity
+                channel: event.channel
             };
+
+            // Ajouter les champs spécifiques selon le type d'événement
+            if (event.type === 'programChange') {
+                trackEvent.programNumber = event.programNumber;
+            } else if (event.type === 'noteOn' || event.type === 'noteOff') {
+                trackEvent.noteNumber = event.noteNumber;
+                trackEvent.velocity = event.velocity;
+            }
+
+            return trackEvent;
         });
 
         // Ajouter End of Track
