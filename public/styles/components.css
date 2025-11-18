@@ -704,6 +704,7 @@
 /* Header avec bouton de fermeture - Compact pour plus d'espace */
 .midi-editor-modal .modal-header {
     padding: 6px 12px;
+    margin: 0;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border-radius: 12px 12px 0 0;
@@ -711,33 +712,6 @@
     align-items: center;
     justify-content: space-between;
     flex-shrink: 0;
-}
-
-.midi-editor-modal .modal-header-content {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
-}
-
-.midi-editor-modal .file-info-compact {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.7rem;
-    opacity: 0.85;
-    padding: 2px 8px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-}
-
-.midi-editor-modal .file-info-item {
-    display: flex;
-    align-items: center;
-    white-space: nowrap;
-    max-width: 250px;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 /* Bouton de fermeture (croix) */
@@ -768,12 +742,23 @@
 .midi-editor-modal .modal-title {
     display: flex;
     align-items: center;
+    gap: 12px;
 }
 
 .midi-editor-modal .modal-title h3 {
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
+}
+
+.midi-editor-modal .file-name {
+    font-size: 0.95rem;
+    opacity: 0.95;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 400px;
 }
 
 .midi-editor-modal .modal-body {
@@ -1141,6 +1126,22 @@
     width: 100%;
     height: 100%;
     cursor: crosshair;
+}
+
+/* Masquer les marqueurs de temps sur le piano roll */
+.midi-editor-modal webaudio-pianoroll::part(wac-markstart),
+.midi-editor-modal webaudio-pianoroll::part(wac-markend),
+.midi-editor-modal webaudio-pianoroll::part(wac-cursor) {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* Alternative si ::part ne fonctionne pas */
+.midi-editor-modal .wac-markstart,
+.midi-editor-modal .wac-markend,
+.midi-editor-modal .wac-cursor {
+    display: none !important;
+    visibility: hidden !important;
 }
 
 /* Modal responsiveness */
