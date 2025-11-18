@@ -2577,9 +2577,10 @@ class MidiEditorModal {
             const currentXOffset = this.pianoRoll.xoffset || 0;
             const currentYOffset = this.pianoRoll.yoffset || 0;
 
-            // Si xoffset a changé, mettre à jour le slider horizontal
+            // Si xoffset a changé, mettre à jour le slider horizontal et synchroniser CC editor
             if (currentXOffset !== lastXOffset) {
                 this.updateHorizontalSlider(currentXOffset);
+                this.syncCCEditor(); // Synchroniser l'éditeur CC/Pitchbend avec le défilement
                 lastXOffset = currentXOffset;
             }
 
