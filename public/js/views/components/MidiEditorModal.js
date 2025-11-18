@@ -869,13 +869,9 @@ class MidiEditorModal {
         this.container.innerHTML = `
             <div class="modal-dialog modal-xl">
                 <div class="modal-header">
-                    <div class="modal-header-content">
-                        <div class="file-info-compact">
-                            <span class="file-info-item" title="Fichier">${this.escapeHtml(this.currentFilename || this.currentFile || '')}</span>
-                        </div>
-                        <div class="modal-title">
-                            <h3>🎹 Éditeur MIDI</h3>
-                        </div>
+                    <div class="modal-title">
+                        <h3>🎹 Éditeur MIDI</h3>
+                        <span class="file-name">${this.escapeHtml(this.currentFilename || this.currentFile || '')}</span>
                     </div>
                     <button class="modal-close" data-action="close">&times;</button>
                 </div>
