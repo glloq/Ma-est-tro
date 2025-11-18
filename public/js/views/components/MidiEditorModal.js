@@ -1107,15 +1107,6 @@ class MidiEditorModal {
         this.pianoRoll.setAttribute('xrange', xrange.toString());
         this.pianoRoll.setAttribute('yrange', noteRange.toString());
         this.pianoRoll.setAttribute('yoffset', yoffset.toString()); // Centrer verticalement
-
-        // Grille visuelle fixe pour voir les subdivisions (1/16 note = 120 ticks)
-        // Cela permet d'avoir toujours une grille visible
-        this.pianoRoll.setAttribute('grid', '120');
-
-        // Snap to grid pour contraindre le positionnement des notes
-        const currentSnap = this.snapValues[this.currentSnapIndex];
-        this.pianoRoll.setAttribute('snap', currentSnap.ticks.toString());
-
         this.pianoRoll.setAttribute('wheelzoom', '1');
         this.pianoRoll.setAttribute('xscroll', '1');
         this.pianoRoll.setAttribute('yscroll', '1');
@@ -1128,10 +1119,19 @@ class MidiEditorModal {
         // Ajouter au conteneur AVANT de charger la sequence
         container.appendChild(this.pianoRoll);
 
-        // Tempo et timebase du fichier MIDI (importants pour l'affichage du temps en secondes)
         // Assigner APRÈS avoir ajouté au DOM pour que les propriétés soient bien initialisées
+        // Tempo et timebase du fichier MIDI (importants pour l'affichage du temps en secondes)
         this.pianoRoll.tempo = this.tempo || 120;
         this.pianoRoll.timebase = this.ticksPerBeat || 480;
+
+        // Grille visuelle fixe pour voir les subdivisions (1/16 note = 120 ticks)
+        this.pianoRoll.grid = 120;
+
+        // Snap to grid pour contraindre le positionnement des notes
+        const currentSnap = this.snapValues[this.currentSnapIndex];
+        this.pianoRoll.snap = currentSnap.ticks;
+
+        this.log('info', `Piano roll grid/snap: grid=${this.pianoRoll.grid} ticks, snap=${this.pianoRoll.snap} ticks (${currentSnap.label})`);
 
         // Forcer updateTimer() et redraw pour afficher les secondes
         if (typeof this.pianoRoll.updateTimer === 'function') {
@@ -1588,9 +1588,10 @@ class MidiEditorModal {
         }
 
         // Appliquer le snap au piano roll (grille visuelle reste fixe à 120)
+        // Utiliser la propriété JavaScript pour s'assurer que le changement est bien appliqué
         if (this.pianoRoll) {
-            this.pianoRoll.setAttribute('snap', currentSnap.ticks.toString());
-            this.log('info', `Snap to grid changed to ${currentSnap.label} (${currentSnap.ticks} ticks)`);
+            this.pianoRoll.snap = currentSnap.ticks;
+            this.log('info', `Snap to grid changed to ${currentSnap.label} (${currentSnap.ticks} ticks) - snap property set to ${this.pianoRoll.snap}`);
         }
 
         this.showNotification(`Magnétisme: ${currentSnap.label}`, 'info');
