@@ -25,10 +25,11 @@ class CCPitchbendEditor {
         this.events = []; // CC et pitchbend events
         this.selectedEvents = new Set();
         this.currentTool = 'select'; // 'select', 'move', 'line', 'draw'
-        this.currentCC = 'cc1'; // 'cc1', 'cc7', 'cc10', 'cc1-step', 'pitchbend'
+        this.currentCC = 'cc1'; // 'cc1', 'cc7', 'cc10', 'cc11', 'pitchbend'
         this.currentChannel = 0;
         this.isDrawing = false;
         this.lastDrawPosition = null;
+        this.lastDrawTicks = null; // Dernier tick où un point a été créé en mode dessin
 
         // Historique pour undo/redo
         this.history = [];
@@ -161,17 +162,39 @@ class CCPitchbendEditor {
 
     // === Gestion des événements ===
 
-    addEvent(ticks, value, channel = this.currentChannel) {
+    addEvent(ticks, value, channel = this.currentChannel, autoSave = true) {
+        const snappedTicks = this.snapToGrid(ticks);
+
+        // Vérifier si un événement existe déjà à ce tick (pour éviter les doublons)
+        const existingEvent = this.events.find(e =>
+            e.ticks === snappedTicks &&
+            e.type === this.currentCC &&
+            e.channel === channel
+        );
+
+        if (existingEvent) {
+            // Mettre à jour la valeur existante
+            existingEvent.value = this.clampValue(value);
+            if (autoSave) {
+                this.render();
+            }
+            return existingEvent;
+        }
+
         const event = {
             type: this.currentCC,
-            ticks: this.snapToGrid(ticks),
+            ticks: snappedTicks,
             value: this.clampValue(value),
             channel: channel,
             id: Date.now() + Math.random()
         };
         this.events.push(event);
-        this.saveState();
-        this.render();
+
+        if (autoSave) {
+            this.saveState();
+            this.render();
+        }
+
         return event;
     }
 
@@ -215,7 +238,9 @@ class CCPitchbendEditor {
             case 'draw':
                 this.isDrawing = true;
                 this.lastDrawPosition = { x, y };
-                this.addEvent(ticks, value);
+                this.lastDrawTicks = this.snapToGrid(ticks);
+                this.addEvent(ticks, value, this.currentChannel, false); // Ne pas sauvegarder immédiatement
+                this.render();
                 break;
 
             case 'line':
@@ -272,9 +297,14 @@ class CCPitchbendEditor {
         const value = this.yToValue(y);
 
         if (this.isDrawing && this.currentTool === 'draw') {
-            // Dessin continu
-            this.addEvent(ticks, value);
-            this.lastDrawPosition = { x, y };
+            // Dessin continu - créer un point seulement si on a avancé d'au moins un tick de grille
+            const snappedTicks = this.snapToGrid(ticks);
+            if (this.lastDrawTicks === null || Math.abs(snappedTicks - this.lastDrawTicks) >= this.options.grid) {
+                this.addEvent(ticks, value, this.currentChannel, false); // Ne pas sauvegarder immédiatement
+                this.lastDrawTicks = snappedTicks;
+                this.lastDrawPosition = { x, y };
+                this.render();
+            }
         } else if (this.dragStart && (this.currentTool === 'select' || this.currentTool === 'move')) {
             // Déplacement des événements sélectionnés
             if (this.selectedEvents.size > 0) {
@@ -305,6 +335,9 @@ class CCPitchbendEditor {
         if (this.isDrawing) {
             this.isDrawing = false;
             this.lastDrawPosition = null;
+            this.lastDrawTicks = null;
+            // Sauvegarder l'état après avoir fini de dessiner
+            this.saveState();
         }
 
         if (this.selectionStart) {
@@ -395,11 +428,16 @@ class CCPitchbendEditor {
         const valueRange = endValue - startValue;
 
         // Créer des points le long de la ligne selon la grille
+        // Utiliser autoSave=false pour ne pas sauvegarder à chaque point
         for (let t = minTicks; t <= maxTicks; t += this.options.grid) {
             const progress = ticksRange > 0 ? (t - minTicks) / ticksRange : 0;
             const value = Math.round(startValue + valueRange * progress);
-            this.addEvent(t, value);
+            this.addEvent(t, value, this.currentChannel, false);
         }
+
+        // Sauvegarder l'état une seule fois à la fin
+        this.saveState();
+        this.render();
     }
 
     // === Rendu ===
@@ -467,17 +505,42 @@ class CCPitchbendEditor {
         if (events.length > 1) {
             this.ctx.strokeStyle = '#4CAF50';
             this.ctx.lineWidth = 2;
-            this.ctx.beginPath();
-            events.forEach((event, i) => {
-                const x = this.ticksToX(event.ticks);
-                const y = this.valueToY(event.value);
-                if (i === 0) {
-                    this.ctx.moveTo(x, y);
-                } else {
-                    this.ctx.lineTo(x, y);
-                }
-            });
-            this.ctx.stroke();
+
+            if (this.currentCC === 'pitchbend') {
+                // Pitchbend : courbe lisse (interpolation linéaire)
+                this.ctx.beginPath();
+                events.forEach((event, i) => {
+                    const x = this.ticksToX(event.ticks);
+                    const y = this.valueToY(event.value);
+                    if (i === 0) {
+                        this.ctx.moveTo(x, y);
+                    } else {
+                        this.ctx.lineTo(x, y);
+                    }
+                });
+                this.ctx.stroke();
+            } else {
+                // CC : courbe en escalier (valeurs discrètes)
+                this.ctx.beginPath();
+                events.forEach((event, i) => {
+                    const x = this.ticksToX(event.ticks);
+                    const y = this.valueToY(event.value);
+
+                    if (i === 0) {
+                        this.ctx.moveTo(x, y);
+                    } else {
+                        const prevEvent = events[i - 1];
+                        const prevX = this.ticksToX(prevEvent.ticks);
+                        const prevY = this.valueToY(prevEvent.value);
+
+                        // Ligne horizontale depuis le point précédent jusqu'à l'abscisse du point actuel
+                        this.ctx.lineTo(x, prevY);
+                        // Ligne verticale jusqu'au point actuel
+                        this.ctx.lineTo(x, y);
+                    }
+                });
+                this.ctx.stroke();
+            }
         }
 
         // Dessiner les points
