@@ -459,7 +459,7 @@ class CCPitchbendEditor {
         const labelMargin = 50; // Marge pour les labels à gauche
 
         // Grille verticale (temps)
-        this.ctx.strokeStyle = '#2a2a2a';
+        this.ctx.strokeStyle = '#3a3a3a'; // Plus clair pour être visible
         this.ctx.lineWidth = 1;
 
         const gridSize = this.options.grid;
@@ -480,7 +480,7 @@ class CCPitchbendEditor {
         if (this.currentCC === 'pitchbend') {
             // Pour pitchbend : lignes aux valeurs -8192, -4096, 0, 4096, 8191
             const values = [-8192, -4096, 0, 4096, 8191];
-            this.ctx.strokeStyle = '#2a2a2a';
+            this.ctx.strokeStyle = '#3a3a3a'; // Plus clair
             this.ctx.lineWidth = 1;
 
             values.forEach(value => {
@@ -497,7 +497,7 @@ class CCPitchbendEditor {
                 this.ctx.fillRect(0, y - 7, labelMargin - 2, 14);
 
                 // Label
-                this.ctx.fillStyle = '#888';
+                this.ctx.fillStyle = '#aaa'; // Plus clair
                 this.ctx.font = '11px monospace';
                 this.ctx.textAlign = 'right';
                 this.ctx.fillText(value.toString(), labelMargin - 5, y + 4);
@@ -505,7 +505,7 @@ class CCPitchbendEditor {
         } else {
             // Pour CC : lignes aux valeurs 0, 32, 64, 96, 127
             const values = [0, 32, 64, 96, 127];
-            this.ctx.strokeStyle = '#2a2a2a';
+            this.ctx.strokeStyle = '#3a3a3a'; // Plus clair
             this.ctx.lineWidth = 1;
 
             values.forEach(value => {
@@ -522,7 +522,7 @@ class CCPitchbendEditor {
                 this.ctx.fillRect(0, y - 7, labelMargin - 2, 14);
 
                 // Label
-                this.ctx.fillStyle = '#888';
+                this.ctx.fillStyle = '#aaa'; // Plus clair
                 this.ctx.font = '11px monospace';
                 this.ctx.textAlign = 'right';
                 this.ctx.fillText(value.toString(), labelMargin - 5, y + 4);
@@ -530,8 +530,8 @@ class CCPitchbendEditor {
         }
 
         // Bordure verticale séparant la zone de labels
-        this.ctx.strokeStyle = '#333';
-        this.ctx.lineWidth = 1;
+        this.ctx.strokeStyle = '#555'; // Plus clair
+        this.ctx.lineWidth = 2;
         this.ctx.beginPath();
         this.ctx.moveTo(labelMargin, 0);
         this.ctx.lineTo(labelMargin, this.canvas.height);

@@ -372,12 +372,13 @@ class MidiEditorModal {
     }
 
     /**
-     * Obtenir l'ensemble des canaux utilisés par les CC/Pitchbend
+     * Obtenir l'ensemble des canaux utilisés par le type CC/Pitchbend actuel
      */
     getCCChannelsUsed() {
         const channels = new Set();
         this.ccEvents.forEach(event => {
-            if (event.channel !== undefined) {
+            // Filtrer uniquement les événements du type CC actuellement sélectionné
+            if (event.type === this.currentCCType && event.channel !== undefined) {
                 channels.add(event.channel);
             }
         });
@@ -511,8 +512,11 @@ class MidiEditorModal {
         const pitchbendCount = this.ccEvents.filter(e => e.type === 'pitchbend').length;
         this.log('info', `  - CC1: ${cc1Count}, CC7: ${cc7Count}, CC10: ${cc10Count}, CC11: ${cc11Count}, Pitchbend: ${pitchbendCount}`);
 
-        // Mettre à jour le sélecteur de canal
-        this.updateCCChannelSelector();
+        // Log des canaux utilisés
+        const usedChannels = this.getCCChannelsUsed();
+        if (usedChannels.length > 0) {
+            this.log('info', `  - Canaux utilisés: ${usedChannels.map(c => c + 1).join(', ')}`);
+        }
     }
 
     /**
@@ -675,6 +679,8 @@ class MidiEditorModal {
         // Mettre à jour l'éditeur CC
         if (this.ccEditor) {
             this.ccEditor.setCC(ccType);
+            // Mettre à jour le sélecteur de canal car les canaux utilisés peuvent varier selon le type CC
+            this.updateCCChannelSelector();
         }
     }
 
@@ -713,10 +719,12 @@ class MidiEditorModal {
         this.ccEditor = new CCPitchbendEditor(container, options);
         this.ccEditor.setCC(this.currentCCType);
 
-        // Obtenir le canal actif (premier canal actif ou 0)
-        const activeChannel = this.activeChannels.size > 0
-            ? Array.from(this.activeChannels)[0]
-            : 0;
+        // Mettre à jour le sélecteur de canal pour afficher uniquement les canaux utilisés
+        this.updateCCChannelSelector();
+
+        // Obtenir le canal actif (premier canal utilisé ou 0)
+        const usedChannels = this.getCCChannelsUsed();
+        const activeChannel = usedChannels.length > 0 ? usedChannels[0] : 0;
         this.ccEditor.setChannel(activeChannel);
 
         // Charger les événements existants
@@ -724,7 +732,7 @@ class MidiEditorModal {
             this.ccEditor.loadEvents(this.ccEvents);
         }
 
-        this.log('info', 'Éditeur CC/Pitchbend initialisé');
+        this.log('info', `Éditeur CC/Pitchbend initialisé avec canal ${activeChannel + 1}`);
     }
 
     /**
@@ -2258,23 +2266,9 @@ class MidiEditorModal {
             });
         });
 
-        // Boutons de sélection de canal pour l'éditeur CC
-        const ccChannelButtons = this.container.querySelectorAll('.cc-channel-btn');
-        ccChannelButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const channel = parseInt(btn.dataset.channel);
-                if (!isNaN(channel) && this.ccEditor) {
-                    // Désactiver tous les boutons
-                    ccChannelButtons.forEach(b => b.classList.remove('active'));
-                    // Activer le bouton cliqué
-                    btn.classList.add('active');
-                    // Changer le canal de l'éditeur CC
-                    this.ccEditor.setChannel(channel);
-                    this.log('info', `CC Editor channel changed to: ${channel + 1}`);
-                }
-            });
-        });
+        // Les event listeners pour les boutons de canal CC sont attachés
+        // dans attachCCChannelListeners() appelé depuis initCCEditor()
+        // pour éviter les conflits lors de la mise à jour dynamique des canaux
 
         // Sliders de navigation (scroll) avec throttle à 15fps
         const scrollHSlider = document.getElementById('scroll-h-slider');
