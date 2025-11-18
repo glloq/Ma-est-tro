@@ -13,7 +13,7 @@
     image-rendering: crisp-edges;
 }
 
-/* Container pour l'éditeur avec accordéon */
+/* Container pour l'éditeur */
 .midi-editor-container {
     display: flex;
     flex-direction: column;
@@ -31,141 +31,129 @@
 }
 
 .midi-editor-section.cc-section {
-    flex: 0 0 auto;
+    flex: 0 0 150px;
     border-top: 2px solid #444;
 }
 
-/* Accordéon Header */
-.accordion-header {
+/* Layout de l'éditeur CC avec sidebar */
+.cc-editor-layout {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 12px;
-    background: linear-gradient(180deg, #2d2d2d 0%, #242424 100%);
-    border-bottom: 1px solid #333;
-    cursor: pointer;
-    user-select: none;
-    transition: background 0.2s;
+    height: 100%;
+    background: #1a1a1a;
 }
 
-.accordion-header:hover {
-    background: linear-gradient(180deg, #353535 0%, #2a2a2a 100%);
-}
-
-.accordion-header.active {
-    background: linear-gradient(180deg, #3d3d3d 0%, #323232 100%);
-}
-
-.accordion-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #e0e0e0;
-}
-
-.accordion-icon {
-    font-size: 12px;
-    transition: transform 0.3s;
-    color: #888;
-}
-
-.accordion-header.collapsed .accordion-icon {
-    transform: rotate(-90deg);
-}
-
-.accordion-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease-out;
-}
-
-.accordion-content.expanded {
-    max-height: 600px; /* Ajuster selon besoin */
-}
-
-/* Barre d'outils CC/Pitchbend */
-.cc-toolbar {
-    display: flex;
-    gap: 8px;
-    padding: 8px;
+.cc-sidebar {
+    width: 120px;
     background: #242424;
-    border-bottom: 1px solid #333;
-    align-items: center;
-}
-
-.cc-toolbar-group {
+    border-right: 1px solid #333;
+    padding: 8px;
     display: flex;
-    gap: 4px;
-    align-items: center;
+    flex-direction: column;
+    gap: 8px;
 }
 
-.cc-toolbar-label {
+.cc-sidebar-label {
     font-size: 11px;
+    font-weight: 600;
     color: #888;
-    margin-right: 4px;
     text-transform: uppercase;
+    margin-bottom: 4px;
 }
 
-.cc-tool-btn,
-.cc-type-btn {
-    padding: 6px 12px;
+.cc-sidebar-divider {
+    height: 1px;
+    background: #333;
+    margin: 4px 0;
+}
+
+/* Boutons verticaux pour types CC */
+.cc-type-buttons-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cc-type-btn-v {
+    padding: 6px 8px;
     background: #2d2d2d;
     border: 1px solid #444;
     border-radius: 4px;
     color: #bbb;
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    white-space: nowrap;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
-.cc-tool-btn:hover,
-.cc-type-btn:hover {
+.cc-type-btn-v .cc-label {
+    font-size: 9px;
+    font-weight: 400;
+    color: #777;
+}
+
+.cc-type-btn-v:hover {
     background: #353535;
     border-color: #555;
     color: #e0e0e0;
 }
 
-.cc-tool-btn.active,
-.cc-type-btn.active {
+.cc-type-btn-v.active {
     background: #4CAF50;
     border-color: #4CAF50;
     color: #fff;
+}
+
+.cc-type-btn-v.active .cc-label {
+    color: #ddd;
+}
+
+/* Boutons verticaux pour outils */
+.cc-tool-buttons-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cc-tool-btn-v {
+    padding: 6px 8px;
+    background: #2d2d2d;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #bbb;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cc-tool-btn-v .tool-label {
+    font-size: 10px;
     font-weight: 600;
 }
 
-.cc-tool-btn.active:hover,
-.cc-type-btn.active:hover {
-    background: #45a049;
+.cc-tool-btn-v:hover {
+    background: #353535;
+    border-color: #555;
+    color: #e0e0e0;
 }
 
-/* Icônes pour les outils */
-.cc-tool-btn::before {
-    margin-right: 4px;
+.cc-tool-btn-v.active {
+    background: #4CAF50;
+    border-color: #4CAF50;
+    color: #fff;
 }
 
-.cc-tool-btn[data-tool="select"]::before {
-    content: "⬚";
-}
-
-.cc-tool-btn[data-tool="move"]::before {
-    content: "✥";
-}
-
-.cc-tool-btn[data-tool="line"]::before {
-    content: "╱";
-}
-
-.cc-tool-btn[data-tool="draw"]::before {
-    content: "✎";
-}
-
-/* Boutons de type CC/Pitchbend */
-.cc-type-btn {
-    min-width: 70px;
-    text-align: center;
+/* Conteneur principal de l'éditeur */
+.cc-editor-main {
+    flex: 1;
+    position: relative;
 }
 
 /* Mode compact pour boutons verticaux */
