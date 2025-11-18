@@ -63,7 +63,7 @@
 
 .midi-editor-section.cc-section.expanded {
     flex: 1 1 auto;
-    min-height: 250px;
+    min-height: 120px;
 }
 
 /* Header de la section CC (collapsible) */
@@ -116,18 +116,20 @@
 /* Layout de l'éditeur CC avec sidebar */
 .cc-editor-layout {
     display: flex;
+    flex-direction: column;
     height: 100%;
     background: #1a1a1a;
 }
 
 .cc-sidebar {
-    width: 110px;
+    flex: 0 0 auto;
     background: #242424;
-    border-right: 1px solid #333;
-    padding: 6px;
+    border-bottom: 1px solid #333;
+    padding: 4px 8px;
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
 }
 
 .cc-sidebar-label {
@@ -135,21 +137,20 @@
     font-weight: 600;
     color: #888;
     text-transform: uppercase;
-    margin-bottom: 2px;
     line-height: 1;
+    white-space: nowrap;
 }
 
 .cc-sidebar-divider {
-    height: 1px;
-    background: #333;
-    margin: 2px 0;
+    display: none;
 }
 
-/* Boutons verticaux pour types CC */
+/* Boutons horizontaux pour types CC */
 .cc-type-buttons-vertical {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    flex-direction: row;
+    gap: 4px;
+    align-items: center;
 }
 
 .cc-type-btn-v {
@@ -192,11 +193,12 @@
     color: #ddd;
 }
 
-/* Boutons verticaux pour outils */
+/* Boutons horizontaux pour outils */
 .cc-tool-buttons-vertical {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    flex-direction: row;
+    gap: 4px;
+    align-items: center;
 }
 
 .cc-tool-btn-v {
