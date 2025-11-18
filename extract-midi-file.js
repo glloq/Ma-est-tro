@@ -4,19 +4,26 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 
-const dbPath = process.argv[2] || './data/midimind.db';
-const fileIdOrName = process.argv[3];
+// Parse arguments intelligently
+let dbPath = './data/midimind.db';
+let fileIdOrName;
 
-if (!fileIdOrName) {
+if (process.argv.length === 3) {
+  // Single argument: either 'list' or file id/name (use default db path)
+  fileIdOrName = process.argv[2];
+} else if (process.argv.length === 4) {
+  // Two arguments: db path + file id/name
+  dbPath = process.argv[2];
+  fileIdOrName = process.argv[3];
+} else {
   console.log('Usage: node extract-midi-file.js [db-path] <file-id-or-name>');
   console.log('');
   console.log('Examples:');
+  console.log('  node extract-midi-file.js list');
   console.log('  node extract-midi-file.js 1');
   console.log('  node extract-midi-file.js mysong.midi');
   console.log('  node extract-midi-file.js ./data/midimind.db 1');
   console.log('');
-  console.log('To list all files:');
-  console.log('  node extract-midi-file.js list');
   process.exit(1);
 }
 
