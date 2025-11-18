@@ -385,8 +385,13 @@ class MidiEditorModal {
 
         // Mettre à jour le piano roll si il existe
         if (this.pianoRoll) {
-            // Recharger le piano roll avec la nouvelle séquence
-            this.pianoRoll.sequence = this.sequence;
+            // Vider complètement la séquence du piano roll d'abord
+            this.pianoRoll.sequence.length = 0;
+
+            // Puis copier les nouvelles notes
+            this.sequence.forEach(note => {
+                this.pianoRoll.sequence.push({...note});
+            });
 
             // S'assurer que les couleurs sont toujours définies
             this.pianoRoll.channelColors = this.channelColors;
@@ -397,10 +402,10 @@ class MidiEditorModal {
                 this.log('debug', `Default channel for new notes: ${this.pianoRoll.defaultChannel}`);
             }
 
-            // Forcer un redraw
+            // Forcer un redraw complet
             if (typeof this.pianoRoll.redraw === 'function') {
                 this.pianoRoll.redraw();
-                this.log('debug', 'Piano roll redrawn after channel toggle');
+                this.log('debug', `Piano roll redrawn after channel toggle: ${this.pianoRoll.sequence.length} notes visible`);
             }
         }
     }
