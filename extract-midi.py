@@ -106,8 +106,6 @@ def extract_file(file_id_or_name):
     conn.close()
 
 if __name__ == '__main__':
-    global DB_PATH
-
     if len(sys.argv) < 2:
         print("Usage: python3 extract-midi.py [db-path] <file-id-or-name>")
         print()
