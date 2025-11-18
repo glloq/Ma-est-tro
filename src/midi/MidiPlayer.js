@@ -130,19 +130,32 @@ class MidiPlayer {
       let trackTime = 0;
       track.events.forEach(event => {
         trackTime += event.deltaTime;
-        
+
         // Convert ticks to seconds
         const timeInSeconds = this.ticksToSeconds(trackTime);
 
-        // Only include note events and CC for now
-        if (event.type === 'noteOn' || event.type === 'noteOff' || event.type === 'controller') {
+        // Include note events, CC, and pitch bend
+        if (event.type === 'noteOn' || event.type === 'noteOff') {
           this.events.push({
             time: timeInSeconds,
             type: event.type,
-            channel: event.channel,
+            channel: event.channel !== undefined ? event.channel : 0,
             note: event.noteNumber,
-            velocity: event.velocity,
+            velocity: event.velocity
+          });
+        } else if (event.type === 'controller') {
+          this.events.push({
+            time: timeInSeconds,
+            type: event.type,
+            channel: event.channel !== undefined ? event.channel : 0,
             controller: event.controllerType,
+            value: event.value
+          });
+        } else if (event.type === 'pitchBend') {
+          this.events.push({
+            time: timeInSeconds,
+            type: event.type,
+            channel: event.channel !== undefined ? event.channel : 0,
             value: event.value
           });
         }
@@ -387,6 +400,11 @@ class MidiPlayer {
       device.sendMessage(targetDevice, 'cc', {
         channel: event.channel,
         controller: event.controller,
+        value: event.value
+      });
+    } else if (event.type === 'pitchBend') {
+      device.sendMessage(targetDevice, 'pitchbend', {
+        channel: event.channel,
         value: event.value
       });
     }

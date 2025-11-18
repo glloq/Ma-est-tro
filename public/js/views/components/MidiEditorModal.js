@@ -352,6 +352,9 @@ class MidiEditorModal {
         this.log('info', `Converted ${this.fullSequence.length} notes to sequence`);
         this.log('info', `Found ${this.channels.length} channels:`, this.channels);
 
+        // Extraire les événements CC et pitchbend
+        this.extractCCAndPitchbend();
+
         // Afficher TOUS les canaux par défaut et construire la séquence
         this.activeChannels.clear();
         if (this.channels.length > 0) {
@@ -366,6 +369,65 @@ class MidiEditorModal {
             this.log('warn', 'No notes found! Check MIDI data structure.');
             this.sequence = [];
         }
+    }
+
+    /**
+     * Extraire les événements CC et pitchbend de toutes les pistes
+     */
+    extractCCAndPitchbend() {
+        this.ccEvents = [];
+
+        if (!this.midiData || !this.midiData.tracks) {
+            this.log('warn', 'No MIDI tracks to extract CC/pitchbend');
+            return;
+        }
+
+        this.midiData.tracks.forEach((track, trackIndex) => {
+            if (!track.events) {
+                return;
+            }
+
+            let currentTick = 0;
+
+            track.events.forEach((event) => {
+                currentTick += event.deltaTime || 0;
+
+                // Control Change events
+                if (event.type === 'controller') {
+                    const channel = event.channel !== undefined ? event.channel : 0;
+                    this.ccEvents.push({
+                        type: 'cc',
+                        tick: currentTick,
+                        channel: channel,
+                        controller: event.controllerType,
+                        value: event.value,
+                        trackIndex: trackIndex
+                    });
+                }
+
+                // Pitch Bend events
+                if (event.type === 'pitchBend') {
+                    const channel = event.channel !== undefined ? event.channel : 0;
+                    this.ccEvents.push({
+                        type: 'pitchbend',
+                        tick: currentTick,
+                        channel: channel,
+                        value: event.value,
+                        trackIndex: trackIndex
+                    });
+                }
+            });
+        });
+
+        // Trier par tick
+        this.ccEvents.sort((a, b) => a.tick - b.tick);
+
+        this.log('info', `Extracted ${this.ccEvents.length} CC/pitchbend events`);
+
+        // Log summary by type
+        const ccCount = this.ccEvents.filter(e => e.type === 'cc').length;
+        const pitchbendCount = this.ccEvents.filter(e => e.type === 'pitchbend').length;
+        this.log('info', `  - CC: ${ccCount}, Pitchbend: ${pitchbendCount}`);
     }
 
     /**
@@ -722,6 +784,29 @@ class MidiEditorModal {
             });
         });
 
+        // Ajouter les événements CC et pitchbend
+        if (this.ccEvents && this.ccEvents.length > 0) {
+            this.log('info', `Adding ${this.ccEvents.length} CC/pitchbend events`);
+            this.ccEvents.forEach(ccEvent => {
+                if (ccEvent.type === 'cc') {
+                    events.push({
+                        absoluteTime: ccEvent.tick,
+                        type: 'controller',
+                        channel: ccEvent.channel,
+                        controllerType: ccEvent.controller,
+                        value: ccEvent.value
+                    });
+                } else if (ccEvent.type === 'pitchbend') {
+                    events.push({
+                        absoluteTime: ccEvent.tick,
+                        type: 'pitchBend',
+                        channel: ccEvent.channel,
+                        value: ccEvent.value
+                    });
+                }
+            });
+        }
+
         // Trier par temps absolu
         events.sort((a, b) => a.absoluteTime - b.absoluteTime);
 
@@ -743,6 +828,11 @@ class MidiEditorModal {
             } else if (event.type === 'noteOn' || event.type === 'noteOff') {
                 trackEvent.noteNumber = event.noteNumber;
                 trackEvent.velocity = event.velocity;
+            } else if (event.type === 'controller') {
+                trackEvent.controllerType = event.controllerType;
+                trackEvent.value = event.value;
+            } else if (event.type === 'pitchBend') {
+                trackEvent.value = event.value;
             }
 
             return trackEvent;
