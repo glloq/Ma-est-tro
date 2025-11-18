@@ -1295,6 +1295,17 @@ class MidiEditorModal {
                                                 ✎<span class="tool-label">Dessin</span>
                                             </button>
                                         </div>
+
+                                        <div class="cc-sidebar-divider"></div>
+
+                                        <div class="cc-sidebar-label">Canal</div>
+                                        <div class="cc-channel-selector">
+                                            ${Array.from({length: 16}, (_, i) => `
+                                                <button class="cc-channel-btn ${i === 0 ? 'active' : ''}" data-channel="${i}" title="Canal ${i + 1}">
+                                                    ${i + 1}
+                                                </button>
+                                            `).join('')}
+                                        </div>
                                     </div>
 
                                     <!-- Conteneur de l'éditeur CC -->
@@ -2123,6 +2134,24 @@ class MidiEditorModal {
                     btn.classList.add('active');
                     // Changer l'outil
                     this.ccEditor.setTool(tool);
+                }
+            });
+        });
+
+        // Boutons de sélection de canal pour l'éditeur CC
+        const ccChannelButtons = this.container.querySelectorAll('.cc-channel-btn');
+        ccChannelButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const channel = parseInt(btn.dataset.channel);
+                if (!isNaN(channel) && this.ccEditor) {
+                    // Désactiver tous les boutons
+                    ccChannelButtons.forEach(b => b.classList.remove('active'));
+                    // Activer le bouton cliqué
+                    btn.classList.add('active');
+                    // Changer le canal de l'éditeur CC
+                    this.ccEditor.setChannel(channel);
+                    this.log('info', `CC Editor channel changed to: ${channel + 1}`);
                 }
             });
         });
