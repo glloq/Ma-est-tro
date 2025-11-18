@@ -104,9 +104,9 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 12px;
-    background: var(--secondary-color);
-    border: 1px solid #444;
+    padding: 12px 12px;
+    background: linear-gradient(180deg, #3a3a3a 0%, #2d2d2d 100%);
+    border: 1px solid #555;
     border-radius: 6px;
     color: var(--text-primary);
     cursor: pointer;
@@ -115,6 +115,7 @@
     transition: all 0.2s ease;
     white-space: nowrap;
     position: relative;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .tool-btn .icon {
@@ -127,25 +128,29 @@
 }
 
 .tool-btn:hover:not(:disabled) {
-    background: #404040;
-    border-color: #555;
+    background: linear-gradient(180deg, #454545 0%, #383838 100%);
+    border-color: #667eea;
     transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 12px rgba(102, 126, 234, 0.2);
 }
 
 .tool-btn:active:not(:disabled) {
     transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .tool-btn.active {
-    background: var(--primary-color);
-    border-color: var(--primary-color);
-    color: #000;
+    background: linear-gradient(180deg, #5a6fd8 0%, #4a5fc8 100%);
+    border-color: #667eea;
+    color: #fff;
     font-weight: 600;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
 }
 
 .tool-btn.active:hover {
-    background: var(--primary-hover);
-    border-color: var(--primary-hover);
+    background: linear-gradient(180deg, #6a7fe8 0%, #5a6fd8 100%);
+    border-color: #7f8ff5;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
 }
 
 .tool-btn:disabled {
@@ -155,25 +160,28 @@
 }
 
 .tool-btn.btn-primary {
-    background: var(--primary-color);
+    background: linear-gradient(180deg, #5fded5 0%, #4ECDC4 100%);
     border-color: var(--primary-color);
     color: #000;
+    box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3);
 }
 
 .tool-btn.btn-primary:hover:not(:disabled) {
-    background: var(--primary-hover);
+    background: linear-gradient(180deg, #6feee5 0%, #5fded5 100%);
     border-color: var(--primary-hover);
+    box-shadow: 0 4px 12px rgba(78, 205, 196, 0.4);
 }
 
 .tool-btn.btn-primary:disabled {
     opacity: 0.5;
+    box-shadow: none;
 }
 
 /* Boutons compacts pour zoom et actions rapides */
 .tool-btn-compact {
-    padding: 6px 10px;
-    background: var(--secondary-color);
-    border: 1px solid #444;
+    padding: 10px 10px;
+    background: linear-gradient(180deg, #3a3a3a 0%, #2d2d2d 100%);
+    border: 1px solid #555;
     border-radius: 4px;
     color: var(--text-primary);
     cursor: pointer;
@@ -182,27 +190,31 @@
     transition: all 0.2s ease;
     white-space: nowrap;
     min-width: 36px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .tool-btn-compact:hover:not(:disabled) {
-    background: #404040;
+    background: linear-gradient(180deg, #454545 0%, #383838 100%);
     border-color: #667eea;
     transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 12px rgba(102, 126, 234, 0.2);
 }
 
 .tool-btn-compact:active:not(:disabled) {
     transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .tool-btn-compact:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+    box-shadow: none;
 }
 
 /* Bouton de snap/grille */
 .tool-btn-snap {
-    padding: 6px 12px;
-    background: var(--secondary-color);
+    padding: 10px 12px;
+    background: linear-gradient(180deg, #3a3a3a 0%, #2d2d2d 100%);
     border: 2px solid #667eea;
     border-radius: 4px;
     color: var(--text-primary);
@@ -213,18 +225,20 @@
     white-space: nowrap;
     min-width: 48px;
     text-align: center;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.25);
 }
 
 .tool-btn-snap:hover {
-    background: #404040;
+    background: linear-gradient(180deg, #454545 0%, #383838 100%);
     border-color: #7f8ff5;
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4), 0 0 16px rgba(102, 126, 234, 0.2);
 }
 
 .tool-btn-snap:active {
     transform: translateY(0);
     border-color: #5a6fd8;
+    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
 }
 
 .tool-btn-snap .snap-value {
