@@ -824,6 +824,162 @@
     margin: 0 4px;
 }
 
+/* Boutons de la toolbar - taille maximale et couleurs */
+.midi-editor-modal .tool-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 12px;
+    background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+    border: 2px solid #555;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 48px;
+    color: #fff;
+    font-size: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.midi-editor-modal .tool-btn .icon {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.midi-editor-modal .tool-btn .btn-label {
+    font-size: 10px;
+    white-space: nowrap;
+    color: #ccc;
+}
+
+.midi-editor-modal .tool-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+    border-color: #667eea;
+    background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
+}
+
+.midi-editor-modal .tool-btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.midi-editor-modal .tool-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: #444;
+}
+
+/* Couleurs spécifiques par action */
+.midi-editor-modal .tool-btn[data-action="undo"],
+.midi-editor-modal .tool-btn[data-action="redo"] {
+    background: linear-gradient(180deg, #3a4a5a 0%, #2a3a4a 100%);
+    border-color: #4a6a8a;
+}
+
+.midi-editor-modal .tool-btn[data-action="undo"]:hover:not(:disabled),
+.midi-editor-modal .tool-btn[data-action="redo"]:hover:not(:disabled) {
+    background: linear-gradient(180deg, #4a5a6a 0%, #3a4a5a 100%);
+    border-color: #5a7a9a;
+}
+
+.midi-editor-modal .tool-btn[data-action="mode-drag-view"] {
+    background: linear-gradient(180deg, #4a3a5a 0%, #3a2a4a 100%);
+    border-color: #6a4a8a;
+}
+
+.midi-editor-modal .tool-btn[data-action="mode-drag-view"]:hover:not(:disabled),
+.midi-editor-modal .tool-btn[data-action="mode-drag-view"].active {
+    background: linear-gradient(180deg, #5a4a6a 0%, #4a3a5a 100%);
+    border-color: #7a5a9a;
+}
+
+.midi-editor-modal .tool-btn[data-action="mode-select"],
+.midi-editor-modal .tool-btn[data-action="mode-drag-notes"],
+.midi-editor-modal .tool-btn[data-action="mode-add-note"],
+.midi-editor-modal .tool-btn[data-action="mode-resize-note"] {
+    background: linear-gradient(180deg, #3a5a3a 0%, #2a4a2a 100%);
+    border-color: #4a8a4a;
+}
+
+.midi-editor-modal .tool-btn[data-action="mode-select"]:hover:not(:disabled),
+.midi-editor-modal .tool-btn[data-action="mode-drag-notes"]:hover:not(:disabled),
+.midi-editor-modal .tool-btn[data-action="mode-add-note"]:hover:not(:disabled),
+.midi-editor-modal .tool-btn[data-action="mode-resize-note"]:hover:not(:disabled),
+.midi-editor-modal .tool-btn[data-action="mode-select"].active,
+.midi-editor-modal .tool-btn[data-action="mode-drag-notes"].active,
+.midi-editor-modal .tool-btn[data-action="mode-add-note"].active,
+.midi-editor-modal .tool-btn[data-action="mode-resize-note"].active {
+    background: linear-gradient(180deg, #4a6a4a 0%, #3a5a3a 100%);
+    border-color: #5a9a5a;
+}
+
+.midi-editor-modal .tool-btn[data-action="copy"],
+.midi-editor-modal .tool-btn[data-action="paste"],
+.midi-editor-modal .tool-btn[data-action="delete"] {
+    background: linear-gradient(180deg, #5a3a3a 0%, #4a2a2a 100%);
+    border-color: #8a4a4a;
+}
+
+.midi-editor-modal .tool-btn[data-action="copy"]:hover:not(:disabled),
+.midi-editor-modal .tool-btn[data-action="paste"]:hover:not(:disabled),
+.midi-editor-modal .tool-btn[data-action="delete"]:hover:not(:disabled) {
+    background: linear-gradient(180deg, #6a4a4a 0%, #5a3a3a 100%);
+    border-color: #9a5a5a;
+}
+
+/* Boutons compacts */
+.midi-editor-modal .tool-btn-compact {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 10px;
+    background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+    border: 2px solid #555;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 48px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.midi-editor-modal .tool-btn-compact:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+    border-color: #667eea;
+    background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
+}
+
+/* Bouton snap */
+.midi-editor-modal .tool-btn-snap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 14px;
+    background: linear-gradient(180deg, #3a4a3a 0%, #2a3a2a 100%);
+    border: 2px solid #4a8a4a;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 48px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.midi-editor-modal .tool-btn-snap:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+    border-color: #5a9a5a;
+    background: linear-gradient(180deg, #4a5a4a 0%, #3a4a3a 100%);
+}
+
 .midi-editor-modal .snap-label {
     color: #aaa;
     font-size: 12px;
