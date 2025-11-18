@@ -37,14 +37,15 @@ class MidiEditorModal {
 
         // Grille de snap pour l'édition (contrainte de positionnement)
         // Valeurs en ticks (basé sur 480 ticks par noire)
+        // Valeurs divisées par 2 pour une précision 2x plus fine (labels inchangés pour l'UI)
         this.snapValues = [
-            { ticks: 1920, label: '1/1' },  // Ronde (whole note)
-            { ticks: 960,  label: '1/2' },  // Blanche (half note)
-            { ticks: 480,  label: '1/4' },  // Noire (quarter note)
-            { ticks: 240,  label: '1/8' },  // Croche (eighth note)
-            { ticks: 120,  label: '1/16' }  // Double croche (sixteenth note)
+            { ticks: 960, label: '1/1' },  // Ronde (affiché 1/1, snap à 1/2)
+            { ticks: 480, label: '1/2' },  // Blanche (affiché 1/2, snap à 1/4)
+            { ticks: 240, label: '1/4' },  // Noire (affiché 1/4, snap à 1/8)
+            { ticks: 120, label: '1/8' },  // Croche (affiché 1/8, snap à 1/16)
+            { ticks: 60,  label: '1/16' }  // Double croche (affiché 1/16, snap à 1/32)
         ];
-        this.currentSnapIndex = 3; // Par défaut 1/8 (240 ticks)
+        this.currentSnapIndex = 3; // Par défaut 1/8 (120 ticks, précision 1/16)
 
         // Couleurs éclatantes pour les 16 canaux MIDI
         this.channelColors = [
