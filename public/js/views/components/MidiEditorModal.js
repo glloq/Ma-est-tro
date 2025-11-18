@@ -373,6 +373,8 @@ class MidiEditorModal {
 
     /**
      * Extraire les événements CC et pitchbend de toutes les pistes
+     * Format de sortie attendu par CCPitchbendEditor:
+     * { type: 'cc1'|'cc7'|'cc10'|'cc11'|'pitchbend', ticks: number, value: number, channel: number }
      */
     extractCCAndPitchbend() {
         this.ccEvents = [];
@@ -395,14 +397,25 @@ class MidiEditorModal {
                 // Control Change events
                 if (event.type === 'controller') {
                     const channel = event.channel !== undefined ? event.channel : 0;
-                    this.ccEvents.push({
-                        type: 'cc',
-                        tick: currentTick,
-                        channel: channel,
-                        controller: event.controllerType,
-                        value: event.value,
-                        trackIndex: trackIndex
-                    });
+                    const controller = event.controllerType;
+
+                    // Convertir le numéro de contrôleur en type pour l'éditeur
+                    let ccType = null;
+                    if (controller === 1) ccType = 'cc1';
+                    else if (controller === 7) ccType = 'cc7';
+                    else if (controller === 10) ccType = 'cc10';
+                    else if (controller === 11) ccType = 'cc11';
+
+                    // Stocker uniquement les CC supportés
+                    if (ccType) {
+                        this.ccEvents.push({
+                            type: ccType,
+                            ticks: currentTick,
+                            channel: channel,
+                            value: event.value,
+                            id: Date.now() + Math.random() + this.ccEvents.length
+                        });
+                    }
                 }
 
                 // Pitch Bend events
@@ -410,24 +423,27 @@ class MidiEditorModal {
                     const channel = event.channel !== undefined ? event.channel : 0;
                     this.ccEvents.push({
                         type: 'pitchbend',
-                        tick: currentTick,
+                        ticks: currentTick,
                         channel: channel,
                         value: event.value,
-                        trackIndex: trackIndex
+                        id: Date.now() + Math.random() + this.ccEvents.length
                     });
                 }
             });
         });
 
         // Trier par tick
-        this.ccEvents.sort((a, b) => a.tick - b.tick);
+        this.ccEvents.sort((a, b) => a.ticks - b.ticks);
 
         this.log('info', `Extracted ${this.ccEvents.length} CC/pitchbend events`);
 
         // Log summary by type
-        const ccCount = this.ccEvents.filter(e => e.type === 'cc').length;
+        const cc1Count = this.ccEvents.filter(e => e.type === 'cc1').length;
+        const cc7Count = this.ccEvents.filter(e => e.type === 'cc7').length;
+        const cc10Count = this.ccEvents.filter(e => e.type === 'cc10').length;
+        const cc11Count = this.ccEvents.filter(e => e.type === 'cc11').length;
         const pitchbendCount = this.ccEvents.filter(e => e.type === 'pitchbend').length;
-        this.log('info', `  - CC: ${ccCount}, Pitchbend: ${pitchbendCount}`);
+        this.log('info', `  - CC1: ${cc1Count}, CC7: ${cc7Count}, CC10: ${cc10Count}, CC11: ${cc11Count}, Pitchbend: ${pitchbendCount}`);
     }
 
     /**
@@ -657,6 +673,35 @@ class MidiEditorModal {
     }
 
     /**
+     * Synchroniser les événements depuis l'éditeur CC vers this.ccEvents
+     * Appelé avant la sauvegarde pour récupérer les modifications
+     */
+    syncCCEventsFromEditor() {
+        if (!this.ccEditor) return;
+
+        // Récupérer tous les événements depuis l'éditeur
+        const editorEvents = this.ccEditor.getEvents();
+
+        if (!editorEvents || editorEvents.length === 0) {
+            this.log('info', 'No CC events in editor');
+            this.ccEvents = [];
+            return;
+        }
+
+        // Les événements de l'éditeur sont déjà au bon format
+        // { type: 'cc1'|'cc7'|'cc10'|'cc11'|'pitchbend', ticks: number, value: number, channel: number }
+        this.ccEvents = editorEvents.map(e => ({
+            type: e.type,
+            ticks: e.ticks,
+            channel: e.channel,
+            value: e.value,
+            id: e.id
+        }));
+
+        this.log('info', `Synchronized ${this.ccEvents.length} CC/pitchbend events from editor`);
+    }
+
+    /**
      * Mettre à jour la liste des canaux basée sur fullSequence
      */
     updateChannelsFromSequence() {
@@ -788,17 +833,20 @@ class MidiEditorModal {
         if (this.ccEvents && this.ccEvents.length > 0) {
             this.log('info', `Adding ${this.ccEvents.length} CC/pitchbend events`);
             this.ccEvents.forEach(ccEvent => {
-                if (ccEvent.type === 'cc') {
+                // Convertir le type de l'éditeur (cc1, cc7, cc10, cc11) en numéro de contrôleur
+                if (ccEvent.type === 'cc1' || ccEvent.type === 'cc7' || ccEvent.type === 'cc10' || ccEvent.type === 'cc11') {
+                    // Extraire le numéro du type (cc1 -> 1, cc7 -> 7, etc.)
+                    const controllerNumber = parseInt(ccEvent.type.replace('cc', ''));
                     events.push({
-                        absoluteTime: ccEvent.tick,
+                        absoluteTime: ccEvent.ticks || ccEvent.tick,
                         type: 'controller',
                         channel: ccEvent.channel,
-                        controllerType: ccEvent.controller,
+                        controllerType: controllerNumber,
                         value: ccEvent.value
                     });
                 } else if (ccEvent.type === 'pitchbend') {
                     events.push({
-                        absoluteTime: ccEvent.tick,
+                        absoluteTime: ccEvent.ticks || ccEvent.tick,
                         type: 'pitchBend',
                         channel: ccEvent.channel,
                         value: ccEvent.value
@@ -870,6 +918,9 @@ class MidiEditorModal {
 
             // Synchroniser fullSequence avec le piano roll actuel (gère les canaux, ajouts, suppressions, etc.)
             this.syncFullSequenceFromPianoRoll();
+
+            // Synchroniser les événements CC/Pitchbend depuis l'éditeur
+            this.syncCCEventsFromEditor();
 
             // Mettre à jour la liste des canaux pour refléter la séquence actuelle
             this.updateChannelsFromSequence();
