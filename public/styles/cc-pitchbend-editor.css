@@ -18,6 +18,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
+    position: relative;
 }
 
 .midi-editor-section {
@@ -27,12 +28,89 @@
 
 .midi-editor-section.notes-section {
     flex: 1;
-    min-height: 300px;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
 }
 
+/* Piano roll wrapper - prend tout l'espace sauf le slider horizontal */
+.piano-roll-wrapper {
+    flex: 1;
+    position: relative;
+    min-height: 150px;
+}
+
+/* Slider horizontal - toujours visible, en dehors du wrapper */
+.notes-section > .scroll-controls-horizontal {
+    flex: 0 0 auto;
+    z-index: 5;
+}
+
+/* Section CC - utilise tout l'espace disponible ou se collapse */
 .midi-editor-section.cc-section {
-    flex: 0 0 150px;
+    flex: 1;
     border-top: 2px solid #444;
+    display: flex;
+    flex-direction: column;
+    transition: flex 0.3s ease-out;
+    min-height: 0;
+}
+
+.midi-editor-section.cc-section.collapsed {
+    flex: 0 0 auto;
+    min-height: 0;
+}
+
+.midi-editor-section.cc-section.expanded {
+    flex: 1;
+    min-height: 200px;
+}
+
+/* Header de la section CC (collapsible) */
+.cc-section-header {
+    flex: 0 0 auto;
+    padding: 6px 12px;
+    background: linear-gradient(180deg, #2d2d2d 0%, #242424 100%);
+    border-bottom: 1px solid #333;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+    z-index: 10;
+}
+
+.cc-section-header:hover {
+    background: linear-gradient(180deg, #353535 0%, #2a2a2a 100%);
+}
+
+.cc-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.cc-collapse-icon {
+    font-size: 10px;
+    transition: transform 0.3s;
+    color: #888;
+}
+
+.cc-section-header.collapsed .cc-collapse-icon {
+    transform: rotate(-90deg);
+}
+
+/* Contenu de la section CC */
+.cc-section-content {
+    flex: 1;
+    overflow: hidden;
+    transition: all 0.3s ease-out;
+    min-height: 0;
+}
+
+.cc-section.collapsed .cc-section-content {
+    display: none;
 }
 
 /* Layout de l'éditeur CC avec sidebar */
@@ -154,6 +232,26 @@
 .cc-editor-main {
     flex: 1;
     position: relative;
+}
+
+/* Footer en overlay pour rester visible */
+.midi-editor-modal .modal-footer {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    z-index: 100;
+    padding: 8px 16px;
+    background: rgba(248, 249, 250, 0.95);
+    backdrop-filter: blur(5px);
+    border-top: 1px solid #dee2e6;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Ajuster le modal-body pour laisser de l'espace au footer */
+.midi-editor-modal .modal-body {
+    padding-bottom: 60px;
+    height: calc(100% - 60px);
 }
 
 /* Mode compact pour boutons verticaux */

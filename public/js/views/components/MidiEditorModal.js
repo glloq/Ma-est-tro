@@ -39,6 +39,7 @@ class MidiEditorModal {
         this.ccEditor = null;
         this.currentCCType = 'cc1'; // 'cc1', 'cc7', 'cc10', 'cc11', 'pitchbend'
         this.ccEvents = []; // Événements CC et pitchbend
+        this.ccSectionExpanded = true; // État du collapse de la section CC
 
         // Grille de snap pour l'édition (contrainte de positionnement)
         // Valeurs en ticks (basé sur 480 ticks par noire)
@@ -479,6 +480,33 @@ class MidiEditorModal {
     // ========================================================================
     // GESTION DU MODE CC/PITCHBEND
     // ========================================================================
+
+    /**
+     * Basculer l'état collapsed/expanded de la section CC
+     */
+    toggleCCSection() {
+        this.ccSectionExpanded = !this.ccSectionExpanded;
+
+        const ccSection = document.getElementById('cc-section');
+        const ccContent = document.getElementById('cc-section-content');
+        const ccHeader = document.getElementById('cc-section-header');
+
+        if (ccSection && ccContent && ccHeader) {
+            if (this.ccSectionExpanded) {
+                ccSection.classList.add('expanded');
+                ccSection.classList.remove('collapsed');
+                ccHeader.classList.add('expanded');
+                ccHeader.classList.remove('collapsed');
+            } else {
+                ccSection.classList.remove('expanded');
+                ccSection.classList.add('collapsed');
+                ccHeader.classList.remove('expanded');
+                ccHeader.classList.add('collapsed');
+            }
+        }
+
+        this.log('info', `Section CC ${this.ccSectionExpanded ? 'expanded' : 'collapsed'}`);
+    }
 
     /**
      * Sélectionner le type de CC à éditer
@@ -1105,17 +1133,11 @@ class MidiEditorModal {
 
                     <!-- Conteneur pour Notes et CC/Pitchbend -->
                     <div class="midi-editor-container">
-                        <!-- Section Notes (toujours visible) -->
+                        <!-- Section Notes -->
                         <div class="midi-editor-section notes-section">
                             <div class="piano-roll-wrapper">
                                 <div class="piano-roll-container" id="piano-roll-container">
                                     <!-- webaudio-pianoroll sera inséré ici -->
-                                </div>
-                                <!-- Slider horizontal avec boutons -->
-                                <div class="scroll-controls scroll-controls-horizontal">
-                                    <button class="scroll-btn scroll-btn-left" data-action="scroll-left">◄</button>
-                                    <input type="range" class="scroll-slider scroll-horizontal" id="scroll-h-slider" min="0" max="100" value="0" step="1">
-                                    <button class="scroll-btn scroll-btn-right" data-action="scroll-right">►</button>
                                 </div>
                                 <!-- Slider vertical avec boutons -->
                                 <div class="scroll-controls scroll-controls-vertical">
@@ -1124,53 +1146,70 @@ class MidiEditorModal {
                                     <button class="scroll-btn scroll-btn-down" data-action="scroll-down">▼</button>
                                 </div>
                             </div>
+                            <!-- Slider horizontal avec boutons (toujours visible) -->
+                            <div class="scroll-controls scroll-controls-horizontal">
+                                <button class="scroll-btn scroll-btn-left" data-action="scroll-left">◄</button>
+                                <input type="range" class="scroll-slider scroll-horizontal" id="scroll-h-slider" min="0" max="100" value="0" step="1">
+                                <button class="scroll-btn scroll-btn-right" data-action="scroll-right">►</button>
+                            </div>
                         </div>
 
-                        <!-- Section CC/Pitchbend (toujours visible) -->
-                        <div class="midi-editor-section cc-section">
-                            <div class="cc-editor-layout">
-                                <!-- Panneau latéral gauche avec sélection CC et outils -->
-                                <div class="cc-sidebar">
-                                    <div class="cc-sidebar-label">Type CC/PB</div>
-                                    <div class="cc-type-buttons-vertical">
-                                        <button class="cc-type-btn-v active" data-cc-type="cc1" title="Modulation Wheel">
-                                            CC1<span class="cc-label">Modulation</span>
-                                        </button>
-                                        <button class="cc-type-btn-v" data-cc-type="cc7" title="Channel Volume">
-                                            CC7<span class="cc-label">Volume</span>
-                                        </button>
-                                        <button class="cc-type-btn-v" data-cc-type="cc10" title="Pan Position">
-                                            CC10<span class="cc-label">Pan</span>
-                                        </button>
-                                        <button class="cc-type-btn-v" data-cc-type="cc11" title="Expression Controller">
-                                            CC11<span class="cc-label">Expression</span>
-                                        </button>
-                                        <button class="cc-type-btn-v" data-cc-type="pitchbend" title="Pitch Wheel">
-                                            PB<span class="cc-label">Pitch Bend</span>
-                                        </button>
-                                    </div>
-
-                                    <div class="cc-sidebar-divider"></div>
-
-                                    <div class="cc-sidebar-label">Outils</div>
-                                    <div class="cc-tool-buttons-vertical">
-                                        <button class="cc-tool-btn-v active" data-tool="select" title="Sélection">
-                                            ⬚<span class="tool-label">Sélection</span>
-                                        </button>
-                                        <button class="cc-tool-btn-v" data-tool="move" title="Déplacer">
-                                            ✥<span class="tool-label">Déplacer</span>
-                                        </button>
-                                        <button class="cc-tool-btn-v" data-tool="line" title="Ligne">
-                                            ╱<span class="tool-label">Ligne</span>
-                                        </button>
-                                        <button class="cc-tool-btn-v" data-tool="draw" title="Dessin continu">
-                                            ✎<span class="tool-label">Dessin</span>
-                                        </button>
-                                    </div>
+                        <!-- Section CC/Pitchbend (collapsible) -->
+                        <div class="midi-editor-section cc-section expanded" id="cc-section">
+                            <!-- Header collapsible -->
+                            <div class="cc-section-header expanded" id="cc-section-header">
+                                <div class="cc-section-title">
+                                    <span class="cc-collapse-icon">▼</span>
+                                    <span>CC & Pitch Bend</span>
                                 </div>
+                            </div>
 
-                                <!-- Conteneur de l'éditeur CC -->
-                                <div id="cc-editor-container" class="cc-editor-main"></div>
+                            <!-- Contenu de l'éditeur CC -->
+                            <div class="cc-section-content" id="cc-section-content">
+                                <div class="cc-editor-layout">
+                                    <!-- Panneau latéral gauche avec sélection CC et outils -->
+                                    <div class="cc-sidebar">
+                                        <div class="cc-sidebar-label">Type CC/PB</div>
+                                        <div class="cc-type-buttons-vertical">
+                                            <button class="cc-type-btn-v active" data-cc-type="cc1" title="Modulation Wheel">
+                                                CC1<span class="cc-label">Modulation</span>
+                                            </button>
+                                            <button class="cc-type-btn-v" data-cc-type="cc7" title="Channel Volume">
+                                                CC7<span class="cc-label">Volume</span>
+                                            </button>
+                                            <button class="cc-type-btn-v" data-cc-type="cc10" title="Pan Position">
+                                                CC10<span class="cc-label">Pan</span>
+                                            </button>
+                                            <button class="cc-type-btn-v" data-cc-type="cc11" title="Expression Controller">
+                                                CC11<span class="cc-label">Expression</span>
+                                            </button>
+                                            <button class="cc-type-btn-v" data-cc-type="pitchbend" title="Pitch Wheel">
+                                                PB<span class="cc-label">Pitch Bend</span>
+                                            </button>
+                                        </div>
+
+                                        <div class="cc-sidebar-divider"></div>
+
+                                        <div class="cc-sidebar-label">Outils</div>
+                                        <div class="cc-tool-buttons-vertical">
+                                            <button class="cc-tool-btn-v active" data-tool="select" title="Sélection">
+                                                ⬚<span class="tool-label">Sélection</span>
+                                            </button>
+                                            <button class="cc-tool-btn-v" data-tool="move" title="Déplacer">
+                                                ✥<span class="tool-label">Déplacer</span>
+                                            </button>
+                                            <button class="cc-tool-btn-v" data-tool="line" title="Ligne">
+                                                ╱<span class="tool-label">Ligne</span>
+                                            </button>
+                                            <button class="cc-tool-btn-v" data-tool="draw" title="Dessin continu">
+                                                ✎<span class="tool-label">Dessin</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Conteneur de l'éditeur CC -->
+                                    <div id="cc-editor-container" class="cc-editor-main"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1959,6 +1998,15 @@ class MidiEditorModal {
                 }
             });
         });
+
+        // Header de la section CC (collapse/expand)
+        const ccSectionHeader = document.getElementById('cc-section-header');
+        if (ccSectionHeader) {
+            ccSectionHeader.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.toggleCCSection();
+            });
+        }
 
         // Boutons de type CC (verticaux)
         const ccTypeButtons = this.container.querySelectorAll('.cc-type-btn-v');
