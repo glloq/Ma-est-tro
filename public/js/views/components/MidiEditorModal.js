@@ -30,7 +30,7 @@ class MidiEditorModal {
         this.clipboard = [];
 
         // Mode d'édition actuel
-        this.editMode = 'select'; // 'select', 'drag-notes', 'drag-view'
+        this.editMode = 'drag-view'; // 'select', 'drag-notes', 'drag-view' - drag-view par défaut pour navigation
 
         // Instrument sélectionné pour les nouveaux canaux (program MIDI GM)
         this.selectedInstrument = 0; // Piano par défaut
@@ -926,7 +926,7 @@ class MidiEditorModal {
 
                         <!-- Section Navigation et Zoom -->
                         <div class="toolbar-section">
-                            <button class="tool-btn" data-action="mode-drag-view" data-mode="drag-view" title="Mode Déplacer Vue">
+                            <button class="tool-btn active" data-action="mode-drag-view" data-mode="drag-view" title="Mode Déplacer Vue (actif par défaut)">
                                 <span class="icon">👁️</span>
                                 <span class="btn-label">Vue</span>
                             </button>
@@ -940,7 +940,7 @@ class MidiEditorModal {
 
                         <!-- Section Mode d'édition -->
                         <div class="toolbar-section">
-                            <button class="tool-btn active" data-action="mode-select" data-mode="select" title="Mode Sélection">
+                            <button class="tool-btn" data-action="mode-select" data-mode="select" title="Mode Sélection">
                                 <span class="icon">⊕</span>
                                 <span class="btn-label">Sélection</span>
                             </button>
@@ -1236,6 +1236,12 @@ class MidiEditorModal {
         this.updateEditButtons(); // État initial
         this.updateUndoRedoButtonsState(); // État initial undo/redo
         this.updateInstrumentSelector(); // État initial sélecteur d'instrument
+
+        // Définir le mode par défaut (drag-view pour navigation)
+        if (this.pianoRoll && typeof this.pianoRoll.setUIMode === 'function') {
+            this.pianoRoll.setUIMode(this.editMode); // 'drag-view' par défaut
+            this.log('info', `Piano roll UI mode set to: ${this.editMode}`);
+        }
     }
 
     /**
@@ -2192,8 +2198,11 @@ class MidiEditorModal {
         // Vérifier les modifications non sauvegardées
         if (this.isDirty) {
             const confirmClose = confirm(
-                'Vous avez des modifications non sauvegardées.\n\n' +
-                'Voulez-vous vraiment fermer l\'éditeur ?'
+                '⚠️ Modifications non sauvegardées ⚠️\n\n' +
+                'Vous avez effectué des modifications qui n\'ont pas été sauvegardées.\n\n' +
+                'Si vous fermez maintenant, ces modifications seront PERDUES.\n\n' +
+                'Cliquez sur "Annuler" pour revenir à l\'éditeur et sauvegarder vos modifications.\n' +
+                'Cliquez sur "OK" pour fermer SANS sauvegarder (les modifications seront perdues).'
             );
             if (!confirmClose) return;
         }
