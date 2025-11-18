@@ -372,6 +372,72 @@ class MidiEditorModal {
     }
 
     /**
+     * Obtenir l'ensemble des canaux utilisés par les CC/Pitchbend
+     */
+    getCCChannelsUsed() {
+        const channels = new Set();
+        this.ccEvents.forEach(event => {
+            if (event.channel !== undefined) {
+                channels.add(event.channel);
+            }
+        });
+        return Array.from(channels).sort((a, b) => a - b);
+    }
+
+    /**
+     * Mettre à jour le sélecteur de canal pour afficher uniquement les canaux utilisés
+     */
+    updateCCChannelSelector() {
+        const channelSelector = this.container?.querySelector('.cc-channel-selector');
+        if (!channelSelector) return;
+
+        const usedChannels = this.getCCChannelsUsed();
+
+        // Si aucun canal n'est utilisé, afficher tous les canaux
+        const channelsToShow = usedChannels.length > 0 ? usedChannels : Array.from({length: 16}, (_, i) => i);
+
+        // Obtenir le canal actuellement actif
+        const activeChannel = this.ccEditor ? this.ccEditor.currentChannel : 0;
+
+        // Générer les boutons uniquement pour les canaux utilisés
+        channelSelector.innerHTML = channelsToShow.map(channel => `
+            <button class="cc-channel-btn ${channel === activeChannel ? 'active' : ''}" data-channel="${channel}" title="Canal ${channel + 1}">
+                ${channel + 1}
+            </button>
+        `).join('');
+
+        // Réattacher les event listeners
+        this.attachCCChannelListeners();
+
+        this.log('info', `Sélecteur de canal CC mis à jour: ${usedChannels.length} canaux utilisés`);
+    }
+
+    /**
+     * Attacher les event listeners aux boutons de canal CC
+     */
+    attachCCChannelListeners() {
+        if (!this.container) return;
+
+        const channelButtons = this.container.querySelectorAll('.cc-channel-btn');
+        channelButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const channel = parseInt(btn.dataset.channel);
+
+                if (!isNaN(channel) && this.ccEditor) {
+                    // Mettre à jour l'UI
+                    channelButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    // Mettre à jour l'éditeur
+                    this.ccEditor.setChannel(channel);
+                    this.log('info', `Canal CC sélectionné: ${channel + 1}`);
+                }
+            });
+        });
+    }
+
+    /**
      * Extraire les événements CC et pitchbend de toutes les pistes
      * Format de sortie attendu par CCPitchbendEditor:
      * { type: 'cc1'|'cc7'|'cc10'|'cc11'|'pitchbend', ticks: number, value: number, channel: number }
@@ -444,6 +510,9 @@ class MidiEditorModal {
         const cc11Count = this.ccEvents.filter(e => e.type === 'cc11').length;
         const pitchbendCount = this.ccEvents.filter(e => e.type === 'pitchbend').length;
         this.log('info', `  - CC1: ${cc1Count}, CC7: ${cc7Count}, CC10: ${cc10Count}, CC11: ${cc11Count}, Pitchbend: ${pitchbendCount}`);
+
+        // Mettre à jour le sélecteur de canal
+        this.updateCCChannelSelector();
     }
 
     /**

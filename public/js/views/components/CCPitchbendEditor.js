@@ -456,10 +456,12 @@ class CCPitchbendEditor {
     }
 
     renderGrid() {
+        const labelMargin = 50; // Marge pour les labels à gauche
+
+        // Grille verticale (temps)
         this.ctx.strokeStyle = '#2a2a2a';
         this.ctx.lineWidth = 1;
 
-        // Grille verticale (temps)
         const gridSize = this.options.grid;
         const startTick = Math.floor(this.options.xoffset / gridSize) * gridSize;
         const endTick = this.options.xoffset + this.options.xrange;
@@ -468,7 +470,7 @@ class CCPitchbendEditor {
             const x = this.ticksToX(t);
             if (x >= 0 && x <= this.canvas.width) {
                 this.ctx.beginPath();
-                this.ctx.moveTo(x, 0);
+                this.ctx.moveTo(Math.max(x, labelMargin), 0);
                 this.ctx.lineTo(x, this.canvas.height);
                 this.ctx.stroke();
             }
@@ -478,57 +480,89 @@ class CCPitchbendEditor {
         if (this.currentCC === 'pitchbend') {
             // Pour pitchbend : lignes aux valeurs -8192, -4096, 0, 4096, 8191
             const values = [-8192, -4096, 0, 4096, 8191];
+            this.ctx.strokeStyle = '#2a2a2a';
+            this.ctx.lineWidth = 1;
+
             values.forEach(value => {
                 const y = this.valueToY(value);
+
+                // Ligne de grille
                 this.ctx.beginPath();
-                this.ctx.moveTo(0, y);
+                this.ctx.moveTo(labelMargin, y);
                 this.ctx.lineTo(this.canvas.width, y);
                 this.ctx.stroke();
 
+                // Zone de label (fond)
+                this.ctx.fillStyle = '#1a1a1a';
+                this.ctx.fillRect(0, y - 7, labelMargin - 2, 14);
+
                 // Label
-                this.ctx.fillStyle = '#666';
-                this.ctx.font = '10px monospace';
-                this.ctx.fillText(value.toString(), 5, y - 2);
+                this.ctx.fillStyle = '#888';
+                this.ctx.font = '11px monospace';
+                this.ctx.textAlign = 'right';
+                this.ctx.fillText(value.toString(), labelMargin - 5, y + 4);
             });
         } else {
             // Pour CC : lignes aux valeurs 0, 32, 64, 96, 127
             const values = [0, 32, 64, 96, 127];
+            this.ctx.strokeStyle = '#2a2a2a';
+            this.ctx.lineWidth = 1;
+
             values.forEach(value => {
                 const y = this.valueToY(value);
+
+                // Ligne de grille
                 this.ctx.beginPath();
-                this.ctx.moveTo(0, y);
+                this.ctx.moveTo(labelMargin, y);
                 this.ctx.lineTo(this.canvas.width, y);
                 this.ctx.stroke();
 
+                // Zone de label (fond)
+                this.ctx.fillStyle = '#1a1a1a';
+                this.ctx.fillRect(0, y - 7, labelMargin - 2, 14);
+
                 // Label
-                this.ctx.fillStyle = '#666';
-                this.ctx.font = '10px monospace';
-                this.ctx.fillText(value.toString(), 5, y - 2);
+                this.ctx.fillStyle = '#888';
+                this.ctx.font = '11px monospace';
+                this.ctx.textAlign = 'right';
+                this.ctx.fillText(value.toString(), labelMargin - 5, y + 4);
             });
         }
+
+        // Bordure verticale séparant la zone de labels
+        this.ctx.strokeStyle = '#333';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.moveTo(labelMargin, 0);
+        this.ctx.lineTo(labelMargin, this.canvas.height);
+        this.ctx.stroke();
+
+        // Réinitialiser l'alignement du texte
+        this.ctx.textAlign = 'left';
     }
 
     renderCenterLine() {
         const filteredEvents = this.getFilteredEvents();
+        const labelMargin = 50;
 
         if (this.currentCC === 'pitchbend') {
             // Pour pitchbend : toujours afficher une barre centrale à 0
-            this.ctx.strokeStyle = '#666';
+            this.ctx.strokeStyle = '#888';
             this.ctx.lineWidth = 2;
             const y = this.valueToY(0);
             this.ctx.beginPath();
-            this.ctx.moveTo(0, y);
+            this.ctx.moveTo(labelMargin, y);
             this.ctx.lineTo(this.canvas.width, y);
             this.ctx.stroke();
         } else {
             // Pour CC : afficher une barre à 0 si pas d'événements
             if (filteredEvents.length === 0) {
-                this.ctx.strokeStyle = '#555';
+                this.ctx.strokeStyle = '#666';
                 this.ctx.lineWidth = 2;
                 this.ctx.setLineDash([5, 5]);
                 const y = this.valueToY(0);
                 this.ctx.beginPath();
-                this.ctx.moveTo(0, y);
+                this.ctx.moveTo(labelMargin, y);
                 this.ctx.lineTo(this.canvas.width, y);
                 this.ctx.stroke();
                 this.ctx.setLineDash([]);
