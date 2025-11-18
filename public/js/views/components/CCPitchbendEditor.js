@@ -475,24 +475,65 @@ class CCPitchbendEditor {
         }
 
         // Grille horizontale (valeurs)
-        const numLines = 8;
-        for (let i = 0; i <= numLines; i++) {
-            const y = (i / numLines) * this.canvas.height;
-            this.ctx.beginPath();
-            this.ctx.moveTo(0, y);
-            this.ctx.lineTo(this.canvas.width, y);
-            this.ctx.stroke();
+        if (this.currentCC === 'pitchbend') {
+            // Pour pitchbend : lignes aux valeurs -8192, -4096, 0, 4096, 8191
+            const values = [-8192, -4096, 0, 4096, 8191];
+            values.forEach(value => {
+                const y = this.valueToY(value);
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, y);
+                this.ctx.lineTo(this.canvas.width, y);
+                this.ctx.stroke();
+
+                // Label
+                this.ctx.fillStyle = '#666';
+                this.ctx.font = '10px monospace';
+                this.ctx.fillText(value.toString(), 5, y - 2);
+            });
+        } else {
+            // Pour CC : lignes aux valeurs 0, 32, 64, 96, 127
+            const values = [0, 32, 64, 96, 127];
+            values.forEach(value => {
+                const y = this.valueToY(value);
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, y);
+                this.ctx.lineTo(this.canvas.width, y);
+                this.ctx.stroke();
+
+                // Label
+                this.ctx.fillStyle = '#666';
+                this.ctx.font = '10px monospace';
+                this.ctx.fillText(value.toString(), 5, y - 2);
+            });
         }
     }
 
     renderCenterLine() {
-        this.ctx.strokeStyle = '#444';
-        this.ctx.lineWidth = 2;
-        const y = this.currentCC === 'pitchbend' ? this.valueToY(0) : this.valueToY(64);
-        this.ctx.beginPath();
-        this.ctx.moveTo(0, y);
-        this.ctx.lineTo(this.canvas.width, y);
-        this.ctx.stroke();
+        const filteredEvents = this.getFilteredEvents();
+
+        if (this.currentCC === 'pitchbend') {
+            // Pour pitchbend : toujours afficher une barre centrale à 0
+            this.ctx.strokeStyle = '#666';
+            this.ctx.lineWidth = 2;
+            const y = this.valueToY(0);
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, y);
+            this.ctx.lineTo(this.canvas.width, y);
+            this.ctx.stroke();
+        } else {
+            // Pour CC : afficher une barre à 0 si pas d'événements
+            if (filteredEvents.length === 0) {
+                this.ctx.strokeStyle = '#555';
+                this.ctx.lineWidth = 2;
+                this.ctx.setLineDash([5, 5]);
+                const y = this.valueToY(0);
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, y);
+                this.ctx.lineTo(this.canvas.width, y);
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+            }
+        }
     }
 
     renderEvents() {
@@ -506,41 +547,36 @@ class CCPitchbendEditor {
             this.ctx.strokeStyle = '#4CAF50';
             this.ctx.lineWidth = 2;
 
-            if (this.currentCC === 'pitchbend') {
-                // Pitchbend : courbe lisse (interpolation linéaire)
-                this.ctx.beginPath();
-                events.forEach((event, i) => {
-                    const x = this.ticksToX(event.ticks);
-                    const y = this.valueToY(event.value);
-                    if (i === 0) {
-                        this.ctx.moveTo(x, y);
-                    } else {
-                        this.ctx.lineTo(x, y);
-                    }
-                });
-                this.ctx.stroke();
-            } else {
-                // CC : courbe en escalier (valeurs discrètes)
-                this.ctx.beginPath();
-                events.forEach((event, i) => {
-                    const x = this.ticksToX(event.ticks);
-                    const y = this.valueToY(event.value);
+            // CC et Pitchbend : courbe en escalier (valeurs discrètes)
+            this.ctx.beginPath();
+            events.forEach((event, i) => {
+                const x = this.ticksToX(event.ticks);
+                const y = this.valueToY(event.value);
 
-                    if (i === 0) {
-                        this.ctx.moveTo(x, y);
-                    } else {
-                        const prevEvent = events[i - 1];
-                        const prevX = this.ticksToX(prevEvent.ticks);
-                        const prevY = this.valueToY(prevEvent.value);
+                if (i === 0) {
+                    this.ctx.moveTo(x, y);
+                } else {
+                    const prevEvent = events[i - 1];
+                    const prevX = this.ticksToX(prevEvent.ticks);
+                    const prevY = this.valueToY(prevEvent.value);
 
-                        // Ligne horizontale depuis le point précédent jusqu'à l'abscisse du point actuel
-                        this.ctx.lineTo(x, prevY);
-                        // Ligne verticale jusqu'au point actuel
-                        this.ctx.lineTo(x, y);
-                    }
-                });
-                this.ctx.stroke();
-            }
+                    // Ligne horizontale depuis le point précédent jusqu'à l'abscisse du point actuel
+                    this.ctx.lineTo(x, prevY);
+                    // Ligne verticale jusqu'au point actuel
+                    this.ctx.lineTo(x, y);
+                }
+            });
+            this.ctx.stroke();
+        } else if (events.length === 1) {
+            // Si un seul événement, afficher une ligne horizontale
+            this.ctx.strokeStyle = '#4CAF50';
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            const x = this.ticksToX(events[0].ticks);
+            const y = this.valueToY(events[0].value);
+            this.ctx.moveTo(x, y);
+            this.ctx.lineTo(this.canvas.width, y);
+            this.ctx.stroke();
         }
 
         // Dessiner les points
