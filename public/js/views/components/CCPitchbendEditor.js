@@ -443,6 +443,11 @@ class CCPitchbendEditor {
     // === Rendu ===
 
     render() {
+        if (!this.ctx || !this.canvas) {
+            console.warn('CCPitchbendEditor: Canvas context not ready');
+            return;
+        }
+
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
         // Grille de fond
@@ -453,6 +458,8 @@ class CCPitchbendEditor {
 
         // Événements
         this.renderEvents();
+
+        console.log(`CCPitchbendEditor: Rendered - Type: ${this.currentCC}, Channel: ${this.currentChannel}, Events: ${this.getFilteredEvents().length}`);
     }
 
     renderGrid() {
@@ -705,10 +712,20 @@ class CCPitchbendEditor {
     // === Import/Export ===
 
     loadEvents(events) {
+        console.log(`CCPitchbendEditor: Loading ${events.length} events`);
         this.events = events.map(e => ({
             ...e,
             id: e.id || (Date.now() + Math.random())
         }));
+
+        // Log des événements par type et canal
+        const eventsByType = {};
+        this.events.forEach(e => {
+            const key = `${e.type}-ch${e.channel}`;
+            eventsByType[key] = (eventsByType[key] || 0) + 1;
+        });
+        console.log('CCPitchbendEditor: Events by type/channel:', eventsByType);
+
         this.saveState();
         this.render();
     }
