@@ -39,7 +39,7 @@ class MidiEditorModal {
         this.ccEditor = null;
         this.currentCCType = 'cc1'; // 'cc1', 'cc7', 'cc10', 'cc11', 'pitchbend'
         this.ccEvents = []; // Événements CC et pitchbend
-        this.ccSectionExpanded = true; // État du collapse de la section CC
+        this.ccSectionExpanded = false; // État du collapse de la section CC
 
         // Grille de snap pour l'édition (contrainte de positionnement)
         // Valeurs en ticks (basé sur 480 ticks par noire)
@@ -1155,9 +1155,9 @@ class MidiEditorModal {
                         </div>
 
                         <!-- Section CC/Pitchbend (collapsible) -->
-                        <div class="midi-editor-section cc-section expanded" id="cc-section">
+                        <div class="midi-editor-section cc-section collapsed" id="cc-section">
                             <!-- Header collapsible -->
-                            <div class="cc-section-header expanded" id="cc-section-header">
+                            <div class="cc-section-header collapsed" id="cc-section-header">
                                 <div class="cc-section-title">
                                     <span class="cc-collapse-icon">▼</span>
                                     <span>CC & Pitch Bend</span>
