@@ -539,6 +539,12 @@ class MidiEditorModal {
         if (usedChannels.length > 0) {
             this.log('info', `  - Canaux utilisés: ${usedChannels.map(c => c + 1).join(', ')}`);
         }
+
+        // Log des événements extraits pour debugging
+        if (this.ccEvents.length > 0) {
+            const sampleEvents = this.ccEvents.slice(0, 3);
+            this.log('debug', 'Sample extracted CC events:', sampleEvents);
+        }
     }
 
     /**
@@ -797,13 +803,17 @@ class MidiEditorModal {
      * Appelé avant la sauvegarde pour récupérer les modifications
      */
     syncCCEventsFromEditor() {
-        if (!this.ccEditor) return;
+        if (!this.ccEditor) {
+            // Si l'éditeur CC n'a jamais été ouvert, garder les événements extraits du fichier original
+            this.log('info', `syncCCEventsFromEditor: CC editor not initialized, keeping ${this.ccEvents.length} original events`);
+            return;
+        }
 
         // Récupérer tous les événements depuis l'éditeur
         const editorEvents = this.ccEditor.getEvents();
 
         if (!editorEvents || editorEvents.length === 0) {
-            this.log('info', 'No CC events in editor');
+            this.log('info', 'syncCCEventsFromEditor: No CC events in editor');
             this.ccEvents = [];
             return;
         }
@@ -819,6 +829,12 @@ class MidiEditorModal {
         }));
 
         this.log('info', `Synchronized ${this.ccEvents.length} CC/pitchbend events from editor`);
+
+        // Log d'échantillon pour debugging
+        if (this.ccEvents.length > 0) {
+            const sample = this.ccEvents.slice(0, 3);
+            this.log('debug', 'Sample synchronized events:', sample);
+        }
     }
 
     /**
@@ -951,7 +967,9 @@ class MidiEditorModal {
 
         // Ajouter les événements CC et pitchbend
         if (this.ccEvents && this.ccEvents.length > 0) {
-            this.log('info', `Adding ${this.ccEvents.length} CC/pitchbend events`);
+            this.log('info', `Adding ${this.ccEvents.length} CC/pitchbend events to MIDI file`);
+
+            let ccCount = 0, pbCount = 0;
             this.ccEvents.forEach(ccEvent => {
                 // Convertir le type de l'éditeur (cc1, cc7, cc10, cc11) en numéro de contrôleur
                 if (ccEvent.type === 'cc1' || ccEvent.type === 'cc7' || ccEvent.type === 'cc10' || ccEvent.type === 'cc11') {
@@ -964,6 +982,7 @@ class MidiEditorModal {
                         controllerType: controllerNumber,
                         value: ccEvent.value
                     });
+                    ccCount++;
                 } else if (ccEvent.type === 'pitchbend') {
                     events.push({
                         absoluteTime: ccEvent.ticks || ccEvent.tick,
@@ -971,8 +990,13 @@ class MidiEditorModal {
                         channel: ccEvent.channel,
                         value: ccEvent.value
                     });
+                    pbCount++;
                 }
             });
+
+            this.log('info', `Converted to MIDI: ${ccCount} CC events, ${pbCount} pitchbend events`);
+        } else {
+            this.log('warn', 'No CC/Pitchbend events to save');
         }
 
         // Trier par temps absolu
