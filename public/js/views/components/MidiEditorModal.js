@@ -648,6 +648,15 @@ class MidiEditorModal {
                 ccSection.classList.remove('collapsed');
                 ccHeader.classList.add('expanded');
                 ccHeader.classList.remove('collapsed');
+
+                // Initialiser l'éditeur CC s'il n'existe pas encore
+                if (!this.ccEditor) {
+                    this.initCCEditor();
+                } else {
+                    // Forcer un rendu pour s'assurer que le canvas est à jour
+                    this.ccEditor.resize();
+                    this.ccEditor.render();
+                }
             } else {
                 ccSection.classList.remove('expanded');
                 ccSection.classList.add('collapsed');
@@ -704,7 +713,17 @@ class MidiEditorModal {
      */
     initCCEditor() {
         const container = document.getElementById('cc-editor-container');
-        if (!container || this.ccEditor) return;
+        if (!container) {
+            this.log('warn', 'Container cc-editor-container not found');
+            return;
+        }
+
+        if (this.ccEditor) {
+            this.log('info', 'CC Editor already initialized');
+            return;
+        }
+
+        this.log('info', `Initializing CC Editor with ${this.ccEvents.length} total CC events`);
 
         // Obtenir les paramètres du piano roll
         const options = {
@@ -719,6 +738,12 @@ class MidiEditorModal {
         this.ccEditor = new CCPitchbendEditor(container, options);
         this.ccEditor.setCC(this.currentCCType);
 
+        // Charger les événements existants AVANT de mettre à jour le sélecteur
+        if (this.ccEvents.length > 0) {
+            this.ccEditor.loadEvents(this.ccEvents);
+            this.log('info', `Loaded ${this.ccEvents.length} CC events into editor`);
+        }
+
         // Mettre à jour le sélecteur de canal pour afficher uniquement les canaux utilisés
         this.updateCCChannelSelector();
 
@@ -727,12 +752,7 @@ class MidiEditorModal {
         const activeChannel = usedChannels.length > 0 ? usedChannels[0] : 0;
         this.ccEditor.setChannel(activeChannel);
 
-        // Charger les événements existants
-        if (this.ccEvents.length > 0) {
-            this.ccEditor.loadEvents(this.ccEvents);
-        }
-
-        this.log('info', `Éditeur CC/Pitchbend initialisé avec canal ${activeChannel + 1}`);
+        this.log('info', `CC Editor initialized - Type: ${this.currentCCType}, Channel: ${activeChannel + 1}, Used channels: [${usedChannels.map(c => c + 1).join(', ')}]`);
     }
 
     /**
@@ -1652,8 +1672,8 @@ class MidiEditorModal {
             this.log('info', `Piano roll UI mode set to: ${this.editMode}`);
         }
 
-        // Initialiser l'éditeur CC/Pitchbend
-        this.initCCEditor();
+        // L'éditeur CC/Pitchbend sera initialisé lors de l'ouverture de la section
+        // via toggleCCSection()
     }
 
     /**
