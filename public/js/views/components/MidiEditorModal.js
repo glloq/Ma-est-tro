@@ -150,6 +150,9 @@ class MidiEditorModal {
 
             this.isOpen = true;
 
+            // Installer le gestionnaire beforeunload pour empêcher la fermeture avec des modifications non sauvegardées
+            this.setupBeforeUnloadHandler();
+
             // Émettre événement
             if (this.eventBus) {
                 this.eventBus.emit('midi_editor:opened', { fileId, filename: this.currentFilename });
@@ -759,7 +762,12 @@ class MidiEditorModal {
             timebase: this.pianoRoll?.timebase || 480,
             xrange: this.pianoRoll?.xrange || 1920,
             xoffset: this.pianoRoll?.xoffset || 0,
-            grid: this.snapValues[this.currentSnapIndex].ticks
+            grid: this.snapValues[this.currentSnapIndex].ticks,
+            onChange: () => {
+                // Marquer comme modifié lors des changements CC/Pitchbend
+                this.isDirty = true;
+                this.updateSaveButton();
+            }
         };
 
         // Créer l'éditeur
@@ -2770,6 +2778,9 @@ class MidiEditorModal {
             this.keyboardHandler = null;
         }
 
+        // Retirer le gestionnaire beforeunload
+        this.removeBeforeUnloadHandler();
+
         // Nettoyer l'historique du piano roll
         if (this.pianoRoll && typeof this.pianoRoll.clearHistory === 'function') {
             this.pianoRoll.clearHistory();
@@ -2795,6 +2806,32 @@ class MidiEditorModal {
         // Émettre événement
         if (this.eventBus) {
             this.eventBus.emit('midi_editor:closed', {});
+        }
+    }
+
+    /**
+     * Installer le gestionnaire beforeunload pour avertir l'utilisateur
+     * s'il tente de fermer la page/onglet avec des modifications non sauvegardées
+     */
+    setupBeforeUnloadHandler() {
+        this.beforeUnloadHandler = (e) => {
+            if (this.isDirty) {
+                // Message standard du navigateur
+                e.preventDefault();
+                e.returnValue = ''; // Requis pour Chrome
+                return ''; // Pour les navigateurs plus anciens
+            }
+        };
+        window.addEventListener('beforeunload', this.beforeUnloadHandler);
+    }
+
+    /**
+     * Retirer le gestionnaire beforeunload
+     */
+    removeBeforeUnloadHandler() {
+        if (this.beforeUnloadHandler) {
+            window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+            this.beforeUnloadHandler = null;
         }
     }
 

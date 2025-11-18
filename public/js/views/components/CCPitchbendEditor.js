@@ -18,6 +18,7 @@ class CCPitchbendEditor {
             xrange: options.xrange || 1920,
             xoffset: options.xoffset || 0,
             grid: options.grid || 15,
+            onChange: options.onChange || null, // Callback appelé lors des changements
             ...options
         };
 
@@ -688,6 +689,11 @@ class CCPitchbendEditor {
                 this.history.shift();
                 this.historyIndex--;
             }
+
+            // Notifier le changement
+            if (this.options.onChange && typeof this.options.onChange === 'function') {
+                this.options.onChange();
+            }
         }
     }
 
@@ -697,6 +703,11 @@ class CCPitchbendEditor {
             this.events = JSON.parse(this.history[this.historyIndex]);
             this.selectedEvents.clear();
             this.render();
+
+            // Notifier le changement
+            if (this.options.onChange && typeof this.options.onChange === 'function') {
+                this.options.onChange();
+            }
         }
     }
 
@@ -706,6 +717,11 @@ class CCPitchbendEditor {
             this.events = JSON.parse(this.history[this.historyIndex]);
             this.selectedEvents.clear();
             this.render();
+
+            // Notifier le changement
+            if (this.options.onChange && typeof this.options.onChange === 'function') {
+                this.options.onChange();
+            }
         }
     }
 
