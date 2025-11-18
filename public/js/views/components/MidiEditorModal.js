@@ -37,9 +37,7 @@ class MidiEditorModal {
 
         // CC/Pitchbend Editor
         this.ccEditor = null;
-        this.ccMode = false; // false = mode notes, true = mode CC/pitchbend
-        this.currentCCType = 'cc1'; // 'cc1', 'cc7', 'cc10', 'cc1-step', 'pitchbend'
-        this.ccSectionExpanded = false; // État de l'accordéon CC
+        this.currentCCType = 'cc1'; // 'cc1', 'cc7', 'cc10', 'cc11', 'pitchbend'
         this.ccEvents = []; // Événements CC et pitchbend
 
         // Grille de snap pour l'édition (contrainte de positionnement)
@@ -387,6 +385,9 @@ class MidiEditorModal {
         this.updateSequenceFromActiveChannels(previousActiveChannels);
         this.updateChannelButtons();
         this.updateInstrumentSelector();
+
+        // Mettre à jour le canal pour l'édition CC
+        this.updateCCEditorChannel();
     }
 
     /**
@@ -480,29 +481,6 @@ class MidiEditorModal {
     // ========================================================================
 
     /**
-     * Basculer entre mode Notes et mode CC/Pitchbend
-     */
-    toggleCCMode() {
-        this.ccMode = !this.ccMode;
-        this.log('info', `Mode CC: ${this.ccMode ? 'Activé' : 'Désactivé'}`);
-
-        // Mettre à jour l'interface
-        this.refreshChannelButtons();
-
-        // Mettre à jour le bouton de toggle
-        const toggleBtn = document.getElementById('mode-toggle-btn');
-        if (toggleBtn) {
-            if (this.ccMode) {
-                toggleBtn.classList.add('cc-mode');
-                toggleBtn.textContent = 'Mode CC/Pitchbend';
-            } else {
-                toggleBtn.classList.remove('cc-mode');
-                toggleBtn.textContent = 'Mode Notes';
-            }
-        }
-    }
-
-    /**
      * Sélectionner le type de CC à éditer
      */
     selectCCType(ccType) {
@@ -510,7 +488,14 @@ class MidiEditorModal {
         this.log('info', `CC Type sélectionné: ${ccType}`);
 
         // Mettre à jour les boutons
-        this.refreshChannelButtons();
+        const ccTypeButtons = this.container?.querySelectorAll('.cc-type-btn-v');
+        ccTypeButtons?.forEach(btn => {
+            if (btn.dataset.ccType === ccType) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
 
         // Mettre à jour l'éditeur CC
         if (this.ccEditor) {
@@ -519,108 +504,18 @@ class MidiEditorModal {
     }
 
     /**
-     * Rafraîchir les boutons de canal
+     * Mettre à jour le canal actif pour l'édition CC
      */
-    refreshChannelButtons() {
-        const channelsToolbar = this.container?.querySelector('.channels-toolbar');
-        if (!channelsToolbar) return;
+    updateCCEditorChannel() {
+        if (!this.ccEditor) return;
 
-        // Trouver le bouton de toggle
-        const toggleBtn = channelsToolbar.querySelector('#mode-toggle-btn');
-        const divider = channelsToolbar.querySelector('.toolbar-divider');
+        // Utiliser le premier canal actif comme canal pour l'édition CC
+        const activeChannel = this.activeChannels.size > 0
+            ? Array.from(this.activeChannels)[0]
+            : 0;
 
-        // Régénérer les boutons
-        const buttonsHTML = this.renderChannelButtons();
-
-        // Recréer la structure complète
-        channelsToolbar.innerHTML = '';
-
-        // Réinsérer le bouton de toggle
-        if (toggleBtn) {
-            channelsToolbar.appendChild(toggleBtn);
-        }
-        if (divider) {
-            channelsToolbar.appendChild(divider);
-        }
-
-        // Insérer les nouveaux boutons
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = buttonsHTML;
-        while (tempDiv.firstChild) {
-            channelsToolbar.appendChild(tempDiv.firstChild);
-        }
-
-        // Réattacher les événements
-        this.attachChannelButtonEvents();
-    }
-
-    /**
-     * Attacher les événements aux boutons de canal
-     */
-    attachChannelButtonEvents() {
-        if (this.ccMode) {
-            // Mode CC: boutons de sélection de type CC
-            const ccTypeButtons = this.container.querySelectorAll('.cc-type-btn');
-            ccTypeButtons.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const ccType = btn.dataset.ccType;
-                    if (ccType) {
-                        this.selectCCType(ccType);
-                    }
-                });
-            });
-        } else {
-            // Mode normal: boutons de canal
-            const channelButtons = this.container.querySelectorAll('.channel-btn');
-            channelButtons.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const channel = parseInt(btn.dataset.channel);
-                    if (!isNaN(channel)) {
-                        this.toggleChannel(channel);
-                    }
-                });
-            });
-        }
-    }
-
-    /**
-     * Basculer l'accordéon d'une section
-     */
-    toggleAccordion(section) {
-        const headers = this.container.querySelectorAll('.accordion-header');
-        const contents = this.container.querySelectorAll('.accordion-content');
-
-        headers.forEach((header, index) => {
-            const headerSection = header.dataset.section;
-            const content = contents[index];
-
-            if (headerSection === section) {
-                // Toggle la section cliquée
-                const isExpanded = content.classList.contains('expanded');
-
-                if (isExpanded) {
-                    header.classList.remove('active');
-                    header.classList.add('collapsed');
-                    content.classList.remove('expanded');
-                } else {
-                    header.classList.add('active');
-                    header.classList.remove('collapsed');
-                    content.classList.add('expanded');
-
-                    // Si on ouvre la section CC, initialiser l'éditeur si nécessaire
-                    if (section === 'cc' && !this.ccEditor) {
-                        this.initCCEditor();
-                    }
-                }
-
-                // Mettre à jour l'état
-                if (section === 'cc') {
-                    this.ccSectionExpanded = !isExpanded;
-                }
-            }
-        });
+        this.ccEditor.setChannel(activeChannel);
+        this.log('info', `Canal CC mis à jour: ${activeChannel}`);
     }
 
     /**
@@ -654,31 +549,7 @@ class MidiEditorModal {
             this.ccEditor.loadEvents(this.ccEvents);
         }
 
-        // Attacher les événements des outils CC
-        this.attachCCToolEvents();
-
         this.log('info', 'Éditeur CC/Pitchbend initialisé');
-    }
-
-    /**
-     * Attacher les événements des outils CC
-     */
-    attachCCToolEvents() {
-        const toolButtons = this.container.querySelectorAll('.cc-tool-btn');
-        toolButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const tool = btn.dataset.tool;
-                if (tool && this.ccEditor) {
-                    // Désactiver tous les boutons
-                    toolButtons.forEach(b => b.classList.remove('active'));
-                    // Activer le bouton cliqué
-                    btn.classList.add('active');
-                    // Changer l'outil
-                    this.ccEditor.setTool(tool);
-                }
-            });
-        });
     }
 
     /**
@@ -925,15 +796,9 @@ class MidiEditorModal {
     // ========================================================================
 
     /**
-     * Générer les boutons de canal (ou sélecteurs CC en mode CC)
+     * Générer les boutons de canal
      */
     renderChannelButtons() {
-        if (this.ccMode) {
-            // Mode CC/Pitchbend : afficher les boutons de sélection de type CC
-            return this.renderCCTypeButtons();
-        }
-
-        // Mode normal : afficher les boutons de canal
         if (!this.channels || this.channels.length === 0) {
             return '<div class="channel-buttons"><span>Aucun canal disponible</span></div>';
         }
@@ -964,42 +829,9 @@ class MidiEditorModal {
                     data-channel="${ch.channel}"
                     data-color="${color}"
                     style="${inlineStyles}"
-                    title="${ch.noteCount} notes"
+                    title="${ch.noteCount} notes - Canal ${ch.channel + 1}"
                 >
                     <span class="channel-label">${ch.channel + 1} : ${ch.instrument}</span>
-                </button>
-            `;
-        });
-
-        buttons += '</div>';
-        return buttons;
-    }
-
-    /**
-     * Générer les boutons de type CC/Pitchbend (mode CC)
-     */
-    renderCCTypeButtons() {
-        const ccTypes = [
-            { id: 'cc1', label: 'CC1 (Modulation)', desc: 'Modulation Wheel' },
-            { id: 'cc7', label: 'CC7 (Volume)', desc: 'Channel Volume' },
-            { id: 'cc10', label: 'CC10 (Pan)', desc: 'Pan Position' },
-            { id: 'cc11', label: 'CC11 (Expression)', desc: 'Expression Controller' },
-            { id: 'pitchbend', label: 'Pitch Bend', desc: 'Pitch Wheel' }
-        ];
-
-        let buttons = '<div class="channel-buttons cc-mode">';
-
-        ccTypes.forEach(type => {
-            const isActive = this.currentCCType === type.id;
-            const activeClass = isActive ? 'active' : '';
-
-            buttons += `
-                <button
-                    class="channel-btn cc-type-btn ${activeClass}"
-                    data-cc-type="${type.id}"
-                    title="${type.desc}"
-                >
-                    <span class="channel-label">${type.label}</span>
                 </button>
             `;
         });
@@ -1266,76 +1098,79 @@ class MidiEditorModal {
                         </div>
                     </div>
 
-                    <!-- Toolbar des canaux avec bouton de toggle mode -->
+                    <!-- Toolbar des canaux -->
                     <div class="channels-toolbar">
-                        <button class="mode-toggle-btn ${this.ccMode ? 'cc-mode' : ''}" id="mode-toggle-btn" title="Basculer entre mode Notes et mode CC/Pitchbend">
-                            ${this.ccMode ? 'Mode CC/Pitchbend' : 'Mode Notes'}
-                        </button>
-                        <div class="toolbar-divider"></div>
                         ${this.renderChannelButtons()}
                     </div>
 
-                    <!-- Conteneur avec accordéon pour Notes et CC/Pitchbend -->
+                    <!-- Conteneur pour Notes et CC/Pitchbend -->
                     <div class="midi-editor-container">
-                        <!-- Section Notes -->
+                        <!-- Section Notes (toujours visible) -->
                         <div class="midi-editor-section notes-section">
-                            <div class="accordion-header active" data-section="notes">
-                                <div class="accordion-title">
-                                    <span class="accordion-icon">▼</span>
-                                    <span>Notes du Piano Roll</span>
+                            <div class="piano-roll-wrapper">
+                                <div class="piano-roll-container" id="piano-roll-container">
+                                    <!-- webaudio-pianoroll sera inséré ici -->
                                 </div>
-                            </div>
-                            <div class="accordion-content expanded">
-                                <!-- Piano Roll -->
-                                <div class="piano-roll-wrapper">
-                                    <div class="piano-roll-container" id="piano-roll-container">
-                                        <!-- webaudio-pianoroll sera inséré ici -->
-                                    </div>
-                                    <!-- Slider horizontal avec boutons -->
-                                    <div class="scroll-controls scroll-controls-horizontal">
-                                        <button class="scroll-btn scroll-btn-left" data-action="scroll-left">◄</button>
-                                        <input type="range" class="scroll-slider scroll-horizontal" id="scroll-h-slider" min="0" max="100" value="0" step="1">
-                                        <button class="scroll-btn scroll-btn-right" data-action="scroll-right">►</button>
-                                    </div>
-                                    <!-- Slider vertical avec boutons -->
-                                    <div class="scroll-controls scroll-controls-vertical">
-                                        <button class="scroll-btn scroll-btn-up" data-action="scroll-up">▲</button>
-                                        <input type="range" class="scroll-slider scroll-vertical" id="scroll-v-slider" min="0" max="100" value="0" step="1" orient="vertical">
-                                        <button class="scroll-btn scroll-btn-down" data-action="scroll-down">▼</button>
-                                    </div>
+                                <!-- Slider horizontal avec boutons -->
+                                <div class="scroll-controls scroll-controls-horizontal">
+                                    <button class="scroll-btn scroll-btn-left" data-action="scroll-left">◄</button>
+                                    <input type="range" class="scroll-slider scroll-horizontal" id="scroll-h-slider" min="0" max="100" value="0" step="1">
+                                    <button class="scroll-btn scroll-btn-right" data-action="scroll-right">►</button>
+                                </div>
+                                <!-- Slider vertical avec boutons -->
+                                <div class="scroll-controls scroll-controls-vertical">
+                                    <button class="scroll-btn scroll-btn-up" data-action="scroll-up">▲</button>
+                                    <input type="range" class="scroll-slider scroll-vertical" id="scroll-v-slider" min="0" max="100" value="0" step="1" orient="vertical">
+                                    <button class="scroll-btn scroll-btn-down" data-action="scroll-down">▼</button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Section CC/Pitchbend -->
+                        <!-- Section CC/Pitchbend (toujours visible) -->
                         <div class="midi-editor-section cc-section">
-                            <div class="accordion-header ${this.ccSectionExpanded ? 'active' : 'collapsed'}" data-section="cc">
-                                <div class="accordion-title">
-                                    <span class="accordion-icon">▼</span>
-                                    <span>CC & Pitch Bend</span>
-                                </div>
-                            </div>
-                            <div class="accordion-content ${this.ccSectionExpanded ? 'expanded' : ''}">
-                                <!-- Toolbar CC -->
-                                <div class="cc-toolbar" id="cc-toolbar">
-                                    <div class="cc-toolbar-group">
-                                        <span class="cc-toolbar-label">Outils:</span>
-                                        <button class="cc-tool-btn active" data-tool="select" title="Sélection">
-                                            Sélection
+                            <div class="cc-editor-layout">
+                                <!-- Panneau latéral gauche avec sélection CC et outils -->
+                                <div class="cc-sidebar">
+                                    <div class="cc-sidebar-label">Type CC/PB</div>
+                                    <div class="cc-type-buttons-vertical">
+                                        <button class="cc-type-btn-v active" data-cc-type="cc1" title="Modulation Wheel">
+                                            CC1<span class="cc-label">Modulation</span>
                                         </button>
-                                        <button class="cc-tool-btn" data-tool="move" title="Déplacer">
-                                            Déplacer
+                                        <button class="cc-type-btn-v" data-cc-type="cc7" title="Channel Volume">
+                                            CC7<span class="cc-label">Volume</span>
                                         </button>
-                                        <button class="cc-tool-btn" data-tool="line" title="Ligne">
-                                            Ligne
+                                        <button class="cc-type-btn-v" data-cc-type="cc10" title="Pan Position">
+                                            CC10<span class="cc-label">Pan</span>
                                         </button>
-                                        <button class="cc-tool-btn" data-tool="draw" title="Dessin continu">
-                                            Dessin
+                                        <button class="cc-type-btn-v" data-cc-type="cc11" title="Expression Controller">
+                                            CC11<span class="cc-label">Expression</span>
+                                        </button>
+                                        <button class="cc-type-btn-v" data-cc-type="pitchbend" title="Pitch Wheel">
+                                            PB<span class="cc-label">Pitch Bend</span>
+                                        </button>
+                                    </div>
+
+                                    <div class="cc-sidebar-divider"></div>
+
+                                    <div class="cc-sidebar-label">Outils</div>
+                                    <div class="cc-tool-buttons-vertical">
+                                        <button class="cc-tool-btn-v active" data-tool="select" title="Sélection">
+                                            ⬚<span class="tool-label">Sélection</span>
+                                        </button>
+                                        <button class="cc-tool-btn-v" data-tool="move" title="Déplacer">
+                                            ✥<span class="tool-label">Déplacer</span>
+                                        </button>
+                                        <button class="cc-tool-btn-v" data-tool="line" title="Ligne">
+                                            ╱<span class="tool-label">Ligne</span>
+                                        </button>
+                                        <button class="cc-tool-btn-v" data-tool="draw" title="Dessin continu">
+                                            ✎<span class="tool-label">Dessin</span>
                                         </button>
                                     </div>
                                 </div>
+
                                 <!-- Conteneur de l'éditeur CC -->
-                                <div id="cc-editor-container"></div>
+                                <div id="cc-editor-container" class="cc-editor-main"></div>
                             </div>
                         </div>
                     </div>
@@ -1548,6 +1383,9 @@ class MidiEditorModal {
             this.pianoRoll.setUIMode(this.editMode); // 'drag-view' par défaut
             this.log('info', `Piano roll UI mode set to: ${this.editMode}`);
         }
+
+        // Initialiser l'éditeur CC/Pitchbend
+        this.initCCEditor();
     }
 
     /**
@@ -2110,29 +1948,46 @@ class MidiEditorModal {
             }
         });
 
-        // Bouton de toggle mode CC/Notes
-        const modeToggleBtn = document.getElementById('mode-toggle-btn');
-        if (modeToggleBtn) {
-            modeToggleBtn.addEventListener('click', (e) => {
+        // Boutons de canal
+        const channelButtons = this.container.querySelectorAll('.channel-btn');
+        channelButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                this.toggleCCMode();
-            });
-        }
-
-        // Headers d'accordéon
-        const accordionHeaders = this.container.querySelectorAll('.accordion-header');
-        accordionHeaders.forEach(header => {
-            header.addEventListener('click', (e) => {
-                e.preventDefault();
-                const section = header.dataset.section;
-                if (section) {
-                    this.toggleAccordion(section);
+                const channel = parseInt(btn.dataset.channel);
+                if (!isNaN(channel)) {
+                    this.toggleChannel(channel);
                 }
             });
         });
 
-        // Clic sur les boutons de canal
-        this.attachChannelButtonEvents();
+        // Boutons de type CC (verticaux)
+        const ccTypeButtons = this.container.querySelectorAll('.cc-type-btn-v');
+        ccTypeButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const ccType = btn.dataset.ccType;
+                if (ccType) {
+                    this.selectCCType(ccType);
+                }
+            });
+        });
+
+        // Boutons d'outils CC (verticaux)
+        const ccToolButtons = this.container.querySelectorAll('.cc-tool-btn-v');
+        ccToolButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tool = btn.dataset.tool;
+                if (tool && this.ccEditor) {
+                    // Désactiver tous les boutons
+                    ccToolButtons.forEach(b => b.classList.remove('active'));
+                    // Activer le bouton cliqué
+                    btn.classList.add('active');
+                    // Changer l'outil
+                    this.ccEditor.setTool(tool);
+                }
+            });
+        });
 
         // Sliders de navigation (scroll) avec throttle à 15fps
         const scrollHSlider = document.getElementById('scroll-h-slider');
