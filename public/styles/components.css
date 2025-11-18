@@ -870,8 +870,8 @@
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    padding: 8px 12px;
-    background: #0a0a0a;
+    padding: 12px 12px;
+    background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
     border: 3px solid #555;
     border-radius: 8px;
     cursor: pointer;
@@ -880,6 +880,7 @@
     position: relative;
     overflow: hidden;
     flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .midi-editor-modal .channel-btn::before {
@@ -888,6 +889,7 @@
 
 .midi-editor-modal .channel-btn:hover {
     transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), 0 0 12px rgba(85, 85, 85, 0.3);
 }
 
 .midi-editor-modal .channel-btn:hover::before {
@@ -904,6 +906,7 @@
 
 .midi-editor-modal .channel-btn.active:hover {
     transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5), 0 0 20px rgba(85, 85, 85, 0.4);
 }
 
 /* Animation de pulsation pour les boutons actifs */
