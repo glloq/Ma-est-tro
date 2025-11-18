@@ -1101,21 +1101,6 @@ class MidiEditorModal {
         const centerNote = Math.floor((minNote + maxNote) / 2);
         const yoffset = Math.max(0, centerNote - Math.floor(noteRange / 2)); // Centrer verticalement
 
-        // Calculer la résolution de grille appropriée en fonction du zoom
-        // grid = pas en ticks entre les lignes (petit = beaucoup de lignes, grand = peu de lignes)
-        let gridValue;
-        if (xrange > 2000) {
-            gridValue = 100000; // Cacher grille si xrange > 2000
-        } else if (xrange < 500) {
-            gridValue = 1;  // Ultra zoomé : ligne tous les 1 tick
-        } else if (xrange < 1000) {
-            gridValue = 2;  // Très zoomé : ligne tous les 2 ticks
-        } else if (xrange < 1500) {
-            gridValue = 4;  // Zoomé : ligne tous les 4 ticks
-        } else {
-            gridValue = 8;  // Normal : ligne tous les 8 ticks
-        }
-
         this.pianoRoll.setAttribute('width', width);
         this.pianoRoll.setAttribute('height', height);
         this.pianoRoll.setAttribute('editmode', 'dragpoly');
@@ -1123,9 +1108,13 @@ class MidiEditorModal {
         this.pianoRoll.setAttribute('yrange', noteRange.toString());
         this.pianoRoll.setAttribute('yoffset', yoffset.toString()); // Centrer verticalement
 
-        // Appliquer la grille de snap pour contraindre le positionnement des notes
+        // Grille visuelle fixe pour voir les subdivisions (1/16 note = 120 ticks)
+        // Cela permet d'avoir toujours une grille visible
+        this.pianoRoll.setAttribute('grid', '120');
+
+        // Snap to grid pour contraindre le positionnement des notes
         const currentSnap = this.snapValues[this.currentSnapIndex];
-        this.pianoRoll.setAttribute('grid', currentSnap.ticks.toString());
+        this.pianoRoll.setAttribute('snap', currentSnap.ticks.toString());
 
         this.pianoRoll.setAttribute('wheelzoom', '1');
         this.pianoRoll.setAttribute('xscroll', '1');
@@ -1598,13 +1587,13 @@ class MidiEditorModal {
             snapValueElement.textContent = currentSnap.label;
         }
 
-        // Appliquer la grille au piano roll
+        // Appliquer le snap au piano roll (grille visuelle reste fixe à 120)
         if (this.pianoRoll) {
-            this.pianoRoll.setAttribute('grid', currentSnap.ticks.toString());
-            this.log('info', `Grid snap changed to ${currentSnap.label} (${currentSnap.ticks} ticks)`);
+            this.pianoRoll.setAttribute('snap', currentSnap.ticks.toString());
+            this.log('info', `Snap to grid changed to ${currentSnap.label} (${currentSnap.ticks} ticks)`);
         }
 
-        this.showNotification(`Grille: ${currentSnap.label}`, 'info');
+        this.showNotification(`Magnétisme: ${currentSnap.label}`, 'info');
     }
 
     /**
