@@ -94,6 +94,22 @@ class FileManager {
   }
 
   convertMidiToJSON(midi) {
+    // Log channel statistics for debugging
+    const channelCounts = new Map();
+    midi.tracks.forEach((track, trackIdx) => {
+      track.forEach(event => {
+        if (event.channel !== undefined) {
+          channelCounts.set(event.channel, (channelCounts.get(event.channel) || 0) + 1);
+        }
+      });
+    });
+
+    if (channelCounts.size > 0) {
+      this.app.logger.info(`MIDI channels detected during parsing: [${Array.from(channelCounts.keys()).sort((a,b) => a-b).join(', ')}]`);
+    } else {
+      this.app.logger.warn('No MIDI channels detected during parsing! This may indicate a problem.');
+    }
+
     return {
       header: {
         format: midi.header.format,
@@ -105,90 +121,19 @@ class FileManager {
           index: index,
           name: this.extractTrackName(track),
           events: track.map(event => {
-            // Create a clean event object with all important MIDI attributes
+            // Simple approach: copy ALL event properties
+            // This ensures we don't accidentally miss anything
             const cleanEvent = {
               deltaTime: event.deltaTime || 0,
               type: event.type
             };
 
-            // Preserve channel for all channel messages
-            if (event.channel !== undefined) {
-              cleanEvent.channel = event.channel;
-            }
-
-            // Note events
-            if (event.noteNumber !== undefined) {
-              cleanEvent.noteNumber = event.noteNumber;
-            }
-            if (event.velocity !== undefined) {
-              cleanEvent.velocity = event.velocity;
-            }
-
-            // Control Change events
-            if (event.controllerType !== undefined) {
-              cleanEvent.controllerType = event.controllerType;
-            }
-            if (event.value !== undefined) {
-              cleanEvent.value = event.value;
-            }
-
-            // Program Change events
-            if (event.programNumber !== undefined) {
-              cleanEvent.programNumber = event.programNumber;
-            }
-
-            // Pitch Bend events
-            // midi-file stores pitch bend as a value from -8192 to 8191
-            // We need to preserve this
-
-            // Channel Aftertouch
-            if (event.amount !== undefined) {
-              cleanEvent.amount = event.amount;
-            }
-
-            // Polyphonic Aftertouch
-            if (event.pressure !== undefined) {
-              cleanEvent.pressure = event.pressure;
-            }
-
-            // Meta events
-            if (event.text !== undefined) {
-              cleanEvent.text = event.text;
-            }
-            if (event.microsecondsPerBeat !== undefined) {
-              cleanEvent.microsecondsPerBeat = event.microsecondsPerBeat;
-            }
-            if (event.numerator !== undefined) {
-              cleanEvent.numerator = event.numerator;
-            }
-            if (event.denominator !== undefined) {
-              cleanEvent.denominator = event.denominator;
-            }
-            if (event.metronome !== undefined) {
-              cleanEvent.metronome = event.metronome;
-            }
-            if (event.thirtyseconds !== undefined) {
-              cleanEvent.thirtyseconds = event.thirtyseconds;
-            }
-            if (event.key !== undefined) {
-              cleanEvent.key = event.key;
-            }
-            if (event.scale !== undefined) {
-              cleanEvent.scale = event.scale;
-            }
-
-            // Copy any remaining properties (for compatibility)
-            // but exclude internal properties that might cause issues
-            const excludeProps = ['deltaTime', 'type', 'channel', 'noteNumber', 'velocity',
-                                  'controllerType', 'value', 'programNumber', 'amount',
-                                  'pressure', 'text', 'microsecondsPerBeat', 'numerator',
-                                  'denominator', 'metronome', 'thirtyseconds', 'key', 'scale'];
-
-            Object.keys(event).forEach(key => {
-              if (!excludeProps.includes(key) && event[key] !== undefined) {
+            // Copy all other properties from the original event
+            for (const key in event) {
+              if (key !== 'deltaTime' && key !== 'type') {
                 cleanEvent[key] = event[key];
               }
-            });
+            }
 
             return cleanEvent;
           })
