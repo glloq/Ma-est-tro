@@ -354,6 +354,9 @@ class MidiEditorModal {
      * Basculer l'affichage d'un canal
      */
     toggleChannel(channel) {
+        // Sauvegarder les canaux actuellement actifs AVANT le toggle
+        const previousActiveChannels = new Set(this.activeChannels);
+
         if (this.activeChannels.has(channel)) {
             this.activeChannels.delete(channel);
         } else {
@@ -362,18 +365,20 @@ class MidiEditorModal {
 
         this.log('info', `Toggled channel ${channel}. Active channels: [${Array.from(this.activeChannels).join(', ')}]`);
 
-        this.updateSequenceFromActiveChannels();
+        this.updateSequenceFromActiveChannels(previousActiveChannels);
         this.updateChannelButtons();
         this.updateInstrumentSelector();
     }
 
     /**
      * Mettre à jour la séquence depuis les canaux actifs
+     * @param {Set} previousActiveChannels - Canaux qui étaient actifs AVANT le changement (optionnel)
      */
-    updateSequenceFromActiveChannels() {
+    updateSequenceFromActiveChannels(previousActiveChannels = null) {
         // D'ABORD: synchroniser fullSequence avec le piano roll actuel
         // pour ne pas perdre les modifications
-        this.syncFullSequenceFromPianoRoll();
+        // Passer les canaux précédents pour savoir quelles notes sont dans le piano roll
+        this.syncFullSequenceFromPianoRoll(previousActiveChannels);
 
         if (this.activeChannels.size === 0) {
             this.sequence = [];
@@ -413,19 +418,20 @@ class MidiEditorModal {
     /**
      * Synchroniser fullSequence avec les notes actuelles du piano roll
      * pour ne pas perdre les modifications (suppressions, ajouts, etc.)
+     * @param {Set} previousActiveChannels - Canaux qui étaient visibles dans le piano roll (optionnel)
      */
-    syncFullSequenceFromPianoRoll() {
+    syncFullSequenceFromPianoRoll(previousActiveChannels = null) {
         if (!this.pianoRoll || !this.pianoRoll.sequence) return;
 
         const currentSequence = this.pianoRoll.sequence;
 
         // Reconstruire fullSequence en fusionnant:
-        // - Les notes des canaux actuellement visibles (depuis le piano roll, potentiellement modifiées)
-        // - Les notes des canaux invisibles (depuis fullSequence, non modifiées)
+        // - Les notes des canaux actuellement visibles dans le piano roll (potentiellement modifiées)
+        // - Les notes des canaux invisibles dans le piano roll (non modifiées)
 
-        // 1. Utiliser this.activeChannels pour savoir quels canaux sont affichés dans le piano roll
-        //    (Ces canaux ont pu être modifiés : notes déplacées, canal changé, notes ajoutées/supprimées)
-        const visibleChannels = this.activeChannels;
+        // 1. Utiliser previousActiveChannels (si fourni) ou this.activeChannels pour savoir
+        //    quels canaux sont actuellement affichés dans le piano roll
+        const visibleChannels = previousActiveChannels || this.activeChannels;
 
         // 2. Garder les notes des canaux qui ne sont PAS visibles dans le piano roll
         //    (Ces notes n'ont pas été touchées)
@@ -437,7 +443,7 @@ class MidiEditorModal {
             t: note.t,
             g: note.g,
             n: note.n,
-            c: note.c !== undefined ? note.c : Array.from(this.activeChannels)[0] || 0, // Assurer que c existe
+            c: note.c !== undefined ? note.c : Array.from(visibleChannels)[0] || 0, // Assurer que c existe
             v: note.v || 100 // Préserver velocity
         }));
 
@@ -447,7 +453,7 @@ class MidiEditorModal {
         // 5. Trier par tick
         this.fullSequence.sort((a, b) => a.t - b.t);
 
-        this.log('debug', `Synced fullSequence: ${invisibleNotes.length} invisible + ${visibleNotes.length} visible = ${this.fullSequence.length} total`);
+        this.log('debug', `Synced fullSequence: ${invisibleNotes.length} invisible + ${visibleNotes.length} visible = ${this.fullSequence.length} total (using ${previousActiveChannels ? 'previous' : 'current'} active channels)`);
     }
 
     /**
