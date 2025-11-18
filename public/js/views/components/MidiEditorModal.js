@@ -2766,6 +2766,15 @@ class MidiEditorModal {
             this.pianoRoll = null;
         }
 
+        // Nettoyer l'éditeur CC/Pitchbend
+        if (this.ccEditor) {
+            this.ccEditor.destroy();
+            this.ccEditor = null;
+        }
+        this.ccEvents = [];
+        this.ccSectionExpanded = false;
+        this.currentCCType = 'cc1';
+
         // Retirer l'événement escape
         if (this.escapeHandler) {
             document.removeEventListener('keydown', this.escapeHandler);
