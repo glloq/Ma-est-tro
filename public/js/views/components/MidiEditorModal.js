@@ -35,6 +35,13 @@ class MidiEditorModal {
         // Instrument sélectionné pour les nouveaux canaux (program MIDI GM)
         this.selectedInstrument = 0; // Piano par défaut
 
+        // CC/Pitchbend Editor
+        this.ccEditor = null;
+        this.ccMode = false; // false = mode notes, true = mode CC/pitchbend
+        this.currentCCType = 'cc1'; // 'cc1', 'cc7', 'cc10', 'cc1-step', 'pitchbend'
+        this.ccSectionExpanded = false; // État de l'accordéon CC
+        this.ccEvents = []; // Événements CC et pitchbend
+
         // Grille de snap pour l'édition (contrainte de positionnement)
         // Valeurs en ticks (basé sur 480 ticks par noire)
         // Progression optimisée : précision maximale pour 1/16, valeurs raisonnables pour subdivisions larges
@@ -468,6 +475,226 @@ class MidiEditorModal {
         this.log('debug', `Synced fullSequence: ${invisibleNotes.length} invisible + ${visibleNotes.length} visible = ${this.fullSequence.length} total (using ${previousActiveChannels ? 'previous' : 'current'} active channels)`);
     }
 
+    // ========================================================================
+    // GESTION DU MODE CC/PITCHBEND
+    // ========================================================================
+
+    /**
+     * Basculer entre mode Notes et mode CC/Pitchbend
+     */
+    toggleCCMode() {
+        this.ccMode = !this.ccMode;
+        this.log('info', `Mode CC: ${this.ccMode ? 'Activé' : 'Désactivé'}`);
+
+        // Mettre à jour l'interface
+        this.refreshChannelButtons();
+
+        // Mettre à jour le bouton de toggle
+        const toggleBtn = document.getElementById('mode-toggle-btn');
+        if (toggleBtn) {
+            if (this.ccMode) {
+                toggleBtn.classList.add('cc-mode');
+                toggleBtn.textContent = 'Mode CC/Pitchbend';
+            } else {
+                toggleBtn.classList.remove('cc-mode');
+                toggleBtn.textContent = 'Mode Notes';
+            }
+        }
+    }
+
+    /**
+     * Sélectionner le type de CC à éditer
+     */
+    selectCCType(ccType) {
+        this.currentCCType = ccType;
+        this.log('info', `CC Type sélectionné: ${ccType}`);
+
+        // Mettre à jour les boutons
+        this.refreshChannelButtons();
+
+        // Mettre à jour l'éditeur CC
+        if (this.ccEditor) {
+            this.ccEditor.setCC(ccType);
+        }
+    }
+
+    /**
+     * Rafraîchir les boutons de canal
+     */
+    refreshChannelButtons() {
+        const channelsToolbar = this.container?.querySelector('.channels-toolbar');
+        if (!channelsToolbar) return;
+
+        // Trouver le bouton de toggle
+        const toggleBtn = channelsToolbar.querySelector('#mode-toggle-btn');
+        const divider = channelsToolbar.querySelector('.toolbar-divider');
+
+        // Régénérer les boutons
+        const buttonsHTML = this.renderChannelButtons();
+
+        // Recréer la structure complète
+        channelsToolbar.innerHTML = '';
+
+        // Réinsérer le bouton de toggle
+        if (toggleBtn) {
+            channelsToolbar.appendChild(toggleBtn);
+        }
+        if (divider) {
+            channelsToolbar.appendChild(divider);
+        }
+
+        // Insérer les nouveaux boutons
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = buttonsHTML;
+        while (tempDiv.firstChild) {
+            channelsToolbar.appendChild(tempDiv.firstChild);
+        }
+
+        // Réattacher les événements
+        this.attachChannelButtonEvents();
+    }
+
+    /**
+     * Attacher les événements aux boutons de canal
+     */
+    attachChannelButtonEvents() {
+        if (this.ccMode) {
+            // Mode CC: boutons de sélection de type CC
+            const ccTypeButtons = this.container.querySelectorAll('.cc-type-btn');
+            ccTypeButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const ccType = btn.dataset.ccType;
+                    if (ccType) {
+                        this.selectCCType(ccType);
+                    }
+                });
+            });
+        } else {
+            // Mode normal: boutons de canal
+            const channelButtons = this.container.querySelectorAll('.channel-btn');
+            channelButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const channel = parseInt(btn.dataset.channel);
+                    if (!isNaN(channel)) {
+                        this.toggleChannel(channel);
+                    }
+                });
+            });
+        }
+    }
+
+    /**
+     * Basculer l'accordéon d'une section
+     */
+    toggleAccordion(section) {
+        const headers = this.container.querySelectorAll('.accordion-header');
+        const contents = this.container.querySelectorAll('.accordion-content');
+
+        headers.forEach((header, index) => {
+            const headerSection = header.dataset.section;
+            const content = contents[index];
+
+            if (headerSection === section) {
+                // Toggle la section cliquée
+                const isExpanded = content.classList.contains('expanded');
+
+                if (isExpanded) {
+                    header.classList.remove('active');
+                    header.classList.add('collapsed');
+                    content.classList.remove('expanded');
+                } else {
+                    header.classList.add('active');
+                    header.classList.remove('collapsed');
+                    content.classList.add('expanded');
+
+                    // Si on ouvre la section CC, initialiser l'éditeur si nécessaire
+                    if (section === 'cc' && !this.ccEditor) {
+                        this.initCCEditor();
+                    }
+                }
+
+                // Mettre à jour l'état
+                if (section === 'cc') {
+                    this.ccSectionExpanded = !isExpanded;
+                }
+            }
+        });
+    }
+
+    /**
+     * Initialiser l'éditeur CC/Pitchbend
+     */
+    initCCEditor() {
+        const container = document.getElementById('cc-editor-container');
+        if (!container || this.ccEditor) return;
+
+        // Obtenir les paramètres du piano roll
+        const options = {
+            height: 150,
+            timebase: this.pianoRoll?.timebase || 480,
+            xrange: this.pianoRoll?.xrange || 1920,
+            xoffset: this.pianoRoll?.xoffset || 0,
+            grid: this.snapValues[this.currentSnapIndex].ticks
+        };
+
+        // Créer l'éditeur
+        this.ccEditor = new CCPitchbendEditor(container, options);
+        this.ccEditor.setCC(this.currentCCType);
+
+        // Obtenir le canal actif (premier canal actif ou 0)
+        const activeChannel = this.activeChannels.size > 0
+            ? Array.from(this.activeChannels)[0]
+            : 0;
+        this.ccEditor.setChannel(activeChannel);
+
+        // Charger les événements existants
+        if (this.ccEvents.length > 0) {
+            this.ccEditor.loadEvents(this.ccEvents);
+        }
+
+        // Attacher les événements des outils CC
+        this.attachCCToolEvents();
+
+        this.log('info', 'Éditeur CC/Pitchbend initialisé');
+    }
+
+    /**
+     * Attacher les événements des outils CC
+     */
+    attachCCToolEvents() {
+        const toolButtons = this.container.querySelectorAll('.cc-tool-btn');
+        toolButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tool = btn.dataset.tool;
+                if (tool && this.ccEditor) {
+                    // Désactiver tous les boutons
+                    toolButtons.forEach(b => b.classList.remove('active'));
+                    // Activer le bouton cliqué
+                    btn.classList.add('active');
+                    // Changer l'outil
+                    this.ccEditor.setTool(tool);
+                }
+            });
+        });
+    }
+
+    /**
+     * Synchroniser l'éditeur CC avec le piano roll
+     */
+    syncCCEditor() {
+        if (!this.ccEditor || !this.pianoRoll) return;
+
+        this.ccEditor.syncWith({
+            xrange: this.pianoRoll.xrange,
+            xoffset: this.pianoRoll.xoffset,
+            grid: this.snapValues[this.currentSnapIndex].ticks,
+            timebase: this.pianoRoll.timebase
+        });
+    }
+
     /**
      * Mettre à jour la liste des canaux basée sur fullSequence
      */
@@ -698,9 +925,15 @@ class MidiEditorModal {
     // ========================================================================
 
     /**
-     * Générer les boutons de canal
+     * Générer les boutons de canal (ou sélecteurs CC en mode CC)
      */
     renderChannelButtons() {
+        if (this.ccMode) {
+            // Mode CC/Pitchbend : afficher les boutons de sélection de type CC
+            return this.renderCCTypeButtons();
+        }
+
+        // Mode normal : afficher les boutons de canal
         if (!this.channels || this.channels.length === 0) {
             return '<div class="channel-buttons"><span>Aucun canal disponible</span></div>';
         }
@@ -734,6 +967,39 @@ class MidiEditorModal {
                     title="${ch.noteCount} notes"
                 >
                     <span class="channel-label">${ch.channel + 1} : ${ch.instrument}</span>
+                </button>
+            `;
+        });
+
+        buttons += '</div>';
+        return buttons;
+    }
+
+    /**
+     * Générer les boutons de type CC/Pitchbend (mode CC)
+     */
+    renderCCTypeButtons() {
+        const ccTypes = [
+            { id: 'cc1', label: 'CC1 (Modulation)', desc: 'Modulation Wheel' },
+            { id: 'cc7', label: 'CC7 (Volume)', desc: 'Channel Volume' },
+            { id: 'cc10', label: 'CC10 (Pan)', desc: 'Pan Position' },
+            { id: 'cc11', label: 'CC11 (Expression)', desc: 'Expression Controller' },
+            { id: 'pitchbend', label: 'Pitch Bend', desc: 'Pitch Wheel' }
+        ];
+
+        let buttons = '<div class="channel-buttons cc-mode">';
+
+        ccTypes.forEach(type => {
+            const isActive = this.currentCCType === type.id;
+            const activeClass = isActive ? 'active' : '';
+
+            buttons += `
+                <button
+                    class="channel-btn cc-type-btn ${activeClass}"
+                    data-cc-type="${type.id}"
+                    title="${type.desc}"
+                >
+                    <span class="channel-label">${type.label}</span>
                 </button>
             `;
         });
@@ -1000,27 +1266,77 @@ class MidiEditorModal {
                         </div>
                     </div>
 
-                    <!-- Toolbar des canaux -->
+                    <!-- Toolbar des canaux avec bouton de toggle mode -->
                     <div class="channels-toolbar">
+                        <button class="mode-toggle-btn ${this.ccMode ? 'cc-mode' : ''}" id="mode-toggle-btn" title="Basculer entre mode Notes et mode CC/Pitchbend">
+                            ${this.ccMode ? 'Mode CC/Pitchbend' : 'Mode Notes'}
+                        </button>
+                        <div class="toolbar-divider"></div>
                         ${this.renderChannelButtons()}
                     </div>
 
-                    <!-- Piano Roll -->
-                    <div class="piano-roll-wrapper">
-                        <div class="piano-roll-container" id="piano-roll-container">
-                            <!-- webaudio-pianoroll sera inséré ici -->
+                    <!-- Conteneur avec accordéon pour Notes et CC/Pitchbend -->
+                    <div class="midi-editor-container">
+                        <!-- Section Notes -->
+                        <div class="midi-editor-section notes-section">
+                            <div class="accordion-header active" data-section="notes">
+                                <div class="accordion-title">
+                                    <span class="accordion-icon">▼</span>
+                                    <span>Notes du Piano Roll</span>
+                                </div>
+                            </div>
+                            <div class="accordion-content expanded">
+                                <!-- Piano Roll -->
+                                <div class="piano-roll-wrapper">
+                                    <div class="piano-roll-container" id="piano-roll-container">
+                                        <!-- webaudio-pianoroll sera inséré ici -->
+                                    </div>
+                                    <!-- Slider horizontal avec boutons -->
+                                    <div class="scroll-controls scroll-controls-horizontal">
+                                        <button class="scroll-btn scroll-btn-left" data-action="scroll-left">◄</button>
+                                        <input type="range" class="scroll-slider scroll-horizontal" id="scroll-h-slider" min="0" max="100" value="0" step="1">
+                                        <button class="scroll-btn scroll-btn-right" data-action="scroll-right">►</button>
+                                    </div>
+                                    <!-- Slider vertical avec boutons -->
+                                    <div class="scroll-controls scroll-controls-vertical">
+                                        <button class="scroll-btn scroll-btn-up" data-action="scroll-up">▲</button>
+                                        <input type="range" class="scroll-slider scroll-vertical" id="scroll-v-slider" min="0" max="100" value="0" step="1" orient="vertical">
+                                        <button class="scroll-btn scroll-btn-down" data-action="scroll-down">▼</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <!-- Slider horizontal avec boutons -->
-                        <div class="scroll-controls scroll-controls-horizontal">
-                            <button class="scroll-btn scroll-btn-left" data-action="scroll-left">◄</button>
-                            <input type="range" class="scroll-slider scroll-horizontal" id="scroll-h-slider" min="0" max="100" value="0" step="1">
-                            <button class="scroll-btn scroll-btn-right" data-action="scroll-right">►</button>
-                        </div>
-                        <!-- Slider vertical avec boutons -->
-                        <div class="scroll-controls scroll-controls-vertical">
-                            <button class="scroll-btn scroll-btn-up" data-action="scroll-up">▲</button>
-                            <input type="range" class="scroll-slider scroll-vertical" id="scroll-v-slider" min="0" max="100" value="0" step="1" orient="vertical">
-                            <button class="scroll-btn scroll-btn-down" data-action="scroll-down">▼</button>
+
+                        <!-- Section CC/Pitchbend -->
+                        <div class="midi-editor-section cc-section">
+                            <div class="accordion-header ${this.ccSectionExpanded ? 'active' : 'collapsed'}" data-section="cc">
+                                <div class="accordion-title">
+                                    <span class="accordion-icon">▼</span>
+                                    <span>CC & Pitch Bend</span>
+                                </div>
+                            </div>
+                            <div class="accordion-content ${this.ccSectionExpanded ? 'expanded' : ''}">
+                                <!-- Toolbar CC -->
+                                <div class="cc-toolbar" id="cc-toolbar">
+                                    <div class="cc-toolbar-group">
+                                        <span class="cc-toolbar-label">Outils:</span>
+                                        <button class="cc-tool-btn active" data-tool="select" title="Sélection">
+                                            Sélection
+                                        </button>
+                                        <button class="cc-tool-btn" data-tool="move" title="Déplacer">
+                                            Déplacer
+                                        </button>
+                                        <button class="cc-tool-btn" data-tool="line" title="Ligne">
+                                            Ligne
+                                        </button>
+                                        <button class="cc-tool-btn" data-tool="draw" title="Dessin continu">
+                                            Dessin
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- Conteneur de l'éditeur CC -->
+                                <div id="cc-editor-container"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1595,6 +1911,9 @@ class MidiEditorModal {
             this.log('info', `Snap to grid changed to ${currentSnap.label} (${currentSnap.ticks} ticks) - snap property set to ${this.pianoRoll.snap}`);
         }
 
+        // Synchroniser l'éditeur CC
+        this.syncCCEditor();
+
         this.showNotification(`Magnétisme: ${currentSnap.label}`, 'info');
     }
 
@@ -1791,15 +2110,29 @@ class MidiEditorModal {
             }
         });
 
-        // Clic sur les boutons de canal
-        const channelButtons = this.container.querySelectorAll('.channel-btn');
-        channelButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
+        // Bouton de toggle mode CC/Notes
+        const modeToggleBtn = document.getElementById('mode-toggle-btn');
+        if (modeToggleBtn) {
+            modeToggleBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                const channel = parseInt(btn.dataset.channel);
-                this.toggleChannel(channel);
+                this.toggleCCMode();
+            });
+        }
+
+        // Headers d'accordéon
+        const accordionHeaders = this.container.querySelectorAll('.accordion-header');
+        accordionHeaders.forEach(header => {
+            header.addEventListener('click', (e) => {
+                e.preventDefault();
+                const section = header.dataset.section;
+                if (section) {
+                    this.toggleAccordion(section);
+                }
             });
         });
+
+        // Clic sur les boutons de canal
+        this.attachChannelButtonEvents();
 
         // Sliders de navigation (scroll) avec throttle à 15fps
         const scrollHSlider = document.getElementById('scroll-h-slider');
@@ -1954,6 +2287,9 @@ class MidiEditorModal {
             }
         }, 50);
 
+        // Synchroniser l'éditeur CC
+        this.syncCCEditor();
+
         this.log('info', `Horizontal zoom: ${currentRange} -> ${newRange}`);
     }
 
@@ -2098,6 +2434,9 @@ class MidiEditorModal {
         if (typeof this.pianoRoll.redraw === 'function') {
             this.pianoRoll.redraw();
         }
+
+        // Synchroniser l'éditeur CC
+        this.syncCCEditor();
     }
 
     /**

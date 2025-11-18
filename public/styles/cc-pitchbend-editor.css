@@ -1,0 +1,369 @@
+/* CC/Pitchbend Editor Styles */
+
+.cc-pitchbend-editor {
+    width: 100%;
+    background: #1a1a1a;
+    border-top: 1px solid #333;
+    position: relative;
+    overflow: hidden;
+}
+
+.cc-pitchbend-editor canvas {
+    display: block;
+    image-rendering: crisp-edges;
+}
+
+/* Container pour l'éditeur avec accordéon */
+.midi-editor-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.midi-editor-section {
+    position: relative;
+    background: #1a1a1a;
+}
+
+.midi-editor-section.notes-section {
+    flex: 1;
+    min-height: 300px;
+}
+
+.midi-editor-section.cc-section {
+    flex: 0 0 auto;
+    border-top: 2px solid #444;
+}
+
+/* Accordéon Header */
+.accordion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: linear-gradient(180deg, #2d2d2d 0%, #242424 100%);
+    border-bottom: 1px solid #333;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+}
+
+.accordion-header:hover {
+    background: linear-gradient(180deg, #353535 0%, #2a2a2a 100%);
+}
+
+.accordion-header.active {
+    background: linear-gradient(180deg, #3d3d3d 0%, #323232 100%);
+}
+
+.accordion-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.accordion-icon {
+    font-size: 12px;
+    transition: transform 0.3s;
+    color: #888;
+}
+
+.accordion-header.collapsed .accordion-icon {
+    transform: rotate(-90deg);
+}
+
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.accordion-content.expanded {
+    max-height: 600px; /* Ajuster selon besoin */
+}
+
+/* Barre d'outils CC/Pitchbend */
+.cc-toolbar {
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    background: #242424;
+    border-bottom: 1px solid #333;
+    align-items: center;
+}
+
+.cc-toolbar-group {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.cc-toolbar-label {
+    font-size: 11px;
+    color: #888;
+    margin-right: 4px;
+    text-transform: uppercase;
+}
+
+.cc-tool-btn,
+.cc-type-btn {
+    padding: 6px 12px;
+    background: #2d2d2d;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #bbb;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.cc-tool-btn:hover,
+.cc-type-btn:hover {
+    background: #353535;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+.cc-tool-btn.active,
+.cc-type-btn.active {
+    background: #4CAF50;
+    border-color: #4CAF50;
+    color: #fff;
+    font-weight: 600;
+}
+
+.cc-tool-btn.active:hover,
+.cc-type-btn.active:hover {
+    background: #45a049;
+}
+
+/* Icônes pour les outils */
+.cc-tool-btn::before {
+    margin-right: 4px;
+}
+
+.cc-tool-btn[data-tool="select"]::before {
+    content: "⬚";
+}
+
+.cc-tool-btn[data-tool="move"]::before {
+    content: "✥";
+}
+
+.cc-tool-btn[data-tool="line"]::before {
+    content: "╱";
+}
+
+.cc-tool-btn[data-tool="draw"]::before {
+    content: "✎";
+}
+
+/* Boutons de type CC/Pitchbend */
+.cc-type-btn {
+    min-width: 70px;
+    text-align: center;
+}
+
+/* Mode compact pour boutons verticaux */
+.channel-buttons.cc-mode {
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 4px;
+}
+
+.channel-buttons.cc-mode .channel-btn {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 11px;
+    text-align: left;
+}
+
+.channel-buttons.cc-mode .channel-btn::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+/* Indicateurs de canal */
+.channel-indicator {
+    font-size: 10px;
+    color: #666;
+    margin-left: auto;
+}
+
+/* Divider */
+.toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: #444;
+    margin: 0 4px;
+}
+
+/* Mode toggle button */
+.mode-toggle-btn {
+    padding: 6px 14px;
+    background: linear-gradient(180deg, #3d3d3d 0%, #323232 100%);
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #e0e0e0;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.mode-toggle-btn:hover {
+    background: linear-gradient(180deg, #454545 0%, #3a3a3a 100%);
+    border-color: #666;
+}
+
+.mode-toggle-btn.cc-mode {
+    background: linear-gradient(180deg, #4CAF50 0%, #45a049 100%);
+    border-color: #4CAF50;
+    color: #fff;
+}
+
+.mode-toggle-btn.cc-mode::before {
+    content: "CC/PB";
+    margin-right: 4px;
+}
+
+.mode-toggle-btn:not(.cc-mode)::before {
+    content: "Notes";
+    margin-right: 4px;
+}
+
+/* Info tooltip */
+.cc-info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #444;
+    color: #aaa;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: help;
+    margin-left: 4px;
+}
+
+.cc-info:hover {
+    background: #555;
+    color: #fff;
+}
+
+/* Resize handle entre sections */
+.resize-handle {
+    height: 6px;
+    background: #2a2a2a;
+    cursor: ns-resize;
+    position: relative;
+    z-index: 10;
+    transition: background 0.2s;
+}
+
+.resize-handle:hover {
+    background: #4CAF50;
+}
+
+.resize-handle::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 3px;
+    background: #444;
+    border-radius: 2px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .cc-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .cc-tool-btn,
+    .cc-type-btn {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+
+    .accordion-header {
+        padding: 6px 10px;
+    }
+}
+
+/* Animation pour l'apparition */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.cc-pitchbend-editor.animating {
+    animation: slideDown 0.3s ease-out;
+}
+
+/* Overlay pour les états */
+.cc-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 14px;
+    z-index: 100;
+}
+
+.cc-overlay.hidden {
+    display: none;
+}
+
+/* Curseurs personnalisés */
+.cc-pitchbend-editor canvas[data-tool="select"] {
+    cursor: default;
+}
+
+.cc-pitchbend-editor canvas[data-tool="move"] {
+    cursor: move;
+}
+
+.cc-pitchbend-editor canvas[data-tool="line"] {
+    cursor: crosshair;
+}
+
+.cc-pitchbend-editor canvas[data-tool="draw"] {
+    cursor: crosshair;
+}
+
+/* État de drag */
+.cc-pitchbend-editor.dragging {
+    cursor: grabbing !important;
+}
+
+.cc-pitchbend-editor.dragging canvas {
+    cursor: grabbing !important;
+}
