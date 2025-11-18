@@ -199,6 +199,39 @@
     cursor: not-allowed;
 }
 
+/* Bouton de snap/grille */
+.tool-btn-snap {
+    padding: 6px 12px;
+    background: var(--secondary-color);
+    border: 2px solid #667eea;
+    border-radius: 4px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    min-width: 48px;
+    text-align: center;
+}
+
+.tool-btn-snap:hover {
+    background: #404040;
+    border-color: #7f8ff5;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.tool-btn-snap:active {
+    transform: translateY(0);
+    border-color: #5a6fd8;
+}
+
+.tool-btn-snap .snap-value {
+    color: #ffffff;
+    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+}
+
 /* Tool Groups Specific Styles */
 .tool-group .tool-btn {
     min-width: 40px;

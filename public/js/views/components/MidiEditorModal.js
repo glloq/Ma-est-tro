@@ -35,6 +35,17 @@ class MidiEditorModal {
         // Instrument sélectionné pour les nouveaux canaux (program MIDI GM)
         this.selectedInstrument = 0; // Piano par défaut
 
+        // Grille de snap pour l'édition (contrainte de positionnement)
+        // Valeurs en ticks (basé sur 480 ticks par noire)
+        this.snapValues = [
+            { ticks: 1920, label: '1/1' },  // Ronde (whole note)
+            { ticks: 960,  label: '1/2' },  // Blanche (half note)
+            { ticks: 480,  label: '1/4' },  // Noire (quarter note)
+            { ticks: 240,  label: '1/8' },  // Croche (eighth note)
+            { ticks: 120,  label: '1/16' }  // Double croche (sixteenth note)
+        ];
+        this.currentSnapIndex = 3; // Par défaut 1/8 (240 ticks)
+
         // Couleurs éclatantes pour les 16 canaux MIDI
         this.channelColors = [
             '#FF0066', // 1 - Rose/Magenta vif
@@ -903,6 +914,16 @@ class MidiEditorModal {
 
                         <div class="toolbar-divider"></div>
 
+                        <!-- Section Grille/Snap -->
+                        <div class="toolbar-section">
+                            <label class="snap-label">Grille:</label>
+                            <button class="tool-btn-snap" data-action="cycle-snap" id="snap-btn" title="Subdivision de la grille (clic pour changer)">
+                                <span class="snap-value" id="snap-value">1/8</span>
+                            </button>
+                        </div>
+
+                        <div class="toolbar-divider"></div>
+
                         <!-- Section Navigation et Zoom -->
                         <div class="toolbar-section">
                             <button class="tool-btn" data-action="mode-drag-view" data-mode="drag-view" title="Mode Déplacer Vue">
@@ -1101,7 +1122,11 @@ class MidiEditorModal {
         this.pianoRoll.setAttribute('xrange', xrange.toString());
         this.pianoRoll.setAttribute('yrange', noteRange.toString());
         this.pianoRoll.setAttribute('yoffset', yoffset.toString()); // Centrer verticalement
-        this.pianoRoll.setAttribute('grid', gridValue.toString()); // Grille adaptée au zoom
+
+        // Appliquer la grille de snap pour contraindre le positionnement des notes
+        const currentSnap = this.snapValues[this.currentSnapIndex];
+        this.pianoRoll.setAttribute('grid', currentSnap.ticks.toString());
+
         this.pianoRoll.setAttribute('wheelzoom', '1');
         this.pianoRoll.setAttribute('xscroll', '1');
         this.pianoRoll.setAttribute('yscroll', '1');
@@ -1553,6 +1578,30 @@ class MidiEditorModal {
     }
 
     /**
+     * Cycler entre les différentes valeurs de grille/snap
+     */
+    cycleSnap() {
+        // Passer à la valeur suivante (cycle)
+        this.currentSnapIndex = (this.currentSnapIndex + 1) % this.snapValues.length;
+
+        const currentSnap = this.snapValues[this.currentSnapIndex];
+
+        // Mettre à jour l'affichage du bouton
+        const snapValueElement = document.getElementById('snap-value');
+        if (snapValueElement) {
+            snapValueElement.textContent = currentSnap.label;
+        }
+
+        // Appliquer la grille au piano roll
+        if (this.pianoRoll) {
+            this.pianoRoll.setAttribute('grid', currentSnap.ticks.toString());
+            this.log('info', `Grid snap changed to ${currentSnap.label} (${currentSnap.ticks} ticks)`);
+        }
+
+        this.showNotification(`Grille: ${currentSnap.label}`, 'info');
+    }
+
+    /**
      * Changer le mode d'édition
      */
     setEditMode(mode) {
@@ -1726,6 +1775,9 @@ class MidiEditorModal {
                     break;
                 case 'apply-instrument':
                     this.applyInstrument();
+                    break;
+                case 'cycle-snap':
+                    this.cycleSnap();
                     break;
 
                 // Modes d'édition
