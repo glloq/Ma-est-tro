@@ -2629,10 +2629,20 @@
                             log('🎵 Instrument virtuel ACTIVÉ - Les messages MIDI seront affichés ici', 'success');
                             // Ajouter le périphérique virtuel
                             loadDevices();
+
+                            // Rafraîchir le KeyboardModal si ouvert
+                            if (keyboardModal && keyboardModal.isOpen) {
+                                keyboardModal.refreshDevices();
+                            }
                         } else {
                             log('🎵 Instrument virtuel DÉSACTIVÉ', 'info');
                             // Retirer le périphérique virtuel
                             loadDevices();
+
+                            // Rafraîchir le KeyboardModal si ouvert
+                            if (keyboardModal && keyboardModal.isOpen) {
+                                keyboardModal.refreshDevices();
+                            }
                         }
                     }
                 };

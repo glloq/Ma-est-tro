@@ -88,6 +88,9 @@ class KeyboardModalNew {
     async open() {
         if (this.isOpen) return;
 
+        // Charger les paramètres sauvegardés pour appliquer le nombre de touches
+        this.loadSettings();
+
         this.createModal();
         this.isOpen = true;
 
@@ -497,6 +500,13 @@ class KeyboardModalNew {
         if (this.selectedDevice && this.backend) {
             const deviceId = this.selectedDevice.device_id || this.selectedDevice.id;
 
+            // Si c'est le périphérique virtuel, envoyer aux logs
+            if (this.selectedDevice.isVirtual) {
+                const noteName = this.getNoteNameFromNumber(note);
+                console.log(`🎹 [Virtual] Note ON: ${noteName} (${note}) velocity=${this.velocity}`);
+                return;
+            }
+
             this.backend.sendNoteOn(deviceId, note, this.velocity, 0)
                 .catch(err => {
                     this.logger.error('[KeyboardModal] Note ON failed:', err);
@@ -513,6 +523,13 @@ class KeyboardModalNew {
         if (this.selectedDevice && this.backend) {
             const deviceId = this.selectedDevice.device_id || this.selectedDevice.id;
 
+            // Si c'est le périphérique virtuel, envoyer aux logs
+            if (this.selectedDevice.isVirtual) {
+                const noteName = this.getNoteNameFromNumber(note);
+                console.log(`🎹 [Virtual] Note OFF: ${noteName} (${note})`);
+                return;
+            }
+
             this.backend.sendNoteOff(deviceId, note, 0)
                 .catch(err => {
                     this.logger.error('[KeyboardModal] Note OFF failed:', err);
@@ -520,14 +537,71 @@ class KeyboardModalNew {
         }
     }
 
+    /**
+     * Obtenir le nom d'une note depuis son numéro MIDI
+     * @param {number} noteNumber - Numéro MIDI (0-127)
+     * @returns {string} - Nom de la note (ex: "C4", "F#5")
+     */
+    getNoteNameFromNumber(noteNumber) {
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const octave = Math.floor(noteNumber / 12) - 1;
+        const noteName = noteNames[noteNumber % 12];
+        return `${noteName}${octave}`;
+    }
+
     // ========================================================================
     // DEVICES
     // ========================================================================
+
+    /**
+     * Charger les paramètres depuis localStorage
+     */
+    loadSettings() {
+        try {
+            const saved = localStorage.getItem('maestro_settings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+
+                // Appliquer le nombre de touches
+                if (settings.keyboardKeys) {
+                    this.setNumberOfKeys(settings.keyboardKeys);
+                    this.logger.info(`[KeyboardModal] Settings loaded: ${settings.keyboardKeys} keys`);
+                }
+            }
+        } catch (error) {
+            this.logger.error('[KeyboardModal] Failed to load settings:', error);
+        }
+    }
 
     async loadDevices() {
         try {
             const devices = await this.backend.listDevices();
             this.devices = devices.filter(d => d.status === 2); // Actifs seulement
+
+            // Ajouter le périphérique virtuel si activé dans les settings
+            try {
+                const saved = localStorage.getItem('maestro_settings');
+                if (saved) {
+                    const settings = JSON.parse(saved);
+                    if (settings.virtualInstrument) {
+                        const virtualDevice = {
+                            id: 'virtual-instrument',
+                            device_id: 'virtual-instrument',
+                            name: '🎹 Instrument Virtuel',
+                            displayName: '🎹 Instrument Virtuel',
+                            type: 'Virtual',
+                            status: 2,
+                            connected: true,
+                            isVirtual: true,
+                            customName: null
+                        };
+                        this.devices.push(virtualDevice);
+                        this.logger.info('[KeyboardModal] Virtual instrument added to devices');
+                    }
+                }
+            } catch (error) {
+                this.logger.warn('[KeyboardModal] Could not load virtual instrument setting:', error);
+            }
 
             // Enrichir avec noms personnalisés
             this.devices = await Promise.all(this.devices.map(async (device) => {
@@ -537,6 +611,11 @@ class KeyboardModalNew {
                     id: deviceId,
                     device_id: deviceId
                 };
+
+                // Ne pas appeler l'API pour le périphérique virtuel
+                if (device.isVirtual) {
+                    return normalizedDevice;
+                }
 
                 try {
                     const response = await this.backend.sendCommand('instrument_get_settings', {
@@ -574,5 +653,16 @@ class KeyboardModalNew {
             option.textContent = device.displayName || device.name;
             select.appendChild(option);
         });
+    }
+
+    /**
+     * Rafraîchir la liste des périphériques si le modal est ouvert
+     */
+    async refreshDevices() {
+        if (!this.isOpen) return;
+
+        this.logger.info('[KeyboardModal] Refreshing devices...');
+        await this.loadDevices();
+        this.populateDeviceSelect();
     }
 }
