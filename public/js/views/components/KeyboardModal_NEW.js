@@ -3,9 +3,9 @@
 // ============================================================================
 
 class KeyboardModalNew {
-    constructor() {
+    constructor(logger = null) {
         this.backend = window.api;
-        this.logger = console;
+        this.logger = logger || console;
         this.isOpen = false;
 
         // État
@@ -503,7 +503,12 @@ class KeyboardModalNew {
             // Si c'est le périphérique virtuel, envoyer aux logs
             if (this.selectedDevice.isVirtual) {
                 const noteName = this.getNoteNameFromNumber(note);
-                console.log(`🎹 [Virtual] Note ON: ${noteName} (${note}) velocity=${this.velocity}`);
+                const message = `🎹 [Virtual] Note ON: ${noteName} (${note}) velocity=${this.velocity}`;
+                if (this.logger && this.logger.info) {
+                    this.logger.info(message);
+                } else {
+                    console.log(message);
+                }
                 return;
             }
 
@@ -526,7 +531,12 @@ class KeyboardModalNew {
             // Si c'est le périphérique virtuel, envoyer aux logs
             if (this.selectedDevice.isVirtual) {
                 const noteName = this.getNoteNameFromNumber(note);
-                console.log(`🎹 [Virtual] Note OFF: ${noteName} (${note})`);
+                const message = `🎹 [Virtual] Note OFF: ${noteName} (${note})`;
+                if (this.logger && this.logger.info) {
+                    this.logger.info(message);
+                } else {
+                    console.log(message);
+                }
                 return;
             }
 
