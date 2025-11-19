@@ -51,7 +51,7 @@ class CCPitchbendEditor {
         this.element.className = 'cc-pitchbend-editor';
         this.element.style.cssText = `
             width: 100%;
-            height: ${this.options.height}px;
+            height: 100%;
             background: #1a1a1a;
             border-top: 1px solid #333;
             position: relative;
@@ -104,7 +104,7 @@ class CCPitchbendEditor {
     resize() {
         const rect = this.container.getBoundingClientRect();
         this.canvas.width = rect.width;
-        this.canvas.height = this.options.height;
+        this.canvas.height = rect.height;
         this.render();
     }
 
