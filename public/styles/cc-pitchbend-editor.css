@@ -28,7 +28,7 @@
 }
 
 .midi-editor-section.notes-section {
-    flex: 1;
+    flex: 3; /* 60% de l'espace */
     min-height: 200px;
     display: flex;
     flex-direction: column;
@@ -63,8 +63,8 @@
 }
 
 .midi-editor-section.cc-section.expanded {
-    flex: 1 1 auto;
-    min-height: 120px;
+    flex: 2; /* 40% de l'espace */
+    min-height: 250px; /* Hauteur minimale plus généreuse */
 }
 
 /* Header de la section CC (collapsible) */
@@ -118,7 +118,8 @@
 .cc-editor-layout {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    flex: 1;
+    min-height: 0;
     background: #1a1a1a;
 }
 
