@@ -32,7 +32,7 @@ class SettingsModal {
     loadSettings() {
         const defaults = {
             theme: 'light',
-            keyboardKeys: 25, // ~2 octaves par défaut
+            keyboardOctaves: 2, // 2 octaves par défaut (24 touches)
             noteDisplayTime: 20, // secondes
             virtualInstrument: false
         };
@@ -40,7 +40,16 @@ class SettingsModal {
         try {
             const saved = localStorage.getItem('maestro_settings');
             if (saved) {
-                return { ...defaults, ...JSON.parse(saved) };
+                const parsed = JSON.parse(saved);
+
+                // Migration: convertir keyboardKeys → keyboardOctaves si nécessaire
+                if (parsed.keyboardKeys !== undefined && parsed.keyboardOctaves === undefined) {
+                    parsed.keyboardOctaves = Math.ceil(parsed.keyboardKeys / 12);
+                    delete parsed.keyboardKeys;
+                    this.logger?.info(`Migrated keyboardKeys (${parsed.keyboardKeys}) to keyboardOctaves (${parsed.keyboardOctaves})`);
+                }
+
+                return { ...defaults, ...parsed };
             }
         } catch (error) {
             this.logger?.error('Failed to load settings:', error);
@@ -197,14 +206,15 @@ class SettingsModal {
                 <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #333;">🎹 Clavier</h3>
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                     <label style="font-size: 14px; color: #666;">
-                        Nombre de touches : <strong id="keyboardKeysValue">${this.settings.keyboardKeys}</strong>
+                        Nombre d'octaves : <strong id="keyboardOctavesValue">${this.settings.keyboardOctaves}</strong>
+                        <span style="color: #999; font-weight: normal;">(<span id="keyboardTouchesCount">${this.settings.keyboardOctaves * 12}</span> touches)</span>
                     </label>
-                    <input type="range" id="keyboardKeysRange" min="12" max="42" step="1"
-                           value="${this.settings.keyboardKeys}"
+                    <input type="range" id="keyboardOctavesRange" min="1" max="4" step="1"
+                           value="${this.settings.keyboardOctaves}"
                            style="width: 100%;">
                     <div style="display: flex; justify-content: space-between; font-size: 12px; color: #999;">
-                        <span>12 touches (1 octave)</span>
-                        <span>42 touches (3.5 octaves)</span>
+                        <span>1 octave</span>
+                        <span>4 octaves</span>
                     </div>
                 </div>
             </div>
@@ -383,11 +393,14 @@ class SettingsModal {
             });
         });
 
-        // Range keyboard keys
-        const keyboardRange = this.modal.querySelector('#keyboardKeysRange');
-        const keyboardValue = this.modal.querySelector('#keyboardKeysValue');
+        // Range keyboard octaves
+        const keyboardRange = this.modal.querySelector('#keyboardOctavesRange');
+        const keyboardValue = this.modal.querySelector('#keyboardOctavesValue');
+        const keyboardTouchesCount = this.modal.querySelector('#keyboardTouchesCount');
         keyboardRange.addEventListener('input', (e) => {
-            keyboardValue.textContent = e.target.value;
+            const octaves = parseInt(e.target.value);
+            keyboardValue.textContent = octaves;
+            keyboardTouchesCount.textContent = octaves * 12;
         });
 
         // Range note display time
@@ -423,8 +436,9 @@ class SettingsModal {
 
         // Restaurer les valeurs actuelles
         this.selectTheme(this.settings.theme);
-        this.modal.querySelector('#keyboardKeysRange').value = this.settings.keyboardKeys;
-        this.modal.querySelector('#keyboardKeysValue').textContent = this.settings.keyboardKeys;
+        this.modal.querySelector('#keyboardOctavesRange').value = this.settings.keyboardOctaves;
+        this.modal.querySelector('#keyboardOctavesValue').textContent = this.settings.keyboardOctaves;
+        this.modal.querySelector('#keyboardTouchesCount').textContent = this.settings.keyboardOctaves * 12;
         this.modal.querySelector('#noteDisplayTimeRange').value = this.settings.noteDisplayTime;
         this.modal.querySelector('#noteDisplayTimeValue').textContent = this.settings.noteDisplayTime + 's';
         this.modal.querySelector('#virtualInstrumentToggle').checked = this.settings.virtualInstrument;
@@ -447,14 +461,14 @@ class SettingsModal {
         // Récupérer les nouvelles valeurs
         const newSettings = {
             theme: this.modal.querySelector('.theme-btn.active').dataset.theme,
-            keyboardKeys: parseInt(this.modal.querySelector('#keyboardKeysRange').value),
+            keyboardOctaves: parseInt(this.modal.querySelector('#keyboardOctavesRange').value),
             noteDisplayTime: parseInt(this.modal.querySelector('#noteDisplayTimeRange').value),
             virtualInstrument: this.modal.querySelector('#virtualInstrumentToggle').checked
         };
 
         // Vérifier les changements
         const themeChanged = newSettings.theme !== this.settings.theme;
-        const keyboardChanged = newSettings.keyboardKeys !== this.settings.keyboardKeys;
+        const keyboardChanged = newSettings.keyboardOctaves !== this.settings.keyboardOctaves;
         const timeChanged = newSettings.noteDisplayTime !== this.settings.noteDisplayTime;
         const virtualInstrumentChanged = newSettings.virtualInstrument !== this.settings.virtualInstrument;
 
@@ -468,7 +482,7 @@ class SettingsModal {
             this.eventBus?.emit('settings:theme_changed', { theme: newSettings.theme });
         }
         if (keyboardChanged) {
-            this.eventBus?.emit('settings:keyboard_changed', { keys: newSettings.keyboardKeys });
+            this.eventBus?.emit('settings:keyboard_changed', { octaves: newSettings.keyboardOctaves });
         }
         if (timeChanged) {
             this.eventBus?.emit('settings:display_time_changed', { time: newSettings.noteDisplayTime });
