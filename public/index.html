@@ -2066,8 +2066,19 @@
                 console.log('✅ Connected devices after filter:', connectedDevices.length, connectedDevices);
 
                 // Ajouter le périphérique virtuel si activé
-                const settings = settingsModal ? settingsModal.getSettings() : null;
-                if (settings && settings.virtualInstrument) {
+                // Charger directement depuis localStorage pour éviter les dépendances
+                let virtualInstrumentEnabled = false;
+                try {
+                    const saved = localStorage.getItem('maestro_settings');
+                    if (saved) {
+                        const settings = JSON.parse(saved);
+                        virtualInstrumentEnabled = settings.virtualInstrument || false;
+                    }
+                } catch (error) {
+                    console.warn('Could not load virtual instrument setting:', error);
+                }
+
+                if (virtualInstrumentEnabled) {
                     const virtualDevice = {
                         id: 'virtual-instrument',
                         name: '🎹 Instrument Virtuel',
@@ -2078,6 +2089,7 @@
                     };
                     connectedDevices.push(virtualDevice);
                     devices.push(virtualDevice);
+                    console.log('✅ Virtual instrument added to devices');
                 }
 
                 if (connectedDevices.length === 0) {
@@ -3192,7 +3204,20 @@
 
             // 🆕 Initialiser la modal clavier MIDI après connexion WebSocket
             if (typeof KeyboardModalNew !== 'undefined') {
-                keyboardModal = new KeyboardModalNew();
+                // Créer un logger personnalisé qui utilise la fonction log() de l'application
+                const keyboardLogger = {
+                    info: (msg) => log(msg, 'info'),
+                    warn: (msg) => log(msg, 'warning'),
+                    error: (msg, err) => {
+                        if (err) {
+                            log(`${msg} ${err.message || err}`, 'error');
+                        } else {
+                            log(msg, 'error');
+                        }
+                    }
+                };
+
+                keyboardModal = new KeyboardModalNew(keyboardLogger);
                 log('✓ Modal clavier MIDI initialisée (version simplifiée)', 'info');
             } else {
                 log('⚠️ KeyboardModalNew non disponible', 'warning');
