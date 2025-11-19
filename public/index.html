@@ -3427,11 +3427,11 @@
                 settingsModal.eventBus.emit = (event, data) => {
                     log(`Settings event: ${event}`, 'info', data);
 
-                    // Gérer le changement de nombre de touches du clavier
+                    // Gérer le changement de nombre d'octaves du clavier
                     if (event === 'settings:keyboard_changed') {
                         if (keyboardModal) {
-                            keyboardModal.setNumberOfKeys(data.keys);
-                            log(`🎹 Nombre de touches du clavier: ${data.keys}`, 'info');
+                            keyboardModal.setOctaves(data.octaves);
+                            log(`🎹 Clavier virtuel: ${data.octaves} octave(s) (${data.octaves * 12} touches)`, 'info');
                         }
                     }
 

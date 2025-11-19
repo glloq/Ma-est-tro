@@ -313,23 +313,30 @@ class KeyboardModalNew {
     }
 
     /**
-     * Définir le nombre de touches du clavier
-     * @param {number} numberOfKeys - Nombre de touches (12-42 touches)
+     * Définir le nombre d'octaves du clavier
+     * @param {number} octaves - Nombre d'octaves (1-4)
      */
-    setNumberOfKeys(numberOfKeys) {
-        // Calculer le nombre d'octaves à afficher
-        // Une octave = 12 touches (7 blanches + 5 noires)
-        const octaves = Math.ceil(numberOfKeys / 12);
-
-        // Limiter entre 1 et 4 octaves (12-42 touches)
+    setOctaves(octaves) {
+        // Limiter entre 1 et 4 octaves
         this.octaves = Math.max(1, Math.min(4, octaves));
 
-        this.logger.info(`[KeyboardModal] Nombre de touches changé: ${numberOfKeys} (${this.octaves} octaves)`);
+        this.logger.info(`[KeyboardModal] Nombre d'octaves changé: ${this.octaves} (${this.octaves * 12} touches)`);
 
         // Régénérer le clavier si le modal est ouvert
         if (this.isOpen) {
             this.regeneratePianoKeys();
         }
+    }
+
+    /**
+     * Définir le nombre de touches du clavier (OBSOLÈTE - utiliser setOctaves)
+     * @param {number} numberOfKeys - Nombre de touches (12-48 touches)
+     * @deprecated Utiliser setOctaves() à la place
+     */
+    setNumberOfKeys(numberOfKeys) {
+        // Calculer le nombre d'octaves à afficher
+        const octaves = Math.ceil(numberOfKeys / 12);
+        this.setOctaves(octaves);
     }
 
     // ========================================================================
@@ -572,10 +579,15 @@ class KeyboardModalNew {
             if (saved) {
                 const settings = JSON.parse(saved);
 
-                // Appliquer le nombre de touches
-                if (settings.keyboardKeys) {
+                // Appliquer le nombre d'octaves (nouveau format)
+                if (settings.keyboardOctaves !== undefined) {
+                    this.setOctaves(settings.keyboardOctaves);
+                    this.logger.info(`[KeyboardModal] Settings loaded: ${settings.keyboardOctaves} octaves`);
+                }
+                // Fallback: ancien format (nombre de touches)
+                else if (settings.keyboardKeys !== undefined) {
                     this.setNumberOfKeys(settings.keyboardKeys);
-                    this.logger.info(`[KeyboardModal] Settings loaded: ${settings.keyboardKeys} keys`);
+                    this.logger.info(`[KeyboardModal] Settings loaded (legacy): ${settings.keyboardKeys} keys`);
                 }
             }
         } catch (error) {
