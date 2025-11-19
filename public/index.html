@@ -81,6 +81,17 @@
             color: #ffffff;
         }
 
+        /* Thème Light */
+        body.theme-light {
+            background: #f9fafb;
+        }
+
+        body.theme-light header,
+        body.theme-light .card {
+            background: var(--card-bg);
+            color: var(--text-primary);
+        }
+
         /* Thème Colored */
         body.theme-colored {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -1834,8 +1845,23 @@
                 deviceList.innerHTML = '';
 
                 // Filtrer uniquement les périphériques connectés (status === 2)
-                const connectedDevices = devices.filter(d => d.status === 2 || d.connected);
+                let connectedDevices = devices.filter(d => d.status === 2 || d.connected);
                 console.log('✅ Connected devices after filter:', connectedDevices.length, connectedDevices);
+
+                // Ajouter le périphérique virtuel si activé
+                const settings = settingsModal ? settingsModal.getSettings() : null;
+                if (settings && settings.virtualInstrument) {
+                    const virtualDevice = {
+                        id: 'virtual-instrument',
+                        name: '🎹 Instrument Virtuel',
+                        type: 'Virtual',
+                        status: 2,
+                        connected: true,
+                        isVirtual: true
+                    };
+                    connectedDevices.push(virtualDevice);
+                    devices.push(virtualDevice);
+                }
 
                 if (connectedDevices.length === 0) {
                     deviceList.innerHTML = '<li class="info-text">Aucun périphérique connecté</li>';
@@ -1849,6 +1875,30 @@
                 for (const device of connectedDevices) {
                     const li = document.createElement('li');
                     li.className = 'device-item';
+
+                    // Traitement spécial pour le périphérique virtuel
+                    if (device.isVirtual) {
+                        const deviceInfo = document.createElement('div');
+                        deviceInfo.className = 'device-info-section';
+                        deviceInfo.innerHTML = `
+                            <div class="device-name">${device.name}</div>
+                            <div class="device-type">Instrument virtuel • Messages envoyés aux logs</div>
+                        `;
+
+                        const deviceActions = document.createElement('div');
+                        deviceActions.className = 'device-actions';
+
+                        // Badge "Virtual"
+                        const badge = document.createElement('span');
+                        badge.style.cssText = 'background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;';
+                        badge.textContent = 'VIRTUAL';
+                        deviceActions.appendChild(badge);
+
+                        li.appendChild(deviceInfo);
+                        li.appendChild(deviceActions);
+                        deviceList.appendChild(li);
+                        continue;
+                    }
 
                     // Charger les réglages pour obtenir le nom personnalisé
                     let displayName = device.name;
@@ -1894,6 +1944,15 @@
 
                 // Enrichir tous les périphériques avec leur nom personnalisé pour le routage
                 const enrichedDevices = await Promise.all(devices.map(async (device) => {
+                    // Ne pas appeler l'API pour le périphérique virtuel
+                    if (device.isVirtual) {
+                        return {
+                            ...device,
+                            displayName: device.name,
+                            customName: null
+                        };
+                    }
+
                     try {
                         const response = await api.sendCommand('instrument_get_settings', {
                             deviceId: device.id
@@ -2556,12 +2615,24 @@
                 settingsModal.eventBus.emit = (event, data) => {
                     log(`Settings event: ${event}`, 'info', data);
 
+                    // Gérer le changement de nombre de touches du clavier
+                    if (event === 'settings:keyboard_changed') {
+                        if (keyboardModal) {
+                            keyboardModal.setNumberOfKeys(data.keys);
+                            log(`🎹 Nombre de touches du clavier: ${data.keys}`, 'info');
+                        }
+                    }
+
                     // Gérer l'instrument virtuel
                     if (event === 'settings:virtual_instrument_changed') {
                         if (data.enabled) {
                             log('🎵 Instrument virtuel ACTIVÉ - Les messages MIDI seront affichés ici', 'success');
+                            // Ajouter le périphérique virtuel
+                            loadDevices();
                         } else {
                             log('🎵 Instrument virtuel DÉSACTIVÉ', 'info');
+                            // Retirer le périphérique virtuel
+                            loadDevices();
                         }
                     }
                 };
