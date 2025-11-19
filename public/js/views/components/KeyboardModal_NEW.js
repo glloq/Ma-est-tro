@@ -20,7 +20,7 @@ class KeyboardModalNew {
         // Piano config
         this.whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
         this.blackKeyPositions = [1, 2, 4, 5, 6]; // Position des touches noires (après C, D, F, G, A)
-        this.octaves = 3; // 3 octaves complètes = 21 touches blanches
+        this.octaves = 3; // 3 octaves par défaut = 36 touches (plage: 1-4 octaves / 12-42 touches)
         this.baseOctave = 3; // Commence à C3
 
         // Keyboard mappings - touches blanches: s d f g h j k l m
@@ -314,15 +314,15 @@ class KeyboardModalNew {
 
     /**
      * Définir le nombre de touches du clavier
-     * @param {number} numberOfKeys - Nombre de touches (25, 49, 61, 88, etc.)
+     * @param {number} numberOfKeys - Nombre de touches (12-42 touches)
      */
     setNumberOfKeys(numberOfKeys) {
         // Calculer le nombre d'octaves à afficher
         // Une octave = 12 touches (7 blanches + 5 noires)
         const octaves = Math.ceil(numberOfKeys / 12);
 
-        // Limiter entre 1 et 8 octaves
-        this.octaves = Math.max(1, Math.min(8, octaves));
+        // Limiter entre 1 et 4 octaves (12-42 touches)
+        this.octaves = Math.max(1, Math.min(4, octaves));
 
         this.logger.info(`[KeyboardModal] Nombre de touches changé: ${numberOfKeys} (${this.octaves} octaves)`);
 
