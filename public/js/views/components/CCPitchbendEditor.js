@@ -102,10 +102,23 @@ class CCPitchbendEditor {
     }
 
     resize() {
+        // Forcer le reflow pour obtenir les dimensions finales
+        const forceReflow = this.container.offsetHeight;
+
         const rect = this.container.getBoundingClientRect();
-        this.canvas.width = rect.width;
-        this.canvas.height = rect.height;
-        this.render();
+        const width = rect.width;
+        const height = rect.height;
+
+        console.log(`CCPitchbendEditor.resize(): container=${width}x${height}`);
+
+        // Ne redimensionner que si on a des dimensions valides
+        if (width > 0 && height > 0) {
+            this.canvas.width = width;
+            this.canvas.height = height;
+            this.render();
+        } else {
+            console.warn(`CCPitchbendEditor.resize(): Invalid dimensions ${width}x${height}, skipping`);
+        }
     }
 
     // === Gestion des outils ===
