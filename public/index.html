@@ -11,11 +11,85 @@
             box-sizing: border-box;
         }
 
+        :root {
+            /* Variables CSS par défaut (thème light) */
+            --bg-primary: #f9fafb;
+            --bg-secondary: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-color: #e5e7eb;
+            --card-bg: #ffffff;
+            --header-bg: #ffffff;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
+            color: var(--text-primary);
             min-height: 100vh;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        /* Thème Dark */
+        body.theme-dark {
+            background: #1a1a1a;
+        }
+
+        body.theme-dark .container {
+            background: transparent;
+        }
+
+        body.theme-dark header,
+        body.theme-dark .card {
+            background: var(--card-bg);
+            color: var(--text-primary);
+        }
+
+        body.theme-dark .btn-keyboard-toggle,
+        body.theme-dark .btn-settings-toggle,
+        body.theme-dark .btn-debug-toggle {
+            background: #3d3d3d;
+            border-color: #4d4d4d;
+            color: #ffffff;
+        }
+
+        body.theme-dark .btn-keyboard-toggle:hover {
+            background: #10b981;
+            border-color: #10b981;
+        }
+
+        body.theme-dark .btn-settings-toggle:hover {
+            background: #f59e0b;
+            border-color: #f59e0b;
+        }
+
+        body.theme-dark .btn-debug-toggle:hover {
+            background: #667eea;
+            border-color: #667eea;
+        }
+
+        body.theme-dark input,
+        body.theme-dark select,
+        body.theme-dark textarea {
+            background: #3d3d3d;
+            color: #ffffff;
+            border-color: #4d4d4d;
+        }
+
+        body.theme-dark .log-console {
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+
+        /* Thème Colored */
+        body.theme-colored {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        body.theme-colored header,
+        body.theme-colored .card {
+            background: var(--header-bg);
+            backdrop-filter: blur(10px);
         }
 
         .container {
@@ -100,6 +174,32 @@
             background: #10b981;
             border-color: #10b981;
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-settings-toggle {
+            position: absolute;
+            top: 20px;
+            right: 75px;
+            background: #f3f4f6;
+            border: 2px solid #e5e7eb;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            font-size: 22px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            z-index: 10;
+        }
+
+        .btn-settings-toggle:hover {
+            background: #f59e0b;
+            border-color: #f59e0b;
+            transform: scale(1.1) rotate(-10deg);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
         }
 
         .status-bar {
@@ -826,6 +926,10 @@
                     🎹
                 </button>
 
+                <button class="btn-settings-toggle" id="settingsToggle" title="Réglages">
+                    ⚙️
+                </button>
+
                 <button class="btn-debug-toggle" id="debugToggle" title="Afficher/Masquer les logs">
                     🐞
                 </button>
@@ -921,6 +1025,9 @@
 
     <!-- Keyboard Modal Component (Simplified version) -->
     <script src="js/views/components/KeyboardModal_NEW.js"></script>
+
+    <!-- Settings Modal Component -->
+    <script src="js/views/components/SettingsModal.js"></script>
 
     <script>
         // ========== SYSTÈME DE MODAL DE CONFIRMATION ==========
@@ -1067,6 +1174,9 @@
 
         // 🆕 Instance du modal clavier MIDI
         let keyboardModal = null;
+
+        // 🆕 Instance du modal de réglages
+        let settingsModal = null;
 
         // Charger la config depuis localStorage
         function loadRoutingConfig() {
@@ -2424,6 +2534,42 @@
             }
         });
 
+        // Event listener pour le bouton de réglages
+        document.getElementById('settingsToggle').addEventListener('click', () => {
+            // Initialiser le modal si nécessaire
+            if (!settingsModal) {
+                log('Initialisation du modal de réglages...', 'info');
+
+                // Créer un EventBus simple si nécessaire
+                const eventBus = {
+                    emit: (event, data) => {
+                        log(`Event: ${event}`, 'debug', data);
+                    }
+                };
+
+                settingsModal = new SettingsModal(eventBus, {
+                    info: (msg, data) => log(msg, 'info', data),
+                    error: (msg, data) => log(msg, 'error', data)
+                });
+
+                // Écouter les événements de changement de paramètres
+                settingsModal.eventBus.emit = (event, data) => {
+                    log(`Settings event: ${event}`, 'info', data);
+
+                    // Gérer l'instrument virtuel
+                    if (event === 'settings:virtual_instrument_changed') {
+                        if (data.enabled) {
+                            log('🎵 Instrument virtuel ACTIVÉ - Les messages MIDI seront affichés ici', 'success');
+                        } else {
+                            log('🎵 Instrument virtuel DÉSACTIVÉ', 'info');
+                        }
+                    }
+                };
+            }
+
+            settingsModal.open();
+        });
+
         // Event listeners pour la zone de drop dédiée (racine)
         const dropZoneRoot = document.getElementById('dropZoneRoot');
 
@@ -2753,6 +2899,60 @@
             } else {
                 log('⚠️ KeyboardModalNew non disponible', 'warning');
             }
+
+            // Charger et appliquer les paramètres sauvegardés
+            const loadSavedSettings = () => {
+                try {
+                    const saved = localStorage.getItem('maestro_settings');
+                    if (saved) {
+                        const settings = JSON.parse(saved);
+
+                        // Appliquer le thème
+                        if (settings.theme) {
+                            document.body.classList.remove('theme-light', 'theme-dark', 'theme-colored');
+                            document.body.classList.add(`theme-${settings.theme}`);
+
+                            const root = document.documentElement;
+                            switch (settings.theme) {
+                                case 'dark':
+                                    root.style.setProperty('--bg-primary', '#1a1a1a');
+                                    root.style.setProperty('--bg-secondary', '#2d2d2d');
+                                    root.style.setProperty('--text-primary', '#ffffff');
+                                    root.style.setProperty('--text-secondary', '#cccccc');
+                                    root.style.setProperty('--border-color', '#404040');
+                                    root.style.setProperty('--card-bg', '#2d2d2d');
+                                    root.style.setProperty('--header-bg', '#2d2d2d');
+                                    break;
+                                case 'colored':
+                                    root.style.setProperty('--bg-primary', 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
+                                    root.style.setProperty('--bg-secondary', '#ffffff');
+                                    root.style.setProperty('--text-primary', '#333333');
+                                    root.style.setProperty('--text-secondary', '#666666');
+                                    root.style.setProperty('--border-color', '#e5e7eb');
+                                    root.style.setProperty('--card-bg', '#ffffff');
+                                    root.style.setProperty('--header-bg', 'rgba(255, 255, 255, 0.95)');
+                                    break;
+                                case 'light':
+                                default:
+                                    root.style.setProperty('--bg-primary', '#f9fafb');
+                                    root.style.setProperty('--bg-secondary', '#ffffff');
+                                    root.style.setProperty('--text-primary', '#333333');
+                                    root.style.setProperty('--text-secondary', '#666666');
+                                    root.style.setProperty('--border-color', '#e5e7eb');
+                                    root.style.setProperty('--card-bg', '#ffffff');
+                                    root.style.setProperty('--header-bg', '#ffffff');
+                                    break;
+                            }
+
+                            log(`✓ Thème "${settings.theme}" appliqué`, 'info');
+                        }
+                    }
+                } catch (error) {
+                    log(`⚠️ Erreur lors du chargement des paramètres: ${error.message}`, 'warning');
+                }
+            };
+
+            loadSavedSettings();
 
             // Afficher l'app
             document.getElementById('loading').classList.add('hidden');
