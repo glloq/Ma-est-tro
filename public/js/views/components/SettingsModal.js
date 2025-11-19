@@ -32,7 +32,7 @@ class SettingsModal {
     loadSettings() {
         const defaults = {
             theme: 'light',
-            keyboardKeys: 88, // Piano complet
+            keyboardKeys: 25, // ~2 octaves par défaut
             noteDisplayTime: 20, // secondes
             virtualInstrument: false
         };
@@ -199,12 +199,12 @@ class SettingsModal {
                     <label style="font-size: 14px; color: #666;">
                         Nombre de touches : <strong id="keyboardKeysValue">${this.settings.keyboardKeys}</strong>
                     </label>
-                    <input type="range" id="keyboardKeysRange" min="25" max="88" step="1"
+                    <input type="range" id="keyboardKeysRange" min="12" max="42" step="1"
                            value="${this.settings.keyboardKeys}"
                            style="width: 100%;">
                     <div style="display: flex; justify-content: space-between; font-size: 12px; color: #999;">
-                        <span>25 touches</span>
-                        <span>88 touches (piano complet)</span>
+                        <span>12 touches (1 octave)</span>
+                        <span>42 touches (3.5 octaves)</span>
                     </div>
                 </div>
             </div>
