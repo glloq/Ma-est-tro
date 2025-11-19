@@ -1517,12 +1517,14 @@ class MidiEditorModal {
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" data-action="close">Fermer</button>
-                    <button class="btn btn-primary" data-action="save" id="save-btn">
-                        💾 Sauvegarder
-                    </button>
+
+                    <!-- Boutons flottants en overlay -->
+                    <div class="modal-floating-buttons">
+                        <button class="btn btn-secondary" data-action="close">Fermer</button>
+                        <button class="btn btn-primary" data-action="save" id="save-btn">
+                            💾 Sauvegarder
+                        </button>
+                    </div>
                 </div>
             </div>
         `;

@@ -1263,14 +1263,26 @@
     box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
 }
 
-.midi-editor-modal .modal-footer {
-    padding: 6px 12px;
-    background: #f8f9fa;
-    border-top: 1px solid #dee2e6;
+/* Boutons flottants en overlay (en bas à droite) */
+.midi-editor-modal .modal-floating-buttons {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
     display: flex;
-    justify-content: flex-end;
     gap: 8px;
-    flex-shrink: 0;
+    z-index: 1000;
+    pointer-events: none; /* Permet le clic à travers le conteneur */
+}
+
+.midi-editor-modal .modal-floating-buttons button {
+    pointer-events: auto; /* Réactive le clic sur les boutons */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+}
+
+.midi-editor-modal .modal-floating-buttons button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
 .midi-editor-modal .btn-sm {

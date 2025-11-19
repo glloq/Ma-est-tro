@@ -278,27 +278,9 @@
     position: relative;
 }
 
-/* Footer en overlay pour rester visible */
-.midi-editor-modal .modal-footer {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    left: auto;
-    width: auto;
-    z-index: 1000;
-    padding: 8px 16px;
-    background: rgba(248, 249, 250, 0.98);
-    backdrop-filter: blur(10px);
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    display: flex;
-    gap: 10px;
-}
-
-/* Ajuster le modal-body pour laisser de l'espace au footer */
+/* S'assurer que le modal-body utilise toute la hauteur sans padding-bottom */
 .midi-editor-modal .modal-body {
-    padding-bottom: 50px;
+    padding-bottom: 0;
     height: 100%;
     overflow: hidden;
 }
