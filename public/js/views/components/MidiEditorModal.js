@@ -693,13 +693,8 @@ class MidiEditorModal {
                     if (!this.ccEditor) {
                         this.initCCEditor();
                     } else {
-                        // L'éditeur existe déjà, juste le redimensionner
-                        setTimeout(() => {
-                            if (this.ccEditor) {
-                                this.ccEditor.resize();
-                                this.log('debug', 'CC Editor resized after transition');
-                            }
-                        }, 50); // Court délai pour laisser le layout se stabiliser
+                        // L'éditeur existe déjà, attendre que le layout soit prêt puis redimensionner
+                        this.waitForCCEditorLayout();
                     }
                 };
 
@@ -813,14 +808,35 @@ class MidiEditorModal {
 
         this.log('info', `CC Editor initialized - Type: ${this.currentCCType}, Channel: ${activeChannel + 1}, Type channels: [${usedChannels.map(c => c + 1).join(', ')}], All CC channels: [${allChannels.map(c => c + 1).join(', ')}]`);
 
-        // Redimensionner après un court délai pour laisser le DOM se stabiliser
-        // Cette fonction est appelée après transitionend, donc le layout devrait être prêt
-        setTimeout(() => {
-            if (this.ccEditor) {
-                this.ccEditor.resize();
-                this.log('debug', 'CC Editor initial resize complete');
-            }
-        }, 50);
+        // Attendre que le layout flex soit complètement calculé avant de resize
+        // Utiliser requestAnimationFrame en boucle jusqu'à ce que l'élément ait une hauteur valide
+        this.waitForCCEditorLayout();
+    }
+
+    /**
+     * Attendre que l'éditeur CC ait une hauteur valide avant de le redimensionner
+     */
+    waitForCCEditorLayout(attempts = 0, maxAttempts = 60) {
+        if (!this.ccEditor || !this.ccEditor.element) {
+            this.log('warn', 'waitForCCEditorLayout: ccEditor or element not found');
+            return;
+        }
+
+        const height = this.ccEditor.element.getBoundingClientRect().height;
+        this.log('debug', `waitForCCEditorLayout attempt ${attempts}: height=${height}`);
+
+        if (height > 100) {
+            // Le layout est prêt, on peut resize
+            this.ccEditor.resize();
+            this.log('info', `CC Editor layout ready after ${attempts} attempts (height=${height})`);
+        } else if (attempts < maxAttempts) {
+            // Le layout n'est pas encore prêt, réessayer au prochain frame
+            requestAnimationFrame(() => {
+                this.waitForCCEditorLayout(attempts + 1, maxAttempts);
+            });
+        } else {
+            this.log('error', `waitForCCEditorLayout: Max attempts reached (${maxAttempts}), height still ${height}px`);
+        }
     }
 
     /**
