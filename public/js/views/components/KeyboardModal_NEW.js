@@ -309,6 +309,26 @@ class KeyboardModalNew {
         this.updatePianoDisplay();
     }
 
+    /**
+     * Définir le nombre de touches du clavier
+     * @param {number} numberOfKeys - Nombre de touches (25, 49, 61, 88, etc.)
+     */
+    setNumberOfKeys(numberOfKeys) {
+        // Calculer le nombre d'octaves à afficher
+        // Une octave = 12 touches (7 blanches + 5 noires)
+        const octaves = Math.ceil(numberOfKeys / 12);
+
+        // Limiter entre 1 et 8 octaves
+        this.octaves = Math.max(1, Math.min(8, octaves));
+
+        this.logger.info(`[KeyboardModal] Nombre de touches changé: ${numberOfKeys} (${this.octaves} octaves)`);
+
+        // Régénérer le clavier si le modal est ouvert
+        if (this.isOpen) {
+            this.regeneratePianoKeys();
+        }
+    }
+
     // ========================================================================
     // EVENTS
     // ========================================================================
