@@ -1406,6 +1406,332 @@
         // 🆕 Instance du modal de réglages
         let settingsModal = null;
 
+        // 🆕 Instance du player MIDI virtuel
+        let virtualPlayer = null;
+
+        // ============================================================================
+        // Classe VirtualMidiPlayer - Lecture MIDI côté frontend pour instrument virtuel
+        // ============================================================================
+        class VirtualMidiPlayer {
+            constructor(logger) {
+                this.logger = logger || console;
+                this.midiData = null;
+                this.events = [];
+                this.currentEventIndex = 0;
+                this.startTime = 0;
+                this.pauseTime = 0;
+                this.playing = false;
+                this.paused = false;
+                this.timeoutId = null;
+                this.fileId = null;
+                this.filename = null;
+                this.duration = 0;
+                this.tempo = 120; // BPM par défaut
+                this.ticksPerBeat = 480;
+                this.routing = {}; // canal -> deviceId
+                this.progressInterval = null;
+            }
+
+            // Charger un fichier MIDI
+            async load(fileId, filename, routing = {}) {
+                try {
+                    this.logger.info(`[VirtualPlayer] Chargement de ${filename}...`);
+
+                    // Récupérer les données du fichier
+                    const response = await api.sendCommand('file_read', { fileId });
+
+                    if (!response || !response.midiData || !response.midiData.midi) {
+                        throw new Error('Données MIDI invalides');
+                    }
+
+                    this.midiData = response.midiData.midi;
+                    this.fileId = fileId;
+                    this.filename = filename;
+                    this.routing = routing;
+
+                    // Extraire le tempo
+                    this.tempo = 120;
+                    this.ticksPerBeat = this.midiData.header.ticksPerBeat || 480;
+
+                    if (this.midiData.tracks && this.midiData.tracks.length > 0) {
+                        for (const track of this.midiData.tracks) {
+                            if (track.events) {
+                                const tempoEvent = track.events.find(e => e.type === 'setTempo');
+                                if (tempoEvent && tempoEvent.microsecondsPerBeat) {
+                                    this.tempo = Math.round(60000000 / tempoEvent.microsecondsPerBeat);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // Construire la liste d'événements avec timing absolu
+                    this.buildEventList();
+
+                    this.logger.info(`[VirtualPlayer] Fichier chargé: ${this.events.length} événements, ${this.tempo} BPM, durée: ${this.duration.toFixed(1)}s`);
+
+                    return true;
+                } catch (error) {
+                    this.logger.error(`[VirtualPlayer] Erreur chargement: ${error.message}`);
+                    throw error;
+                }
+            }
+
+            // Construire la liste d'événements avec timing absolu en secondes
+            buildEventList() {
+                this.events = [];
+                const beatsPerSecond = this.tempo / 60;
+                const ticksPerSecond = beatsPerSecond * this.ticksPerBeat;
+
+                let maxTime = 0;
+
+                this.midiData.tracks.forEach((track, trackIndex) => {
+                    if (!track.events) return;
+
+                    let currentTick = 0;
+
+                    track.events.forEach(event => {
+                        currentTick += event.deltaTime || 0;
+                        const timeInSeconds = currentTick / ticksPerSecond;
+
+                        // Ajouter les événements MIDI pertinents
+                        if (event.type === 'noteOn' && event.velocity > 0) {
+                            this.events.push({
+                                time: timeInSeconds,
+                                type: 'noteOn',
+                                channel: event.channel !== undefined ? event.channel : 0,
+                                note: event.noteNumber,
+                                velocity: event.velocity
+                            });
+                            maxTime = Math.max(maxTime, timeInSeconds);
+                        } else if (event.type === 'noteOff' || (event.type === 'noteOn' && event.velocity === 0)) {
+                            this.events.push({
+                                time: timeInSeconds,
+                                type: 'noteOff',
+                                channel: event.channel !== undefined ? event.channel : 0,
+                                note: event.noteNumber
+                            });
+                            maxTime = Math.max(maxTime, timeInSeconds);
+                        } else if (event.type === 'controller') {
+                            this.events.push({
+                                time: timeInSeconds,
+                                type: 'cc',
+                                channel: event.channel !== undefined ? event.channel : 0,
+                                controller: event.controllerType,
+                                value: event.value
+                            });
+                            maxTime = Math.max(maxTime, timeInSeconds);
+                        } else if (event.type === 'pitchBend') {
+                            this.events.push({
+                                time: timeInSeconds,
+                                type: 'pitchBend',
+                                channel: event.channel !== undefined ? event.channel : 0,
+                                value: event.value
+                            });
+                            maxTime = Math.max(maxTime, timeInSeconds);
+                        } else if (event.type === 'programChange') {
+                            this.events.push({
+                                time: timeInSeconds,
+                                type: 'programChange',
+                                channel: event.channel !== undefined ? event.channel : 0,
+                                program: event.programNumber
+                            });
+                        }
+                    });
+                });
+
+                // Trier par temps
+                this.events.sort((a, b) => a.time - b.time);
+                this.duration = maxTime + 1; // +1 seconde de marge
+            }
+
+            // Démarrer la lecture
+            play() {
+                if (this.playing && !this.paused) {
+                    this.logger.warn('[VirtualPlayer] Déjà en lecture');
+                    return;
+                }
+
+                if (this.paused) {
+                    // Reprendre depuis la pause
+                    this.paused = false;
+                    this.playing = true;
+                    this.startTime = Date.now() - this.pauseTime;
+                    this.logger.info('[VirtualPlayer] ▶️ Reprise de la lecture');
+                } else {
+                    // Démarrer depuis le début
+                    this.currentEventIndex = 0;
+                    this.startTime = Date.now();
+                    this.playing = true;
+                    this.paused = false;
+                    this.logger.info('[VirtualPlayer] ▶️ Lecture démarrée');
+                }
+
+                // Mettre à jour les états globaux
+                isPlaying = true;
+                isPaused = false;
+                updatePlaybackControls();
+
+                // Démarrer l'envoi des événements
+                this.scheduleNextEvent();
+
+                // Démarrer la mise à jour de la progression
+                this.startProgressUpdates();
+            }
+
+            // Mettre en pause
+            pause() {
+                if (!this.playing || this.paused) {
+                    return;
+                }
+
+                this.paused = true;
+                this.playing = false;
+                this.pauseTime = Date.now() - this.startTime;
+
+                if (this.timeoutId) {
+                    clearTimeout(this.timeoutId);
+                    this.timeoutId = null;
+                }
+
+                this.stopProgressUpdates();
+
+                // Mettre à jour les états globaux
+                isPlaying = false;
+                isPaused = true;
+                updatePlaybackControls();
+
+                this.logger.info('[VirtualPlayer] ⏸️ Pause');
+            }
+
+            // Arrêter la lecture
+            stop() {
+                this.playing = false;
+                this.paused = false;
+                this.currentEventIndex = 0;
+                this.pauseTime = 0;
+
+                if (this.timeoutId) {
+                    clearTimeout(this.timeoutId);
+                    this.timeoutId = null;
+                }
+
+                this.stopProgressUpdates();
+
+                // Mettre à jour les états globaux
+                isPlaying = false;
+                isPaused = false;
+                updatePlaybackControls();
+
+                this.logger.info('[VirtualPlayer] ⏹️ Arrêt');
+            }
+
+            // Planifier l'événement suivant
+            scheduleNextEvent() {
+                if (!this.playing || this.paused) {
+                    return;
+                }
+
+                if (this.currentEventIndex >= this.events.length) {
+                    // Fin de la lecture
+                    this.logger.info('[VirtualPlayer] ✅ Lecture terminée');
+                    this.stop();
+                    return;
+                }
+
+                const event = this.events[this.currentEventIndex];
+                const currentTime = (Date.now() - this.startTime) / 1000;
+                const delay = Math.max(0, (event.time - currentTime) * 1000);
+
+                this.timeoutId = setTimeout(() => {
+                    this.sendEvent(event);
+                    this.currentEventIndex++;
+                    this.scheduleNextEvent();
+                }, delay);
+            }
+
+            // Envoyer un événement MIDI (vers les logs)
+            sendEvent(event) {
+                // Vérifier si ce canal est routé vers l'instrument virtuel
+                const deviceId = this.routing[event.channel];
+                if (deviceId !== 'virtual-instrument') {
+                    return; // Ne pas logger si pas routé vers virtuel
+                }
+
+                let message = '';
+
+                switch (event.type) {
+                    case 'noteOn':
+                        message = `🎹 [Virtual] Ch${event.channel + 1} Note ON: ${this.getNoteName(event.note)} (${event.note}) velocity=${event.velocity}`;
+                        break;
+                    case 'noteOff':
+                        message = `🎹 [Virtual] Ch${event.channel + 1} Note OFF: ${this.getNoteName(event.note)} (${event.note})`;
+                        break;
+                    case 'cc':
+                        message = `🎹 [Virtual] Ch${event.channel + 1} CC${event.controller}=${event.value}`;
+                        break;
+                    case 'pitchBend':
+                        message = `🎹 [Virtual] Ch${event.channel + 1} PitchBend=${event.value}`;
+                        break;
+                    case 'programChange':
+                        message = `🎹 [Virtual] Ch${event.channel + 1} Program=${event.program}`;
+                        break;
+                }
+
+                if (message) {
+                    log(message, 'info');
+                }
+            }
+
+            // Convertir un numéro de note en nom
+            getNoteName(noteNumber) {
+                const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                const octave = Math.floor(noteNumber / 12) - 1;
+                const noteName = noteNames[noteNumber % 12];
+                return `${noteName}${octave}`;
+            }
+
+            // Démarrer les mises à jour de progression
+            startProgressUpdates() {
+                this.stopProgressUpdates();
+
+                this.progressInterval = setInterval(() => {
+                    if (this.playing && !this.paused) {
+                        const currentTime = (Date.now() - this.startTime) / 1000;
+                        const progress = Math.min(currentTime / this.duration, 1.0);
+
+                        // Émettre l'événement de progression
+                        const progressEvent = new CustomEvent('virtualplayback_progress', {
+                            detail: {
+                                position: currentTime,
+                                duration: this.duration,
+                                progress: progress
+                            }
+                        });
+                        document.dispatchEvent(progressEvent);
+                    }
+                }, 100); // Mise à jour toutes les 100ms
+            }
+
+            // Arrêter les mises à jour de progression
+            stopProgressUpdates() {
+                if (this.progressInterval) {
+                    clearInterval(this.progressInterval);
+                    this.progressInterval = null;
+                }
+            }
+
+            // Obtenir l'état actuel
+            getStatus() {
+                return {
+                    playing: this.playing,
+                    paused: this.paused,
+                    position: this.playing ? (Date.now() - this.startTime) / 1000 : this.pauseTime / 1000,
+                    duration: this.duration
+                };
+            }
+        }
+
         // Charger la config depuis localStorage
         function loadRoutingConfig() {
             const saved = localStorage.getItem('midi_file_routing');
@@ -1528,6 +1854,20 @@
                     isPaused = false;
                     updatePlaybackControls();
                     log('▶️ Lecture reprise');
+                });
+
+                // Événements du player virtuel
+                document.addEventListener('virtualplayback_progress', (event) => {
+                    const { position, duration, progress } = event.detail;
+                    currentDuration = duration;
+
+                    // Mettre à jour la barre de progression
+                    const percent = progress * 100;
+                    document.getElementById('headerProgressFill').style.width = `${percent}%`;
+
+                    // Mettre à jour le temps
+                    const timeText = `${formatTime(position * 1000)} / ${formatTime(duration * 1000)}`;
+                    document.getElementById('headerTime').textContent = timeText;
                 });
 
                 // Événement de réception d'identité SysEx
@@ -2648,36 +2988,77 @@
 
             // Appliquer le routage sauvegardé
             const config = fileRoutingConfig[fileId];
-            if (config && config.channels) {
-                for (const [channel, deviceId] of Object.entries(config.channels)) {
-                    // Ne pas envoyer au backend si c'est le périphérique virtuel
-                    if (deviceId !== 'virtual-instrument') {
-                        try {
-                            await api.sendCommand('playback_set_channel_routing', {
-                                channel: parseInt(channel),
-                                deviceId: deviceId
-                            });
-                        } catch (error) {
-                            log(`Erreur application routage canal ${channel}: ${error.message}`, 'error');
-                        }
+            if (!config || !config.channels) {
+                log('Configuration de routage invalide', 'error');
+                return;
+            }
+
+            // Vérifier si tous les canaux sont routés vers l'instrument virtuel
+            const allVirtual = Object.values(config.channels).every(deviceId => deviceId === 'virtual-instrument');
+            const hasVirtual = Object.values(config.channels).some(deviceId => deviceId === 'virtual-instrument');
+
+            // Mode lecture virtuelle pure (tous les canaux → virtuel)
+            if (allVirtual) {
+                log(`🎹 Mode lecture virtuelle pour ${filename}`, 'info');
+
+                try {
+                    // Définir l'ID du fichier AVANT de lancer la lecture
+                    currentFileId = fileId;
+                    document.getElementById('headerFileName').textContent = filename;
+                    updatePlaybackControls();
+
+                    // Créer ou réinitialiser le player virtuel
+                    if (!virtualPlayer) {
+                        virtualPlayer = new VirtualMidiPlayer({ info: log, warn: log, error: log });
                     } else {
-                        log(`Canal ${channel} → 🎹 Instrument Virtuel`, 'info');
+                        virtualPlayer.stop(); // Arrêter toute lecture en cours
                     }
+
+                    // Charger le fichier et démarrer la lecture
+                    await virtualPlayer.load(fileId, filename, config.channels);
+                    virtualPlayer.play();
+
+                    log(`▶️ Lecture virtuelle de ${filename}`, 'info');
+                } catch (error) {
+                    log(`Erreur lecture virtuelle: ${error.message}`, 'error');
+                    currentFileId = null;
+                    document.getElementById('headerFileName').textContent = 'Aucun fichier sélectionné';
+                    updatePlaybackControls();
+                }
+                return;
+            }
+
+            // Mode mixte ou backend pur
+            if (hasVirtual) {
+                log('ℹ️ Mode mixte : certains canaux routés vers l\'instrument virtuel', 'info');
+            }
+
+            // Appliquer le routage aux canaux non-virtuels
+            for (const [channel, deviceId] of Object.entries(config.channels)) {
+                if (deviceId !== 'virtual-instrument') {
+                    try {
+                        await api.sendCommand('playback_set_channel_routing', {
+                            channel: parseInt(channel),
+                            deviceId: deviceId
+                        });
+                    } catch (error) {
+                        log(`Erreur application routage canal ${channel}: ${error.message}`, 'error');
+                    }
+                } else {
+                    log(`Canal ${channel} → 🎹 Instrument Virtuel (ignoré en mode backend)`, 'info');
                 }
             }
 
-            // Lancer la lecture
+            // Lancer la lecture via le backend
             try {
-                // Définir l'ID du fichier AVANT de lancer la lecture
                 currentFileId = fileId;
                 document.getElementById('headerFileName').textContent = filename;
-                updatePlaybackControls(); // Activer les boutons immédiatement
+                updatePlaybackControls();
 
                 await api.sendCommand('playback_start', { fileId });
-                log(`▶️ Lecture de ${filename}`);
+                log(`▶️ Lecture de ${filename}`, 'info');
             } catch (error) {
                 log(`Erreur lecture: ${error.message}`, 'error');
-                // En cas d'erreur, réinitialiser
                 currentFileId = null;
                 document.getElementById('headerFileName').textContent = 'Aucun fichier sélectionné';
                 updatePlaybackControls();
@@ -2692,15 +3073,25 @@
             }
 
             try {
-                if (isPlaying) {
-                    // Mettre en pause
-                    await api.sendCommand('playback_pause');
-                } else if (isPaused) {
-                    // Reprendre la lecture (resume)
-                    await api.sendCommand('playback_resume');
+                // Vérifier si on utilise le player virtuel
+                if (virtualPlayer && virtualPlayer.fileId === currentFileId) {
+                    // Player virtuel
+                    if (isPlaying) {
+                        virtualPlayer.pause();
+                    } else if (isPaused) {
+                        virtualPlayer.play();
+                    } else {
+                        virtualPlayer.play();
+                    }
                 } else {
-                    // Démarrer la lecture depuis le début
-                    await api.sendCommand('playback_start', { fileId: currentFileId });
+                    // Backend
+                    if (isPlaying) {
+                        await api.sendCommand('playback_pause');
+                    } else if (isPaused) {
+                        await api.sendCommand('playback_resume');
+                    } else {
+                        await api.sendCommand('playback_start', { fileId: currentFileId });
+                    }
                 }
             } catch (error) {
                 log(`Erreur lecture/pause: ${error.message}`, 'error');
@@ -2709,7 +3100,12 @@
 
         async function stopPlayback() {
             try {
-                await api.sendCommand('playback_stop');
+                // Vérifier si on utilise le player virtuel
+                if (virtualPlayer && virtualPlayer.fileId === currentFileId) {
+                    virtualPlayer.stop();
+                } else {
+                    await api.sendCommand('playback_stop');
+                }
                 // Réinitialiser l'état de pause
                 isPaused = false;
                 // Ne pas réinitialiser currentFileId pour permettre de relancer
