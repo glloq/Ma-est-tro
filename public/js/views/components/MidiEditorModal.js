@@ -684,9 +684,13 @@ class MidiEditorModal {
                 if (!this.ccEditor) {
                     this.initCCEditor();
                 } else {
-                    // Forcer un rendu pour s'assurer que le canvas est à jour
-                    this.ccEditor.resize();
-                    this.ccEditor.render();
+                    // Forcer un rendu après la transition CSS pour s'assurer que le canvas est à jour
+                    setTimeout(() => {
+                        if (this.ccEditor) {
+                            this.ccEditor.resize();
+                            this.ccEditor.render();
+                        }
+                    }, 350); // 350ms > 300ms de transition CSS
                 }
             } else {
                 ccSection.classList.remove('expanded');
@@ -758,7 +762,6 @@ class MidiEditorModal {
 
         // Obtenir les paramètres du piano roll
         const options = {
-            height: 150,
             timebase: this.pianoRoll?.timebase || 480,
             xrange: this.pianoRoll?.xrange || 1920,
             xoffset: this.pianoRoll?.xoffset || 0,
@@ -790,6 +793,16 @@ class MidiEditorModal {
         this.ccEditor.setChannel(activeChannel);
 
         this.log('info', `CC Editor initialized - Type: ${this.currentCCType}, Channel: ${activeChannel + 1}, Type channels: [${usedChannels.map(c => c + 1).join(', ')}], All CC channels: [${allChannels.map(c => c + 1).join(', ')}]`);
+
+        // Attendre que la transition CSS soit terminée avant de redimensionner
+        // La transition de la section CC est de 0.3s
+        setTimeout(() => {
+            if (this.ccEditor) {
+                this.ccEditor.resize();
+                this.ccEditor.render();
+                this.log('debug', 'CC Editor resized after CSS transition');
+            }
+        }, 350); // 350ms > 300ms de transition CSS
     }
 
     /**
