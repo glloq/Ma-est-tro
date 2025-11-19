@@ -2300,14 +2300,44 @@
                 }
 
                 // Vérifier qu'on a des périphériques de sortie (accepter tous sauf 'input')
+                // Note : on accepte aussi le périphérique virtuel (type = 'Virtual')
                 const outputDevices = availableDevices.filter(d => d.type !== 'input');
 
+                // Si aucun périphérique réel, vérifier si l'instrument virtuel est activé
                 if (outputDevices.length === 0) {
-                    await showAlert('Aucun périphérique de sortie MIDI disponible.\n\nVeuillez connecter un périphérique MIDI ou créer un port virtuel.', {
-                        title: 'Périphérique requis',
-                        icon: '🎛️'
-                    });
-                    return;
+                    // Essayer de charger l'instrument virtuel depuis localStorage
+                    let virtualInstrumentEnabled = false;
+                    try {
+                        const saved = localStorage.getItem('maestro_settings');
+                        if (saved) {
+                            const settings = JSON.parse(saved);
+                            virtualInstrumentEnabled = settings.virtualInstrument || false;
+                        }
+                    } catch (error) {
+                        console.warn('Could not load virtual instrument setting:', error);
+                    }
+
+                    if (!virtualInstrumentEnabled) {
+                        await showAlert('Aucun périphérique de sortie MIDI disponible.\n\nVeuillez connecter un périphérique MIDI, activer l\'instrument virtuel dans les réglages, ou créer un port virtuel.', {
+                            title: 'Périphérique requis',
+                            icon: '🎛️'
+                        });
+                        return;
+                    } else {
+                        // L'instrument virtuel est activé mais pas encore dans availableDevices
+                        // Recharger les devices
+                        log('Rechargement des périphériques pour inclure l\'instrument virtuel...', 'info');
+                        await loadDevices();
+
+                        const outputDevicesAfterReload = availableDevices.filter(d => d.type !== 'input');
+                        if (outputDevicesAfterReload.length === 0) {
+                            await showAlert('Erreur : l\'instrument virtuel n\'a pas pu être chargé.\n\nVeuillez rafraîchir la page.', {
+                                title: 'Erreur de chargement',
+                                icon: '❌'
+                            });
+                            return;
+                        }
+                    }
                 }
 
                 // Charger le fichier et récupérer ses canaux (sans lancer la lecture)
