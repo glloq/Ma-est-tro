@@ -680,26 +680,37 @@ class MidiEditorModal {
                 ccHeader.classList.add('expanded');
                 ccHeader.classList.remove('collapsed');
 
-                // Initialiser l'éditeur CC s'il n'existe pas encore
-                if (!this.ccEditor) {
-                    this.initCCEditor();
-                } else {
-                    // Forcer un rendu après la transition CSS pour s'assurer que le canvas est à jour
-                    const ensureResize = (attempts = 0) => {
-                        if (!this.ccEditor) return;
+                // Écouter la fin de la transition CSS
+                const onTransitionEnd = (e) => {
+                    // S'assurer que c'est bien la transition de la section CC
+                    if (e.target !== ccSection) return;
 
-                        const container = document.getElementById('cc-editor-container');
-                        if (container && container.offsetHeight >= 100) {
-                            this.ccEditor.resize();
-                            this.log('debug', `CC Editor resized on reopen: ${container.offsetWidth}x${container.offsetHeight} (attempt ${attempts + 1})`);
-                        } else if (attempts < 50) {
-                            requestAnimationFrame(() => ensureResize(attempts + 1));
-                        } else {
-                            this.log('warn', `CC Editor resize timeout on reopen - height: ${container?.offsetHeight}px`);
-                        }
-                    };
-                    setTimeout(() => ensureResize(), 350);
-                }
+                    ccSection.removeEventListener('transitionend', onTransitionEnd);
+
+                    this.log('debug', 'CC Section transition ended');
+
+                    // Initialiser l'éditeur CC s'il n'existe pas encore
+                    if (!this.ccEditor) {
+                        this.initCCEditor();
+                    } else {
+                        // L'éditeur existe déjà, juste le redimensionner
+                        setTimeout(() => {
+                            if (this.ccEditor) {
+                                this.ccEditor.resize();
+                                this.log('debug', 'CC Editor resized after transition');
+                            }
+                        }, 50); // Court délai pour laisser le layout se stabiliser
+                    }
+                };
+
+                ccSection.addEventListener('transitionend', onTransitionEnd);
+
+                // Fallback si pas de transition (déjà expanded, etc.)
+                setTimeout(() => {
+                    if (!this.ccEditor) {
+                        this.initCCEditor();
+                    }
+                }, 400);
             } else {
                 ccSection.classList.remove('expanded');
                 ccSection.classList.add('collapsed');
@@ -802,26 +813,14 @@ class MidiEditorModal {
 
         this.log('info', `CC Editor initialized - Type: ${this.currentCCType}, Channel: ${activeChannel + 1}, Type channels: [${usedChannels.map(c => c + 1).join(', ')}], All CC channels: [${allChannels.map(c => c + 1).join(', ')}]`);
 
-        // Attendre que le layout soit prêt avant de redimensionner
-        // Utiliser requestAnimationFrame pour s'assurer que le layout est calculé
-        const ensureResize = (attempts = 0) => {
-            if (!this.ccEditor) return;
-
-            const container = document.getElementById('cc-editor-container');
-            if (container && container.offsetHeight >= 100) {
-                // Le conteneur a une hauteur valide (>= 100px), on peut resize
+        // Redimensionner après un court délai pour laisser le DOM se stabiliser
+        // Cette fonction est appelée après transitionend, donc le layout devrait être prêt
+        setTimeout(() => {
+            if (this.ccEditor) {
                 this.ccEditor.resize();
-                this.log('debug', `CC Editor resized successfully: ${container.offsetWidth}x${container.offsetHeight} (attempt ${attempts + 1})`);
-            } else if (attempts < 50) {
-                // Réessayer jusqu'à 50 fois (~833ms à 60fps)
-                requestAnimationFrame(() => ensureResize(attempts + 1));
-            } else {
-                this.log('warn', `CC Editor resize timeout - container height still too small: ${container?.offsetHeight}px`);
+                this.log('debug', 'CC Editor initial resize complete');
             }
-        };
-
-        // Attendre la fin de la transition CSS (300ms) puis réessayer avec requestAnimationFrame
-        setTimeout(() => ensureResize(), 350);
+        }, 50);
     }
 
     /**
