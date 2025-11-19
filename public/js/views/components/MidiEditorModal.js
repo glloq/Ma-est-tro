@@ -689,13 +689,13 @@ class MidiEditorModal {
                         if (!this.ccEditor) return;
 
                         const container = document.getElementById('cc-editor-container');
-                        if (container && container.offsetHeight > 0) {
+                        if (container && container.offsetHeight >= 100) {
                             this.ccEditor.resize();
                             this.log('debug', `CC Editor resized on reopen: ${container.offsetWidth}x${container.offsetHeight} (attempt ${attempts + 1})`);
-                        } else if (attempts < 20) {
+                        } else if (attempts < 50) {
                             requestAnimationFrame(() => ensureResize(attempts + 1));
                         } else {
-                            this.log('warn', 'CC Editor resize timeout on reopen');
+                            this.log('warn', `CC Editor resize timeout on reopen - height: ${container?.offsetHeight}px`);
                         }
                     };
                     setTimeout(() => ensureResize(), 350);
@@ -808,15 +808,15 @@ class MidiEditorModal {
             if (!this.ccEditor) return;
 
             const container = document.getElementById('cc-editor-container');
-            if (container && container.offsetHeight > 0) {
-                // Le conteneur a une hauteur valide, on peut resize
+            if (container && container.offsetHeight >= 100) {
+                // Le conteneur a une hauteur valide (>= 100px), on peut resize
                 this.ccEditor.resize();
                 this.log('debug', `CC Editor resized successfully: ${container.offsetWidth}x${container.offsetHeight} (attempt ${attempts + 1})`);
-            } else if (attempts < 20) {
-                // Réessayer jusqu'à 20 fois (~333ms à 60fps)
+            } else if (attempts < 50) {
+                // Réessayer jusqu'à 50 fois (~833ms à 60fps)
                 requestAnimationFrame(() => ensureResize(attempts + 1));
             } else {
-                this.log('warn', 'CC Editor resize timeout - container has no height');
+                this.log('warn', `CC Editor resize timeout - container height still too small: ${container?.offsetHeight}px`);
             }
         };
 
