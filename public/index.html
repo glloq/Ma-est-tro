@@ -2282,6 +2282,72 @@
             }
         }
 
+        // Extraire les canaux réellement utilisés depuis les données MIDI
+        function extractChannelsFromMidiData(midiData) {
+            try {
+                // Vérifier la structure des données
+                if (!midiData || !midiData.midi || !midiData.midi.tracks) {
+                    console.warn('extractChannelsFromMidiData: Invalid midiData structure', midiData);
+                    return [];
+                }
+
+                const tracks = midiData.midi.tracks;
+                const channelMap = new Map(); // canal -> { tracks: Set(), noteCount: number }
+
+                // Parcourir toutes les pistes
+                tracks.forEach((track, trackIndex) => {
+                    if (!track.events) return;
+
+                    const trackName = track.name || `Track ${trackIndex + 1}`;
+
+                    // Parcourir tous les événements de la piste
+                    track.events.forEach(event => {
+                        // Chercher les événements qui ont un canal (noteOn, noteOff, controller, pitchBend, etc.)
+                        if (event.channel !== undefined) {
+                            const channel = event.channel;
+
+                            if (!channelMap.has(channel)) {
+                                channelMap.set(channel, {
+                                    tracks: new Set(),
+                                    noteCount: 0
+                                });
+                            }
+
+                            const channelInfo = channelMap.get(channel);
+                            channelInfo.tracks.add(trackName);
+
+                            // Compter les notes (noteOn avec vélocité > 0)
+                            if (event.type === 'noteOn' && event.velocity > 0) {
+                                channelInfo.noteCount++;
+                            }
+                        }
+                    });
+                });
+
+                // Convertir en format attendu par le système de routage
+                const channels = [];
+                channelMap.forEach((info, channel) => {
+                    channels.push({
+                        channel: channel,
+                        channelDisplay: `Canal ${channel + 1}`,
+                        tracks: Array.from(info.tracks).map(name => ({ name })),
+                        noteCount: info.noteCount
+                    });
+                });
+
+                // Trier par numéro de canal
+                channels.sort((a, b) => a.channel - b.channel);
+
+                console.log(`[extractChannelsFromMidiData] Found ${channels.length} channel(s):`,
+                    channels.map(c => `Ch${c.channel} (${c.noteCount} notes)`).join(', '));
+
+                return channels;
+            } catch (error) {
+                console.error('[extractChannelsFromMidiData] Error:', error);
+                return [];
+            }
+        }
+
         // 🆕 Configurer le routage d'un fichier
         async function configureRouting(fileId, filename) {
             try {
@@ -2350,14 +2416,40 @@
 
                 if (hasOnlyVirtualDevice) {
                     // Configuration simplifiée pour l'instrument virtuel uniquement
-                    log('Mode instrument virtuel uniquement - configuration simplifiée', 'info');
+                    log('Mode instrument virtuel uniquement - extraction des canaux du fichier...', 'info');
 
-                    // Créer des canaux par défaut (0-15)
-                    channels = Array.from({ length: 16 }, (_, i) => ({
-                        channel: i,
-                        channelDisplay: i === 9 ? `${i + 1} (Drums)` : `${i + 1}`,
-                        tracks: [{ name: `Canal ${i + 1}` }]
-                    }));
+                    // Récupérer le fichier MIDI et extraire les canaux utilisés
+                    try {
+                        const fileData = await api.sendCommand('file_read', { fileId });
+
+                        if (fileData && fileData.midiData) {
+                            // Parser le fichier MIDI pour extraire les canaux
+                            const usedChannels = extractChannelsFromMidiData(fileData.midiData);
+
+                            if (usedChannels.length > 0) {
+                                channels = usedChannels;
+                                log(`${usedChannels.length} canal(aux) trouvé(s) dans le fichier`, 'info');
+                            } else {
+                                // Fallback si aucun canal trouvé
+                                channels = Array.from({ length: 16 }, (_, i) => ({
+                                    channel: i,
+                                    channelDisplay: i === 9 ? `${i + 1} (Drums)` : `${i + 1}`,
+                                    tracks: [{ name: `Canal ${i + 1}` }]
+                                }));
+                                log('Aucun canal trouvé dans le fichier, utilisation des 16 canaux par défaut', 'warning');
+                            }
+                        } else {
+                            throw new Error('Données MIDI non disponibles');
+                        }
+                    } catch (fileError) {
+                        log(`Impossible de lire le fichier, utilisation des 16 canaux par défaut: ${fileError.message}`, 'warning');
+                        // Créer des canaux par défaut (0-15)
+                        channels = Array.from({ length: 16 }, (_, i) => ({
+                            channel: i,
+                            channelDisplay: i === 9 ? `${i + 1} (Drums)` : `${i + 1}`,
+                            tracks: [{ name: `Canal ${i + 1}` }]
+                        }));
+                    }
                 } else {
                     // Configuration normale avec le backend
                     try {
@@ -2376,13 +2468,36 @@
                         updatePlaybackControls();
                     } catch (backendError) {
                         // Si le backend échoue (ex: No output devices available)
-                        // Basculer en mode virtuel uniquement
-                        log('Backend non disponible, basculement en mode virtuel', 'warning');
-                        channels = Array.from({ length: 16 }, (_, i) => ({
-                            channel: i,
-                            channelDisplay: i === 9 ? `${i + 1} (Drums)` : `${i + 1}`,
-                            tracks: [{ name: `Canal ${i + 1}` }]
-                        }));
+                        // Basculer en mode virtuel et extraire les canaux du fichier
+                        log('Backend non disponible, extraction des canaux du fichier...', 'warning');
+
+                        try {
+                            const fileData = await api.sendCommand('file_read', { fileId });
+                            if (fileData && fileData.midiData) {
+                                const usedChannels = extractChannelsFromMidiData(fileData.midiData);
+                                if (usedChannels.length > 0) {
+                                    channels = usedChannels;
+                                    log(`${usedChannels.length} canal(aux) trouvé(s) dans le fichier`, 'info');
+                                } else {
+                                    // Fallback si aucun canal trouvé
+                                    channels = Array.from({ length: 16 }, (_, i) => ({
+                                        channel: i,
+                                        channelDisplay: i === 9 ? `${i + 1} (Drums)` : `${i + 1}`,
+                                        tracks: [{ name: `Canal ${i + 1}` }]
+                                    }));
+                                }
+                            } else {
+                                throw new Error('Données MIDI non disponibles');
+                            }
+                        } catch (fileReadError) {
+                            log(`Impossible de lire le fichier: ${fileReadError.message}`, 'error');
+                            // Fallback final: tous les canaux
+                            channels = Array.from({ length: 16 }, (_, i) => ({
+                                channel: i,
+                                channelDisplay: i === 9 ? `${i + 1} (Drums)` : `${i + 1}`,
+                                tracks: [{ name: `Canal ${i + 1}` }]
+                            }));
+                        }
                     }
                 }
 
