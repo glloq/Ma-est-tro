@@ -81,6 +81,223 @@
             color: #ffffff;
         }
 
+        /* Styles spécifiques pour les éléments en mode dark */
+        body.theme-dark .file-item {
+            background: #3d3d3d;
+            color: #ffffff;
+        }
+
+        body.theme-dark .file-item:hover {
+            background: #4d4d4d;
+        }
+
+        body.theme-dark .folder-item {
+            background: #4a3f1f;
+            border-left-color: #f59e0b;
+        }
+
+        body.theme-dark .folder-item:hover {
+            background: #5a4f2f;
+        }
+
+        body.theme-dark .folder-item.open {
+            background: #5a4f2f;
+        }
+
+        body.theme-dark .device-item {
+            background: #3d3d3d;
+            color: #ffffff;
+        }
+
+        body.theme-dark .device-item:hover {
+            background: #4d4d4d;
+        }
+
+        body.theme-dark .file-name,
+        body.theme-dark .device-name {
+            color: #ffffff;
+        }
+
+        body.theme-dark .device-type,
+        body.theme-dark .file-meta {
+            color: #cccccc;
+        }
+
+        body.theme-dark .info-text {
+            color: #999999;
+        }
+
+        body.theme-dark h1,
+        body.theme-dark h2,
+        body.theme-dark h3 {
+            color: #8b9bea;
+        }
+
+        body.theme-dark .subtitle {
+            color: #cccccc;
+        }
+
+        body.theme-dark .folder-children {
+            border-left-color: #4d4d4d;
+        }
+
+        body.theme-dark .drop-zone-root {
+            background: #2d2d2d;
+            border-color: #4d4d4d;
+            color: #cccccc;
+        }
+
+        body.theme-dark .drop-zone-root:hover {
+            background: #3d3d3d;
+            border-color: #667eea;
+        }
+
+        body.theme-dark .btn-secondary {
+            background: #4d4d4d !important;
+            color: #ffffff !important;
+        }
+
+        body.theme-dark .btn-secondary:hover {
+            background: #5d5d5d !important;
+        }
+
+        body.theme-dark .btn-danger {
+            background: #dc2626 !important;
+            color: #ffffff !important;
+        }
+
+        body.theme-dark .btn-danger:hover {
+            background: #b91c1c !important;
+        }
+
+        body.theme-dark .device-info-section {
+            color: #ffffff;
+        }
+
+        body.theme-dark .file-item.drag-over {
+            background: #4a4a7a;
+            border-color: #8b9bea;
+        }
+
+        body.theme-dark .folder-item.drag-over {
+            background: #6a5f3f;
+            border-color: #f59e0b;
+        }
+
+        /* Modals et formulaires en mode dark */
+        body.theme-dark .modal-content {
+            background: #2d2d2d;
+            color: #ffffff;
+        }
+
+        body.theme-dark .modal-header {
+            color: #8b9bea;
+        }
+
+        body.theme-dark .modal-close {
+            color: #cccccc;
+        }
+
+        body.theme-dark .modal-close:hover {
+            color: #ffffff;
+        }
+
+        body.theme-dark .form-group label {
+            color: #ffffff;
+        }
+
+        body.theme-dark .form-group input,
+        body.theme-dark .form-group select {
+            background: #3d3d3d;
+            color: #ffffff;
+            border-color: #4d4d4d;
+        }
+
+        body.theme-dark .form-group .form-text {
+            color: #cccccc;
+        }
+
+        body.theme-dark .identity-section {
+            background: #3d3d3d;
+        }
+
+        body.theme-dark .identity-section h3 {
+            color: #8b9bea;
+        }
+
+        body.theme-dark .info-label {
+            color: #999999;
+        }
+
+        body.theme-dark .info-value {
+            color: #ffffff;
+        }
+
+        /* Header time et file name en mode dark */
+        body.theme-dark .header-file-name {
+            color: #8b9bea;
+        }
+
+        body.theme-dark .header-time {
+            color: #cccccc;
+        }
+
+        body.theme-dark .header-progress {
+            background: #3d3d3d;
+        }
+
+        /* Modal de settings en mode dark */
+        body.theme-dark .settings-modal {
+            background: #2d2d2d !important;
+            color: #ffffff !important;
+        }
+
+        body.theme-dark .settings-modal h2,
+        body.theme-dark .settings-modal h3 {
+            color: #8b9bea !important;
+        }
+
+        body.theme-dark .settings-section {
+            color: #ffffff !important;
+        }
+
+        body.theme-dark .theme-btn {
+            background: #3d3d3d !important;
+            color: #ffffff !important;
+            border-color: #4d4d4d !important;
+        }
+
+        body.theme-dark .theme-btn:hover {
+            border-color: #8b9bea !important;
+            background: #4d4d4d !important;
+        }
+
+        body.theme-dark .theme-btn.active {
+            border-color: #8b9bea !important;
+            background: #3a3a5a !important;
+        }
+
+        body.theme-dark .settings-close-btn {
+            color: #cccccc !important;
+        }
+
+        body.theme-dark .settings-close-btn:hover {
+            background: #3d3d3d !important;
+            color: #ffffff !important;
+        }
+
+        body.theme-dark .toggle-slider {
+            background-color: #4d4d4d !important;
+        }
+
+        body.theme-dark .btn-primary {
+            background: #667eea !important;
+        }
+
+        body.theme-dark .btn-primary:hover {
+            background: #5568d3 !important;
+        }
+
         /* Thème Light */
         body.theme-light {
             background: #f9fafb;
@@ -2629,10 +2846,20 @@
                             log('🎵 Instrument virtuel ACTIVÉ - Les messages MIDI seront affichés ici', 'success');
                             // Ajouter le périphérique virtuel
                             loadDevices();
+
+                            // Rafraîchir le KeyboardModal si ouvert
+                            if (keyboardModal && keyboardModal.isOpen) {
+                                keyboardModal.refreshDevices();
+                            }
                         } else {
                             log('🎵 Instrument virtuel DÉSACTIVÉ', 'info');
                             // Retirer le périphérique virtuel
                             loadDevices();
+
+                            // Rafraîchir le KeyboardModal si ouvert
+                            if (keyboardModal && keyboardModal.isOpen) {
+                                keyboardModal.refreshDevices();
+                            }
                         }
                     }
                 };
