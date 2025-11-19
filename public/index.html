@@ -2341,19 +2341,50 @@
                 }
 
                 // Charger le fichier et récupérer ses canaux (sans lancer la lecture)
-                const response = await api.sendCommand('playback_start', { fileId });
-                const channelsResponse = await api.sendCommand('playback_get_channels');
-                const channels = channelsResponse.channels || [];
+                // Si on n'a que l'instrument virtuel, ne pas appeler le backend
+                // Recalculer les output devices après rechargement potentiel
+                const currentOutputDevices = availableDevices.filter(d => d.type !== 'input');
+                const hasOnlyVirtualDevice = currentOutputDevices.length > 0 && currentOutputDevices.every(d => d.isVirtual);
 
-                // Arrêter immédiatement pour ne pas lancer la lecture
-                await api.sendCommand('playback_stop');
+                let channels = [];
 
-                // Restaurer l'état précédent
-                currentFileId = savedFileId;
-                isPlaying = savedIsPlaying;
-                isPaused = savedIsPaused;
-                document.getElementById('headerFileName').textContent = savedFileName;
-                updatePlaybackControls();
+                if (hasOnlyVirtualDevice) {
+                    // Configuration simplifiée pour l'instrument virtuel uniquement
+                    log('Mode instrument virtuel uniquement - configuration simplifiée', 'info');
+
+                    // Créer des canaux par défaut (0-15)
+                    channels = Array.from({ length: 16 }, (_, i) => ({
+                        channel: i,
+                        channelDisplay: i === 9 ? `${i + 1} (Drums)` : `${i + 1}`,
+                        tracks: [{ name: `Canal ${i + 1}` }]
+                    }));
+                } else {
+                    // Configuration normale avec le backend
+                    try {
+                        const response = await api.sendCommand('playback_start', { fileId });
+                        const channelsResponse = await api.sendCommand('playback_get_channels');
+                        channels = channelsResponse.channels || [];
+
+                        // Arrêter immédiatement pour ne pas lancer la lecture
+                        await api.sendCommand('playback_stop');
+
+                        // Restaurer l'état précédent
+                        currentFileId = savedFileId;
+                        isPlaying = savedIsPlaying;
+                        isPaused = savedIsPaused;
+                        document.getElementById('headerFileName').textContent = savedFileName;
+                        updatePlaybackControls();
+                    } catch (backendError) {
+                        // Si le backend échoue (ex: No output devices available)
+                        // Basculer en mode virtuel uniquement
+                        log('Backend non disponible, basculement en mode virtuel', 'warning');
+                        channels = Array.from({ length: 16 }, (_, i) => ({
+                            channel: i,
+                            channelDisplay: i === 9 ? `${i + 1} (Drums)` : `${i + 1}`,
+                            tracks: [{ name: `Canal ${i + 1}` }]
+                        }));
+                    }
+                }
 
                 if (channels.length === 0) {
                     await showAlert(`Aucun canal MIDI trouvé dans "${filename}"`, {
