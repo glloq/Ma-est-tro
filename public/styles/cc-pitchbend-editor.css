@@ -105,6 +105,8 @@
 /* Contenu de la section CC */
 .cc-section-content {
     flex: 1;
+    display: flex;           /* CRITICAL: doit être flex container pour ses enfants */
+    flex-direction: column;
     overflow: hidden;
     transition: all 0.3s ease-out;
     min-height: 0;
