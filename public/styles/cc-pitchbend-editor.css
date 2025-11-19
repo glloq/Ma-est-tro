@@ -17,7 +17,8 @@
 .midi-editor-container {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    flex: 1; /* Utilise tout l'espace disponible */
+    min-height: 0; /* Important pour flex container */
     position: relative;
 }
 
@@ -278,17 +279,7 @@
     position: relative;
 }
 
-/* S'assurer que le modal-body utilise toute la hauteur sans padding-bottom */
-.midi-editor-modal .modal-body {
-    padding-bottom: 0;
-    height: 100%;
-    overflow: hidden;
-}
-
-/* S'assurer que le container utilise toute la hauteur */
-.midi-editor-modal .midi-editor-container {
-    height: 100%;
-}
+/* Styles déjà définis dans components.css, pas besoin de redéfinition ici */
 
 /* Mode compact pour boutons verticaux */
 .channel-buttons.cc-mode {
