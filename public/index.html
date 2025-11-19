@@ -2411,13 +2411,19 @@
                     hasRouting = true;
 
                     // Appliquer le routage au lecteur
-                    try {
-                        await api.sendCommand('playback_set_channel_routing', {
-                            channel: ch.channel,
-                            deviceId: select.value
-                        });
-                    } catch (error) {
-                        log(`Erreur routage canal ${ch.channel}: ${error.message}`, 'error');
+                    // Ne pas envoyer au backend si c'est le périphérique virtuel
+                    if (select.value !== 'virtual-instrument') {
+                        try {
+                            await api.sendCommand('playback_set_channel_routing', {
+                                channel: ch.channel,
+                                deviceId: select.value
+                            });
+                        } catch (error) {
+                            log(`Erreur routage canal ${ch.channel}: ${error.message}`, 'error');
+                        }
+                    } else {
+                        // Périphérique virtuel : juste logger
+                        log(`Canal ${ch.channel} → 🎹 Instrument Virtuel (messages vers logs)`, 'info');
                     }
                 }
             }
@@ -2468,13 +2474,18 @@
             const config = fileRoutingConfig[fileId];
             if (config && config.channels) {
                 for (const [channel, deviceId] of Object.entries(config.channels)) {
-                    try {
-                        await api.sendCommand('playback_set_channel_routing', {
-                            channel: parseInt(channel),
-                            deviceId: deviceId
-                        });
-                    } catch (error) {
-                        log(`Erreur application routage canal ${channel}: ${error.message}`, 'error');
+                    // Ne pas envoyer au backend si c'est le périphérique virtuel
+                    if (deviceId !== 'virtual-instrument') {
+                        try {
+                            await api.sendCommand('playback_set_channel_routing', {
+                                channel: parseInt(channel),
+                                deviceId: deviceId
+                            });
+                        } catch (error) {
+                            log(`Erreur application routage canal ${channel}: ${error.message}`, 'error');
+                        }
+                    } else {
+                        log(`Canal ${channel} → 🎹 Instrument Virtuel`, 'info');
                     }
                 }
             }
