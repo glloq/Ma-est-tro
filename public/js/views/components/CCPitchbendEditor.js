@@ -51,11 +51,14 @@ class CCPitchbendEditor {
         this.element.className = 'cc-pitchbend-editor';
         this.element.style.cssText = `
             width: 100%;
-            height: 100%;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
             background: #1a1a1a;
             border-top: 1px solid #333;
             position: relative;
             overflow: hidden;
+            min-height: 0;
         `;
 
         // Canvas pour le rendu
@@ -103,16 +106,16 @@ class CCPitchbendEditor {
 
     resize() {
         // Forcer le reflow pour obtenir les dimensions finales
-        const forceReflow = this.container.offsetHeight;
+        const forceReflow = this.element.offsetHeight;
 
-        const rect = this.container.getBoundingClientRect();
+        const rect = this.element.getBoundingClientRect();
         const width = rect.width;
         const height = rect.height;
 
-        console.log(`CCPitchbendEditor.resize(): container=${width}x${height}`);
+        console.log(`CCPitchbendEditor.resize(): element=${width}x${height}`);
 
         // Ne redimensionner que si on a des dimensions valides
-        if (width > 0 && height > 0) {
+        if (width > 0 && height > 100) {
             this.canvas.width = width;
             this.canvas.height = height;
             this.render();
