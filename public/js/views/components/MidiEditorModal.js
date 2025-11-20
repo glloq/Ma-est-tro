@@ -2803,16 +2803,135 @@ class MidiEditorModal {
     close() {
         // Vérifier les modifications non sauvegardées
         if (this.isDirty) {
-            const confirmClose = confirm(
-                '⚠️ Modifications non sauvegardées ⚠️\n\n' +
-                'Vous avez effectué des modifications qui n\'ont pas été sauvegardées.\n\n' +
-                'Si vous fermez maintenant, ces modifications seront PERDUES.\n\n' +
-                'Cliquez sur "Annuler" pour revenir à l\'éditeur et sauvegarder vos modifications.\n' +
-                'Cliquez sur "OK" pour fermer SANS sauvegarder (les modifications seront perdues).'
-            );
-            if (!confirmClose) return;
+            this.showUnsavedChangesModal();
+            return;
         }
 
+        this.doClose();
+    }
+
+    /**
+     * Afficher la modal de confirmation pour modifications non sauvegardées
+     */
+    showUnsavedChangesModal() {
+        // Créer la modal de confirmation
+        const confirmModal = document.createElement('div');
+        confirmModal.className = 'modal-overlay';
+        confirmModal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10001;
+        `;
+
+        confirmModal.innerHTML = `
+            <div class="modal-dialog" style="
+                background: #2a2a2a;
+                border: 2px solid #ff6b6b;
+                border-radius: 8px;
+                padding: 24px;
+                max-width: 500px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            ">
+                <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                    <span style="font-size: 32px; margin-right: 12px;">⚠️</span>
+                    <h2 style="margin: 0; color: #ff6b6b; font-size: 20px;">
+                        Modifications non sauvegardées
+                    </h2>
+                </div>
+
+                <div style="margin-bottom: 24px; color: #ddd; line-height: 1.6;">
+                    <p style="margin: 0 0 12px 0;">
+                        Vous avez effectué des modifications qui n'ont pas été sauvegardées.
+                    </p>
+                    <p style="margin: 0; font-weight: bold; color: #ff6b6b;">
+                        Si vous fermez maintenant, ces modifications seront PERDUES.
+                    </p>
+                </div>
+
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button id="unsaved-cancel-btn" class="btn btn-secondary" style="
+                        padding: 10px 20px;
+                        border: 1px solid #666;
+                        border-radius: 4px;
+                        background: #444;
+                        color: #fff;
+                        cursor: pointer;
+                        font-size: 14px;
+                    ">
+                        ↩️ Annuler
+                    </button>
+                    <button id="unsaved-save-btn" class="btn btn-success" style="
+                        padding: 10px 20px;
+                        border: 1px solid #4CAF50;
+                        border-radius: 4px;
+                        background: #4CAF50;
+                        color: #fff;
+                        cursor: pointer;
+                        font-size: 14px;
+                        font-weight: bold;
+                    ">
+                        💾 Sauvegarder et fermer
+                    </button>
+                    <button id="unsaved-discard-btn" class="btn btn-danger" style="
+                        padding: 10px 20px;
+                        border: 1px solid #f44336;
+                        border-radius: 4px;
+                        background: #f44336;
+                        color: #fff;
+                        cursor: pointer;
+                        font-size: 14px;
+                    ">
+                        🗑️ Fermer sans sauvegarder
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(confirmModal);
+
+        // Bouton Annuler
+        const cancelBtn = confirmModal.querySelector('#unsaved-cancel-btn');
+        cancelBtn.addEventListener('click', () => {
+            confirmModal.remove();
+        });
+
+        // Bouton Sauvegarder et fermer
+        const saveBtn = confirmModal.querySelector('#unsaved-save-btn');
+        saveBtn.addEventListener('click', async () => {
+            confirmModal.remove();
+            await this.saveMidiFile();
+            // Fermer après la sauvegarde
+            this.doClose();
+        });
+
+        // Bouton Fermer sans sauvegarder
+        const discardBtn = confirmModal.querySelector('#unsaved-discard-btn');
+        discardBtn.addEventListener('click', () => {
+            confirmModal.remove();
+            this.doClose();
+        });
+
+        // Fermer avec Escape
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                confirmModal.remove();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    }
+
+    /**
+     * Effectuer la fermeture réelle de l'éditeur
+     */
+    doClose() {
         // Arrêter la synchronisation des sliders
         if (this.syncInterval) {
             clearInterval(this.syncInterval);
