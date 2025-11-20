@@ -2612,10 +2612,11 @@ class MidiEditorModal {
     setupScrollSynchronization() {
         if (!this.pianoRoll) return;
 
-        // Utiliser setInterval pour vérifier les changements (polling à 60fps)
+        // OPTIMISATION: Polling réduit à 50ms (20fps) au lieu de 16ms (60fps)
         // Car webaudio-pianoroll ne déclenche pas toujours d'événements pour xoffset/yoffset
         let lastXOffset = this.pianoRoll.xoffset || 0;
         let lastYOffset = this.pianoRoll.yoffset || 0;
+        let syncScheduled = false;
 
         this.syncInterval = setInterval(() => {
             if (!this.pianoRoll) {
@@ -2626,19 +2627,33 @@ class MidiEditorModal {
             const currentXOffset = this.pianoRoll.xoffset || 0;
             const currentYOffset = this.pianoRoll.yoffset || 0;
 
-            // Si xoffset a changé, mettre à jour le slider horizontal et synchroniser CC editor
-            if (currentXOffset !== lastXOffset) {
+            // OPTIMISATION: Vérifier que le changement est significatif (> 1 tick)
+            // pour éviter les updates inutiles dus à l'arrondi
+            const xOffsetChanged = Math.abs(currentXOffset - lastXOffset) > 0.5;
+            const yOffsetChanged = Math.abs(currentYOffset - lastYOffset) > 0.01;
+
+            // Si xoffset a changé de manière significative, mettre à jour
+            if (xOffsetChanged) {
                 this.updateHorizontalSlider(currentXOffset);
-                this.syncCCEditor(); // Synchroniser l'éditeur CC/Pitchbend avec le défilement
+
+                // OPTIMISATION: Throttler syncCCEditor avec requestAnimationFrame
+                if (!syncScheduled) {
+                    syncScheduled = true;
+                    requestAnimationFrame(() => {
+                        this.syncCCEditor();
+                        syncScheduled = false;
+                    });
+                }
+
                 lastXOffset = currentXOffset;
             }
 
-            // Si yoffset a changé, mettre à jour le slider vertical
-            if (currentYOffset !== lastYOffset) {
+            // Si yoffset a changé de manière significative, mettre à jour le slider vertical
+            if (yOffsetChanged) {
                 this.updateVerticalSlider(currentYOffset);
                 lastYOffset = currentYOffset;
             }
-        }, 16); // ~60fps
+        }, 50); // OPTIMISATION: 50ms (20fps) au lieu de 16ms (60fps)
     }
 
     /**

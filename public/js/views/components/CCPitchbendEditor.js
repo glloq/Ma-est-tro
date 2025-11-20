@@ -36,6 +36,16 @@ class CCPitchbendEditor {
         this.history = [];
         this.historyIndex = -1;
 
+        // OPTIMISATION: Système de throttling pour le rendu
+        this.pendingRender = false;
+        this.renderScheduled = false;
+        this.isDirty = false;
+
+        // Canvas de buffer pour la grille (statique)
+        this.gridCanvas = null;
+        this.gridCtx = null;
+        this.gridDirty = true;
+
         // Initialisation
         this.init();
     }
@@ -118,7 +128,17 @@ class CCPitchbendEditor {
         if (width > 0 && height > 100) {
             this.canvas.width = width;
             this.canvas.height = height;
-            this.render();
+
+            // OPTIMISATION: Recréer le canvas de buffer pour la grille
+            if (!this.gridCanvas) {
+                this.gridCanvas = document.createElement('canvas');
+                this.gridCtx = this.gridCanvas.getContext('2d');
+            }
+            this.gridCanvas.width = width;
+            this.gridCanvas.height = height;
+            this.gridDirty = true;
+
+            this.renderThrottled();
         } else {
             console.warn(`CCPitchbendEditor.resize(): Invalid dimensions ${width}x${height}, skipping`);
         }
@@ -133,12 +153,14 @@ class CCPitchbendEditor {
 
     setCC(ccType) {
         this.currentCC = ccType;
-        this.render();
+        this.isDirty = true;
+        this.renderThrottled();
     }
 
     setChannel(channel) {
         this.currentChannel = channel;
-        this.render();
+        this.isDirty = true;
+        this.renderThrottled();
     }
 
     // === Conversion coordonnées ===
@@ -193,7 +215,7 @@ class CCPitchbendEditor {
             // Mettre à jour la valeur existante
             existingEvent.value = this.clampValue(value);
             if (autoSave) {
-                this.render();
+                this.renderThrottled();
             }
             return existingEvent;
         }
@@ -209,7 +231,7 @@ class CCPitchbendEditor {
 
         if (autoSave) {
             this.saveState();
-            this.render();
+            this.renderThrottled();
         }
 
         return event;
@@ -219,7 +241,7 @@ class CCPitchbendEditor {
         this.events = this.events.filter(e => !eventIds.includes(e.id));
         this.selectedEvents.clear();
         this.saveState();
-        this.render();
+        this.renderThrottled();
     }
 
     moveEvents(eventIds, deltaTicks, deltaValue) {
@@ -231,7 +253,7 @@ class CCPitchbendEditor {
             }
         });
         this.saveState();
-        this.render();
+        this.renderThrottled();
     }
 
     clampValue(value) {
@@ -257,7 +279,7 @@ class CCPitchbendEditor {
                 this.lastDrawPosition = { x, y };
                 this.lastDrawTicks = this.snapToGrid(ticks);
                 this.addEvent(ticks, value, this.currentChannel, false); // Ne pas sauvegarder immédiatement
-                this.render();
+                this.renderThrottled();
                 break;
 
             case 'line':
@@ -289,7 +311,7 @@ class CCPitchbendEditor {
                     }
                     this.selectionStart = { x, y };
                 }
-                this.render();
+                this.renderThrottled();
                 break;
 
             case 'move':
@@ -301,7 +323,7 @@ class CCPitchbendEditor {
                     }
                     this.dragStart = { x, y, ticks, value };
                 }
-                this.render();
+                this.renderThrottled();
                 break;
         }
     }
@@ -320,7 +342,7 @@ class CCPitchbendEditor {
                 this.addEvent(ticks, value, this.currentChannel, false); // Ne pas sauvegarder immédiatement
                 this.lastDrawTicks = snappedTicks;
                 this.lastDrawPosition = { x, y };
-                this.render();
+                this.renderThrottled();
             }
         } else if (this.dragStart && (this.currentTool === 'select' || this.currentTool === 'move')) {
             // Déplacement des événements sélectionnés
@@ -337,7 +359,7 @@ class CCPitchbendEditor {
                 });
 
                 this.dragStart = { x, y, ticks, value };
-                this.render();
+                this.renderThrottled();
             }
         } else if (this.selectionStart) {
             // Rectangle de sélection
@@ -370,7 +392,7 @@ class CCPitchbendEditor {
             this.dragStart = null;
         }
 
-        this.render();
+        this.renderThrottled();
     }
 
     handleMouseLeave(e) {
@@ -385,7 +407,7 @@ class CCPitchbendEditor {
         } else if (e.key === 'Escape') {
             this.selectedEvents.clear();
             this.lineStart = null;
-            this.render();
+            this.renderThrottled();
         } else if (e.ctrlKey || e.metaKey) {
             if (e.key === 'z') {
                 this.undo();
@@ -433,7 +455,7 @@ class CCPitchbendEditor {
         this.getFilteredEvents().forEach(event => {
             this.selectedEvents.add(event.id);
         });
-        this.render();
+        this.renderThrottled();
     }
 
     // === Outil ligne ===
@@ -454,10 +476,21 @@ class CCPitchbendEditor {
 
         // Sauvegarder l'état une seule fois à la fin
         this.saveState();
-        this.render();
+        this.renderThrottled();
     }
 
     // === Rendu ===
+
+    // OPTIMISATION: Fonction throttled pour le rendu
+    renderThrottled() {
+        if (!this.renderScheduled) {
+            this.renderScheduled = true;
+            requestAnimationFrame(() => {
+                this.render();
+                this.renderScheduled = false;
+            });
+        }
+    }
 
     render() {
         if (!this.ctx || !this.canvas) {
@@ -467,6 +500,7 @@ class CCPitchbendEditor {
 
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+        // OPTIMISATION: Utiliser le canvas de buffer pour la grille
         // Grille de fond
         this.renderGrid();
 
@@ -476,15 +510,38 @@ class CCPitchbendEditor {
         // Événements
         this.renderEvents();
 
+        // Réinitialiser le dirty flag
+        this.isDirty = false;
+
         console.log(`CCPitchbendEditor: Rendered - Type: ${this.currentCC}, Channel: ${this.currentChannel}, Events: ${this.getFilteredEvents().length}`);
     }
 
     renderGrid() {
         const labelMargin = 50; // Marge pour les labels à gauche
 
+        // OPTIMISATION: Vérifier si la grille doit être redessinée
+        // La grille change si xoffset, xrange, grid, ou currentCC changent
+        if (this.gridDirty || !this.gridCanvas) {
+            this.renderGridToBuffer();
+            this.gridDirty = false;
+        }
+
+        // Copier le buffer de grille sur le canvas principal
+        this.ctx.drawImage(this.gridCanvas, 0, 0);
+    }
+
+    renderGridToBuffer() {
+        if (!this.gridCtx) return;
+
+        const labelMargin = 50; // Marge pour les labels à gauche
+        const ctx = this.gridCtx;
+
+        // Effacer le buffer
+        ctx.clearRect(0, 0, this.gridCanvas.width, this.gridCanvas.height);
+
         // Grille verticale (temps)
-        this.ctx.strokeStyle = '#3a3a3a'; // Plus clair pour être visible
-        this.ctx.lineWidth = 1;
+        ctx.strokeStyle = '#3a3a3a'; // Plus clair pour être visible
+        ctx.lineWidth = 1;
 
         const gridSize = this.options.grid;
         const startTick = Math.floor(this.options.xoffset / gridSize) * gridSize;
@@ -492,11 +549,11 @@ class CCPitchbendEditor {
 
         for (let t = startTick; t <= endTick; t += gridSize) {
             const x = this.ticksToX(t);
-            if (x >= 0 && x <= this.canvas.width) {
-                this.ctx.beginPath();
-                this.ctx.moveTo(Math.max(x, labelMargin), 0);
-                this.ctx.lineTo(x, this.canvas.height);
-                this.ctx.stroke();
+            if (x >= 0 && x <= this.gridCanvas.width) {
+                ctx.beginPath();
+                ctx.moveTo(Math.max(x, labelMargin), 0);
+                ctx.lineTo(x, this.gridCanvas.height);
+                ctx.stroke();
             }
         }
 
@@ -504,65 +561,65 @@ class CCPitchbendEditor {
         if (this.currentCC === 'pitchbend') {
             // Pour pitchbend : lignes aux valeurs -8192, -4096, 0, 4096, 8191
             const values = [-8192, -4096, 0, 4096, 8191];
-            this.ctx.strokeStyle = '#3a3a3a'; // Plus clair
-            this.ctx.lineWidth = 1;
+            ctx.strokeStyle = '#3a3a3a'; // Plus clair
+            ctx.lineWidth = 1;
 
             values.forEach(value => {
                 const y = this.valueToY(value);
 
                 // Ligne de grille
-                this.ctx.beginPath();
-                this.ctx.moveTo(labelMargin, y);
-                this.ctx.lineTo(this.canvas.width, y);
-                this.ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(labelMargin, y);
+                ctx.lineTo(this.gridCanvas.width, y);
+                ctx.stroke();
 
                 // Zone de label (fond)
-                this.ctx.fillStyle = '#1a1a1a';
-                this.ctx.fillRect(0, y - 7, labelMargin - 2, 14);
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fillRect(0, y - 7, labelMargin - 2, 14);
 
                 // Label
-                this.ctx.fillStyle = '#aaa'; // Plus clair
-                this.ctx.font = '11px monospace';
-                this.ctx.textAlign = 'right';
-                this.ctx.fillText(value.toString(), labelMargin - 5, y + 4);
+                ctx.fillStyle = '#aaa'; // Plus clair
+                ctx.font = '11px monospace';
+                ctx.textAlign = 'right';
+                ctx.fillText(value.toString(), labelMargin - 5, y + 4);
             });
         } else {
             // Pour CC : lignes aux valeurs 0, 32, 64, 96, 127
             const values = [0, 32, 64, 96, 127];
-            this.ctx.strokeStyle = '#3a3a3a'; // Plus clair
-            this.ctx.lineWidth = 1;
+            ctx.strokeStyle = '#3a3a3a'; // Plus clair
+            ctx.lineWidth = 1;
 
             values.forEach(value => {
                 const y = this.valueToY(value);
 
                 // Ligne de grille
-                this.ctx.beginPath();
-                this.ctx.moveTo(labelMargin, y);
-                this.ctx.lineTo(this.canvas.width, y);
-                this.ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(labelMargin, y);
+                ctx.lineTo(this.gridCanvas.width, y);
+                ctx.stroke();
 
                 // Zone de label (fond)
-                this.ctx.fillStyle = '#1a1a1a';
-                this.ctx.fillRect(0, y - 7, labelMargin - 2, 14);
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fillRect(0, y - 7, labelMargin - 2, 14);
 
                 // Label
-                this.ctx.fillStyle = '#aaa'; // Plus clair
-                this.ctx.font = '11px monospace';
-                this.ctx.textAlign = 'right';
-                this.ctx.fillText(value.toString(), labelMargin - 5, y + 4);
+                ctx.fillStyle = '#aaa'; // Plus clair
+                ctx.font = '11px monospace';
+                ctx.textAlign = 'right';
+                ctx.fillText(value.toString(), labelMargin - 5, y + 4);
             });
         }
 
         // Bordure verticale séparant la zone de labels
-        this.ctx.strokeStyle = '#555'; // Plus clair
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.moveTo(labelMargin, 0);
-        this.ctx.lineTo(labelMargin, this.canvas.height);
-        this.ctx.stroke();
+        ctx.strokeStyle = '#555'; // Plus clair
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(labelMargin, 0);
+        ctx.lineTo(labelMargin, this.gridCanvas.height);
+        ctx.stroke();
 
         // Réinitialiser l'alignement du texte
-        this.ctx.textAlign = 'left';
+        ctx.textAlign = 'left';
     }
 
     renderCenterLine() {
@@ -650,25 +707,40 @@ class CCPitchbendEditor {
         });
     }
 
+    // OPTIMISATION: Utiliser requestAnimationFrame pour les rendus temporaires
     renderSelectionRect(x1, y1, x2, y2) {
-        this.render();
-        this.ctx.strokeStyle = '#2196F3';
-        this.ctx.lineWidth = 1;
-        this.ctx.setLineDash([5, 5]);
-        this.ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-        this.ctx.setLineDash([]);
+        if (!this.renderScheduled) {
+            this.renderScheduled = true;
+            requestAnimationFrame(() => {
+                this.render();
+                // Dessiner le rectangle de sélection par-dessus
+                this.ctx.strokeStyle = '#2196F3';
+                this.ctx.lineWidth = 1;
+                this.ctx.setLineDash([5, 5]);
+                this.ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                this.ctx.setLineDash([]);
+                this.renderScheduled = false;
+            });
+        }
     }
 
     renderLinePreview(start, end) {
-        this.render();
-        this.ctx.strokeStyle = '#9E9E9E';
-        this.ctx.lineWidth = 1;
-        this.ctx.setLineDash([5, 5]);
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.ticksToX(start.ticks), this.valueToY(start.value));
-        this.ctx.lineTo(this.ticksToX(end.ticks), this.valueToY(end.value));
-        this.ctx.stroke();
-        this.ctx.setLineDash([]);
+        if (!this.renderScheduled) {
+            this.renderScheduled = true;
+            requestAnimationFrame(() => {
+                this.render();
+                // Dessiner la ligne de prévisualisation par-dessus
+                this.ctx.strokeStyle = '#9E9E9E';
+                this.ctx.lineWidth = 1;
+                this.ctx.setLineDash([5, 5]);
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.ticksToX(start.ticks), this.valueToY(start.value));
+                this.ctx.lineTo(this.ticksToX(end.ticks), this.valueToY(end.value));
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+                this.renderScheduled = false;
+            });
+        }
     }
 
     // === Filtrage ===
@@ -684,11 +756,23 @@ class CCPitchbendEditor {
 
     syncWith(pianoRoll) {
         // Synchroniser avec les paramètres du piano roll
+        const oldXRange = this.options.xrange;
+        const oldXOffset = this.options.xoffset;
+        const oldGrid = this.options.grid;
+
         this.options.xrange = pianoRoll.xrange || this.options.xrange;
         this.options.xoffset = pianoRoll.xoffset || this.options.xoffset;
         this.options.grid = pianoRoll.grid || this.options.grid;
         this.options.timebase = pianoRoll.timebase || this.options.timebase;
-        this.render();
+
+        // OPTIMISATION: Marquer la grille comme dirty si les paramètres ont changé
+        if (oldXRange !== this.options.xrange ||
+            oldXOffset !== this.options.xoffset ||
+            oldGrid !== this.options.grid) {
+            this.gridDirty = true;
+        }
+
+        this.renderThrottled();
     }
 
     // === Undo/Redo ===
@@ -718,7 +802,7 @@ class CCPitchbendEditor {
             this.historyIndex--;
             this.events = JSON.parse(this.history[this.historyIndex]);
             this.selectedEvents.clear();
-            this.render();
+            this.renderThrottled();
 
             // Notifier le changement
             if (this.options.onChange && typeof this.options.onChange === 'function') {
@@ -732,7 +816,7 @@ class CCPitchbendEditor {
             this.historyIndex++;
             this.events = JSON.parse(this.history[this.historyIndex]);
             this.selectedEvents.clear();
-            this.render();
+            this.renderThrottled();
 
             // Notifier le changement
             if (this.options.onChange && typeof this.options.onChange === 'function') {
@@ -759,7 +843,7 @@ class CCPitchbendEditor {
         console.log('CCPitchbendEditor: Events by type/channel:', eventsByType);
 
         this.saveState();
-        this.render();
+        this.renderThrottled();
     }
 
     getEvents() {
@@ -770,7 +854,7 @@ class CCPitchbendEditor {
         this.events = [];
         this.selectedEvents.clear();
         this.saveState();
-        this.render();
+        this.renderThrottled();
     }
 
     // === Cleanup ===
