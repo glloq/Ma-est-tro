@@ -2801,12 +2801,16 @@ class MidiEditorModal {
      * Fermer la modale
      */
     close() {
+        console.log('[MidiEditor] close() called, isDirty:', this.isDirty);
+
         // Vérifier les modifications non sauvegardées
         if (this.isDirty) {
+            console.log('[MidiEditor] Has unsaved changes, showing modal');
             this.showUnsavedChangesModal();
             return;
         }
 
+        console.log('[MidiEditor] No unsaved changes, closing directly');
         this.doClose();
     }
 
@@ -2814,20 +2818,22 @@ class MidiEditorModal {
      * Afficher la modal de confirmation pour modifications non sauvegardées
      */
     showUnsavedChangesModal() {
+        console.log('[MidiEditor] Showing unsaved changes modal');
+
         // Créer la modal de confirmation
         const confirmModal = document.createElement('div');
-        confirmModal.className = 'modal-overlay';
+        confirmModal.className = 'modal-overlay unsaved-changes-modal';
         confirmModal.style.cssText = `
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 10001;
+            z-index: 9999999 !important;
         `;
 
         confirmModal.innerHTML = `
@@ -2841,12 +2847,12 @@ class MidiEditorModal {
             ">
                 <div style="display: flex; align-items: center; margin-bottom: 16px;">
                     <span style="font-size: 32px; margin-right: 12px;">⚠️</span>
-                    <h2 style="margin: 0; color: #ff6b6b; font-size: 20px;">
+                    <h2 style="margin: 0; color: #ff6b6b; font-size: 20px; font-family: sans-serif;">
                         Modifications non sauvegardées
                     </h2>
                 </div>
 
-                <div style="margin-bottom: 24px; color: #ddd; line-height: 1.6;">
+                <div style="margin-bottom: 24px; color: #ddd; line-height: 1.6; font-family: sans-serif;">
                     <p style="margin: 0 0 12px 0;">
                         Vous avez effectué des modifications qui n'ont pas été sauvegardées.
                     </p>
@@ -2855,8 +2861,8 @@ class MidiEditorModal {
                     </p>
                 </div>
 
-                <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                    <button id="unsaved-cancel-btn" class="btn btn-secondary" style="
+                <div style="display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap;">
+                    <button id="unsaved-cancel-btn" style="
                         padding: 10px 20px;
                         border: 1px solid #666;
                         border-radius: 4px;
@@ -2864,10 +2870,11 @@ class MidiEditorModal {
                         color: #fff;
                         cursor: pointer;
                         font-size: 14px;
+                        font-family: sans-serif;
                     ">
                         ↩️ Annuler
                     </button>
-                    <button id="unsaved-save-btn" class="btn btn-success" style="
+                    <button id="unsaved-save-btn" style="
                         padding: 10px 20px;
                         border: 1px solid #4CAF50;
                         border-radius: 4px;
@@ -2876,10 +2883,11 @@ class MidiEditorModal {
                         cursor: pointer;
                         font-size: 14px;
                         font-weight: bold;
+                        font-family: sans-serif;
                     ">
                         💾 Sauvegarder et fermer
                     </button>
-                    <button id="unsaved-discard-btn" class="btn btn-danger" style="
+                    <button id="unsaved-discard-btn" style="
                         padding: 10px 20px;
                         border: 1px solid #f44336;
                         border-radius: 4px;
@@ -2887,6 +2895,7 @@ class MidiEditorModal {
                         color: #fff;
                         cursor: pointer;
                         font-size: 14px;
+                        font-family: sans-serif;
                     ">
                         🗑️ Fermer sans sauvegarder
                     </button>
@@ -2895,16 +2904,19 @@ class MidiEditorModal {
         `;
 
         document.body.appendChild(confirmModal);
+        console.log('[MidiEditor] Modal appended to body');
 
         // Bouton Annuler
         const cancelBtn = confirmModal.querySelector('#unsaved-cancel-btn');
         cancelBtn.addEventListener('click', () => {
+            console.log('[MidiEditor] Cancel clicked');
             confirmModal.remove();
         });
 
         // Bouton Sauvegarder et fermer
         const saveBtn = confirmModal.querySelector('#unsaved-save-btn');
         saveBtn.addEventListener('click', async () => {
+            console.log('[MidiEditor] Save and close clicked');
             confirmModal.remove();
             await this.saveMidiFile();
             // Fermer après la sauvegarde
@@ -2914,6 +2926,7 @@ class MidiEditorModal {
         // Bouton Fermer sans sauvegarder
         const discardBtn = confirmModal.querySelector('#unsaved-discard-btn');
         discardBtn.addEventListener('click', () => {
+            console.log('[MidiEditor] Discard and close clicked');
             confirmModal.remove();
             this.doClose();
         });
@@ -2921,6 +2934,7 @@ class MidiEditorModal {
         // Fermer avec Escape
         const escHandler = (e) => {
             if (e.key === 'Escape') {
+                console.log('[MidiEditor] Escape pressed in modal');
                 confirmModal.remove();
                 document.removeEventListener('keydown', escHandler);
             }
