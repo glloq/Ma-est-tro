@@ -614,6 +614,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
         this.delNote=function(idx){
             this.sequence.splice(idx,1);
             this.redrawThrottled();
+            this.sendEvent('change');
         };
         this.delAreaNote=function(t,g,n){
             const l=this.sequence.length;
@@ -923,6 +924,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             case 46://delNote
                 this.delSelectedNote();
                 this.redrawThrottled();
+                this.sendEvent('change');
                 break;
             }
         };
@@ -1272,8 +1274,10 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             if(this.dragging.o=="m"){
                 this.menu.style.display="none";
                 this.rcMenu={x:0,y:0,width:0,height:0};
-                if(pos.t==this.menu)
+                if(pos.t==this.menu) {
                     this.delSelectedNote();
+                    this.sendEvent('change');
+                }
                 this.redrawThrottled();
             }
             if(this.dragging.o=="V"){
@@ -1299,6 +1303,8 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             this.dragging={o:null};
             if(this.press){
                 this.sortSequence();
+                // Notifier le changement après le drag/édition
+                this.sendEvent('change');
             }
             this.press = 0;
 //            this.mousemove(e);
