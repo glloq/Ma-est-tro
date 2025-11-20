@@ -842,7 +842,11 @@ class CCPitchbendEditor {
         });
         console.log('CCPitchbendEditor: Events by type/channel:', eventsByType);
 
-        this.saveState();
+        // CORRECTION: Initialiser l'historique sans déclencher onChange
+        // (car charger les événements existants n'est pas une modification utilisateur)
+        this.history = [JSON.stringify(this.events)];
+        this.historyIndex = 0;
+
         this.renderThrottled();
     }
 
@@ -853,8 +857,17 @@ class CCPitchbendEditor {
     clear() {
         this.events = [];
         this.selectedEvents.clear();
-        this.saveState();
+
+        // Réinitialiser l'historique
+        this.history = [JSON.stringify(this.events)];
+        this.historyIndex = 0;
+
         this.renderThrottled();
+
+        // Notifier le changement (car clear est une action utilisateur)
+        if (this.options.onChange && typeof this.options.onChange === 'function') {
+            this.options.onChange();
+        }
     }
 
     // === Cleanup ===
