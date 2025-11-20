@@ -214,7 +214,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             const snapshot = this.undoStack.pop();
             this.sequence = snapshot.map(note => ({...note}));
 
-            this.redraw();
+            this.redrawThrottled();
             this.sendEvent('change');
             console.log('[PianoRoll] Undo performed, undo stack:', this.undoStack.length);
             return true;
@@ -241,7 +241,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             const snapshot = this.redoStack.pop();
             this.sequence = snapshot.map(note => ({...note}));
 
-            this.redraw();
+            this.redrawThrottled();
             this.sendEvent('change');
             console.log('[PianoRoll] Redo performed, redo stack:', this.redoStack.length);
             return true;
@@ -613,7 +613,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
         };
         this.delNote=function(idx){
             this.sequence.splice(idx,1);
-            this.redraw();
+            this.redrawThrottled();
         };
         this.delAreaNote=function(t,g,n){
             const l=this.sequence.length;
@@ -693,13 +693,13 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                     if(ev.f)
                         ev.on=ev.n, ev.ot=ev.t, ev.og=ev.g;
                 }
-                this.redraw();
+                this.redrawThrottled();
             }
             else if(ht.m=="n"){
                 ev=this.sequence[ht.i];
                 this.clearSel();
                 ev.f=1;
-                this.redraw();
+                this.redrawThrottled();
             }
             else if(ht.m=="E"){
                 // En mode drag-notes : traiter E comme N (déplacement, pas resize)
@@ -731,7 +731,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                         if(ev.f)
                             ev.on=ev.n, ev.ot=ev.t, ev.og=ev.g;
                     }
-                    this.redraw();
+                    this.redrawThrottled();
                 } else {
                     // Mode resize-note ou défaut : resize
                     this.saveSnapshot();
@@ -922,7 +922,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             switch(e.keyCode){
             case 46://delNote
                 this.delSelectedNote();
-                this.redraw();
+                this.redrawThrottled();
                 break;
             }
         };
@@ -1092,7 +1092,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                         const c = this.defaultChannel !== undefined ? this.defaultChannel : 0; // Utiliser le canal par défaut
                         this.sequence.push({t:t, n:n, g:1, f:1, c:c});
                         this.dragging={o:"D",m:"E",i:this.sequence.length-1, t:t, g:1, ev:[{t:t,g:1,ev:this.sequence[this.sequence.length-1]}]};
-                        this.redraw();
+                        this.redrawThrottled();
                         this.sendEvent('change'); // Signaler le changement
                     }
                 }
@@ -1114,7 +1114,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                             this.clearSel();
                             evNote.f = 1;
                         }
-                        this.redraw();
+                        this.redrawThrottled();
                         break;
                     default:
                         // Clic dans le vide : ne rien faire
@@ -1274,7 +1274,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 this.rcMenu={x:0,y:0,width:0,height:0};
                 if(pos.t==this.menu)
                     this.delSelectedNote();
-                this.redraw();
+                this.redrawThrottled();
             }
             if(this.dragging.o=="V"){
                 // Fin du drag-view: remettre le curseur
@@ -1283,7 +1283,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             if(this.dragging.o=="A"){
                 this.selAreaNote(this.dragging.t1,this.dragging.t2,this.dragging.n1,this.dragging.n2);
                 this.dragging={o:null};
-                this.redraw();
+                this.redrawThrottled();
             }
 //            if(this.dragging.o=="D"){
                 if(this.editmode=="dragmono"){
@@ -1294,7 +1294,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                         }
                     }
                 }
-                this.redraw();
+                this.redrawThrottled();
 //            }
             this.dragging={o:null};
             if(this.press){
@@ -1627,7 +1627,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             this.sequence.push(newNote);
         });
 
-        this.redraw();
+        this.redrawThrottled();
         this.sendEvent('change');
     }
 
@@ -1639,7 +1639,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
         this.saveSnapshot();
 
         this.delSelectedNote();
-        this.redraw();
+        this.redrawThrottled();
         this.sendEvent('change');
     }
 
@@ -1657,7 +1657,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 ev.c = newChannel;
             }
         }
-        this.redraw();
+        this.redrawThrottled();
         this.sendEvent('change');
     }
 
@@ -1669,7 +1669,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
         for (let i = 0; i < l; ++i) {
             this.sequence[i].f = 1;
         }
-        this.redraw();
+        this.redrawThrottled();
     }
 
     /**
@@ -1677,7 +1677,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
      */
     deselectAll() {
         this.clearSel();
-        this.redraw();
+        this.redrawThrottled();
     }
 
     /**
