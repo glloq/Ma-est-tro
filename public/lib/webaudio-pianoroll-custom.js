@@ -1300,10 +1300,12 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 }
                 this.redrawThrottled();
 //            }
+            // CORRECTION: Sauvegarder le type de drag avant de le réinitialiser
+            const wasDraggingNotes = this.dragging.o === "D";
             this.dragging={o:null};
-            if(this.press){
+            if(this.press && wasDraggingNotes){
                 this.sortSequence();
-                // Notifier le changement après le drag/édition
+                // Notifier le changement uniquement si on a modifié des notes (pas pour drag-view)
                 this.sendEvent('change');
             }
             this.press = 0;
