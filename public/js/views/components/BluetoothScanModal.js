@@ -505,9 +505,18 @@ class BluetoothScanModal {
      */
     handleScanComplete(data) {
         this.scanning = false;
-        this.availableDevices = data.devices || [];
+        const allDevices = data.devices || [];
 
-        this.logger.info('BluetoothScanModal', `Scan complete: ${this.availableDevices.length} devices found`);
+        // Filtrer les périphériques déjà appairés pour éviter les doublons
+        this.availableDevices = allDevices.filter(device => {
+            const deviceId = device.id || device.address;
+            const isAlreadyPaired = this.pairedDevices.some(
+                paired => paired.address === deviceId
+            );
+            return !isAlreadyPaired;
+        });
+
+        this.logger.info('BluetoothScanModal', `Scan complete: ${allDevices.length} devices found, ${this.availableDevices.length} available (${allDevices.length - this.availableDevices.length} already paired)`);
 
         this.updateModalContent();
     }
@@ -745,9 +754,15 @@ class BluetoothScanModal {
 
         const modalDialog = this.container.querySelector('.modal-dialog');
         if (modalDialog) {
-            modalDialog.innerHTML = this.renderModalContent()
-                .replace('<div class="modal-dialog modal-lg">', '')
-                .replace('</div>', '');
+            // Re-render le contenu complet de la modal
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = this.renderModalContent();
+
+            // Extraire le contenu interne du modal-dialog (sans la balise modal-dialog elle-même)
+            const newContent = tempDiv.querySelector('.modal-dialog');
+            if (newContent) {
+                modalDialog.innerHTML = newContent.innerHTML;
+            }
 
             // Réattacher les événements
             this.attachModalEvents();
