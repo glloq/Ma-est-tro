@@ -23,16 +23,21 @@
 
 .bluetooth-scan-modal {
     display: flex !important;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 10000;
-    align-items: center;
-    justify-content: center;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    z-index: 10000 !important;
+    align-items: center !important;
+    justify-content: center !important;
     animation: fadeIn 0.2s ease-out;
+    overflow: auto !important;
 }
 
 @keyframes fadeIn {
@@ -49,16 +54,18 @@
    ============================================================================ */
 
 .bluetooth-scan-modal .modal-dialog {
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(155, 89, 182, 0.3);
-    max-width: 650px;
-    width: 92%;
-    max-height: 90vh;
+    background: white !important;
+    border-radius: 16px !important;
+    box-shadow: 0 20px 60px rgba(155, 89, 182, 0.3) !important;
+    max-width: 650px !important;
+    width: 92% !important;
+    max-height: 90vh !important;
+    margin: auto !important;
     display: flex !important;
     flex-direction: column !important;
     animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden;
+    overflow: hidden !important;
+    position: relative !important;
 }
 
 @keyframes slideUp {
@@ -327,6 +334,11 @@
     color: #155724;
 }
 
+.status-badge.connected {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
 /* ============================================================================
    DEVICE ACTIONS
    ============================================================================ */
@@ -339,6 +351,7 @@
 
 .btn-pair,
 .btn-connect,
+.btn-disconnect,
 .btn-unpair {
     padding: 10px 20px !important;
     font-size: 14px !important;
@@ -357,9 +370,16 @@
     box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3);
 }
 
-.btn-pair:hover {
+.btn-pair:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 4px 16px rgba(155, 89, 182, 0.4) !important;
+}
+
+.btn-pair:disabled,
+.btn-pair.loading {
+    opacity: 0.7 !important;
+    cursor: wait !important;
+    pointer-events: none !important;
 }
 
 .btn-connect {
@@ -371,6 +391,17 @@
 .btn-connect:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 16px rgba(46, 204, 113, 0.4) !important;
+}
+
+.btn-disconnect {
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%) !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(230, 126, 34, 0.3);
+}
+
+.btn-disconnect:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(230, 126, 34, 0.4) !important;
 }
 
 .btn-unpair {
@@ -681,11 +712,15 @@ body.dark-mode .bluetooth-scan-modal .bluetooth-device.paired {
 }
 
 body.dark-mode .bluetooth-scan-modal .modal-body {
-    background: var(--bg-primary);
+    background: var(--bg-primary) !important;
 }
 
 body.dark-mode .bluetooth-scan-modal .modal-dialog {
-    background: var(--bg-secondary);
+    background: var(--bg-secondary) !important;
+}
+
+body.dark-mode .bluetooth-scan-modal .modal-header {
+    background: linear-gradient(135deg, #7b3d96 0%, #6e308d 100%) !important;
 }
 
 body.dark-mode .bluetooth-scan-modal .modal-footer {
