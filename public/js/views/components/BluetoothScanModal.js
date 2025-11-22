@@ -665,21 +665,11 @@ class BluetoothScanModal {
 
         this.logger.info('BluetoothScanModal', `Device connected: ${deviceId}`);
 
-        // Rafraîchir plusieurs fois pour s'assurer que le statut est bien à jour
-        // Premier refresh rapide
+        // Attendre que le backend ait vraiment établi la connexion avant de rafraîchir
+        // La découverte des services MIDI peut prendre jusqu'à 5 secondes
         setTimeout(() => {
             this.loadPairedDevices();
-        }, 500);
-
-        // Second refresh pour être sûr (la découverte MIDI peut prendre du temps)
-        setTimeout(() => {
-            this.loadPairedDevices();
-        }, 1500);
-
-        // Troisième refresh final
-        setTimeout(() => {
-            this.loadPairedDevices();
-        }, 3000);
+        }, 1000);
     }
 
     /**
@@ -808,6 +798,12 @@ class BluetoothScanModal {
      * @param {Function} onConfirm - Callback si confirmé
      */
     showConfirmModal(title, message, onConfirm) {
+        // Empêcher l'empilement de modals - fermer la précédente si elle existe
+        const existingConfirmModal = document.querySelector('.confirm-modal');
+        if (existingConfirmModal) {
+            existingConfirmModal.remove();
+        }
+
         // Créer la modal de confirmation
         const confirmModal = document.createElement('div');
         confirmModal.className = 'modal-overlay confirm-modal';
