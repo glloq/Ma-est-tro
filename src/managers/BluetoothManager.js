@@ -103,7 +103,9 @@ class BluetoothManager extends EventEmitter {
 
       this.app.logger.info(`Starting BLE scan for ${duration}s...`);
       this.scanning = true;
-      this.devices.clear();
+
+      // NE PAS vider le cache - conserver les périphériques appairés pour permettre la reconnexion
+      // this.devices.clear(); // SUPPRIMÉ
 
       try {
         // Démarrer le scan (permettre les doublons pour obtenir des mises à jour RSSI)
