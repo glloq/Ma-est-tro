@@ -400,6 +400,17 @@ class BluetoothScanModal {
     pairDevice(deviceId, deviceName) {
         this.logger.info('BluetoothScanModal', `Pairing device: ${deviceId}`);
 
+        // Marquer le périphérique comme "en cours d'appairage"
+        const deviceCard = this.container.querySelector(`[data-device-id="${deviceId}"]`);
+        if (deviceCard) {
+            const button = deviceCard.querySelector('.btn-pair');
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '⏳ Connexion...';
+                button.classList.add('loading');
+            }
+        }
+
         if (this.eventBus) {
             this.eventBus.emit('bluetooth:pair_requested', {
                 device_id: deviceId,
@@ -731,8 +742,7 @@ class BluetoothScanModal {
                 e.stopPropagation();
                 closeModal();
                 if (onConfirm) {
-                    // Petit délai pour s'assurer que la modal est bien fermée
-                    setTimeout(() => onConfirm(), 100);
+                    onConfirm();
                 }
             });
         }
