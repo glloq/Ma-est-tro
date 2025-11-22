@@ -271,6 +271,9 @@ class BluetoothManager extends EventEmitter {
       await this.disconnect(address);
     }
 
+    // Supprimer du cache de devices
+    this.devices.delete(address);
+
     // Supprimer des périphériques appairés
     const index = this.pairedDevices.findIndex(d => d.address === address);
     if (index !== -1) {
@@ -288,6 +291,83 @@ class BluetoothManager extends EventEmitter {
    */
   getPairedDevices() {
     return this.pairedDevices;
+  }
+
+  /**
+   * Envoie un message MIDI à un périphérique Bluetooth
+   * @param {string} address - Adresse du périphérique
+   * @param {string} type - Type de message MIDI (noteon, noteoff, cc, etc.)
+   * @param {Object} data - Données du message MIDI
+   * @returns {boolean} Succès de l'envoi
+   */
+  sendMidiMessage(address, type, data) {
+    const device = this.connectedDevices.get(address);
+    if (!device || !device.midiService) {
+      this.app.logger.warn(`Cannot send MIDI: Device ${address} not connected or no MIDI service`);
+      return false;
+    }
+
+    try {
+      // Convertir le message MIDI en bytes selon le format BLE MIDI
+      const midiBytes = this.convertToBleMidi(type, data);
+
+      // Envoyer via la caractéristique MIDI I/O
+      if (device.midiCharacteristic) {
+        device.midiCharacteristic.write(Buffer.from(midiBytes), false);
+        this.app.logger.debug(`Sent MIDI message to ${address}: ${type} ${JSON.stringify(data)}`);
+        return true;
+      } else {
+        this.app.logger.warn(`No MIDI characteristic for device ${address}`);
+        return false;
+      }
+    } catch (error) {
+      this.app.logger.error(`Failed to send MIDI to ${address}: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
+   * Convertit un message MIDI en format BLE MIDI
+   * @param {string} type - Type de message
+   * @param {Object} data - Données du message
+   * @returns {Array} Bytes du message BLE MIDI
+   */
+  convertToBleMidi(type, data) {
+    // BLE MIDI header (timestamp high bits)
+    const timestamp = Date.now() & 0x1FFF;
+    const header = 0x80 | ((timestamp >> 7) & 0x3F);
+    const timestampLow = 0x80 | (timestamp & 0x7F);
+
+    let midiBytes = [];
+
+    switch (type) {
+      case 'noteon':
+        // Note On: 0x90 + channel, note, velocity
+        midiBytes = [header, timestampLow, 0x90 | (data.channel || 0), data.note || 60, data.velocity || 127];
+        break;
+      case 'noteoff':
+        // Note Off: 0x80 + channel, note, velocity
+        midiBytes = [header, timestampLow, 0x80 | (data.channel || 0), data.note || 60, data.velocity || 0];
+        break;
+      case 'cc':
+        // Control Change: 0xB0 + channel, controller, value
+        midiBytes = [header, timestampLow, 0xB0 | (data.channel || 0), data.controller || 0, data.value || 0];
+        break;
+      case 'program':
+        // Program Change: 0xC0 + channel, program
+        midiBytes = [header, timestampLow, 0xC0 | (data.channel || 0), data.program || 0];
+        break;
+      case 'pitchbend':
+        // Pitch Bend: 0xE0 + channel, LSB, MSB
+        const bend = (data.value || 0) + 8192; // Center at 8192
+        midiBytes = [header, timestampLow, 0xE0 | (data.channel || 0), bend & 0x7F, (bend >> 7) & 0x7F];
+        break;
+      default:
+        this.app.logger.warn(`Unknown MIDI message type: ${type}`);
+        midiBytes = [header, timestampLow];
+    }
+
+    return midiBytes;
   }
 
   /**
