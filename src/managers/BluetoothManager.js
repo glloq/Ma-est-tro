@@ -173,7 +173,8 @@ class BluetoothManager extends EventEmitter {
    * @returns {Promise<Object>} Info de connexion
    */
   async connect(address) {
-    this.app.logger.info(`Connecting to BLE device: ${address}`);
+    const startTime = Date.now();
+    this.app.logger.info(`[TIMING] Starting connection to BLE device: ${address}`);
 
     // Récupérer le périphérique depuis le cache
     const deviceInfo = this.devices.get(address);
@@ -183,15 +184,22 @@ class BluetoothManager extends EventEmitter {
     }
 
     const peripheral = deviceInfo.peripheral;
+    this.app.logger.info(`[TIMING] Device found in cache after ${Date.now() - startTime}ms`);
 
     return new Promise((resolve, reject) => {
+      const connectStartTime = Date.now();
+      this.app.logger.info(`[TIMING] Calling peripheral.connect()...`);
+
       peripheral.connect((error) => {
+        const connectDuration = Date.now() - connectStartTime;
+        this.app.logger.info(`[TIMING] peripheral.connect() callback after ${connectDuration}ms`);
+
         if (error) {
           this.app.logger.error(`Failed to connect to ${address}: ${error.message}`);
           return reject(error);
         }
 
-        this.app.logger.info(`Connected to ${deviceInfo.name} (${address})`);
+        this.app.logger.info(`Connected to ${deviceInfo.name} (${address}) - Total time: ${Date.now() - startTime}ms`);
 
         // IMPORTANT: Marquer comme connecté IMMÉDIATEMENT après la connexion BLE
         // avant la découverte des services (qui peut prendre 30 secondes)
