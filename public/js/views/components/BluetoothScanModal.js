@@ -229,14 +229,15 @@ class BluetoothScanModal {
      * Rendu d'un périphérique disponible
      */
     renderAvailableDevice(device) {
-        const deviceName = this.escapeHtml(device.name || 'Appareil Bluetooth');
+        const deviceName = device.name || 'Appareil Bluetooth';
+        const deviceNameEscaped = this.escapeHtml(deviceName);
         const deviceAddress = device.address || device.id || 'Adresse inconnue';
 
         return `
             <div class="device-card bluetooth-device" data-device-id="${device.id || device.address}">
                 <div class="device-icon">📡</div>
                 <div class="device-info">
-                    <div class="device-name">${deviceName}</div>
+                    <div class="device-name">${deviceNameEscaped}</div>
                     <div class="device-address">${deviceAddress}</div>
                     ${device.signal ? `<div class="device-signal">📶 Signal: ${device.signal}%</div>` : ''}
                     ${device.rssi ? `<div class="device-signal">📡 RSSI: ${device.rssi} dBm</div>` : ''}
