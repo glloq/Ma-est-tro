@@ -433,7 +433,8 @@ class BluetoothScanModal {
     pairDevice(deviceId, deviceName) {
         this.logger.info('BluetoothScanModal', `Pairing device: ${deviceId}`);
 
-        // Marquer le périphérique comme "en cours d'appairage"
+        // Désactiver le bouton pendant l'appairage SANS changer le texte
+        // (évite le problème de fond violet)
         const deviceCard = this.container.querySelector(`[data-device-id="${deviceId}"]`);
         if (deviceCard) {
             const button = deviceCard.querySelector('.btn-pair');
@@ -444,8 +445,8 @@ class BluetoothScanModal {
                     return;
                 }
                 button.disabled = true;
-                button.innerHTML = '⏳ Connexion...';
-                button.classList.add('loading');
+                button.style.opacity = '0.6';
+                button.style.cursor = 'wait';
             }
         }
 
@@ -465,12 +466,14 @@ class BluetoothScanModal {
         this.logger.info('BluetoothScanModal', `Connecting device: ${deviceAddress}`);
 
         // Désactiver le bouton pendant la connexion pour éviter les clics multiples
+        // MAIS ne pas changer le texte pour éviter le problème de fond violet
         const deviceCard = this.container.querySelector(`[data-device-address="${deviceAddress}"]`);
         if (deviceCard) {
             const button = deviceCard.querySelector('.btn-connect');
             if (button) {
                 button.disabled = true;
-                button.innerHTML = '⏳ Connexion...';
+                button.style.opacity = '0.6';
+                button.style.cursor = 'wait';
             }
         }
 
