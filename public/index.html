@@ -2747,98 +2747,42 @@
                 }
 
                 // Charger le fichier et récupérer ses canaux (sans lancer la lecture)
-                // Si on n'a que l'instrument virtuel, ne pas appeler le backend
-                // Recalculer les output devices après rechargement potentiel
-                const currentOutputDevices = availableDevices.filter(d => d.type !== 'input');
-                const hasOnlyVirtualDevice = currentOutputDevices.length > 0 && currentOutputDevices.every(d => d.isVirtual);
+                // IMPORTANT: Toujours extraire les canaux directement du fichier MIDI
+                // pour éviter d'envoyer CC 123 (All Notes Off) via playback_stop
+                log('Extraction des canaux du fichier MIDI...', 'info');
 
                 let channels = [];
 
-                if (hasOnlyVirtualDevice) {
-                    // Configuration simplifiée pour l'instrument virtuel uniquement
-                    log('Mode instrument virtuel uniquement - extraction des canaux du fichier...', 'info');
+                try {
+                    const fileData = await api.sendCommand('file_read', { fileId });
 
-                    // Récupérer le fichier MIDI et extraire les canaux utilisés
-                    try {
-                        const fileData = await api.sendCommand('file_read', { fileId });
+                    if (fileData && fileData.midiData) {
+                        // Parser le fichier MIDI pour extraire les canaux
+                        const usedChannels = extractChannelsFromMidiData(fileData.midiData);
 
-                        if (fileData && fileData.midiData) {
-                            // Parser le fichier MIDI pour extraire les canaux
-                            const usedChannels = extractChannelsFromMidiData(fileData.midiData);
-
-                            if (usedChannels.length > 0) {
-                                channels = usedChannels;
-                                log(`${usedChannels.length} canal(aux) trouvé(s) dans le fichier`, 'info');
-                            } else {
-                                // Fallback si aucun canal trouvé
-                                channels = Array.from({ length: 16 }, (_, i) => ({
-                                    channel: i,
-                                    channelDisplay: i === 9 ? `${i + 1} (Drums)` : `${i + 1}`,
-                                    tracks: [{ name: `Canal ${i + 1}` }]
-                                }));
-                                log('Aucun canal trouvé dans le fichier, utilisation des 16 canaux par défaut', 'warning');
-                            }
+                        if (usedChannels.length > 0) {
+                            channels = usedChannels;
+                            log(`${usedChannels.length} canal(aux) trouvé(s) dans le fichier`, 'info');
                         } else {
-                            throw new Error('Données MIDI non disponibles');
-                        }
-                    } catch (fileError) {
-                        log(`Impossible de lire le fichier, utilisation des 16 canaux par défaut: ${fileError.message}`, 'warning');
-                        // Créer des canaux par défaut (0-15)
-                        channels = Array.from({ length: 16 }, (_, i) => ({
-                            channel: i,
-                            channelDisplay: i === 9 ? `${i + 1} (Drums)` : `${i + 1}`,
-                            tracks: [{ name: `Canal ${i + 1}` }]
-                        }));
-                    }
-                } else {
-                    // Configuration normale avec le backend
-                    try {
-                        const response = await api.sendCommand('playback_start', { fileId });
-                        const channelsResponse = await api.sendCommand('playback_get_channels');
-                        channels = channelsResponse.channels || [];
-
-                        // Arrêter immédiatement pour ne pas lancer la lecture
-                        await api.sendCommand('playback_stop');
-
-                        // Restaurer l'état précédent
-                        currentFileId = savedFileId;
-                        isPlaying = savedIsPlaying;
-                        isPaused = savedIsPaused;
-                        document.getElementById('headerFileName').textContent = savedFileName;
-                        updatePlaybackControls();
-                    } catch (backendError) {
-                        // Si le backend échoue (ex: No output devices available)
-                        // Basculer en mode virtuel et extraire les canaux du fichier
-                        log('Backend non disponible, extraction des canaux du fichier...', 'warning');
-
-                        try {
-                            const fileData = await api.sendCommand('file_read', { fileId });
-                            if (fileData && fileData.midiData) {
-                                const usedChannels = extractChannelsFromMidiData(fileData.midiData);
-                                if (usedChannels.length > 0) {
-                                    channels = usedChannels;
-                                    log(`${usedChannels.length} canal(aux) trouvé(s) dans le fichier`, 'info');
-                                } else {
-                                    // Fallback si aucun canal trouvé
-                                    channels = Array.from({ length: 16 }, (_, i) => ({
-                                        channel: i,
-                                        channelDisplay: i === 9 ? `${i + 1} (Drums)` : `${i + 1}`,
-                                        tracks: [{ name: `Canal ${i + 1}` }]
-                                    }));
-                                }
-                            } else {
-                                throw new Error('Données MIDI non disponibles');
-                            }
-                        } catch (fileReadError) {
-                            log(`Impossible de lire le fichier: ${fileReadError.message}`, 'error');
-                            // Fallback final: tous les canaux
+                            // Fallback si aucun canal trouvé
                             channels = Array.from({ length: 16 }, (_, i) => ({
                                 channel: i,
                                 channelDisplay: i === 9 ? `${i + 1} (Drums)` : `${i + 1}`,
                                 tracks: [{ name: `Canal ${i + 1}` }]
                             }));
+                            log('Aucun canal trouvé dans le fichier, utilisation des 16 canaux par défaut', 'warning');
                         }
+                    } else {
+                        throw new Error('Données MIDI non disponibles');
                     }
+                } catch (fileError) {
+                    log(`Impossible de lire le fichier, utilisation des 16 canaux par défaut: ${fileError.message}`, 'warning');
+                    // Créer des canaux par défaut (0-15)
+                    channels = Array.from({ length: 16 }, (_, i) => ({
+                        channel: i,
+                        channelDisplay: i === 9 ? `${i + 1} (Drums)` : `${i + 1}`,
+                        tracks: [{ name: `Canal ${i + 1}` }]
+                    }));
                 }
 
                 if (channels.length === 0) {
