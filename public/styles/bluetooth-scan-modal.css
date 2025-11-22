@@ -32,7 +32,7 @@
     height: 100vh !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: rgba(0, 0, 0, 0.6) !important;
+    background: rgba(0, 0, 0, 0.3) !important; /* Opacité réduite de 0.6 à 0.3 */
     z-index: 10000 !important;
     align-items: center !important;
     justify-content: center !important;

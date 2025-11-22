@@ -146,6 +146,40 @@ class BluetoothScanModal {
 
         // Attacher les événements
         this.attachModalEvents();
+
+        // Attacher la délégation d'événements pour les actions sur les périphériques UNE SEULE FOIS
+        // Ces listeners restent actifs même après updateModalContent()
+        this.container.addEventListener('click', (e) => {
+            // Clic sur le fond pour fermer
+            if (e.target === this.container) {
+                this.close();
+                return;
+            }
+
+            const action = e.target.dataset.action;
+            if (!action) return;
+
+            if (action === 'pair') {
+                const deviceId = e.target.dataset.deviceId;
+                const deviceName = e.target.dataset.deviceName;
+                if (deviceId) this.pairDevice(deviceId, deviceName);
+            }
+
+            if (action === 'connect') {
+                const deviceAddress = e.target.dataset.deviceAddress;
+                if (deviceAddress) this.connectDevice(deviceAddress);
+            }
+
+            if (action === 'disconnect') {
+                const deviceAddress = e.target.dataset.deviceAddress;
+                if (deviceAddress) this.disconnectDevice(deviceAddress);
+            }
+
+            if (action === 'unpair') {
+                const deviceAddress = e.target.dataset.deviceAddress;
+                if (deviceAddress) this.unpairDevice(deviceAddress);
+            }
+        });
     }
 
     /**
@@ -326,56 +360,32 @@ class BluetoothScanModal {
     attachModalEvents() {
         if (!this.container) return;
 
-        // Fermeture de la modal
+        // IMPORTANT: Ne réattacher les event listeners que pour les nouveaux éléments
+        // Les event listeners sur le container principal sont attachés une seule fois à la création
+
+        // Fermeture de la modal - réattacher car les boutons sont re-rendus
         const closeButtons = this.container.querySelectorAll('[data-action="close"]');
         closeButtons.forEach(btn => {
+            // Retirer l'ancien listener s'il existe
+            btn.removeEventListener('click', this._closeHandler);
             btn.addEventListener('click', () => this.close());
         });
 
-        // Clic sur le fond pour fermer
-        this.container.addEventListener('click', (e) => {
-            if (e.target === this.container) {
-                this.close();
-            }
-        });
-
-        // Bouton de scan
+        // Bouton de scan - réattacher car re-rendu
         const scanButton = this.container.querySelector('[data-action="scan"]');
         if (scanButton) {
-            scanButton.addEventListener('click', () => this.startScan());
+            scanButton.removeEventListener('click', this._scanHandler);
+            this._scanHandler = () => this.startScan();
+            scanButton.addEventListener('click', this._scanHandler);
         }
 
-        // Bouton d'activation Bluetooth
+        // Bouton d'activation Bluetooth - réattacher car re-rendu
         const powerOnButton = this.container.querySelector('[data-action="power_on"]');
         if (powerOnButton) {
-            powerOnButton.addEventListener('click', () => this.powerOnBluetooth());
+            powerOnButton.removeEventListener('click', this._powerOnHandler);
+            this._powerOnHandler = () => this.powerOnBluetooth();
+            powerOnButton.addEventListener('click', this._powerOnHandler);
         }
-
-        // Délégation d'événements pour les actions sur les périphériques
-        this.container.addEventListener('click', (e) => {
-            const action = e.target.dataset.action;
-
-            if (action === 'pair') {
-                const deviceId = e.target.dataset.deviceId;
-                const deviceName = e.target.dataset.deviceName;
-                if (deviceId) this.pairDevice(deviceId, deviceName);
-            }
-
-            if (action === 'connect') {
-                const deviceAddress = e.target.dataset.deviceAddress;
-                if (deviceAddress) this.connectDevice(deviceAddress);
-            }
-
-            if (action === 'disconnect') {
-                const deviceAddress = e.target.dataset.deviceAddress;
-                if (deviceAddress) this.disconnectDevice(deviceAddress);
-            }
-
-            if (action === 'unpair') {
-                const deviceAddress = e.target.dataset.deviceAddress;
-                if (deviceAddress) this.unpairDevice(deviceAddress);
-            }
-        });
     }
 
     // ========================================================================
@@ -655,11 +665,21 @@ class BluetoothScanModal {
 
         this.logger.info('BluetoothScanModal', `Device connected: ${deviceId}`);
 
-        // Petit délai pour laisser le backend mettre à jour
+        // Rafraîchir plusieurs fois pour s'assurer que le statut est bien à jour
+        // Premier refresh rapide
         setTimeout(() => {
-            // Recharger la liste depuis le backend pour être sûr d'avoir le bon statut
             this.loadPairedDevices();
-        }, 300);
+        }, 500);
+
+        // Second refresh pour être sûr (la découverte MIDI peut prendre du temps)
+        setTimeout(() => {
+            this.loadPairedDevices();
+        }, 1500);
+
+        // Troisième refresh final
+        setTimeout(() => {
+            this.loadPairedDevices();
+        }, 3000);
     }
 
     /**
