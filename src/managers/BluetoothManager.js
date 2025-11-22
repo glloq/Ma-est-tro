@@ -222,41 +222,10 @@ class BluetoothManager extends EventEmitter {
           connected: true
         });
 
-        // Découvrir les services et caractéristiques MIDI en arrière-plan
-        // (ne pas attendre pour résoudre la Promise)
-        this.app.logger.info(`Discovering MIDI services for ${address} in background...`);
-
-        peripheral.discoverServices([this.BLE_MIDI_SERVICE_UUID], (error, services) => {
-          if (error || !services || services.length === 0) {
-            this.app.logger.warn(`No MIDI services found on ${address} (device still usable, configure via settings)`);
-            return;
-          }
-
-          const midiService = services[0];
-          this.app.logger.info(`Found MIDI service on ${address}`);
-
-          // Découvrir UNIQUEMENT la caractéristique MIDI I/O spécifique (pas de fallback)
-          // Si l'UUID spécifique n'est pas trouvé, l'utilisateur devra configurer via réglages instrument
-          midiService.discoverCharacteristics([this.BLE_MIDI_CHARACTERISTIC_UUID], (error, characteristics) => {
-            let midiCharacteristic = null;
-
-            if (!error && characteristics && characteristics.length > 0) {
-              midiCharacteristic = characteristics[0];
-              this.app.logger.info(`Found MIDI characteristic on ${address}`);
-            } else {
-              this.app.logger.warn(`Specific MIDI characteristic not found on ${address} - use instrument settings to configure`);
-            }
-
-            // Mettre à jour avec les services MIDI découverts (ou null si non trouvé)
-            this.connectedDevices.set(address, {
-              peripheral: peripheral,
-              midiService: midiService,
-              midiCharacteristic: midiCharacteristic
-            });
-
-            this.app.logger.info(`MIDI setup complete for ${address}`);
-          });
-        });
+        // NE PAS découvrir les services MIDI automatiquement
+        // La découverte peut prendre 30+ secondes et bloquer la connexion
+        // L'utilisateur configurera manuellement via "Réglages instrument" si nécessaire
+        this.app.logger.info(`Device ${address} connected successfully - MIDI services NOT auto-discovered (configure via instrument settings if needed)`);
       });
     });
   }
