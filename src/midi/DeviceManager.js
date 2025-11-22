@@ -262,19 +262,39 @@ class DeviceManager {
   }
 
   sendMessage(deviceName, type, data) {
+    // Vérifier si c'est un périphérique USB MIDI
     const output = this.outputs.get(deviceName);
-    if (!output) {
-      this.app.logger.warn(`Output device not found: ${deviceName}`);
-      return false;
+    if (output) {
+      try {
+        output.send(type, data);
+        return true;
+      } catch (error) {
+        this.app.logger.error(`Failed to send MIDI message to ${deviceName}: ${error.message}`);
+        return false;
+      }
     }
 
-    try {
-      output.send(type, data);
-      return true;
-    } catch (error) {
-      this.app.logger.error(`Failed to send MIDI message: ${error.message}`);
-      return false;
+    // Sinon, vérifier si c'est un périphérique Bluetooth
+    if (this.app.bluetoothManager) {
+      const pairedDevices = this.app.bluetoothManager.getPairedDevices();
+      const bleDevice = pairedDevices.find(d =>
+        d.name === deviceName || d.address === deviceName
+      );
+
+      if (bleDevice && bleDevice.connected) {
+        try {
+          // Envoyer via Bluetooth MIDI
+          this.app.bluetoothManager.sendMidiMessage(bleDevice.address, type, data);
+          return true;
+        } catch (error) {
+          this.app.logger.error(`Failed to send MIDI message via Bluetooth to ${deviceName}: ${error.message}`);
+          return false;
+        }
+      }
     }
+
+    this.app.logger.warn(`Output device not found: ${deviceName}`);
+    return false;
   }
 
   /**
