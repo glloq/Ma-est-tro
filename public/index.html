@@ -3581,10 +3581,8 @@
                             api.emit('bluetooth:paired', { device_id: address, address: address });
                             log(`✓ ${name} connecté avec succès`, 'info');
 
-                            // Petit délai pour laisser le backend finaliser la mise à jour
-                            setTimeout(() => {
-                                loadDevices(); // Rafraîchir la liste des périphériques
-                            }, 300);
+                            // Rafraîchir immédiatement la liste (connexion rapide maintenant)
+                            loadDevices();
                         } else {
                             throw new Error(response.error || 'Erreur de connexion');
                         }
@@ -3623,10 +3621,8 @@
                             api.emit('bluetooth:connected', { device_id: address });
                             log(`✓ Connecté à ${address}`, 'info');
 
-                            // Petit délai pour laisser le backend finaliser la mise à jour
-                            setTimeout(() => {
-                                loadDevices(); // Rafraîchir la liste des périphériques
-                            }, 300);
+                            // Rafraîchir immédiatement la liste (connexion rapide maintenant)
+                            loadDevices();
                         } else {
                             throw new Error(response.error || 'Erreur de connexion');
                         }
@@ -3646,10 +3642,8 @@
                             api.emit('bluetooth:disconnected', { device_id: address });
                             log(`✓ Déconnecté de ${address}`, 'info');
 
-                            // Petit délai pour laisser le backend finaliser la mise à jour
-                            setTimeout(() => {
-                                loadDevices(); // Rafraîchir la liste des périphériques
-                            }, 300);
+                            // Rafraîchir immédiatement la liste
+                            loadDevices();
                         } else {
                             throw new Error(response.error || 'Erreur de déconnexion');
                         }
