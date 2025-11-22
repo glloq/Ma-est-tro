@@ -3599,6 +3599,7 @@
                         if (response.success) {
                             api.emit('bluetooth:unpaired', { device_id: address });
                             log(`✓ Appareil oublié`, 'info');
+                            loadDevices(); // Rafraîchir la liste des périphériques
                         } else {
                             throw new Error(response.error || 'Erreur');
                         }

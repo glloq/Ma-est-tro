@@ -70,6 +70,11 @@ class BluetoothScanModal {
             this.handleBluetoothPoweredOff(data);
         });
 
+        // Périphérique oublié
+        this.eventBus.on('bluetooth:unpaired', (data) => {
+            this.handleDeviceUnpaired(data);
+        });
+
         this.logger.debug('BluetoothScanModal', 'Event listeners configured');
     }
 
@@ -423,17 +428,24 @@ class BluetoothScanModal {
      * Oublie un périphérique appairé
      */
     unpairDevice(deviceAddress) {
-        if (!confirm('Voulez-vous vraiment oublier cet appareil ?')) {
-            return;
-        }
+        // Trouver le nom du périphérique
+        const device = this.pairedDevices.find(d => d.address === deviceAddress);
+        const deviceName = device ? device.name : deviceAddress;
 
-        this.logger.info('BluetoothScanModal', `Unpairing device: ${deviceAddress}`);
+        // Afficher la modal de confirmation
+        this.showConfirmModal(
+            'Oublier cet appareil ?',
+            `Voulez-vous vraiment oublier <strong>${this.escapeHtml(deviceName)}</strong> ?<br><br>Cette action supprimera l'appairage avec cet appareil.`,
+            () => {
+                this.logger.info('BluetoothScanModal', `Unpairing device: ${deviceAddress}`);
 
-        if (this.eventBus) {
-            this.eventBus.emit('bluetooth:unpair_requested', {
-                address: deviceAddress
-            });
-        }
+                if (this.eventBus) {
+                    this.eventBus.emit('bluetooth:unpair_requested', {
+                        address: deviceAddress
+                    });
+                }
+            }
+        );
     }
 
     // ========================================================================
@@ -544,6 +556,22 @@ class BluetoothScanModal {
         this.updateModalContent();
     }
 
+    /**
+     * Gère l'oubli d'un périphérique
+     */
+    handleDeviceUnpaired(data) {
+        const deviceId = data.device_id || data.address;
+
+        this.logger.info('BluetoothScanModal', `Device unpaired: ${deviceId}`);
+
+        // Supprimer de la liste des appareils appairés
+        this.pairedDevices = this.pairedDevices.filter(
+            d => d.address !== deviceId
+        );
+
+        this.updateModalContent();
+    }
+
     // ========================================================================
     // BLUETOOTH POWER CONTROL
     // ========================================================================
@@ -639,6 +667,62 @@ class BluetoothScanModal {
             // Réattacher les événements
             this.attachModalEvents();
         }
+    }
+
+    // ========================================================================
+    // MODAL DE CONFIRMATION
+    // ========================================================================
+
+    /**
+     * Affiche une modal de confirmation
+     * @param {string} title - Titre de la modal
+     * @param {string} message - Message de confirmation (peut contenir du HTML)
+     * @param {Function} onConfirm - Callback si confirmé
+     */
+    showConfirmModal(title, message, onConfirm) {
+        // Créer la modal de confirmation
+        const confirmModal = document.createElement('div');
+        confirmModal.className = 'modal-overlay confirm-modal';
+        confirmModal.style.zIndex = '10001'; // Au-dessus de la modal Bluetooth
+
+        confirmModal.innerHTML = `
+            <div class="modal-dialog modal-sm">
+                <div class="modal-header">
+                    <h2>${this.escapeHtml(title)}</h2>
+                </div>
+                <div class="modal-body">
+                    <p style="text-align: center; font-size: 15px; line-height: 1.6;">
+                        ${message}
+                    </p>
+                </div>
+                <div class="modal-footer" style="display: flex; gap: 12px; justify-content: center;">
+                    <button class="btn-secondary" data-action="cancel">Annuler</button>
+                    <button class="btn-danger" data-action="confirm">Oublier</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(confirmModal);
+
+        // Bouton Annuler
+        const cancelBtn = confirmModal.querySelector('[data-action="cancel"]');
+        cancelBtn.addEventListener('click', () => {
+            confirmModal.remove();
+        });
+
+        // Bouton Confirmer
+        const confirmBtn = confirmModal.querySelector('[data-action="confirm"]');
+        confirmBtn.addEventListener('click', () => {
+            confirmModal.remove();
+            if (onConfirm) onConfirm();
+        });
+
+        // Clic sur le fond pour fermer
+        confirmModal.addEventListener('click', (e) => {
+            if (e.target === confirmModal) {
+                confirmModal.remove();
+            }
+        });
     }
 
     // ========================================================================
