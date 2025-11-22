@@ -21,6 +21,7 @@ class BluetoothManager extends EventEmitter {
     this.pairedDevices = []; // Liste des périphériques appairés (simulé pour l'instant)
 
     this.BLE_MIDI_SERVICE_UUID = '03b80e5aede84b33a7516ce34ec4c700'; // UUID du service MIDI BLE
+    this.BLE_MIDI_CHARACTERISTIC_UUID = '7772e5db38684112a1a9f2669d106bf3'; // UUID de la caractéristique MIDI I/O
 
     this.setupNobleEvents();
 
@@ -234,13 +235,32 @@ class BluetoothManager extends EventEmitter {
           const midiService = services[0];
           this.app.logger.info(`Found MIDI service on ${address}`);
 
-          // Découvrir la caractéristique MIDI I/O
-          midiService.discoverCharacteristics([], (error, characteristics) => {
+          // Découvrir la caractéristique MIDI I/O spécifique pour accélérer
+          midiService.discoverCharacteristics([this.BLE_MIDI_CHARACTERISTIC_UUID], (error, characteristics) => {
             let midiCharacteristic = null;
 
             if (!error && characteristics && characteristics.length > 0) {
               midiCharacteristic = characteristics[0];
               this.app.logger.info(`Found MIDI characteristic on ${address}`);
+            } else {
+              // Fallback: essayer de découvrir toutes les caractéristiques si UUID spécifique échoue
+              this.app.logger.warn(`Specific MIDI characteristic not found, trying all characteristics...`);
+              midiService.discoverCharacteristics([], (error2, chars2) => {
+                if (!error2 && chars2 && chars2.length > 0) {
+                  midiCharacteristic = chars2[0];
+                  this.app.logger.info(`Found fallback MIDI characteristic on ${address}`);
+                }
+
+                // Mettre à jour avec les services MIDI découverts
+                this.connectedDevices.set(address, {
+                  peripheral: peripheral,
+                  midiService: midiService,
+                  midiCharacteristic: midiCharacteristic
+                });
+
+                this.app.logger.info(`MIDI setup complete for ${address}`);
+              });
+              return;
             }
 
             // Mettre à jour avec les services MIDI découverts
