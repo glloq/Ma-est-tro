@@ -273,22 +273,30 @@ class BluetoothScanModal {
      */
     renderPairedDevice(device) {
         const deviceName = this.escapeHtml(device.name || device.address);
+        const isConnected = device.connected === true;
 
         return `
-            <div class="device-card bluetooth-device paired" data-device-address="${device.address}">
-                <div class="device-icon">✓</div>
+            <div class="device-card bluetooth-device paired ${isConnected ? 'connected' : ''}" data-device-address="${device.address}">
+                <div class="device-icon">${isConnected ? '🟢' : '✓'}</div>
                 <div class="device-info">
                     <div class="device-name">${deviceName}</div>
                     <div class="device-address">${device.address}</div>
                     <div class="device-status">
-                        <span class="status-badge paired">✓ Appairé</span>
+                        <span class="status-badge ${isConnected ? 'connected' : 'paired'}">${isConnected ? '🟢 Connecté' : '✓ Appairé'}</span>
                     </div>
                 </div>
                 <div class="device-actions">
-                    <button class="btn-connect" data-action="connect"
-                            data-device-address="${device.address}">
-                        🔌 Connecter
-                    </button>
+                    ${isConnected ? `
+                        <button class="btn-disconnect" data-action="disconnect"
+                                data-device-address="${device.address}">
+                            🔌 Déconnecter
+                        </button>
+                    ` : `
+                        <button class="btn-connect" data-action="connect"
+                                data-device-address="${device.address}">
+                            🔌 Connecter
+                        </button>
+                    `}
                     <button class="btn-unpair" data-action="unpair"
                             data-device-address="${device.address}">
                         Oublier
@@ -346,6 +354,11 @@ class BluetoothScanModal {
             if (action === 'connect') {
                 const deviceAddress = e.target.dataset.deviceAddress;
                 if (deviceAddress) this.connectDevice(deviceAddress);
+            }
+
+            if (action === 'disconnect') {
+                const deviceAddress = e.target.dataset.deviceAddress;
+                if (deviceAddress) this.disconnectDevice(deviceAddress);
             }
 
             if (action === 'unpair') {
@@ -434,6 +447,19 @@ class BluetoothScanModal {
 
         // Fermer la modal après connexion
         this.close();
+    }
+
+    /**
+     * Déconnecte un périphérique
+     */
+    disconnectDevice(deviceAddress) {
+        this.logger.info('BluetoothScanModal', `Disconnecting device: ${deviceAddress}`);
+
+        if (this.eventBus) {
+            this.eventBus.emit('bluetooth:disconnect_requested', {
+                address: deviceAddress
+            });
+        }
     }
 
     /**

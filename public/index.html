@@ -3627,6 +3627,25 @@
                     }
                 });
 
+                api.on('bluetooth:disconnect_requested', async (data) => {
+                    try {
+                        const address = data.address || data.device_id;
+
+                        log(`🔌 Déconnexion de ${address}...`, 'info');
+                        const response = await api.sendCommand('ble_disconnect', { address: address });
+
+                        if (response.success) {
+                            api.emit('bluetooth:disconnected', { device_id: address });
+                            log(`✓ Déconnecté de ${address}`, 'info');
+                            loadDevices(); // Rafraîchir la liste des périphériques
+                        } else {
+                            throw new Error(response.error || 'Erreur de déconnexion');
+                        }
+                    } catch (error) {
+                        log(`❌ Erreur déconnexion: ${error.message}`, 'error');
+                    }
+                });
+
                 // Demande d'état Bluetooth
                 api.on('bluetooth:status_requested', async () => {
                     try {
