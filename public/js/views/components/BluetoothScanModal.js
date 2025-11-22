@@ -655,8 +655,11 @@ class BluetoothScanModal {
 
         this.logger.info('BluetoothScanModal', `Device connected: ${deviceId}`);
 
-        // Recharger la liste depuis le backend pour être sûr d'avoir le bon statut
-        this.loadPairedDevices();
+        // Petit délai pour laisser le backend mettre à jour
+        setTimeout(() => {
+            // Recharger la liste depuis le backend pour être sûr d'avoir le bon statut
+            this.loadPairedDevices();
+        }, 300);
     }
 
     /**
@@ -830,11 +833,20 @@ class BluetoothScanModal {
             confirmBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+
+                // Empêcher les clics multiples
+                if (confirmBtn.disabled) {
+                    return;
+                }
+                confirmBtn.disabled = true;
+                confirmBtn.style.opacity = '0.5';
+                confirmBtn.style.cursor = 'wait';
+
                 closeModal();
                 if (onConfirm) {
                     onConfirm();
                 }
-            });
+            }, { once: true });
         }
 
         // Clic sur le fond pour fermer

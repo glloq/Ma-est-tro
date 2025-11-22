@@ -179,21 +179,23 @@
 /* ===== MODALES ===== */
 .modal {
     display: none;
-    position: fixed;
+    position: fixed !important;
     z-index: 1200;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
     overflow: auto;
     background-color: rgba(0,0,0,0.4);
     backdrop-filter: blur(5px);
+    align-items: center !important;
+    justify-content: center !important;
 }
 
 .modal.show {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
 .modal-content {
