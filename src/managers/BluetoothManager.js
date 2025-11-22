@@ -176,6 +176,16 @@ class BluetoothManager extends EventEmitter {
     const startTime = Date.now();
     this.app.logger.info(`[TIMING] Starting connection to BLE device: ${address}`);
 
+    // CRITIQUE: Arrêter le scan AVANT de se connecter
+    // Certains adaptateurs BLE ne peuvent pas se connecter pendant qu'ils scannent
+    // Cela cause des délais de 30-40 secondes
+    if (this.scanning) {
+      this.app.logger.info('[TIMING] Stopping scan before connection...');
+      this.stopScan();
+      // Attendre un court instant pour que le scan s'arrête complètement
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
     // Récupérer le périphérique depuis le cache
     const deviceInfo = this.devices.get(address);
 
