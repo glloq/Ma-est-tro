@@ -668,18 +668,8 @@ class BluetoothScanModal {
 
         this.logger.info('BluetoothScanModal', `Device connected: ${deviceId}`);
 
-        // NE PAS rafraîchir automatiquement pendant la connexion
-        // Cela cause des problèmes d'UI (page violette, boutons cassés)
-        // L'utilisateur peut fermer et rouvrir la modal pour voir le statut actualisé
-        // OU attendre que la découverte MIDI soit terminée avant de rafraîchir
-
-        // Rafraîchir seulement après un délai suffisant pour la découverte MIDI complète
-        setTimeout(() => {
-            // Vérifier si la modal est toujours ouverte avant de rafraîchir
-            if (this.isOpen) {
-                this.loadPairedDevices();
-            }
-        }, 5000); // 5 secondes pour laisser le temps à la découverte MIDI
+        // Rafraîchir IMMÉDIATEMENT pour afficher le statut connecté
+        this.loadPairedDevices();
     }
 
     /**
