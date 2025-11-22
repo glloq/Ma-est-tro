@@ -665,11 +665,18 @@ class BluetoothScanModal {
 
         this.logger.info('BluetoothScanModal', `Device connected: ${deviceId}`);
 
-        // Attendre que le backend ait vraiment établi la connexion avant de rafraîchir
-        // La découverte des services MIDI peut prendre jusqu'à 5 secondes
+        // NE PAS rafraîchir automatiquement pendant la connexion
+        // Cela cause des problèmes d'UI (page violette, boutons cassés)
+        // L'utilisateur peut fermer et rouvrir la modal pour voir le statut actualisé
+        // OU attendre que la découverte MIDI soit terminée avant de rafraîchir
+
+        // Rafraîchir seulement après un délai suffisant pour la découverte MIDI complète
         setTimeout(() => {
-            this.loadPairedDevices();
-        }, 1000);
+            // Vérifier si la modal est toujours ouverte avant de rafraîchir
+            if (this.isOpen) {
+                this.loadPairedDevices();
+            }
+        }, 5000); // 5 secondes pour laisser le temps à la découverte MIDI
     }
 
     /**
