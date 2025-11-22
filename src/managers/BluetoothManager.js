@@ -190,38 +190,43 @@ class BluetoothManager extends EventEmitter {
 
         this.app.logger.info(`Connected to ${deviceInfo.name} (${address})`);
 
-        // Découvrir les services et caractéristiques MIDI
+        // IMPORTANT: Marquer comme connecté IMMÉDIATEMENT après la connexion BLE
+        // avant la découverte des services (qui peut prendre 30 secondes)
+        const existingDevice = this.pairedDevices.find(d => d.address === address);
+        if (existingDevice) {
+          existingDevice.connected = true;
+        } else {
+          this.pairedDevices.push({
+            address: address,
+            name: deviceInfo.name,
+            type: 'ble',
+            paired: true,
+            connected: true
+          });
+        }
+
+        // Stocker temporairement avec services vides (sera mis à jour après découverte)
+        this.connectedDevices.set(address, {
+          peripheral: peripheral,
+          midiService: null,
+          midiCharacteristic: null
+        });
+
+        // Résoudre IMMÉDIATEMENT pour que le frontend affiche le statut connecté
+        resolve({
+          address: address,
+          name: deviceInfo.name,
+          connected: true
+        });
+
+        // Découvrir les services et caractéristiques MIDI en arrière-plan
+        // (ne pas attendre pour résoudre la Promise)
+        this.app.logger.info(`Discovering MIDI services for ${address} in background...`);
+
         peripheral.discoverServices([this.BLE_MIDI_SERVICE_UUID], (error, services) => {
           if (error || !services || services.length === 0) {
-            this.app.logger.warn(`No MIDI services found on ${address}`);
-            // Stocker quand même avec services vides
-            this.connectedDevices.set(address, {
-              peripheral: peripheral,
-              midiService: null,
-              midiCharacteristic: null
-            });
-
-            // Ajouter aux périphériques appairés ou mettre à jour le statut
-            const existingDevice = this.pairedDevices.find(d => d.address === address);
-            if (existingDevice) {
-              // Mettre à jour le statut de connexion
-              existingDevice.connected = true;
-            } else {
-              // Ajouter un nouveau périphérique
-              this.pairedDevices.push({
-                address: address,
-                name: deviceInfo.name,
-                type: 'ble',
-                paired: true,
-                connected: true
-              });
-            }
-
-            return resolve({
-              address: address,
-              name: deviceInfo.name,
-              connected: true
-            });
+            this.app.logger.warn(`No MIDI services found on ${address} (device still usable)`);
+            return;
           }
 
           const midiService = services[0];
@@ -232,39 +237,18 @@ class BluetoothManager extends EventEmitter {
             let midiCharacteristic = null;
 
             if (!error && characteristics && characteristics.length > 0) {
-              // Chercher la caractéristique MIDI I/O (généralement la première)
               midiCharacteristic = characteristics[0];
               this.app.logger.info(`Found MIDI characteristic on ${address}`);
             }
 
-            // Stocker le périphérique avec ses services MIDI
+            // Mettre à jour avec les services MIDI découverts
             this.connectedDevices.set(address, {
               peripheral: peripheral,
               midiService: midiService,
               midiCharacteristic: midiCharacteristic
             });
 
-            // Ajouter aux périphériques appairés ou mettre à jour le statut
-            const existingDevice = this.pairedDevices.find(d => d.address === address);
-            if (existingDevice) {
-              // Mettre à jour le statut de connexion
-              existingDevice.connected = true;
-            } else {
-              // Ajouter un nouveau périphérique
-              this.pairedDevices.push({
-                address: address,
-                name: deviceInfo.name,
-                type: 'ble',
-                paired: true,
-                connected: true
-              });
-            }
-
-            resolve({
-              address: address,
-              name: deviceInfo.name,
-              connected: true
-            });
+            this.app.logger.info(`MIDI setup complete for ${address}`);
           });
         });
       });
