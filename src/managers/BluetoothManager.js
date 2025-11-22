@@ -6,9 +6,10 @@
 //   - Scan des périphériques BLE disponibles
 //   - Connexion/déconnexion aux périphériques BLE MIDI
 //   - Gestion des périphériques appairés
+//   - NOUVELLE VERSION: Utilise node-ble (Bluez/DBus) pour connexions RAPIDES
 // ============================================================================
 
-import noble from '@abandonware/noble';
+import { createBluetooth } from 'node-ble';
 import EventEmitter from 'events';
 
 class BluetoothManager extends EventEmitter {
@@ -17,63 +18,141 @@ class BluetoothManager extends EventEmitter {
     this.app = app;
     this.scanning = false;
     this.devices = new Map(); // Map of device address -> device info
-    this.connectedDevices = new Map(); // Map of address -> peripheral object
-    this.pairedDevices = []; // Liste des périphériques appairés (simulé pour l'instant)
+    this.connectedDevices = new Map(); // Map of address -> {device, gattServer, characteristic}
+    this.pairedDevices = []; // Liste des périphériques appairés
 
-    this.BLE_MIDI_SERVICE_UUID = '03b80e5aede84b33a7516ce34ec4c700'; // UUID du service MIDI BLE
-    this.BLE_MIDI_CHARACTERISTIC_UUID = '7772e5db38684112a1a9f2669d106bf3'; // UUID de la caractéristique MIDI I/O
+    this.BLE_MIDI_SERVICE_UUID = '03b80e5a-ede8-4b33-a751-6ce34ec4c700'; // UUID du service MIDI BLE
+    this.BLE_MIDI_CHARACTERISTIC_UUID = '7772e5db-3868-4112-a1a9-f2669d106bf3'; // UUID de la caractéristique MIDI I/O
 
-    this.setupNobleEvents();
+    // Initialiser node-ble
+    this.bluetooth = null;
+    this.adapter = null;
+    this.destroy = null;
 
-    this.app.logger.info('BluetoothManager initialized');
+    this.initializeBluetooth();
+
+    this.app.logger.info('BluetoothManager initialized (node-ble)');
   }
 
-  setupNobleEvents() {
-    noble.on('stateChange', (state) => {
-      this.app.logger.info(`Bluetooth state changed: ${state}`);
+  async initializeBluetooth() {
+    try {
+      const { bluetooth, destroy } = createBluetooth();
+      this.bluetooth = bluetooth;
+      this.destroy = destroy;
 
-      if (state === 'poweredOn') {
-        this.app.logger.info('Bluetooth is ready');
-      } else {
-        this.app.logger.warn(`Bluetooth is ${state}`);
-        if (this.scanning) {
-          this.stopScan();
+      this.adapter = await bluetooth.defaultAdapter();
+
+      const adapterName = await this.adapter.getName();
+      this.app.logger.info(`Bluetooth adapter ready: ${adapterName}`);
+
+      // Émettre événement powered on
+      this.emit('bluetooth:powered_on');
+
+    } catch (error) {
+      this.app.logger.error(`Failed to initialize Bluetooth: ${error.message}`);
+      this.emit('bluetooth:powered_off', { error: error.message });
+    }
+  }
+
+  /**
+   * Démarre le scan BLE
+   * @param {number} duration - Durée du scan en secondes (0 = scan continu)
+   * @param {string} filter - Filtre optionnel sur le nom
+   * @returns {Promise<Array>} Liste des périphériques trouvés
+   */
+  async startScan(duration = 5, filter = '') {
+    if (this.scanning) {
+      throw new Error('Scan already in progress');
+    }
+
+    if (!this.adapter) {
+      throw new Error('Bluetooth adapter not ready');
+    }
+
+    try {
+      this.scanning = true;
+      this.devices.clear();
+
+      const startTime = Date.now();
+      this.app.logger.info(`[TIMING] Starting BLE scan for ${duration}s...`);
+
+      // Démarrer le scan
+      const isDiscovering = await this.adapter.isDiscovering();
+      if (!isDiscovering) {
+        await this.adapter.startDiscovery();
+      }
+
+      // Attendre la durée du scan
+      await new Promise(resolve => setTimeout(resolve, duration * 1000));
+
+      // Récupérer les appareils découverts
+      const deviceAddresses = await this.adapter.devices();
+      this.app.logger.info(`[TIMING] Scan found ${deviceAddresses.length} devices in ${Date.now() - startTime}ms`);
+
+      // Charger les infos de chaque appareil
+      for (const address of deviceAddresses) {
+        try {
+          const device = await this.adapter.getDevice(address);
+          await this.handleDeviceDiscovered(device, address);
+        } catch (error) {
+          this.app.logger.debug(`Could not get device ${address}: ${error.message}`);
         }
       }
-    });
 
-    noble.on('discover', (peripheral) => {
-      this.handleDeviceDiscovered(peripheral);
-    });
+      // Arrêter le scan
+      await this.adapter.stopDiscovery();
+      this.scanning = false;
+
+      // Appliquer le filtre si nécessaire
+      let devicesArray = Array.from(this.devices.values());
+      if (filter) {
+        devicesArray = devicesArray.filter(d =>
+          d.name.toLowerCase().includes(filter.toLowerCase())
+        );
+      }
+
+      this.app.logger.info(`Scan complete: ${devicesArray.length} devices available`);
+
+      return devicesArray;
+
+    } catch (error) {
+      this.scanning = false;
+      this.app.logger.error(`Scan error: ${error.message}`);
+      throw error;
+    }
   }
 
-  handleDeviceDiscovered(peripheral) {
-    const address = peripheral.address || peripheral.id;
-    const name = peripheral.advertisement.localName || 'Appareil Bluetooth';
-    const rssi = peripheral.rssi;
+  async handleDeviceDiscovered(device, address) {
+    try {
+      const name = await device.getName() || 'Unknown Device';
+      const rssi = await device.getRSSI().catch(() => -100);
+      const uuids = await device.getUUIDs().catch(() => []);
 
-    // Vérifier si c'est un périphérique MIDI BLE
-    const serviceUuids = peripheral.advertisement.serviceUuids || [];
-    const isMidiDevice = serviceUuids.some(uuid =>
-      uuid.toLowerCase().includes('03b80e5a') ||
-      uuid.toLowerCase().includes(this.BLE_MIDI_SERVICE_UUID)
-    );
+      // Vérifier si c'est un périphérique MIDI BLE
+      const isMidiDevice = uuids.some(uuid =>
+        uuid.toLowerCase().includes('03b80e5a') ||
+        uuid.toLowerCase() === this.BLE_MIDI_SERVICE_UUID.toLowerCase()
+      );
 
-    const deviceInfo = {
-      id: address,
-      address: address,
-      name: name,
-      rssi: rssi,
-      signal: this.rssiToSignalStrength(rssi),
-      type: 'ble',
-      isMidiDevice: isMidiDevice,
-      serviceUuids: serviceUuids,
-      peripheral: peripheral
-    };
+      const deviceInfo = {
+        id: address,
+        address: address,
+        name: name,
+        rssi: rssi,
+        signal: this.rssiToSignalStrength(rssi),
+        type: 'ble',
+        isMidiDevice: isMidiDevice,
+        serviceUuids: uuids,
+        deviceObject: device
+      };
 
-    this.devices.set(address, deviceInfo);
+      this.devices.set(address, deviceInfo);
 
-    this.app.logger.debug(`BLE device discovered: ${name} (${address}) RSSI: ${rssi} dBm ${isMidiDevice ? '[MIDI]' : ''}`);
+      this.app.logger.debug(`BLE device discovered: ${name} (${address}) RSSI: ${rssi} dBm ${isMidiDevice ? '[MIDI]' : ''}`);
+
+    } catch (error) {
+      this.app.logger.debug(`Error processing device ${address}: ${error.message}`);
+    }
   }
 
   rssiToSignalStrength(rssi) {
@@ -87,83 +166,25 @@ class BluetoothManager extends EventEmitter {
   }
 
   /**
-   * Démarre le scan BLE
-   * @param {number} duration - Durée du scan en secondes (0 = scan continu)
-   * @param {string} filter - Filtre optionnel sur le nom
-   * @returns {Promise<Array>} Liste des périphériques trouvés
-   */
-  async startScan(duration = 5, filter = '') {
-    return new Promise((resolve, reject) => {
-      if (this.scanning) {
-        return reject(new Error('Scan already in progress'));
-      }
-
-      if (noble.state !== 'poweredOn') {
-        return reject(new Error(`Bluetooth is ${noble.state}. Please enable Bluetooth.`));
-      }
-
-      this.app.logger.info(`Starting BLE scan for ${duration}s...`);
-      this.scanning = true;
-
-      // NE PAS vider le cache - conserver les périphériques appairés pour permettre la reconnexion
-      // this.devices.clear(); // SUPPRIMÉ
-
-      try {
-        // Démarrer le scan (permettre les doublons pour obtenir des mises à jour RSSI)
-        noble.startScanning([], true);
-
-        // Arrêter automatiquement après la durée spécifiée
-        if (duration > 0) {
-          setTimeout(() => {
-            this.stopScan();
-
-            // Filtrer les résultats si un filtre est fourni
-            let devices = Array.from(this.devices.values());
-
-            if (filter) {
-              const filterLower = filter.toLowerCase();
-              devices = devices.filter(d =>
-                d.name.toLowerCase().includes(filterLower) ||
-                d.address.toLowerCase().includes(filterLower)
-              );
-            }
-
-            // Retirer les objets peripheral pour éviter les références circulaires lors de la sérialisation JSON
-            const serializedDevices = devices.map(d => ({
-              id: d.id,
-              address: d.address,
-              name: d.name,
-              rssi: d.rssi,
-              signal: d.signal,
-              type: d.type,
-              isMidiDevice: d.isMidiDevice,
-              serviceUuids: d.serviceUuids
-              // peripheral: omis - contient des références circulaires
-            }));
-
-            this.app.logger.info(`BLE scan completed: ${serializedDevices.length} devices found`);
-            resolve(serializedDevices);
-          }, duration * 1000);
-        } else {
-          // Scan continu
-          resolve([]);
-        }
-      } catch (error) {
-        this.scanning = false;
-        this.app.logger.error(`BLE scan error: ${error.message}`);
-        reject(error);
-      }
-    });
-  }
-
-  /**
    * Arrête le scan BLE
    */
-  stopScan() {
-    if (this.scanning) {
-      noble.stopScanning();
+  async stopScan() {
+    if (!this.scanning) {
+      return;
+    }
+
+    try {
+      if (this.adapter) {
+        const isDiscovering = await this.adapter.isDiscovering();
+        if (isDiscovering) {
+          await this.adapter.stopDiscovery();
+        }
+      }
       this.scanning = false;
       this.app.logger.info('BLE scan stopped');
+    } catch (error) {
+      this.app.logger.error(`Error stopping scan: ${error.message}`);
+      this.scanning = false;
     }
   }
 
@@ -176,374 +197,253 @@ class BluetoothManager extends EventEmitter {
     const startTime = Date.now();
     this.app.logger.info(`[TIMING] Starting connection to BLE device: ${address}`);
 
-    // CRITIQUE: Arrêter le scan AVANT de se connecter
-    // Certains adaptateurs BLE ne peuvent pas se connecter pendant qu'ils scannent
-    // Cela cause des délais de 30-40 secondes
-    if (this.scanning) {
-      this.app.logger.info('[TIMING] Stopping scan before connection...');
-      this.stopScan();
-      // Attendre un court instant pour que le scan s'arrête complètement
-      await new Promise(resolve => setTimeout(resolve, 100));
+    if (!this.adapter) {
+      throw new Error('Bluetooth adapter not ready');
     }
 
-    // Récupérer le périphérique depuis le cache
-    const deviceInfo = this.devices.get(address);
+    try {
+      // Récupérer le périphérique
+      const deviceInfo = this.devices.get(address);
+      let device = deviceInfo ? deviceInfo.deviceObject : null;
 
-    if (!deviceInfo) {
-      throw new Error(`Device not found: ${address}. Please scan first.`);
-    }
+      if (!device) {
+        this.app.logger.info(`[TIMING] Device not in cache, fetching from adapter...`);
+        device = await this.adapter.getDevice(address);
+      }
 
-    const peripheral = deviceInfo.peripheral;
-    this.app.logger.info(`[TIMING] Device found in cache after ${Date.now() - startTime}ms`);
+      // Connecter
+      const connectStart = Date.now();
+      this.app.logger.info(`[TIMING] Calling device.connect()...`);
 
-    return new Promise((resolve, reject) => {
-      const connectStartTime = Date.now();
-      this.app.logger.info(`[TIMING] Calling peripheral.connect()...`);
+      await device.connect();
 
-      peripheral.connect((error) => {
-        const connectDuration = Date.now() - connectStartTime;
-        this.app.logger.info(`[TIMING] peripheral.connect() callback after ${connectDuration}ms`);
+      this.app.logger.info(`[TIMING] ✅ device.connect() completed in ${Date.now() - connectStart}ms`);
 
-        if (error) {
-          this.app.logger.error(`Failed to connect to ${address}: ${error.message}`);
-          return reject(error);
-        }
+      // Obtenir le serveur GATT
+      const gattStart = Date.now();
+      const gattServer = await device.gatt();
+      this.app.logger.info(`[TIMING] GATT server obtained in ${Date.now() - gattStart}ms`);
 
-        this.app.logger.info(`Connected to ${deviceInfo.name} (${address}) - Total time: ${Date.now() - startTime}ms`);
+      // Obtenir le service MIDI
+      const serviceStart = Date.now();
+      const service = await gattServer.getPrimaryService(this.BLE_MIDI_SERVICE_UUID);
+      this.app.logger.info(`[TIMING] MIDI service found in ${Date.now() - serviceStart}ms`);
 
-        // IMPORTANT: Marquer comme connecté IMMÉDIATEMENT après la connexion BLE
-        // avant la découverte des services (qui peut prendre 30 secondes)
-        const existingDevice = this.pairedDevices.find(d => d.address === address);
-        if (existingDevice) {
-          existingDevice.connected = true;
-        } else {
-          this.pairedDevices.push({
-            address: address,
-            name: deviceInfo.name,
-            type: 'ble',
-            paired: true,
-            connected: true
-          });
-        }
+      // Obtenir la caractéristique MIDI I/O
+      const charStart = Date.now();
+      const characteristic = await service.getCharacteristic(this.BLE_MIDI_CHARACTERISTIC_UUID);
+      this.app.logger.info(`[TIMING] MIDI characteristic found in ${Date.now() - charStart}ms`);
 
-        // Stocker temporairement avec services vides (sera mis à jour après découverte)
-        this.connectedDevices.set(address, {
-          peripheral: peripheral,
-          midiService: null,
-          midiCharacteristic: null
-        });
+      // S'abonner aux notifications
+      characteristic.on('valuechanged', buffer => {
+        this.handleMidiData(address, buffer);
+      });
+      await characteristic.startNotifications();
 
-        // Résoudre IMMÉDIATEMENT pour que le frontend affiche le statut connecté
-        resolve({
+      const name = await device.getName();
+
+      // Marquer comme connecté
+      const existingDevice = this.pairedDevices.find(d => d.address === address);
+      if (existingDevice) {
+        existingDevice.connected = true;
+      } else {
+        this.pairedDevices.push({
           address: address,
-          name: deviceInfo.name,
+          name: name,
+          type: 'ble',
+          paired: true,
           connected: true
         });
+      }
 
-        // NE PAS découvrir les services MIDI automatiquement
-        // La découverte peut prendre 30+ secondes et bloquer la connexion
-        // L'utilisateur configurera manuellement via "Réglages instrument" si nécessaire
-        this.app.logger.info(`Device ${address} connected successfully - MIDI services NOT auto-discovered (configure via instrument settings if needed)`);
+      // Stocker la connexion
+      this.connectedDevices.set(address, {
+        device: device,
+        gattServer: gattServer,
+        characteristic: characteristic
       });
-    });
+
+      const totalTime = Date.now() - startTime;
+      this.app.logger.info(`[TIMING] 🚀 TOTAL CONNECTION TIME: ${totalTime}ms`);
+      this.app.logger.info(`Connected to ${name} (${address}) via node-ble`);
+
+      // Émettre événement de connexion
+      this.emit('bluetooth:connected', {
+        address: address,
+        device_id: address,
+        name: name
+      });
+
+      return {
+        address: address,
+        name: name,
+        connected: true
+      };
+
+    } catch (error) {
+      this.app.logger.error(`Failed to connect to ${address}: ${error.message}`);
+      throw error;
+    }
   }
 
   /**
-   * Déconnecte un périphérique BLE
+   * Déconnecte un périphérique
    * @param {string} address - Adresse du périphérique
-   * @returns {Promise<Object>} Résultat de la déconnexion
    */
   async disconnect(address) {
-    this.app.logger.info(`Disconnecting BLE device: ${address}`);
+    const deviceConnection = this.connectedDevices.get(address);
 
-    const deviceData = this.connectedDevices.get(address);
-
-    if (!deviceData) {
-      throw new Error(`Device not connected: ${address}`);
+    if (!deviceConnection) {
+      throw new Error(`Device ${address} not connected`);
     }
 
-    const peripheral = deviceData.peripheral;
+    try {
+      const { device, characteristic } = deviceConnection;
 
-    return new Promise((resolve, reject) => {
-      peripheral.disconnect((error) => {
-        if (error) {
-          this.app.logger.error(`Failed to disconnect ${address}: ${error.message}`);
-          return reject(error);
-        }
+      // Arrêter les notifications
+      if (characteristic) {
+        await characteristic.stopNotifications();
+      }
 
-        this.connectedDevices.delete(address);
-        this.app.logger.info(`Disconnected from ${address}`);
+      // Déconnecter
+      await device.disconnect();
 
-        // Mettre à jour l'état dans pairedDevices
-        const pairedDevice = this.pairedDevices.find(d => d.address === address);
-        if (pairedDevice) {
-          pairedDevice.connected = false;
-        }
+      this.connectedDevices.delete(address);
 
-        resolve({
-          address: address,
-          connected: false
-        });
+      // Mettre à jour le statut
+      const pairedDevice = this.pairedDevices.find(d => d.address === address);
+      if (pairedDevice) {
+        pairedDevice.connected = false;
+      }
+
+      this.app.logger.info(`Disconnected from ${address}`);
+
+      // Émettre événement
+      this.emit('bluetooth:disconnected', {
+        address: address,
+        device_id: address
       });
-    });
+
+    } catch (error) {
+      this.app.logger.error(`Disconnect error for ${address}: ${error.message}`);
+      throw error;
+    }
   }
 
   /**
-   * Oublie un périphérique appairé
+   * Oublie un périphérique (dépairage)
    * @param {string} address - Adresse du périphérique
-   * @returns {Object} Résultat
    */
-  async forget(address) {
-    this.app.logger.info(`Forgetting BLE device: ${address}`);
-
+  async unpair(address) {
     // Déconnecter d'abord si connecté
     if (this.connectedDevices.has(address)) {
       await this.disconnect(address);
     }
 
-    // NE PAS supprimer du cache devices - permet le ré-appairage
-    // Le cache sera rafraîchi au prochain scan de toute façon
+    // Retirer de la liste appairée
+    this.pairedDevices = this.pairedDevices.filter(d => d.address !== address);
 
-    // Supprimer des périphériques appairés
-    const index = this.pairedDevices.findIndex(d => d.address === address);
-    if (index !== -1) {
-      this.pairedDevices.splice(index, 1);
-      this.app.logger.info(`Device ${address} forgotten`);
-      return { success: true };
-    } else {
-      throw new Error(`Device not found in paired list: ${address}`);
-    }
-  }
+    this.app.logger.info(`Unpaired device ${address}`);
 
-  /**
-   * Retourne la liste des périphériques appairés
-   * @returns {Array} Liste des périphériques appairés
-   */
-  getPairedDevices() {
-    return this.pairedDevices;
-  }
-
-  /**
-   * Envoie un message MIDI à un périphérique Bluetooth
-   * @param {string} address - Adresse du périphérique
-   * @param {string} type - Type de message MIDI (noteon, noteoff, cc, etc.)
-   * @param {Object} data - Données du message MIDI
-   * @returns {boolean} Succès de l'envoi
-   */
-  sendMidiMessage(address, type, data) {
-    const device = this.connectedDevices.get(address);
-    if (!device || !device.midiService) {
-      this.app.logger.warn(`Cannot send MIDI: Device ${address} not connected or no MIDI service`);
-      return false;
-    }
-
-    try {
-      // Convertir le message MIDI en bytes selon le format BLE MIDI
-      const midiBytes = this.convertToBleMidi(type, data);
-
-      // Envoyer via la caractéristique MIDI I/O
-      if (device.midiCharacteristic) {
-        device.midiCharacteristic.write(Buffer.from(midiBytes), false);
-        this.app.logger.debug(`Sent MIDI message to ${address}: ${type} ${JSON.stringify(data)}`);
-        return true;
-      } else {
-        this.app.logger.warn(`No MIDI characteristic for device ${address}`);
-        return false;
-      }
-    } catch (error) {
-      this.app.logger.error(`Failed to send MIDI to ${address}: ${error.message}`);
-      return false;
-    }
-  }
-
-  /**
-   * Convertit un message MIDI en format BLE MIDI
-   * @param {string} type - Type de message
-   * @param {Object} data - Données du message
-   * @returns {Array} Bytes du message BLE MIDI
-   */
-  convertToBleMidi(type, data) {
-    // BLE MIDI header (timestamp high bits)
-    const timestamp = Date.now() & 0x1FFF;
-    const header = 0x80 | ((timestamp >> 7) & 0x3F);
-    const timestampLow = 0x80 | (timestamp & 0x7F);
-
-    let midiBytes = [];
-
-    switch (type) {
-      case 'noteon':
-        // Note On: 0x90 + channel, note, velocity
-        midiBytes = [header, timestampLow, 0x90 | (data.channel || 0), data.note || 60, data.velocity || 127];
-        break;
-      case 'noteoff':
-        // Note Off: 0x80 + channel, note, velocity
-        midiBytes = [header, timestampLow, 0x80 | (data.channel || 0), data.note || 60, data.velocity || 0];
-        break;
-      case 'cc':
-        // Control Change: 0xB0 + channel, controller, value
-        midiBytes = [header, timestampLow, 0xB0 | (data.channel || 0), data.controller || 0, data.value || 0];
-        break;
-      case 'program':
-        // Program Change: 0xC0 + channel, program
-        midiBytes = [header, timestampLow, 0xC0 | (data.channel || 0), data.program || 0];
-        break;
-      case 'pitchbend':
-        // Pitch Bend: 0xE0 + channel, LSB, MSB
-        const bend = (data.value || 0) + 8192; // Center at 8192
-        midiBytes = [header, timestampLow, 0xE0 | (data.channel || 0), bend & 0x7F, (bend >> 7) & 0x7F];
-        break;
-      default:
-        this.app.logger.warn(`Unknown MIDI message type: ${type}`);
-        midiBytes = [header, timestampLow];
-    }
-
-    return midiBytes;
-  }
-
-  /**
-   * Vérifie l'état de Bluetooth
-   * @returns {Object} État de Bluetooth
-   */
-  getStatus() {
-    return {
-      enabled: noble.state === 'poweredOn',
-      state: noble.state,
-      scanning: this.scanning,
-      devicesFound: this.devices.size,
-      connectedDevices: this.connectedDevices.size,
-      pairedDevices: this.pairedDevices.length
-    };
-  }
-
-  /**
-   * Active l'adaptateur Bluetooth
-   * @returns {Promise<Object>} Résultat de l'activation
-   */
-  async powerOn() {
-    this.app.logger.info('Powering on Bluetooth adapter...');
-
-    // Sur Linux, utiliser hciconfig pour activer l'adaptateur
-    if (process.platform === 'linux') {
-      const { exec } = await import('child_process');
-      const { promisify } = await import('util');
-      const execAsync = promisify(exec);
-
-      try {
-        // Débloquer RF-kill d'abord (si bloqué)
-        this.app.logger.debug('Unblocking Bluetooth with rfkill...');
-        try {
-          await execAsync('sudo rfkill unblock bluetooth');
-        } catch (rfkillError) {
-          this.app.logger.warn(`rfkill unblock failed (may not be needed): ${rfkillError.message}`);
-        }
-
-        // Activer l'adaptateur hci0
-        this.app.logger.debug('Bringing up hci0 adapter...');
-        await execAsync('sudo hciconfig hci0 up');
-        this.app.logger.info('Bluetooth adapter powered on');
-
-        // Attendre que Noble détecte le changement d'état
-        await this.waitForState('poweredOn', 5000);
-
-        return {
-          success: true,
-          state: noble.state
-        };
-      } catch (error) {
-        this.app.logger.error(`Failed to power on Bluetooth: ${error.message}`);
-
-        // Messages d'aide détaillés selon l'erreur
-        if (error.message.includes('RF-kill')) {
-          throw new Error(`Bluetooth blocked by RF-kill. Try: sudo rfkill unblock bluetooth && sudo hciconfig hci0 up`);
-        } else {
-          throw new Error(`Failed to enable Bluetooth. Try running: sudo rfkill unblock bluetooth && sudo hciconfig hci0 up`);
-        }
-      }
-    } else {
-      throw new Error('Bluetooth power control is only available on Linux');
-    }
-  }
-
-  /**
-   * Désactive l'adaptateur Bluetooth
-   * @returns {Promise<Object>} Résultat de la désactivation
-   */
-  async powerOff() {
-    this.app.logger.info('Powering off Bluetooth adapter...');
-
-    // Arrêter le scan d'abord
-    if (this.scanning) {
-      this.stopScan();
-    }
-
-    // Sur Linux, utiliser hciconfig pour désactiver l'adaptateur
-    if (process.platform === 'linux') {
-      const { exec } = await import('child_process');
-      const { promisify } = await import('util');
-      const execAsync = promisify(exec);
-
-      try {
-        await execAsync('sudo hciconfig hci0 down');
-        this.app.logger.info('Bluetooth adapter powered off');
-
-        return {
-          success: true,
-          state: 'poweredOff'
-        };
-      } catch (error) {
-        this.app.logger.error(`Failed to power off Bluetooth: ${error.message}`);
-        throw new Error(`Failed to disable Bluetooth. Try running: sudo hciconfig hci0 down`);
-      }
-    } else {
-      throw new Error('Bluetooth power control is only available on Linux');
-    }
-  }
-
-  /**
-   * Attend que Bluetooth atteigne un certain état
-   * @param {string} targetState - État cible
-   * @param {number} timeout - Timeout en ms
-   * @returns {Promise<void>}
-   */
-  async waitForState(targetState, timeout = 5000) {
-    const startTime = Date.now();
-
-    return new Promise((resolve, reject) => {
-      const checkState = () => {
-        if (noble.state === targetState) {
-          resolve();
-        } else if (Date.now() - startTime > timeout) {
-          reject(new Error(`Timeout waiting for Bluetooth state: ${targetState}`));
-        } else {
-          setTimeout(checkState, 100);
-        }
-      };
-
-      checkState();
+    // Émettre événement
+    this.emit('bluetooth:unpaired', {
+      address: address
     });
   }
 
   /**
-   * Arrête tous les scans et déconnecte tous les périphériques
+   * Gère les données MIDI reçues
    */
-  async shutdown() {
-    this.app.logger.info('Shutting down BluetoothManager...');
+  handleMidiData(address, buffer) {
+    try {
+      // Format BLE MIDI: premier octet = timestamp header, reste = données MIDI
+      const data = Array.from(buffer);
 
-    // Arrêter le scan
-    this.stopScan();
+      if (data.length < 2) {
+        return; // Pas assez de données
+      }
 
-    // Déconnecter tous les périphériques
-    const disconnectPromises = [];
-    for (const address of this.connectedDevices.keys()) {
-      disconnectPromises.push(
-        this.disconnect(address).catch(err =>
-          this.app.logger.error(`Error disconnecting ${address}: ${err.message}`)
-        )
-      );
+      // Ignorer le timestamp header (premier octet)
+      const midiData = data.slice(1);
+
+      this.app.logger.debug(`MIDI data from ${address}:`, midiData);
+
+      // Émettre événement MIDI (pour traitement par MidiManager si nécessaire)
+      this.emit('midi:data', {
+        address: address,
+        data: midiData
+      });
+
+    } catch (error) {
+      this.app.logger.error(`Error processing MIDI data: ${error.message}`);
+    }
+  }
+
+  /**
+   * Envoie des données MIDI à un périphérique
+   */
+  async sendMidiData(address, midiData) {
+    const deviceConnection = this.connectedDevices.get(address);
+
+    if (!deviceConnection || !deviceConnection.characteristic) {
+      throw new Error(`Device ${address} not connected or MIDI not configured`);
     }
 
-    await Promise.all(disconnectPromises);
-    this.app.logger.info('BluetoothManager shutdown complete');
+    try {
+      // Format BLE MIDI: timestamp header + données MIDI
+      const timestamp = 0x80; // Header simple avec bit 7 à 1
+      const bleData = Buffer.from([timestamp, ...midiData]);
+
+      await deviceConnection.characteristic.writeValue(bleData);
+
+      this.app.logger.debug(`MIDI sent to ${address}:`, midiData);
+
+    } catch (error) {
+      this.app.logger.error(`Send MIDI error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtient la liste des périphériques appairés
+   */
+  getPairedDevices() {
+    return this.pairedDevices.map(device => ({
+      ...device,
+      connected: this.connectedDevices.has(device.address)
+    }));
+  }
+
+  /**
+   * Vérifie si un périphérique est connecté
+   */
+  isConnected(address) {
+    return this.connectedDevices.has(address);
+  }
+
+  /**
+   * Nettoie et libère les ressources
+   */
+  async cleanup() {
+    try {
+      // Déconnecter tous les périphériques
+      for (const address of this.connectedDevices.keys()) {
+        await this.disconnect(address).catch(() => {});
+      }
+
+      // Arrêter le scan si actif
+      await this.stopScan();
+
+      // Libérer node-ble
+      if (this.destroy) {
+        this.destroy();
+      }
+
+      this.app.logger.info('BluetoothManager cleaned up');
+
+    } catch (error) {
+      this.app.logger.error(`Cleanup error: ${error.message}`);
+    }
   }
 }
 

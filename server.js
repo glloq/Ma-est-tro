@@ -1,11 +1,4 @@
 // server.js
-
-// CRITIQUE: Optimisation BLE - Accélère les connexions Bluetooth
-// Par défaut, noble attend à la fois les données d'advertisement ET de scan response
-// Cette variable permet de bypasser l'attente si l'appareil n'utilise pas scan response
-// Cela réduit le temps de connexion de 30-40s à <2s
-process.env.NOBLE_REPORT_ALL_HCI_EVENTS = '1';
-
 import Application from './src/core/Application.js';
 
 async function main() {
