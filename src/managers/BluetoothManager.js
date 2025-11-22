@@ -189,31 +189,72 @@ class BluetoothManager extends EventEmitter {
         }
 
         this.app.logger.info(`Connected to ${deviceInfo.name} (${address})`);
-        this.connectedDevices.set(address, peripheral);
 
-        // Ajouter aux périphériques appairés (persisté en mémoire)
-        if (!this.pairedDevices.find(d => d.address === address)) {
-          this.pairedDevices.push({
-            address: address,
-            name: deviceInfo.name,
-            type: 'ble',
-            paired: true,
-            connected: true
-          });
-        }
-
-        // Explorer les services MIDI (optionnel, pour validation)
+        // Découvrir les services et caractéristiques MIDI
         peripheral.discoverServices([this.BLE_MIDI_SERVICE_UUID], (error, services) => {
-          if (error) {
-            this.app.logger.warn(`Service discovery error: ${error.message}`);
-          } else if (services && services.length > 0) {
-            this.app.logger.info(`Found ${services.length} MIDI service(s)`);
+          if (error || !services || services.length === 0) {
+            this.app.logger.warn(`No MIDI services found on ${address}`);
+            // Stocker quand même avec services vides
+            this.connectedDevices.set(address, {
+              peripheral: peripheral,
+              midiService: null,
+              midiCharacteristic: null
+            });
+
+            // Ajouter aux périphériques appairés
+            if (!this.pairedDevices.find(d => d.address === address)) {
+              this.pairedDevices.push({
+                address: address,
+                name: deviceInfo.name,
+                type: 'ble',
+                paired: true,
+                connected: true
+              });
+            }
+
+            return resolve({
+              address: address,
+              name: deviceInfo.name,
+              connected: true
+            });
           }
 
-          resolve({
-            address: address,
-            name: deviceInfo.name,
-            connected: true
+          const midiService = services[0];
+          this.app.logger.info(`Found MIDI service on ${address}`);
+
+          // Découvrir la caractéristique MIDI I/O
+          midiService.discoverCharacteristics([], (error, characteristics) => {
+            let midiCharacteristic = null;
+
+            if (!error && characteristics && characteristics.length > 0) {
+              // Chercher la caractéristique MIDI I/O (généralement la première)
+              midiCharacteristic = characteristics[0];
+              this.app.logger.info(`Found MIDI characteristic on ${address}`);
+            }
+
+            // Stocker le périphérique avec ses services MIDI
+            this.connectedDevices.set(address, {
+              peripheral: peripheral,
+              midiService: midiService,
+              midiCharacteristic: midiCharacteristic
+            });
+
+            // Ajouter aux périphériques appairés
+            if (!this.pairedDevices.find(d => d.address === address)) {
+              this.pairedDevices.push({
+                address: address,
+                name: deviceInfo.name,
+                type: 'ble',
+                paired: true,
+                connected: true
+              });
+            }
+
+            resolve({
+              address: address,
+              name: deviceInfo.name,
+              connected: true
+            });
           });
         });
       });
@@ -228,11 +269,13 @@ class BluetoothManager extends EventEmitter {
   async disconnect(address) {
     this.app.logger.info(`Disconnecting BLE device: ${address}`);
 
-    const peripheral = this.connectedDevices.get(address);
+    const deviceData = this.connectedDevices.get(address);
 
-    if (!peripheral) {
+    if (!deviceData) {
       throw new Error(`Device not connected: ${address}`);
     }
+
+    const peripheral = deviceData.peripheral;
 
     return new Promise((resolve, reject) => {
       peripheral.disconnect((error) => {
@@ -271,8 +314,8 @@ class BluetoothManager extends EventEmitter {
       await this.disconnect(address);
     }
 
-    // Supprimer du cache de devices
-    this.devices.delete(address);
+    // NE PAS supprimer du cache devices - permet le ré-appairage
+    // Le cache sera rafraîchi au prochain scan de toute façon
 
     // Supprimer des périphériques appairés
     const index = this.pairedDevices.findIndex(d => d.address === address);
