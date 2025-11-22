@@ -544,6 +544,59 @@
 .bluetooth-device:nth-child(5) { animation-delay: 0.25s; }
 
 /* ============================================================================
+   THÈME SOMBRE
+   ============================================================================ */
+
+body.dark-mode .bluetooth-scan-modal .device-name {
+    color: var(--text-primary);
+}
+
+body.dark-mode .bluetooth-scan-modal .device-address {
+    color: var(--text-secondary);
+}
+
+body.dark-mode .bluetooth-scan-modal .device-signal {
+    color: var(--text-secondary);
+}
+
+body.dark-mode .bluetooth-scan-modal .info-section p {
+    color: var(--text-secondary);
+}
+
+body.dark-mode .bluetooth-scan-modal .devices-empty p {
+    color: var(--text-primary);
+}
+
+body.dark-mode .bluetooth-scan-modal .devices-empty .text-muted {
+    color: var(--text-secondary) !important;
+}
+
+body.dark-mode .bluetooth-scan-modal .devices-scanning p {
+    color: var(--text-primary);
+}
+
+body.dark-mode .bluetooth-scan-modal .devices-scanning .text-muted {
+    color: var(--text-secondary) !important;
+}
+
+/* Modal de confirmation en mode sombre */
+body.dark-mode .confirm-modal .modal-header h2 {
+    color: var(--text-primary) !important;
+}
+
+body.dark-mode .confirm-modal .modal-body p {
+    color: var(--text-secondary) !important;
+}
+
+body.dark-mode .confirm-modal .modal-dialog {
+    background: var(--bg-secondary);
+}
+
+body.dark-mode .confirm-modal .modal-header {
+    border-bottom-color: var(--border-color);
+}
+
+/* ============================================================================
    RESPONSIVE
    ============================================================================ */
 
