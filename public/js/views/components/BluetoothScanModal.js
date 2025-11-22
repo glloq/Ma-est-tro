@@ -688,10 +688,10 @@ class BluetoothScanModal {
         confirmModal.innerHTML = `
             <div class="modal-dialog modal-sm">
                 <div class="modal-header">
-                    <h2>${this.escapeHtml(title)}</h2>
+                    <h2 style="margin: 0; color: #2c3e50; font-size: 1.3rem; font-weight: 600;">${this.escapeHtml(title)}</h2>
                 </div>
                 <div class="modal-body">
-                    <p style="text-align: center; font-size: 15px; line-height: 1.6;">
+                    <p style="text-align: center; font-size: 15px; line-height: 1.6; color: #333;">
                         ${message}
                     </p>
                 </div>
