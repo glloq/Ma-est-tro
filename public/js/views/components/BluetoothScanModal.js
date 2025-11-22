@@ -655,13 +655,8 @@ class BluetoothScanModal {
 
         this.logger.info('BluetoothScanModal', `Device connected: ${deviceId}`);
 
-        // Mettre à jour le statut dans la liste des appareils appairés
-        const device = this.pairedDevices.find(d => d.address === deviceId);
-        if (device) {
-            device.connected = true;
-        }
-
-        this.updateModalContent();
+        // Recharger la liste depuis le backend pour être sûr d'avoir le bon statut
+        this.loadPairedDevices();
     }
 
     /**
@@ -672,13 +667,8 @@ class BluetoothScanModal {
 
         this.logger.info('BluetoothScanModal', `Device disconnected: ${deviceId}`);
 
-        // Mettre à jour le statut dans la liste des appareils appairés
-        const device = this.pairedDevices.find(d => d.address === deviceId);
-        if (device) {
-            device.connected = false;
-        }
-
-        this.updateModalContent();
+        // Recharger la liste depuis le backend pour être sûr d'avoir le bon statut
+        this.loadPairedDevices();
     }
 
     // ========================================================================
