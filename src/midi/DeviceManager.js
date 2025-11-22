@@ -234,7 +234,31 @@ class DeviceManager {
   }
 
   getDeviceList() {
-    return Array.from(this.devices.values());
+    const usbDevices = Array.from(this.devices.values());
+
+    // Ajouter les périphériques Bluetooth appairés et connectés
+    if (this.app.bluetoothManager) {
+      const pairedDevices = this.app.bluetoothManager.getPairedDevices();
+
+      // Ajouter seulement les périphériques connectés à la liste des instruments disponibles
+      const connectedBluetoothDevices = pairedDevices
+        .filter(device => device.connected)
+        .map(device => ({
+          id: device.address,
+          name: device.name,
+          manufacturer: 'Bluetooth',
+          type: 'bluetooth',
+          input: true,  // BLE MIDI supporte généralement l'entrée
+          output: true, // BLE MIDI supporte généralement la sortie
+          enabled: true,
+          connected: true,
+          address: device.address
+        }));
+
+      return [...usbDevices, ...connectedBluetoothDevices];
+    }
+
+    return usbDevices;
   }
 
   sendMessage(deviceName, type, data) {
