@@ -228,14 +228,15 @@ class BluetoothManager extends EventEmitter {
 
         peripheral.discoverServices([this.BLE_MIDI_SERVICE_UUID], (error, services) => {
           if (error || !services || services.length === 0) {
-            this.app.logger.warn(`No MIDI services found on ${address} (device still usable)`);
+            this.app.logger.warn(`No MIDI services found on ${address} (device still usable, configure via settings)`);
             return;
           }
 
           const midiService = services[0];
           this.app.logger.info(`Found MIDI service on ${address}`);
 
-          // Découvrir la caractéristique MIDI I/O spécifique pour accélérer
+          // Découvrir UNIQUEMENT la caractéristique MIDI I/O spécifique (pas de fallback)
+          // Si l'UUID spécifique n'est pas trouvé, l'utilisateur devra configurer via réglages instrument
           midiService.discoverCharacteristics([this.BLE_MIDI_CHARACTERISTIC_UUID], (error, characteristics) => {
             let midiCharacteristic = null;
 
@@ -243,27 +244,10 @@ class BluetoothManager extends EventEmitter {
               midiCharacteristic = characteristics[0];
               this.app.logger.info(`Found MIDI characteristic on ${address}`);
             } else {
-              // Fallback: essayer de découvrir toutes les caractéristiques si UUID spécifique échoue
-              this.app.logger.warn(`Specific MIDI characteristic not found, trying all characteristics...`);
-              midiService.discoverCharacteristics([], (error2, chars2) => {
-                if (!error2 && chars2 && chars2.length > 0) {
-                  midiCharacteristic = chars2[0];
-                  this.app.logger.info(`Found fallback MIDI characteristic on ${address}`);
-                }
-
-                // Mettre à jour avec les services MIDI découverts
-                this.connectedDevices.set(address, {
-                  peripheral: peripheral,
-                  midiService: midiService,
-                  midiCharacteristic: midiCharacteristic
-                });
-
-                this.app.logger.info(`MIDI setup complete for ${address}`);
-              });
-              return;
+              this.app.logger.warn(`Specific MIDI characteristic not found on ${address} - use instrument settings to configure`);
             }
 
-            // Mettre à jour avec les services MIDI découverts
+            // Mettre à jour avec les services MIDI découverts (ou null si non trouvé)
             this.connectedDevices.set(address, {
               peripheral: peripheral,
               midiService: midiService,
