@@ -75,6 +75,16 @@ class BluetoothScanModal {
             this.handleDeviceUnpaired(data);
         });
 
+        // Périphérique connecté
+        this.eventBus.on('bluetooth:connected', (data) => {
+            this.handleDeviceConnected(data);
+        });
+
+        // Périphérique déconnecté
+        this.eventBus.on('bluetooth:disconnected', (data) => {
+            this.handleDeviceDisconnected(data);
+        });
+
         this.logger.debug('BluetoothScanModal', 'Event listeners configured');
     }
 
@@ -609,6 +619,40 @@ class BluetoothScanModal {
         this.pairedDevices = this.pairedDevices.filter(
             d => d.address !== deviceId
         );
+
+        this.updateModalContent();
+    }
+
+    /**
+     * Gère la connexion d'un périphérique
+     */
+    handleDeviceConnected(data) {
+        const deviceId = data.device_id || data.address;
+
+        this.logger.info('BluetoothScanModal', `Device connected: ${deviceId}`);
+
+        // Mettre à jour le statut dans la liste des appareils appairés
+        const device = this.pairedDevices.find(d => d.address === deviceId);
+        if (device) {
+            device.connected = true;
+        }
+
+        this.updateModalContent();
+    }
+
+    /**
+     * Gère la déconnexion d'un périphérique
+     */
+    handleDeviceDisconnected(data) {
+        const deviceId = data.device_id || data.address;
+
+        this.logger.info('BluetoothScanModal', `Device disconnected: ${deviceId}`);
+
+        // Mettre à jour le statut dans la liste des appareils appairés
+        const device = this.pairedDevices.find(d => d.address === deviceId);
+        if (device) {
+            device.connected = false;
+        }
 
         this.updateModalContent();
     }
