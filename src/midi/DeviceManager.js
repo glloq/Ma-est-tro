@@ -252,6 +252,7 @@ class DeviceManager {
           output: true, // BLE MIDI supporte généralement la sortie
           enabled: true,
           connected: true,
+          status: 2,    // Status 2 = Active (requis pour apparaître dans le piano virtuel)
           address: device.address
         }));
 
