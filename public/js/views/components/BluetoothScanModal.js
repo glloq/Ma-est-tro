@@ -482,10 +482,13 @@ class BluetoothScanModal {
     handleDevicePaired(data) {
         this.logger.info('BluetoothScanModal', `Device paired: ${data.device_id}`);
 
-        // Recharger la liste des appareils appairés
-        this.loadPairedDevices();
+        // Petit délai pour laisser le backend mettre à jour
+        setTimeout(() => {
+            // Recharger la liste des appareils appairés
+            this.loadPairedDevices();
+        }, 500);
 
-        // Supprimer de la liste des disponibles
+        // Supprimer de la liste des disponibles immédiatement
         this.availableDevices = this.availableDevices.filter(
             d => (d.id || d.address) !== data.device_id
         );
@@ -705,23 +708,41 @@ class BluetoothScanModal {
 
         document.body.appendChild(confirmModal);
 
+        // Fonction pour fermer la modal
+        const closeModal = () => {
+            if (confirmModal && confirmModal.parentNode) {
+                confirmModal.remove();
+            }
+        };
+
         // Bouton Annuler
         const cancelBtn = confirmModal.querySelector('[data-action="cancel"]');
-        cancelBtn.addEventListener('click', () => {
-            confirmModal.remove();
-        });
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closeModal();
+            });
+        }
 
         // Bouton Confirmer
         const confirmBtn = confirmModal.querySelector('[data-action="confirm"]');
-        confirmBtn.addEventListener('click', () => {
-            confirmModal.remove();
-            if (onConfirm) onConfirm();
-        });
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closeModal();
+                if (onConfirm) {
+                    // Petit délai pour s'assurer que la modal est bien fermée
+                    setTimeout(() => onConfirm(), 100);
+                }
+            });
+        }
 
         // Clic sur le fond pour fermer
         confirmModal.addEventListener('click', (e) => {
             if (e.target === confirmModal) {
-                confirmModal.remove();
+                closeModal();
             }
         });
     }
