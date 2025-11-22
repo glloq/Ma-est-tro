@@ -177,34 +177,42 @@
 }
 
 /* ===== MODALES ===== */
-.modal {
+/* ===== MODALES - CENTRAGE FORCÉ POUR TOUS ===== */
+.modal,
+.modal-overlay {
     display: none;
-    position: fixed;
-    z-index: 1200;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
+    position: fixed !important;
+    z-index: 9999 !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    margin: 0 !important;
     overflow: auto;
     background-color: rgba(0,0,0,0.4);
     backdrop-filter: blur(5px);
 }
 
-.modal.show {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.modal.show,
+.modal-overlay {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
-.modal-content {
+.modal-content,
+.modal-dialog {
     background-color: white;
-    margin: auto;
+    margin: auto !important;
     padding: 20px;
     border-radius: 16px;
     width: 90%;
     max-width: 600px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.2);
     animation: modalSlideIn 0.3s ease;
+    position: relative !important;
 }
 
 @keyframes modalSlideIn {
