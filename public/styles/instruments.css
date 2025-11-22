@@ -1384,6 +1384,14 @@ body.dark-mode .device-status {
     color: var(--text-secondary);
 }
 
+body.dark-mode .instrument-settings-modal .modal-header h2 {
+    color: var(--text-primary);
+}
+
+body.dark-mode .instrument-settings-modal .modal-header {
+    border-bottom-color: var(--border-color);
+}
+
 /* ============================================================================
    FIN instruments.css
    ============================================================================ */
