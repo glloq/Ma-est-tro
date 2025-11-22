@@ -201,8 +201,13 @@ class BluetoothManager extends EventEmitter {
               midiCharacteristic: null
             });
 
-            // Ajouter aux périphériques appairés
-            if (!this.pairedDevices.find(d => d.address === address)) {
+            // Ajouter aux périphériques appairés ou mettre à jour le statut
+            const existingDevice = this.pairedDevices.find(d => d.address === address);
+            if (existingDevice) {
+              // Mettre à jour le statut de connexion
+              existingDevice.connected = true;
+            } else {
+              // Ajouter un nouveau périphérique
               this.pairedDevices.push({
                 address: address,
                 name: deviceInfo.name,
@@ -239,8 +244,13 @@ class BluetoothManager extends EventEmitter {
               midiCharacteristic: midiCharacteristic
             });
 
-            // Ajouter aux périphériques appairés
-            if (!this.pairedDevices.find(d => d.address === address)) {
+            // Ajouter aux périphériques appairés ou mettre à jour le statut
+            const existingDevice = this.pairedDevices.find(d => d.address === address);
+            if (existingDevice) {
+              // Mettre à jour le statut de connexion
+              existingDevice.connected = true;
+            } else {
+              // Ajouter un nouveau périphérique
               this.pairedDevices.push({
                 address: address,
                 name: deviceInfo.name,
