@@ -689,6 +689,9 @@
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     animation: scaleIn 0.2s ease-out;
     position: relative !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* AJOUT: Empêcher dépassement et clipper border-radius */
 }
 
 .midi-editor-modal .modal-content {
@@ -782,6 +785,7 @@
     overflow: hidden;
     background: #1a1a1a;
     min-height: 0; /* Important pour flex container */
+    border-radius: 0 0 12px 12px; /* AJOUT: Correspond aux coins arrondis du parent */
 }
 
 .midi-editor-modal .editor-toolbar {
