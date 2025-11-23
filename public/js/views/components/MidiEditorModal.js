@@ -325,12 +325,13 @@ class MidiEditorModal {
             this.log('debug', `Track ${trackIndex} summary: ${noteOnCount} note-ons, ${noteOffCount} note-offs, ${allNotes.length} complete notes`);
         });
 
-        // Convertir en format webaudio-pianoroll: {t: tick, g: gate, n: note, c: channel}
+        // Convertir en format webaudio-pianoroll: {t: tick, g: gate, n: note, c: channel, v: velocity}
         this.fullSequence = allNotes.map(note => ({
             t: note.tick,    // tick (position de départ)
             g: note.gate,    // gate (durée)
             n: note.note,    // note (numéro MIDI)
-            c: note.channel  // canal MIDI (0-15)
+            c: note.channel, // canal MIDI (0-15)
+            v: note.velocity || 100  // vélocité (1-127, défaut: 100)
         }));
 
         // Trier par tick
@@ -854,6 +855,14 @@ class MidiEditorModal {
     }
 
     /**
+     * Synchroniser tous les éditeurs (CC et Velocity) avec le piano roll
+     */
+    syncAllEditors() {
+        this.syncCCEditor();
+        this.syncVelocityEditor();
+    }
+
+    /**
      * Synchroniser les événements depuis l'éditeur CC vers this.ccEvents
      * Appelé avant la sauvegarde pour récupérer les modifications
      */
@@ -890,6 +899,171 @@ class MidiEditorModal {
             const sample = this.ccEvents.slice(0, 3);
             this.log('debug', 'Sample synchronized events:', sample);
         }
+    }
+
+    /**
+     * Basculer entre les onglets CC et Velocity
+     */
+    switchEditorTab(tabType) {
+        this.log('info', `Switching editor tab to: ${tabType}`);
+
+        // Mettre à jour les onglets visuels
+        const tabs = this.container.querySelectorAll('.editor-tab');
+        tabs.forEach(tab => {
+            if (tab.dataset.tab === tabType) {
+                tab.classList.add('active');
+            } else {
+                tab.classList.remove('active');
+            }
+        });
+
+        // Afficher/masquer les éditeurs
+        const ccLayout = this.container.querySelector('.cc-editor-layout');
+        const velocityLayout = this.container.querySelector('.velocity-editor-layout');
+
+        if (tabType === 'cc-pitchbend') {
+            if (ccLayout) ccLayout.style.display = 'flex';
+            if (velocityLayout) velocityLayout.style.display = 'none';
+
+            // Initialiser l'éditeur CC s'il n'existe pas
+            if (!this.ccEditor) {
+                this.initCCEditor();
+            } else if (this.ccEditor.resize) {
+                setTimeout(() => this.ccEditor.resize(), 10);
+            }
+        } else if (tabType === 'velocity') {
+            if (ccLayout) ccLayout.style.display = 'none';
+            if (velocityLayout) velocityLayout.style.display = 'flex';
+
+            // Initialiser l'éditeur de vélocité s'il n'existe pas
+            if (!this.velocityEditor) {
+                this.initVelocityEditor();
+            } else {
+                // Recharger la séquence et redimensionner
+                this.velocityEditor.setSequence(this.sequence);
+                this.syncVelocityEditor();
+                if (this.velocityEditor.resize) {
+                    setTimeout(() => this.velocityEditor.resize(), 10);
+                }
+            }
+        }
+    }
+
+    /**
+     * Initialiser l'éditeur de vélocité
+     */
+    initVelocityEditor() {
+        const container = document.getElementById('velocity-editor-container');
+        if (!container) {
+            this.log('warn', 'Container velocity-editor-container not found');
+            return;
+        }
+
+        if (this.velocityEditor) {
+            this.log('info', 'Velocity Editor already initialized');
+            return;
+        }
+
+        this.log('info', `Initializing Velocity Editor with ${this.sequence.length} notes`);
+
+        // Obtenir les paramètres du piano roll
+        const options = {
+            timebase: this.pianoRoll?.timebase || 480,
+            xrange: this.pianoRoll?.xrange || 1920,
+            xoffset: this.pianoRoll?.xoffset || 0,
+            grid: this.snapValues[this.currentSnapIndex].ticks,
+            onChange: (sequence) => {
+                // Marquer comme modifié lors des changements de vélocité
+                this.isDirty = true;
+                this.updateSaveButton();
+                // Synchroniser vers fullSequence et sequence
+                this.syncSequenceFromVelocityEditor(sequence);
+            }
+        };
+
+        // Créer l'éditeur
+        this.velocityEditor = new VelocityEditor(container, options);
+
+        // Charger la séquence
+        this.velocityEditor.setSequence(this.sequence);
+
+        // Définir les canaux actifs
+        this.velocityEditor.setActiveChannels(Array.from(this.activeChannels));
+
+        this.log('info', `Velocity Editor initialized with ${this.sequence.length} notes`);
+
+        // Attendre que le layout soit prêt
+        this.waitForVelocityEditorLayout();
+    }
+
+    /**
+     * Attendre que l'éditeur de vélocité ait une hauteur valide
+     */
+    waitForVelocityEditorLayout(attempts = 0, maxAttempts = 60) {
+        if (!this.velocityEditor || !this.velocityEditor.element) {
+            this.log('warn', 'waitForVelocityEditorLayout: velocityEditor or element not found');
+            return;
+        }
+
+        const height = this.velocityEditor.element.getBoundingClientRect().height;
+        this.log('debug', `waitForVelocityEditorLayout attempt ${attempts}: height=${height}`);
+
+        if (height > 100) {
+            // Le layout est prêt, on peut resize
+            this.velocityEditor.resize();
+            this.log('info', `Velocity Editor layout ready after ${attempts} attempts (height=${height})`);
+        } else if (attempts < maxAttempts) {
+            // Le layout n'est pas encore prêt, réessayer au prochain frame
+            requestAnimationFrame(() => {
+                this.waitForVelocityEditorLayout(attempts + 1, maxAttempts);
+            });
+        } else {
+            this.log('error', `waitForVelocityEditorLayout: Max attempts reached (${maxAttempts}), height still ${height}px`);
+        }
+    }
+
+    /**
+     * Synchroniser l'éditeur de vélocité avec le piano roll
+     */
+    syncVelocityEditor() {
+        if (!this.velocityEditor || !this.pianoRoll) return;
+
+        this.velocityEditor.syncWith({
+            xrange: this.pianoRoll.xrange,
+            xoffset: this.pianoRoll.xoffset,
+            grid: this.snapValues[this.currentSnapIndex].ticks,
+            timebase: this.pianoRoll.timebase
+        });
+    }
+
+    /**
+     * Synchroniser la séquence depuis l'éditeur de vélocité
+     */
+    syncSequenceFromVelocityEditor(velocitySequence) {
+        if (!velocitySequence) return;
+
+        // Mettre à jour fullSequence et sequence avec les nouvelles vélocités
+        this.fullSequence.forEach(note => {
+            const velocityNote = velocitySequence.find(vn =>
+                vn.t === note.t && vn.n === note.n && vn.c === note.c
+            );
+            if (velocityNote) {
+                note.v = velocityNote.v || 100;
+            }
+        });
+
+        // Reconstruire la sequence filtrée
+        this.sequence = this.fullSequence.filter(note => this.activeChannels.has(note.c));
+
+        // Mettre à jour le piano roll
+        if (this.pianoRoll) {
+            this.pianoRoll.sequence = this.sequence;
+            if (typeof this.pianoRoll.redraw === 'function') {
+                this.pianoRoll.redraw();
+            }
+        }
+
+        this.log('debug', 'Synchronized velocities from velocity editor to sequence');
     }
 
     /**
@@ -1494,18 +1668,32 @@ class MidiEditorModal {
                             </div>
                         </div>
 
-                        <!-- Section CC/Pitchbend (collapsible) -->
+                        <!-- Resize handle -->
+                        <div class="resize-handle" id="resize-handle"></div>
+
+                        <!-- Section CC/Pitchbend/Velocity (collapsible) -->
                         <div class="midi-editor-section cc-section collapsed" id="cc-section">
                             <!-- Header collapsible -->
                             <div class="cc-section-header collapsed" id="cc-section-header">
                                 <div class="cc-section-title">
                                     <span class="cc-collapse-icon">▼</span>
-                                    <span>CC & Pitch Bend</span>
+                                    <span>CC / Pitch Bend / Vélocité</span>
                                 </div>
                             </div>
 
-                            <!-- Contenu de l'éditeur CC -->
+                            <!-- Contenu de l'éditeur CC/Velocity -->
                             <div class="cc-section-content" id="cc-section-content">
+                                <!-- Onglets pour basculer entre CC et Velocity -->
+                                <div class="editor-tabs">
+                                    <button class="editor-tab active" data-tab="cc-pitchbend" id="tab-cc">
+                                        CC / Pitch Bend
+                                    </button>
+                                    <button class="editor-tab" data-tab="velocity" id="tab-velocity">
+                                        Vélocité
+                                    </button>
+                                </div>
+
+                                <!-- Conteneur pour l'éditeur CC/Pitchbend -->
                                 <div class="cc-editor-layout">
                                     <!-- Panneau latéral gauche avec sélection CC et outils -->
                                     <div class="cc-sidebar">
@@ -1560,6 +1748,42 @@ class MidiEditorModal {
 
                                     <!-- Conteneur de l'éditeur CC -->
                                     <div id="cc-editor-container" class="cc-editor-main"></div>
+                                </div>
+
+                                <!-- Conteneur pour l'éditeur de vélocité -->
+                                <div class="velocity-editor-layout" style="display: none;">
+                                    <!-- Panneau latéral gauche avec outils -->
+                                    <div class="cc-sidebar">
+                                        <div class="cc-sidebar-label">Outils</div>
+                                        <div class="cc-tool-buttons-vertical">
+                                            <button class="cc-tool-btn-v velocity-tool active" data-velocity-tool="select" title="Sélection">
+                                                ⬚<span class="tool-label">Sélection</span>
+                                            </button>
+                                            <button class="cc-tool-btn-v velocity-tool" data-velocity-tool="move" title="Déplacer">
+                                                ✥<span class="tool-label">Déplacer</span>
+                                            </button>
+                                            <button class="cc-tool-btn-v velocity-tool" data-velocity-tool="line" title="Ligne">
+                                                ╱<span class="tool-label">Ligne</span>
+                                            </button>
+                                            <button class="cc-tool-btn-v velocity-tool" data-velocity-tool="draw" title="Dessin continu">
+                                                ✎<span class="tool-label">Dessin</span>
+                                            </button>
+                                        </div>
+
+                                        <div class="cc-sidebar-divider"></div>
+
+                                        <div class="cc-sidebar-label">Canal</div>
+                                        <div class="cc-channel-selector" id="velocity-channel-selector">
+                                            ${Array.from({length: 16}, (_, i) => `
+                                                <button class="cc-channel-btn velocity-channel-btn ${i === 0 ? 'active' : ''}" data-velocity-channel="${i}" title="Canal ${i + 1}">
+                                                    ${i + 1}
+                                                </button>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+
+                                    <!-- Conteneur de l'éditeur de vélocité -->
+                                    <div id="velocity-editor-container" class="cc-editor-main"></div>
                                 </div>
                             </div>
                         </div>
@@ -2141,8 +2365,8 @@ class MidiEditorModal {
             this.log('info', `Snap to grid changed to ${currentSnap.label} (${currentSnap.ticks} ticks) - snap property set to ${this.pianoRoll.snap}`);
         }
 
-        // Synchroniser l'éditeur CC
-        this.syncCCEditor();
+        // Synchroniser tous les éditeurs
+        this.syncAllEditors();
 
         this.showNotification(`Magnétisme: ${currentSnap.label}`, 'info');
     }
@@ -2394,6 +2618,52 @@ class MidiEditorModal {
         // dans attachCCChannelListeners() appelé depuis initCCEditor()
         // pour éviter les conflits lors de la mise à jour dynamique des canaux
 
+        // Onglets pour basculer entre CC et Velocity
+        const editorTabs = this.container.querySelectorAll('.editor-tab');
+        editorTabs.forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tabType = tab.dataset.tab;
+                if (tabType) {
+                    this.switchEditorTab(tabType);
+                }
+            });
+        });
+
+        // Boutons d'outils Velocity
+        const velocityToolButtons = this.container.querySelectorAll('.velocity-tool');
+        velocityToolButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tool = btn.dataset.velocityTool;
+                if (tool && this.velocityEditor) {
+                    // Désactiver tous les boutons
+                    velocityToolButtons.forEach(b => b.classList.remove('active'));
+                    // Activer le bouton cliqué
+                    btn.classList.add('active');
+                    // Changer l'outil
+                    this.velocityEditor.setTool(tool);
+                }
+            });
+        });
+
+        // Boutons de canal Velocity
+        const velocityChannelButtons = this.container.querySelectorAll('.velocity-channel-btn');
+        velocityChannelButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const channel = parseInt(btn.dataset.velocityChannel);
+                if (!isNaN(channel) && this.velocityEditor) {
+                    // Désactiver tous les boutons
+                    velocityChannelButtons.forEach(b => b.classList.remove('active'));
+                    // Activer le bouton cliqué
+                    btn.classList.add('active');
+                    // Changer le canal
+                    this.velocityEditor.setChannel(channel);
+                }
+            });
+        });
+
         // Sliders de navigation (scroll) avec throttle à 15fps
         const scrollHSlider = document.getElementById('scroll-h-slider');
         const scrollVSlider = document.getElementById('scroll-v-slider');
@@ -2431,6 +2701,76 @@ class MidiEditorModal {
                 this.selectedInstrument = parseInt(e.target.value);
                 this.log('info', `Selected instrument changed to: ${this.gmInstruments[this.selectedInstrument]} (${this.selectedInstrument})`);
             });
+        }
+
+        // Resize handle pour redimensionner les sections notes et CC/Velocity
+        const resizeHandle = document.getElementById('resize-handle');
+        const notesSection = this.container.querySelector('.notes-section');
+        const ccSection = document.getElementById('cc-section');
+
+        if (resizeHandle && notesSection && ccSection) {
+            let isResizing = false;
+            let startY = 0;
+            let startNotesFlex = 3;
+            let startCCFlex = 2;
+
+            const startResize = (e) => {
+                isResizing = true;
+                startY = e.clientY;
+
+                // Obtenir les flex actuels
+                const notesStyle = window.getComputedStyle(notesSection);
+                const ccStyle = window.getComputedStyle(ccSection);
+                startNotesFlex = parseFloat(notesStyle.flex) || 3;
+                startCCFlex = parseFloat(ccStyle.flex) || 2;
+
+                document.body.style.cursor = 'ns-resize';
+                e.preventDefault();
+            };
+
+            const doResize = (e) => {
+                if (!isResizing) return;
+
+                const deltaY = e.clientY - startY;
+                const containerHeight = this.container.querySelector('.midi-editor-container').clientHeight;
+
+                // Calculer le ratio de changement basé sur le mouvement
+                const ratio = deltaY / containerHeight;
+
+                // Ajuster les flex values
+                let newNotesFlex = Math.max(1, startNotesFlex + ratio * 5);
+                let newCCFlex = Math.max(1, startCCFlex - ratio * 5);
+
+                // Appliquer les nouveaux flex
+                notesSection.style.flex = newNotesFlex;
+                ccSection.style.flex = newCCFlex;
+
+                // Redimensionner les éditeurs
+                if (this.pianoRoll && typeof this.pianoRoll.redraw === 'function') {
+                    setTimeout(() => this.pianoRoll.redraw(), 10);
+                }
+
+                if (this.ccEditor && typeof this.ccEditor.resize === 'function') {
+                    setTimeout(() => this.ccEditor.resize(), 10);
+                }
+
+                if (this.velocityEditor && typeof this.velocityEditor.resize === 'function') {
+                    setTimeout(() => this.velocityEditor.resize(), 10);
+                }
+
+                e.preventDefault();
+            };
+
+            const stopResize = () => {
+                if (isResizing) {
+                    isResizing = false;
+                    document.body.style.cursor = '';
+                }
+            };
+
+            resizeHandle.addEventListener('mousedown', startResize);
+            document.addEventListener('mousemove', doResize);
+            document.addEventListener('mouseup', stopResize);
         }
     }
 
@@ -2547,8 +2887,8 @@ class MidiEditorModal {
             }
         }, 50);
 
-        // Synchroniser l'éditeur CC
-        this.syncCCEditor();
+        // Synchroniser tous les éditeurs
+        this.syncAllEditors();
 
         this.log('info', `Horizontal zoom: ${currentRange} -> ${newRange}`);
     }
@@ -2636,11 +2976,11 @@ class MidiEditorModal {
             if (xOffsetChanged) {
                 this.updateHorizontalSlider(currentXOffset);
 
-                // OPTIMISATION: Throttler syncCCEditor avec requestAnimationFrame
+                // OPTIMISATION: Throttler syncAllEditors avec requestAnimationFrame
                 if (!syncScheduled) {
                     syncScheduled = true;
                     requestAnimationFrame(() => {
-                        this.syncCCEditor();
+                        this.syncAllEditors();
                         syncScheduled = false;
                     });
                 }
