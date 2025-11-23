@@ -174,7 +174,7 @@ class NetworkScanModal {
                                         <span>Afficher toutes les IPs du réseau</span>
                                     </label>
                                     <p class="text-muted" style="margin: 4px 0 0 24px; font-size: 11px;">
-                                        (scan complet du subnet - peut être plus lent)
+                                        (scan de 254 IPs - durée: ~5-10 secondes)
                                     </p>
                                 </div>
                             </div>
