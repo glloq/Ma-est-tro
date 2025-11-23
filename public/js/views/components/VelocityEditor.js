@@ -77,6 +77,8 @@ class VelocityEditor {
             position: absolute;
             top: 0;
             left: 0;
+            width: 100%;
+            height: 100%;
             cursor: crosshair;
         `;
         this.ctx = this.canvas.getContext('2d');
