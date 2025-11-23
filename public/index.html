@@ -1115,6 +1115,20 @@
             font-size: 15px;
             font-weight: 600;
         }
+
+        /* Modal de confirmation - Dark mode */
+        body.theme-dark .confirm-modal {
+            background: #2d2d2d;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        }
+
+        body.theme-dark .confirm-modal-title {
+            color: #e0e0e0;
+        }
+
+        body.theme-dark .confirm-modal-message {
+            color: #b0b0b0;
+        }
     </style>
 
     <!-- Fichier CSS externe pour les composants (Modal MIDI Editor, etc.) -->
@@ -1305,15 +1319,32 @@
                     resolve(false);
                 };
 
+                const handleEscape = (e) => {
+                    if (e.key === 'Escape') {
+                        handleCancel();
+                    }
+                };
+
+                const handleOverlayClick = (e) => {
+                    // Fermer si on clique sur l'overlay (pas sur la modal elle-même)
+                    if (e.target === modal) {
+                        handleCancel();
+                    }
+                };
+
                 const cleanup = () => {
                     modal.classList.remove('show');
                     okBtn.removeEventListener('click', handleOk);
                     cancelBtn.removeEventListener('click', handleCancel);
+                    document.removeEventListener('keydown', handleEscape);
+                    modal.removeEventListener('click', handleOverlayClick);
                 };
 
                 // Attacher les événements
                 okBtn.addEventListener('click', handleOk);
                 cancelBtn.addEventListener('click', handleCancel);
+                document.addEventListener('keydown', handleEscape);
+                modal.addEventListener('click', handleOverlayClick);
 
                 // Afficher la modal
                 modal.classList.add('show');
