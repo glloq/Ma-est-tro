@@ -765,7 +765,7 @@ class MidiEditorModal {
         this.log('info', `Type sélectionné: ${ccType}`);
 
         // Mettre à jour les boutons
-        const ccTypeButtons = this.container?.querySelectorAll('.cc-type-btn-v');
+        const ccTypeButtons = this.container?.querySelectorAll('.cc-type-btn');
         ccTypeButtons?.forEach(btn => {
             if (btn.dataset.ccType === ccType) {
                 btn.classList.add('active');
@@ -1721,57 +1721,50 @@ class MidiEditorModal {
 
                             <!-- Contenu de l'éditeur CC/Velocity -->
                             <div class="cc-section-content" id="cc-section-content">
-                                <div class="cc-editor-layout">
-                                    <!-- Panneau latéral gauche avec sélection type et outils -->
-                                    <div class="cc-sidebar">
-                                        <div class="cc-sidebar-label">Type</div>
-                                        <div class="cc-type-buttons-vertical">
-                                            <button class="cc-type-btn-v active" data-cc-type="cc1" title="Modulation Wheel">
-                                                CC1<span class="cc-label">Modulation</span>
-                                            </button>
-                                            <button class="cc-type-btn-v" data-cc-type="cc7" title="Channel Volume">
-                                                CC7<span class="cc-label">Volume</span>
-                                            </button>
-                                            <button class="cc-type-btn-v" data-cc-type="cc10" title="Pan Position">
-                                                CC10<span class="cc-label">Pan</span>
-                                            </button>
-                                            <button class="cc-type-btn-v" data-cc-type="cc11" title="Expression Controller">
-                                                CC11<span class="cc-label">Expression</span>
-                                            </button>
-                                            <button class="cc-type-btn-v" data-cc-type="pitchbend" title="Pitch Wheel">
-                                                PB<span class="cc-label">Pitch Bend</span>
-                                            </button>
-                                            <button class="cc-type-btn-v" data-cc-type="velocity" title="Note Velocity">
-                                                VEL<span class="cc-label">Vélocité</span>
-                                            </button>
-                                        </div>
-
-                                        <div class="cc-sidebar-divider"></div>
-
-                                        <div class="cc-sidebar-label">Outils</div>
-                                        <div class="cc-tool-buttons-vertical">
-                                            <button class="cc-tool-btn-v active" data-tool="select" title="Sélection">
-                                                ⬚<span class="tool-label">Sélection</span>
-                                            </button>
-                                            <button class="cc-tool-btn-v" data-tool="move" title="Déplacer">
-                                                ✥<span class="tool-label">Déplacer</span>
-                                            </button>
-                                            <button class="cc-tool-btn-v" data-tool="line" title="Ligne">
-                                                ╱<span class="tool-label">Ligne</span>
-                                            </button>
-                                            <button class="cc-tool-btn-v" data-tool="draw" title="Dessin continu">
-                                                ✎<span class="tool-label">Dessin</span>
-                                            </button>
-                                        </div>
-
-                                        <div class="cc-sidebar-divider"></div>
-
-                                        <div class="cc-sidebar-label">Canal</div>
-                                        <div class="cc-channel-selector" id="editor-channel-selector">
-                                            <!-- Les canaux seront ajoutés dynamiquement -->
-                                        </div>
+                                <!-- Toolbar horizontal pour sélection du type (CC/PB/VEL) -->
+                                <div class="cc-type-toolbar">
+                                    <label class="cc-toolbar-label">Type:</label>
+                                    <div class="cc-type-buttons-horizontal">
+                                        <button class="cc-type-btn active" data-cc-type="cc1" title="Modulation Wheel">
+                                            CC1 <span class="cc-label">Modulation</span>
+                                        </button>
+                                        <button class="cc-type-btn" data-cc-type="cc7" title="Channel Volume">
+                                            CC7 <span class="cc-label">Volume</span>
+                                        </button>
+                                        <button class="cc-type-btn" data-cc-type="cc10" title="Pan Position">
+                                            CC10 <span class="cc-label">Pan</span>
+                                        </button>
+                                        <button class="cc-type-btn" data-cc-type="cc11" title="Expression Controller">
+                                            CC11 <span class="cc-label">Expression</span>
+                                        </button>
+                                        <button class="cc-type-btn" data-cc-type="pitchbend" title="Pitch Wheel">
+                                            PB <span class="cc-label">Pitch Bend</span>
+                                        </button>
+                                        <button class="cc-type-btn" data-cc-type="velocity" title="Note Velocity">
+                                            VEL <span class="cc-label">Vélocité</span>
+                                        </button>
                                     </div>
 
+                                    <div class="cc-toolbar-divider"></div>
+
+                                    <label class="cc-toolbar-label">Outils:</label>
+                                    <div class="cc-tool-buttons-horizontal">
+                                        <button class="cc-tool-btn active" data-tool="select" title="Sélection">⬚</button>
+                                        <button class="cc-tool-btn" data-tool="move" title="Déplacer">✥</button>
+                                        <button class="cc-tool-btn" data-tool="line" title="Ligne">╱</button>
+                                        <button class="cc-tool-btn" data-tool="draw" title="Dessin continu">✎</button>
+                                    </div>
+
+                                    <div class="cc-toolbar-divider"></div>
+
+                                    <label class="cc-toolbar-label">Canal:</label>
+                                    <div class="cc-channel-selector-horizontal" id="editor-channel-selector">
+                                        <!-- Les canaux seront ajoutés dynamiquement -->
+                                    </div>
+                                </div>
+
+                                <!-- Layout de l'éditeur (pleine hauteur sans sidebar) -->
+                                <div class="cc-editor-layout">
                                     <!-- Conteneur pour les éditeurs (CC ou Velocity) -->
                                     <div id="cc-editor-container" class="cc-editor-main"></div>
                                     <div id="velocity-editor-container" class="cc-editor-main" style="display: none;"></div>
@@ -2576,8 +2569,8 @@ class MidiEditorModal {
             });
         }
 
-        // Boutons de type CC (verticaux)
-        const ccTypeButtons = this.container.querySelectorAll('.cc-type-btn-v');
+        // Boutons de type CC (horizontaux)
+        const ccTypeButtons = this.container.querySelectorAll('.cc-type-btn');
         ccTypeButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -2589,7 +2582,7 @@ class MidiEditorModal {
         });
 
         // Boutons d'outils (partagés entre CC et Velocity)
-        const ccToolButtons = this.container.querySelectorAll('.cc-tool-btn-v');
+        const ccToolButtons = this.container.querySelectorAll('.cc-tool-btn');
         ccToolButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();

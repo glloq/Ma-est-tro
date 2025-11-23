@@ -683,11 +683,16 @@
     height: 95vh !important;
     max-height: none !important;
     margin: 0 !important;
+    padding: 0 !important; /* AJOUT: Retirer padding pour gain de place */
     background: #1a1a1a; /* Fond noir pour éviter la bande blanche */
     border-radius: 12px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     animation: scaleIn 0.2s ease-out;
     position: relative !important;
+}
+
+.midi-editor-modal .modal-content {
+    padding: 0 !important; /* AJOUT: Retirer padding pour gain de place */
 }
 
 @keyframes scaleIn {
