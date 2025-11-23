@@ -2669,6 +2669,7 @@ class MidiEditorModal {
             let isResizing = false;
             let startY = 0;
             let startNotesHeight = 0;
+            let availableHeight = 0;  // Espace disponible réel pour le resize
             let startNotesFlex = 3;
             let startCCFlex = 2;
 
@@ -2686,7 +2687,14 @@ class MidiEditorModal {
                 isResizing = true;
                 startY = e.clientY;
                 startNotesHeight = notesSection.clientHeight;
-                this.log('info', 'Resize started at Y=' + startY + ', initial notesHeight=' + startNotesHeight);
+
+                // Capturer l'espace disponible RÉEL (pas la hauteur actuelle du container)
+                const modalBody = this.container.querySelector('.modal-body');
+                const toolbarHeight = this.container.querySelector('.editor-toolbar')?.clientHeight || 0;
+                const channelsToolbarHeight = this.container.querySelector('.channels-toolbar')?.clientHeight || 0;
+                availableHeight = modalBody.clientHeight - toolbarHeight - channelsToolbarHeight;
+
+                this.log('info', `Resize started at Y=${startY}, notesHeight=${startNotesHeight}px, availableHeight=${availableHeight}px`);
 
                 // Obtenir les flex-grow actuels
                 const notesStyle = window.getComputedStyle(notesSection);
@@ -2696,6 +2704,10 @@ class MidiEditorModal {
 
                 this.log('info', `Initial flex: notes=${startNotesFlex}, cc=${startCCFlex}`);
 
+                // Désactiver les transitions pendant le resize pour éviter les animations
+                notesSection.style.transition = 'none';
+                ccSection.style.transition = 'none';
+
                 document.body.style.cursor = 'ns-resize';
                 resizeBar.classList.add('dragging');
             };
@@ -2704,15 +2716,18 @@ class MidiEditorModal {
                 if (!isResizing) return;
 
                 const deltaY = e.clientY - startY;
-                const containerHeight = this.container.querySelector('.midi-editor-container').clientHeight;
                 const resizeBarHeight = 12; // Hauteur de la barre
 
-                // Calculer les nouvelles hauteurs en pixels
-                const totalFlexHeight = containerHeight - resizeBarHeight;
-                const newNotesHeight = Math.max(200, Math.min(totalFlexHeight - 250, startNotesHeight + deltaY));
+                // Utiliser l'espace disponible RÉEL capturé au début
+                const totalFlexHeight = availableHeight - resizeBarHeight;
+
+                // Contraintes assouplies: notes min 150px, cc min 100px
+                const minNotesHeight = 150;
+                const minCCHeight = 100;
+                const newNotesHeight = Math.max(minNotesHeight, Math.min(totalFlexHeight - minCCHeight, startNotesHeight + deltaY));
                 const newCCHeight = totalFlexHeight - newNotesHeight;
 
-                this.log('debug', `Resize: deltaY=${deltaY}, notesH=${newNotesHeight}px, ccH=${newCCHeight}px`);
+                this.log('debug', `Resize: deltaY=${deltaY}, availableH=${availableHeight}px, notesH=${newNotesHeight}px, ccH=${newCCHeight}px`);
 
                 // Appliquer les hauteurs directement en pixels
                 notesSection.style.setProperty('height', `${newNotesHeight}px`, 'important');
@@ -2728,6 +2743,10 @@ class MidiEditorModal {
                     isResizing = false;
                     document.body.style.cursor = '';
                     resizeBar.classList.remove('dragging');
+
+                    // Réactiver les transitions
+                    notesSection.style.transition = '';
+                    ccSection.style.transition = '';
 
                     // Redimensionner les éditeurs après le resize
                     requestAnimationFrame(() => {
