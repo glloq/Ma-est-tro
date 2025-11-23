@@ -303,12 +303,12 @@
 
 /* Barre de resize de la section CC */
 .cc-resize-btn {
-    padding: 2px 16px;
+    padding: 4px 20px;
     background: #3d3d3d;
     border: 1px solid #555;
     border-radius: 4px;
     color: #888;
-    font-size: 12px;
+    font-size: 14px;
     cursor: ns-resize;
     transition: all 0.2s;
     display: none; /* Caché par défaut */
@@ -318,6 +318,10 @@
     left: 50%;
     transform: translateX(-50%);
     user-select: none;
+    z-index: 100;
+    pointer-events: auto;
+    min-width: 60px;
+    min-height: 24px;
 }
 
 .cc-section-header.expanded .cc-resize-btn {
