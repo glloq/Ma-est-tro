@@ -546,61 +546,65 @@ class VelocityEditor {
     renderGridToBuffer() {
         if (!this.gridCtx) return;
 
+        const labelMargin = 50; // IDENTIQUE À CC: Marge pour les labels à gauche
         const ctx = this.gridCtx;
-        const width = this.gridCanvas.width;
-        const height = this.gridCanvas.height;
 
-        // Fond
-        ctx.fillStyle = '#1a1a1a';
-        ctx.fillRect(0, 0, width, height);
+        // Effacer le buffer
+        ctx.clearRect(0, 0, this.gridCanvas.width, this.gridCanvas.height);
 
-        // Lignes horizontales (niveaux de vélocité)
-        ctx.strokeStyle = '#2a2a2a';
-        ctx.lineWidth = 1;
-
-        for (let v = 0; v <= 127; v += 16) {
-            const y = this.velocityToY(v);
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(width, y);
-            ctx.stroke();
-
-            // Labels de vélocité
-            if (v % 32 === 0) {
-                ctx.fillStyle = '#666';
-                ctx.font = '10px monospace';
-                ctx.textAlign = 'left';
-                ctx.fillText(v.toString(), 4, y - 2);
-            }
-        }
-
-        // Ligne centrale à vélocité 64
-        ctx.strokeStyle = '#3a3a3a';
-        ctx.lineWidth = 1;
-        const centerY = this.velocityToY(64);
-        ctx.beginPath();
-        ctx.moveTo(0, centerY);
-        ctx.lineTo(width, centerY);
-        ctx.stroke();
-
-        // Lignes verticales (grille temporelle)
-        ctx.strokeStyle = '#2a2a2a';
+        // Grille verticale (temps) - IDENTIQUE À CC
+        ctx.strokeStyle = '#3a3a3a'; // IDENTIQUE À CC: Plus clair
         ctx.lineWidth = 1;
 
         const gridSize = this.options.grid;
-        const startTick = this.options.xoffset;
+        const startTick = Math.floor(this.options.xoffset / gridSize) * gridSize;
         const endTick = this.options.xoffset + this.options.xrange;
-        const firstGridTick = Math.ceil(startTick / gridSize) * gridSize;
 
-        for (let tick = firstGridTick; tick <= endTick; tick += gridSize) {
-            const x = this.ticksToX(tick);
-            if (x >= 0 && x <= width) {
+        for (let t = startTick; t <= endTick; t += gridSize) {
+            const x = this.ticksToX(t);
+            if (x >= 0 && x <= this.gridCanvas.width) {
                 ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, height);
+                ctx.moveTo(Math.max(x, labelMargin), 0);
+                ctx.lineTo(x, this.gridCanvas.height);
                 ctx.stroke();
             }
         }
+
+        // Grille horizontale (valeurs de vélocité) - IDENTIQUE À CC
+        const values = [0, 32, 64, 96, 127]; // IDENTIQUE À CC
+        ctx.strokeStyle = '#3a3a3a'; // IDENTIQUE À CC
+        ctx.lineWidth = 1;
+
+        values.forEach(value => {
+            const y = this.velocityToY(value);
+
+            // Ligne de grille
+            ctx.beginPath();
+            ctx.moveTo(labelMargin, y);
+            ctx.lineTo(this.gridCanvas.width, y);
+            ctx.stroke();
+
+            // Zone de label (fond)
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, y - 7, labelMargin - 2, 14);
+
+            // Label
+            ctx.fillStyle = '#aaa'; // IDENTIQUE À CC: Plus clair
+            ctx.font = '11px monospace';
+            ctx.textAlign = 'right';
+            ctx.fillText(value.toString(), labelMargin - 5, y + 4);
+        });
+
+        // Bordure verticale séparant la zone de labels - IDENTIQUE À CC
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(labelMargin, 0);
+        ctx.lineTo(labelMargin, this.gridCanvas.height);
+        ctx.stroke();
+
+        // Réinitialiser l'alignement du texte
+        ctx.textAlign = 'left';
     }
 
     renderVelocityBars() {

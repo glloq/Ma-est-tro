@@ -786,9 +786,8 @@ class MidiEditorModal {
             if (!this.velocityEditor) {
                 this.initVelocityEditor();
             } else {
-                // Recharger et synchroniser
-                this.velocityEditor.setSequence(this.sequence);
-                this.velocityEditor.setActiveChannels(Array.from(this.activeChannels));
+                // Recharger la séquence complète (le filtrage par canal se fait dans l'éditeur)
+                this.velocityEditor.setSequence(this.fullSequence);
                 this.syncVelocityEditor();
                 // Attendre que le layout soit recalculé avant de resize
                 requestAnimationFrame(() => {
@@ -1020,13 +1019,17 @@ class MidiEditorModal {
         // Créer l'éditeur
         this.velocityEditor = new VelocityEditor(container, options);
 
-        // Charger la séquence
-        this.velocityEditor.setSequence(this.sequence);
+        // Charger la séquence complète (non filtrée) pour la vélocité
+        this.velocityEditor.setSequence(this.fullSequence);
 
-        // Définir les canaux actifs
-        this.velocityEditor.setActiveChannels(Array.from(this.activeChannels));
+        // Définir le premier canal utilisé comme canal actif par défaut
+        const firstChannel = this.channels.length > 0 ? this.channels[0].channel : 0;
+        this.velocityEditor.setChannel(firstChannel);
 
-        this.log('info', `Velocity Editor initialized with ${this.sequence.length} notes`);
+        this.log('info', `Velocity Editor initialized with ${this.fullSequence.length} notes, default channel: ${firstChannel + 1}`);
+
+        // Mettre à jour le sélecteur de canal
+        this.updateEditorChannelSelector();
 
         // Attendre que le layout soit prêt
         this.waitForVelocityEditorLayout();
