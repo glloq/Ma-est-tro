@@ -1301,7 +1301,8 @@
                 // Appliquer la configuration
                 icon.textContent = config.icon;
                 title.textContent = config.title;
-                messageEl.textContent = message;
+                // Supporter les retours à la ligne \n
+                messageEl.innerHTML = message.replace(/\n/g, '<br>');
                 okBtn.textContent = config.okText;
                 cancelBtn.textContent = config.cancelText;
 
@@ -1378,7 +1379,8 @@
                 // Appliquer la configuration
                 icon.textContent = config.icon;
                 title.textContent = config.title;
-                messageEl.textContent = message;
+                // Supporter les retours à la ligne \n (showAlert)
+                messageEl.innerHTML = message.replace(/\n/g, '<br>');
 
                 // Créer un seul bouton OK
                 buttons.innerHTML = `<button class="btn" id="alertOkBtn">${config.okText}</button>`;
@@ -1390,9 +1392,24 @@
                     resolve();
                 };
 
+                const handleEscape = (e) => {
+                    if (e.key === 'Escape') {
+                        handleOk();
+                    }
+                };
+
+                const handleOverlayClick = (e) => {
+                    // Fermer si on clique sur l'overlay
+                    if (e.target === modal) {
+                        handleOk();
+                    }
+                };
+
                 const cleanup = () => {
                     modal.classList.remove('show');
                     okBtn.removeEventListener('click', handleOk);
+                    document.removeEventListener('keydown', handleEscape);
+                    modal.removeEventListener('click', handleOverlayClick);
                     // Restaurer les deux boutons pour les prochains confirms
                     buttons.innerHTML = `
                         <button class="btn btn-secondary" id="confirmCancelBtn">Annuler</button>
@@ -1400,8 +1417,10 @@
                     `;
                 };
 
-                // Attacher l'événement
+                // Attacher les événements
                 okBtn.addEventListener('click', handleOk);
+                document.addEventListener('keydown', handleEscape);
+                modal.addEventListener('click', handleOverlayClick);
 
                 // Afficher la modal
                 modal.classList.add('show');
