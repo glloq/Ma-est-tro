@@ -512,13 +512,19 @@ class BluetoothScanModal {
         this.showConfirmModal(
             'Oublier cet appareil ?',
             `Voulez-vous vraiment oublier <strong>${this.escapeHtml(deviceName)}</strong> ?<br><br>Cette action supprimera l'appairage avec cet appareil.`,
-            () => {
-                this.logger.info('BluetoothScanModal', `Unpairing device: ${deviceAddress}`);
+            async () => {
+                this.logger.info('BluetoothScanModal', `Forgetting device: ${deviceAddress}`);
 
-                if (this.eventBus) {
-                    this.eventBus.emit('bluetooth:unpair_requested', {
-                        address: deviceAddress
-                    });
+                try {
+                    // Appeler la commande ble_forget via l'API
+                    await window.api.sendCommand('ble_forget', { address: deviceAddress });
+
+                    // Recharger la liste des appareils appairés
+                    this.loadPairedDevices();
+
+                    this.logger.info('BluetoothScanModal', `Device ${deviceAddress} forgotten successfully`);
+                } catch (error) {
+                    this.logger.error('BluetoothScanModal', `Failed to forget device: ${error.message}`);
                 }
             }
         );
