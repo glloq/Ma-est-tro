@@ -3761,6 +3761,7 @@
                 const keyboardLogger = {
                     info: (msg) => log(msg, 'info'),
                     warn: (msg) => log(msg, 'warning'),
+                    debug: (msg) => {}, // Silent debug pour ne pas polluer les logs
                     error: (msg, err) => {
                         if (err) {
                             log(`${msg} ${err.message || err}`, 'error');
