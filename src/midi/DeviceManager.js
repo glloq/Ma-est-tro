@@ -256,7 +256,20 @@ class DeviceManager {
           address: device.address
         }));
 
-      return [...usbDevices, ...connectedBluetoothDevices];
+      // Dédupliquer par nom (évite doublons USB input/output et USB/Bluetooth)
+      const allDevices = [...usbDevices, ...connectedBluetoothDevices];
+      const uniqueDevices = [];
+      const seenNames = new Set();
+
+      for (const device of allDevices) {
+        const key = `${device.name}`;
+        if (!seenNames.has(key)) {
+          seenNames.add(key);
+          uniqueDevices.push(device);
+        }
+      }
+
+      return uniqueDevices;
     }
 
     return usbDevices;
