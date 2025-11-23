@@ -301,15 +301,15 @@
     font-style: italic;
 }
 
-/* Bouton de resize de la section CC */
+/* Barre de resize de la section CC */
 .cc-resize-btn {
-    padding: 4px 10px;
+    padding: 2px 16px;
     background: #3d3d3d;
     border: 1px solid #555;
-    border-radius: 3px;
-    color: #aaa;
-    font-size: 14px;
-    cursor: pointer;
+    border-radius: 4px;
+    color: #888;
+    font-size: 12px;
+    cursor: ns-resize;
     transition: all 0.2s;
     display: none; /* Caché par défaut */
     align-items: center;
@@ -317,6 +317,7 @@
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
+    user-select: none;
 }
 
 .cc-section-header.expanded .cc-resize-btn {
@@ -325,14 +326,21 @@
 
 .cc-resize-btn:hover {
     background: #4a4a4a;
-    border-color: #666;
+    border-color: #4CAF50;
+    color: #4CAF50;
+}
+
+.cc-resize-btn.dragging {
+    background: #4CAF50;
+    border-color: #4CAF50;
     color: #fff;
 }
 
-.cc-resize-btn .resize-icon {
+.cc-resize-btn .resize-grip {
     display: block;
-    transition: transform 0.3s;
-    line-height: 1;
+    line-height: 0.8;
+    font-size: 18px;
+    letter-spacing: -2px;
 }
 
 /* Conteneur principal de l'éditeur */
