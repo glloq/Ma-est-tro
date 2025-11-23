@@ -3387,6 +3387,12 @@ class MidiEditorModal {
         this.ccSectionExpanded = false;
         this.currentCCType = 'cc1';
 
+        // Nettoyer l'éditeur de vélocité
+        if (this.velocityEditor) {
+            this.velocityEditor.destroy();
+            this.velocityEditor = null;
+        }
+
         // Retirer l'événement escape
         if (this.escapeHandler) {
             document.removeEventListener('keydown', this.escapeHandler);
