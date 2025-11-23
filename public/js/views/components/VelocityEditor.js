@@ -156,12 +156,14 @@ class VelocityEditor {
     setChannel(channel) {
         this.currentChannel = channel;
         this.activeChannels = new Set([channel]); // CORRECTION: Mettre à jour activeChannels pour filtrage
+        this.selectedNotes.clear(); // IMPORTANT: Effacer sélection car indices deviennent invalides
         this.isDirty = true;
         this.renderThrottled();
     }
 
     setActiveChannels(channels) {
         this.activeChannels = new Set(channels);
+        this.selectedNotes.clear(); // IMPORTANT: Effacer sélection car indices deviennent invalides
         this.isDirty = true;
         this.renderThrottled();
     }
@@ -418,16 +420,23 @@ class VelocityEditor {
     getNoteAtPosition(x, y, threshold = 8) {
         const ticks = this.xToTicks(x);
 
-        return this.getFilteredNotes().findIndex(note => {
+        // CORRECTION: Retourner l'index dans this.sequence (pas filtered)
+        for (let i = 0; i < this.sequence.length; i++) {
+            const note = this.sequence[i];
+            if (!this.activeChannels.has(note.c)) continue;
+
             const nx = this.ticksToX(note.t);
             const barWidth = Math.max(2, this.ticksToX(note.t + note.g) - nx);
             const ny = this.velocityToY(note.v || 100);
 
-            return x >= nx - threshold &&
-                   x <= nx + barWidth + threshold &&
-                   y >= ny - threshold &&
-                   y <= this.canvas.height + threshold;
-        });
+            if (x >= nx - threshold &&
+                x <= nx + barWidth + threshold &&
+                y >= ny - threshold &&
+                y <= this.canvas.height + threshold) {
+                return i; // Index dans this.sequence
+            }
+        }
+        return null;
     }
 
     getNoteAtTick(ticks, threshold = null) {
@@ -435,9 +444,15 @@ class VelocityEditor {
             threshold = this.options.grid / 2;
         }
 
-        return this.getFilteredNotes().findIndex(note => {
-            return Math.abs(note.t - ticks) <= threshold;
-        });
+        // CORRECTION: Retourner l'index dans this.sequence (pas filtered)
+        for (let i = 0; i < this.sequence.length; i++) {
+            const note = this.sequence[i];
+            if (!this.activeChannels.has(note.c)) continue;
+            if (Math.abs(note.t - ticks) <= threshold) {
+                return i; // Index dans this.sequence
+            }
+        }
+        return null;
     }
 
     selectInRect(x1, y1, x2, y2) {
@@ -446,24 +461,31 @@ class VelocityEditor {
         const top = Math.min(y1, y2);
         const bottom = Math.max(y1, y2);
 
-        this.getFilteredNotes().forEach((note, index) => {
+        // CORRECTION: Utiliser l'index dans this.sequence (pas filtered)
+        for (let i = 0; i < this.sequence.length; i++) {
+            const note = this.sequence[i];
+            if (!this.activeChannels.has(note.c)) continue;
+
             const nx = this.ticksToX(note.t);
             const barWidth = Math.max(2, this.ticksToX(note.t + note.g) - nx);
             const ny = this.velocityToY(note.v || 100);
 
             if (nx >= left && nx + barWidth <= right && ny >= top && ny <= bottom) {
-                this.selectedNotes.add(index);
+                this.selectedNotes.add(i); // Index dans this.sequence
             }
-        });
+        }
 
         this.renderThrottled();
     }
 
     selectAll() {
         this.selectedNotes.clear();
-        this.getFilteredNotes().forEach((note, index) => {
-            this.selectedNotes.add(index);
-        });
+        // CORRECTION: Utiliser l'index dans this.sequence (pas filtered)
+        for (let i = 0; i < this.sequence.length; i++) {
+            if (this.activeChannels.has(this.sequence[i].c)) {
+                this.selectedNotes.add(i); // Index dans this.sequence
+            }
+        }
         this.renderThrottled();
     }
 
@@ -611,9 +633,12 @@ class VelocityEditor {
 
     renderVelocityBars() {
         const ctx = this.ctx;
-        const filteredNotes = this.getFilteredNotes();
 
-        filteredNotes.forEach((note, index) => {
+        // CORRECTION: Itérer sur this.sequence avec indices complets
+        for (let i = 0; i < this.sequence.length; i++) {
+            const note = this.sequence[i];
+            if (!this.activeChannels.has(note.c)) continue;
+
             const velocity = note.v || 100;
             const x = this.ticksToX(note.t);
             const y = this.velocityToY(velocity);
@@ -626,8 +651,8 @@ class VelocityEditor {
             const saturation = 60 + 40 * intensityRatio;
             const lightness = 40 + 20 * intensityRatio;
 
-            // Barre de vélocité
-            const isSelected = this.selectedNotes.has(index);
+            // Barre de vélocité - vérifier sélection avec index complet
+            const isSelected = this.selectedNotes.has(i); // i est l'index dans this.sequence
             if (isSelected) {
                 ctx.fillStyle = `hsl(50, 100%, 60%)`; // Jaune pour sélection
             } else {
@@ -642,7 +667,7 @@ class VelocityEditor {
                 ctx.lineWidth = 2;
                 ctx.strokeRect(x, y, barWidth, barHeight);
             }
-        });
+        }
     }
 
     renderSelectionRect(x1, y1, x2, y2) {
