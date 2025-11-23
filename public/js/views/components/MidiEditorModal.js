@@ -2758,10 +2758,28 @@ class MidiEditorModal {
                 const actualCCHeight = ccSection.clientHeight;
                 this.log('debug', `Applied styles - Expected: notes=${newNotesHeight}px cc=${newCCHeight}px, Actual: notes=${actualNotesHeight}px cc=${actualCCHeight}px`);
 
+                // SOLUTION 1: Cacher scroll-controls-horizontal quand notes < 80px pour éviter débordement
+                const horizontalSlider = notesSection.querySelector('.scroll-controls-horizontal');
+                if (horizontalSlider) {
+                    if (newNotesHeight < 80) {
+                        horizontalSlider.style.display = 'none';
+                        this.log('debug', 'Horizontal slider hidden (notes < 80px)');
+                    } else {
+                        horizontalSlider.style.display = '';
+                        this.log('debug', 'Horizontal slider visible');
+                    }
+                }
+
                 // Redimensionner les éditeurs pendant le drag pour que la grille soit visible
                 requestAnimationFrame(() => {
-                    // Forcer un recalcul de layout avant redimensionnement
+                    // SOLUTION 2.2: Forcer recalcul de TOUTE la cascade flex (5 niveaux)
                     void ccSection.offsetHeight;
+                    const ccContent = ccSection.querySelector('.cc-section-content');
+                    const ccLayout = ccSection.querySelector('.cc-editor-layout');
+                    const ccMain = ccSection.querySelector('.cc-editor-main');
+                    void ccContent?.offsetHeight;
+                    void ccLayout?.offsetHeight;
+                    void ccMain?.offsetHeight;
 
                     if (this.pianoRoll && typeof this.pianoRoll.redraw === 'function') {
                         this.pianoRoll.redraw();
@@ -2769,15 +2787,33 @@ class MidiEditorModal {
                     }
 
                     if (this.ccEditor && typeof this.ccEditor.resize === 'function') {
-                        const ccContainer = ccSection.querySelector('.cc-pitchbend-container');
+                        // SOLUTION 2.1: Corriger le bug du sélecteur (.cc-pitchbend-editor, pas -container)
+                        const ccContainer = ccSection.querySelector('.cc-pitchbend-editor');
                         const ccHeight = ccContainer?.clientHeight || 0;
                         this.log('debug', `CC editor resize called - container height: ${ccHeight}px`);
+
+                        // Premier appel resize
                         this.ccEditor.resize();
+
+                        // SOLUTION 2.3: Double appel après 2 frames pour stabilisation layout
+                        setTimeout(() => {
+                            if (this.ccEditor && typeof this.ccEditor.resize === 'function') {
+                                this.ccEditor.resize();
+                                this.log('debug', 'CC editor re-resize after layout stabilization');
+                            }
+                        }, 32);
                     }
 
                     if (this.velocityEditor && typeof this.velocityEditor.resize === 'function') {
                         this.velocityEditor.resize();
                         this.log('debug', 'Velocity editor resize called');
+
+                        // Double appel pour velocity editor aussi
+                        setTimeout(() => {
+                            if (this.velocityEditor && typeof this.velocityEditor.resize === 'function') {
+                                this.velocityEditor.resize();
+                            }
+                        }, 32);
                     }
                 });
 
