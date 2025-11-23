@@ -2719,6 +2719,9 @@ class MidiEditorModal {
                 notesSection.style.setProperty('min-height', '0px', 'important');
                 ccSection.style.setProperty('min-height', '0px', 'important');
 
+                // Empêcher le slider horizontal de déborder au-dessus de la section CC
+                notesSection.style.setProperty('overflow', 'hidden', 'important');
+
                 document.body.style.cursor = 'ns-resize';
                 resizeBar.classList.add('dragging');
             };
@@ -2757,16 +2760,24 @@ class MidiEditorModal {
 
                 // Redimensionner les éditeurs pendant le drag pour que la grille soit visible
                 requestAnimationFrame(() => {
+                    // Forcer un recalcul de layout avant redimensionnement
+                    void ccSection.offsetHeight;
+
                     if (this.pianoRoll && typeof this.pianoRoll.redraw === 'function') {
                         this.pianoRoll.redraw();
+                        this.log('debug', 'Piano roll redraw called');
                     }
 
                     if (this.ccEditor && typeof this.ccEditor.resize === 'function') {
+                        const ccContainer = ccSection.querySelector('.cc-pitchbend-container');
+                        const ccHeight = ccContainer?.clientHeight || 0;
+                        this.log('debug', `CC editor resize called - container height: ${ccHeight}px`);
                         this.ccEditor.resize();
                     }
 
                     if (this.velocityEditor && typeof this.velocityEditor.resize === 'function') {
                         this.velocityEditor.resize();
+                        this.log('debug', 'Velocity editor resize called');
                     }
                 });
 
@@ -2782,6 +2793,9 @@ class MidiEditorModal {
                     // Réactiver les transitions
                     notesSection.style.transition = '';
                     ccSection.style.transition = '';
+
+                    // Réactiver overflow (remettre à auto au lieu de hidden)
+                    notesSection.style.overflow = '';
 
                     // Redimensionner les éditeurs après le resize
                     requestAnimationFrame(() => {
