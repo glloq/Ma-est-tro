@@ -2713,9 +2713,10 @@ class MidiEditorModal {
 
                 this.log('debug', `Resize: deltaY=${deltaY}, ratio=${ratio.toFixed(3)}, notes=${newNotesFlex.toFixed(2)}, cc=${newCCFlex.toFixed(2)}`);
 
-                // Appliquer les nouveaux flex-grow
-                notesSection.style.flexGrow = newNotesFlex;
-                ccSection.style.flexGrow = newCCFlex;
+                // Appliquer les nouveaux flex (complet, pas juste flex-grow)
+                // Utiliser "flex: grow shrink basis" pour remplacer complètement la règle CSS
+                notesSection.style.flex = `${newNotesFlex} 1 0%`;
+                ccSection.style.flex = `${newCCFlex} 1 0%`;
 
                 e.preventDefault();
             };
