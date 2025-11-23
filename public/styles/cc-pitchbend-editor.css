@@ -446,6 +446,11 @@
     position: relative;
     z-index: 10;
     transition: background 0.2s;
+    display: none; /* Caché par défaut */
+}
+
+.resize-handle.visible {
+    display: block; /* Visible quand la section CC est ouverte */
 }
 
 .resize-handle:hover {

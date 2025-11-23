@@ -673,6 +673,7 @@ class MidiEditorModal {
         const ccSection = document.getElementById('cc-section');
         const ccContent = document.getElementById('cc-section-content');
         const ccHeader = document.getElementById('cc-section-header');
+        const resizeHandle = document.getElementById('resize-handle');
 
         if (ccSection && ccContent && ccHeader) {
             if (this.ccSectionExpanded) {
@@ -680,6 +681,11 @@ class MidiEditorModal {
                 ccSection.classList.remove('collapsed');
                 ccHeader.classList.add('expanded');
                 ccHeader.classList.remove('collapsed');
+
+                // Afficher le resize handle quand la section CC est ouverte
+                if (resizeHandle) {
+                    resizeHandle.classList.add('visible');
+                }
 
                 // Écouter la fin de la transition CSS
                 const onTransitionEnd = (e) => {
@@ -712,6 +718,11 @@ class MidiEditorModal {
                 ccSection.classList.add('collapsed');
                 ccHeader.classList.remove('expanded');
                 ccHeader.classList.add('collapsed');
+
+                // Cacher le resize handle quand la section CC est fermée
+                if (resizeHandle) {
+                    resizeHandle.classList.remove('visible');
+                }
             }
         }
 
@@ -2715,6 +2726,11 @@ class MidiEditorModal {
             let startCCFlex = 2;
 
             const startResize = (e) => {
+                // Ne permettre le resize que si la section CC est expanded
+                if (!this.ccSectionExpanded || !ccSection.classList.contains('expanded')) {
+                    return;
+                }
+
                 isResizing = true;
                 startY = e.clientY;
 
