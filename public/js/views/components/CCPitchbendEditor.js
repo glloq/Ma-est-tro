@@ -128,7 +128,16 @@ class CCPitchbendEditor {
         const width = rect.width;
         const height = rect.height;
 
-        console.log(`CCPitchbendEditor.resize(): element=${width}x${height}`);
+        // LOGS DÉTAILLÉS pour debug
+        const containerHeight = this.container?.clientHeight || 0;
+        const elementHeight = this.element.clientHeight;
+        const canvasHeight = this.canvas?.height || 0;
+        console.log(`CCPitchbendEditor.resize() DÉTAILLÉ:
+  - Container: ${containerHeight}px
+  - Element (.cc-pitchbend-editor): ${elementHeight}px
+  - Canvas actuel: ${canvasHeight}px
+  - getBoundingClientRect: ${width}x${height}
+  - Match: ${Math.abs(containerHeight - elementHeight) < 5 ? '✅' : '❌ MISMATCH!'}`);
 
         // Ne redimensionner que si on a des dimensions valides
         if (width > 0 && height > 100) {
@@ -147,6 +156,8 @@ class CCPitchbendEditor {
             this.gridCanvas.height = height;
             this.gridDirty = true;
 
+            console.log(`  → Canvas redimensionné à: ${this.canvas.width}x${this.canvas.height}`);
+
             this.renderThrottled();
 
             // CORRECTION: Vérification que la hauteur est stable après 1 frame
@@ -157,6 +168,8 @@ class CCPitchbendEditor {
                     if (Math.abs(newHeight - height) > 2) {
                         console.warn(`CCPitchbendEditor: Height unstable (${height}px → ${newHeight}px), re-resizing...`);
                         this.resize();  // Rappeler avec la vraie hauteur
+                    } else {
+                        console.log(`  → Hauteur stable confirmée: ${newHeight}px ✅`);
                     }
                 });
             }
