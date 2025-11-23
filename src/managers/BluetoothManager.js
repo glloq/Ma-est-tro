@@ -449,6 +449,66 @@ class BluetoothManager extends EventEmitter {
   }
 
   /**
+   * Envoie un message MIDI (format easymidi) à un périphérique Bluetooth
+   * @param {string} address - Adresse BLE du périphérique
+   * @param {string} type - Type de message ('noteon', 'noteoff', 'cc', etc.)
+   * @param {object} data - Données du message ({channel, note, velocity} ou {channel, controller, value})
+   */
+  async sendMidiMessage(address, type, data) {
+    // Convertir format easymidi en bytes MIDI bruts
+    const midiBytes = this.convertToMidiBytes(type, data);
+
+    if (midiBytes) {
+      await this.sendMidiData(address, midiBytes);
+    } else {
+      this.app.logger.warn(`Unsupported MIDI message type: ${type}`);
+    }
+  }
+
+  /**
+   * Convertit un message easymidi en bytes MIDI
+   * @param {string} type - Type de message
+   * @param {object} data - Données du message
+   * @returns {Array<number>} Bytes MIDI
+   */
+  convertToMidiBytes(type, data) {
+    const channel = data.channel || 0;
+
+    switch (type.toLowerCase()) {
+      case 'noteon':
+        return [0x90 | channel, data.note, data.velocity];
+
+      case 'noteoff':
+        return [0x80 | channel, data.note, data.velocity || 0];
+
+      case 'cc':
+      case 'controlchange':
+        return [0xB0 | channel, data.controller, data.value];
+
+      case 'programchange':
+      case 'program':
+        return [0xC0 | channel, data.program || data.number];
+
+      case 'pitchbend':
+        const value = data.value || 0;
+        const lsb = value & 0x7F;
+        const msb = (value >> 7) & 0x7F;
+        return [0xE0 | channel, lsb, msb];
+
+      case 'poly aftertouch':
+      case 'polyaftertouch':
+        return [0xA0 | channel, data.note, data.pressure];
+
+      case 'channel aftertouch':
+      case 'channelaftertouch':
+        return [0xD0 | channel, data.pressure];
+
+      default:
+        return null;
+    }
+  }
+
+  /**
    * Obtient la liste des périphériques appairés
    */
   getPairedDevices() {
