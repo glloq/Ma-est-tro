@@ -370,10 +370,10 @@ class DeviceManager {
   }
 
   /**
-   * Send SysEx Identity Request to a device
-   * Format: F0 7E 7F 06 01 F7
+   * Send SysEx Identity Request to a device using MidiMind Block 1 protocol
+   * Format: F0 7D 00 01 00 F7
    * @param {string} deviceName - Name of the device
-   * @param {number} deviceId - MIDI device ID (0x7F for broadcast to all devices)
+   * @param {number} deviceId - MIDI device ID (unused in MidiMind protocol, kept for compatibility)
    * @returns {boolean} Success status
    */
   sendIdentityRequest(deviceName, deviceId = 0x7F) {
@@ -396,20 +396,23 @@ class DeviceManager {
     }
 
     try {
-      // Identity Request SysEx message
-      // Format: F0 7E [device_id] 06 01 F7
-      // Note: easymidi requires F0 and F7 to be included
+      // MidiMind Block 1 Identity Request SysEx message
+      // Format: F0 7D 00 01 00 F7
+      // Protocol: Custom SysEx (Educational/Development use)
+      // Manufacturer ID: 0x00 (MidiMind)
+      // Block ID: 0x01 (Identification)
+      // Request flag: 0x00 (request)
       const sysexData = [
         0xF0,        // SysEx Start
-        0x7E,        // Universal Non-Real Time
-        deviceId,    // Device ID (0x7F = all devices)
-        0x06,        // General Information
-        0x01,        // Identity Request
+        0x7D,        // Custom SysEx (Educational/Development)
+        0x00,        // MidiMind Manufacturer ID
+        0x01,        // Block 1 (Identification)
+        0x00,        // Request flag (00=request, 01=response)
         0xF7         // SysEx End
       ];
 
       output.send('sysex', sysexData);
-      this.app.logger.info(`Identity Request sent to ${deviceName} (device ID: 0x${deviceId.toString(16).toUpperCase()})`);
+      this.app.logger.info(`MidiMind Block 1 Identity Request sent to ${deviceName}`);
       return true;
     } catch (error) {
       this.app.logger.error(`Failed to send Identity Request: ${error.message}`);
@@ -468,8 +471,24 @@ class DeviceManager {
   }
 
   /**
-   * Parse SysEx Identity Reply message
-   * Format: F0 7E [device_id] 06 02 [manufacturer_id] [device_family] [device_family_member] [software_version] F7
+   * Decode a 32-bit value from 5 bytes of 7-bit encoded data
+   * @param {Array} data - Array of 5 bytes (7-bit encoded)
+   * @returns {number} 32-bit value
+   */
+  decode7BitTo32Bit(data) {
+    let value = 0;
+    value |= (data[0] & 0x7F);
+    value |= (data[1] & 0x7F) << 7;
+    value |= (data[2] & 0x7F) << 14;
+    value |= (data[3] & 0x7F) << 21;
+    value |= (data[4] & 0x07) << 28;  // Only 3 bits useful (bits 28-31)
+    return value >>> 0;  // Convert to unsigned 32-bit
+  }
+
+  /**
+   * Parse SysEx Identity Reply message using MidiMind Block 1 protocol
+   * Format: F0 7D 00 01 01 <version> <deviceId[5]> <name[32]> <firmware[3]> <features[5]> F7
+   * Total size: 52 bytes
    * @param {Array|Object} msg - SysEx message data (includes F0 and F7)
    * @returns {Object|null} Parsed identity info or null if not an identity reply
    */
@@ -481,70 +500,93 @@ class DeviceManager {
     this.app.logger.debug(`Received SysEx message: ${bytes.map(b => '0x' + b.toString(16).toUpperCase()).join(' ')}`);
     this.app.logger.debug(`Length: ${bytes.length}, First: 0x${bytes[0]?.toString(16).toUpperCase()}, Last: 0x${bytes[bytes.length - 1]?.toString(16).toUpperCase()}`);
 
-    // Check minimum length and identity reply signature
-    // F0 7E [device_id] 06 02 [manufacturer] [family] [member] [version] F7
-    if (bytes.length < 8) {
-      this.app.logger.debug('SysEx message too short (< 8 bytes)');
+    // Check for MidiMind Block 1 Identity Reply
+    // Format: F0 7D 00 01 01 <version> <deviceId[5]> <name[32]> <firmware[3]> <features[5]> F7
+    // Total size: 52 bytes
+    if (bytes.length !== 52) {
+      this.app.logger.debug(`Not a MidiMind Block 1 message (expected 52 bytes, got ${bytes.length})`);
       return null;
     }
     if (bytes[0] !== 0xF0) {
       this.app.logger.debug(`Not a SysEx message (first byte: 0x${bytes[0]?.toString(16).toUpperCase()})`);
       return null;
     }
-    if (bytes[1] !== 0x7E) {
-      this.app.logger.debug(`Not a Universal Non-Real Time message (byte[1]: 0x${bytes[1]?.toString(16).toUpperCase()})`);
+    if (bytes[1] !== 0x7D) {
+      this.app.logger.debug(`Not a Custom SysEx message (byte[1]: 0x${bytes[1]?.toString(16).toUpperCase()})`);
       return null;
     }
-    if (bytes[3] !== 0x06) {
-      this.app.logger.debug(`Not a General Information message (byte[3]: 0x${bytes[3]?.toString(16).toUpperCase()})`);
+    if (bytes[2] !== 0x00) {
+      this.app.logger.debug(`Not a MidiMind message (byte[2]: 0x${bytes[2]?.toString(16).toUpperCase()})`);
       return null;
     }
-    if (bytes[4] !== 0x02) {
+    if (bytes[3] !== 0x01) {
+      this.app.logger.debug(`Not a Block 1 message (byte[3]: 0x${bytes[3]?.toString(16).toUpperCase()})`);
+      return null;
+    }
+    if (bytes[4] !== 0x01) {
       this.app.logger.debug(`Not an Identity Reply (byte[4]: 0x${bytes[4]?.toString(16).toUpperCase()})`);
       return null;
     }
-
-    const deviceId = bytes[2];
-    let pos = 5;
-
-    // Parse manufacturer ID (1 or 3 bytes)
-    let manufacturerId;
-    let manufacturerName = 'Unknown';
-
-    if (bytes[pos] === 0x00) {
-      // 3-byte manufacturer ID
-      if (bytes.length < pos + 3) return null;
-      manufacturerId = `00 ${bytes[pos + 1].toString(16).padStart(2, '0').toUpperCase()} ${bytes[pos + 2].toString(16).padStart(2, '0').toUpperCase()}`;
-      pos += 3;
-    } else {
-      // 1-byte manufacturer ID
-      manufacturerId = bytes[pos].toString(16).padStart(2, '0').toUpperCase();
-      manufacturerName = this.getManufacturerName(bytes[pos]);
-      pos += 1;
+    if (bytes[51] !== 0xF7) {
+      this.app.logger.debug(`Invalid SysEx end marker (byte[51]: 0x${bytes[51]?.toString(16).toUpperCase()})`);
+      return null;
     }
 
-    // Parse device family (2 bytes, little-endian)
-    if (bytes.length < pos + 2) return null;
-    const deviceFamily = bytes[pos] | (bytes[pos + 1] << 8);
-    pos += 2;
+    let pos = 5;
 
-    // Parse device family member (2 bytes, little-endian)
-    if (bytes.length < pos + 2) return null;
-    const deviceFamilyMember = bytes[pos] | (bytes[pos + 1] << 8);
-    pos += 2;
+    // Parse Block Version (1 byte)
+    const blockVersion = bytes[pos];
+    pos += 1;
 
-    // Parse software revision (4 bytes)
-    const softwareRevision = bytes.slice(pos, pos + 4)
-      .map(b => b.toString(16).padStart(2, '0').toUpperCase())
-      .join(' ');
+    // Parse Device ID (5 bytes, 7-bit encoded to 32-bit)
+    const deviceIdBytes = bytes.slice(pos, pos + 5);
+    const deviceId = this.decode7BitTo32Bit(deviceIdBytes);
+    pos += 5;
+
+    // Parse Device Name (32 bytes, null-terminated ASCII string)
+    const nameBytes = bytes.slice(pos, pos + 32);
+    let deviceName = '';
+    for (let i = 0; i < nameBytes.length; i++) {
+      if (nameBytes[i] === 0x00) break;  // Null terminator
+      deviceName += String.fromCharCode(nameBytes[i]);
+    }
+    pos += 32;
+
+    // Parse Firmware version (3 bytes: major, minor, patch)
+    const firmwareMajor = bytes[pos];
+    const firmwareMinor = bytes[pos + 1];
+    const firmwarePatch = bytes[pos + 2];
+    const firmwareVersion = `${firmwareMajor}.${firmwareMinor}.${firmwarePatch}`;
+    pos += 3;
+
+    // Parse Feature Flags (5 bytes, 7-bit encoded to 32-bit)
+    const featureBytes = bytes.slice(pos, pos + 5);
+    const features = this.decode7BitTo32Bit(featureBytes);
+    pos += 5;
+
+    // Decode feature flags
+    const featureFlags = {
+      noteMap: (features & 0x01) !== 0,           // Bit 0: Note Map support
+      velocityCurves: (features & 0x02) !== 0,    // Bit 1: Velocity Curves support
+      ccMapping: (features & 0x04) !== 0          // Bit 2: CC Mapping support
+    };
 
     return {
-      deviceId: `0x${deviceId.toString(16).padStart(2, '0').toUpperCase()}`,
-      manufacturerId,
-      manufacturerName,
-      deviceFamily: `0x${deviceFamily.toString(16).padStart(4, '0').toUpperCase()}`,
-      deviceFamilyMember: `0x${deviceFamilyMember.toString(16).padStart(4, '0').toUpperCase()}`,
-      softwareRevision,
+      protocol: 'MidiMind Block 1',
+      blockVersion: blockVersion,
+      deviceId: `0x${deviceId.toString(16).padStart(8, '0').toUpperCase()}`,
+      deviceIdDecimal: deviceId,
+      deviceName: deviceName,
+      manufacturerName: 'MidiMind',
+      firmwareVersion: firmwareVersion,
+      firmware: {
+        major: firmwareMajor,
+        minor: firmwareMinor,
+        patch: firmwarePatch
+      },
+      features: `0x${features.toString(16).padStart(8, '0').toUpperCase()}`,
+      featuresDecimal: features,
+      featureFlags: featureFlags,
       rawBytes: bytes.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ')
     };
   }
