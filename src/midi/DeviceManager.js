@@ -262,16 +262,27 @@ class DeviceManager {
       const uniqueDevices = [];
       const seenNames = new Set();
 
-      this.app.logger.debug(`[Deduplication] ${allDevices.length} devices before: ${allDevices.map(d => `"${d.name}" (${d.type})`).join(', ')}`);
+      this.app.logger.debug(`[Deduplication] ${allDevices.length} devices before:`);
+      allDevices.forEach(d => {
+        this.app.logger.debug(`  - "${d.name}" (${d.type})`);
+      });
+
+      // Fonction pour normaliser un nom (retire suffixes courants)
+      const normalizeName = (name) => {
+        // Retirer les suffixes de port MIDI (ex: ":Lyre-Test MIDI 128:0" -> "Lyre-Test")
+        let normalized = name.split(':')[0].trim();
+        return normalized;
+      };
 
       for (const device of allDevices) {
-        const key = `${device.name}`;
-        if (!seenNames.has(key)) {
-          seenNames.add(key);
+        const normalizedName = normalizeName(device.name);
+
+        if (!seenNames.has(normalizedName)) {
+          seenNames.add(normalizedName);
           uniqueDevices.push(device);
-          this.app.logger.debug(`[Deduplication] ✓ KEPT: "${device.name}" (${device.type})`);
+          this.app.logger.debug(`[Deduplication] ✓ KEPT: "${device.name}" (${device.type}) [normalized: "${normalizedName}"]`);
         } else {
-          this.app.logger.debug(`[Deduplication] ✗ SKIP: "${device.name}" (${device.type}) - duplicate`);
+          this.app.logger.debug(`[Deduplication] ✗ SKIP: "${device.name}" (${device.type}) [normalized: "${normalizedName}"] - duplicate`);
         }
       }
 
