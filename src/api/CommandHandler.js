@@ -191,7 +191,10 @@ class CommandHandler {
   // ==================== DEVICE HANDLERS ====================
 
   async deviceList() {
-    return { devices: this.app.deviceManager.getDeviceList() };
+    const devices = this.app.deviceManager.getDeviceList();
+    this.app.logger.debug(`[CommandHandler] deviceList returning ${devices.length} devices:`,
+      devices.map(d => `"${d.name}" (${d.type})`).join(', '));
+    return { devices: devices };
   }
 
   async deviceRefresh() {
