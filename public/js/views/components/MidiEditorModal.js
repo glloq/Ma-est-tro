@@ -2755,6 +2755,21 @@ class MidiEditorModal {
                 const actualCCHeight = ccSection.clientHeight;
                 this.log('debug', `Applied styles - Expected: notes=${newNotesHeight}px cc=${newCCHeight}px, Actual: notes=${actualNotesHeight}px cc=${actualCCHeight}px`);
 
+                // Redimensionner les éditeurs pendant le drag pour que la grille soit visible
+                requestAnimationFrame(() => {
+                    if (this.pianoRoll && typeof this.pianoRoll.redraw === 'function') {
+                        this.pianoRoll.redraw();
+                    }
+
+                    if (this.ccEditor && typeof this.ccEditor.resize === 'function') {
+                        this.ccEditor.resize();
+                    }
+
+                    if (this.velocityEditor && typeof this.velocityEditor.resize === 'function') {
+                        this.velocityEditor.resize();
+                    }
+                });
+
                 e.preventDefault();
             };
 
