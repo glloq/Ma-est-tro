@@ -133,10 +133,11 @@
     padding: 24px !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    flex: 1 !important;
+    flex: 1 1 auto !important;
     display: flex !important;
     flex-direction: column !important;
     min-height: 0 !important;
+    max-height: calc(90vh - 180px) !important;
     -webkit-overflow-scrolling: touch !important;
 }
 
