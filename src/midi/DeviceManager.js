@@ -257,7 +257,8 @@ class DeviceManager {
         }));
 
       // Dédupliquer par nom (évite doublons USB input/output et USB/Bluetooth)
-      const allDevices = [...usbDevices, ...connectedBluetoothDevices];
+      // Priorité: Bluetooth > USB (si connecté en BT, on préfère cette connexion)
+      const allDevices = [...connectedBluetoothDevices, ...usbDevices];
       const uniqueDevices = [];
       const seenNames = new Set();
 
