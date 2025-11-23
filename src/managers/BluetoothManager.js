@@ -124,12 +124,35 @@ class BluetoothManager extends EventEmitter {
 
   async handleDeviceDiscovered(device, address) {
     try {
-      const name = await device.getName() || 'Unknown Device';
-      const rssi = await device.getRSSI().catch(() => -100);
-      const uuids = await device.getUUIDs().catch(() => []);
+      // Obtenir les infos avec gestion d'erreurs individuelles
+      let name = 'Unknown Device';
+      let rssi = -100;
+      let uuids = [];
+
+      try {
+        name = await device.getName();
+        if (!name || name.trim() === '') {
+          name = `BLE-${address.slice(-8)}`;
+        }
+      } catch (e) {
+        this.app.logger.debug(`Cannot get name for ${address}: ${e.message}`);
+        name = `BLE-${address.slice(-8)}`;
+      }
+
+      try {
+        rssi = await device.getRSSI();
+      } catch (e) {
+        this.app.logger.debug(`Cannot get RSSI for ${address}: ${e.message}`);
+      }
+
+      try {
+        uuids = await device.getUUIDs();
+      } catch (e) {
+        this.app.logger.debug(`Cannot get UUIDs for ${address}: ${e.message}`);
+      }
 
       // Vérifier si c'est un périphérique MIDI BLE
-      const isMidiDevice = uuids.some(uuid =>
+      const isMidiDevice = uuids && uuids.length > 0 && uuids.some(uuid =>
         uuid.toLowerCase().includes('03b80e5a') ||
         uuid.toLowerCase() === this.BLE_MIDI_SERVICE_UUID.toLowerCase()
       );
@@ -142,16 +165,29 @@ class BluetoothManager extends EventEmitter {
         signal: this.rssiToSignalStrength(rssi),
         type: 'ble',
         isMidiDevice: isMidiDevice,
-        serviceUuids: uuids,
+        serviceUuids: uuids || [],
         deviceObject: device
       };
 
       this.devices.set(address, deviceInfo);
 
-      this.app.logger.debug(`BLE device discovered: ${name} (${address}) RSSI: ${rssi} dBm ${isMidiDevice ? '[MIDI]' : ''}`);
+      this.app.logger.info(`✓ BLE device discovered: ${name} (${address}) RSSI: ${rssi} dBm ${isMidiDevice ? '[MIDI]' : ''}`);
 
     } catch (error) {
-      this.app.logger.debug(`Error processing device ${address}: ${error.message}`);
+      this.app.logger.error(`Error processing device ${address}: ${error.message}`);
+
+      // TOUJOURS ajouter le device même en cas d'erreur pour qu'il soit visible
+      this.devices.set(address, {
+        id: address,
+        address: address,
+        name: `Device-${address.slice(-8)}`,
+        rssi: -100,
+        signal: 0,
+        type: 'ble',
+        isMidiDevice: false,
+        serviceUuids: [],
+        deviceObject: device
+      });
     }
   }
 
@@ -419,6 +455,20 @@ class BluetoothManager extends EventEmitter {
    */
   isConnected(address) {
     return this.connectedDevices.has(address);
+  }
+
+  /**
+   * Obtient le statut du Bluetooth
+   */
+  getStatus() {
+    return {
+      enabled: this.adapter !== null,
+      state: this.adapter ? 'poweredOn' : 'unknown',
+      scanning: this.scanning,
+      devicesFound: this.devices.size,
+      connectedDevices: this.connectedDevices.size,
+      pairedDevices: this.pairedDevices.length
+    };
   }
 
   /**
