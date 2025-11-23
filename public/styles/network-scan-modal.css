@@ -170,7 +170,6 @@
     background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
     border-radius: 12px;
     border: 2px solid var(--network-primary);
-    flex-shrink: 0;
 }
 
 .manual-ip-header {
@@ -262,7 +261,6 @@
 
 .scan-section {
     margin-bottom: 20px;
-    flex-shrink: 0;
 }
 
 .scan-header {
@@ -518,7 +516,6 @@
     margin-bottom: 20px;
     padding-top: 20px;
     border-top: 2px solid #f0f0f0;
-    flex-shrink: 0;
 }
 
 .connected-section h3 {
