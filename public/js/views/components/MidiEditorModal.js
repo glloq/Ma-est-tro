@@ -2644,6 +2644,11 @@ class MidiEditorModal {
         const ccSection = document.getElementById('cc-section');
 
         if (resizeBar && notesSection && ccSection) {
+            // Empêcher tous les clics sur le bouton de se propager au header
+            resizeBar.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+
             let isResizing = false;
             let startY = 0;
             let startNotesFlex = 3;
@@ -2652,6 +2657,7 @@ class MidiEditorModal {
             const startResize = (e) => {
                 // Empêcher le clic de se propager au header (pour ne pas déclencher le collapse)
                 e.stopPropagation();
+                e.preventDefault();
 
                 // Ne permettre le resize que si la section CC est expanded
                 if (!this.ccSectionExpanded || !ccSection.classList.contains('expanded')) {
@@ -2669,7 +2675,6 @@ class MidiEditorModal {
 
                 document.body.style.cursor = 'ns-resize';
                 resizeBar.classList.add('dragging');
-                e.preventDefault();
             };
 
             const doResize = (e) => {
