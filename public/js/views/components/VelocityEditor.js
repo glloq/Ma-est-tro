@@ -153,6 +153,7 @@ class VelocityEditor {
 
     setChannel(channel) {
         this.currentChannel = channel;
+        this.activeChannels = new Set([channel]); // CORRECTION: Mettre à jour activeChannels pour filtrage
         this.isDirty = true;
         this.renderThrottled();
     }
