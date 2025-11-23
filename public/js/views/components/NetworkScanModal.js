@@ -166,7 +166,18 @@ class NetworkScanModal {
                     <!-- Section scan -->
                     <div class="scan-section">
                         <div class="scan-header">
-                            <h3>Périphériques disponibles</h3>
+                            <div class="scan-header-left">
+                                <h3>Périphériques disponibles</h3>
+                                <div class="scan-options">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="fullScanCheckbox" ${this.scanning ? 'disabled' : ''}>
+                                        <span>Afficher toutes les IPs du réseau</span>
+                                    </label>
+                                    <p class="text-muted" style="margin: 4px 0 0 24px; font-size: 11px;">
+                                        (scan complet du subnet - peut être plus lent)
+                                    </p>
+                                </div>
+                            </div>
                             <button class="btn-scan ${this.scanning ? 'scanning' : ''}"
                                     data-action="scan" ${this.scanning ? 'disabled' : ''}>
                                 ${this.scanning ? '🔄 Scan en cours...' : '🔍 Rechercher'}
@@ -385,12 +396,17 @@ class NetworkScanModal {
 
         this.scanning = true;
         this.availableDevices = [];
+
+        // Vérifier si le scan complet est activé
+        const fullScanCheckbox = this.container ? this.container.querySelector('#fullScanCheckbox') : null;
+        const fullScan = fullScanCheckbox ? fullScanCheckbox.checked : false;
+
         this.updateModalContent();
 
-        this.logger.info('NetworkScanModal', 'Starting network scan');
+        this.logger.info('NetworkScanModal', `Starting network scan (fullScan: ${fullScan})`);
 
         if (this.eventBus) {
-            this.eventBus.emit('network:scan_requested');
+            this.eventBus.emit('network:scan_requested', { fullScan });
         } else {
             this.logger.error('NetworkScanModal', 'EventBus not available');
             this.scanning = false;

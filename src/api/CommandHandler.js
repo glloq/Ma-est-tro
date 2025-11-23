@@ -421,8 +421,9 @@ class CommandHandler {
     }
 
     const timeout = data.timeout || 5;
+    const fullScan = data.fullScan || false;
 
-    const devices = await this.app.networkManager.startScan(timeout);
+    const devices = await this.app.networkManager.startScan(timeout, fullScan);
 
     return {
       success: true,
