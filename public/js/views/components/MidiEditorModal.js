@@ -1691,6 +1691,11 @@ class MidiEditorModal {
                             </div>
                         </div>
 
+                        <!-- Barre de resize entre notes et CC -->
+                        <div class="cc-resize-bar" id="cc-resize-btn" title="Drag pour redimensionner">
+                            <span class="resize-grip">⋮⋮⋮</span>
+                        </div>
+
                         <!-- Section CC/Pitchbend/Velocity (collapsible) -->
                         <div class="midi-editor-section cc-section collapsed" id="cc-section">
                             <!-- Header collapsible -->
@@ -1698,9 +1703,6 @@ class MidiEditorModal {
                                 <div class="cc-section-title">
                                     <span class="cc-collapse-icon">▼</span>
                                     <span>CC / Pitch Bend / Vélocité</span>
-                                    <div class="cc-resize-btn" id="cc-resize-btn" title="Drag pour redimensionner">
-                                        <span class="resize-grip">⋮</span>
-                                    </div>
                                 </div>
                             </div>
 
@@ -2556,12 +2558,6 @@ class MidiEditorModal {
         const ccSectionHeader = document.getElementById('cc-section-header');
         if (ccSectionHeader) {
             ccSectionHeader.addEventListener('click', (e) => {
-                // Ignorer les clics sur le bouton de resize et ses enfants
-                if (e.target.closest('#cc-resize-btn') || e.target.closest('.cc-resize-btn')) {
-                    this.log('debug', 'Click on resize button ignored by header');
-                    return;
-                }
-
                 e.preventDefault();
                 this.toggleCCSection();
             });
@@ -2652,23 +2648,15 @@ class MidiEditorModal {
         if (resizeBar && notesSection && ccSection) {
             this.log('info', 'Resize bar found, attaching drag events');
 
-            // Empêcher tous les clics sur le bouton de se propager au header
-            resizeBar.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.log('debug', 'Resize bar clicked');
-            });
-
             let isResizing = false;
             let startY = 0;
             let startNotesFlex = 3;
             let startCCFlex = 2;
 
             const startResize = (e) => {
-                this.log('debug', 'Resize mousedown detected');
-
-                // Empêcher le clic de se propager au header (pour ne pas déclencher le collapse)
-                e.stopPropagation();
                 e.preventDefault();
+
+                this.log('debug', 'Resize mousedown detected');
 
                 // Ne permettre le resize que si la section CC est expanded
                 if (!this.ccSectionExpanded || !ccSection.classList.contains('expanded')) {
