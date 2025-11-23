@@ -157,6 +157,8 @@ class VelocityEditor {
         this.currentChannel = channel;
         this.activeChannels = new Set([channel]); // CORRECTION: Mettre à jour activeChannels pour filtrage
         this.selectedNotes.clear(); // IMPORTANT: Effacer sélection car indices deviennent invalides
+        // Annuler les actions en cours
+        this.cancelInteractions();
         this.isDirty = true;
         this.renderThrottled();
     }
@@ -164,8 +166,22 @@ class VelocityEditor {
     setActiveChannels(channels) {
         this.activeChannels = new Set(channels);
         this.selectedNotes.clear(); // IMPORTANT: Effacer sélection car indices deviennent invalides
+        // Annuler les actions en cours
+        this.cancelInteractions();
         this.isDirty = true;
         this.renderThrottled();
+    }
+
+    cancelInteractions() {
+        // Annuler toutes les interactions en cours
+        this.lineStart = null;
+        this.selectionStart = null;
+        this.dragStart = null;
+        this.isDrawing = false;
+        this.lastDrawPosition = null;
+        this.lastDrawTicks = null;
+        this.lastMouseX = undefined;
+        this.lastMouseY = undefined;
     }
 
     // === Conversion coordonnées ===
@@ -330,6 +346,10 @@ class VelocityEditor {
         const ticks = this.xToTicks(x);
         const velocity = this.yToVelocity(y);
 
+        // Stocker la position de la souris pour le rendu
+        this.lastMouseX = x;
+        this.lastMouseY = y;
+
         if (this.isDrawing && this.currentTool === 'draw') {
             // Dessin continu - modifier la vélocité des notes sous le curseur
             const snappedTicks = this.snapToGrid(ticks);
@@ -356,12 +376,9 @@ class VelocityEditor {
 
                 this.renderThrottled();
             }
-        } else if (this.selectionStart) {
-            // Rectangle de sélection
-            this.renderSelectionRect(this.selectionStart.x, this.selectionStart.y, x, y);
-        } else if (this.lineStart) {
-            // Prévisualisation de la ligne
-            this.renderLinePreview(this.lineStart, { ticks, velocity });
+        } else if (this.selectionStart || this.lineStart) {
+            // Rectangle de sélection ou prévisualisation de ligne
+            this.renderThrottled();
         }
     }
 
@@ -489,6 +506,28 @@ class VelocityEditor {
         this.renderThrottled();
     }
 
+    deleteSelected() {
+        if (this.selectedNotes.size === 0) return;
+
+        // Convertir en tableau et trier en ordre décroissant pour supprimer de la fin
+        const indices = Array.from(this.selectedNotes).sort((a, b) => b - a);
+
+        // Supprimer les notes sélectionnées
+        indices.forEach(index => {
+            if (index >= 0 && index < this.sequence.length) {
+                this.sequence.splice(index, 1);
+            }
+        });
+
+        // Effacer la sélection
+        this.selectedNotes.clear();
+
+        // Sauvegarder l'état et notifier le changement
+        this.saveState();
+        this.notifyChange();
+        this.renderThrottled();
+    }
+
     getFilteredNotes() {
         return this.sequence.filter(note => this.activeChannels.has(note.c));
     }
@@ -549,20 +588,19 @@ class VelocityEditor {
         this.renderVelocityBars();
 
         // Dessiner les éléments interactifs
-        if (this.selectionStart) {
+        if (this.selectionStart && this.lastMouseX !== undefined) {
             this.renderSelectionRect(
                 this.selectionStart.x,
                 this.selectionStart.y,
-                this.lastMouseX || this.selectionStart.x,
-                this.lastMouseY || this.selectionStart.y
+                this.lastMouseX,
+                this.lastMouseY
             );
         }
 
-        if (this.lineStart) {
-            const lastPos = this.lastDrawPosition || this.lineStart;
+        if (this.lineStart && this.lastMouseX !== undefined) {
             this.renderLinePreview(this.lineStart, {
-                ticks: this.xToTicks(lastPos.x),
-                velocity: this.yToVelocity(lastPos.y)
+                ticks: this.xToTicks(this.lastMouseX),
+                velocity: this.yToVelocity(this.lastMouseY)
             });
         }
     }
@@ -672,18 +710,18 @@ class VelocityEditor {
 
     renderSelectionRect(x1, y1, x2, y2) {
         const ctx = this.ctx;
-        ctx.strokeStyle = '#4CAF50';
+        ctx.strokeStyle = '#2196F3'; // IDENTIQUE CC: Bleu
         ctx.lineWidth = 1;
-        ctx.setLineDash([4, 4]);
+        ctx.setLineDash([5, 5]); // IDENTIQUE CC
         ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
         ctx.setLineDash([]);
     }
 
     renderLinePreview(start, end) {
         const ctx = this.ctx;
-        ctx.strokeStyle = '#FFA500';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = '#9E9E9E'; // IDENTIQUE CC: Gris
+        ctx.lineWidth = 1; // IDENTIQUE CC
+        ctx.setLineDash([5, 5]); // IDENTIQUE CC
         ctx.beginPath();
         ctx.moveTo(this.ticksToX(start.ticks), this.velocityToY(start.velocity));
         ctx.lineTo(this.ticksToX(end.ticks), this.velocityToY(end.velocity));
