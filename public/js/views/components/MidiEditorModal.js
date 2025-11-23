@@ -35,9 +35,10 @@ class MidiEditorModal {
         // Instrument sélectionné pour les nouveaux canaux (program MIDI GM)
         this.selectedInstrument = 0; // Piano par défaut
 
-        // CC/Pitchbend Editor
+        // CC/Pitchbend/Velocity Editor
         this.ccEditor = null;
-        this.currentCCType = 'cc1'; // 'cc1', 'cc7', 'cc10', 'cc11', 'pitchbend'
+        this.velocityEditor = null;
+        this.currentCCType = 'cc1'; // 'cc1', 'cc7', 'cc10', 'cc11', 'pitchbend', 'velocity'
         this.ccEvents = []; // Événements CC et pitchbend
         this.ccSectionExpanded = false; // État du collapse de la section CC
 
@@ -404,28 +405,35 @@ class MidiEditorModal {
     }
 
     /**
-     * Mettre à jour le sélecteur de canal pour afficher uniquement les canaux utilisés
+     * Mettre à jour le sélecteur de canal pour afficher uniquement les canaux présents dans le fichier
      */
-    updateCCChannelSelector() {
-        const channelSelector = this.container?.querySelector('.cc-channel-selector');
+    updateEditorChannelSelector() {
+        const channelSelector = document.getElementById('editor-channel-selector');
         if (!channelSelector) return;
 
-        const usedChannels = this.getCCChannelsUsed();
+        let channelsToShow = [];
+        let activeChannel = 0;
 
-        // Si aucun canal n'est utilisé pour le type actuel, afficher tous les canaux ayant des CC/Pitchbend
-        const channelsToShow = usedChannels.length > 0 ? usedChannels : this.getAllCCChannels();
+        if (this.currentCCType === 'velocity') {
+            // Pour la vélocité, afficher tous les canaux ayant des notes
+            channelsToShow = this.channels.map(ch => ch.channel).sort((a, b) => a - b);
+            activeChannel = this.velocityEditor ? this.velocityEditor.currentChannel : 0;
+        } else {
+            // Pour CC/Pitchbend, afficher les canaux utilisés pour ce type
+            const usedChannels = this.getCCChannelsUsed();
+            channelsToShow = usedChannels.length > 0 ? usedChannels : this.getAllCCChannels();
+            activeChannel = this.ccEditor ? this.ccEditor.currentChannel : 0;
+        }
 
-        // Obtenir le canal actuellement actif
-        const activeChannel = this.ccEditor ? this.ccEditor.currentChannel : 0;
-
-        // Si aucun canal n'a de CC/Pitchbend, afficher un message
+        // Si aucun canal, afficher un message
         if (channelsToShow.length === 0) {
-            channelSelector.innerHTML = '<div class="cc-no-channels">Aucun CC/Pitchbend dans ce fichier</div>';
-            this.log('info', 'Aucun canal avec CC/Pitchbend trouvé');
+            const message = this.currentCCType === 'velocity' ? 'Aucune note dans ce fichier' : 'Aucun CC/Pitchbend dans ce fichier';
+            channelSelector.innerHTML = `<div class="cc-no-channels">${message}</div>`;
+            this.log('info', message);
             return;
         }
 
-        // Générer les boutons uniquement pour les canaux utilisés
+        // Générer les boutons uniquement pour les canaux présents
         channelSelector.innerHTML = channelsToShow.map(channel => `
             <button class="cc-channel-btn ${channel === activeChannel ? 'active' : ''}" data-channel="${channel}" title="Canal ${channel + 1}">
                 ${channel + 1}
@@ -433,16 +441,22 @@ class MidiEditorModal {
         `).join('');
 
         // Réattacher les event listeners
-        this.attachCCChannelListeners();
+        this.attachEditorChannelListeners();
 
-        const allChannels = this.getAllCCChannels();
-        this.log('info', `Sélecteur de canal CC mis à jour - Type ${this.currentCCType}: ${usedChannels.length} canaux, Total CC/PB: ${allChannels.length} canaux`);
+        this.log('info', `Sélecteur de canal mis à jour - Type ${this.currentCCType}: ${channelsToShow.length} canaux`);
     }
 
     /**
-     * Attacher les event listeners aux boutons de canal CC
+     * DEPRECATED: Use updateEditorChannelSelector() instead
      */
-    attachCCChannelListeners() {
+    updateCCChannelSelector() {
+        this.updateEditorChannelSelector();
+    }
+
+    /**
+     * Attacher les event listeners aux boutons de canal pour CC ou Velocity
+     */
+    attachEditorChannelListeners() {
         if (!this.container) return;
 
         const channelButtons = this.container.querySelectorAll('.cc-channel-btn');
@@ -451,17 +465,29 @@ class MidiEditorModal {
                 e.preventDefault();
                 const channel = parseInt(btn.dataset.channel);
 
-                if (!isNaN(channel) && this.ccEditor) {
+                if (!isNaN(channel)) {
                     // Mettre à jour l'UI
                     channelButtons.forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
 
-                    // Mettre à jour l'éditeur
-                    this.ccEditor.setChannel(channel);
-                    this.log('info', `Canal CC sélectionné: ${channel + 1}`);
+                    // Mettre à jour l'éditeur approprié
+                    if (this.currentCCType === 'velocity' && this.velocityEditor) {
+                        this.velocityEditor.setChannel(channel);
+                        this.log('info', `Canal vélocité sélectionné: ${channel + 1}`);
+                    } else if (this.ccEditor) {
+                        this.ccEditor.setChannel(channel);
+                        this.log('info', `Canal CC sélectionné: ${channel + 1}`);
+                    }
                 }
             });
         });
+    }
+
+    /**
+     * DEPRECATED: Use attachEditorChannelListeners() instead
+     */
+    attachCCChannelListeners() {
+        this.attachEditorChannelListeners();
     }
 
     /**
@@ -730,11 +756,11 @@ class MidiEditorModal {
     }
 
     /**
-     * Sélectionner le type de CC à éditer
+     * Sélectionner le type de CC/Velocity à éditer
      */
     selectCCType(ccType) {
         this.currentCCType = ccType;
-        this.log('info', `CC Type sélectionné: ${ccType}`);
+        this.log('info', `Type sélectionné: ${ccType}`);
 
         // Mettre à jour les boutons
         const ccTypeButtons = this.container?.querySelectorAll('.cc-type-btn-v');
@@ -746,11 +772,42 @@ class MidiEditorModal {
             }
         });
 
-        // Mettre à jour l'éditeur CC
-        if (this.ccEditor) {
-            this.ccEditor.setCC(ccType);
-            // Mettre à jour le sélecteur de canal car les canaux utilisés peuvent varier selon le type CC
-            this.updateCCChannelSelector();
+        const ccEditorContainer = document.getElementById('cc-editor-container');
+        const velocityEditorContainer = document.getElementById('velocity-editor-container');
+
+        if (ccType === 'velocity') {
+            // Afficher l'éditeur de vélocité
+            if (ccEditorContainer) ccEditorContainer.style.display = 'none';
+            if (velocityEditorContainer) velocityEditorContainer.style.display = 'block';
+
+            // Initialiser l'éditeur de vélocité s'il n'existe pas
+            if (!this.velocityEditor) {
+                this.initVelocityEditor();
+            } else {
+                // Recharger et synchroniser
+                this.velocityEditor.setSequence(this.sequence);
+                this.velocityEditor.setActiveChannels(Array.from(this.activeChannels));
+                this.syncVelocityEditor();
+                if (this.velocityEditor.resize) {
+                    setTimeout(() => this.velocityEditor.resize(), 10);
+                }
+            }
+
+            // Mettre à jour le sélecteur de canal pour la vélocité
+            this.updateEditorChannelSelector();
+        } else {
+            // Afficher l'éditeur CC
+            if (ccEditorContainer) ccEditorContainer.style.display = 'block';
+            if (velocityEditorContainer) velocityEditorContainer.style.display = 'none';
+
+            // Initialiser l'éditeur CC s'il n'existe pas
+            if (!this.ccEditor) {
+                this.initCCEditor();
+            } else {
+                this.ccEditor.setCC(ccType);
+                // Mettre à jour le sélecteur de canal car les canaux utilisés peuvent varier selon le type CC
+                this.updateEditorChannelSelector();
+            }
         }
     }
 
@@ -912,53 +969,6 @@ class MidiEditorModal {
         }
     }
 
-    /**
-     * Basculer entre les onglets CC et Velocity
-     */
-    switchEditorTab(tabType) {
-        this.log('info', `Switching editor tab to: ${tabType}`);
-
-        // Mettre à jour les onglets visuels
-        const tabs = this.container.querySelectorAll('.editor-tab');
-        tabs.forEach(tab => {
-            if (tab.dataset.tab === tabType) {
-                tab.classList.add('active');
-            } else {
-                tab.classList.remove('active');
-            }
-        });
-
-        // Afficher/masquer les éditeurs
-        const ccLayout = this.container.querySelector('.cc-editor-layout');
-        const velocityLayout = this.container.querySelector('.velocity-editor-layout');
-
-        if (tabType === 'cc-pitchbend') {
-            if (ccLayout) ccLayout.style.display = 'flex';
-            if (velocityLayout) velocityLayout.style.display = 'none';
-
-            // Initialiser l'éditeur CC s'il n'existe pas
-            if (!this.ccEditor) {
-                this.initCCEditor();
-            } else if (this.ccEditor.resize) {
-                setTimeout(() => this.ccEditor.resize(), 10);
-            }
-        } else if (tabType === 'velocity') {
-            if (ccLayout) ccLayout.style.display = 'none';
-            if (velocityLayout) velocityLayout.style.display = 'flex';
-
-            // Initialiser l'éditeur de vélocité s'il n'existe pas
-            if (!this.velocityEditor) {
-                this.initVelocityEditor();
-            } else {
-                // Recharger la séquence et redimensionner
-                this.velocityEditor.setSequence(this.sequence);
-                this.syncVelocityEditor();
-                if (this.velocityEditor.resize) {
-                    setTimeout(() => this.velocityEditor.resize(), 10);
-                }
-            }
-        }
-    }
 
     /**
      * Initialiser l'éditeur de vélocité
@@ -1694,21 +1704,10 @@ class MidiEditorModal {
 
                             <!-- Contenu de l'éditeur CC/Velocity -->
                             <div class="cc-section-content" id="cc-section-content">
-                                <!-- Onglets pour basculer entre CC et Velocity -->
-                                <div class="editor-tabs">
-                                    <button class="editor-tab active" data-tab="cc-pitchbend" id="tab-cc">
-                                        CC / Pitch Bend
-                                    </button>
-                                    <button class="editor-tab" data-tab="velocity" id="tab-velocity">
-                                        Vélocité
-                                    </button>
-                                </div>
-
-                                <!-- Conteneur pour l'éditeur CC/Pitchbend -->
                                 <div class="cc-editor-layout">
-                                    <!-- Panneau latéral gauche avec sélection CC et outils -->
+                                    <!-- Panneau latéral gauche avec sélection type et outils -->
                                     <div class="cc-sidebar">
-                                        <div class="cc-sidebar-label">Type CC/PB</div>
+                                        <div class="cc-sidebar-label">Type</div>
                                         <div class="cc-type-buttons-vertical">
                                             <button class="cc-type-btn-v active" data-cc-type="cc1" title="Modulation Wheel">
                                                 CC1<span class="cc-label">Modulation</span>
@@ -1724,6 +1723,9 @@ class MidiEditorModal {
                                             </button>
                                             <button class="cc-type-btn-v" data-cc-type="pitchbend" title="Pitch Wheel">
                                                 PB<span class="cc-label">Pitch Bend</span>
+                                            </button>
+                                            <button class="cc-type-btn-v" data-cc-type="velocity" title="Note Velocity">
+                                                VEL<span class="cc-label">Vélocité</span>
                                             </button>
                                         </div>
 
@@ -1748,53 +1750,16 @@ class MidiEditorModal {
                                         <div class="cc-sidebar-divider"></div>
 
                                         <div class="cc-sidebar-label">Canal</div>
-                                        <div class="cc-channel-selector">
-                                            ${Array.from({length: 16}, (_, i) => `
-                                                <button class="cc-channel-btn ${i === 0 ? 'active' : ''}" data-channel="${i}" title="Canal ${i + 1}">
-                                                    ${i + 1}
-                                                </button>
-                                            `).join('')}
+                                        <div class="cc-channel-selector" id="editor-channel-selector">
+                                            <!-- Les canaux seront ajoutés dynamiquement -->
                                         </div>
                                     </div>
 
-                                    <!-- Conteneur de l'éditeur CC -->
-                                    <div id="cc-editor-container" class="cc-editor-main"></div>
-                                </div>
-
-                                <!-- Conteneur pour l'éditeur de vélocité -->
-                                <div class="velocity-editor-layout" style="display: none;">
-                                    <!-- Panneau latéral gauche avec outils -->
-                                    <div class="cc-sidebar">
-                                        <div class="cc-sidebar-label">Outils</div>
-                                        <div class="cc-tool-buttons-vertical">
-                                            <button class="cc-tool-btn-v velocity-tool active" data-velocity-tool="select" title="Sélection">
-                                                ⬚<span class="tool-label">Sélection</span>
-                                            </button>
-                                            <button class="cc-tool-btn-v velocity-tool" data-velocity-tool="move" title="Déplacer">
-                                                ✥<span class="tool-label">Déplacer</span>
-                                            </button>
-                                            <button class="cc-tool-btn-v velocity-tool" data-velocity-tool="line" title="Ligne">
-                                                ╱<span class="tool-label">Ligne</span>
-                                            </button>
-                                            <button class="cc-tool-btn-v velocity-tool" data-velocity-tool="draw" title="Dessin continu">
-                                                ✎<span class="tool-label">Dessin</span>
-                                            </button>
-                                        </div>
-
-                                        <div class="cc-sidebar-divider"></div>
-
-                                        <div class="cc-sidebar-label">Canal</div>
-                                        <div class="cc-channel-selector" id="velocity-channel-selector">
-                                            ${Array.from({length: 16}, (_, i) => `
-                                                <button class="cc-channel-btn velocity-channel-btn ${i === 0 ? 'active' : ''}" data-velocity-channel="${i}" title="Canal ${i + 1}">
-                                                    ${i + 1}
-                                                </button>
-                                            `).join('')}
-                                        </div>
+                                    <!-- Conteneur pour les éditeurs (CC ou Velocity) -->
+                                    <div class="cc-editor-main">
+                                        <div id="cc-editor-container"></div>
+                                        <div id="velocity-editor-container" style="display: none;"></div>
                                     </div>
-
-                                    <!-- Conteneur de l'éditeur de vélocité -->
-                                    <div id="velocity-editor-container" class="cc-editor-main"></div>
                                 </div>
                             </div>
                         </div>
@@ -2608,72 +2573,31 @@ class MidiEditorModal {
             });
         });
 
-        // Boutons d'outils CC (verticaux)
+        // Boutons d'outils (partagés entre CC et Velocity)
         const ccToolButtons = this.container.querySelectorAll('.cc-tool-btn-v');
         ccToolButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 const tool = btn.dataset.tool;
-                if (tool && this.ccEditor) {
+                if (tool) {
                     // Désactiver tous les boutons
                     ccToolButtons.forEach(b => b.classList.remove('active'));
                     // Activer le bouton cliqué
                     btn.classList.add('active');
-                    // Changer l'outil
-                    this.ccEditor.setTool(tool);
+
+                    // Changer l'outil sur l'éditeur approprié
+                    if (this.currentCCType === 'velocity' && this.velocityEditor) {
+                        this.velocityEditor.setTool(tool);
+                    } else if (this.ccEditor) {
+                        this.ccEditor.setTool(tool);
+                    }
                 }
             });
         });
 
-        // Les event listeners pour les boutons de canal CC sont attachés
-        // dans attachCCChannelListeners() appelé depuis initCCEditor()
+        // Les event listeners pour les boutons de canal sont attachés
+        // dans attachEditorChannelListeners() appelé depuis updateEditorChannelSelector()
         // pour éviter les conflits lors de la mise à jour dynamique des canaux
-
-        // Onglets pour basculer entre CC et Velocity
-        const editorTabs = this.container.querySelectorAll('.editor-tab');
-        editorTabs.forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                e.preventDefault();
-                const tabType = tab.dataset.tab;
-                if (tabType) {
-                    this.switchEditorTab(tabType);
-                }
-            });
-        });
-
-        // Boutons d'outils Velocity
-        const velocityToolButtons = this.container.querySelectorAll('.velocity-tool');
-        velocityToolButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const tool = btn.dataset.velocityTool;
-                if (tool && this.velocityEditor) {
-                    // Désactiver tous les boutons
-                    velocityToolButtons.forEach(b => b.classList.remove('active'));
-                    // Activer le bouton cliqué
-                    btn.classList.add('active');
-                    // Changer l'outil
-                    this.velocityEditor.setTool(tool);
-                }
-            });
-        });
-
-        // Boutons de canal Velocity
-        const velocityChannelButtons = this.container.querySelectorAll('.velocity-channel-btn');
-        velocityChannelButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const channel = parseInt(btn.dataset.velocityChannel);
-                if (!isNaN(channel) && this.velocityEditor) {
-                    // Désactiver tous les boutons
-                    velocityChannelButtons.forEach(b => b.classList.remove('active'));
-                    // Activer le bouton cliqué
-                    btn.classList.add('active');
-                    // Changer le canal
-                    this.velocityEditor.setChannel(channel);
-                }
-            });
-        });
 
         // Sliders de navigation (scroll) avec throttle à 15fps
         const scrollHSlider = document.getElementById('scroll-h-slider');
