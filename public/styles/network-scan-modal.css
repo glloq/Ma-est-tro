@@ -331,8 +331,8 @@
    ============================================================================ */
 
 .devices-list {
-    min-height: 180px;
-    max-height: 400px;
+    min-height: 120px;
+    max-height: 250px;
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 4px;
