@@ -2715,6 +2715,10 @@ class MidiEditorModal {
                 notesSection.style.transition = 'none';
                 ccSection.style.transition = 'none';
 
+                // Désactiver les min-height CSS qui bloquent le resize à ~50%
+                notesSection.style.setProperty('min-height', '0px', 'important');
+                ccSection.style.setProperty('min-height', '0px', 'important');
+
                 document.body.style.cursor = 'ns-resize';
                 resizeBar.classList.add('dragging');
             };
@@ -2737,8 +2741,12 @@ class MidiEditorModal {
                 this.log('debug', `Resize: deltaY=${deltaY}, availableH=${availableHeight}px, notesH=${newNotesHeight}px, ccH=${newCCHeight}px`);
 
                 // Appliquer les hauteurs directement en pixels
+                // Désactiver les min-height CSS qui bloquent le resize
+                notesSection.style.setProperty('min-height', '0px', 'important');
                 notesSection.style.setProperty('height', `${newNotesHeight}px`, 'important');
                 notesSection.style.setProperty('flex', 'none', 'important');
+
+                ccSection.style.setProperty('min-height', '0px', 'important');
                 ccSection.style.setProperty('height', `${newCCHeight}px`, 'important');
                 ccSection.style.setProperty('flex', 'none', 'important');
 
