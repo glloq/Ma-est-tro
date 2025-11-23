@@ -699,6 +699,7 @@ class MidiEditorModal {
         const ccSection = document.getElementById('cc-section');
         const ccContent = document.getElementById('cc-section-content');
         const ccHeader = document.getElementById('cc-section-header');
+        const resizeBar = document.getElementById('cc-resize-btn');
 
         if (ccSection && ccContent && ccHeader) {
             if (this.ccSectionExpanded) {
@@ -706,6 +707,12 @@ class MidiEditorModal {
                 ccSection.classList.remove('collapsed');
                 ccHeader.classList.add('expanded');
                 ccHeader.classList.remove('collapsed');
+
+                // Afficher la barre de resize
+                if (resizeBar) {
+                    resizeBar.classList.add('visible');
+                    this.log('debug', 'Resize bar shown');
+                }
 
                 // Écouter la fin de la transition CSS
                 const onTransitionEnd = (e) => {
@@ -738,6 +745,12 @@ class MidiEditorModal {
                 ccSection.classList.add('collapsed');
                 ccHeader.classList.remove('expanded');
                 ccHeader.classList.add('collapsed');
+
+                // Cacher la barre de resize
+                if (resizeBar) {
+                    resizeBar.classList.remove('visible');
+                    this.log('debug', 'Resize bar hidden');
+                }
             }
         }
 
@@ -2648,6 +2661,11 @@ class MidiEditorModal {
         if (resizeBar && notesSection && ccSection) {
             this.log('info', 'Resize bar found, attaching drag events');
 
+            // Log quand on survole la barre pour vérifier qu'elle est accessible
+            resizeBar.addEventListener('mouseenter', () => {
+                this.log('debug', 'Mouse entered resize bar');
+            });
+
             let isResizing = false;
             let startY = 0;
             let startNotesFlex = 3;
@@ -2656,7 +2674,7 @@ class MidiEditorModal {
             const startResize = (e) => {
                 e.preventDefault();
 
-                this.log('debug', 'Resize mousedown detected');
+                this.log('info', '=== RESIZE MOUSEDOWN DETECTED ===');
 
                 // Ne permettre le resize que si la section CC est expanded
                 if (!this.ccSectionExpanded || !ccSection.classList.contains('expanded')) {
