@@ -2707,9 +2707,9 @@ class MidiEditorModal {
                 // Calculer le ratio de changement basé sur le mouvement
                 const ratio = deltaY / containerHeight;
 
-                // Ajuster les flex values avec limites
-                let newNotesFlex = Math.max(1, Math.min(5, startNotesFlex + ratio * 6));
-                let newCCFlex = Math.max(1, Math.min(5, startCCFlex - ratio * 6));
+                // Ajuster les flex values avec limites élargies (0.5 à 10 au lieu de 1 à 5)
+                let newNotesFlex = Math.max(0.5, Math.min(10, startNotesFlex + ratio * 8));
+                let newCCFlex = Math.max(0.5, Math.min(10, startCCFlex - ratio * 8));
 
                 this.log('debug', `Resize: deltaY=${deltaY}, ratio=${ratio.toFixed(3)}, notes=${newNotesFlex.toFixed(2)}, cc=${newCCFlex.toFixed(2)}`);
 
