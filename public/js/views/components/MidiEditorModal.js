@@ -699,7 +699,6 @@ class MidiEditorModal {
         const ccSection = document.getElementById('cc-section');
         const ccContent = document.getElementById('cc-section-content');
         const ccHeader = document.getElementById('cc-section-header');
-        const resizeBtn = document.getElementById('cc-resize-btn');
 
         if (ccSection && ccContent && ccHeader) {
             if (this.ccSectionExpanded) {
@@ -707,11 +706,6 @@ class MidiEditorModal {
                 ccSection.classList.remove('collapsed');
                 ccHeader.classList.add('expanded');
                 ccHeader.classList.remove('collapsed');
-
-                // Afficher le bouton de resize quand la section CC est ouverte
-                if (resizeBtn) {
-                    resizeBtn.style.display = 'flex';
-                }
 
                 // Écouter la fin de la transition CSS
                 const onTransitionEnd = (e) => {
@@ -744,11 +738,6 @@ class MidiEditorModal {
                 ccSection.classList.add('collapsed');
                 ccHeader.classList.remove('expanded');
                 ccHeader.classList.add('collapsed');
-
-                // Cacher le bouton de resize quand la section CC est fermée
-                if (resizeBtn) {
-                    resizeBtn.style.display = 'none';
-                }
             }
         }
 
@@ -1709,6 +1698,9 @@ class MidiEditorModal {
                                 <div class="cc-section-title">
                                     <span class="cc-collapse-icon">▼</span>
                                     <span>CC / Pitch Bend / Vélocité</span>
+                                    <button class="cc-resize-btn" id="cc-resize-btn" title="Agrandir / Réduire l'éditeur">
+                                        <span class="resize-icon">⬍</span>
+                                    </button>
                                 </div>
                             </div>
 
@@ -1763,12 +1755,6 @@ class MidiEditorModal {
                                         <div class="cc-channel-selector" id="editor-channel-selector">
                                             <!-- Les canaux seront ajoutés dynamiquement -->
                                         </div>
-
-                                        <div class="cc-sidebar-divider"></div>
-
-                                        <button class="cc-resize-btn" id="cc-resize-btn" title="Agrandir / Réduire l'éditeur">
-                                            <span class="resize-icon">⬍</span>
-                                        </button>
                                     </div>
 
                                     <!-- Conteneur pour les éditeurs (CC ou Velocity) -->
@@ -2666,7 +2652,10 @@ class MidiEditorModal {
             ];
             this.currentSizeMode = 1; // Commence en mode moyen
 
-            resizeBtn.addEventListener('click', () => {
+            resizeBtn.addEventListener('click', (e) => {
+                // Empêcher le clic de se propager au header (pour ne pas déclencher le collapse)
+                e.stopPropagation();
+
                 // Cycle entre les 3 tailles
                 this.currentSizeMode = (this.currentSizeMode + 1) % this.ccSizeModes.length;
                 const mode = this.ccSizeModes[this.currentSizeMode];
