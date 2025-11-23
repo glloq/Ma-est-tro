@@ -261,13 +261,20 @@ class DeviceManager {
       const uniqueDevices = [];
       const seenNames = new Set();
 
+      this.app.logger.debug(`[Deduplication] ${allDevices.length} devices before: ${allDevices.map(d => `"${d.name}" (${d.type})`).join(', ')}`);
+
       for (const device of allDevices) {
         const key = `${device.name}`;
         if (!seenNames.has(key)) {
           seenNames.add(key);
           uniqueDevices.push(device);
+          this.app.logger.debug(`[Deduplication] ✓ KEPT: "${device.name}" (${device.type})`);
+        } else {
+          this.app.logger.debug(`[Deduplication] ✗ SKIP: "${device.name}" (${device.type}) - duplicate`);
         }
       }
+
+      this.app.logger.info(`[Deduplication] Result: ${allDevices.length} → ${uniqueDevices.length} devices`);
 
       return uniqueDevices;
     }

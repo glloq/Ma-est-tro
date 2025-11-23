@@ -389,6 +389,13 @@ class BluetoothManager extends EventEmitter {
   }
 
   /**
+   * Alias pour unpair() - pour compatibilité avec CommandHandler
+   */
+  async forget(address) {
+    return await this.unpair(address);
+  }
+
+  /**
    * Gère les données MIDI reçues
    */
   handleMidiData(address, buffer) {
