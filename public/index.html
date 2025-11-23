@@ -1115,6 +1115,20 @@
             font-size: 15px;
             font-weight: 600;
         }
+
+        /* Modal de confirmation - Dark mode */
+        body.theme-dark .confirm-modal {
+            background: #2d2d2d;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        }
+
+        body.theme-dark .confirm-modal-title {
+            color: #e0e0e0;
+        }
+
+        body.theme-dark .confirm-modal-message {
+            color: #b0b0b0;
+        }
     </style>
 
     <!-- Fichier CSS externe pour les composants (Modal MIDI Editor, etc.) -->
@@ -1272,6 +1286,21 @@
                 const icon = document.getElementById('confirmIcon');
                 const title = document.getElementById('confirmTitle');
                 const messageEl = document.getElementById('confirmMessage');
+                const buttons = document.getElementById('confirmButtons');
+
+                // Vérifier que tous les éléments existent
+                if (!modal || !icon || !title || !messageEl || !buttons) {
+                    console.error('Modal elements not found!', { modal, icon, title, messageEl, buttons });
+                    resolve(false);
+                    return;
+                }
+
+                // S'assurer que les boutons confirm existent (peuvent avoir été modifiés par showAlert)
+                buttons.innerHTML = `
+                    <button class="btn btn-secondary" id="confirmCancelBtn">Annuler</button>
+                    <button class="btn btn-danger" id="confirmOkBtn">Confirmer</button>
+                `;
+
                 const okBtn = document.getElementById('confirmOkBtn');
                 const cancelBtn = document.getElementById('confirmCancelBtn');
 
@@ -1287,7 +1316,8 @@
                 // Appliquer la configuration
                 icon.textContent = config.icon;
                 title.textContent = config.title;
-                messageEl.textContent = message;
+                // Supporter les retours à la ligne \n
+                messageEl.innerHTML = message.replace(/\n/g, '<br>');
                 okBtn.textContent = config.okText;
                 cancelBtn.textContent = config.cancelText;
 
@@ -1305,15 +1335,32 @@
                     resolve(false);
                 };
 
+                const handleEscape = (e) => {
+                    if (e.key === 'Escape') {
+                        handleCancel();
+                    }
+                };
+
+                const handleOverlayClick = (e) => {
+                    // Fermer si on clique sur l'overlay (pas sur la modal elle-même)
+                    if (e.target === modal) {
+                        handleCancel();
+                    }
+                };
+
                 const cleanup = () => {
                     modal.classList.remove('show');
                     okBtn.removeEventListener('click', handleOk);
                     cancelBtn.removeEventListener('click', handleCancel);
+                    document.removeEventListener('keydown', handleEscape);
+                    modal.removeEventListener('click', handleOverlayClick);
                 };
 
                 // Attacher les événements
                 okBtn.addEventListener('click', handleOk);
                 cancelBtn.addEventListener('click', handleCancel);
+                document.addEventListener('keydown', handleEscape);
+                modal.addEventListener('click', handleOverlayClick);
 
                 // Afficher la modal
                 modal.classList.add('show');
@@ -1337,6 +1384,13 @@
                 const messageEl = document.getElementById('confirmMessage');
                 const buttons = document.getElementById('confirmButtons');
 
+                // Vérifier que tous les éléments existent
+                if (!modal || !icon || !title || !messageEl || !buttons) {
+                    console.error('Modal elements not found!', { modal, icon, title, messageEl, buttons });
+                    resolve();
+                    return;
+                }
+
                 // Configuration par défaut
                 const config = {
                     title: options.title || 'Information',
@@ -1347,7 +1401,8 @@
                 // Appliquer la configuration
                 icon.textContent = config.icon;
                 title.textContent = config.title;
-                messageEl.textContent = message;
+                // Supporter les retours à la ligne \n (showAlert)
+                messageEl.innerHTML = message.replace(/\n/g, '<br>');
 
                 // Créer un seul bouton OK
                 buttons.innerHTML = `<button class="btn" id="alertOkBtn">${config.okText}</button>`;
@@ -1359,9 +1414,24 @@
                     resolve();
                 };
 
+                const handleEscape = (e) => {
+                    if (e.key === 'Escape') {
+                        handleOk();
+                    }
+                };
+
+                const handleOverlayClick = (e) => {
+                    // Fermer si on clique sur l'overlay
+                    if (e.target === modal) {
+                        handleOk();
+                    }
+                };
+
                 const cleanup = () => {
                     modal.classList.remove('show');
                     okBtn.removeEventListener('click', handleOk);
+                    document.removeEventListener('keydown', handleEscape);
+                    modal.removeEventListener('click', handleOverlayClick);
                     // Restaurer les deux boutons pour les prochains confirms
                     buttons.innerHTML = `
                         <button class="btn btn-secondary" id="confirmCancelBtn">Annuler</button>
@@ -1369,8 +1439,10 @@
                     `;
                 };
 
-                // Attacher l'événement
+                // Attacher les événements
                 okBtn.addEventListener('click', handleOk);
+                document.addEventListener('keydown', handleEscape);
+                modal.addEventListener('click', handleOverlayClick);
 
                 // Afficher la modal
                 modal.classList.add('show');
