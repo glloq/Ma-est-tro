@@ -334,6 +334,31 @@
 
 .devices-list {
     min-height: 180px;
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Style de la scrollbar pour les listes de devices */
+.devices-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.devices-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.devices-list::-webkit-scrollbar-thumb {
+    background: var(--network-primary);
+    border-radius: 3px;
+    transition: background 0.2s;
+}
+
+.devices-list::-webkit-scrollbar-thumb:hover {
+    background: var(--network-secondary);
 }
 
 .devices-grid {
@@ -462,13 +487,27 @@
     color: var(--network-danger) !important;
     border: 2px solid var(--network-danger) !important;
     padding: 8px 16px !important;
-    min-width: 80px !important;
+    min-width: 120px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+}
+
+.btn-disconnect::before {
+    content: '🗑️';
+    font-size: 14px;
 }
 
 .btn-disconnect:hover {
     background: var(--network-danger) !important;
     color: white !important;
     transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(231, 76, 60, 0.4) !important;
+}
+
+.btn-disconnect:active {
+    transform: translateY(0);
 }
 
 /* ============================================================================
