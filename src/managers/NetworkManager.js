@@ -172,25 +172,18 @@ class NetworkManager extends EventEmitter {
   async scanSubnetIPs(subnet, timeout) {
     this.app.logger.info(`[NetworkManager] Scanning full subnet ${subnet}.0/24...`);
 
-    const startTime = Date.now();
-    const maxDuration = timeout * 1000;
     const pingPromises = [];
+    const localIP = this.getLocalIP();
 
     // Scanner les IPs de .1 à .254 (exclure .0 et .255)
     for (let i = 1; i <= 254; i++) {
       const ip = `${subnet}.${i}`;
 
       // Éviter de scanner notre propre IP
-      const localIP = this.getLocalIP();
       if (ip === localIP) continue;
 
-      // Vérifier si on a dépassé le timeout
-      if (Date.now() - startTime > maxDuration) {
-        break;
-      }
-
-      // Lancer le ping de manière asynchrone
-      const pingPromise = this.checkReachability(ip)
+      // Lancer le ping de manière asynchrone avec timeout réduit
+      const pingPromise = this.checkReachability(ip, 1) // 1 seconde au lieu de 2
         .then(isReachable => {
           if (isReachable) {
             // Ne pas ajouter si déjà découvert via mDNS
@@ -216,8 +209,8 @@ class NetworkManager extends EventEmitter {
 
       pingPromises.push(pingPromise);
 
-      // Traiter par batch de 20 pour éviter de surcharger le réseau
-      if (pingPromises.length >= 20) {
+      // Traiter par batch de 50 pour plus de rapidité
+      if (pingPromises.length >= 50) {
         await Promise.all(pingPromises);
         pingPromises.length = 0; // Vider le tableau
       }
@@ -228,7 +221,7 @@ class NetworkManager extends EventEmitter {
       await Promise.all(pingPromises);
     }
 
-    this.app.logger.info(`[NetworkManager] Subnet scan completed`);
+    this.app.logger.info(`[NetworkManager] Subnet scan completed - ${this.devices.size} total devices found`);
   }
 
   /**
@@ -395,16 +388,15 @@ class NetworkManager extends EventEmitter {
   /**
    * Vérifie si un hôte est accessible
    * @param {string} ip - Adresse IP
+   * @param {number} timeoutSec - Timeout en secondes (défaut: 2)
    * @returns {Promise<boolean>} True si accessible
    */
-  async checkReachability(ip) {
+  async checkReachability(ip, timeoutSec = 2) {
     try {
-      const timeout = 2; // secondes
-
       if (process.platform === 'win32') {
-        await execAsync(`ping -n 1 -w ${timeout * 1000} ${ip}`, { timeout: timeout * 1000 });
+        await execAsync(`ping -n 1 -w ${timeoutSec * 1000} ${ip}`, { timeout: timeoutSec * 1000 });
       } else {
-        await execAsync(`ping -c 1 -W ${timeout} ${ip}`, { timeout: timeout * 1000 });
+        await execAsync(`ping -c 1 -W ${timeoutSec} ${ip}`, { timeout: timeoutSec * 1000 });
       }
 
       return true;
