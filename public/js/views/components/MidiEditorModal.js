@@ -2692,6 +2692,8 @@ class MidiEditorModal {
                 startNotesFlex = parseFloat(notesStyle.flexGrow) || 3;
                 startCCFlex = parseFloat(ccStyle.flexGrow) || 2;
 
+                this.log('info', `Initial flex: notes=${startNotesFlex}, cc=${startCCFlex}`);
+
                 document.body.style.cursor = 'ns-resize';
                 resizeBar.classList.add('dragging');
             };
@@ -2708,6 +2710,8 @@ class MidiEditorModal {
                 // Ajuster les flex values avec limites
                 let newNotesFlex = Math.max(1, Math.min(5, startNotesFlex + ratio * 6));
                 let newCCFlex = Math.max(1, Math.min(5, startCCFlex - ratio * 6));
+
+                this.log('debug', `Resize: deltaY=${deltaY}, ratio=${ratio.toFixed(3)}, notes=${newNotesFlex.toFixed(2)}, cc=${newCCFlex.toFixed(2)}`);
 
                 // Appliquer les nouveaux flex-grow
                 notesSection.style.flexGrow = newNotesFlex;
