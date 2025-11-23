@@ -29,6 +29,7 @@
     flex: 1; /* Utilise tout l'espace disponible */
     min-height: 0; /* Important pour flex container */
     position: relative;
+    padding-bottom: 70px; /* Espace pour boutons flottants (40px bouton + 16px margin + 12px ombre + 2px sécurité) */
 }
 
 .midi-editor-section {
