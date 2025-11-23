@@ -2728,8 +2728,8 @@ class MidiEditorModal {
                 // Utiliser l'espace disponible RÉEL capturé au début
                 const totalFlexHeight = availableHeight - resizeBarHeight;
 
-                // Contraintes assouplies: notes min 50px (permet à CC d'atteindre ~100%), cc min 100px
-                const minNotesHeight = 50;
+                // Contraintes très assouplies: notes min 20px (permet à CC d'atteindre ~98%), cc min 100px
+                const minNotesHeight = 20;
                 const minCCHeight = 100;
                 const newNotesHeight = Math.max(minNotesHeight, Math.min(totalFlexHeight - minCCHeight, startNotesHeight + deltaY));
                 const newCCHeight = totalFlexHeight - newNotesHeight;
