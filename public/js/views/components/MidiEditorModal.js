@@ -2722,6 +2722,14 @@ class MidiEditorModal {
                 // Empêcher le slider horizontal de déborder au-dessus de la section CC
                 notesSection.style.setProperty('overflow', 'hidden', 'important');
 
+                // Positionner le slider horizontal en sticky pour qu'il reste visible au-dessus de CC
+                const horizontalSlider = notesSection.querySelector('.scroll-controls-horizontal');
+                if (horizontalSlider) {
+                    horizontalSlider.style.position = 'sticky';
+                    horizontalSlider.style.bottom = '0';
+                    horizontalSlider.style.zIndex = '100';
+                }
+
                 document.body.style.cursor = 'ns-resize';
                 resizeBar.classList.add('dragging');
             };
@@ -2757,15 +2765,6 @@ class MidiEditorModal {
                 const actualNotesHeight = notesSection.clientHeight;
                 const actualCCHeight = ccSection.clientHeight;
                 this.log('debug', `Applied styles - Expected: notes=${newNotesHeight}px cc=${newCCHeight}px, Actual: notes=${actualNotesHeight}px cc=${actualCCHeight}px`);
-
-                // SOLUTION 1 MODIFIÉE: Garder le slider visible au-dessus de la section CC
-                const horizontalSlider = notesSection.querySelector('.scroll-controls-horizontal');
-                if (horizontalSlider) {
-                    // Toujours visible, positionnement sticky pour rester en bas de notes-section
-                    horizontalSlider.style.position = 'sticky';
-                    horizontalSlider.style.bottom = '0';
-                    horizontalSlider.style.zIndex = '100';  // Au-dessus de tout
-                }
 
                 // Redimensionner les éditeurs pendant le drag pour que la grille soit visible
                 requestAnimationFrame(() => {
@@ -2827,8 +2826,8 @@ class MidiEditorModal {
                     notesSection.style.transition = '';
                     ccSection.style.transition = '';
 
-                    // Réactiver overflow (remettre à auto au lieu de hidden)
-                    notesSection.style.overflow = '';
+                    // GARDER overflow: hidden pour que le slider reste au-dessus
+                    // Ne pas réinitialiser: notesSection.style.overflow = '';
 
                     // Redimensionner les éditeurs après le resize
                     requestAnimationFrame(() => {
