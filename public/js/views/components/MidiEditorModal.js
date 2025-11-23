@@ -2644,9 +2644,12 @@ class MidiEditorModal {
         const ccSection = document.getElementById('cc-section');
 
         if (resizeBar && notesSection && ccSection) {
+            this.log('info', 'Resize bar found, attaching drag events');
+
             // Empêcher tous les clics sur le bouton de se propager au header
             resizeBar.addEventListener('click', (e) => {
                 e.stopPropagation();
+                this.log('debug', 'Resize bar clicked');
             });
 
             let isResizing = false;
@@ -2655,17 +2658,21 @@ class MidiEditorModal {
             let startCCFlex = 2;
 
             const startResize = (e) => {
+                this.log('debug', 'Resize mousedown detected');
+
                 // Empêcher le clic de se propager au header (pour ne pas déclencher le collapse)
                 e.stopPropagation();
                 e.preventDefault();
 
                 // Ne permettre le resize que si la section CC est expanded
                 if (!this.ccSectionExpanded || !ccSection.classList.contains('expanded')) {
+                    this.log('warn', 'Resize blocked: CC section not expanded');
                     return;
                 }
 
                 isResizing = true;
                 startY = e.clientY;
+                this.log('info', 'Resize started at Y=' + startY);
 
                 // Obtenir les flex-grow actuels
                 const notesStyle = window.getComputedStyle(notesSection);
