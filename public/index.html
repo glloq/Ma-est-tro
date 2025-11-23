@@ -3770,7 +3770,7 @@
                     }
                 };
 
-                keyboardModal = new KeyboardModalNew(keyboardLogger);
+                keyboardModal = new KeyboardModalNew(keyboardLogger, api);
                 log('✓ Modal clavier MIDI initialisée (version simplifiée)', 'info');
             } else {
                 log('⚠️ KeyboardModalNew non disponible', 'warning');
