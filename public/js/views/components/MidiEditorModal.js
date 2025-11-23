@@ -2668,6 +2668,7 @@ class MidiEditorModal {
 
             let isResizing = false;
             let startY = 0;
+            let startNotesHeight = 0;
             let startNotesFlex = 3;
             let startCCFlex = 2;
 
@@ -2684,7 +2685,8 @@ class MidiEditorModal {
 
                 isResizing = true;
                 startY = e.clientY;
-                this.log('info', 'Resize started at Y=' + startY);
+                startNotesHeight = notesSection.clientHeight;
+                this.log('info', 'Resize started at Y=' + startY + ', initial notesHeight=' + startNotesHeight);
 
                 // Obtenir les flex-grow actuels
                 const notesStyle = window.getComputedStyle(notesSection);
@@ -2703,19 +2705,20 @@ class MidiEditorModal {
 
                 const deltaY = e.clientY - startY;
                 const containerHeight = this.container.querySelector('.midi-editor-container').clientHeight;
+                const resizeBarHeight = 12; // Hauteur de la barre
 
-                // Calculer le ratio de changement basé sur le mouvement
-                const ratio = deltaY / containerHeight;
+                // Calculer les nouvelles hauteurs en pixels
+                const totalFlexHeight = containerHeight - resizeBarHeight;
+                const newNotesHeight = Math.max(200, Math.min(totalFlexHeight - 250, startNotesHeight + deltaY));
+                const newCCHeight = totalFlexHeight - newNotesHeight;
 
-                // Ajuster les flex values avec limites élargies (0.5 à 10 au lieu de 1 à 5)
-                let newNotesFlex = Math.max(0.5, Math.min(10, startNotesFlex + ratio * 8));
-                let newCCFlex = Math.max(0.5, Math.min(10, startCCFlex - ratio * 8));
+                this.log('debug', `Resize: deltaY=${deltaY}, notesH=${newNotesHeight}px, ccH=${newCCHeight}px`);
 
-                this.log('debug', `Resize: deltaY=${deltaY}, ratio=${ratio.toFixed(3)}, notes=${newNotesFlex.toFixed(2)}, cc=${newCCFlex.toFixed(2)}`);
-
-                // Appliquer les nouveaux flex avec !important pour forcer l'override
-                notesSection.style.setProperty('flex', `${newNotesFlex} 1 0%`, 'important');
-                ccSection.style.setProperty('flex', `${newCCFlex} 1 0%`, 'important');
+                // Appliquer les hauteurs directement en pixels
+                notesSection.style.setProperty('height', `${newNotesHeight}px`, 'important');
+                notesSection.style.setProperty('flex', 'none', 'important');
+                ccSection.style.setProperty('height', `${newCCHeight}px`, 'important');
+                ccSection.style.setProperty('flex', 'none', 'important');
 
                 e.preventDefault();
             };
