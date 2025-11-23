@@ -131,7 +131,7 @@
 /* Layout de l'éditeur CC avec sidebar */
 .cc-editor-layout {
     display: flex;
-    flex-direction: column; /* Sidebar en haut, éditeur en bas */
+    flex-direction: row; /* CORRIGÉ: Sidebar à GAUCHE, éditeur à DROITE (pleine hauteur) */
     flex: 1;
     min-height: 0;
     background: #1a1a1a;
@@ -140,13 +140,13 @@
 .cc-sidebar {
     flex: 0 0 auto;
     background: #242424;
-    border-bottom: 1px solid #333;
+    border-right: 1px solid #333; /* CORRIGÉ: border-right au lieu de border-bottom */
     padding: 8px;
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
+    flex-direction: column; /* CORRIGÉ: column pour empiler les boutons verticalement */
+    align-items: stretch;
+    gap: 8px;
+    max-width: 180px; /* Limite la largeur du sidebar */
 }
 
 .cc-sidebar-label {
