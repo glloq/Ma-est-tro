@@ -712,6 +712,131 @@
 .network-device:nth-child(5) { animation-delay: 0.25s; }
 
 /* ============================================================================
+   MODAL DE DÉCONNEXION
+   ============================================================================ */
+
+.disconnect-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001; /* Au-dessus du modal de scan */
+    animation: fadeIn 0.2s ease-out;
+}
+
+.disconnect-modal {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(231, 76, 60, 0.4);
+    max-width: 450px;
+    width: 90%;
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.disconnect-modal-header {
+    padding: 20px 24px;
+    border-bottom: 2px solid #fee;
+    background: linear-gradient(135deg, #fee 0%, #fdd 100%);
+    border-radius: 16px 16px 0 0;
+}
+
+.disconnect-modal-header h3 {
+    margin: 0;
+    font-size: 20px;
+    color: #c0392b;
+    font-weight: 700;
+}
+
+.disconnect-modal-body {
+    padding: 24px;
+}
+
+.disconnect-modal-body p {
+    margin: 0 0 16px 0;
+    color: #2c3e50;
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.disconnect-device-info {
+    background: #f8f9fa;
+    padding: 16px;
+    border-radius: 8px;
+    border-left: 4px solid var(--network-danger);
+    margin-bottom: 16px;
+}
+
+.disconnect-device-info strong {
+    display: block;
+    font-size: 16px;
+    color: #2c3e50;
+    margin-bottom: 4px;
+}
+
+.device-ip-small {
+    font-size: 13px;
+    color: #7f8c8d;
+    font-family: 'Courier New', monospace;
+}
+
+.warning-text {
+    color: #e74c3c !important;
+    font-size: 13px !important;
+    background: #fee;
+    padding: 12px;
+    border-radius: 6px;
+    margin: 0 !important;
+}
+
+.disconnect-modal-footer {
+    padding: 16px 24px;
+    border-top: 2px solid #f0f0f0;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    background: #f8f9fa;
+    border-radius: 0 0 16px 16px;
+}
+
+.btn-cancel,
+.btn-confirm-disconnect {
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-cancel {
+    background: white;
+    color: #7f8c8d;
+    border: 2px solid #d0d7de;
+}
+
+.btn-cancel:hover {
+    background: #f8f9fa;
+    border-color: #95a5a6;
+}
+
+.btn-confirm-disconnect {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+}
+
+.btn-confirm-disconnect:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(231, 76, 60, 0.4);
+}
+
+/* ============================================================================
    RESPONSIVE
    ============================================================================ */
 

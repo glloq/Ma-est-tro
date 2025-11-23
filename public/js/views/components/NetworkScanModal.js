@@ -310,7 +310,8 @@ class NetworkScanModal {
                 </div>
                 <div class="device-actions">
                     <button class="btn-disconnect" data-action="disconnect"
-                            data-device-ip="${deviceIp}">
+                            data-device-ip="${deviceIp}"
+                            data-device-name="${deviceName}">
                         Déconnecter
                     </button>
                 </div>
@@ -368,6 +369,7 @@ class NetworkScanModal {
             const action = e.target.dataset.action;
 
             if (action === 'connect') {
+                e.stopPropagation(); // Empêcher la propagation
                 const deviceIp = e.target.dataset.deviceIp;
                 const devicePort = e.target.dataset.devicePort;
                 const deviceName = e.target.dataset.deviceName;
@@ -375,8 +377,10 @@ class NetworkScanModal {
             }
 
             if (action === 'disconnect') {
+                e.stopPropagation(); // Empêcher la propagation
                 const deviceIp = e.target.dataset.deviceIp;
-                if (deviceIp) this.disconnectDevice(deviceIp);
+                const deviceName = e.target.dataset.deviceName || `Appareil ${deviceIp}`;
+                if (deviceIp) this.showDisconnectModal(deviceIp, deviceName);
             }
         });
     }
@@ -490,13 +494,58 @@ class NetworkScanModal {
     }
 
     /**
-     * Déconnecte un périphérique
+     * Affiche le modal de confirmation de déconnexion
+     */
+    showDisconnectModal(deviceIp, deviceName) {
+        // Créer le modal
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'disconnect-modal-overlay';
+        modalOverlay.innerHTML = `
+            <div class="disconnect-modal">
+                <div class="disconnect-modal-header">
+                    <h3>⚠️ Déconnecter l'appareil</h3>
+                </div>
+                <div class="disconnect-modal-body">
+                    <p>Êtes-vous sûr de vouloir déconnecter cet appareil ?</p>
+                    <div class="disconnect-device-info">
+                        <strong>${this.escapeHtml(deviceName)}</strong>
+                        <span class="device-ip-small">${deviceIp}</span>
+                    </div>
+                    <p class="warning-text">
+                        ⚠️ L'appareil sera déconnecté et ne pourra plus recevoir de messages MIDI.
+                    </p>
+                </div>
+                <div class="disconnect-modal-footer">
+                    <button class="btn-cancel" data-action="cancel">Annuler</button>
+                    <button class="btn-confirm-disconnect" data-action="confirm">Déconnecter</button>
+                </div>
+            </div>
+        `;
+
+        // Ajouter au DOM
+        document.body.appendChild(modalOverlay);
+
+        // Gérer les clics
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay || e.target.dataset.action === 'cancel') {
+                modalOverlay.remove();
+            } else if (e.target.dataset.action === 'confirm') {
+                modalOverlay.remove();
+                this.disconnectDevice(deviceIp);
+            }
+        });
+
+        // Focus sur le bouton annuler par défaut
+        setTimeout(() => {
+            const cancelBtn = modalOverlay.querySelector('.btn-cancel');
+            if (cancelBtn) cancelBtn.focus();
+        }, 100);
+    }
+
+    /**
+     * Déconnecte un périphérique (sans confirmation)
      */
     disconnectDevice(deviceIp) {
-        if (!confirm('Voulez-vous vraiment déconnecter cet appareil ?')) {
-            return;
-        }
-
         this.logger.info('NetworkScanModal', `Disconnecting device: ${deviceIp}`);
 
         if (this.eventBus) {
