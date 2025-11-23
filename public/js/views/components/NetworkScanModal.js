@@ -20,6 +20,7 @@ class NetworkScanModal {
         this.scanning = false;
         this.availableDevices = [];
         this.connectedDevices = [];
+        this.eventsAttached = false; // Flag pour éviter d'attacher plusieurs fois
 
         this.setupEventListeners();
 
@@ -93,6 +94,7 @@ class NetworkScanModal {
 
         this.isOpen = false;
         this.scanning = false;
+        this.eventsAttached = false; // Réinitialiser le flag
 
         if (this.container) {
             this.container.remove();
@@ -328,6 +330,10 @@ class NetworkScanModal {
      */
     attachModalEvents() {
         if (!this.container) return;
+
+        // Éviter d'attacher les événements plusieurs fois
+        if (this.eventsAttached) return;
+        this.eventsAttached = true;
 
         // Fermeture de la modal
         const closeButtons = this.container.querySelectorAll('[data-action="close"]');
@@ -654,8 +660,8 @@ class NetworkScanModal {
                 .replace('<div class="modal-dialog modal-lg">', '')
                 .replace('</div>', '');
 
-            // Réattacher les événements
-            this.attachModalEvents();
+            // Note: Pas besoin de réattacher les événements car ils sont délégués
+            // au conteneur principal qui n'est pas remplacé
         }
     }
 
