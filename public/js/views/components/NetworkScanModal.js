@@ -20,7 +20,6 @@ class NetworkScanModal {
         this.scanning = false;
         this.availableDevices = [];
         this.connectedDevices = [];
-        this.eventsAttached = false; // Flag pour éviter d'attacher plusieurs fois
 
         this.setupEventListeners();
 
@@ -94,7 +93,6 @@ class NetworkScanModal {
 
         this.isOpen = false;
         this.scanning = false;
-        this.eventsAttached = false; // Réinitialiser le flag
 
         if (this.container) {
             this.container.remove();
@@ -331,36 +329,48 @@ class NetworkScanModal {
     attachModalEvents() {
         if (!this.container) return;
 
-        // Éviter d'attacher les événements plusieurs fois
-        if (this.eventsAttached) return;
-        this.eventsAttached = true;
-
-        // Fermeture de la modal
-        const closeButtons = this.container.querySelectorAll('[data-action="close"]');
-        closeButtons.forEach(btn => {
-            btn.addEventListener('click', () => this.close());
-        });
-
-        // Clic sur le fond pour fermer
+        // Utiliser la délégation d'événements sur le conteneur
+        // pour gérer TOUS les clics (fermeture, scan, connexion, déconnexion)
         this.container.addEventListener('click', (e) => {
-            if (e.target === this.container) {
+            const action = e.target.dataset.action;
+
+            // Fermeture
+            if (action === 'close' || e.target === this.container) {
                 this.close();
+                return;
+            }
+
+            // Scan
+            if (action === 'scan') {
+                this.startScan();
+                return;
+            }
+
+            // Connexion manuelle
+            if (action === 'connect-manual') {
+                this.connectManual();
+                return;
+            }
+
+            // Connexion device
+            if (action === 'connect') {
+                const deviceIp = e.target.dataset.deviceIp;
+                const devicePort = e.target.dataset.devicePort;
+                const deviceName = e.target.dataset.deviceName;
+                if (deviceIp) this.connectDevice(deviceIp, devicePort, deviceName);
+                return;
+            }
+
+            // Déconnexion device
+            if (action === 'disconnect') {
+                const deviceIp = e.target.dataset.deviceIp;
+                const deviceName = e.target.dataset.deviceName || `Appareil ${deviceIp}`;
+                if (deviceIp) this.showDisconnectModal(deviceIp, deviceName);
+                return;
             }
         });
 
-        // Bouton de scan
-        const scanButton = this.container.querySelector('[data-action="scan"]');
-        if (scanButton) {
-            scanButton.addEventListener('click', () => this.startScan());
-        }
-
-        // Bouton de connexion manuelle
-        const connectManualButton = this.container.querySelector('[data-action="connect-manual"]');
-        if (connectManualButton) {
-            connectManualButton.addEventListener('click', () => this.connectManual());
-        }
-
-        // Validation IP en temps réel
+        // Enter sur le champ IP
         const manualIpInput = this.container.querySelector('#manualIp');
         if (manualIpInput) {
             manualIpInput.addEventListener('keypress', (e) => {
@@ -369,26 +379,6 @@ class NetworkScanModal {
                 }
             });
         }
-
-        // Délégation d'événements pour les actions sur les périphériques
-        this.container.addEventListener('click', (e) => {
-            const action = e.target.dataset.action;
-
-            if (action === 'connect') {
-                e.stopPropagation(); // Empêcher la propagation
-                const deviceIp = e.target.dataset.deviceIp;
-                const devicePort = e.target.dataset.devicePort;
-                const deviceName = e.target.dataset.deviceName;
-                if (deviceIp) this.connectDevice(deviceIp, devicePort, deviceName);
-            }
-
-            if (action === 'disconnect') {
-                e.stopPropagation(); // Empêcher la propagation
-                const deviceIp = e.target.dataset.deviceIp;
-                const deviceName = e.target.dataset.deviceName || `Appareil ${deviceIp}`;
-                if (deviceIp) this.showDisconnectModal(deviceIp, deviceName);
-            }
-        });
     }
 
     // ========================================================================
@@ -660,8 +650,16 @@ class NetworkScanModal {
                 .replace('<div class="modal-dialog modal-lg">', '')
                 .replace('</div>', '');
 
-            // Note: Pas besoin de réattacher les événements car ils sont délégués
-            // au conteneur principal qui n'est pas remplacé
+            // Réattacher uniquement l'événement Enter sur le champ IP
+            // (les autres sont délégués au conteneur)
+            const manualIpInput = this.container.querySelector('#manualIp');
+            if (manualIpInput) {
+                manualIpInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.connectManual();
+                    }
+                });
+            }
         }
     }
 
