@@ -99,6 +99,8 @@
     font-size: 12px;
     font-weight: 600;
     color: #e0e0e0;
+    width: 100%;
+    position: relative;
 }
 
 .cc-collapse-icon {
@@ -301,24 +303,30 @@
 
 /* Bouton de resize de la section CC */
 .cc-resize-btn {
-    padding: 6px 12px;
-    background: #2d2d2d;
-    border: 1px solid #444;
+    padding: 4px 10px;
+    background: #3d3d3d;
+    border: 1px solid #555;
     border-radius: 3px;
-    color: #bbb;
-    font-size: 16px;
+    color: #aaa;
+    font-size: 14px;
     cursor: pointer;
     transition: all 0.2s;
     display: none; /* Caché par défaut */
     align-items: center;
     justify-content: center;
-    margin-left: auto; /* Pousse le bouton vers la droite */
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.cc-section-header.expanded .cc-resize-btn {
+    display: flex; /* Visible quand la section est ouverte */
 }
 
 .cc-resize-btn:hover {
-    background: #353535;
-    border-color: #555;
-    color: #e0e0e0;
+    background: #4a4a4a;
+    border-color: #666;
+    color: #fff;
 }
 
 .cc-resize-btn .resize-icon {
