@@ -1286,6 +1286,21 @@
                 const icon = document.getElementById('confirmIcon');
                 const title = document.getElementById('confirmTitle');
                 const messageEl = document.getElementById('confirmMessage');
+                const buttons = document.getElementById('confirmButtons');
+
+                // Vérifier que tous les éléments existent
+                if (!modal || !icon || !title || !messageEl || !buttons) {
+                    console.error('Modal elements not found!', { modal, icon, title, messageEl, buttons });
+                    resolve(false);
+                    return;
+                }
+
+                // S'assurer que les boutons confirm existent (peuvent avoir été modifiés par showAlert)
+                buttons.innerHTML = `
+                    <button class="btn btn-secondary" id="confirmCancelBtn">Annuler</button>
+                    <button class="btn btn-danger" id="confirmOkBtn">Confirmer</button>
+                `;
+
                 const okBtn = document.getElementById('confirmOkBtn');
                 const cancelBtn = document.getElementById('confirmCancelBtn');
 
@@ -1368,6 +1383,13 @@
                 const title = document.getElementById('confirmTitle');
                 const messageEl = document.getElementById('confirmMessage');
                 const buttons = document.getElementById('confirmButtons');
+
+                // Vérifier que tous les éléments existent
+                if (!modal || !icon || !title || !messageEl || !buttons) {
+                    console.error('Modal elements not found!', { modal, icon, title, messageEl, buttons });
+                    resolve();
+                    return;
+                }
 
                 // Configuration par défaut
                 const config = {
