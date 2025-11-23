@@ -699,7 +699,7 @@ class MidiEditorModal {
         const ccSection = document.getElementById('cc-section');
         const ccContent = document.getElementById('cc-section-content');
         const ccHeader = document.getElementById('cc-section-header');
-        const resizeHandle = document.getElementById('resize-handle');
+        const resizeBtn = document.getElementById('cc-resize-btn');
 
         if (ccSection && ccContent && ccHeader) {
             if (this.ccSectionExpanded) {
@@ -708,9 +708,9 @@ class MidiEditorModal {
                 ccHeader.classList.add('expanded');
                 ccHeader.classList.remove('collapsed');
 
-                // Afficher le resize handle quand la section CC est ouverte
-                if (resizeHandle) {
-                    resizeHandle.classList.add('visible');
+                // Afficher le bouton de resize quand la section CC est ouverte
+                if (resizeBtn) {
+                    resizeBtn.style.display = 'flex';
                 }
 
                 // Écouter la fin de la transition CSS
@@ -745,9 +745,9 @@ class MidiEditorModal {
                 ccHeader.classList.remove('expanded');
                 ccHeader.classList.add('collapsed');
 
-                // Cacher le resize handle quand la section CC est fermée
-                if (resizeHandle) {
-                    resizeHandle.classList.remove('visible');
+                // Cacher le bouton de resize quand la section CC est fermée
+                if (resizeBtn) {
+                    resizeBtn.style.display = 'none';
                 }
             }
         }
@@ -1702,9 +1702,6 @@ class MidiEditorModal {
                             </div>
                         </div>
 
-                        <!-- Resize handle -->
-                        <div class="resize-handle" id="resize-handle"></div>
-
                         <!-- Section CC/Pitchbend/Velocity (collapsible) -->
                         <div class="midi-editor-section cc-section collapsed" id="cc-section">
                             <!-- Header collapsible -->
@@ -1766,6 +1763,12 @@ class MidiEditorModal {
                                         <div class="cc-channel-selector" id="editor-channel-selector">
                                             <!-- Les canaux seront ajoutés dynamiquement -->
                                         </div>
+
+                                        <div class="cc-sidebar-divider"></div>
+
+                                        <button class="cc-resize-btn" id="cc-resize-btn" title="Agrandir / Réduire l'éditeur">
+                                            <span class="resize-icon">⬍</span>
+                                        </button>
                                     </div>
 
                                     <!-- Conteneur pour les éditeurs (CC ou Velocity) -->
@@ -2649,81 +2652,59 @@ class MidiEditorModal {
             });
         }
 
-        // Resize handle pour redimensionner les sections notes et CC/Velocity
-        const resizeHandle = document.getElementById('resize-handle');
+        // Bouton de resize pour agrandir/réduire la section CC/Velocity
+        const resizeBtn = document.getElementById('cc-resize-btn');
         const notesSection = this.container.querySelector('.notes-section');
         const ccSection = document.getElementById('cc-section');
 
-        if (resizeHandle && notesSection && ccSection) {
-            let isResizing = false;
-            let startY = 0;
-            let startNotesFlex = 3;
-            let startCCFlex = 2;
+        if (resizeBtn && notesSection && ccSection) {
+            // Tailles prédéfinies : [notesFlex, ccFlex]
+            this.ccSizeModes = [
+                { notes: 4, cc: 1, icon: '⬍' },  // Petit : 80% notes, 20% CC
+                { notes: 3, cc: 2, icon: '⬌' },  // Moyen : 60% notes, 40% CC
+                { notes: 2, cc: 3, icon: '⬍' }   // Grand : 40% notes, 60% CC
+            ];
+            this.currentSizeMode = 1; // Commence en mode moyen
 
-            const startResize = (e) => {
-                // Ne permettre le resize que si la section CC est expanded
-                if (!this.ccSectionExpanded || !ccSection.classList.contains('expanded')) {
-                    return;
+            resizeBtn.addEventListener('click', () => {
+                // Cycle entre les 3 tailles
+                this.currentSizeMode = (this.currentSizeMode + 1) % this.ccSizeModes.length;
+                const mode = this.ccSizeModes[this.currentSizeMode];
+
+                // Appliquer les flex-grow
+                notesSection.style.flexGrow = mode.notes;
+                ccSection.style.flexGrow = mode.cc;
+
+                // Mettre à jour l'icône
+                const icon = resizeBtn.querySelector('.resize-icon');
+                if (icon) {
+                    if (this.currentSizeMode === 0) {
+                        icon.textContent = '⬍'; // Petit -> montrer icône pour agrandir
+                        icon.style.transform = 'rotate(90deg)';
+                    } else if (this.currentSizeMode === 1) {
+                        icon.textContent = '⬌'; // Moyen -> montrer icône neutre
+                        icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        icon.textContent = '⬍'; // Grand -> montrer icône pour réduire
+                        icon.style.transform = 'rotate(-90deg)';
+                    }
                 }
 
-                isResizing = true;
-                startY = e.clientY;
+                // Redimensionner les éditeurs après le changement
+                requestAnimationFrame(() => {
+                    if (this.pianoRoll && typeof this.pianoRoll.redraw === 'function') {
+                        this.pianoRoll.redraw();
+                    }
 
-                // Obtenir les flex-grow actuels (plus fiable que flex shorthand)
-                const notesStyle = window.getComputedStyle(notesSection);
-                const ccStyle = window.getComputedStyle(ccSection);
-                startNotesFlex = parseFloat(notesStyle.flexGrow) || 3;
-                startCCFlex = parseFloat(ccStyle.flexGrow) || 2;
+                    if (this.ccEditor && typeof this.ccEditor.resize === 'function') {
+                        this.ccEditor.resize();
+                    }
 
-                document.body.style.cursor = 'ns-resize';
-                e.preventDefault();
-            };
-
-            const doResize = (e) => {
-                if (!isResizing) return;
-
-                const deltaY = e.clientY - startY;
-                const containerHeight = this.container.querySelector('.midi-editor-container').clientHeight;
-
-                // Calculer le ratio de changement basé sur le mouvement
-                const ratio = deltaY / containerHeight;
-
-                // Ajuster les flex values
-                let newNotesFlex = Math.max(1, startNotesFlex + ratio * 5);
-                let newCCFlex = Math.max(1, startCCFlex - ratio * 5);
-
-                // Appliquer les nouveaux flex-grow
-                notesSection.style.flexGrow = newNotesFlex;
-                ccSection.style.flexGrow = newCCFlex;
-
-                e.preventDefault();
-            };
-
-            const stopResize = () => {
-                if (isResizing) {
-                    isResizing = false;
-                    document.body.style.cursor = '';
-
-                    // Redimensionner les éditeurs après le resize
-                    requestAnimationFrame(() => {
-                        if (this.pianoRoll && typeof this.pianoRoll.redraw === 'function') {
-                            this.pianoRoll.redraw();
-                        }
-
-                        if (this.ccEditor && typeof this.ccEditor.resize === 'function') {
-                            this.ccEditor.resize();
-                        }
-
-                        if (this.velocityEditor && typeof this.velocityEditor.resize === 'function') {
-                            this.velocityEditor.resize();
-                        }
-                    });
-                }
-            };
-
-            resizeHandle.addEventListener('mousedown', startResize);
-            document.addEventListener('mousemove', doResize);
-            document.addEventListener('mouseup', stopResize);
+                    if (this.velocityEditor && typeof this.velocityEditor.resize === 'function') {
+                        this.velocityEditor.resize();
+                    }
+                });
+            });
         }
     }
 

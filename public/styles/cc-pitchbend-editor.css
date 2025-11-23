@@ -299,6 +299,34 @@
     font-style: italic;
 }
 
+/* Bouton de resize de la section CC */
+.cc-resize-btn {
+    padding: 6px 12px;
+    background: #2d2d2d;
+    border: 1px solid #444;
+    border-radius: 3px;
+    color: #bbb;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: none; /* Caché par défaut */
+    align-items: center;
+    justify-content: center;
+    margin-left: auto; /* Pousse le bouton vers la droite */
+}
+
+.cc-resize-btn:hover {
+    background: #353535;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+.cc-resize-btn .resize-icon {
+    display: block;
+    transition: transform 0.3s;
+    line-height: 1;
+}
+
 /* Conteneur principal de l'éditeur */
 .cc-editor-main {
     flex: 1;
@@ -403,37 +431,6 @@
 .cc-info:hover {
     background: #555;
     color: #fff;
-}
-
-/* Resize handle entre sections */
-.resize-handle {
-    height: 6px;
-    background: #2a2a2a;
-    cursor: ns-resize;
-    position: relative;
-    z-index: 10;
-    transition: background 0.2s;
-    display: none; /* Caché par défaut */
-}
-
-.resize-handle.visible {
-    display: block; /* Visible quand la section CC est ouverte */
-}
-
-.resize-handle:hover {
-    background: #4CAF50;
-}
-
-.resize-handle::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 40px;
-    height: 3px;
-    background: #444;
-    border-radius: 2px;
 }
 
 /* Responsive adjustments */
