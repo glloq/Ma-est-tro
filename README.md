@@ -1,624 +1,115 @@
 # 🎹 MidiMind 5.0
 
-> **Système complet d'orchestration MIDI pour Raspberry Pi avec interface web moderne**
-
-Gérez vos appareils MIDI, routez les canaux, éditez les fichiers MIDI et jouez avec compensation de latence - le tout depuis un navigateur web.
+> **Système d'orchestration MIDI pour Raspberry Pi avec interface web moderne**
 
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-3B%2B%2F4-red)](https://www.raspberrypi.org/)
 
+MidiMind est un système complet de gestion MIDI qui vous permet de gérer vos périphériques MIDI, éditer et jouer des fichiers MIDI avec compensation de latence, le tout depuis une interface web moderne.
+
 ---
 
-## 🎯 Capacités de l'Application
+## ✨ Fonctionnalités
 
-MidiMind 5.0 est un système de gestion MIDI pour Raspberry Pi avec interface web moderne.
-
-### 🎹 Gestion des Périphériques MIDI
-- **Scan USB** : Détection des périphériques MIDI connectés en USB
-- **Scan Bluetooth** : Découverte et connexion de périphériques MIDI BLE
-- **Scan Réseau** : Découverte de périphériques RTP-MIDI sur le réseau local
-- **Affichage en Temps Réel** : Liste des périphériques disponibles avec leur statut
-- **Clavier MIDI Virtuel** : Clavier jouable directement dans le navigateur pour tester les périphériques
-
-### 📁 Gestion des Fichiers MIDI
-- **Upload de Fichiers** : Envoi de fichiers .mid et .midi depuis votre ordinateur
-- **Organisation en Dossiers** : Créez des dossiers pour organiser vos fichiers
-- **Drag & Drop** : Déplacez les fichiers entre dossiers par glisser-déposer
-- **Suppression** : Supprimez fichiers et dossiers avec confirmation
-- **Éditeur Piano Roll** : Visualisez et éditez vos fichiers MIDI avec un éditeur graphique
-  - Visualisation des notes par canal avec coloration
-  - Zoom et défilement
-  - Édition des notes (ajout, déplacement, suppression)
-
-### 🎵 Lecture de Fichiers MIDI
-- **Contrôles de Lecture** : Play, Pause, Stop depuis l'interface
-- **Barre de Progression** : Visualisez la position de lecture en temps réel
-- **Affichage du Temps** : Position actuelle et durée totale
+- **Gestion des Périphériques** : Détection USB, Bluetooth (BLE) et Réseau (RTP-MIDI)
+- **Fichiers MIDI** : Upload, organisation en dossiers, édition avec Piano Roll
 - **Routage par Canal** : Assignez chaque canal MIDI (1-16) à un périphérique différent
-  - Configuration sauvegardée par fichier
-  - Sélection du périphérique de sortie pour chaque canal
-  - Indicateur visuel des canaux routés
-- **Compensation de Latence par Instrument** : Synchronisation précise
-  - Configurez un délai (`sync_delay`) pour chaque instrument via le bouton ⚙️ Réglages
-  - Chaque canal utilise le délai de son instrument assigné
-  - Permet de compenser les différences de latence entre instruments (USB, Bluetooth, etc.)
-  - Délai ajustable de -2147483648 à +2147483647 ms (valeurs négatives pour avancer l'instrument)
-
-### 🌐 Interface Web
-- **Responsive** : Interface adaptée pour PC, tablette et smartphone
-- **Temps Réel** : Communication WebSocket pour mises à jour instantanées
-- **Drag & Drop** : Glissez-déposez vos fichiers MIDI pour les uploader
-- **Console de Debug** : Logs en temps réel pour diagnostic (bouton 🐞)
-- **Design Moderne** : Interface colorée et intuitive
-
-### 🔧 Fonctionnalités Techniques
-- **Base de Données SQLite** : Stockage local des fichiers et configurations
-- **API WebSocket** : Architecture client-serveur avec 95+ commandes backend
-- **Logging** : Système de logs pour monitoring et debug
+- **Lecture Intelligente** : Compensation de latence par instrument pour synchronisation parfaite
+- **Clavier Virtuel** : Testez vos périphériques depuis le navigateur
+- **Interface Web** : Responsive, temps réel via WebSocket
 
 ---
 
-## 💡 Fonctionnalités Avancées (API Backend)
+## 🚀 Installation Rapide
 
-L'API backend supporte des fonctionnalités additionnelles accessibles via WebSocket :
+### Prérequis
+- Raspberry Pi 3B+ ou 4 (2GB RAM minimum, 4GB recommandé)
+- Raspberry Pi OS (Lite ou Desktop)
+- Connexion réseau (Ethernet ou WiFi)
 
-- **Contrôle de Tempo** : Modification du tempo de lecture (commandes API)
-- **Transposition** : Transposition des notes (commandes API)
-- **Mode Boucle** : Lecture en boucle (commandes API)
-- **Compensation de Latence Automatique** : Calibration par mesure roundtrip (commandes API)
-- **Sessions** : Sauvegarde/chargement de l'état complet (commandes API)
-- **Presets** : Configurations de routage réutilisables (commandes API)
-- **Playlists** : Files d'attente de lecture (commandes API)
-
-> **Note** : Ces fonctionnalités sont disponibles via l'API WebSocket (95+ commandes) mais ne sont pas encore intégrées dans l'interface web. Elles peuvent être utilisées en développant une interface personnalisée ou en envoyant des commandes directement via WebSocket.
-
----
-
-## ✅ Corrections Récentes
-
-### Compensation de Latence par Instrument
-
-**Statut** : ✅ **Corrigé et fonctionnel**
-
-**Problème précédent** : Le délai de synchronisation (`sync_delay`) configuré via le bouton ⚙️ Réglages n'était pas appliqué lors de la lecture MIDI.
-
-**Correction apportée** (`src/midi/MidiPlayer.js:317-354`) :
-- La fonction `scheduleEvent()` récupère maintenant le périphérique cible AVANT de calculer la latence
-- Le `sync_delay` est lu depuis la base de données pour chaque canal
-- Chaque canal applique le délai de son instrument assigné, pas du périphérique par défaut
-
-**Résultat** :
-- ✅ Les canaux routés vers différents instruments avec des latences différentes sont maintenant parfaitement synchronisés
-- ✅ La compensation est appliquée individuellement pour chaque canal selon son instrument
-- ✅ Logs de debug disponibles pour vérifier l'application des délais (niveau `debug`)
-
-**Comment utiliser** :
-1. Scannez vos périphériques MIDI
-2. Cliquez sur ⚙️ Réglages pour chaque instrument
-3. Configurez le `Délai de synchronisation` (en millisecondes)
-   - Valeurs positives : retarder l'instrument (ex: 80ms pour Bluetooth)
-   - Valeurs négatives : avancer l'instrument (ex: -20ms)
-4. Jouez un fichier MIDI avec routage par canal
-5. Les délais sont appliqués automatiquement !
-
----
-
-## 🚀 Installation sur Raspberry Pi
-
-### 📋 Prérequis
-
-- **Matériel** : Raspberry Pi 3B+ ou 4 (recommandé)
-- **RAM** : Minimum 2GB (4GB recommandé)
-- **OS** : Raspberry Pi OS Lite (64-bit) ou Raspberry Pi OS Desktop
-- **Stockage** : Carte SD 8GB minimum
-- **Réseau** : Connexion Ethernet ou WiFi
-
-### 🎯 Installation Automatique (Recommandée)
-
-**Option 1 : Installation complète avec une seule commande**
+### Installation Automatique
 
 ```bash
 # Cloner le repository
 git clone https://github.com/glloq/Ma-est-tro.git
 cd Ma-est-tro
 
-# Rendre le script exécutable
+# Lancer l'installation complète
 chmod +x scripts/Install.sh
-
-# Lancer l'installation
 ./scripts/Install.sh
 ```
 
-Le script d'installation va automatiquement :
-- ✅ Mettre à jour le système (`apt-get update`)
-- ✅ Installer les dépendances système (ALSA, Bluetooth, build tools)
-- ✅ Installer Node.js 18 LTS
-- ✅ Installer PM2 (gestionnaire de processus)
-- ✅ Installer les dépendances npm
-- ✅ Créer les dossiers nécessaires (data, logs, uploads, backups)
-- ✅ Initialiser la base de données SQLite
-- ✅ Créer le fichier de configuration
-- ✅ Configurer les permissions Bluetooth
-- ✅ Configurer systemd pour démarrage automatique
-- ✅ Afficher l'IP locale pour accéder à l'interface web
+Le script installe automatiquement :
+- Node.js 18 LTS
+- Toutes les dépendances système (ALSA, Bluetooth, build tools)
+- PM2 (gestionnaire de processus)
+- Base de données SQLite
+- Configuration Bluetooth
+- Service systemd pour démarrage automatique
 
-### ⚙️ Installation Manuelle (Détails des Commandes)
+### Démarrage
 
-Si vous préférez installer manuellement, voici les commandes exactes :
-
-**Étape 1 : Mise à jour du système**
 ```bash
-sudo apt-get update
-sudo apt-get upgrade -y
-```
-
-**Étape 2 : Installation des dépendances système**
-```bash
-sudo apt-get install -y \
-  libasound2-dev \
-  bluetooth \
-  bluez \
-  libbluetooth-dev \
-  build-essential \
-  git \
-  curl \
-  python3 \
-  sqlite3
-```
-
-**Étape 3 : Installation de Node.js 18 LTS**
-```bash
-# Télécharger et installer Node.js 18
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# Vérifier l'installation
-node --version  # Doit afficher v18.x.x
-npm --version   # Doit afficher 9.x.x ou supérieur
-```
-
-**Étape 4 : Installation de PM2 (gestionnaire de processus)**
-```bash
-sudo npm install -g pm2
-pm2 --version
-```
-
-**Étape 5 : Cloner et installer le projet**
-```bash
-# Cloner le repository
-cd ~
-git clone https://github.com/glloq/Ma-est-tro.git
-cd Ma-est-tro
-
-# Installer les dépendances npm
-npm install
-
-# Créer les dossiers nécessaires
-mkdir -p data logs uploads backups public/uploads examples
-```
-
-**Étape 6 : Initialiser la base de données**
-```bash
-npm run migrate
-```
-
-**Étape 7 : Configuration Bluetooth (pour MIDI BLE)**
-```bash
-# Activer le service Bluetooth
-sudo systemctl enable bluetooth
-sudo systemctl start bluetooth
-
-# Ajouter l'utilisateur au groupe bluetooth
-sudo usermod -a -G bluetooth $USER
-
-# Définir les permissions pour Node.js
-sudo setcap cap_net_raw+eip $(eval readlink -f `which node`)
-
-# Débloquer le Bluetooth
-sudo rfkill unblock bluetooth
-
-# Redémarrer pour appliquer les changements de groupe
-# (ou exécuter : newgrp bluetooth)
-```
-
-**Étape 8 : Configuration du démarrage automatique**
-
-**Option A : Avec systemd (recommandé pour Raspberry Pi)**
-```bash
-# Créer le service systemd
-sudo nano /etc/systemd/system/midimind.service
-```
-
-Coller le contenu suivant :
-```ini
-[Unit]
-Description=MidiMind 5.0 MIDI Orchestration System
-After=network.target
-
-[Service]
-Type=simple
-User=pi
-WorkingDirectory=/home/pi/Ma-est-tro
-ExecStart=/usr/bin/node /home/pi/Ma-est-tro/server.js
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=midimind
-Environment=NODE_ENV=production
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Puis activer et démarrer le service :
-```bash
-# Recharger systemd
-sudo systemctl daemon-reload
-
-# Activer le démarrage automatique
-sudo systemctl enable midimind
-
-# Démarrer le service
-sudo systemctl start midimind
-
-# Vérifier le statut
-sudo systemctl status midimind
-
-# Voir les logs
-sudo journalctl -u midimind -f
-```
-
-**Option B : Avec PM2**
-```bash
-# Démarrer l'application
-pm2 start ecosystem.config.cjs
-
-# Sauvegarder la configuration
-pm2 save
-
-# Configurer le démarrage automatique
-pm2 startup
-# Exécuter la commande affichée par PM2
-
-# Vérifier
-pm2 list
-pm2 logs midimind
-```
-
-### 🎮 Démarrage de l'Application
-
-**Démarrage manuel (développement)**
-```bash
-# Mode développement (avec rechargement automatique)
+# Mode développement
 npm run dev
 
 # Mode production
 npm start
-```
 
-**Avec PM2 (recommandé)**
-```bash
-# Démarrer
+# Avec PM2 (recommandé)
 npm run pm2:start
-
-# Voir les logs
 npm run pm2:logs
-
-# Arrêter
-npm run pm2:stop
-
-# Redémarrer
-npm run pm2:restart
-
-# Statut
-npm run pm2:status
 ```
 
-**Avec systemd (si configuré)**
-```bash
-# Démarrer
-sudo systemctl start midimind
+### Accès à l'Interface Web
 
-# Arrêter
-sudo systemctl stop midimind
+**En local** : `http://localhost:8080`
+**Sur le réseau** : `http://<IP-du-Raspberry-Pi>:8080`
 
-# Redémarrer
-sudo systemctl restart midimind
-
-# Statut
-sudo systemctl status midimind
-
-# Logs en temps réel
-sudo journalctl -u midimind -f
-```
-
-### 🌐 Accès à l'Interface Web
-
-**En local sur le Raspberry Pi**
-```
-http://localhost:8080
-```
-
-**Depuis un autre appareil sur le réseau**
-```
-http://<IP-du-Raspberry-Pi>:8080
-```
-
-Pour connaître l'IP de votre Raspberry Pi :
-```bash
-hostname -I
-```
-
-Exemple : `http://192.168.1.100:8080`
-
-### 🔄 Mise à jour depuis GitHub
-
-Pour récupérer les dernières modifications :
-
-```bash
-cd ~/Ma-est-tro
-./scripts/update.sh
-```
-
-Le script de mise à jour va :
-- ✅ Récupérer les dernières modifications (`git pull`)
-- ✅ Mettre à jour les dépendances npm (si nécessaire)
-- ✅ Exécuter les migrations de base de données
-- ✅ Redémarrer automatiquement le serveur
-- ✅ Vérifier que la mise à jour s'est bien déroulée
-
-### 📱 Commandes Utiles Raspberry Pi
-
-**Vérifier l'état du système**
-```bash
-# Température du CPU
-vcgencmd measure_temp
-
-# Utilisation mémoire
-free -h
-
-# Espace disque
-df -h
-
-# Processus Node.js
-ps aux | grep node
-```
-
-**Gérer les périphériques MIDI**
-```bash
-# Lister les périphériques MIDI USB
-aconnect -l
-
-# Lister les périphériques ALSA
-amidi -l
-
-# Tester un périphérique MIDI
-amidi -p hw:1,0 -d
-```
-
-**Gérer le Bluetooth**
-```bash
-# Statut Bluetooth
-sudo systemctl status bluetooth
-
-# Scanner les périphériques Bluetooth
-bluetoothctl scan on
-
-# Vérifier l'adaptateur Bluetooth
-hciconfig -a
-```
-
-**Logs et Diagnostic**
-```bash
-# Logs du système
-sudo journalctl -xe
-
-# Logs MidiMind (systemd)
-sudo journalctl -u midimind -n 100
-
-# Logs PM2
-pm2 logs midimind --lines 100
-
-# Logs de l'application
-tail -f logs/midimind.log
-```
+Trouvez votre IP : `hostname -I`
 
 ---
 
 ## 📖 Guide d'Utilisation
 
-### 1️⃣ Scanner les Périphériques MIDI
+### 1. Scanner les Périphériques MIDI
+- Cliquez sur **🔌 Scan USB** pour les périphériques USB
+- Cliquez sur **📡 Scan Bluetooth** pour les périphériques BLE
+- Cliquez sur **🌐 Scan Réseau** pour les périphériques RTP-MIDI
 
-1. Cliquez sur **"🔌 Scan USB"** pour détecter les périphériques USB
-2. Cliquez sur **"📡 Scan Bluetooth"** pour rechercher des périphériques BLE
-3. Cliquez sur **"🌐 Scan Réseau"** pour découvrir les périphériques RTP-MIDI
-4. Les périphériques trouvés s'affichent dans la liste **"Périphériques MIDI"**
+### 2. Uploader des Fichiers MIDI
+- Cliquez sur **📁 Fichiers MIDI** puis **📤 Envoyer**
+- Glissez-déposez vos fichiers `.mid` / `.midi`
+- Organisez avec des dossiers
 
-### 2️⃣ Uploader des Fichiers MIDI
+### 3. Configurer le Routage
+- Cliquez sur **🔀 Router** à côté d'un fichier
+- Assignez chaque canal MIDI (1-16) à un périphérique
+- Sauvegardez la configuration
 
-1. Cliquez sur **"📁 Fichiers MIDI"**
-2. Cliquez sur le bouton **"📤 Envoyer"** ou glissez-déposez vos fichiers `.mid` / `.midi`
-3. Créez des dossiers avec **"📁 Nouveau dossier"**
-4. Organisez vos fichiers par glisser-déposer entre dossiers
+### 4. Configurer les Délais de Synchronisation
+- Cliquez sur **⚙️ Réglages** à côté d'un périphérique
+- Entrez le délai de synchronisation en millisecondes :
+  - **Positif** (ex: `80`) pour retarder (Bluetooth)
+  - **Négatif** (ex: `-20`) pour avancer
+  - **Zéro** (défaut) pour aucune compensation
+- Les délais sont appliqués automatiquement lors de la lecture
 
-### 3️⃣ Éditer un Fichier MIDI
+### 5. Jouer un Fichier
+- Cliquez sur **▶️ Jouer** à côté d'un fichier
+- Utilisez les contrôles de lecture (Play, Pause, Stop)
 
-1. Cliquez sur l'icône **"✏️ Éditer"** à côté d'un fichier
-2. L'éditeur Piano Roll s'ouvre avec :
-   - Visualisation des notes par canal (colorées)
-   - Zoom : molette de la souris
-   - Édition : ajout, déplacement, suppression de notes
-3. Cliquez sur **"💾 Sauvegarder"** pour enregistrer vos modifications
-
-### 4️⃣ Configurer le Routage par Canal
-
-1. Cliquez sur l'icône **"🔀 Router"** à côté d'un fichier
-2. Pour chaque canal MIDI (1-16), sélectionnez le périphérique de sortie
-3. Cliquez sur **"💾 Sauvegarder le routage"**
-4. La configuration est sauvegardée pour ce fichier
-
-### 5️⃣ Jouer un Fichier MIDI
-
-1. Cliquez sur **"▶️ Jouer"** à côté d'un fichier
-2. Les contrôles de lecture s'affichent en haut :
-   - **▶️ Lecture** : Lire/Pauser
-   - **⏹️ Stop** : Arrêter la lecture
-   - Barre de progression avec temps écoulé / durée totale
-3. Les notes sont envoyées vers les périphériques configurés
-
-### 6️⃣ Utiliser le Clavier MIDI Virtuel
-
-1. Cliquez sur le bouton **"🎹"** en haut à gauche
-2. Jouez des notes avec la souris ou le clavier de l'ordinateur
-3. Testez vos périphériques MIDI connectés
-
-### 7️⃣ Configurer les Délais de Synchronisation (Latence)
-
-1. Dans la liste **"Périphériques MIDI"**, cliquez sur ⚙️ **Réglages** à côté d'un instrument
-2. Dans la section **"Délai de synchronisation (ms)"**, entrez le délai en millisecondes :
-   - **Valeur positive** (ex: `80`) : retarde cet instrument (utile pour Bluetooth)
-   - **Valeur négative** (ex: `-20`) : avance cet instrument
-   - **Zéro** (défaut) : aucune compensation
-3. Cliquez sur **💾 Enregistrer**
-4. Le délai sera automatiquement appliqué lors de la lecture MIDI
-
-**Exemple d'utilisation** :
-- Piano USB (latence faible) : `0 ms`
-- Synthé Bluetooth (latence élevée) : `80 ms`
-- Résultat : Les deux instruments jouent parfaitement synchronisés !
-
-**Astuce** : Testez différentes valeurs pour trouver le meilleur réglage pour vos instruments.
-
-### 8️⃣ Console de Debug
-
-1. Cliquez sur le bouton **"🐞"** en haut à droite
-2. Visualisez les logs en temps réel :
-   - Messages d'information (bleu)
-   - Avertissements (orange)
-   - Erreurs (rouge)
-3. Utile pour diagnostiquer les problèmes de connexion
-4. Les logs de debug montrent l'application des délais de synchronisation
-
----
-
-## 🧪 Tests et Exemples
-
-### Test de l'Interface
-
-Accédez à l'application :
-```
-http://<IP-Raspberry-Pi>:8080
-```
-
-Fonctionnalités testables :
-- ✅ Upload de fichiers MIDI
-- ✅ Scan de périphériques (USB, Bluetooth, Réseau)
-- ✅ Édition avec Piano Roll
-- ✅ Routage par canal
-- ✅ Lecture MIDI
-- ✅ Clavier virtuel
-- ✅ Organisation en dossiers
-
-### Exemples et Documentation
-
-Consultez les fichiers de documentation pour plus de détails :
-- `TESTING.md` : Guide de test détaillé
-- `INTEGRATION_GUIDE.md` : Guide d'architecture et d'intégration
-- `examples/` : Exemples de code
-
----
-
-## 📚 Documentation
-
-| Document | Description |
-|----------|-------------|
-| [QUICK_START.md](./QUICK_START.md) | Quick start guide with code examples |
-| [INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md) | Full architecture and integration guide |
-| [FRONTEND_COMPONENTS.md](./FRONTEND_COMPONENTS.md) | UI components documentation |
-| [TESTING.md](./TESTING.md) | Complete testing guide with API examples |
-
----
-
-## 🎯 Exemples d'Utilisation de l'API WebSocket
-
-### Upload et Gestion de Fichiers
-```javascript
-// Upload d'un fichier MIDI
-const response = await api.uploadMidiFile(file, '/');
-
-// Lister les fichiers
-const response = await api.sendCommand('file_list', {});
-
-// Supprimer un fichier
-await api.sendCommand('file_delete', { fileId: 'file123' });
-```
-
-### Scan de Périphériques
-```javascript
-// Scanner les périphériques USB
-const response = await api.sendCommand('device_refresh', {});
-
-// Scanner Bluetooth
-await api.sendCommand('ble_scan_start', { duration: 5 });
-
-// Scanner réseau
-await api.sendCommand('network_scan', { timeout: 5 });
-```
-
-### Lecture MIDI
-```javascript
-// Démarrer la lecture
-await api.sendCommand('playback_start', { fileId: 'file123' });
-
-// Pause
-await api.sendCommand('playback_pause', {});
-
-// Stop
-await api.sendCommand('playback_stop', {});
-
-// Obtenir les canaux du fichier
-const response = await api.sendCommand('playback_get_channels', {});
-```
-
-### Routage par Canal
-```javascript
-// Configurer le routage d'un canal vers un périphérique
-await api.sendCommand('playback_set_channel_routing', {
-    channel: 0,
-    deviceId: 'device-id-123'
-});
-```
-
-> **Note** : L'API WebSocket supporte 95+ commandes. Consultez `TESTING.md` pour la documentation complète de l'API.
-
----
-
-## 🏗️ Architecture
-
-```
-┌──────────────────────────────────────────────────────────┐
-│                    Browser Frontend                       │
-├──────────────────────────────────────────────────────────┤
-│                                                            │
-│  WebMIDI.js (browser MIDI)                                │
-│       ↕                                                    │
-│  MidiBridge ←→ WebSocket ←→ Backend (Raspberry Pi)       │
-│       ↕                             ↕                      │
-│  Tone.js (audio preview)      easymidi (hardware MIDI)   │
-│       ↕                             ↕                      │
-│  webaudio-pianoroll           Hardware MIDI Devices       │
-│  (visual editor)               (USB/Virtual/BLE)          │
-│                                                            │
-└────────────────────────────────────────────────────────────┘
-```
+### 6. Éditer un Fichier
+- Cliquez sur **✏️ Éditer** pour ouvrir le Piano Roll
+- Ajoutez, déplacez ou supprimez des notes
+- Sauvegardez vos modifications
 
 ---
 
 ## 🔧 Configuration
 
-Edit `config.json`:
+Éditez `config.json` pour personnaliser :
 
 ```json
 {
@@ -642,186 +133,159 @@ Edit `config.json`:
 
 ---
 
-## 📦 Project Structure
+## 📚 Documentation
 
-```
-Ma-est-tro/
-├── scripts/
-│   └── Install.sh           # Complete installation script
-├── src/                     # Backend (Node.js)
-│   ├── api/
-│   │   ├── CommandHandler.js  # 95+ commandes WebSocket
-│   │   ├── WebSocketServer.js
-│   │   └── HttpServer.js
-│   ├── midi/
-│   │   ├── DeviceManager.js   # MIDI device management
-│   │   ├── MidiRouter.js      # Routing engine
-│   │   ├── MidiPlayer.js      # Playback engine
-│   │   └── LatencyCompensator.js
-│   └── storage/
-│       ├── Database.js
-│       └── FileManager.js
-├── public/                  # Frontend (Vanilla JS)
-│   ├── js/
-│   │   ├── api/
-│   │   │   └── BackendAPIClient.js
-│   │   ├── managers/
-│   │   │   ├── MidiFileManager.js
-│   │   │   └── MidiRoutingManager.js
-│   │   ├── bridges/
-│   │   │   └── MidiBridge.js
-│   │   └── integration/
-│   │       └── MidiIntegrationManager.js
-│   └── index.html
-├── examples/
-│   ├── functionality-test.html   # Complete test suite
-│   └── integrated-editor.html    # Full MIDI editor demo
-├── migrations/              # Database migrations
-├── data/                    # SQLite database
-└── uploads/                 # Uploaded MIDI files
-```
+| Document | Description |
+|----------|-------------|
+| [docs/BLUETOOTH_SETUP.md](./docs/BLUETOOTH_SETUP.md) | Configuration Bluetooth BLE MIDI |
+| [docs/NETWORK_MIDI_SETUP.md](./docs/NETWORK_MIDI_SETUP.md) | Configuration RTP-MIDI réseau |
 
 ---
 
-## 🌟 External Libraries Used
+## 🔄 Mise à Jour
 
-MidiMind integrates proven open-source libraries:
+```bash
+cd ~/Ma-est-tro
+./scripts/update.sh
+```
 
-### Frontend
-- **[webaudio-pianoroll](https://github.com/g200kg/webaudio-pianoroll)** - Éditeur Piano Roll visuel (version personnalisée avec coloration par canal)
-- **Vanilla JavaScript** - Pas de framework, code léger et rapide
-
-### Backend
-- **[easymidi](https://www.npmjs.com/package/easymidi)** - Gestion des périphériques MIDI sous Node.js
-- **[ws](https://github.com/websockets/ws)** - Serveur WebSocket pour communication temps réel
-- **[better-sqlite3](https://github.com/WiseLibs/better-sqlite3)** - Base de données SQLite locale
-- **[@abandonware/noble](https://www.npmjs.com/package/@abandonware/noble)** - Support Bluetooth Low Energy (BLE MIDI)
+Le script met à jour automatiquement :
+- Code source (git pull)
+- Dépendances npm
+- Migrations de base de données
+- Redémarrage du serveur
 
 ---
 
-## 🔌 API WebSocket Backend
+## 🏗️ Architecture
 
-MidiMind fournit une **API WebSocket complète avec 95+ commandes** réparties en catégories :
+```
+┌──────────────────────────────────────────────────────────┐
+│                    Interface Web (Browser)                │
+├──────────────────────────────────────────────────────────┤
+│  WebSocket Client ←→ WebSocket Server (Raspberry Pi)     │
+│                             ↕                              │
+│                       Backend (Node.js)                    │
+│                             ↕                              │
+│                   Hardware MIDI Devices                    │
+│                   (USB / Bluetooth / Network)              │
+└──────────────────────────────────────────────────────────┘
+```
 
-| Catégorie | Commandes | Exemples |
-|----------|----------|----------|
-| **Devices** | ~24 | `device_list`, `device_refresh`, `ble_scan_start`, `network_scan`, `virtual_create` |
-| **Routing** | 15 | `route_create`, `channel_map`, `filter_set`, `monitor_start` |
-| **Files** | 12 | `file_upload`, `file_load`, `file_save`, `file_delete`, `file_rename` |
-| **Playback** | 13 | `playback_start`, `playback_pause`, `playback_stop`, `playback_set_channel_routing` |
-| **Latency** | 8 | `latency_set`, `latency_measure`, `latency_auto_calibrate` |
-| **MIDI Messages** | 8 | `midi_send_note`, `midi_send_cc`, `midi_panic`, `midi_all_notes_off` |
-| **System** | 8 | `system_status`, `system_info`, `system_backup`, `system_logs` |
-| **Sessions** | 6 | `session_save`, `session_load`, `session_list`, `session_delete` |
-| **Presets** | 6 | `preset_save`, `preset_load`, `preset_list`, `preset_delete` |
-| **Playlists** | 4 | `playlist_create`, `playlist_list`, `playlist_add_file` |
+**Backend** : Node.js, Express, WebSocket (ws), easymidi, better-sqlite3
+**Frontend** : Vanilla JavaScript, Web MIDI API, webaudio-pianoroll
 
-> **Note** : Toutes ces commandes sont implémentées dans le backend, mais seules certaines sont utilisées par l'interface web actuelle. Pour utiliser les commandes avancées (tempo, transposition, sessions, presets, etc.), vous devez envoyer des commandes WebSocket directement ou développer votre propre interface.
+---
+
+## 🔌 API WebSocket
+
+MidiMind fournit une **API WebSocket complète avec 95+ commandes** :
+
+| Catégorie | Exemples |
+|----------|----------|
+| **Devices** | `device_list`, `device_refresh`, `ble_scan_start`, `network_scan` |
+| **Files** | `file_upload`, `file_load`, `file_save`, `file_delete` |
+| **Playback** | `playback_start`, `playback_pause`, `playback_stop` |
+| **Routing** | `route_create`, `channel_map`, `playback_set_channel_routing` |
+| **Latency** | `latency_set`, `latency_measure`, `latency_auto_calibrate` |
+| **MIDI** | `midi_send_note`, `midi_send_cc`, `midi_panic` |
 
 Référence complète : `src/api/CommandHandler.js`
 
 ---
 
-## 🖥️ System Requirements
+## 🛠️ Commandes Utiles
 
-### Minimum
-- **CPU**: Raspberry Pi 3B+ or equivalent
-- **RAM**: 2GB
-- **OS**: Raspberry Pi OS Lite (64-bit) or Ubuntu 20.04+
-- **Node.js**: 18.0.0 or higher
-- **Storage**: 4GB free space
+### Gestion du Service
 
-### Recommended
-- **CPU**: Raspberry Pi 4 or higher
-- **RAM**: 4GB
-- **Storage**: 8GB+ SD card
-- **Network**: Ethernet or WiFi for web access
-
-### Tested On
-- ✅ Raspberry Pi 4 (4GB RAM) - Recommended
-- ✅ Raspberry Pi 3B+
-- ✅ Ubuntu 22.04 Desktop
-- ✅ macOS 13+ (development only)
-
----
-
-## 🛠️ Development
-
-### Running in Development Mode
-
+**Avec PM2** :
 ```bash
-npm run dev
+npm run pm2:start    # Démarrer
+npm run pm2:stop     # Arrêter
+npm run pm2:restart  # Redémarrer
+npm run pm2:logs     # Voir les logs
 ```
 
-### Building for Production
-
+**Avec systemd** :
 ```bash
-npm start
+sudo systemctl start midimind    # Démarrer
+sudo systemctl stop midimind     # Arrêter
+sudo systemctl restart midimind  # Redémarrer
+sudo systemctl status midimind   # Statut
+sudo journalctl -u midimind -f   # Logs en temps réel
 ```
 
-### Running Tests
+### Diagnostic MIDI
 
 ```bash
-npm test
-```
+# Lister les périphériques MIDI
+aconnect -l
+amidi -l
 
-### Database Management
+# Statut Bluetooth
+sudo systemctl status bluetooth
 
-```bash
-# Run migrations
-npm run migrate
-
-# Reset database
-rm data/midimind.db
-npm run migrate
+# Logs de l'application
+tail -f logs/midimind.log
 ```
 
 ---
 
-## 🤝 Contributing
+## 📦 Structure du Projet
 
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+```
+Ma-est-tro/
+├── scripts/          # Scripts d'installation et mise à jour
+├── src/              # Backend (Node.js)
+│   ├── api/          # WebSocket, CommandHandler, HttpServer
+│   ├── midi/         # DeviceManager, MidiRouter, MidiPlayer
+│   ├── storage/      # Database, FileManager
+│   └── managers/     # BluetoothManager, NetworkManager
+├── public/           # Frontend (Vanilla JS)
+│   ├── js/           # Application, Components, API Client
+│   └── styles/       # CSS
+├── docs/             # Documentation
+├── migrations/       # Database migrations
+├── data/             # SQLite database (créé au runtime)
+└── uploads/          # Fichiers MIDI uploadés
+```
 
 ---
 
-## 📝 License
+## 🤝 Contribution
 
-MIT License - see [LICENSE](LICENSE) file for details.
+Les contributions sont les bienvenues ! Pour contribuer :
+
+1. Forkez le repository
+2. Créez une branche feature
+3. Testez vos changements
+4. Soumettez une pull request
 
 ---
 
-## 🙏 Credits
+## 📝 Licence
 
-### Libraries
-- WebMidi.js by Jean-Philippe Côté ([@djipco](https://github.com/djipco))
-- Tone.js by Yotam Mann and contributors
-- webaudio-pianoroll by g200kg
-- webaudio-controls by g200kg
-- easymidi by Andrew Kelley
+MIT License - voir le fichier [LICENSE](LICENSE)
 
-### Inspiration
-- MIDI.org specifications
-- Web MIDI API standard
-- Open-source MIDI community
+---
+
+## 🙏 Remerciements
+
+**Bibliothèques** :
+- [webaudio-pianoroll](https://github.com/g200kg/webaudio-pianoroll) par g200kg
+- [easymidi](https://www.npmjs.com/package/easymidi) par Andrew Kelley
+- [ws](https://github.com/websockets/ws) - WebSocket server
+- [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) - SQLite database
 
 ---
 
 ## 📬 Support
 
-- **Documentation**: See `docs/` folder
-- **Issues**: [GitHub Issues](https://github.com/yourusername/Ma-est-tro/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/Ma-est-tro/discussions)
+- **Documentation** : Voir le dossier `docs/`
+- **Issues** : [GitHub Issues](https://github.com/glloq/Ma-est-tro/issues)
 
 ---
 
 ## 🎵 Happy MIDI Orchestrating! 🎹
 
 Made with ❤️ for the MIDI community
-
----

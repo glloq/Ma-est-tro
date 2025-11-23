@@ -402,7 +402,7 @@ print_step "9. Verification"
 CRITICAL_FILES=(
     "package.json"
     "config.json"
-    "src/Server.js"
+    "server.js"
     "public/index.html"
 )
 
