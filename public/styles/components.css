@@ -660,7 +660,7 @@
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 20px;
+    padding: 8px; /* RÉDUIT: 20px → 8px pour gain de place */
     animation: fadeIn 0.2s ease-out;
     margin: 0 !important;
     transform: none !important;
@@ -711,7 +711,7 @@
 
 /* Header avec bouton de fermeture - Compact pour plus d'espace */
 .midi-editor-modal .modal-header {
-    padding: 6px 12px;
+    padding: 4px 8px; /* RÉDUIT: 6px 12px → 4px 8px pour gain de place */
     margin: 0;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -782,7 +782,7 @@
 .midi-editor-modal .editor-toolbar {
     display: flex;
     gap: 8px;
-    padding: 4px 8px;
+    padding: 2px 4px; /* RÉDUIT: 4px 8px → 2px 4px pour gain de place */
     background: #2a2a2a;
     border-bottom: 1px solid #3a3a3a;
     align-items: center;
@@ -810,7 +810,7 @@
 .midi-editor-modal .channels-toolbar {
     display: flex;
     gap: 4px;
-    padding: 4px 8px;
+    padding: 2px 4px; /* RÉDUIT: 4px 8px → 2px 4px pour gain de place */
     background: #252525;
     border-bottom: 1px solid #3a3a3a;
     overflow-x: auto;
