@@ -3735,10 +3735,11 @@
                 log('✓ Modal réseau initialisée', 'info');
 
                 // Handlers pour les requêtes de la modal vers le backend
-                api.on('network:scan_requested', async () => {
+                api.on('network:scan_requested', async (params) => {
                     try {
-                        log('🔍 Lancement du scan réseau...', 'info');
-                        const response = await api.sendCommand('network_scan', { timeout: 5 });
+                        const fullScan = params?.fullScan || false;
+                        log(`🔍 Lancement du scan réseau... (fullScan: ${fullScan})`, 'info');
+                        const response = await api.sendCommand('network_scan', { timeout: 5, fullScan });
 
                         // Le backend retourne { success: true, data: { devices: [...] } }
                         const devices = (response.success && response.data && response.data.devices) ? response.data.devices : [];
