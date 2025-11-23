@@ -2669,11 +2669,11 @@ class MidiEditorModal {
                 isResizing = true;
                 startY = e.clientY;
 
-                // Obtenir les flex actuels
+                // Obtenir les flex-grow actuels (plus fiable que flex shorthand)
                 const notesStyle = window.getComputedStyle(notesSection);
                 const ccStyle = window.getComputedStyle(ccSection);
-                startNotesFlex = parseFloat(notesStyle.flex) || 3;
-                startCCFlex = parseFloat(ccStyle.flex) || 2;
+                startNotesFlex = parseFloat(notesStyle.flexGrow) || 3;
+                startCCFlex = parseFloat(ccStyle.flexGrow) || 2;
 
                 document.body.style.cursor = 'ns-resize';
                 e.preventDefault();
@@ -2692,22 +2692,9 @@ class MidiEditorModal {
                 let newNotesFlex = Math.max(1, startNotesFlex + ratio * 5);
                 let newCCFlex = Math.max(1, startCCFlex - ratio * 5);
 
-                // Appliquer les nouveaux flex
-                notesSection.style.flex = newNotesFlex;
-                ccSection.style.flex = newCCFlex;
-
-                // Redimensionner les éditeurs
-                if (this.pianoRoll && typeof this.pianoRoll.redraw === 'function') {
-                    setTimeout(() => this.pianoRoll.redraw(), 10);
-                }
-
-                if (this.ccEditor && typeof this.ccEditor.resize === 'function') {
-                    setTimeout(() => this.ccEditor.resize(), 10);
-                }
-
-                if (this.velocityEditor && typeof this.velocityEditor.resize === 'function') {
-                    setTimeout(() => this.velocityEditor.resize(), 10);
-                }
+                // Appliquer les nouveaux flex-grow
+                notesSection.style.flexGrow = newNotesFlex;
+                ccSection.style.flexGrow = newCCFlex;
 
                 e.preventDefault();
             };
@@ -2716,6 +2703,21 @@ class MidiEditorModal {
                 if (isResizing) {
                     isResizing = false;
                     document.body.style.cursor = '';
+
+                    // Redimensionner les éditeurs après le resize
+                    requestAnimationFrame(() => {
+                        if (this.pianoRoll && typeof this.pianoRoll.redraw === 'function') {
+                            this.pianoRoll.redraw();
+                        }
+
+                        if (this.ccEditor && typeof this.ccEditor.resize === 'function') {
+                            this.ccEditor.resize();
+                        }
+
+                        if (this.velocityEditor && typeof this.velocityEditor.resize === 'function') {
+                            this.velocityEditor.resize();
+                        }
+                    });
                 }
             };
 
