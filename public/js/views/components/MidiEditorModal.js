@@ -2689,7 +2689,7 @@ class MidiEditorModal {
                 startNotesHeight = notesSection.clientHeight;
 
                 // Capturer l'espace disponible RÉEL depuis modal-dialog (hauteur fixe 95vh)
-                const modalDialog = this.container.closest('.modal-dialog');
+                const modalDialog = this.container.querySelector('.modal-dialog');  // ENFANT, pas parent !
                 const modalBody = this.container.querySelector('.modal-body');
                 const modalHeader = this.container.querySelector('.modal-header');
                 const toolbarHeight = this.container.querySelector('.editor-toolbar')?.clientHeight || 0;
