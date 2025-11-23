@@ -778,7 +778,7 @@ class MidiEditorModal {
         if (ccType === 'velocity') {
             // Afficher l'éditeur de vélocité
             if (ccEditorContainer) ccEditorContainer.style.display = 'none';
-            if (velocityEditorContainer) velocityEditorContainer.style.display = 'block';
+            if (velocityEditorContainer) velocityEditorContainer.style.display = 'flex';
 
             // Initialiser l'éditeur de vélocité s'il n'existe pas
             if (!this.velocityEditor) {
@@ -788,16 +788,21 @@ class MidiEditorModal {
                 this.velocityEditor.setSequence(this.sequence);
                 this.velocityEditor.setActiveChannels(Array.from(this.activeChannels));
                 this.syncVelocityEditor();
-                if (this.velocityEditor.resize) {
-                    setTimeout(() => this.velocityEditor.resize(), 10);
-                }
+                // Attendre que le layout soit recalculé avant de resize
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        if (this.velocityEditor && this.velocityEditor.resize) {
+                            this.velocityEditor.resize();
+                        }
+                    });
+                });
             }
 
             // Mettre à jour le sélecteur de canal pour la vélocité
             this.updateEditorChannelSelector();
         } else {
             // Afficher l'éditeur CC
-            if (ccEditorContainer) ccEditorContainer.style.display = 'block';
+            if (ccEditorContainer) ccEditorContainer.style.display = 'flex';
             if (velocityEditorContainer) velocityEditorContainer.style.display = 'none';
 
             // Initialiser l'éditeur CC s'il n'existe pas
@@ -805,6 +810,14 @@ class MidiEditorModal {
                 this.initCCEditor();
             } else {
                 this.ccEditor.setCC(ccType);
+                // Attendre que le layout soit recalculé avant de resize
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        if (this.ccEditor && this.ccEditor.resize) {
+                            this.ccEditor.resize();
+                        }
+                    });
+                });
                 // Mettre à jour le sélecteur de canal car les canaux utilisés peuvent varier selon le type CC
                 this.updateEditorChannelSelector();
             }
@@ -1756,10 +1769,8 @@ class MidiEditorModal {
                                     </div>
 
                                     <!-- Conteneur pour les éditeurs (CC ou Velocity) -->
-                                    <div class="cc-editor-main">
-                                        <div id="cc-editor-container"></div>
-                                        <div id="velocity-editor-container" style="display: none;"></div>
-                                    </div>
+                                    <div id="cc-editor-container" class="cc-editor-main"></div>
+                                    <div id="velocity-editor-container" class="cc-editor-main" style="display: none;"></div>
                                 </div>
                             </div>
                         </div>
