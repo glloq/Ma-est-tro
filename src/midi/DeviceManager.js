@@ -235,6 +235,7 @@ class DeviceManager {
 
   getDeviceList() {
     const usbDevices = Array.from(this.devices.values());
+    const allDevices = [...usbDevices];
 
     // Ajouter les périphériques Bluetooth appairés et connectés
     if (this.app.bluetoothManager) {
@@ -256,42 +257,61 @@ class DeviceManager {
           address: device.address
         }));
 
-      // Dédupliquer par nom (évite doublons USB input/output et USB/Bluetooth)
-      // Priorité: Bluetooth > USB (si connecté en BT, on préfère cette connexion)
-      const allDevices = [...connectedBluetoothDevices, ...usbDevices];
-      const uniqueDevices = [];
-      const seenNames = new Set();
-
-      this.app.logger.debug(`[Deduplication] ${allDevices.length} devices before:`);
-      allDevices.forEach(d => {
-        this.app.logger.debug(`  - "${d.name}" (${d.type})`);
-      });
-
-      // Fonction pour normaliser un nom (retire suffixes courants)
-      const normalizeName = (name) => {
-        // Retirer les suffixes de port MIDI (ex: ":Lyre-Test MIDI 128:0" -> "Lyre-Test")
-        let normalized = name.split(':')[0].trim();
-        return normalized;
-      };
-
-      for (const device of allDevices) {
-        const normalizedName = normalizeName(device.name);
-
-        if (!seenNames.has(normalizedName)) {
-          seenNames.add(normalizedName);
-          uniqueDevices.push(device);
-          this.app.logger.debug(`[Deduplication] ✓ KEPT: "${device.name}" (${device.type}) [normalized: "${normalizedName}"]`);
-        } else {
-          this.app.logger.debug(`[Deduplication] ✗ SKIP: "${device.name}" (${device.type}) [normalized: "${normalizedName}"] - duplicate`);
-        }
-      }
-
-      this.app.logger.info(`[Deduplication] Result: ${allDevices.length} → ${uniqueDevices.length} devices`);
-
-      return uniqueDevices;
+      allDevices.push(...connectedBluetoothDevices);
     }
 
-    return usbDevices;
+    // Ajouter les périphériques réseau connectés
+    if (this.app.networkManager) {
+      const networkDevices = this.app.networkManager.getConnectedDevices()
+        .map(device => ({
+          id: device.ip,
+          name: device.name || `Network MIDI (${device.ip})`,
+          manufacturer: 'Network',
+          type: 'network',
+          input: true,  // Network MIDI supporte généralement l'entrée
+          output: true, // Network MIDI supporte généralement la sortie
+          enabled: true,
+          connected: true,
+          status: 2,    // Status 2 = Active
+          address: device.ip,
+          port: device.port
+        }));
+
+      allDevices.push(...networkDevices);
+    }
+
+    // Dédupliquer par nom (évite doublons USB input/output et USB/Bluetooth/Network)
+    // Priorité: Network > Bluetooth > USB
+    const uniqueDevices = [];
+    const seenNames = new Set();
+
+    this.app.logger.debug(`[Deduplication] ${allDevices.length} devices before:`);
+    allDevices.forEach(d => {
+      this.app.logger.debug(`  - "${d.name}" (${d.type})`);
+    });
+
+    // Fonction pour normaliser un nom (retire suffixes courants)
+    const normalizeName = (name) => {
+      // Retirer les suffixes de port MIDI (ex: ":Lyre-Test MIDI 128:0" -> "Lyre-Test")
+      let normalized = name.split(':')[0].trim();
+      return normalized;
+    };
+
+    for (const device of allDevices) {
+      const normalizedName = normalizeName(device.name);
+
+      if (!seenNames.has(normalizedName)) {
+        seenNames.add(normalizedName);
+        uniqueDevices.push(device);
+        this.app.logger.debug(`[Deduplication] ✓ KEPT: "${device.name}" (${device.type}) [normalized: "${normalizedName}"]`);
+      } else {
+        this.app.logger.debug(`[Deduplication] ✗ SKIP: "${device.name}" (${device.type}) [normalized: "${normalizedName}"] - duplicate`);
+      }
+    }
+
+    this.app.logger.info(`[Deduplication] Result: ${allDevices.length} → ${uniqueDevices.length} devices`);
+
+    return uniqueDevices;
   }
 
   sendMessage(deviceName, type, data) {
@@ -321,6 +341,25 @@ class DeviceManager {
           return true;
         } catch (error) {
           this.app.logger.error(`Failed to send MIDI message via Bluetooth to ${deviceName}: ${error.message}`);
+          return false;
+        }
+      }
+    }
+
+    // Sinon, vérifier si c'est un périphérique réseau
+    if (this.app.networkManager) {
+      const networkDevices = this.app.networkManager.getConnectedDevices();
+      const networkDevice = networkDevices.find(d =>
+        d.name === deviceName || d.ip === deviceName || d.address === deviceName
+      );
+
+      if (networkDevice && networkDevice.connected) {
+        try {
+          // Envoyer via Network MIDI (RTP-MIDI)
+          this.app.networkManager.sendMidiMessage(networkDevice.ip, type, data);
+          return true;
+        } catch (error) {
+          this.app.logger.error(`Failed to send MIDI message via Network to ${deviceName}: ${error.message}`);
           return false;
         }
       }

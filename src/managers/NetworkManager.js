@@ -12,6 +12,7 @@ import EventEmitter from 'events';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import os from 'os';
+import RtpMidiSession from './RtpMidiSession.js';
 
 const execAsync = promisify(exec);
 
@@ -22,6 +23,7 @@ class NetworkManager extends EventEmitter {
     this.scanning = false;
     this.devices = new Map(); // Map of IP -> device info
     this.connectedDevices = new Map(); // Map of IP -> connection info
+    this.rtpSessions = new Map(); // Map of IP -> RtpMidiSession
 
     // Ports MIDI over network couramment utilisés
     this.MIDI_NETWORK_PORTS = [
@@ -31,7 +33,7 @@ class NetworkManager extends EventEmitter {
       7000, 7001, 7002 // Ports personnalisés souvent utilisés
     ];
 
-    this.app.logger.info('NetworkManager initialized');
+    this.app.logger.info('NetworkManager initialized with RTP-MIDI support');
   }
 
   /**
@@ -209,13 +211,13 @@ class NetworkManager extends EventEmitter {
   }
 
   /**
-   * Connecte un instrument réseau
+   * Connecte un instrument réseau via RTP-MIDI
    * @param {string} ip - Adresse IP de l'instrument
    * @param {string} port - Port (optionnel)
    * @returns {Promise<Object>} Info de connexion
    */
   async connect(ip, port = '5004') {
-    this.app.logger.info(`Connecting to network instrument: ${ip}:${port}`);
+    this.app.logger.info(`[NetworkManager] Connecting to network instrument: ${ip}:${port}`);
 
     // Vérifier si l'instrument est accessible
     const isReachable = await this.checkReachability(ip);
@@ -241,21 +243,66 @@ class NetworkManager extends EventEmitter {
       this.devices.set(ip, deviceInfo);
     }
 
-    // Simuler la connexion
-    // En production, il faudrait établir une vraie connexion RTP-MIDI ou OSC
-    const connectionInfo = {
-      ip: ip,
-      address: ip,
-      port: port,
-      name: deviceInfo.name,
-      connected: true,
-      connectedAt: new Date().toISOString()
-    };
+    try {
+      // Créer session RTP-MIDI
+      const session = new RtpMidiSession({
+        localName: 'MidiMind',
+        localPort: 5004
+      });
 
-    this.connectedDevices.set(ip, connectionInfo);
-    this.app.logger.info(`Connected to ${deviceInfo.name} (${ip}:${port})`);
+      // Écouter les messages MIDI entrants
+      session.on('message', (deltaTime, midiBytes) => {
+        this.handleMidiData(ip, midiBytes);
+      });
 
-    return connectionInfo;
+      // Écouter les erreurs
+      session.on('error', (error) => {
+        this.app.logger.error(`[NetworkManager] RTP-MIDI error for ${ip}: ${error.message}`);
+      });
+
+      // Écouter la déconnexion
+      session.on('disconnected', () => {
+        this.app.logger.info(`[NetworkManager] RTP-MIDI session disconnected: ${ip}`);
+        this.rtpSessions.delete(ip);
+        this.connectedDevices.delete(ip);
+
+        // Émettre événement
+        this.emit('network:disconnected', { ip });
+      });
+
+      // Connecter
+      await session.connect(ip, parseInt(port));
+
+      // Stocker la session
+      this.rtpSessions.set(ip, session);
+
+      // Info de connexion
+      const connectionInfo = {
+        ip: ip,
+        address: ip,
+        port: port,
+        name: deviceInfo.name,
+        connected: true,
+        connectedAt: new Date().toISOString(),
+        session: session
+      };
+
+      this.connectedDevices.set(ip, connectionInfo);
+      this.app.logger.info(`[NetworkManager] ✅ Connected to ${deviceInfo.name} (${ip}:${port}) via RTP-MIDI`);
+
+      // Émettre événement
+      this.emit('network:connected', {
+        ip: ip,
+        device_id: ip,
+        name: deviceInfo.name
+      });
+
+      return connectionInfo;
+
+    } catch (error) {
+      this.app.logger.error(`[NetworkManager] Failed to connect RTP-MIDI to ${ip}: ${error.message}`);
+      throw error;
+    }
   }
 
   /**
@@ -285,7 +332,7 @@ class NetworkManager extends EventEmitter {
    * @returns {Promise<Object>} Résultat de la déconnexion
    */
   async disconnect(ip) {
-    this.app.logger.info(`Disconnecting network instrument: ${ip}`);
+    this.app.logger.info(`[NetworkManager] Disconnecting network instrument: ${ip}`);
 
     const connectionInfo = this.connectedDevices.get(ip);
 
@@ -293,15 +340,216 @@ class NetworkManager extends EventEmitter {
       throw new Error(`Instrument not connected: ${ip}`);
     }
 
-    // Simuler la déconnexion
-    this.connectedDevices.delete(ip);
-    this.app.logger.info(`Disconnected from ${ip}`);
+    try {
+      // Fermer la session RTP-MIDI
+      const session = this.rtpSessions.get(ip);
+      if (session) {
+        await session.disconnect();
+        this.rtpSessions.delete(ip);
+      }
 
-    return {
-      ip: ip,
-      address: ip,
-      connected: false
-    };
+      this.connectedDevices.delete(ip);
+      this.app.logger.info(`[NetworkManager] ✅ Disconnected from ${ip}`);
+
+      // Émettre événement
+      this.emit('network:disconnected', {
+        ip: ip,
+        device_id: ip
+      });
+
+      return {
+        ip: ip,
+        address: ip,
+        connected: false
+      };
+
+    } catch (error) {
+      this.app.logger.error(`[NetworkManager] Error disconnecting ${ip}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Envoie un message MIDI à un instrument réseau
+   * @param {string} ip - Adresse IP de l'instrument
+   * @param {string} type - Type de message ('noteon', 'noteoff', 'cc', etc.)
+   * @param {object} data - Données du message
+   */
+  async sendMidiMessage(ip, type, data) {
+    const session = this.rtpSessions.get(ip);
+
+    if (!session || !session.isConnected()) {
+      throw new Error(`Device ${ip} not connected via RTP-MIDI`);
+    }
+
+    try {
+      // Convertir format easymidi en bytes MIDI bruts
+      const midiBytes = this.convertToMidiBytes(type, data);
+
+      if (midiBytes) {
+        session.sendMessage(midiBytes);
+        this.app.logger.debug(`[NetworkManager] MIDI sent to ${ip}:`, type, data);
+      } else {
+        this.app.logger.warn(`[NetworkManager] Unsupported MIDI message type: ${type}`);
+      }
+
+    } catch (error) {
+      this.app.logger.error(`[NetworkManager] Send MIDI error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Gère les données MIDI reçues d'un instrument réseau
+   * @param {string} ip - Adresse IP de l'instrument
+   * @param {Array<number>} midiBytes - Bytes MIDI reçus
+   */
+  handleMidiData(ip, midiBytes) {
+    try {
+      // Parser les bytes MIDI
+      const parsedMessage = this.parseMidiBytes(midiBytes);
+
+      if (parsedMessage) {
+        this.app.logger.debug(`[NetworkManager] MIDI from ${ip}:`, parsedMessage.type, parsedMessage.data);
+
+        // Émettre événement MIDI
+        this.emit('midi:data', {
+          ip: ip,
+          address: ip,
+          type: parsedMessage.type,
+          data: parsedMessage.data
+        });
+      }
+
+    } catch (error) {
+      this.app.logger.error(`[NetworkManager] Error processing MIDI data: ${error.message}`);
+    }
+  }
+
+  /**
+   * Convertit un message easymidi en bytes MIDI
+   * @param {string} type - Type de message
+   * @param {object} data - Données du message
+   * @returns {Array<number>} Bytes MIDI
+   */
+  convertToMidiBytes(type, data) {
+    const channel = data.channel || 0;
+
+    switch (type.toLowerCase()) {
+      case 'noteon':
+        return [0x90 | channel, data.note, data.velocity];
+
+      case 'noteoff':
+        return [0x80 | channel, data.note, data.velocity || 0];
+
+      case 'cc':
+      case 'controlchange':
+        return [0xB0 | channel, data.controller, data.value];
+
+      case 'programchange':
+      case 'program':
+        return [0xC0 | channel, data.program || data.number];
+
+      case 'pitchbend':
+        const value = data.value || 0;
+        const lsb = value & 0x7F;
+        const msb = (value >> 7) & 0x7F;
+        return [0xE0 | channel, lsb, msb];
+
+      case 'poly aftertouch':
+      case 'polyaftertouch':
+        return [0xA0 | channel, data.note, data.pressure];
+
+      case 'channel aftertouch':
+      case 'channelaftertouch':
+        return [0xD0 | channel, data.pressure];
+
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Parse des bytes MIDI en format easymidi
+   * @param {Array<number>} bytes - Bytes MIDI
+   * @returns {Object|null} Message parsé {type, data}
+   */
+  parseMidiBytes(bytes) {
+    if (!bytes || bytes.length === 0) {
+      return null;
+    }
+
+    const status = bytes[0];
+    const command = status & 0xF0;
+    const channel = status & 0x0F;
+
+    switch (command) {
+      case 0x90: // Note On
+        if (bytes.length >= 3) {
+          return {
+            type: 'noteon',
+            data: { channel, note: bytes[1], velocity: bytes[2] }
+          };
+        }
+        break;
+
+      case 0x80: // Note Off
+        if (bytes.length >= 3) {
+          return {
+            type: 'noteoff',
+            data: { channel, note: bytes[1], velocity: bytes[2] }
+          };
+        }
+        break;
+
+      case 0xB0: // Control Change
+        if (bytes.length >= 3) {
+          return {
+            type: 'cc',
+            data: { channel, controller: bytes[1], value: bytes[2] }
+          };
+        }
+        break;
+
+      case 0xC0: // Program Change
+        if (bytes.length >= 2) {
+          return {
+            type: 'program',
+            data: { channel, number: bytes[1] }
+          };
+        }
+        break;
+
+      case 0xE0: // Pitch Bend
+        if (bytes.length >= 3) {
+          const value = (bytes[2] << 7) | bytes[1];
+          return {
+            type: 'pitchbend',
+            data: { channel, value }
+          };
+        }
+        break;
+
+      case 0xA0: // Poly Aftertouch
+        if (bytes.length >= 3) {
+          return {
+            type: 'poly aftertouch',
+            data: { channel, note: bytes[1], pressure: bytes[2] }
+          };
+        }
+        break;
+
+      case 0xD0: // Channel Aftertouch
+        if (bytes.length >= 2) {
+          return {
+            type: 'channel aftertouch',
+            data: { channel, pressure: bytes[1] }
+          };
+        }
+        break;
+    }
+
+    return null;
   }
 
   /**
@@ -309,7 +557,7 @@ class NetworkManager extends EventEmitter {
    * @returns {Array} Liste des instruments connectés
    */
   getConnectedDevices() {
-    return Array.from(this.connectedDevices.values());
+    return Array.from(this.connectedDevices.values()).map(({ session, ...device }) => device);
   }
 
   /**
