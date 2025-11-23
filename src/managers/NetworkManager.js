@@ -174,6 +174,7 @@ class NetworkManager extends EventEmitter {
 
     const pingPromises = [];
     const localIP = this.getLocalIP();
+    let ipFoundCount = 0;
 
     // Scanner les IPs de .1 à .254 (exclure .0 et .255)
     for (let i = 1; i <= 254; i++) {
@@ -199,7 +200,8 @@ class NetworkManager extends EventEmitter {
                 discovered: 'ping'
               };
               this.devices.set(ip, deviceInfo);
-              this.app.logger.debug(`[NetworkManager] IP found: ${ip}`);
+              ipFoundCount++;
+              this.app.logger.info(`[NetworkManager] ✅ IP found: ${ip}`);
             }
           }
         })
@@ -221,7 +223,45 @@ class NetworkManager extends EventEmitter {
       await Promise.all(pingPromises);
     }
 
-    this.app.logger.info(`[NetworkManager] Subnet scan completed - ${this.devices.size} total devices found`);
+    this.app.logger.info(`[NetworkManager] Subnet scan completed - ${ipFoundCount} IPs found by ping, ${this.devices.size} total devices`);
+
+    // Si aucune IP trouvée, ajouter des devices de test (environnement dev)
+    if (ipFoundCount === 0) {
+      this.app.logger.warn('[NetworkManager] No IPs found - adding test devices for development');
+      this.addTestDevicesIP(subnet);
+    }
+  }
+
+  /**
+   * Ajoute des IPs de test pour l'environnement de développement
+   * @param {string} subnet - Sous-réseau
+   */
+  addTestDevicesIP(subnet) {
+    const testIPs = [
+      { ip: `${subnet}.1`, name: 'Routeur (Test)' },
+      { ip: `${subnet}.10`, name: 'Ordinateur Bureau (Test)' },
+      { ip: `${subnet}.20`, name: 'Smartphone (Test)' },
+      { ip: `${subnet}.50`, name: 'Raspberry Pi (Test)' },
+      { ip: `${subnet}.100`, name: 'Imprimante (Test)' }
+    ];
+
+    testIPs.forEach(({ ip, name }) => {
+      if (!this.devices.has(ip)) {
+        this.devices.set(ip, {
+          ip,
+          address: ip,
+          port: '5004',
+          name,
+          type: 'network-ip',
+          manufacturer: 'Test',
+          protocol: 'IP',
+          discovered: 'test'
+        });
+        this.app.logger.debug(`[NetworkManager] Added test IP: ${ip}`);
+      }
+    });
+
+    this.app.logger.info(`[NetworkManager] ${testIPs.length} test IPs added`);
   }
 
   /**
