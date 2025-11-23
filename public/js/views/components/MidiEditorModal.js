@@ -2758,16 +2758,13 @@ class MidiEditorModal {
                 const actualCCHeight = ccSection.clientHeight;
                 this.log('debug', `Applied styles - Expected: notes=${newNotesHeight}px cc=${newCCHeight}px, Actual: notes=${actualNotesHeight}px cc=${actualCCHeight}px`);
 
-                // SOLUTION 1: Cacher scroll-controls-horizontal quand notes < 80px pour éviter débordement
+                // SOLUTION 1 MODIFIÉE: Garder le slider visible au-dessus de la section CC
                 const horizontalSlider = notesSection.querySelector('.scroll-controls-horizontal');
                 if (horizontalSlider) {
-                    if (newNotesHeight < 80) {
-                        horizontalSlider.style.display = 'none';
-                        this.log('debug', 'Horizontal slider hidden (notes < 80px)');
-                    } else {
-                        horizontalSlider.style.display = '';
-                        this.log('debug', 'Horizontal slider visible');
-                    }
+                    // Toujours visible, positionnement sticky pour rester en bas de notes-section
+                    horizontalSlider.style.position = 'sticky';
+                    horizontalSlider.style.bottom = '0';
+                    horizontalSlider.style.zIndex = '100';  // Au-dessus de tout
                 }
 
                 // Redimensionner les éditeurs pendant le drag pour que la grille soit visible
