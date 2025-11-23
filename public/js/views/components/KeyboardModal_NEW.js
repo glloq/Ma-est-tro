@@ -3,9 +3,10 @@
 // ============================================================================
 
 class KeyboardModalNew {
-    constructor(logger = null) {
+    constructor(logger = null, eventBus = null) {
         this.backend = window.api;
         this.logger = logger || console;
+        this.eventBus = eventBus || window.eventBus || null;
         this.isOpen = false;
 
         // État
@@ -79,6 +80,47 @@ class KeyboardModalNew {
         this.handleGlobalMouseUp = this.handleGlobalMouseUp.bind(this);
 
         this.container = null;
+
+        // Setup event listeners
+        this.setupEventListeners();
+    }
+
+    // ========================================================================
+    // ÉVÉNEMENTS
+    // ========================================================================
+
+    setupEventListeners() {
+        if (!this.eventBus) {
+            this.logger.warn('[KeyboardModal] No eventBus available - device list will not auto-refresh');
+            return;
+        }
+
+        // Écouter les connexions/déconnexions Bluetooth pour rafraîchir la liste
+        this.eventBus.on('bluetooth:connected', async (data) => {
+            this.logger.info('[KeyboardModal] Bluetooth device connected, refreshing device list...');
+            if (this.isOpen) {
+                await this.loadDevices();
+                this.populateDeviceSelect();
+            }
+        });
+
+        this.eventBus.on('bluetooth:disconnected', async (data) => {
+            this.logger.info('[KeyboardModal] Bluetooth device disconnected, refreshing device list...');
+            if (this.isOpen) {
+                await this.loadDevices();
+                this.populateDeviceSelect();
+            }
+        });
+
+        this.eventBus.on('bluetooth:unpaired', async (data) => {
+            this.logger.info('[KeyboardModal] Bluetooth device unpaired, refreshing device list...');
+            if (this.isOpen) {
+                await this.loadDevices();
+                this.populateDeviceSelect();
+            }
+        });
+
+        this.logger.debug('[KeyboardModal] Event listeners configured');
     }
 
     // ========================================================================
