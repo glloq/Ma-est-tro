@@ -128,16 +128,25 @@ class CCPitchbendEditor {
         const width = rect.width;
         const height = rect.height;
 
-        // LOGS DÉTAILLÉS pour debug
+        // LOGS DÉTAILLÉS pour debug - TOUTE LA HIÉRARCHIE
+        const ccSection = document.getElementById('cc-section');
+        const ccHeader = document.querySelector('.cc-section-header');
+        const ccContent = document.querySelector('.cc-section-content');
+        const ccLayout = document.querySelector('.cc-editor-layout');
         const containerHeight = this.container?.clientHeight || 0;
         const elementHeight = this.element.clientHeight;
         const canvasHeight = this.canvas?.height || 0;
-        console.log(`CCPitchbendEditor.resize() DÉTAILLÉ:
-  - Container: ${containerHeight}px
+
+        console.log(`CCPitchbendEditor.resize() HIÉRARCHIE COMPLÈTE:
+  - cc-section: ${ccSection?.clientHeight || 0}px
+  - cc-section-header: ${ccHeader?.clientHeight || 0}px  ← PREND DE L'ESPACE?
+  - cc-section-content: ${ccContent?.clientHeight || 0}px
+  - cc-editor-layout: ${ccLayout?.clientHeight || 0}px
+  - Container (.cc-editor-main): ${containerHeight}px
   - Element (.cc-pitchbend-editor): ${elementHeight}px
   - Canvas actuel: ${canvasHeight}px
   - getBoundingClientRect: ${width}x${height}
-  - Match: ${Math.abs(containerHeight - elementHeight) < 5 ? '✅' : '❌ MISMATCH!'}`);
+  - Match Container/Element: ${Math.abs(containerHeight - elementHeight) < 5 ? '✅' : '❌ MISMATCH!'}`);
 
         // Ne redimensionner que si on a des dimensions valides
         if (width > 0 && height > 100) {
