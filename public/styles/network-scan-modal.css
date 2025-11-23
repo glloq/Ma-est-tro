@@ -137,6 +137,7 @@
     display: flex !important;
     flex-direction: column !important;
     min-height: 0 !important;
+    height: calc(90vh - 180px) !important;
     max-height: calc(90vh - 180px) !important;
     -webkit-overflow-scrolling: touch !important;
 }
@@ -332,12 +333,12 @@
    ============================================================================ */
 
 .devices-list {
-    min-height: 120px;
-    max-height: 250px;
+    min-height: 180px;
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 4px;
     -webkit-overflow-scrolling: touch;
+    flex: 1 1 auto;
 }
 
 /* Style de la scrollbar pour les listes de devices */
