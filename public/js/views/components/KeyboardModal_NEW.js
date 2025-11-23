@@ -598,7 +598,24 @@ class KeyboardModalNew {
     async loadDevices() {
         try {
             const devices = await this.backend.listDevices();
-            this.devices = devices.filter(d => d.status === 2); // Actifs seulement
+            let activeDevices = devices.filter(d => d.status === 2); // Actifs seulement
+
+            // Dédupliquer par nom (au cas où le backend n'aurait pas tout dédupliqué)
+            const uniqueDevices = [];
+            const seenNames = new Set();
+
+            for (const device of activeDevices) {
+                if (!seenNames.has(device.name)) {
+                    seenNames.add(device.name);
+                    uniqueDevices.push(device);
+                    this.logger.debug('[KeyboardModal] ✓ Device kept:', device.name);
+                } else {
+                    this.logger.debug('[KeyboardModal] ✗ Device skipped (duplicate):', device.name);
+                }
+            }
+
+            this.devices = uniqueDevices;
+            this.logger.info(`[KeyboardModal] Loaded ${activeDevices.length} → ${uniqueDevices.length} unique devices`);
 
             // Ajouter le périphérique virtuel si activé dans les settings
             try {
