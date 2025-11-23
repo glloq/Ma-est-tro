@@ -2556,6 +2556,12 @@ class MidiEditorModal {
         const ccSectionHeader = document.getElementById('cc-section-header');
         if (ccSectionHeader) {
             ccSectionHeader.addEventListener('click', (e) => {
+                // Ignorer les clics sur le bouton de resize et ses enfants
+                if (e.target.closest('#cc-resize-btn') || e.target.closest('.cc-resize-btn')) {
+                    this.log('debug', 'Click on resize button ignored by header');
+                    return;
+                }
+
                 e.preventDefault();
                 this.toggleCCSection();
             });
