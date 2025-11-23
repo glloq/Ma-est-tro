@@ -2688,13 +2688,20 @@ class MidiEditorModal {
                 startY = e.clientY;
                 startNotesHeight = notesSection.clientHeight;
 
-                // Capturer l'espace disponible RÉEL (pas la hauteur actuelle du container)
+                // Capturer l'espace disponible RÉEL depuis modal-dialog (hauteur fixe 95vh)
+                const modalDialog = this.container.closest('.modal-dialog');
                 const modalBody = this.container.querySelector('.modal-body');
+                const modalHeader = this.container.querySelector('.modal-header');
                 const toolbarHeight = this.container.querySelector('.editor-toolbar')?.clientHeight || 0;
                 const channelsToolbarHeight = this.container.querySelector('.channels-toolbar')?.clientHeight || 0;
-                availableHeight = modalBody.clientHeight - toolbarHeight - channelsToolbarHeight;
 
-                this.log('info', `Resize started at Y=${startY}, notesHeight=${startNotesHeight}px, availableHeight=${availableHeight}px`);
+                const modalDialogHeight = modalDialog?.clientHeight || 0;
+                const modalHeaderHeight = modalHeader?.clientHeight || 0;
+
+                // Espace disponible = hauteur totale du dialog - header - toolbars
+                availableHeight = modalDialogHeight - modalHeaderHeight - toolbarHeight - channelsToolbarHeight;
+
+                this.log('info', `Resize: modalDialog=${modalDialogHeight}px, modalHeader=${modalHeaderHeight}px, toolbars=${toolbarHeight + channelsToolbarHeight}px, available=${availableHeight}px`);
 
                 // Obtenir les flex-grow actuels
                 const notesStyle = window.getComputedStyle(notesSection);
@@ -2734,6 +2741,11 @@ class MidiEditorModal {
                 notesSection.style.setProperty('flex', 'none', 'important');
                 ccSection.style.setProperty('height', `${newCCHeight}px`, 'important');
                 ccSection.style.setProperty('flex', 'none', 'important');
+
+                // Vérifier si les styles sont réellement appliqués
+                const actualNotesHeight = notesSection.clientHeight;
+                const actualCCHeight = ccSection.clientHeight;
+                this.log('debug', `Applied styles - Expected: notes=${newNotesHeight}px cc=${newCCHeight}px, Actual: notes=${actualNotesHeight}px cc=${actualCCHeight}px`);
 
                 e.preventDefault();
             };
