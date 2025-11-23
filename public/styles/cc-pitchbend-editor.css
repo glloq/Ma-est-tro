@@ -254,6 +254,47 @@
     color: #fff;
 }
 
+/* Bouton de suppression */
+.cc-delete-btn {
+    padding: 6px 12px;
+    background: #c62828;
+    border: 1px solid #b71c1c;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.cc-delete-btn:hover:not(:disabled) {
+    background: #d32f2f;
+    border-color: #c62828;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.cc-delete-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.cc-delete-btn:disabled {
+    background: #424242;
+    border-color: #616161;
+    color: #757575;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.cc-delete-btn .btn-label {
+    font-size: 10px;
+}
+
 /* Sélecteur de canal pour l'éditeur CC (horizontal dans toolbar) */
 .cc-channel-selector,
 .cc-channel-selector-horizontal {

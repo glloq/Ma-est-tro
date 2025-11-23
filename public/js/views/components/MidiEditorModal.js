@@ -823,6 +823,9 @@ class MidiEditorModal {
                 this.updateEditorChannelSelector();
             }
         }
+
+        // Mettre à jour l'état du bouton de suppression après le changement de type
+        this.updateDeleteButtonState();
     }
 
     /**
@@ -838,6 +841,37 @@ class MidiEditorModal {
 
         this.ccEditor.setChannel(activeChannel);
         this.log('info', `Canal CC mis à jour: ${activeChannel}`);
+    }
+
+    /**
+     * Supprimer les éléments sélectionnés (CC/Velocity)
+     */
+    deleteSelectedCCVelocity() {
+        if (this.currentCCType === 'velocity' && this.velocityEditor) {
+            this.velocityEditor.deleteSelected();
+        } else if (this.ccEditor) {
+            this.ccEditor.deleteSelected();
+        }
+
+        // Mettre à jour l'état du bouton de suppression
+        this.updateDeleteButtonState();
+    }
+
+    /**
+     * Mettre à jour l'état du bouton de suppression
+     */
+    updateDeleteButtonState() {
+        const deleteBtn = this.container?.querySelector('#cc-delete-btn');
+        if (!deleteBtn) return;
+
+        let hasSelection = false;
+        if (this.currentCCType === 'velocity' && this.velocityEditor) {
+            hasSelection = this.velocityEditor.selectedNotes.size > 0;
+        } else if (this.ccEditor) {
+            hasSelection = this.ccEditor.selectedEvents.size > 0;
+        }
+
+        deleteBtn.disabled = !hasSelection;
     }
 
     /**
@@ -890,6 +924,12 @@ class MidiEditorModal {
         this.ccEditor.setChannel(activeChannel);
 
         this.log('info', `CC Editor initialized - Type: ${this.currentCCType}, Channel: ${activeChannel + 1}, Type channels: [${usedChannels.map(c => c + 1).join(', ')}], All CC channels: [${allChannels.map(c => c + 1).join(', ')}]`);
+
+        // Ajouter un écouteur pour mettre à jour le bouton de suppression lors des interactions
+        container.addEventListener('mouseup', () => {
+            // Utiliser setTimeout pour laisser la sélection se mettre à jour d'abord
+            setTimeout(() => this.updateDeleteButtonState(), 0);
+        });
 
         // Attendre que le layout flex soit complètement calculé avant de resize
         // Utiliser requestAnimationFrame en boucle jusqu'à ce que l'élément ait une hauteur valide
@@ -1030,6 +1070,12 @@ class MidiEditorModal {
 
         // Mettre à jour le sélecteur de canal
         this.updateEditorChannelSelector();
+
+        // Ajouter un écouteur pour mettre à jour le bouton de suppression lors des interactions
+        container.addEventListener('mouseup', () => {
+            // Utiliser setTimeout pour laisser la sélection se mettre à jour d'abord
+            setTimeout(() => this.updateDeleteButtonState(), 0);
+        });
 
         // Attendre que le layout soit prêt
         this.waitForVelocityEditorLayout();
@@ -1760,6 +1806,12 @@ class MidiEditorModal {
 
                                     <div class="cc-toolbar-divider"></div>
 
+                                    <button class="cc-delete-btn" id="cc-delete-btn" title="Supprimer la sélection (Del)" disabled>
+                                        🗑️ <span class="btn-label">Supprimer</span>
+                                    </button>
+
+                                    <div class="cc-toolbar-divider"></div>
+
                                     <label class="cc-toolbar-label">Canal:</label>
                                     <div class="cc-channel-selector-horizontal" id="editor-channel-selector">
                                         <!-- Les canaux seront ajoutés dynamiquement -->
@@ -2449,7 +2501,13 @@ class MidiEditorModal {
             // Delete ou Backspace = Delete
             else if (e.key === 'Delete' || e.key === 'Backspace') {
                 e.preventDefault();
-                this.deleteSelectedNotes();
+                // Si la section CC/Velocity est ouverte, supprimer les éléments CC/Velocity sélectionnés
+                if (this.ccSectionExpanded) {
+                    this.deleteSelectedCCVelocity();
+                } else {
+                    // Sinon, supprimer les notes sélectionnées
+                    this.deleteSelectedNotes();
+                }
             }
         };
 
@@ -2605,6 +2663,15 @@ class MidiEditorModal {
                 }
             });
         });
+
+        // Bouton de suppression pour CC/Velocity
+        const ccDeleteBtn = this.container.querySelector('#cc-delete-btn');
+        if (ccDeleteBtn) {
+            ccDeleteBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.deleteSelectedCCVelocity();
+            });
+        }
 
         // Les event listeners pour les boutons de canal sont attachés
         // dans attachEditorChannelListeners() appelé depuis updateEditorChannelSelector()

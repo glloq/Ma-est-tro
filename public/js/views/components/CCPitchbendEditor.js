@@ -196,14 +196,26 @@ class CCPitchbendEditor {
 
     setCC(ccType) {
         this.currentCC = ccType;
+        this.cancelInteractions(); // Annuler actions en cours lors changement type CC
         this.isDirty = true;
         this.renderThrottled();
     }
 
     setChannel(channel) {
         this.currentChannel = channel;
+        this.cancelInteractions(); // Annuler actions en cours lors changement canal
         this.isDirty = true;
         this.renderThrottled();
+    }
+
+    cancelInteractions() {
+        // Annuler toutes les interactions en cours
+        this.lineStart = null;
+        this.selectionStart = null;
+        this.dragStart = null;
+        this.isDrawing = false;
+        this.lastDrawPosition = null;
+        this.lastDrawTicks = null;
     }
 
     // === Conversion coordonnées ===
@@ -498,6 +510,23 @@ class CCPitchbendEditor {
         this.getFilteredEvents().forEach(event => {
             this.selectedEvents.add(event.id);
         });
+        this.renderThrottled();
+    }
+
+    deleteSelected() {
+        if (this.selectedEvents.size === 0) return;
+
+        // Supprimer les événements sélectionnés
+        this.events = this.events.filter(event => !this.selectedEvents.has(event.id));
+
+        // Effacer la sélection
+        this.selectedEvents.clear();
+
+        // Sauvegarder l'état et notifier le changement
+        this.saveState();
+        if (this.options.onChange) {
+            this.options.onChange();
+        }
         this.renderThrottled();
     }
 
