@@ -115,8 +115,14 @@ class CCPitchbendEditor {
     }
 
     resize() {
-        // Forcer le reflow pour obtenir les dimensions finales
-        const forceReflow = this.element.offsetHeight;
+        // CORRECTION: Forcer reflow de la cascade complète (container parents + element)
+        if (this.container) {
+            void this.container.offsetHeight;
+        }
+        if (this.container && this.container.parentElement) {
+            void this.container.parentElement.offsetHeight;
+        }
+        void this.element.offsetHeight;
 
         const rect = this.element.getBoundingClientRect();
         const width = rect.width;
@@ -126,6 +132,9 @@ class CCPitchbendEditor {
 
         // Ne redimensionner que si on a des dimensions valides
         if (width > 0 && height > 100) {
+            // Stocker l'ancienne hauteur pour détecter les changements importants
+            const oldHeight = this.canvas.height;
+
             this.canvas.width = width;
             this.canvas.height = height;
 
@@ -139,6 +148,18 @@ class CCPitchbendEditor {
             this.gridDirty = true;
 
             this.renderThrottled();
+
+            // CORRECTION: Vérification que la hauteur est stable après 1 frame
+            if (oldHeight > 0 && Math.abs(height - oldHeight) > 50) {
+                // Changement important détecté, vérifier la stabilité
+                requestAnimationFrame(() => {
+                    const newHeight = this.element.getBoundingClientRect().height;
+                    if (Math.abs(newHeight - height) > 2) {
+                        console.warn(`CCPitchbendEditor: Height unstable (${height}px → ${newHeight}px), re-resizing...`);
+                        this.resize();  // Rappeler avec la vraie hauteur
+                    }
+                });
+            }
         } else {
             console.warn(`CCPitchbendEditor.resize(): Invalid dimensions ${width}x${height}, skipping`);
         }
