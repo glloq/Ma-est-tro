@@ -61,14 +61,15 @@ class NetworkManager extends EventEmitter {
   /**
    * Scan du réseau local pour trouver des instruments
    * @param {number} timeout - Timeout en secondes
+   * @param {boolean} fullScan - Si true, scan toutes les IPs du subnet (pas seulement RTP-MIDI)
    * @returns {Promise<Array>} Liste des instruments trouvés
    */
-  async startScan(timeout = 5) {
+  async startScan(timeout = 5, fullScan = false) {
     if (this.scanning) {
       throw new Error('Scan already in progress');
     }
 
-    this.app.logger.info(`Starting network scan for ${timeout}s...`);
+    this.app.logger.info(`Starting network scan for ${timeout}s... (fullScan: ${fullScan})`);
     this.scanning = true;
     this.devices.clear();
 
@@ -79,9 +80,10 @@ class NetworkManager extends EventEmitter {
       // Méthode 1: Scan mDNS pour services MIDI
       await this.scanMDNS(timeout);
 
-      // Méthode 2: Scan de ports sur le sous-réseau local
-      // Note: Cette méthode peut être lente et devrait être optimisée en production
-      // Pour l'instant, on utilise seulement mDNS
+      // Méthode 2: Scan complet du subnet (toutes les IPs)
+      if (fullScan) {
+        await this.scanSubnetIPs(subnet, timeout);
+      }
 
       const devices = Array.from(this.devices.values());
 
@@ -160,6 +162,91 @@ class NetworkManager extends EventEmitter {
         this.app.logger.debug(`mDNS device found: ${name} at ${ip}:${port}`);
       }
     }
+  }
+
+  /**
+   * Scan complet du subnet pour trouver toutes les IPs accessibles
+   * @param {string} subnet - Sous-réseau à scanner (ex: "192.168.1")
+   * @param {number} timeout - Timeout en secondes
+   */
+  async scanSubnetIPs(subnet, timeout) {
+    this.app.logger.info(`[NetworkManager] Scanning full subnet ${subnet}.0/24...`);
+
+    const startTime = Date.now();
+    const maxDuration = timeout * 1000;
+    const pingPromises = [];
+
+    // Scanner les IPs de .1 à .254 (exclure .0 et .255)
+    for (let i = 1; i <= 254; i++) {
+      const ip = `${subnet}.${i}`;
+
+      // Éviter de scanner notre propre IP
+      const localIP = this.getLocalIP();
+      if (ip === localIP) continue;
+
+      // Vérifier si on a dépassé le timeout
+      if (Date.now() - startTime > maxDuration) {
+        break;
+      }
+
+      // Lancer le ping de manière asynchrone
+      const pingPromise = this.checkReachability(ip)
+        .then(isReachable => {
+          if (isReachable) {
+            // Ne pas ajouter si déjà découvert via mDNS
+            if (!this.devices.has(ip)) {
+              const deviceInfo = {
+                ip: ip,
+                address: ip,
+                port: '5004',
+                name: `Device IP (${ip})`,
+                type: 'network-ip',
+                manufacturer: 'Unknown',
+                protocol: 'IP',
+                discovered: 'ping'
+              };
+              this.devices.set(ip, deviceInfo);
+              this.app.logger.debug(`[NetworkManager] IP found: ${ip}`);
+            }
+          }
+        })
+        .catch(() => {
+          // Ignorer les erreurs de ping
+        });
+
+      pingPromises.push(pingPromise);
+
+      // Traiter par batch de 20 pour éviter de surcharger le réseau
+      if (pingPromises.length >= 20) {
+        await Promise.all(pingPromises);
+        pingPromises.length = 0; // Vider le tableau
+      }
+    }
+
+    // Attendre les derniers pings
+    if (pingPromises.length > 0) {
+      await Promise.all(pingPromises);
+    }
+
+    this.app.logger.info(`[NetworkManager] Subnet scan completed`);
+  }
+
+  /**
+   * Obtient l'adresse IP locale
+   * @returns {string} Adresse IP locale
+   */
+  getLocalIP() {
+    const interfaces = os.networkInterfaces();
+
+    for (const name in interfaces) {
+      for (const iface of interfaces[name]) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          return iface.address;
+        }
+      }
+    }
+
+    return '';
   }
 
   /**
