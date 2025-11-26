@@ -1,5 +1,6 @@
 // ============================================================================
 // Fichier: KeyboardModal_NEW.js - VERSION DIVs (Pas de Canvas!)
+// Version: 1.1.0 - Support i18n
 // ============================================================================
 
 class KeyboardModalNew {
@@ -8,6 +9,9 @@ class KeyboardModalNew {
         this.logger = logger || console;
         this.eventBus = eventBus || window.eventBus || null;
         this.isOpen = false;
+
+        // i18n support
+        this.localeUnsubscribe = null;
 
         // État
         this.devices = [];
@@ -86,6 +90,78 @@ class KeyboardModalNew {
     }
 
     // ========================================================================
+    // I18N SUPPORT
+    // ========================================================================
+
+    /**
+     * Helper pour traduire une clé
+     * @param {string} key - Clé de traduction
+     * @param {Object} params - Paramètres d'interpolation
+     * @returns {string} - Texte traduit
+     */
+    t(key, params = {}) {
+        return typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
+    }
+
+    /**
+     * Met à jour le contenu traduit de la modale
+     */
+    updateTranslations() {
+        if (!this.container) return;
+
+        // Titre
+        const title = this.container.querySelector('.modal-header h2');
+        if (title) title.textContent = `🎹 ${this.t('keyboard.title')}`;
+
+        // Vélocité
+        const velocityLabel = this.container.querySelector('.velocity-label-vertical');
+        if (velocityLabel) velocityLabel.textContent = this.t('keyboard.velocity');
+
+        // Instrument label
+        const instrumentLabel = this.container.querySelector('.control-group label');
+        if (instrumentLabel && instrumentLabel.textContent.includes('Instrument')) {
+            instrumentLabel.textContent = this.t('keyboard.instrument');
+        }
+
+        // Octave display
+        const octaveDisplay = document.getElementById('keyboard-octave-display');
+        if (octaveDisplay) {
+            const display = this.octaveOffset > 0 ? `+${this.octaveOffset}` : this.octaveOffset;
+            octaveDisplay.textContent = this.t('keyboard.octave', { offset: display });
+        }
+
+        // Layout clavier label
+        const layoutLabels = this.container.querySelectorAll('.control-group label');
+        layoutLabels.forEach(label => {
+            if (label.textContent.includes('Layout') || label.textContent.includes('clavier')) {
+                label.textContent = this.t('keyboard.layout');
+            }
+        });
+
+        // PC Keys label
+        const pcKeysLabel = this.container.querySelector('.info-label');
+        if (pcKeysLabel) pcKeysLabel.textContent = this.t('keyboard.pcKeys');
+
+        // Keyboard help text
+        const helpText = document.getElementById('keyboard-help-text');
+        if (helpText) {
+            helpText.textContent = this.keyboardLayout === 'azerty'
+                ? this.t('keyboard.azertyHelp')
+                : this.t('keyboard.qwertyHelp');
+        }
+
+        // Bouton Fermer
+        const closeBtn = document.getElementById('keyboard-close-btn-footer');
+        if (closeBtn) closeBtn.textContent = this.t('common.close');
+
+        // Select par défaut
+        const deviceSelect = document.getElementById('keyboard-device-select');
+        if (deviceSelect && deviceSelect.options.length > 0) {
+            deviceSelect.options[0].textContent = this.t('common.select');
+        }
+    }
+
+    // ========================================================================
     // ÉVÉNEMENTS
     // ========================================================================
 
@@ -143,6 +219,14 @@ class KeyboardModalNew {
         // Attach events
         this.attachEvents();
 
+        // Subscribe to locale changes
+        if (typeof i18n !== 'undefined') {
+            this.localeUnsubscribe = i18n.onLocaleChange(() => {
+                this.updateTranslations();
+                this.populateDeviceSelect();
+            });
+        }
+
         this.logger.info('[KeyboardModal] Opened');
     }
 
@@ -150,6 +234,12 @@ class KeyboardModalNew {
         if (!this.isOpen) return;
 
         this.detachEvents();
+
+        // Unsubscribe from locale changes
+        if (this.localeUnsubscribe) {
+            this.localeUnsubscribe();
+            this.localeUnsubscribe = null;
+        }
 
         // Stop toutes les notes actives
         this.activeNotes.forEach(note => this.stopNote(note));
@@ -168,12 +258,14 @@ class KeyboardModalNew {
     }
 
     createModal() {
+        const display = this.octaveOffset > 0 ? `+${this.octaveOffset}` : this.octaveOffset;
+
         this.container = document.createElement('div');
         this.container.className = 'keyboard-modal';
         this.container.innerHTML = `
             <div class="modal-dialog">
                 <div class="modal-header">
-                    <h2>🎹 Clavier MIDI Virtuel</h2>
+                    <h2>🎹 ${this.t('keyboard.title')}</h2>
                     <button class="modal-close" id="keyboard-close-btn">&times;</button>
                 </div>
 
@@ -181,7 +273,7 @@ class KeyboardModalNew {
                     <div class="keyboard-layout">
                         <!-- Slider vélocité vertical à gauche -->
                         <div class="velocity-control-vertical">
-                            <div class="velocity-label-vertical">Vélocité</div>
+                            <div class="velocity-label-vertical">${this.t('keyboard.velocity')}</div>
                             <div class="velocity-slider-wrapper">
                                 <input type="range"
                                        id="keyboard-velocity"
@@ -199,30 +291,30 @@ class KeyboardModalNew {
                             <div class="keyboard-header">
                                 <div class="keyboard-controls">
                                     <div class="control-group">
-                                        <label>Instrument:</label>
+                                        <label>${this.t('keyboard.instrument')}</label>
                                         <select class="device-select" id="keyboard-device-select">
-                                            <option value="">-- Sélectionner --</option>
+                                            <option value="">${this.t('common.select')}</option>
                                         </select>
                                     </div>
 
                                     <div class="control-group octave-controls">
                                         <button class="btn-octave-down" id="keyboard-octave-down">◄</button>
-                                        <span class="octave-display" id="keyboard-octave-display">Octave: 0</span>
+                                        <span class="octave-display" id="keyboard-octave-display">${this.t('keyboard.octave', { offset: display })}</span>
                                         <button class="btn-octave-up" id="keyboard-octave-up">►</button>
                                     </div>
 
                                     <div class="control-group">
-                                        <label>Layout clavier:</label>
+                                        <label>${this.t('keyboard.layout')}</label>
                                         <select class="layout-select" id="keyboard-layout-select">
-                                            <option value="azerty">AZERTY</option>
-                                            <option value="qwerty">QWERTY</option>
+                                            <option value="azerty">${this.t('keyboard.layoutAzerty')}</option>
+                                            <option value="qwerty">${this.t('keyboard.layoutQwerty')}</option>
                                         </select>
                                     </div>
 
                                     <div class="control-group">
                                         <div class="info-item">
-                                            <span class="info-label">Touches PC:</span>
-                                            <span class="info-value" id="keyboard-help-text">SDFGHJKLM (blanches) / ZETYUOP (noires)</span>
+                                            <span class="info-label">${this.t('keyboard.pcKeys')}</span>
+                                            <span class="info-value" id="keyboard-help-text">${this.t('keyboard.azertyHelp')}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -236,7 +328,7 @@ class KeyboardModalNew {
                 </div>
 
                 <div class="modal-footer">
-                    <button class="btn-secondary" id="keyboard-close-btn-footer">Fermer</button>
+                    <button class="btn-secondary" id="keyboard-close-btn-footer">${this.t('common.close')}</button>
                 </div>
             </div>
         `;
@@ -393,14 +485,14 @@ class KeyboardModalNew {
         document.getElementById('keyboard-octave-up')?.addEventListener('click', () => {
             this.octaveOffset = Math.min(3, this.octaveOffset + 1);
             const display = this.octaveOffset > 0 ? `+${this.octaveOffset}` : this.octaveOffset;
-            document.getElementById('keyboard-octave-display').textContent = `Octave: ${display}`;
+            document.getElementById('keyboard-octave-display').textContent = this.t('keyboard.octave', { offset: display });
             this.regeneratePianoKeys();
         });
 
         document.getElementById('keyboard-octave-down')?.addEventListener('click', () => {
             this.octaveOffset = Math.max(-3, this.octaveOffset - 1);
             const display = this.octaveOffset > 0 ? `+${this.octaveOffset}` : this.octaveOffset;
-            document.getElementById('keyboard-octave-display').textContent = `Octave: ${display}`;
+            document.getElementById('keyboard-octave-display').textContent = this.t('keyboard.octave', { offset: display });
             this.regeneratePianoKeys();
         });
 
@@ -424,11 +516,9 @@ class KeyboardModalNew {
             // Mettre à jour le texte d'aide
             const helpText = document.getElementById('keyboard-help-text');
             if (helpText) {
-                if (this.keyboardLayout === 'azerty') {
-                    helpText.textContent = 'SDFGHJKLM (blanches) / ZETYUOP (noires)';
-                } else {
-                    helpText.textContent = 'SDFGHJKL; (blanches) / WETYUOP (noires)';
-                }
+                helpText.textContent = this.keyboardLayout === 'azerty'
+                    ? this.t('keyboard.azertyHelp')
+                    : this.t('keyboard.qwertyHelp');
             }
         });
 
@@ -552,7 +642,7 @@ class KeyboardModalNew {
             // Si c'est le périphérique virtuel, envoyer aux logs
             if (this.selectedDevice.isVirtual) {
                 const noteName = this.getNoteNameFromNumber(note);
-                const message = `🎹 [Virtual] Note ON: ${noteName} (${note}) velocity=${this.velocity}`;
+                const message = `🎹 ${this.t('keyboard.virtualNoteOn', { note: noteName, number: note, velocity: this.velocity })}`;
                 if (this.logger && this.logger.info) {
                     this.logger.info(message);
                 } else {
@@ -580,7 +670,7 @@ class KeyboardModalNew {
             // Si c'est le périphérique virtuel, envoyer aux logs
             if (this.selectedDevice.isVirtual) {
                 const noteName = this.getNoteNameFromNumber(note);
-                const message = `🎹 [Virtual] Note OFF: ${noteName} (${note})`;
+                const message = `🎹 ${this.t('keyboard.virtualNoteOff', { note: noteName, number: note })}`;
                 if (this.logger && this.logger.info) {
                     this.logger.info(message);
                 } else {
@@ -665,11 +755,12 @@ class KeyboardModalNew {
                 if (saved) {
                     const settings = JSON.parse(saved);
                     if (settings.virtualInstrument) {
+                        const virtualName = `🎹 ${this.t('keyboard.virtualInstrument')}`;
                         const virtualDevice = {
                             id: 'virtual-instrument',
                             device_id: 'virtual-instrument',
-                            name: '🎹 Instrument Virtuel',
-                            displayName: '🎹 Instrument Virtuel',
+                            name: virtualName,
+                            displayName: virtualName,
                             type: 'Virtual',
                             status: 2,
                             connected: true,
@@ -726,7 +817,7 @@ class KeyboardModalNew {
         const select = document.getElementById('keyboard-device-select');
         if (!select) return;
 
-        select.innerHTML = '<option value="">-- Sélectionner --</option>';
+        select.innerHTML = `<option value="">${this.t('common.select')}</option>`;
 
         this.devices.forEach(device => {
             const option = document.createElement('option');

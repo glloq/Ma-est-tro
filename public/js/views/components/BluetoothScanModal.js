@@ -1,6 +1,6 @@
 // ============================================================================
 // Fichier: frontend/js/views/components/BluetoothScanModal.js
-// Version: v1.0.0
+// Version: v1.1.0 (i18n support)
 // Date: 2025-11-16
 // ============================================================================
 // Description:
@@ -8,6 +8,9 @@
 //   - Affichage des périphériques disponibles
 //   - Appairage et connexion
 //   - Interface utilisateur intuitive
+//   - Support multilingue (i18n)
+//
+// Dépendance: i18n doit être chargé avant ce script (js/i18n/I18n.js)
 // ============================================================================
 
 class BluetoothScanModal {
@@ -25,7 +28,7 @@ class BluetoothScanModal {
 
         this.setupEventListeners();
 
-        this.logger.info('BluetoothScanModal', '✓ Modal initialized v1.0.0');
+        this.logger.info('BluetoothScanModal', '✓ Modal initialized v1.1.0 (i18n)');
     }
 
     // ========================================================================
@@ -84,6 +87,11 @@ class BluetoothScanModal {
         this.eventBus.on('bluetooth:disconnected', (data) => {
             this.handleDeviceDisconnected(data);
         });
+
+        // Écouter les changements de langue
+        if (typeof i18n !== 'undefined') {
+            i18n.onLocaleChange(() => this.updateModalContent());
+        }
 
         this.logger.debug('BluetoothScanModal', 'Event listeners configured');
     }
@@ -186,10 +194,12 @@ class BluetoothScanModal {
      * Rendu du contenu de la modal
      */
     renderModalContent() {
+        const t = (key, params) => typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
+
         return `
             <div class="modal-dialog modal-lg">
                 <div class="modal-header">
-                    <h2>📡 Recherche d'instruments Bluetooth</h2>
+                    <h2>📡 ${t('bluetooth.title')}</h2>
                     <button class="modal-close" data-action="close">&times;</button>
                 </div>
 
@@ -200,10 +210,10 @@ class BluetoothScanModal {
                     <!-- Section scan -->
                     <div class="scan-section">
                         <div class="scan-header">
-                            <h3>Périphériques disponibles</h3>
+                            <h3>${t('bluetooth.availableDevices')}</h3>
                             <button class="btn-scan ${this.scanning ? 'scanning' : ''}"
                                     data-action="scan" ${this.scanning ? 'disabled' : ''}>
-                                ${this.scanning ? '🔄 Scan en cours...' : '🔍 Rechercher'}
+                                ${this.scanning ? `🔄 ${t('bluetooth.scanning')}` : `🔍 ${t('common.search')}`}
                             </button>
                         </div>
 
@@ -215,7 +225,7 @@ class BluetoothScanModal {
                     <!-- Section appareils appairés -->
                     ${this.pairedDevices.length > 0 ? `
                         <div class="paired-section">
-                            <h3>Appareils appairés</h3>
+                            <h3>${t('bluetooth.pairedDevices')}</h3>
                             <div class="devices-list" id="bluetoothPairedDevices">
                                 ${this.renderPairedDevices()}
                             </div>
@@ -225,14 +235,13 @@ class BluetoothScanModal {
                     <!-- Informations -->
                     <div class="info-section">
                         <p>
-                            💡 <strong>Astuce:</strong> Assurez-vous que votre instrument Bluetooth est en mode appairage
-                            et à portée (10-15m max) avant de lancer la recherche.
+                            💡 <strong>${t('bluetooth.tipLabel')}</strong> ${t('bluetooth.tip')}
                         </p>
                     </div>
                 </div>
 
                 <div class="modal-footer">
-                    <button class="btn-secondary" data-action="close">Fermer</button>
+                    <button class="btn-secondary" data-action="close">${t('common.close')}</button>
                 </div>
             </div>
         `;
@@ -242,12 +251,14 @@ class BluetoothScanModal {
      * Rendu de la liste des périphériques disponibles
      */
     renderAvailableDevices() {
+        const t = (key, params) => typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
+
         if (this.scanning) {
             return `
                 <div class="devices-scanning">
                     <div class="spinner"></div>
-                    <p>Recherche de périphériques Bluetooth...</p>
-                    <p class="text-muted">Cette opération peut prendre quelques secondes</p>
+                    <p>${t('bluetooth.searchingDevices')}</p>
+                    <p class="text-muted">${t('bluetooth.operationMayTakeTime')}</p>
                 </div>
             `;
         }
@@ -256,8 +267,8 @@ class BluetoothScanModal {
             return `
                 <div class="devices-empty">
                     <div class="empty-icon">🔍</div>
-                    <p>Aucun périphérique détecté</p>
-                    <p class="text-muted">Cliquez sur "Rechercher" pour scanner</p>
+                    <p>${t('bluetooth.noDeviceDetected')}</p>
+                    <p class="text-muted">${t('bluetooth.clickToScan')}</p>
                 </div>
             `;
         }
@@ -273,9 +284,11 @@ class BluetoothScanModal {
      * Rendu d'un périphérique disponible
      */
     renderAvailableDevice(device) {
-        const deviceName = device.name || 'Appareil Bluetooth';
+        const t = (key, params) => typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
+
+        const deviceName = device.name || t('bluetooth.device');
         const deviceNameEscaped = this.escapeHtml(deviceName);
-        const deviceAddress = device.address || device.id || 'Adresse inconnue';
+        const deviceAddress = device.address || device.id || t('bluetooth.unknownAddress');
 
         return `
             <div class="device-card bluetooth-device" data-device-id="${device.id || device.address}">
@@ -283,14 +296,14 @@ class BluetoothScanModal {
                 <div class="device-info">
                     <div class="device-name">${deviceNameEscaped}</div>
                     <div class="device-address">${deviceAddress}</div>
-                    ${device.signal ? `<div class="device-signal">📶 Signal: ${device.signal}%</div>` : ''}
-                    ${device.rssi ? `<div class="device-signal">📡 RSSI: ${device.rssi} dBm</div>` : ''}
+                    ${device.signal ? `<div class="device-signal">📶 ${t('bluetooth.signal')}: ${device.signal}%</div>` : ''}
+                    ${device.rssi ? `<div class="device-signal">📡 ${t('bluetooth.rssi')}: ${device.rssi} dBm</div>` : ''}
                 </div>
                 <div class="device-actions">
                     <button class="btn-pair" data-action="pair"
                             data-device-id="${device.id || device.address}"
                             data-device-name="${deviceName}">
-                        🔗 Appairer
+                        🔗 ${t('common.pair')}
                     </button>
                 </div>
             </div>
@@ -301,8 +314,10 @@ class BluetoothScanModal {
      * Rendu de la liste des périphériques appairés
      */
     renderPairedDevices() {
+        const t = (key, params) => typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
+
         if (this.pairedDevices.length === 0) {
-            return '<p class="text-muted">Aucun appareil appairé</p>';
+            return `<p class="text-muted">${t('bluetooth.noDevicePaired')}</p>`;
         }
 
         return `
@@ -316,6 +331,8 @@ class BluetoothScanModal {
      * Rendu d'un périphérique appairé
      */
     renderPairedDevice(device) {
+        const t = (key, params) => typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
+
         const deviceName = this.escapeHtml(device.name || device.address);
         const isConnected = device.connected === true;
 
@@ -326,24 +343,26 @@ class BluetoothScanModal {
                     <div class="device-name">${deviceName}</div>
                     <div class="device-address">${device.address}</div>
                     <div class="device-status">
-                        <span class="status-badge ${isConnected ? 'connected' : 'paired'}">${isConnected ? '🟢 Connecté' : '✓ Appairé'}</span>
+                        <span class="status-badge ${isConnected ? 'connected' : 'paired'}">
+                            ${isConnected ? `🟢 ${t('bluetooth.connected')}` : `✓ ${t('bluetooth.paired')}`}
+                        </span>
                     </div>
                 </div>
                 <div class="device-actions">
                     ${isConnected ? `
                         <button class="btn-disconnect" data-action="disconnect"
                                 data-device-address="${device.address}">
-                            🔌 Déconnecter
+                            🔌 ${t('common.disconnect')}
                         </button>
                     ` : `
                         <button class="btn-connect" data-action="connect"
                                 data-device-address="${device.address}">
-                            🔌 Connecter
+                            🔌 ${t('common.connect')}
                         </button>
                     `}
                     <button class="btn-unpair" data-action="unpair"
                             data-device-address="${device.address}">
-                        Oublier
+                        ${t('common.forget')}
                     </button>
                 </div>
             </div>
@@ -504,14 +523,16 @@ class BluetoothScanModal {
      * Oublie un périphérique appairé
      */
     unpairDevice(deviceAddress) {
+        const t = (key, params) => typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
+
         // Trouver le nom du périphérique
         const device = this.pairedDevices.find(d => d.address === deviceAddress);
         const deviceName = device ? device.name : deviceAddress;
 
         // Afficher la modal de confirmation
         this.showConfirmModal(
-            'Oublier cet appareil ?',
-            `Voulez-vous vraiment oublier <strong>${this.escapeHtml(deviceName)}</strong> ?<br><br>Cette action supprimera l'appairage avec cet appareil.`,
+            t('bluetooth.forgetDevice.title'),
+            `${t('bluetooth.forgetDevice.message', { deviceName: this.escapeHtml(deviceName) })}<br><br>${t('bluetooth.forgetDevice.warning')}`,
             async () => {
                 this.logger.info('BluetoothScanModal', `Forgetting device: ${deviceAddress}`);
 
@@ -731,6 +752,8 @@ class BluetoothScanModal {
      * Rendu du message Bluetooth désactivé
      */
     renderBluetoothDisabled() {
+        const t = (key, params) => typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
+
         return `
             <div class="bluetooth-disabled-section" style="
                 background: linear-gradient(135deg, #fff3cd 0%, #ffe5b4 100%);
@@ -742,11 +765,11 @@ class BluetoothScanModal {
             ">
                 <div style="font-size: 48px; margin-bottom: 12px;">⚠️</div>
                 <h3 style="margin: 0 0 12px; color: #856404; font-size: 18px;">
-                    Bluetooth désactivé
+                    ${t('bluetooth.disabled.title')}
                 </h3>
                 <p style="margin: 0 0 16px; color: #856404; font-size: 14px;">
-                    L'adaptateur Bluetooth est actuellement désactivé.<br>
-                    Veuillez l'activer pour scanner les périphériques disponibles.
+                    ${t('bluetooth.disabled.message')}<br>
+                    ${t('bluetooth.disabled.enableMessage')}
                 </p>
                 <button class="btn-power-on" data-action="power_on" style="
                     padding: 12px 24px;
@@ -760,7 +783,7 @@ class BluetoothScanModal {
                     transition: all 0.2s;
                     box-shadow: 0 2px 8px rgba(255, 193, 7, 0.4);
                 ">
-                    🔌 Activer le Bluetooth
+                    🔌 ${t('bluetooth.disabled.enableButton')}
                 </button>
             </div>
         `;
@@ -804,6 +827,8 @@ class BluetoothScanModal {
      * @param {Function} onConfirm - Callback si confirmé
      */
     showConfirmModal(title, message, onConfirm) {
+        const t = (key, params) => typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
+
         // Empêcher l'empilement de modals - fermer la précédente si elle existe
         const existingConfirmModal = document.querySelector('.confirm-modal');
         if (existingConfirmModal) {
@@ -824,8 +849,8 @@ class BluetoothScanModal {
                     <p>${message}</p>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn-secondary" data-action="cancel">Annuler</button>
-                    <button class="btn-danger" data-action="confirm">Oublier</button>
+                    <button class="btn-secondary" data-action="cancel">${t('common.cancel')}</button>
+                    <button class="btn-danger" data-action="confirm">${t('common.forget')}</button>
                 </div>
             </div>
         `;
