@@ -1239,6 +1239,9 @@
     <!-- Scripts -->
     <script src="js/api/BackendAPIClient.js"></script>
 
+    <!-- i18n - Internationalization (must be loaded before components) -->
+    <script src="js/i18n/I18n.js"></script>
+
     <!-- Core classes -->
     <script src="js/core/EventBus.js"></script>
     <script src="js/core/BaseView.js"></script>
@@ -3544,6 +3547,14 @@
         // Initialisation
         window.addEventListener('load', async () => {
             log('🚀 Démarrage de MidiMind 5.0');
+
+            // 🌐 Initialiser le système d'internationalisation (i18n)
+            try {
+                await i18n.init();
+                log(`✓ Langue chargée: ${i18n.getLocale()}`, 'info');
+            } catch (error) {
+                log(`⚠️ Erreur chargement langue: ${error.message}`, 'error');
+            }
 
             // 🆕 Charger la configuration de routage
             loadRoutingConfig();

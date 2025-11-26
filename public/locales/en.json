@@ -1,0 +1,174 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close",
+    "select": "-- Select --",
+    "loading": "Loading...",
+    "search": "Search",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "forget": "Forget",
+    "pair": "Pair",
+    "yes": "Yes",
+    "no": "No",
+    "confirm": "Confirm",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Information",
+    "seconds": "seconds",
+    "octave": "octave",
+    "octaves": "octaves",
+    "keys": "keys"
+  },
+  "app": {
+    "title": "MidiMind 5.0 - MIDI Orchestration System",
+    "subtitle": "MIDI Orchestration System"
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": {
+      "title": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "colored": "Colored"
+    },
+    "keyboard": {
+      "title": "Keyboard",
+      "octaveCount": "Number of octaves",
+      "keyCount": "{count} keys"
+    },
+    "noteDisplay": {
+      "title": "Note display",
+      "visibleDuration": "Visible duration",
+      "minSeconds": "5 seconds",
+      "maxSeconds": "60 seconds"
+    },
+    "virtualInstrument": {
+      "title": "Virtual instrument",
+      "enable": "Enable virtual instrument",
+      "description": "MIDI messages will be sent to the logs",
+      "enabled": "Virtual instrument enabled - MIDI messages will be sent to logs",
+      "disabled": "Virtual instrument disabled"
+    },
+    "language": {
+      "title": "Language",
+      "select": "Select language"
+    }
+  },
+  "bluetooth": {
+    "title": "Bluetooth Instruments Search",
+    "scanning": "Scanning...",
+    "search": "Search",
+    "availableDevices": "Available devices",
+    "pairedDevices": "Paired devices",
+    "searchingDevices": "Searching for Bluetooth devices...",
+    "operationMayTakeTime": "This operation may take a few seconds",
+    "noDeviceDetected": "No device detected",
+    "clickToScan": "Click \"Search\" to scan",
+    "noDevicePaired": "No paired devices",
+    "pairingSuccess": "Pairing successful",
+    "scanError": "Scan error",
+    "status": "Bluetooth status",
+    "connected": "Connected",
+    "paired": "Paired",
+    "signal": "Signal",
+    "rssi": "RSSI",
+    "tip": "Make sure your Bluetooth instrument is in pairing mode and within range (10-15m max) before starting the search.",
+    "tipLabel": "Tip:",
+    "disabled": {
+      "title": "Bluetooth disabled",
+      "message": "The Bluetooth adapter is currently disabled.",
+      "enableMessage": "Please enable it to scan for available devices.",
+      "enableButton": "Enable Bluetooth"
+    },
+    "forgetDevice": {
+      "title": "Forget this device?",
+      "message": "Do you really want to forget <strong>{deviceName}</strong>?",
+      "warning": "This will remove the pairing with this device."
+    },
+    "device": "Bluetooth Device",
+    "unknownAddress": "Unknown address"
+  },
+  "network": {
+    "title": "Network Instruments Search",
+    "manualConnection": {
+      "title": "Manual connection",
+      "description": "For instruments without automatic detection",
+      "ipAddress": "IP Address",
+      "ipPlaceholder": "e.g.: 192.168.1.100",
+      "port": "Port (optional)"
+    },
+    "availableDevices": "Available devices",
+    "connectedDevices": "Connected devices",
+    "showAllIPs": "Show all network IPs",
+    "fullScanDescription": "(scanning 254 IPs - duration: ~5-10 seconds)",
+    "searchingDevices": "Searching for devices on the network...",
+    "operationMayTakeTime": "This operation may take a few seconds",
+    "noDeviceDetected": "No device detected",
+    "clickToScan": "Click \"Search\" to scan",
+    "noDeviceConnected": "No connected devices",
+    "connected": "Connected",
+    "type": "Type",
+    "manufacturer": "Manufacturer",
+    "tip": "Make sure your instrument is connected to the same WiFi network as this device and is turned on before starting the search.",
+    "tipLabel": "Tip:",
+    "networkInstrument": "Network instrument",
+    "unknownIP": "Unknown IP",
+    "invalidIP": {
+      "empty": "Please enter an IP address",
+      "format": "Invalid IP address\nExpected format: xxx.xxx.xxx.xxx\nExample: 192.168.1.100"
+    },
+    "disconnect": {
+      "title": "Disconnect device",
+      "message": "Are you sure you want to disconnect this device?",
+      "warning": "The device will be disconnected and will no longer receive MIDI messages."
+    },
+    "connectionSuccess": "Instrument connected successfully: {name}"
+  },
+  "keyboard": {
+    "title": "Virtual MIDI Keyboard",
+    "velocity": "Velocity",
+    "instrument": "Instrument:",
+    "octave": "Octave: {offset}",
+    "layout": "Keyboard layout:",
+    "layoutAzerty": "AZERTY",
+    "layoutQwerty": "QWERTY",
+    "pcKeys": "PC Keys:",
+    "azertyHelp": "SDFGHJKLM (white) / ZETYUOP (black)",
+    "qwertyHelp": "SDFGHJKL; (white) / WETYUOP (black)",
+    "virtualInstrument": "Virtual Instrument",
+    "virtualNoteOn": "[Virtual] Note ON: {note} ({number}) velocity={velocity}",
+    "virtualNoteOff": "[Virtual] Note OFF: {note} ({number})"
+  },
+  "midiEditor": {
+    "title": "MIDI Editor",
+    "instrument": "Instrument",
+    "selectInstrument": "Select an instrument",
+    "noInstrument": "No instrument selected",
+    "pianoRoll": "Piano Roll",
+    "velocity": "Velocity",
+    "cc": "CC",
+    "pitchbend": "Pitchbend"
+  },
+  "errors": {
+    "deviceNotFound": "Device not found: {deviceId}",
+    "connectionFailed": "Connection failed",
+    "unknownCommand": "Unknown command: {command}",
+    "invalidMessage": "Invalid message: {errors}",
+    "scanFailed": "Scan failed",
+    "pairingFailed": "Pairing failed",
+    "disconnectFailed": "Disconnection failed"
+  },
+  "logs": {
+    "applicationStarting": "=== MidiMind 5.0 Starting ===",
+    "initializing": "Initializing application...",
+    "bluetoothInitialized": "Bluetooth initialized",
+    "bluetoothNotAvailable": "Bluetooth not available",
+    "networkManagerInitialized": "Network manager initialized",
+    "applicationInitialized": "Application initialized",
+    "initializationFailed": "Initialization failed: {error}",
+    "commandCompleted": "Command {command} completed in {time}ms"
+  }
+}

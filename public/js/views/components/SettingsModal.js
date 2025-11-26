@@ -6,6 +6,9 @@
  * - Ajustement du nombre de touches du clavier
  * - Modification du temps d'affichage des notes
  * - Gestion de l'instrument virtuel
+ * - Sélection de la langue (FR, EN, ES)
+ *
+ * Dépendance: i18n doit être chargé avant ce script (js/i18n/I18n.js)
  */
 
 class SettingsModal {
@@ -24,6 +27,9 @@ class SettingsModal {
         this.createModal();
         this.setupEventListeners();
         this.applySettings();
+
+        // Écouter les changements de langue pour mettre à jour le modal
+        i18n.onLocaleChange(() => this.updateModalTexts());
     }
 
     /**
@@ -108,6 +114,7 @@ class SettingsModal {
 
         // Header
         const header = document.createElement('div');
+        header.className = 'settings-modal-header';
         header.style.cssText = `
             padding: 24px;
             border-bottom: 1px solid #e5e7eb;
@@ -116,7 +123,7 @@ class SettingsModal {
             align-items: center;
         `;
         header.innerHTML = `
-            <h2 style="margin: 0; color: #667eea; font-size: 20px;">⚙️ Réglages</h2>
+            <h2 class="settings-title" style="margin: 0; color: #667eea; font-size: 20px;" data-i18n="settings.title">⚙️ ${i18n.t('settings.title')}</h2>
             <button class="settings-close-btn" style="
                 background: transparent;
                 border: none;
@@ -137,15 +144,97 @@ class SettingsModal {
 
         // Content
         const content = document.createElement('div');
+        content.className = 'settings-modal-content';
         content.style.cssText = `
             padding: 24px;
             overflow-y: auto;
             flex: 1;
         `;
-        content.innerHTML = `
-            <!-- Thème -->
+        content.innerHTML = this.renderContent();
+
+        // Footer
+        const footer = document.createElement('div');
+        footer.className = 'settings-modal-footer';
+        footer.style.cssText = `
+            padding: 16px 24px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        `;
+        footer.innerHTML = `
+            <button class="btn btn-secondary settings-cancel-btn" style="
+                padding: 10px 20px;
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
+                background: white;
+                color: #666;
+                cursor: pointer;
+                font-size: 14px;
+                transition: all 0.2s;
+            ">${i18n.t('common.cancel')}</button>
+            <button class="btn btn-primary settings-save-btn" style="
+                padding: 10px 20px;
+                border: none;
+                border-radius: 6px;
+                background: #667eea;
+                color: white;
+                cursor: pointer;
+                font-size: 14px;
+                transition: all 0.2s;
+            ">${i18n.t('common.save')}</button>
+        `;
+
+        // Assembler le modal
+        this.modal.appendChild(header);
+        this.modal.appendChild(content);
+        this.modal.appendChild(footer);
+        this.overlay.appendChild(this.modal);
+        document.body.appendChild(this.overlay);
+
+        // Ajouter les styles pour le toggle
+        this.addToggleStyles();
+    }
+
+    /**
+     * Générer le contenu HTML du modal
+     */
+    renderContent() {
+        const currentLocale = i18n.getLocale();
+        const locales = i18n.getSupportedLocales();
+
+        return `
+            <!-- Langue -->
             <div class="settings-section">
-                <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #333;">🎨 Thème</h3>
+                <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #333;">🌐 ${i18n.t('settings.language.title')}</h3>
+                <div class="language-options" style="display: flex; gap: 12px;">
+                    ${locales.map(locale => `
+                        <button class="language-btn ${locale.code === currentLocale ? 'active' : ''}"
+                                data-locale="${locale.code}"
+                                style="
+                                    flex: 1;
+                                    padding: 12px 16px;
+                                    border: 2px solid ${locale.code === currentLocale ? '#667eea' : '#e5e7eb'};
+                                    border-radius: 8px;
+                                    background: ${locale.code === currentLocale ? '#f0f4ff' : 'white'};
+                                    cursor: pointer;
+                                    transition: all 0.2s;
+                                    font-size: 14px;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    gap: 8px;
+                                ">
+                            <span style="font-size: 18px;">${this.getLocaleFlag(locale.code)}</span>
+                            <span>${locale.name}</span>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+
+            <!-- Thème -->
+            <div class="settings-section" style="margin-top: 24px;">
+                <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #333;">🎨 ${i18n.t('settings.theme.title')}</h3>
                 <div class="theme-options" style="display: flex; gap: 12px;">
                     <button class="theme-btn" data-theme="light" style="
                         flex: 1;
@@ -162,7 +251,7 @@ class SettingsModal {
                         gap: 8px;
                     ">
                         <span style="font-size: 24px;">☀️</span>
-                        <span>Light</span>
+                        <span>${i18n.t('settings.theme.light')}</span>
                     </button>
                     <button class="theme-btn" data-theme="dark" style="
                         flex: 1;
@@ -179,7 +268,7 @@ class SettingsModal {
                         gap: 8px;
                     ">
                         <span style="font-size: 24px;">🌙</span>
-                        <span>Dark</span>
+                        <span>${i18n.t('settings.theme.dark')}</span>
                     </button>
                     <button class="theme-btn" data-theme="colored" style="
                         flex: 1;
@@ -196,53 +285,53 @@ class SettingsModal {
                         gap: 8px;
                     ">
                         <span style="font-size: 24px;">🎨</span>
-                        <span>Colored</span>
+                        <span>${i18n.t('settings.theme.colored')}</span>
                     </button>
                 </div>
             </div>
 
             <!-- Clavier -->
             <div class="settings-section" style="margin-top: 24px;">
-                <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #333;">🎹 Clavier</h3>
+                <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #333;">🎹 ${i18n.t('settings.keyboard.title')}</h3>
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                     <label style="font-size: 14px; color: #666;">
-                        Nombre d'octaves : <strong id="keyboardOctavesValue">${this.settings.keyboardOctaves}</strong>
-                        <span style="color: #999; font-weight: normal;">(<span id="keyboardTouchesCount">${this.settings.keyboardOctaves * 12}</span> touches)</span>
+                        ${i18n.t('settings.keyboard.octaveCount')} : <strong id="keyboardOctavesValue">${this.settings.keyboardOctaves}</strong>
+                        <span style="color: #999; font-weight: normal;">(<span id="keyboardTouchesCount">${this.settings.keyboardOctaves * 12}</span> ${i18n.t('common.keys')})</span>
                     </label>
                     <input type="range" id="keyboardOctavesRange" min="1" max="4" step="1"
                            value="${this.settings.keyboardOctaves}"
                            style="width: 100%;">
                     <div style="display: flex; justify-content: space-between; font-size: 12px; color: #999;">
-                        <span>1 octave</span>
-                        <span>4 octaves</span>
+                        <span>1 ${i18n.t('common.octave')}</span>
+                        <span>4 ${i18n.t('common.octaves')}</span>
                     </div>
                 </div>
             </div>
 
             <!-- Temps d'affichage -->
             <div class="settings-section" style="margin-top: 24px;">
-                <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #333;">⏱️ Affichage des notes</h3>
+                <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #333;">⏱️ ${i18n.t('settings.noteDisplay.title')}</h3>
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                     <label style="font-size: 14px; color: #666;">
-                        Durée visible : <strong id="noteDisplayTimeValue">${this.settings.noteDisplayTime}s</strong>
+                        ${i18n.t('settings.noteDisplay.visibleDuration')} : <strong id="noteDisplayTimeValue">${this.settings.noteDisplayTime}s</strong>
                     </label>
                     <input type="range" id="noteDisplayTimeRange" min="5" max="60" step="5"
                            value="${this.settings.noteDisplayTime}"
                            style="width: 100%;">
                     <div style="display: flex; justify-content: space-between; font-size: 12px; color: #999;">
-                        <span>5 secondes</span>
-                        <span>60 secondes</span>
+                        <span>${i18n.t('settings.noteDisplay.minSeconds')}</span>
+                        <span>${i18n.t('settings.noteDisplay.maxSeconds')}</span>
                     </div>
                 </div>
             </div>
 
             <!-- Instrument virtuel -->
             <div class="settings-section" style="margin-top: 24px;">
-                <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #333;">🎵 Instrument virtuel</h3>
+                <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #333;">🎵 ${i18n.t('settings.virtualInstrument.title')}</h3>
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
                     <div style="flex: 1;">
-                        <p style="margin: 0 0 4px 0; font-size: 14px; color: #333;">Activer l'instrument virtuel</p>
-                        <p style="margin: 0; font-size: 12px; color: #666;">Les messages MIDI seront envoyés aux logs</p>
+                        <p style="margin: 0 0 4px 0; font-size: 14px; color: #333;">${i18n.t('settings.virtualInstrument.enable')}</p>
+                        <p style="margin: 0; font-size: 12px; color: #666;">${i18n.t('settings.virtualInstrument.description')}</p>
                     </div>
                     <label class="toggle-switch" style="position: relative; display: inline-block; width: 60px; height: 30px;">
                         <input type="checkbox" id="virtualInstrumentToggle" ${this.settings.virtualInstrument ? 'checked' : ''}
@@ -262,48 +351,47 @@ class SettingsModal {
                 </div>
             </div>
         `;
+    }
 
-        // Footer
-        const footer = document.createElement('div');
-        footer.style.cssText = `
-            padding: 16px 24px;
-            border-top: 1px solid #e5e7eb;
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-        `;
-        footer.innerHTML = `
-            <button class="btn btn-secondary settings-cancel-btn" style="
-                padding: 10px 20px;
-                border: 1px solid #e5e7eb;
-                border-radius: 6px;
-                background: white;
-                color: #666;
-                cursor: pointer;
-                font-size: 14px;
-                transition: all 0.2s;
-            ">Annuler</button>
-            <button class="btn btn-primary settings-save-btn" style="
-                padding: 10px 20px;
-                border: none;
-                border-radius: 6px;
-                background: #667eea;
-                color: white;
-                cursor: pointer;
-                font-size: 14px;
-                transition: all 0.2s;
-            ">Enregistrer</button>
-        `;
+    /**
+     * Obtenir le drapeau emoji pour une locale
+     */
+    getLocaleFlag(locale) {
+        const flags = {
+            'fr': '🇫🇷',
+            'en': '🇬🇧',
+            'es': '🇪🇸'
+        };
+        return flags[locale] || '🌐';
+    }
 
-        // Assembler le modal
-        this.modal.appendChild(header);
-        this.modal.appendChild(content);
-        this.modal.appendChild(footer);
-        this.overlay.appendChild(this.modal);
-        document.body.appendChild(this.overlay);
+    /**
+     * Mettre à jour les textes du modal lors du changement de langue
+     */
+    updateModalTexts() {
+        if (!this.modal) return;
 
-        // Ajouter les styles pour le toggle
-        this.addToggleStyles();
+        // Mettre à jour le titre
+        const title = this.modal.querySelector('.settings-title');
+        if (title) {
+            title.innerHTML = `⚙️ ${i18n.t('settings.title')}`;
+        }
+
+        // Mettre à jour le contenu
+        const content = this.modal.querySelector('.settings-modal-content');
+        if (content) {
+            content.innerHTML = this.renderContent();
+            // Réattacher les événements pour les nouveaux éléments
+            this.attachContentEventListeners();
+            // Restaurer les valeurs
+            this.selectTheme(this.settings.theme);
+        }
+
+        // Mettre à jour les boutons du footer
+        const cancelBtn = this.modal.querySelector('.settings-cancel-btn');
+        const saveBtn = this.modal.querySelector('.settings-save-btn');
+        if (cancelBtn) cancelBtn.textContent = i18n.t('common.cancel');
+        if (saveBtn) saveBtn.textContent = i18n.t('common.save');
     }
 
     /**
@@ -332,12 +420,14 @@ class SettingsModal {
                 transform: translateX(30px);
             }
 
-            .theme-btn.active {
+            .theme-btn.active,
+            .language-btn.active {
                 border-color: #667eea !important;
                 background: #f0f4ff !important;
             }
 
-            .theme-btn:hover {
+            .theme-btn:hover,
+            .language-btn:hover {
                 border-color: #667eea !important;
                 transform: translateY(-2px);
                 box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
@@ -386,6 +476,35 @@ class SettingsModal {
             }
         });
 
+        // Touche Escape pour fermer
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.overlay.style.display === 'flex') {
+                this.close();
+            }
+        });
+
+        // Attacher les événements du contenu
+        this.attachContentEventListeners();
+    }
+
+    /**
+     * Attacher les événements du contenu (appelé après mise à jour du contenu)
+     */
+    attachContentEventListeners() {
+        // Boutons de langue
+        this.modal.querySelectorAll('.language-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const locale = btn.dataset.locale;
+                await i18n.setLocale(locale);
+                // Mettre à jour l'état actif des boutons
+                this.modal.querySelectorAll('.language-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.locale === locale);
+                    b.style.borderColor = b.dataset.locale === locale ? '#667eea' : '#e5e7eb';
+                    b.style.background = b.dataset.locale === locale ? '#f0f4ff' : 'white';
+                });
+            });
+        });
+
         // Boutons de thème
         this.modal.querySelectorAll('.theme-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -397,25 +516,22 @@ class SettingsModal {
         const keyboardRange = this.modal.querySelector('#keyboardOctavesRange');
         const keyboardValue = this.modal.querySelector('#keyboardOctavesValue');
         const keyboardTouchesCount = this.modal.querySelector('#keyboardTouchesCount');
-        keyboardRange.addEventListener('input', (e) => {
-            const octaves = parseInt(e.target.value);
-            keyboardValue.textContent = octaves;
-            keyboardTouchesCount.textContent = octaves * 12;
-        });
+        if (keyboardRange) {
+            keyboardRange.addEventListener('input', (e) => {
+                const octaves = parseInt(e.target.value);
+                keyboardValue.textContent = octaves;
+                keyboardTouchesCount.textContent = octaves * 12;
+            });
+        }
 
         // Range note display time
         const timeRange = this.modal.querySelector('#noteDisplayTimeRange');
         const timeValue = this.modal.querySelector('#noteDisplayTimeValue');
-        timeRange.addEventListener('input', (e) => {
-            timeValue.textContent = e.target.value + 's';
-        });
-
-        // Touche Escape pour fermer
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.overlay.style.display === 'flex') {
-                this.close();
-            }
-        });
+        if (timeRange) {
+            timeRange.addEventListener('input', (e) => {
+                timeValue.textContent = e.target.value + 's';
+            });
+        }
     }
 
     /**
@@ -425,7 +541,10 @@ class SettingsModal {
         this.modal.querySelectorAll('.theme-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        this.modal.querySelector(`[data-theme="${theme}"]`).classList.add('active');
+        const selectedBtn = this.modal.querySelector(`[data-theme="${theme}"]`);
+        if (selectedBtn) {
+            selectedBtn.classList.add('active');
+        }
     }
 
     /**
@@ -436,12 +555,20 @@ class SettingsModal {
 
         // Restaurer les valeurs actuelles
         this.selectTheme(this.settings.theme);
-        this.modal.querySelector('#keyboardOctavesRange').value = this.settings.keyboardOctaves;
-        this.modal.querySelector('#keyboardOctavesValue').textContent = this.settings.keyboardOctaves;
-        this.modal.querySelector('#keyboardTouchesCount').textContent = this.settings.keyboardOctaves * 12;
-        this.modal.querySelector('#noteDisplayTimeRange').value = this.settings.noteDisplayTime;
-        this.modal.querySelector('#noteDisplayTimeValue').textContent = this.settings.noteDisplayTime + 's';
-        this.modal.querySelector('#virtualInstrumentToggle').checked = this.settings.virtualInstrument;
+
+        const keyboardRange = this.modal.querySelector('#keyboardOctavesRange');
+        const keyboardValue = this.modal.querySelector('#keyboardOctavesValue');
+        const keyboardTouchesCount = this.modal.querySelector('#keyboardTouchesCount');
+        const timeRange = this.modal.querySelector('#noteDisplayTimeRange');
+        const timeValue = this.modal.querySelector('#noteDisplayTimeValue');
+        const virtualToggle = this.modal.querySelector('#virtualInstrumentToggle');
+
+        if (keyboardRange) keyboardRange.value = this.settings.keyboardOctaves;
+        if (keyboardValue) keyboardValue.textContent = this.settings.keyboardOctaves;
+        if (keyboardTouchesCount) keyboardTouchesCount.textContent = this.settings.keyboardOctaves * 12;
+        if (timeRange) timeRange.value = this.settings.noteDisplayTime;
+        if (timeValue) timeValue.textContent = this.settings.noteDisplayTime + 's';
+        if (virtualToggle) virtualToggle.checked = this.settings.virtualInstrument;
 
         this.logger?.info('Settings modal opened');
     }
@@ -459,11 +586,16 @@ class SettingsModal {
      */
     save() {
         // Récupérer les nouvelles valeurs
+        const activeThemeBtn = this.modal.querySelector('.theme-btn.active');
+        const keyboardRange = this.modal.querySelector('#keyboardOctavesRange');
+        const timeRange = this.modal.querySelector('#noteDisplayTimeRange');
+        const virtualToggle = this.modal.querySelector('#virtualInstrumentToggle');
+
         const newSettings = {
-            theme: this.modal.querySelector('.theme-btn.active').dataset.theme,
-            keyboardOctaves: parseInt(this.modal.querySelector('#keyboardOctavesRange').value),
-            noteDisplayTime: parseInt(this.modal.querySelector('#noteDisplayTimeRange').value),
-            virtualInstrument: this.modal.querySelector('#virtualInstrumentToggle').checked
+            theme: activeThemeBtn ? activeThemeBtn.dataset.theme : this.settings.theme,
+            keyboardOctaves: keyboardRange ? parseInt(keyboardRange.value) : this.settings.keyboardOctaves,
+            noteDisplayTime: timeRange ? parseInt(timeRange.value) : this.settings.noteDisplayTime,
+            virtualInstrument: virtualToggle ? virtualToggle.checked : this.settings.virtualInstrument
         };
 
         // Vérifier les changements
@@ -491,9 +623,9 @@ class SettingsModal {
             this.eventBus?.emit('settings:virtual_instrument_changed', { enabled: newSettings.virtualInstrument });
 
             if (newSettings.virtualInstrument) {
-                this.logger?.info('🎵 Instrument virtuel activé - Les messages MIDI seront envoyés aux logs');
+                this.logger?.info(`🎵 ${i18n.t('settings.virtualInstrument.enabled')}`);
             } else {
-                this.logger?.info('🎵 Instrument virtuel désactivé');
+                this.logger?.info(`🎵 ${i18n.t('settings.virtualInstrument.disabled')}`);
             }
         }
 
@@ -566,4 +698,9 @@ class SettingsModal {
     getSettings() {
         return { ...this.settings };
     }
+}
+
+// Export global
+if (typeof window !== 'undefined') {
+    window.SettingsModal = SettingsModal;
 }

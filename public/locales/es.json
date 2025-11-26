@@ -1,0 +1,174 @@
+{
+  "common": {
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "close": "Cerrar",
+    "select": "-- Seleccionar --",
+    "loading": "Cargando...",
+    "search": "Buscar",
+    "connect": "Conectar",
+    "disconnect": "Desconectar",
+    "forget": "Olvidar",
+    "pair": "Emparejar",
+    "yes": "Sí",
+    "no": "No",
+    "confirm": "Confirmar",
+    "error": "Error",
+    "success": "Éxito",
+    "warning": "Advertencia",
+    "info": "Información",
+    "seconds": "segundos",
+    "octave": "octava",
+    "octaves": "octavas",
+    "keys": "teclas"
+  },
+  "app": {
+    "title": "MidiMind 5.0 - Sistema de Orquestación MIDI",
+    "subtitle": "Sistema de Orquestación MIDI"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "theme": {
+      "title": "Tema",
+      "light": "Claro",
+      "dark": "Oscuro",
+      "colored": "Colorido"
+    },
+    "keyboard": {
+      "title": "Teclado",
+      "octaveCount": "Número de octavas",
+      "keyCount": "{count} teclas"
+    },
+    "noteDisplay": {
+      "title": "Visualización de notas",
+      "visibleDuration": "Duración visible",
+      "minSeconds": "5 segundos",
+      "maxSeconds": "60 segundos"
+    },
+    "virtualInstrument": {
+      "title": "Instrumento virtual",
+      "enable": "Activar instrumento virtual",
+      "description": "Los mensajes MIDI se enviarán a los registros",
+      "enabled": "Instrumento virtual activado - Los mensajes MIDI se enviarán a los registros",
+      "disabled": "Instrumento virtual desactivado"
+    },
+    "language": {
+      "title": "Idioma",
+      "select": "Seleccionar idioma"
+    }
+  },
+  "bluetooth": {
+    "title": "Búsqueda de instrumentos Bluetooth",
+    "scanning": "Escaneando...",
+    "search": "Buscar",
+    "availableDevices": "Dispositivos disponibles",
+    "pairedDevices": "Dispositivos emparejados",
+    "searchingDevices": "Buscando dispositivos Bluetooth...",
+    "operationMayTakeTime": "Esta operación puede tardar unos segundos",
+    "noDeviceDetected": "Ningún dispositivo detectado",
+    "clickToScan": "Haga clic en \"Buscar\" para escanear",
+    "noDevicePaired": "Ningún dispositivo emparejado",
+    "pairingSuccess": "Emparejamiento exitoso",
+    "scanError": "Error de escaneo",
+    "status": "Estado del Bluetooth",
+    "connected": "Conectado",
+    "paired": "Emparejado",
+    "signal": "Señal",
+    "rssi": "RSSI",
+    "tip": "Asegúrese de que su instrumento Bluetooth esté en modo de emparejamiento y al alcance (máx. 10-15m) antes de iniciar la búsqueda.",
+    "tipLabel": "Consejo:",
+    "disabled": {
+      "title": "Bluetooth desactivado",
+      "message": "El adaptador Bluetooth está actualmente desactivado.",
+      "enableMessage": "Por favor, actívelo para buscar dispositivos disponibles.",
+      "enableButton": "Activar Bluetooth"
+    },
+    "forgetDevice": {
+      "title": "¿Olvidar este dispositivo?",
+      "message": "¿Realmente desea olvidar <strong>{deviceName}</strong>?",
+      "warning": "Esto eliminará el emparejamiento con este dispositivo."
+    },
+    "device": "Dispositivo Bluetooth",
+    "unknownAddress": "Dirección desconocida"
+  },
+  "network": {
+    "title": "Búsqueda de instrumentos en red",
+    "manualConnection": {
+      "title": "Conexión manual",
+      "description": "Para instrumentos sin detección automática",
+      "ipAddress": "Dirección IP",
+      "ipPlaceholder": "ej: 192.168.1.100",
+      "port": "Puerto (opcional)"
+    },
+    "availableDevices": "Dispositivos disponibles",
+    "connectedDevices": "Dispositivos conectados",
+    "showAllIPs": "Mostrar todas las IPs de la red",
+    "fullScanDescription": "(escaneo de 254 IPs - duración: ~5-10 segundos)",
+    "searchingDevices": "Buscando dispositivos en la red...",
+    "operationMayTakeTime": "Esta operación puede tardar unos segundos",
+    "noDeviceDetected": "Ningún dispositivo detectado",
+    "clickToScan": "Haga clic en \"Buscar\" para escanear",
+    "noDeviceConnected": "Ningún dispositivo conectado",
+    "connected": "Conectado",
+    "type": "Tipo",
+    "manufacturer": "Fabricante",
+    "tip": "Asegúrese de que su instrumento esté conectado a la misma red WiFi que este dispositivo y que esté encendido antes de iniciar la búsqueda.",
+    "tipLabel": "Consejo:",
+    "networkInstrument": "Instrumento de red",
+    "unknownIP": "IP desconocida",
+    "invalidIP": {
+      "empty": "Por favor, introduzca una dirección IP",
+      "format": "Dirección IP inválida\nFormato esperado: xxx.xxx.xxx.xxx\nEjemplo: 192.168.1.100"
+    },
+    "disconnect": {
+      "title": "Desconectar dispositivo",
+      "message": "¿Está seguro de que desea desconectar este dispositivo?",
+      "warning": "El dispositivo será desconectado y ya no recibirá mensajes MIDI."
+    },
+    "connectionSuccess": "Instrumento conectado con éxito: {name}"
+  },
+  "keyboard": {
+    "title": "Teclado MIDI Virtual",
+    "velocity": "Velocidad",
+    "instrument": "Instrumento:",
+    "octave": "Octava: {offset}",
+    "layout": "Disposición del teclado:",
+    "layoutAzerty": "AZERTY",
+    "layoutQwerty": "QWERTY",
+    "pcKeys": "Teclas PC:",
+    "azertyHelp": "SDFGHJKLM (blancas) / ZETYUOP (negras)",
+    "qwertyHelp": "SDFGHJKL; (blancas) / WETYUOP (negras)",
+    "virtualInstrument": "Instrumento Virtual",
+    "virtualNoteOn": "[Virtual] Nota ON: {note} ({number}) velocidad={velocity}",
+    "virtualNoteOff": "[Virtual] Nota OFF: {note} ({number})"
+  },
+  "midiEditor": {
+    "title": "Editor MIDI",
+    "instrument": "Instrumento",
+    "selectInstrument": "Seleccione un instrumento",
+    "noInstrument": "Ningún instrumento seleccionado",
+    "pianoRoll": "Piano Roll",
+    "velocity": "Velocidad",
+    "cc": "CC",
+    "pitchbend": "Pitchbend"
+  },
+  "errors": {
+    "deviceNotFound": "Dispositivo no encontrado: {deviceId}",
+    "connectionFailed": "Conexión fallida",
+    "unknownCommand": "Comando desconocido: {command}",
+    "invalidMessage": "Mensaje inválido: {errors}",
+    "scanFailed": "Escaneo fallido",
+    "pairingFailed": "Emparejamiento fallido",
+    "disconnectFailed": "Desconexión fallida"
+  },
+  "logs": {
+    "applicationStarting": "=== MidiMind 5.0 Iniciando ===",
+    "initializing": "Inicializando aplicación...",
+    "bluetoothInitialized": "Bluetooth inicializado",
+    "bluetoothNotAvailable": "Bluetooth no disponible",
+    "networkManagerInitialized": "Gestor de red inicializado",
+    "applicationInitialized": "Aplicación inicializada",
+    "initializationFailed": "Error de inicialización: {error}",
+    "commandCompleted": "Comando {command} completado en {time}ms"
+  }
+}
