@@ -1,6 +1,6 @@
 // ============================================================================
 // Fichier: frontend/js/views/components/NetworkScanModal.js
-// Version: v1.0.0
+// Version: v1.1.0 (i18n support)
 // Date: 2025-11-16
 // ============================================================================
 // Description:
@@ -8,6 +8,9 @@
 //   - Affichage des périphériques disponibles sur le réseau
 //   - Connexion aux instruments
 //   - Interface utilisateur intuitive
+//   - Support multilingue (i18n)
+//
+// Dépendance: i18n doit être chargé avant ce script (js/i18n/I18n.js)
 // ============================================================================
 
 class NetworkScanModal {
@@ -23,7 +26,12 @@ class NetworkScanModal {
 
         this.setupEventListeners();
 
-        this.logger.info('NetworkScanModal', '✓ Modal initialized v1.0.0');
+        this.logger.info('NetworkScanModal', '✓ Modal initialized v1.1.0 (i18n)');
+    }
+
+    // Helper pour les traductions
+    t(key, params) {
+        return typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
     }
 
     // ========================================================================
@@ -57,6 +65,11 @@ class NetworkScanModal {
         this.eventBus.on('network:scan_error', (data) => {
             this.handleScanError(data);
         });
+
+        // Écouter les changements de langue
+        if (typeof i18n !== 'undefined') {
+            i18n.onLocaleChange(() => this.updateModalContent());
+        }
 
         this.logger.debug('NetworkScanModal', 'Event listeners configured');
     }
@@ -129,7 +142,7 @@ class NetworkScanModal {
         return `
             <div class="modal-dialog modal-lg">
                 <div class="modal-header">
-                    <h2>🌐 Recherche d'instruments réseau</h2>
+                    <h2>🌐 ${this.t('network.title')}</h2>
                     <button class="modal-close" data-action="close">&times;</button>
                 </div>
 
@@ -137,27 +150,27 @@ class NetworkScanModal {
                     <!-- Section ajout manuel d'IP -->
                     <div class="manual-ip-section">
                         <div class="manual-ip-header">
-                            <h3>🎯 Connexion manuelle</h3>
-                            <p class="text-muted" style="margin: 0; font-size: 12px;">Pour les instruments sans détection automatique</p>
+                            <h3>🎯 ${this.t('network.manualConnection.title')}</h3>
+                            <p class="text-muted" style="margin: 0; font-size: 12px;">${this.t('network.manualConnection.description')}</p>
                         </div>
                         <div class="manual-ip-form">
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="manualIp">Adresse IP</label>
+                                    <label for="manualIp">${this.t('network.manualConnection.ipAddress')}</label>
                                     <input type="text"
                                            id="manualIp"
-                                           placeholder="ex: 192.168.1.100"
+                                           placeholder="${this.t('network.manualConnection.ipPlaceholder')}"
                                            pattern="^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$">
                                 </div>
                                 <div class="form-group">
-                                    <label for="manualPort">Port (optionnel)</label>
+                                    <label for="manualPort">${this.t('network.manualConnection.port')}</label>
                                     <input type="text"
                                            id="manualPort"
                                            placeholder="5004"
                                            value="5004">
                                 </div>
                                 <button class="btn-connect-manual" data-action="connect-manual">
-                                    🔌 Connecter
+                                    🔌 ${this.t('common.connect')}
                                 </button>
                             </div>
                         </div>
@@ -167,20 +180,20 @@ class NetworkScanModal {
                     <div class="scan-section">
                         <div class="scan-header">
                             <div class="scan-header-left">
-                                <h3>Périphériques disponibles</h3>
+                                <h3>${this.t('network.availableDevices')}</h3>
                                 <div class="scan-options">
                                     <label class="checkbox-label">
                                         <input type="checkbox" id="fullScanCheckbox" ${this.scanning ? 'disabled' : ''}>
-                                        <span>Afficher toutes les IPs du réseau</span>
+                                        <span>${this.t('network.showAllIPs')}</span>
                                     </label>
                                     <p class="text-muted" style="margin: 4px 0 0 24px; font-size: 11px;">
-                                        (scan de 254 IPs - durée: ~5-10 secondes)
+                                        ${this.t('network.fullScanDescription')}
                                     </p>
                                 </div>
                             </div>
                             <button class="btn-scan ${this.scanning ? 'scanning' : ''}"
                                     data-action="scan" ${this.scanning ? 'disabled' : ''}>
-                                ${this.scanning ? '🔄 Scan en cours...' : '🔍 Rechercher'}
+                                ${this.scanning ? `🔄 ${this.t('bluetooth.scanning')}` : `🔍 ${this.t('common.search')}`}
                             </button>
                         </div>
 
@@ -192,7 +205,7 @@ class NetworkScanModal {
                     <!-- Section appareils connectés -->
                     ${this.connectedDevices.length > 0 ? `
                         <div class="connected-section">
-                            <h3>Appareils connectés</h3>
+                            <h3>${this.t('network.connectedDevices')}</h3>
                             <div class="devices-list" id="networkConnectedDevices">
                                 ${this.renderConnectedDevices()}
                             </div>
@@ -202,14 +215,13 @@ class NetworkScanModal {
                     <!-- Informations -->
                     <div class="info-section">
                         <p>
-                            💡 <strong>Astuce:</strong> Assurez-vous que votre instrument est connecté au même réseau
-                            WiFi que cet appareil et qu'il est allumé avant de lancer la recherche.
+                            💡 <strong>${this.t('network.tipLabel')}</strong> ${this.t('network.tip')}
                         </p>
                     </div>
                 </div>
 
                 <div class="modal-footer">
-                    <button class="btn-secondary" data-action="close">Fermer</button>
+                    <button class="btn-secondary" data-action="close">${this.t('common.close')}</button>
                 </div>
             </div>
         `;
@@ -223,8 +235,8 @@ class NetworkScanModal {
             return `
                 <div class="devices-scanning">
                     <div class="spinner"></div>
-                    <p>Recherche de périphériques sur le réseau...</p>
-                    <p class="text-muted">Cette opération peut prendre quelques secondes</p>
+                    <p>${this.t('network.searchingDevices')}</p>
+                    <p class="text-muted">${this.t('network.operationMayTakeTime')}</p>
                 </div>
             `;
         }
@@ -233,8 +245,8 @@ class NetworkScanModal {
             return `
                 <div class="devices-empty">
                     <div class="empty-icon">🔍</div>
-                    <p>Aucun périphérique détecté</p>
-                    <p class="text-muted">Cliquez sur "Rechercher" pour scanner</p>
+                    <p>${this.t('network.noDeviceDetected')}</p>
+                    <p class="text-muted">${this.t('network.clickToScan')}</p>
                 </div>
             `;
         }
@@ -250,8 +262,8 @@ class NetworkScanModal {
      * Rendu d'un périphérique disponible
      */
     renderAvailableDevice(device) {
-        const deviceName = this.escapeHtml(device.name || 'Instrument réseau');
-        const deviceIp = device.ip || device.address || 'IP inconnue';
+        const deviceName = this.escapeHtml(device.name || this.t('network.networkInstrument'));
+        const deviceIp = device.ip || device.address || this.t('network.unknownIP');
         const devicePort = device.port || '';
 
         return `
@@ -260,15 +272,15 @@ class NetworkScanModal {
                 <div class="device-info">
                     <div class="device-name">${deviceName}</div>
                     <div class="device-ip">${deviceIp}${devicePort ? ':' + devicePort : ''}</div>
-                    ${device.type ? `<div class="device-signal">🎹 Type: ${device.type}</div>` : ''}
-                    ${device.manufacturer ? `<div class="device-signal">🏭 ${device.manufacturer}</div>` : ''}
+                    ${device.type ? `<div class="device-signal">🎹 ${this.t('network.type')}: ${device.type}</div>` : ''}
+                    ${device.manufacturer ? `<div class="device-signal">🏭 ${this.t('network.manufacturer')}: ${device.manufacturer}</div>` : ''}
                 </div>
                 <div class="device-actions">
                     <button class="btn-connect-network" data-action="connect"
                             data-device-ip="${deviceIp}"
                             data-device-port="${devicePort || ''}"
                             data-device-name="${deviceName}">
-                        🔌 Connecter
+                        🔌 ${this.t('common.connect')}
                     </button>
                 </div>
             </div>
@@ -280,7 +292,7 @@ class NetworkScanModal {
      */
     renderConnectedDevices() {
         if (this.connectedDevices.length === 0) {
-            return '<p class="text-muted">Aucun appareil connecté</p>';
+            return `<p class="text-muted">${this.t('network.noDeviceConnected')}</p>`;
         }
 
         return `
@@ -305,14 +317,14 @@ class NetworkScanModal {
                     <div class="device-name">${deviceName}</div>
                     <div class="device-ip">${deviceIp}${devicePort ? ':' + devicePort : ''}</div>
                     <div class="device-status">
-                        <span class="status-badge connected">✓ Connecté</span>
+                        <span class="status-badge connected">✓ ${this.t('network.connected')}</span>
                     </div>
                 </div>
                 <div class="device-actions">
                     <button class="btn-disconnect" data-action="disconnect"
                             data-device-ip="${deviceIp}"
                             data-device-name="${deviceName}">
-                        Déconnecter
+                        ${this.t('common.disconnect')}
                     </button>
                 </div>
             </div>
@@ -438,7 +450,7 @@ class NetworkScanModal {
 
         // Validation de l'adresse IP
         if (!ip) {
-            alert('⚠️ Veuillez entrer une adresse IP');
+            alert(`⚠️ ${this.t('network.invalidIP.empty')}`);
             ipInput.focus();
             return;
         }
@@ -446,7 +458,7 @@ class NetworkScanModal {
         // Regex pour valider l'IP
         const ipPattern = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
         if (!ipPattern.test(ip)) {
-            alert('⚠️ Adresse IP invalide\nFormat attendu: xxx.xxx.xxx.xxx\nExemple: 192.168.1.100');
+            alert(`⚠️ ${this.t('network.invalidIP.format')}`);
             ipInput.focus();
             return;
         }
@@ -454,7 +466,7 @@ class NetworkScanModal {
         this.logger.info('NetworkScanModal', `Manual connection to: ${ip}:${port}`);
 
         // Connecter le périphérique
-        const deviceName = `Instrument réseau (${ip})`;
+        const deviceName = `${this.t('network.networkInstrument')} (${ip})`;
         this.connectDevice(ip, port, deviceName);
 
         // Vider les champs après connexion
@@ -499,21 +511,21 @@ class NetworkScanModal {
         modalOverlay.innerHTML = `
             <div class="disconnect-modal">
                 <div class="disconnect-modal-header">
-                    <h3>⚠️ Déconnecter l'appareil</h3>
+                    <h3>⚠️ ${this.t('network.disconnect.title')}</h3>
                 </div>
                 <div class="disconnect-modal-body">
-                    <p>Êtes-vous sûr de vouloir déconnecter cet appareil ?</p>
+                    <p>${this.t('network.disconnect.message')}</p>
                     <div class="disconnect-device-info">
                         <strong>${this.escapeHtml(deviceName)}</strong>
                         <span class="device-ip-small">${deviceIp}</span>
                     </div>
                     <p class="warning-text">
-                        ⚠️ L'appareil sera déconnecté et ne pourra plus recevoir de messages MIDI.
+                        ⚠️ ${this.t('network.disconnect.warning')}
                     </p>
                 </div>
                 <div class="disconnect-modal-footer">
-                    <button class="btn-cancel" data-action="cancel">Annuler</button>
-                    <button class="btn-confirm-disconnect" data-action="confirm">Déconnecter</button>
+                    <button class="btn-cancel" data-action="cancel">${this.t('common.cancel')}</button>
+                    <button class="btn-confirm-disconnect" data-action="confirm">${this.t('common.disconnect')}</button>
                 </div>
             </div>
         `;
@@ -607,7 +619,7 @@ class NetworkScanModal {
 
         // Afficher un message de succès
         if (this.logger.success) {
-            this.logger.success('NetworkScanModal', `Instrument connecté avec succès: ${data.name || deviceIp}`);
+            this.logger.success('NetworkScanModal', this.t('network.connectionSuccess', { name: data.name || deviceIp }));
         }
     }
 

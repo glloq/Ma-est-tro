@@ -1,6 +1,6 @@
 // ============================================================================
 // Fichier: public/js/views/components/MidiEditorModal.js
-// Version: v2.0.0 - Utilise webaudio-pianoroll (g200kg)
+// Version: v2.1.0 - Utilise webaudio-pianoroll (g200kg) + i18n support
 // Description: Modale d'édition MIDI avec piano roll webaudio-pianoroll
 // ============================================================================
 
@@ -13,6 +13,9 @@ class MidiEditorModal {
         this.container = null;
         this.isOpen = false;
         this.pianoRoll = null;
+
+        // i18n support
+        this.localeUnsubscribe = null;
 
         // État
         this.currentFile = null;  // fileId
@@ -119,6 +122,20 @@ class MidiEditorModal {
     }
 
     // ========================================================================
+    // I18N SUPPORT
+    // ========================================================================
+
+    /**
+     * Helper pour traduire une clé
+     * @param {string} key - Clé de traduction
+     * @param {Object} params - Paramètres d'interpolation
+     * @returns {string} - Texte traduit
+     */
+    t(key, params = {}) {
+        return typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
+    }
+
+    // ========================================================================
     // AFFICHAGE DE LA MODALE
     // ========================================================================
 
@@ -154,6 +171,14 @@ class MidiEditorModal {
             // Installer le gestionnaire beforeunload pour empêcher la fermeture avec des modifications non sauvegardées
             this.setupBeforeUnloadHandler();
 
+            // Subscribe to locale changes
+            if (typeof i18n !== 'undefined') {
+                this.localeUnsubscribe = i18n.onLocaleChange(() => {
+                    // Note: le piano roll est déjà rendu, on ne peut pas facilement re-traduire
+                    // mais on garde la souscription pour cohérence
+                });
+            }
+
             // Émettre événement
             if (this.eventBus) {
                 this.eventBus.emit('midi_editor:opened', { fileId, filename: this.currentFilename });
@@ -161,7 +186,7 @@ class MidiEditorModal {
 
         } catch (error) {
             this.log('error', 'Failed to open MIDI editor:', error);
-            this.showError(`Impossible d'ouvrir le fichier: ${error.message}`);
+            this.showError(this.t('midiEditor.cannotOpen', { error: error.message }));
         }
     }
 
@@ -199,11 +224,7 @@ class MidiEditorModal {
 
             // Si l'erreur est "Unknown command", proposer une alternative
             if (error.message.includes('Unknown command') || error.message.includes('file_read')) {
-                throw new Error(
-                    'Le backend ne supporte pas encore la lecture de fichiers MIDI.\n\n' +
-                    'La commande "file_read" doit être ajoutée au backend.\n' +
-                    'En attendant, utilisez l\'éditeur classique.'
-                );
+                throw new Error(this.t('midiEditor.backendNotSupported'));
             }
 
             throw error;
@@ -427,7 +448,7 @@ class MidiEditorModal {
 
         // Si aucun canal, afficher un message
         if (channelsToShow.length === 0) {
-            const message = this.currentCCType === 'velocity' ? 'Aucune note dans ce fichier' : 'Aucun CC/Pitchbend dans ce fichier';
+            const message = this.currentCCType === 'velocity' ? this.t('midiEditor.noNotesInFile') : this.t('midiEditor.noCCInFile');
             channelSelector.innerHTML = `<div class="cc-no-channels">${message}</div>`;
             this.log('info', message);
             return;
@@ -435,7 +456,7 @@ class MidiEditorModal {
 
         // Générer les boutons uniquement pour les canaux présents
         channelSelector.innerHTML = channelsToShow.map(channel => `
-            <button class="cc-channel-btn ${channel === activeChannel ? 'active' : ''}" data-channel="${channel}" title="Canal ${channel + 1}">
+            <button class="cc-channel-btn ${channel === activeChannel ? 'active' : ''}" data-channel="${channel}" title="${this.t('midiEditor.channelTip', { channel: channel + 1 })}">
                 ${channel + 1}
             </button>
         `).join('');
@@ -1367,7 +1388,7 @@ class MidiEditorModal {
     async saveMidiFile() {
         if (!this.currentFile || !this.pianoRoll) {
             this.log('error', 'Cannot save: no file or piano roll');
-            this.showError('Impossible de sauvegarder: éditeur non initialisé');
+            this.showError(this.t('midiEditor.cannotSave'));
             return;
         }
 
@@ -1400,7 +1421,7 @@ class MidiEditorModal {
             if (response && response.success) {
                 this.isDirty = false;
                 this.updateSaveButton();
-                this.showNotification('Fichier sauvegardé avec succès', 'success');
+                this.showNotification(this.t('midiEditor.saveSuccess'), 'success');
 
                 // Émettre événement
                 if (this.eventBus) {
@@ -1409,12 +1430,12 @@ class MidiEditorModal {
                     });
                 }
             } else {
-                throw new Error('La réponse du serveur indique un échec');
+                throw new Error('Server response indicates failure');
             }
 
         } catch (error) {
             this.log('error', 'Failed to save MIDI file:', error);
-            this.showError(`Erreur de sauvegarde: ${error.message}`);
+            this.showError(`${this.t('errors.saveFailed')}: ${error.message}`);
         }
     }
 
@@ -1427,7 +1448,7 @@ class MidiEditorModal {
      */
     renderChannelButtons() {
         if (!this.channels || this.channels.length === 0) {
-            return '<div class="channel-buttons"><span>Aucun canal disponible</span></div>';
+            return `<div class="channel-buttons"><span>${this.t('midiEditor.noActiveChannel')}</span></div>`;
         }
 
         let buttons = '<div class="channel-buttons">';
@@ -1530,7 +1551,7 @@ class MidiEditorModal {
 
         if (this.activeChannels.size === 0) {
             // Aucun canal actif : afficher "Instrument:" et désactiver
-            if (instrumentLabel) instrumentLabel.textContent = 'Instrument:';
+            if (instrumentLabel) instrumentLabel.textContent = this.t('midiEditor.instrument');
             if (applyBtn) applyBtn.disabled = true;
         } else if (this.activeChannels.size === 1) {
             // Un seul canal actif : on peut modifier son instrument
@@ -1550,7 +1571,7 @@ class MidiEditorModal {
                 // Activer le bouton
                 if (applyBtn) {
                     applyBtn.disabled = false;
-                    applyBtn.title = 'Appliquer l\'instrument au canal';
+                    applyBtn.title = this.t('midiEditor.applyInstrument');
                 }
             }
         } else {
@@ -1559,8 +1580,8 @@ class MidiEditorModal {
             const channelInfo = this.channels.find(ch => ch.channel === firstActiveChannel);
 
             if (instrumentLabel) {
-                instrumentLabel.textContent = `⚠ ${this.activeChannels.size} canaux actifs`;
-                instrumentLabel.title = 'Désactivez les canaux que vous ne voulez pas modifier';
+                instrumentLabel.textContent = this.t('midiEditor.multipleChannels', { count: this.activeChannels.size });
+                instrumentLabel.title = this.t('midiEditor.multipleChannelsTip');
             }
 
             // Afficher l'instrument du premier canal actif
@@ -1571,7 +1592,7 @@ class MidiEditorModal {
             // Désactiver le bouton car plusieurs canaux actifs
             if (applyBtn) {
                 applyBtn.disabled = true;
-                applyBtn.title = 'Veuillez garder un seul canal actif pour modifier son instrument';
+                applyBtn.title = this.t('midiEditor.singleChannelRequired');
             }
         }
     }
@@ -1618,7 +1639,7 @@ class MidiEditorModal {
             <div class="modal-dialog modal-xl">
                 <div class="modal-header">
                     <div class="modal-title">
-                        <h3>🎹 Éditeur MIDI</h3>
+                        <h3>🎹 ${this.t('midiEditor.title')}</h3>
                         <span class="file-name">${this.escapeHtml(this.currentFilename || this.currentFile || '')}</span>
                     </div>
                     <button class="modal-close" data-action="close">&times;</button>
@@ -1628,13 +1649,13 @@ class MidiEditorModal {
                     <div class="editor-toolbar">
                         <!-- Section Undo/Redo -->
                         <div class="toolbar-section">
-                            <button class="tool-btn" data-action="undo" id="undo-btn" title="Annuler (Ctrl+Z)" disabled>
+                            <button class="tool-btn" data-action="undo" id="undo-btn" title="${this.t('midiEditor.undo')} (Ctrl+Z)" disabled>
                                 <span class="icon">↶</span>
-                                <span class="btn-label">Annuler</span>
+                                <span class="btn-label">${this.t('midiEditor.undo')}</span>
                             </button>
-                            <button class="tool-btn" data-action="redo" id="redo-btn" title="Refaire (Ctrl+Y)" disabled>
+                            <button class="tool-btn" data-action="redo" id="redo-btn" title="${this.t('midiEditor.redo')} (Ctrl+Y)" disabled>
                                 <span class="icon">↷</span>
-                                <span class="btn-label">Refaire</span>
+                                <span class="btn-label">${this.t('midiEditor.redo')}</span>
                             </button>
                         </div>
 
@@ -1642,8 +1663,8 @@ class MidiEditorModal {
 
                         <!-- Section Grille/Snap -->
                         <div class="toolbar-section">
-                            <label class="snap-label">Grille:</label>
-                            <button class="tool-btn-snap" data-action="cycle-snap" id="snap-btn" title="Subdivision de la grille (clic pour changer)">
+                            <label class="snap-label">${this.t('midiEditor.grid')}</label>
+                            <button class="tool-btn-snap" data-action="cycle-snap" id="snap-btn" title="${this.t('midiEditor.gridTip')}">
                                 <span class="snap-value" id="snap-value">1/8</span>
                             </button>
                         </div>
@@ -1652,35 +1673,35 @@ class MidiEditorModal {
 
                         <!-- Section Navigation et Zoom -->
                         <div class="toolbar-section">
-                            <button class="tool-btn active" data-action="mode-drag-view" data-mode="drag-view" title="Mode Déplacer Vue (actif par défaut)">
+                            <button class="tool-btn active" data-action="mode-drag-view" data-mode="drag-view" title="${this.t('midiEditor.viewModeTip')}">
                                 <span class="icon">👁️</span>
-                                <span class="btn-label">Vue</span>
+                                <span class="btn-label">${this.t('midiEditor.viewMode')}</span>
                             </button>
-                            <button class="tool-btn-compact" data-action="zoom-h-out" title="Dézoomer horizontal">H−</button>
-                            <button class="tool-btn-compact" data-action="zoom-h-in" title="Zoomer horizontal">H+</button>
-                            <button class="tool-btn-compact" data-action="zoom-v-out" title="Dézoomer vertical">V−</button>
-                            <button class="tool-btn-compact" data-action="zoom-v-in" title="Zoomer vertical">V+</button>
+                            <button class="tool-btn-compact" data-action="zoom-h-out" title="${this.t('midiEditor.zoomHOut')}">H−</button>
+                            <button class="tool-btn-compact" data-action="zoom-h-in" title="${this.t('midiEditor.zoomHIn')}">H+</button>
+                            <button class="tool-btn-compact" data-action="zoom-v-out" title="${this.t('midiEditor.zoomVOut')}">V−</button>
+                            <button class="tool-btn-compact" data-action="zoom-v-in" title="${this.t('midiEditor.zoomVIn')}">V+</button>
                         </div>
 
                         <div class="toolbar-divider"></div>
 
                         <!-- Section Mode d'édition -->
                         <div class="toolbar-section">
-                            <button class="tool-btn" data-action="mode-select" data-mode="select" title="Mode Sélection">
+                            <button class="tool-btn" data-action="mode-select" data-mode="select" title="${this.t('midiEditor.selectModeTip')}">
                                 <span class="icon">⊕</span>
-                                <span class="btn-label">Sélection</span>
+                                <span class="btn-label">${this.t('midiEditor.selectMode')}</span>
                             </button>
-                            <button class="tool-btn" data-action="mode-drag-notes" data-mode="drag-notes" title="Mode Déplacer Notes">
+                            <button class="tool-btn" data-action="mode-drag-notes" data-mode="drag-notes" title="${this.t('midiEditor.moveNotesTip')}">
                                 <span class="icon">🎵</span>
-                                <span class="btn-label">Déplacer</span>
+                                <span class="btn-label">${this.t('midiEditor.moveNotes')}</span>
                             </button>
-                            <button class="tool-btn" data-action="mode-add-note" data-mode="add-note" title="Mode Ajouter Note">
+                            <button class="tool-btn" data-action="mode-add-note" data-mode="add-note" title="${this.t('midiEditor.addNoteTip')}">
                                 <span class="icon">➕</span>
-                                <span class="btn-label">Ajouter</span>
+                                <span class="btn-label">${this.t('midiEditor.addNote')}</span>
                             </button>
-                            <button class="tool-btn" data-action="mode-resize-note" data-mode="resize-note" title="Mode Modifier Durée">
+                            <button class="tool-btn" data-action="mode-resize-note" data-mode="resize-note" title="${this.t('midiEditor.durationTip')}">
                                 <span class="icon">↔</span>
-                                <span class="btn-label">Durée</span>
+                                <span class="btn-label">${this.t('midiEditor.duration')}</span>
                             </button>
                         </div>
 
@@ -1688,17 +1709,17 @@ class MidiEditorModal {
 
                         <!-- Section Édition -->
                         <div class="toolbar-section">
-                            <button class="tool-btn" data-action="copy" id="copy-btn" title="Copier (Ctrl+C)" disabled>
+                            <button class="tool-btn" data-action="copy" id="copy-btn" title="${this.t('midiEditor.copy')} (Ctrl+C)" disabled>
                                 <span class="icon">📋</span>
-                                <span class="btn-label">Copier</span>
+                                <span class="btn-label">${this.t('midiEditor.copy')}</span>
                             </button>
-                            <button class="tool-btn" data-action="paste" id="paste-btn" title="Coller (Ctrl+V)" disabled>
+                            <button class="tool-btn" data-action="paste" id="paste-btn" title="${this.t('midiEditor.paste')} (Ctrl+V)" disabled>
                                 <span class="icon">📄</span>
-                                <span class="btn-label">Coller</span>
+                                <span class="btn-label">${this.t('midiEditor.paste')}</span>
                             </button>
-                            <button class="tool-btn" data-action="delete" id="delete-btn" title="Supprimer (Del)">
+                            <button class="tool-btn" data-action="delete" id="delete-btn" title="${this.t('midiEditor.delete')} (Del)">
                                 <span class="icon">🗑</span>
-                                <span class="btn-label">Supprimer</span>
+                                <span class="btn-label">${this.t('midiEditor.delete')}</span>
                             </button>
                         </div>
 
@@ -1706,22 +1727,22 @@ class MidiEditorModal {
 
                         <!-- Section Canal -->
                         <div class="toolbar-section">
-                            <label class="snap-label">Canal:</label>
-                            <select class="snap-select" id="channel-selector" title="Changer le canal des notes sélectionnées">
+                            <label class="snap-label">${this.t('midiEditor.channel')}</label>
+                            <select class="snap-select" id="channel-selector" title="${this.t('midiEditor.changeChannelTip')}">
                                 ${this.renderChannelOptions()}
                             </select>
-                            <button class="tool-btn-compact" data-action="change-channel" id="change-channel-btn" title="Appliquer le canal" disabled>→</button>
+                            <button class="tool-btn-compact" data-action="change-channel" id="change-channel-btn" title="${this.t('midiEditor.applyChannel')}" disabled>→</button>
                         </div>
 
                         <div class="toolbar-divider"></div>
 
                         <!-- Section Instrument -->
                         <div class="toolbar-section">
-                            <label class="snap-label" id="instrument-label">Instrument:</label>
-                            <select class="snap-select" id="instrument-selector" title="Instrument du canal actif">
+                            <label class="snap-label" id="instrument-label">${this.t('midiEditor.instrument')}</label>
+                            <select class="snap-select" id="instrument-selector" title="${this.t('midiEditor.selectInstrument')}">
                                 ${this.renderInstrumentOptions()}
                             </select>
-                            <button class="tool-btn-compact" data-action="apply-instrument" id="apply-instrument-btn" title="Appliquer l'instrument au canal">✓</button>
+                            <button class="tool-btn-compact" data-action="apply-instrument" id="apply-instrument-btn" title="${this.t('midiEditor.applyInstrument')}">✓</button>
                         </div>
                     </div>
 
@@ -1754,7 +1775,7 @@ class MidiEditorModal {
                         </div>
 
                         <!-- Barre de resize entre notes et CC -->
-                        <div class="cc-resize-bar" id="cc-resize-btn" title="Drag pour redimensionner">
+                        <div class="cc-resize-bar" id="cc-resize-btn" title="${this.t('midiEditor.dragToResize')}">
                             <span class="resize-grip">⋮⋮⋮</span>
                         </div>
 
@@ -1764,7 +1785,7 @@ class MidiEditorModal {
                             <div class="cc-section-header collapsed" id="cc-section-header">
                                 <div class="cc-section-title">
                                     <span class="cc-collapse-icon">▼</span>
-                                    <span>CC / Pitch Bend / Vélocité</span>
+                                    <span>${this.t('midiEditor.ccSection')}</span>
                                 </div>
                             </div>
 
@@ -1772,47 +1793,47 @@ class MidiEditorModal {
                             <div class="cc-section-content" id="cc-section-content">
                                 <!-- Toolbar horizontal pour sélection du type (CC/PB/VEL) -->
                                 <div class="cc-type-toolbar">
-                                    <label class="cc-toolbar-label">Type:</label>
+                                    <label class="cc-toolbar-label">${this.t('midiEditor.type')}</label>
                                     <div class="cc-type-buttons-horizontal">
                                         <button class="cc-type-btn active" data-cc-type="cc1" title="Modulation Wheel">
-                                            CC1 <span class="cc-label">Modulation</span>
+                                            CC1 <span class="cc-label">${this.t('midiEditor.modulation')}</span>
                                         </button>
                                         <button class="cc-type-btn" data-cc-type="cc7" title="Channel Volume">
-                                            CC7 <span class="cc-label">Volume</span>
+                                            CC7 <span class="cc-label">${this.t('midiEditor.volume')}</span>
                                         </button>
                                         <button class="cc-type-btn" data-cc-type="cc10" title="Pan Position">
-                                            CC10 <span class="cc-label">Pan</span>
+                                            CC10 <span class="cc-label">${this.t('midiEditor.pan')}</span>
                                         </button>
                                         <button class="cc-type-btn" data-cc-type="cc11" title="Expression Controller">
-                                            CC11 <span class="cc-label">Expression</span>
+                                            CC11 <span class="cc-label">${this.t('midiEditor.expression')}</span>
                                         </button>
                                         <button class="cc-type-btn" data-cc-type="pitchbend" title="Pitch Wheel">
-                                            PB <span class="cc-label">Pitch Bend</span>
+                                            PB <span class="cc-label">${this.t('midiEditor.pitchBend')}</span>
                                         </button>
                                         <button class="cc-type-btn" data-cc-type="velocity" title="Note Velocity">
-                                            VEL <span class="cc-label">Vélocité</span>
+                                            VEL <span class="cc-label">${this.t('midiEditor.velocity')}</span>
                                         </button>
                                     </div>
 
                                     <div class="cc-toolbar-divider"></div>
 
-                                    <label class="cc-toolbar-label">Outils:</label>
+                                    <label class="cc-toolbar-label">${this.t('midiEditor.tools')}</label>
                                     <div class="cc-tool-buttons-horizontal">
-                                        <button class="cc-tool-btn active" data-tool="select" title="Sélection">⬚</button>
-                                        <button class="cc-tool-btn" data-tool="move" title="Déplacer">✥</button>
-                                        <button class="cc-tool-btn" data-tool="line" title="Ligne">╱</button>
-                                        <button class="cc-tool-btn" data-tool="draw" title="Dessin continu">✎</button>
+                                        <button class="cc-tool-btn active" data-tool="select" title="${this.t('midiEditor.selectTool')}">⬚</button>
+                                        <button class="cc-tool-btn" data-tool="move" title="${this.t('midiEditor.moveTool')}">✥</button>
+                                        <button class="cc-tool-btn" data-tool="line" title="${this.t('midiEditor.lineTool')}">╱</button>
+                                        <button class="cc-tool-btn" data-tool="draw" title="${this.t('midiEditor.drawTool')}">✎</button>
                                     </div>
 
                                     <div class="cc-toolbar-divider"></div>
 
-                                    <button class="cc-delete-btn" id="cc-delete-btn" title="Supprimer la sélection (Del)" disabled>
-                                        🗑️ <span class="btn-label">Supprimer</span>
+                                    <button class="cc-delete-btn" id="cc-delete-btn" title="${this.t('midiEditor.deleteSelection')}" disabled>
+                                        🗑️ <span class="btn-label">${this.t('midiEditor.delete')}</span>
                                     </button>
 
                                     <div class="cc-toolbar-divider"></div>
 
-                                    <label class="cc-toolbar-label">Canal:</label>
+                                    <label class="cc-toolbar-label">${this.t('midiEditor.channel')}</label>
                                     <div class="cc-channel-selector-horizontal" id="editor-channel-selector">
                                         <!-- Les canaux seront ajoutés dynamiquement -->
                                     </div>
@@ -1830,9 +1851,9 @@ class MidiEditorModal {
 
                     <!-- Boutons flottants en overlay -->
                     <div class="modal-floating-buttons">
-                        <button class="btn btn-secondary" data-action="close">Fermer</button>
+                        <button class="btn btn-secondary" data-action="close">${this.t('common.close')}</button>
                         <button class="btn btn-primary" data-action="save" id="save-btn">
-                            💾 Sauvegarder
+                            💾 ${this.t('midiEditor.save')}
                         </button>
                     </div>
                 </div>
@@ -1866,7 +1887,7 @@ class MidiEditorModal {
 
         // Vérifier que webaudio-pianoroll est chargé
         if (typeof customElements.get('webaudio-pianoroll') === 'undefined') {
-            this.showError('La bibliothèque webaudio-pianoroll n\'est pas chargée. Vérifiez que le script est inclus dans index.html.');
+            this.showError(this.t('midiEditor.libraryNotLoaded'));
             return;
         }
 
@@ -2060,10 +2081,10 @@ class MidiEditorModal {
         if (saveBtn) {
             if (this.isDirty) {
                 saveBtn.classList.add('btn-warning');
-                saveBtn.innerHTML = '💾 Sauvegarder *';
+                saveBtn.innerHTML = `💾 ${this.t('midiEditor.saveModified')}`;
             } else {
                 saveBtn.classList.remove('btn-warning');
-                saveBtn.innerHTML = '💾 Sauvegarder';
+                saveBtn.innerHTML = `💾 ${this.t('midiEditor.save')}`;
             }
         }
     }
@@ -2157,13 +2178,13 @@ class MidiEditorModal {
      */
     copy() {
         if (!this.pianoRoll || typeof this.pianoRoll.copySelection !== 'function') {
-            this.showNotification('Fonction copier non disponible', 'error');
+            this.showNotification(this.t('midiEditor.copyNotAvailable'), 'error');
             return;
         }
 
         const count = this.getSelectionCount();
         if (count === 0) {
-            this.showNotification('Aucune note sélectionnée', 'info');
+            this.showNotification(this.t('midiEditor.noNoteSelected'), 'info');
             return;
         }
 
@@ -2171,7 +2192,7 @@ class MidiEditorModal {
         this.clipboard = this.pianoRoll.copySelection();
 
         this.log('info', `Copied ${this.clipboard.length} notes`);
-        this.showNotification(`${this.clipboard.length} note(s) copiée(s)`, 'success');
+        this.showNotification(this.t('midiEditor.notesCopied', { count: this.clipboard.length }), 'success');
 
         // Activer le bouton Paste
         const pasteBtn = document.getElementById('paste-btn');
@@ -2187,12 +2208,12 @@ class MidiEditorModal {
      */
     paste() {
         if (!this.clipboard || this.clipboard.length === 0) {
-            this.showNotification('Clipboard vide', 'info');
+            this.showNotification(this.t('midiEditor.clipboardEmpty'), 'info');
             return;
         }
 
         if (!this.pianoRoll || typeof this.pianoRoll.pasteNotes !== 'function') {
-            this.showNotification('Fonction coller non disponible', 'error');
+            this.showNotification(this.t('midiEditor.pasteNotAvailable'), 'error');
             return;
         }
 
@@ -2203,7 +2224,7 @@ class MidiEditorModal {
         this.pianoRoll.pasteNotes(this.clipboard, currentTime);
 
         this.log('info', `Pasted ${this.clipboard.length} notes`);
-        this.showNotification(`${this.clipboard.length} note(s) collée(s)`, 'success');
+        this.showNotification(this.t('midiEditor.notesPasted', { count: this.clipboard.length }), 'success');
 
         this.isDirty = true;
         this.updateSaveButton();
@@ -2216,13 +2237,13 @@ class MidiEditorModal {
      */
     deleteSelectedNotes() {
         if (!this.pianoRoll || typeof this.pianoRoll.deleteSelection !== 'function') {
-            this.showNotification('Fonction supprimer non disponible', 'error');
+            this.showNotification(this.t('midiEditor.deleteNotAvailable'), 'error');
             return;
         }
 
         const count = this.getSelectionCount();
         if (count === 0) {
-            this.showNotification('Aucune note sélectionnée', 'info');
+            this.showNotification(this.t('midiEditor.noNoteSelected'), 'info');
             return;
         }
 
@@ -2230,7 +2251,7 @@ class MidiEditorModal {
         this.pianoRoll.deleteSelection();
 
         this.log('info', `Deleted ${count} notes`);
-        this.showNotification(`${count} note(s) supprimée(s)`, 'success');
+        this.showNotification(this.t('midiEditor.notesDeleted', { count }), 'success');
 
         this.isDirty = true;
         this.updateSaveButton();
@@ -2243,13 +2264,13 @@ class MidiEditorModal {
      */
     changeChannel() {
         if (!this.pianoRoll || typeof this.pianoRoll.changeChannelSelection !== 'function') {
-            this.showNotification('Fonction changer canal non disponible', 'error');
+            this.showNotification(this.t('midiEditor.changeChannelNotAvailable'), 'error');
             return;
         }
 
         const count = this.getSelectionCount();
         if (count === 0) {
-            this.showNotification('Aucune note sélectionnée', 'info');
+            this.showNotification(this.t('midiEditor.noNoteSelected'), 'info');
             return;
         }
 
@@ -2272,7 +2293,7 @@ class MidiEditorModal {
         this.pianoRoll.changeChannelSelection(newChannel);
 
         this.log('info', `Changed channel of ${count} notes to ${newChannel}`);
-        this.showNotification(`Canal changé pour ${count} note(s)`, 'success');
+        this.showNotification(this.t('midiEditor.channelChanged', { count }), 'success');
 
         this.isDirty = true;
         this.updateSaveButton();
@@ -2314,14 +2335,14 @@ class MidiEditorModal {
      */
     applyInstrument() {
         if (this.activeChannels.size === 0) {
-            this.showNotification('Aucun canal actif', 'info');
+            this.showNotification(this.t('midiEditor.noActiveChannel'), 'info');
             return;
         }
 
         // Si plusieurs canaux sont actifs, demander de n'en garder qu'un seul
         if (this.activeChannels.size > 1) {
             this.showNotification(
-                `Plusieurs canaux actifs (${this.activeChannels.size}). Veuillez désactiver les canaux que vous ne voulez pas modifier en cliquant sur leurs boutons.`,
+                this.t('midiEditor.multipleChannelsWarning', { count: this.activeChannels.size }),
                 'warning'
             );
             return;
@@ -2359,7 +2380,7 @@ class MidiEditorModal {
         channelInfo.instrument = targetChannel === 9 ? 'Drums' : instrumentName;
 
         this.log('info', `Applied instrument ${instrumentName} to channel ${targetChannel}`);
-        this.showNotification(`Canal ${targetChannel + 1}: ${instrumentName}`, 'success');
+        this.showNotification(this.t('midiEditor.instrumentApplied', { channel: targetChannel + 1, instrument: instrumentName }), 'success');
 
         // Mettre à jour l'affichage des boutons de canal (pour refléter le nouvel instrument)
         // Régénérer complètement les boutons avec les nouveaux noms d'instrument
@@ -2407,7 +2428,7 @@ class MidiEditorModal {
         // Synchroniser tous les éditeurs
         this.syncAllEditors();
 
-        this.showNotification(`Magnétisme: ${currentSnap.label}`, 'info');
+        this.showNotification(this.t('midiEditor.snapChanged', { snap: currentSnap.label }), 'info');
     }
 
     /**
@@ -3329,16 +3350,16 @@ class MidiEditorModal {
                 <div style="display: flex; align-items: center; margin-bottom: 16px;">
                     <span style="font-size: 32px; margin-right: 12px;">⚠️</span>
                     <h2 style="margin: 0; color: #ff6b6b; font-size: 20px; font-family: sans-serif;">
-                        Modifications non sauvegardées
+                        ${this.t('midiEditor.unsavedChanges.title')}
                     </h2>
                 </div>
 
                 <div style="margin-bottom: 24px; color: #ddd; line-height: 1.6; font-family: sans-serif;">
                     <p style="margin: 0 0 12px 0;">
-                        Vous avez effectué des modifications qui n'ont pas été sauvegardées.
+                        ${this.t('midiEditor.unsavedChanges.message')}
                     </p>
                     <p style="margin: 0; font-weight: bold; color: #ff6b6b;">
-                        Si vous fermez maintenant, ces modifications seront PERDUES.
+                        ${this.t('midiEditor.unsavedChanges.warning')}
                     </p>
                 </div>
 
@@ -3353,7 +3374,7 @@ class MidiEditorModal {
                         font-size: 14px;
                         font-family: sans-serif;
                     ">
-                        ↩️ Annuler
+                        ↩️ ${this.t('midiEditor.unsavedChanges.cancel')}
                     </button>
                     <button id="unsaved-save-btn" style="
                         padding: 10px 20px;
@@ -3366,7 +3387,7 @@ class MidiEditorModal {
                         font-weight: bold;
                         font-family: sans-serif;
                     ">
-                        💾 Sauvegarder et fermer
+                        💾 ${this.t('midiEditor.unsavedChanges.saveAndClose')}
                     </button>
                     <button id="unsaved-discard-btn" style="
                         padding: 10px 20px;
@@ -3378,7 +3399,7 @@ class MidiEditorModal {
                         font-size: 14px;
                         font-family: sans-serif;
                     ">
-                        🗑️ Fermer sans sauvegarder
+                        🗑️ ${this.t('midiEditor.unsavedChanges.closeWithoutSave')}
                     </button>
                 </div>
             </div>
@@ -3427,6 +3448,12 @@ class MidiEditorModal {
      * Effectuer la fermeture réelle de l'éditeur
      */
     doClose() {
+        // Unsubscribe from locale changes
+        if (this.localeUnsubscribe) {
+            this.localeUnsubscribe();
+            this.localeUnsubscribe = null;
+        }
+
         // Arrêter la synchronisation des sliders
         if (this.syncInterval) {
             clearInterval(this.syncInterval);
