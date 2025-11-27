@@ -207,26 +207,27 @@ class SettingsModal {
             <!-- Langue -->
             <div class="settings-section">
                 <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #333;">🌐 ${i18n.t('settings.language.title')}</h3>
-                <div class="language-options" style="display: flex; gap: 12px;">
+                <div class="language-options" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;">
                     ${locales.map(locale => `
                         <button class="language-btn ${locale.code === currentLocale ? 'active' : ''}"
                                 data-locale="${locale.code}"
                                 style="
-                                    flex: 1;
-                                    padding: 12px 16px;
+                                    padding: 10px 12px;
                                     border: 2px solid ${locale.code === currentLocale ? '#667eea' : '#e5e7eb'};
                                     border-radius: 8px;
                                     background: ${locale.code === currentLocale ? '#f0f4ff' : 'white'};
                                     cursor: pointer;
                                     transition: all 0.2s;
-                                    font-size: 14px;
+                                    font-size: 13px;
                                     display: flex;
                                     align-items: center;
-                                    justify-content: center;
+                                    justify-content: flex-start;
                                     gap: 8px;
+                                    white-space: nowrap;
+                                    overflow: hidden;
                                 ">
-                            <span style="font-size: 18px;">${this.getLocaleFlag(locale.code)}</span>
-                            <span>${locale.name}</span>
+                            <span style="font-size: 18px; flex-shrink: 0;">${this.getLocaleFlag(locale.code)}</span>
+                            <span style="overflow: hidden; text-overflow: ellipsis;">${locale.name}</span>
                         </button>
                     `).join('')}
                 </div>
@@ -363,7 +364,12 @@ class SettingsModal {
             'es': '🇪🇸',
             'de': '🇩🇪',
             'it': '🇮🇹',
-            'pt': '🇧🇷'
+            'pt': '🇧🇷',
+            'nl': '🇳🇱',
+            'pl': '🇵🇱',
+            'ru': '🇷🇺',
+            'ja': '🇯🇵',
+            'zh-CN': '🇨🇳'
         };
         return flags[locale] || '🌐';
     }
