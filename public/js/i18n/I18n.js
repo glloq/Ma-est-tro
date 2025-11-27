@@ -17,11 +17,14 @@
             this.currentLocale = 'fr';
             this.fallbackLocale = 'fr';
             this.translations = {};
-            this.supportedLocales = ['fr', 'en', 'es'];
+            this.supportedLocales = ['fr', 'en', 'es', 'de', 'it', 'pt'];
             this.localeNames = {
                 'fr': 'Français',
                 'en': 'English',
-                'es': 'Español'
+                'es': 'Español',
+                'de': 'Deutsch',
+                'it': 'Italiano',
+                'pt': 'Português'
             };
             this.listeners = [];
             this.initialized = false;
