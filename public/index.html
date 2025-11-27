@@ -1129,6 +1129,27 @@
         body.theme-dark .confirm-modal-message {
             color: #b0b0b0;
         }
+
+        /* File input wrapper */
+        .file-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .file-input-label {
+            color: #666;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+        }
+
+        body.theme-dark .file-input-label {
+            color: #b0b0b0;
+        }
     </style>
 
     <!-- Fichier CSS externe pour les composants (Modal MIDI Editor, etc.) -->
@@ -1195,7 +1216,13 @@
                 <div class="card">
                     <h2>📁 <span data-i18n="ui.midiFiles">Fichiers MIDI</span></h2>
 
-                    <input type="file" id="fileInput" accept=".mid,.midi" multiple>
+                    <input type="file" id="fileInput" accept=".mid,.midi" multiple style="display: none;">
+                    <div class="file-input-wrapper">
+                        <button class="btn btn-secondary" id="browseBtn" onclick="document.getElementById('fileInput').click()">
+                            📂&nbsp;&nbsp;<span data-i18n="ui.browse">Parcourir</span>
+                        </button>
+                        <span class="file-input-label" id="fileInputLabel" data-i18n="ui.noFileSelectedShort">Aucun fichier sélectionné</span>
+                    </div>
 
                     <div class="btn-group">
                         <button class="btn" id="uploadBtn">📤&nbsp;&nbsp;<span data-i18n="ui.upload">Envoyer</span></button>
@@ -2651,6 +2678,7 @@
             }
 
             input.value = '';
+            document.getElementById('fileInputLabel').textContent = i18n.t('ui.noFileSelectedShort');
             loadFiles();
         }
 
@@ -3377,6 +3405,16 @@
         // ========== ÉVÉNEMENTS ==========
 
         document.getElementById('uploadBtn').addEventListener('click', uploadFile);
+        document.getElementById('fileInput').addEventListener('change', function() {
+            const label = document.getElementById('fileInputLabel');
+            if (this.files.length === 0) {
+                label.textContent = i18n.t('ui.noFileSelectedShort');
+            } else if (this.files.length === 1) {
+                label.textContent = this.files[0].name;
+            } else {
+                label.textContent = i18n.t('ui.filesSelected', { count: this.files.length });
+            }
+        });
         document.getElementById('createFolderBtn').addEventListener('click', createFolder);
         document.getElementById('scanDevicesBtn').addEventListener('click', loadDevices);
 
