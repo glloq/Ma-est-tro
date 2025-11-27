@@ -17,14 +17,19 @@
             this.currentLocale = 'fr';
             this.fallbackLocale = 'fr';
             this.translations = {};
-            this.supportedLocales = ['fr', 'en', 'es', 'de', 'it', 'pt'];
+            this.supportedLocales = ['fr', 'en', 'es', 'de', 'it', 'pt', 'nl', 'pl', 'ru', 'ja', 'zh-CN'];
             this.localeNames = {
                 'fr': 'Français',
                 'en': 'English',
                 'es': 'Español',
                 'de': 'Deutsch',
                 'it': 'Italiano',
-                'pt': 'Português'
+                'pt': 'Português',
+                'nl': 'Nederlands',
+                'pl': 'Polski',
+                'ru': 'Русский',
+                'ja': '日本語',
+                'zh-CN': '简体中文'
             };
             this.listeners = [];
             this.initialized = false;
