@@ -199,6 +199,10 @@
     "deleteSelection": "Supprimer la sélection (Del)",
     "dragToResize": "Drag pour redimensionner",
     "save": "Sauvegarder",
+    "renameFile": "Renommer le fichier",
+    "renameEmpty": "Le nom du fichier ne peut pas être vide",
+    "renameSuccess": "Fichier renommé avec succès",
+    "renameFailed": "Échec du renommage",
     "cannotSave": "Impossible de sauvegarder: éditeur non initialisé",
     "cannotOpen": "Impossible d'ouvrir le fichier: {error}",
     "libraryNotLoaded": "La bibliothèque webaudio-pianoroll n'est pas chargée. Vérifiez que le script est inclus dans index.html.",
@@ -333,6 +337,11 @@
     "createFolderPrompt": "Nom du nouveau dossier:",
     "folderCreated": "Dossier \"{folder}\" créé",
     "uploadSuccess": "Envoi de {filename}...",
-    "uploadComplete": "Fichier envoyé avec succès"
+    "uploadComplete": "Fichier envoyé avec succès",
+    "newFolder": "Nouveau dossier",
+    "folderNamePlaceholder": "Nom du dossier...",
+    "create": "Créer",
+    "folderExists": "Le dossier \"{folder}\" existe déjà",
+    "folderExistsTitle": "Dossier existant"
   }
 }

@@ -199,6 +199,10 @@
     "deleteSelection": "Delete selection (Del)",
     "dragToResize": "Drag to resize",
     "save": "Save",
+    "renameFile": "Rename file",
+    "renameEmpty": "File name cannot be empty",
+    "renameSuccess": "File renamed successfully",
+    "renameFailed": "Rename failed",
     "cannotSave": "Cannot save: editor not initialized",
     "cannotOpen": "Cannot open file: {error}",
     "libraryNotLoaded": "The webaudio-pianoroll library is not loaded. Check that the script is included in index.html.",
@@ -333,6 +337,11 @@
     "createFolderPrompt": "New folder name:",
     "folderCreated": "Folder \"{folder}\" created",
     "uploadSuccess": "Uploading {filename}...",
-    "uploadComplete": "File uploaded successfully"
+    "uploadComplete": "File uploaded successfully",
+    "newFolder": "New folder",
+    "folderNamePlaceholder": "Folder name...",
+    "create": "Create",
+    "folderExists": "Folder \"{folder}\" already exists",
+    "folderExistsTitle": "Folder exists"
   }
 }

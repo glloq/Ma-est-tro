@@ -1130,6 +1130,130 @@
             color: #b0b0b0;
         }
 
+        /* Modal de création de dossier */
+        .folder-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .folder-modal-overlay.show {
+            display: flex;
+        }
+
+        .folder-modal {
+            background: white;
+            border-radius: 12px;
+            padding: 0;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 450px;
+            width: 90%;
+            animation: modalFadeIn 0.2s ease-out;
+        }
+
+        .folder-modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .folder-modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .folder-modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+            line-height: 1;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .folder-modal-close:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .folder-modal-body {
+            padding: 24px;
+        }
+
+        .folder-modal-input {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .folder-modal-input:focus {
+            border-color: #667eea;
+        }
+
+        .folder-modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        /* Folder Modal - Dark mode */
+        body.theme-dark .folder-modal {
+            background: #2d2d2d;
+        }
+
+        body.theme-dark .folder-modal-header {
+            border-bottom-color: #444;
+        }
+
+        body.theme-dark .folder-modal-title {
+            color: #e0e0e0;
+        }
+
+        body.theme-dark .folder-modal-close {
+            color: #999;
+        }
+
+        body.theme-dark .folder-modal-close:hover {
+            background: #3d3d3d;
+            color: #fff;
+        }
+
+        body.theme-dark .folder-modal-input {
+            background: #3d3d3d;
+            border-color: #555;
+            color: #fff;
+        }
+
+        body.theme-dark .folder-modal-input:focus {
+            border-color: #667eea;
+        }
+
+        body.theme-dark .folder-modal-footer {
+            border-top-color: #444;
+        }
+
         /* File input wrapper */
         .file-input-wrapper {
             display: flex;
@@ -1171,6 +1295,28 @@
             <div class="confirm-modal-buttons" id="confirmButtons">
                 <button class="btn btn-secondary" id="confirmCancelBtn" data-i18n="common.cancel">Annuler</button>
                 <button class="btn btn-danger" id="confirmOkBtn" data-i18n="common.confirm">Confirmer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de création de dossier -->
+    <div class="folder-modal-overlay" id="folderModal">
+        <div class="folder-modal">
+            <div class="folder-modal-header">
+                <div class="folder-modal-title">
+                    <span>📁</span>
+                    <span data-i18n="fileOperations.newFolder">Nouveau dossier</span>
+                </div>
+                <button class="folder-modal-close" id="folderModalClose">&times;</button>
+            </div>
+            <div class="folder-modal-body">
+                <input type="text" class="folder-modal-input" id="folderNameInput"
+                       data-i18n-placeholder="fileOperations.folderNamePlaceholder"
+                       placeholder="Nom du dossier..." />
+            </div>
+            <div class="folder-modal-footer">
+                <button class="btn btn-secondary" id="folderModalCancel" data-i18n="common.cancel">Annuler</button>
+                <button class="btn btn-primary" id="folderModalCreate" data-i18n="fileOperations.create">Créer</button>
             </div>
         </div>
     </div>
@@ -2260,34 +2406,92 @@
             return li;
         }
 
-        // Créer un nouveau dossier
-        async function createFolder() {
-            const folderName = prompt('Nom du dossier:');
-            if (!folderName || folderName.trim() === '') {
+        // Afficher le modal de création de dossier
+        function showFolderModal() {
+            const modal = document.getElementById('folderModal');
+            const input = document.getElementById('folderNameInput');
+            modal.classList.add('show');
+            input.value = '';
+            input.focus();
+        }
+
+        // Masquer le modal de création de dossier
+        function hideFolderModal() {
+            const modal = document.getElementById('folderModal');
+            modal.classList.remove('show');
+        }
+
+        // Créer un nouveau dossier (appelé depuis le modal)
+        async function createFolderFromModal() {
+            const input = document.getElementById('folderNameInput');
+            const folderName = input.value.trim();
+
+            if (!folderName) {
+                input.focus();
                 return;
             }
 
-            const cleanName = folderName.trim();
-
             // Vérifier si le dossier existe déjà
-            if (folderStructure[cleanName]) {
-                await showAlert(`Le dossier "${cleanName}" existe déjà`, {
-                    title: 'Dossier existant',
+            if (folderStructure[folderName]) {
+                await showAlert(i18n.t('fileOperations.folderExists', { folder: folderName }), {
+                    title: i18n.t('fileOperations.folderExistsTitle'),
                     icon: '⚠️'
                 });
                 return;
             }
 
             // Créer le dossier
-            folderStructure[cleanName] = {
+            folderStructure[folderName] = {
                 parent: null,
                 files: [],
                 open: false
             };
 
             saveFolderStructure();
-            log(`📁 Dossier "${cleanName}" créé`);
+            log(`📁 ${i18n.t('fileOperations.folderCreated', { folder: folderName })}`);
             loadFiles();
+            hideFolderModal();
+        }
+
+        // Initialiser les event listeners du modal dossier
+        function initFolderModal() {
+            const modal = document.getElementById('folderModal');
+            const closeBtn = document.getElementById('folderModalClose');
+            const cancelBtn = document.getElementById('folderModalCancel');
+            const createBtn = document.getElementById('folderModalCreate');
+            const input = document.getElementById('folderNameInput');
+
+            // Fermer avec le bouton X
+            closeBtn.addEventListener('click', hideFolderModal);
+
+            // Fermer avec le bouton Annuler
+            cancelBtn.addEventListener('click', hideFolderModal);
+
+            // Créer avec le bouton Créer
+            createBtn.addEventListener('click', createFolderFromModal);
+
+            // Créer avec Entrée
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    createFolderFromModal();
+                }
+                if (e.key === 'Escape') {
+                    hideFolderModal();
+                }
+            });
+
+            // Fermer en cliquant sur l'overlay
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    hideFolderModal();
+                }
+            });
+        }
+
+        // Créer un nouveau dossier (fonction publique qui affiche le modal)
+        function createFolder() {
+            showFolderModal();
         }
 
         // Supprimer un dossier (seulement si vide)
@@ -3416,6 +3620,7 @@
             }
         });
         document.getElementById('createFolderBtn').addEventListener('click', createFolder);
+        initFolderModal(); // Initialiser le modal de création de dossier
         document.getElementById('scanDevicesBtn').addEventListener('click', loadDevices);
 
         // Event listener pour le bouton de scan Bluetooth

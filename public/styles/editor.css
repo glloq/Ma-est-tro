@@ -820,3 +820,120 @@
     pointer-events: none;
     cursor: not-allowed;
 }
+
+/* ===== FILE RENAME IN HEADER ===== */
+.file-name-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-rename-file {
+    background: transparent;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    opacity: 0.6;
+    transition: all 0.2s ease;
+}
+
+.btn-rename-file:hover {
+    background: rgba(255, 255, 255, 0.1);
+    opacity: 1;
+}
+
+/* Rename Dialog Overlay */
+.rename-dialog-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.rename-dialog {
+    background: var(--bg-secondary, #2a2a2a);
+    border-radius: 12px;
+    padding: 24px;
+    min-width: 350px;
+    max-width: 450px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.rename-dialog h4 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    color: var(--text-primary, #fff);
+}
+
+.rename-input-container {
+    display: flex;
+    align-items: center;
+    background: var(--bg-tertiary, #1a1a1a);
+    border: 2px solid var(--border-color, #333);
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 20px;
+}
+
+.rename-input-container:focus-within {
+    border-color: var(--primary-color, #4ECDC4);
+}
+
+.rename-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 10px 12px;
+    font-size: 15px;
+    color: var(--text-primary, #fff);
+    outline: none;
+}
+
+.rename-extension {
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--text-secondary, #888);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0 6px 6px 0;
+}
+
+.rename-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.rename-buttons .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.rename-buttons .btn-secondary {
+    background: var(--bg-tertiary, #333);
+    color: var(--text-primary, #fff);
+}
+
+.rename-buttons .btn-secondary:hover {
+    background: #444;
+}
+
+.rename-buttons .btn-primary {
+    background: var(--primary-color, #4ECDC4);
+    color: #000;
+}
+
+.rename-buttons .btn-primary:hover {
+    background: var(--primary-hover, #45B7D1);
+}
