@@ -581,12 +581,7 @@
    ============================================================================ */
 
 .confirm-modal {
-    display: flex !important;
     position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
     background: rgba(0, 0, 0, 0.7);
     z-index: 999999 !important;
     align-items: center !important;
