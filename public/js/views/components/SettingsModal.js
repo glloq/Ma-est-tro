@@ -207,29 +207,37 @@ class SettingsModal {
             <!-- Langue -->
             <div class="settings-section">
                 <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #333;">🌐 ${i18n.t('settings.language.title')}</h3>
-                <div class="language-options" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;">
-                    ${locales.map(locale => `
-                        <button class="language-btn ${locale.code === currentLocale ? 'active' : ''}"
-                                data-locale="${locale.code}"
-                                style="
-                                    padding: 10px 12px;
-                                    border: 2px solid ${locale.code === currentLocale ? '#667eea' : '#e5e7eb'};
-                                    border-radius: 8px;
-                                    background: ${locale.code === currentLocale ? '#f0f4ff' : 'white'};
-                                    cursor: pointer;
-                                    transition: all 0.2s;
-                                    font-size: 13px;
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: flex-start;
-                                    gap: 8px;
-                                    white-space: nowrap;
-                                    overflow: hidden;
-                                ">
-                            <span style="font-size: 18px; flex-shrink: 0;">${this.getLocaleFlag(locale.code)}</span>
-                            <span style="overflow: hidden; text-overflow: ellipsis;">${locale.name}</span>
-                        </button>
-                    `).join('')}
+                <div class="language-selector-container" style="position: relative;">
+                    <select id="languageSelect" class="language-select" style="
+                        width: 100%;
+                        padding: 12px 16px;
+                        padding-right: 40px;
+                        border: 2px solid #e5e7eb;
+                        border-radius: 8px;
+                        background: white;
+                        cursor: pointer;
+                        font-size: 15px;
+                        color: #333;
+                        appearance: none;
+                        -webkit-appearance: none;
+                        -moz-appearance: none;
+                        transition: all 0.2s;
+                    ">
+                        ${locales.map(locale => `
+                            <option value="${locale.code}" ${locale.code === currentLocale ? 'selected' : ''}>
+                                ${this.getLocaleFlag(locale.code)} ${locale.name}
+                            </option>
+                        `).join('')}
+                    </select>
+                    <span style="
+                        position: absolute;
+                        right: 16px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        pointer-events: none;
+                        color: #666;
+                        font-size: 12px;
+                    ">▼</span>
                 </div>
             </div>
 
@@ -384,7 +392,8 @@ class SettingsModal {
             'fi': '🇫🇮',
             'cs': '🇨🇿',
             'hu': '🇭🇺',
-            'tl': '🇵🇭'
+            'tl': '🇵🇭',
+            'uk': '🇺🇦'
         };
         return flags[locale] || '🌐';
     }
@@ -444,17 +453,22 @@ class SettingsModal {
                 transform: translateX(30px);
             }
 
-            .theme-btn.active,
-            .language-btn.active {
+            .theme-btn.active {
                 border-color: #667eea !important;
                 background: #f0f4ff !important;
             }
 
-            .theme-btn:hover,
-            .language-btn:hover {
+            .theme-btn:hover {
                 border-color: #667eea !important;
                 transform: translateY(-2px);
                 box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+            }
+
+            .language-select:hover,
+            .language-select:focus {
+                border-color: #667eea !important;
+                outline: none;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
             }
 
             .settings-close-btn:hover {
@@ -515,19 +529,14 @@ class SettingsModal {
      * Attacher les événements du contenu (appelé après mise à jour du contenu)
      */
     attachContentEventListeners() {
-        // Boutons de langue
-        this.modal.querySelectorAll('.language-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const locale = btn.dataset.locale;
+        // Sélecteur de langue (liste déroulante)
+        const languageSelect = this.modal.querySelector('#languageSelect');
+        if (languageSelect) {
+            languageSelect.addEventListener('change', async (e) => {
+                const locale = e.target.value;
                 await i18n.setLocale(locale);
-                // Mettre à jour l'état actif des boutons
-                this.modal.querySelectorAll('.language-btn').forEach(b => {
-                    b.classList.toggle('active', b.dataset.locale === locale);
-                    b.style.borderColor = b.dataset.locale === locale ? '#667eea' : '#e5e7eb';
-                    b.style.background = b.dataset.locale === locale ? '#f0f4ff' : 'white';
-                });
             });
-        });
+        }
 
         // Boutons de thème
         this.modal.querySelectorAll('.theme-btn').forEach(btn => {
