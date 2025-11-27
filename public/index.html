@@ -1145,11 +1145,11 @@
     <div class="confirm-modal-overlay" id="confirmModal">
         <div class="confirm-modal">
             <div class="confirm-modal-icon" id="confirmIcon">⚠️</div>
-            <div class="confirm-modal-title" id="confirmTitle">Confirmation</div>
-            <div class="confirm-modal-message" id="confirmMessage">Êtes-vous sûr de vouloir continuer ?</div>
+            <div class="confirm-modal-title" id="confirmTitle" data-i18n="ui.confirmation">Confirmation</div>
+            <div class="confirm-modal-message" id="confirmMessage" data-i18n="ui.confirmMessage">Êtes-vous sûr de vouloir continuer ?</div>
             <div class="confirm-modal-buttons" id="confirmButtons">
-                <button class="btn btn-secondary" id="confirmCancelBtn">Annuler</button>
-                <button class="btn btn-danger" id="confirmOkBtn">Confirmer</button>
+                <button class="btn btn-secondary" id="confirmCancelBtn" data-i18n="common.cancel">Annuler</button>
+                <button class="btn btn-danger" id="confirmOkBtn" data-i18n="common.confirm">Confirmer</button>
             </div>
         </div>
     </div>
@@ -1157,31 +1157,31 @@
     <div id="loading" class="loading">
         <div class="loading-content">
             <div class="spinner"></div>
-            <p>Chargement de MidiMind...</p>
+            <p data-i18n="ui.loading">Chargement de MidiMind...</p>
         </div>
     </div>
 
     <div id="app" class="hidden">
         <div class="container">
             <header>
-                <button class="btn-keyboard-toggle" id="openKeyboardBtn" title="Ouvrir le clavier MIDI">
+                <button class="btn-keyboard-toggle" id="openKeyboardBtn" data-i18n-title="ui.openKeyboard" title="Ouvrir le clavier MIDI">
                     🎹
                 </button>
 
-                <button class="btn-settings-toggle" id="settingsToggle" title="Réglages">
+                <button class="btn-settings-toggle" id="settingsToggle" data-i18n-title="ui.settings" title="Réglages">
                     ⚙️
                 </button>
 
-                <button class="btn-debug-toggle" id="debugToggle" title="Afficher/Masquer les logs">
+                <button class="btn-debug-toggle" id="debugToggle" data-i18n-title="ui.toggleLogs" title="Afficher/Masquer les logs">
                     🐞
                 </button>
 
                 <div class="header-playback">
                     <div class="header-controls">
-                        <span class="header-file-name" id="headerFileName">Aucun fichier sélectionné</span>
+                        <span class="header-file-name" id="headerFileName" data-i18n="ui.noFileSelected">Aucun fichier sélectionné</span>
                         <span class="header-time" id="headerTime">00:00 / 00:00</span>
-                        <button class="btn" id="headerPlayPauseBtn" disabled>▶️&nbsp;&nbsp;Lecture</button>
-                        <button class="btn btn-danger" id="headerStopBtn" disabled>⏹️&nbsp;&nbsp;Stop</button>
+                        <button class="btn" id="headerPlayPauseBtn" disabled>▶️&nbsp;&nbsp;<span data-i18n="ui.play">Lecture</span></button>
+                        <button class="btn btn-danger" id="headerStopBtn" disabled>⏹️&nbsp;&nbsp;<span data-i18n="ui.stop">Stop</span></button>
                     </div>
 
                     <div class="header-progress">
@@ -1193,36 +1193,36 @@
             <div class="main-grid">
                 <!-- Fichiers MIDI -->
                 <div class="card">
-                    <h2>📁 Fichiers MIDI</h2>
+                    <h2>📁 <span data-i18n="ui.midiFiles">Fichiers MIDI</span></h2>
 
                     <input type="file" id="fileInput" accept=".mid,.midi" multiple>
 
                     <div class="btn-group">
-                        <button class="btn" id="uploadBtn">📤&nbsp;&nbsp;Envoyer</button>
-                        <button class="btn btn-secondary" id="createFolderBtn">📁&nbsp;&nbsp;Nouveau dossier</button>
+                        <button class="btn" id="uploadBtn">📤&nbsp;&nbsp;<span data-i18n="ui.upload">Envoyer</span></button>
+                        <button class="btn btn-secondary" id="createFolderBtn">📁&nbsp;&nbsp;<span data-i18n="ui.newFolder">Nouveau dossier</span></button>
                     </div>
 
-                    <div class="drop-zone-root" id="dropZoneRoot">
+                    <div class="drop-zone-root" id="dropZoneRoot" data-i18n="ui.dropToRoot">
                         📂 Déposer ici pour remettre à la racine
                     </div>
 
                     <ul class="file-list" id="fileList">
-                        <li class="info-text">Aucun fichier</li>
+                        <li class="info-text" data-i18n="ui.noFiles">Aucun fichier</li>
                     </ul>
                 </div>
 
                 <!-- Périphériques MIDI -->
                 <div class="card">
-                    <h2>🎛️ Périphériques MIDI</h2>
+                    <h2>🎛️ <span data-i18n="ui.midiDevices">Périphériques MIDI</span></h2>
 
                     <div class="btn-group">
-                        <button class="btn" id="scanDevicesBtn">🔌&nbsp;&nbsp;Scan USB</button>
-                        <button class="btn" id="scanBluetoothBtn" style="background: #9b59b6 !important;">📡&nbsp;&nbsp;Scan Bluetooth</button>
-                        <button class="btn" id="scanNetworkBtn" style="background: #3498db !important;">🌐&nbsp;&nbsp;Scan Réseau</button>
+                        <button class="btn" id="scanDevicesBtn">🔌&nbsp;&nbsp;<span data-i18n="ui.scanUsb">Scan USB</span></button>
+                        <button class="btn" id="scanBluetoothBtn" style="background: #9b59b6 !important;">📡&nbsp;&nbsp;<span data-i18n="ui.scanBluetooth">Scan Bluetooth</span></button>
+                        <button class="btn" id="scanNetworkBtn" style="background: #3498db !important;">🌐&nbsp;&nbsp;<span data-i18n="ui.scanNetwork">Scan Réseau</span></button>
                     </div>
 
                     <ul class="device-list" id="deviceList">
-                        <li class="info-text">Aucun périphérique</li>
+                        <li class="info-text" data-i18n="ui.noDevices">Aucun périphérique</li>
                     </ul>
                 </div>
 
@@ -1230,7 +1230,7 @@
 
             <!-- Console -->
             <div class="card hidden" id="debugConsole">
-                <h2>📋 Console de débogage</h2>
+                <h2>📋 <span data-i18n="ui.debugConsole">Console de débogage</span></h2>
                 <div class="log-console" id="logConsole"></div>
             </div>
         </div>
@@ -1303,8 +1303,8 @@
 
                 // S'assurer que les boutons confirm existent (peuvent avoir été modifiés par showAlert)
                 buttons.innerHTML = `
-                    <button class="btn btn-secondary" id="confirmCancelBtn">Annuler</button>
-                    <button class="btn btn-danger" id="confirmOkBtn">Confirmer</button>
+                    <button class="btn btn-secondary" id="confirmCancelBtn">${i18n.t('common.cancel')}</button>
+                    <button class="btn btn-danger" id="confirmOkBtn">${i18n.t('common.confirm')}</button>
                 `;
 
                 const okBtn = document.getElementById('confirmOkBtn');
@@ -1312,10 +1312,10 @@
 
                 // Configuration par défaut
                 const config = {
-                    title: options.title || 'Confirmation',
+                    title: options.title || i18n.t('ui.confirmation'),
                     icon: options.icon || '⚠️',
-                    okText: options.okText || 'Confirmer',
-                    cancelText: options.cancelText || 'Annuler',
+                    okText: options.okText || i18n.t('common.confirm'),
+                    cancelText: options.cancelText || i18n.t('common.cancel'),
                     danger: options.danger !== false // true par défaut
                 };
 
@@ -1440,8 +1440,8 @@
                     modal.removeEventListener('click', handleOverlayClick);
                     // Restaurer les deux boutons pour les prochains confirms
                     buttons.innerHTML = `
-                        <button class="btn btn-secondary" id="confirmCancelBtn">Annuler</button>
-                        <button class="btn btn-danger" id="confirmOkBtn">Confirmer</button>
+                        <button class="btn btn-secondary" id="confirmCancelBtn">${i18n.t('common.cancel')}</button>
+                        <button class="btn btn-danger" id="confirmOkBtn">${i18n.t('common.confirm')}</button>
                     `;
                 };
 
@@ -1915,7 +1915,7 @@
                     currentDuration = 0;
                     updatePlaybackControls();
                     document.getElementById('headerProgressFill').style.width = '0%';
-                    document.getElementById('headerFileName').textContent = 'Aucun fichier sélectionné';
+                    document.getElementById('headerFileName').textContent = i18n.t('ui.noFileSelected');
                     document.getElementById('headerTime').textContent = '00:00 / 00:00';
                     log('⏹️ Lecture arrêtée');
                 });
@@ -2048,7 +2048,7 @@
                 });
 
                 if (rootItems.length === 0) {
-                    fileList.innerHTML = '<li class="info-text">Aucun fichier</li>';
+                    fileList.innerHTML = `<li class="info-text">${i18n.t('ui.noFiles')}</li>`;
                     return;
                 }
 
@@ -2283,11 +2283,11 @@
                 return;
             }
 
-            const confirmed = await showConfirm(`Voulez-vous vraiment supprimer le dossier "${folderPath}" ?`, {
-                title: 'Supprimer le dossier',
+            const confirmed = await showConfirm(i18n.t('fileOperations.deleteFolderConfirm', { folder: folderPath }), {
+                title: i18n.t('fileOperations.deleteFolder'),
                 icon: '📁🗑️',
-                okText: 'Supprimer',
-                cancelText: 'Annuler'
+                okText: i18n.t('fileOperations.delete'),
+                cancelText: i18n.t('common.cancel')
             });
 
             if (!confirmed) {
@@ -2296,7 +2296,7 @@
 
             delete folderStructure[folderPath];
             saveFolderStructure();
-            log(`🗑️ Dossier "${folderPath}" supprimé`);
+            log(`🗑️ ${i18n.t('fileOperations.folderDeleted', { folder: folderPath })}`);
             loadFiles();
         }
 
@@ -2430,7 +2430,7 @@
             if (!targetFolder) {
                 console.log(`Fichier ${fileIdStr} déplacé vers la racine`);
                 saveFolderStructure();
-                log(`📦 Fichier déplacé vers la racine`);
+                log(`📦 ${i18n.t('fileOperations.movedToRoot')}`);
                 loadFiles();
                 return;
             }
@@ -2456,7 +2456,7 @@
             console.log('Nouvelle structure:', JSON.stringify(folderStructure, null, 2));
 
             saveFolderStructure();
-            log(`📦 Fichier déplacé vers "${targetFolder}"`);
+            log(`📦 ${i18n.t('fileOperations.movedToFolder', { folder: targetFolder })}`);
             loadFiles();
         }
 
@@ -2499,7 +2499,7 @@
                 if (virtualInstrumentEnabled) {
                     const virtualDevice = {
                         id: 'virtual-instrument',
-                        name: '🎹 Instrument Virtuel',
+                        name: `🎹 ${i18n.t('ui.virtualInstrument')}`,
                         type: 'Virtual',
                         status: 2,
                         connected: true,
@@ -2511,7 +2511,7 @@
                 }
 
                 if (connectedDevices.length === 0) {
-                    deviceList.innerHTML = '<li class="info-text">Aucun périphérique connecté</li>';
+                    deviceList.innerHTML = `<li class="info-text">${i18n.t('ui.noDevicesConnected')}</li>`;
                     // Sauvegarder tous les périphériques pour le routage
                     availableDevices = devices;
                     log(`${devices.length} périphérique(s) trouvé(s), ${connectedDevices.length} connecté(s)`);
@@ -2529,7 +2529,7 @@
                         deviceInfo.className = 'device-info-section';
                         deviceInfo.innerHTML = `
                             <div class="device-name">${device.name}</div>
-                            <div class="device-type">Instrument virtuel • Messages envoyés aux logs</div>
+                            <div class="device-type">${i18n.t('ui.virtualInstrumentType')}</div>
                         `;
 
                         const deviceActions = document.createElement('div');
@@ -2636,7 +2636,7 @@
             const files = input.files;
 
             if (files.length === 0) {
-                log('Aucun fichier sélectionné', 'warning');
+                log(i18n.t('ui.noFileSelected'), 'warning');
                 return;
             }
 
@@ -2656,18 +2656,18 @@
 
         // Supprimer fichier
         async function deleteFile(fileId) {
-            const confirmed = await showConfirm('Voulez-vous vraiment supprimer ce fichier ?', {
-                title: 'Supprimer le fichier',
+            const confirmed = await showConfirm(i18n.t('fileOperations.deleteFileConfirm'), {
+                title: i18n.t('fileOperations.deleteFile'),
                 icon: '🗑️',
-                okText: 'Supprimer',
-                cancelText: 'Annuler'
+                okText: i18n.t('fileOperations.delete'),
+                cancelText: i18n.t('common.cancel')
             });
 
             if (!confirmed) return;
 
             try {
                 await api.sendCommand('file_delete', { fileId });
-                log(`🗑️ Fichier supprimé`);
+                log(`🗑️ ${i18n.t('fileOperations.fileDeleted')}`);
 
                 // Supprimer aussi la config de routage
                 delete fileRoutingConfig[fileId];
@@ -2802,21 +2802,21 @@
                     }
 
                     if (!virtualInstrumentEnabled) {
-                        await showAlert('Aucun périphérique de sortie MIDI disponible.\n\nVeuillez connecter un périphérique MIDI, activer l\'instrument virtuel dans les réglages, ou créer un port virtuel.', {
-                            title: 'Périphérique requis',
+                        await showAlert(i18n.t('ui.noMidiOutput'), {
+                            title: i18n.t('ui.midiDevices'),
                             icon: '🎛️'
                         });
                         return;
                     } else {
                         // L'instrument virtuel est activé mais pas encore dans availableDevices
                         // Recharger les devices
-                        log('Rechargement des périphériques pour inclure l\'instrument virtuel...', 'info');
+                        log(i18n.t('ui.reloadingDevices'), 'info');
                         await loadDevices();
 
                         const outputDevicesAfterReload = availableDevices.filter(d => d.type !== 'input');
                         if (outputDevicesAfterReload.length === 0) {
-                            await showAlert('Erreur : l\'instrument virtuel n\'a pas pu être chargé.\n\nVeuillez rafraîchir la page.', {
-                                title: 'Erreur de chargement',
+                            await showAlert(i18n.t('ui.virtualInstrumentLoadError'), {
+                                title: i18n.t('common.error'),
                                 icon: '❌'
                             });
                             return;
@@ -2915,15 +2915,15 @@
 
             modal.innerHTML = `
                 <div style="background: white; border-radius: 12px; padding: 24px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
-                    <h2 style="margin: 0 0 16px 0; color: #667eea;">🔀 Configuration du routage MIDI</h2>
-                    <p style="margin-bottom: 16px; color: #666;"><strong>Fichier:</strong> ${filename}</p>
-                    <p style="margin-bottom: 16px; color: #666;"><strong>Canaux trouvés:</strong> ${channels.length}</p>
+                    <h2 style="margin: 0 0 16px 0; color: #667eea;">🔀 ${i18n.t('channelRouter.title')}</h2>
+                    <p style="margin-bottom: 16px; color: #666;"><strong>${i18n.t('channelRouter.file')}:</strong> ${filename}</p>
+                    <p style="margin-bottom: 16px; color: #666;"><strong>${i18n.t('channelRouter.channelsFound')}:</strong> ${channels.length}</p>
                     <div style="margin-bottom: 20px;">
                         ${channelHTML}
                     </div>
                     <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                        <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Annuler</button>
-                        <button class="btn" onclick="saveRouting(${fileId})">✓ Sauvegarder</button>
+                        <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">${i18n.t('common.cancel')}</button>
+                        <button class="btn" onclick="saveRouting(${fileId})">✓ ${i18n.t('channelRouter.saveRouting')}</button>
                     </div>
                 </div>
             `;
@@ -2961,7 +2961,7 @@
                         }
                     } else {
                         // Périphérique virtuel : juste logger
-                        log(`Canal ${ch.channel} → 🎹 Instrument Virtuel (messages vers logs)`, 'info');
+                        log(i18n.t('ui.channelToVirtual', { channel: ch.channel }), 'info');
                     }
                 }
             }
@@ -2992,12 +2992,12 @@
 
             if (!routed) {
                 const shouldConfigure = await showConfirm(
-                    `Le routage MIDI n'est pas configuré pour "${filename}".\n\nVoulez-vous le configurer maintenant ?`,
+                    i18n.t('channelRouter.routingRequiredMessage', { filename }),
                     {
-                        title: 'Routage requis',
+                        title: i18n.t('channelRouter.routingRequired'),
                         icon: '🔀',
-                        okText: 'Configurer',
-                        cancelText: 'Annuler',
+                        okText: i18n.t('channelRouter.configure'),
+                        cancelText: i18n.t('common.cancel'),
                         danger: false
                     }
                 );
@@ -3044,7 +3044,7 @@
                 } catch (error) {
                     log(`Erreur lecture virtuelle: ${error.message}`, 'error');
                     currentFileId = null;
-                    document.getElementById('headerFileName').textContent = 'Aucun fichier sélectionné';
+                    document.getElementById('headerFileName').textContent = i18n.t('ui.noFileSelected');
                     updatePlaybackControls();
                 }
                 return;
@@ -3052,7 +3052,7 @@
 
             // Mode mixte ou backend pur
             if (hasVirtual) {
-                log('ℹ️ Mode mixte : certains canaux routés vers l\'instrument virtuel', 'info');
+                log(`ℹ️ ${i18n.t('ui.mixedModeInfo')}`, 'info');
             }
 
             // Appliquer le routage aux canaux non-virtuels
@@ -3067,7 +3067,7 @@
                         log(`Erreur application routage canal ${channel}: ${error.message}`, 'error');
                     }
                 } else {
-                    log(`Canal ${channel} → 🎹 Instrument Virtuel (ignoré en mode backend)`, 'info');
+                    log(i18n.t('ui.channelToVirtualIgnored', { channel }), 'info');
                 }
             }
 
@@ -3082,7 +3082,7 @@
             } catch (error) {
                 log(`Erreur lecture: ${error.message}`, 'error');
                 currentFileId = null;
-                document.getElementById('headerFileName').textContent = 'Aucun fichier sélectionné';
+                document.getElementById('headerFileName').textContent = i18n.t('ui.noFileSelected');
                 updatePlaybackControls();
             }
         }
@@ -3191,55 +3191,55 @@
                 modal.innerHTML = `
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h2>⚙️ Réglages de l'instrument</h2>
+                            <h2>⚙️ ${i18n.t('instrumentSettings.title')}</h2>
                             <button class="modal-close" onclick="closeInstrumentSettings()">×</button>
                         </div>
 
                         <div class="form-group">
-                            <label>Nom du périphérique</label>
+                            <label>${i18n.t('instrumentSettings.deviceName')}</label>
                             <input type="text" id="deviceNameDisplay" value="${device.name}" disabled>
-                            <small class="form-text">Nom détecté automatiquement</small>
+                            <small class="form-text">${i18n.t('instrumentSettings.deviceNameAuto')}</small>
                         </div>
 
                         ${device.usbSerialNumber ? `
                         <div class="form-group">
-                            <label>Numéro de série USB</label>
+                            <label>${i18n.t('instrumentSettings.serialNumber')}</label>
                             <input type="text" id="usbSerialNumber" value="${device.usbSerialNumber}" disabled>
-                            <small class="form-text">Identifiant unique pour différencier les appareils identiques</small>
+                            <small class="form-text">${i18n.t('instrumentSettings.serialNumberHelp')}</small>
                         </div>
                         ` : ''}
 
                         <div class="form-group">
-                            <label>Nom personnalisé</label>
-                            <input type="text" id="customName" value="${settings.custom_name || ''}" placeholder="Mon Synthétiseur">
-                            <small class="form-text">Nom d'affichage personnalisé (optionnel)</small>
+                            <label>${i18n.t('instrumentSettings.customName')}</label>
+                            <input type="text" id="customName" value="${settings.custom_name || ''}" placeholder="${i18n.t('instrumentSettings.customNamePlaceholder')}">
+                            <small class="form-text">${i18n.t('instrumentSettings.customNameHelp')}</small>
                         </div>
 
                         <div class="form-group">
-                            <label>Délai de synchronisation (μs)</label>
+                            <label>${i18n.t('instrumentSettings.syncDelay')}</label>
                             <input type="number" id="syncDelay" value="${settings.sync_delay || 0}" min="-2147483648" max="2147483647">
-                            <small class="form-text">Positif = retarder, négatif = avancer (pour synchronisation multi-instruments)</small>
+                            <small class="form-text">${i18n.t('instrumentSettings.syncDelayHelp')}</small>
                         </div>
 
                         <div class="form-group">
-                            <label>Adresse MAC (Bluetooth)</label>
+                            <label>${i18n.t('instrumentSettings.macAddress')}</label>
                             <input type="text" id="macAddress" value="${settings.mac_address || ''}" placeholder="AA:BB:CC:DD:EE:FF">
-                            <small class="form-text">Pour associer les réglages aux appareils Bluetooth</small>
+                            <small class="form-text">${i18n.t('instrumentSettings.macAddressHelp')}</small>
                         </div>
 
                         <div class="identity-section">
-                            <h3>🔍 Identification SysEx</h3>
+                            <h3>🔍 ${i18n.t('instrumentSettings.identity')}</h3>
                             <button class="btn" id="requestIdentityBtn" onclick="requestIdentity('${device.id.replace(/'/g, "\\'")}')">
-                                📡 Envoyer Identity Request
+                                📡 ${i18n.t('instrumentSettings.sendIdentityRequest')}
                             </button>
                             <div id="identityInfo" style="margin-top: 12px;">
-                                ${settings.sysex_manufacturer_id ? renderIdentityInfo(settings) : '<p class="info-text">Aucune information d\'identité disponible</p>'}
+                                ${settings.sysex_manufacturer_id ? renderIdentityInfo(settings) : `<p class="info-text">${i18n.t('instrumentSettings.noIdentity')}</p>`}
                             </div>
                         </div>
 
                         <div class="modal-actions">
-                            <button class="btn btn-secondary" onclick="closeInstrumentSettings()">Annuler</button>
-                            <button class="btn" onclick="saveInstrumentSettings()">💾 Enregistrer</button>
+                            <button class="btn btn-secondary" onclick="closeInstrumentSettings()">${i18n.t('common.cancel')}</button>
+                            <button class="btn" onclick="saveInstrumentSettings()">💾 ${i18n.t('common.save')}</button>
                         </div>
                     </div>
                 `;
@@ -3460,7 +3460,7 @@
                     // Gérer l'instrument virtuel
                     if (event === 'settings:virtual_instrument_changed') {
                         if (data.enabled) {
-                            log('🎵 Instrument virtuel ACTIVÉ - Les messages MIDI seront affichés ici', 'success');
+                            log(`🎵 ${i18n.t('ui.virtualInstrumentEnabled')}`, 'success');
                             // Ajouter le périphérique virtuel
                             loadDevices();
 
@@ -3469,7 +3469,7 @@
                                 keyboardModal.refreshDevices();
                             }
                         } else {
-                            log('🎵 Instrument virtuel DÉSACTIVÉ', 'info');
+                            log(`🎵 ${i18n.t('ui.virtualInstrumentDisabled')}`, 'info');
                             // Retirer le périphérique virtuel
                             loadDevices();
 
