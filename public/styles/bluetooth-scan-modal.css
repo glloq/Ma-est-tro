@@ -582,7 +582,6 @@
 
 .confirm-modal {
     position: fixed !important;
-    left: 0 !important;
     background: rgba(0, 0, 0, 0.7);
     z-index: 999999 !important;
     align-items: center !important;
