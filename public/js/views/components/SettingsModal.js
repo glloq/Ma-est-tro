@@ -360,7 +360,10 @@ class SettingsModal {
         const flags = {
             'fr': '🇫🇷',
             'en': '🇬🇧',
-            'es': '🇪🇸'
+            'es': '🇪🇸',
+            'de': '🇩🇪',
+            'it': '🇮🇹',
+            'pt': '🇧🇷'
         };
         return flags[locale] || '🌐';
     }
