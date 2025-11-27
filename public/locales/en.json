@@ -202,7 +202,29 @@
     "cannotSave": "Cannot save: editor not initialized",
     "cannotOpen": "Cannot open file: {error}",
     "libraryNotLoaded": "The webaudio-pianoroll library is not loaded. Check that the script is included in index.html.",
-    "backendNotSupported": "The backend doesn't support MIDI file reading yet.\\n\\nThe \"file_read\" command must be added to the backend.\\nMeanwhile, use the classic editor."
+    "backendNotSupported": "The backend doesn't support MIDI file reading yet.\\n\\nThe \"file_read\" command must be added to the backend.\\nMeanwhile, use the classic editor.",
+    "saveSuccess": "File saved successfully",
+    "copyNotAvailable": "Copy function not available",
+    "pasteNotAvailable": "Paste function not available",
+    "deleteNotAvailable": "Delete function not available",
+    "noNoteSelected": "No note selected",
+    "clipboardEmpty": "Clipboard empty",
+    "notesCopied": "{count} note(s) copied",
+    "notesPasted": "{count} note(s) pasted",
+    "notesDeleted": "{count} note(s) deleted",
+    "saveModified": "Save *",
+    "unsavedChanges": {
+      "title": "Unsaved changes",
+      "message": "You have made changes that have not been saved.",
+      "warning": "If you close now, these changes will be LOST.",
+      "saveAndClose": "Save and close",
+      "closeWithoutSave": "Close without saving",
+      "cancel": "Cancel"
+    },
+    "changeChannelNotAvailable": "Change channel function not available",
+    "channelChanged": "Channel changed for {count} note(s)",
+    "instrumentApplied": "Channel {channel}: {instrument}",
+    "snapChanged": "Snap: {snap}"
   },
   "errors": {
     "deviceNotFound": "Device not found: {deviceId}",
@@ -211,7 +233,8 @@
     "invalidMessage": "Invalid message: {errors}",
     "scanFailed": "Scan failed",
     "pairingFailed": "Pairing failed",
-    "disconnectFailed": "Disconnection failed"
+    "disconnectFailed": "Disconnection failed",
+    "saveFailed": "Save error"
   },
   "logs": {
     "applicationStarting": "=== MidiMind 5.0 Starting ===",

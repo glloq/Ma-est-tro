@@ -202,7 +202,29 @@
     "cannotSave": "Impossible de sauvegarder: éditeur non initialisé",
     "cannotOpen": "Impossible d'ouvrir le fichier: {error}",
     "libraryNotLoaded": "La bibliothèque webaudio-pianoroll n'est pas chargée. Vérifiez que le script est inclus dans index.html.",
-    "backendNotSupported": "Le backend ne supporte pas encore la lecture de fichiers MIDI.\\n\\nLa commande \"file_read\" doit être ajoutée au backend.\\nEn attendant, utilisez l'éditeur classique."
+    "backendNotSupported": "Le backend ne supporte pas encore la lecture de fichiers MIDI.\\n\\nLa commande \"file_read\" doit être ajoutée au backend.\\nEn attendant, utilisez l'éditeur classique.",
+    "saveSuccess": "Fichier sauvegardé avec succès",
+    "copyNotAvailable": "Fonction copier non disponible",
+    "pasteNotAvailable": "Fonction coller non disponible",
+    "deleteNotAvailable": "Fonction supprimer non disponible",
+    "noNoteSelected": "Aucune note sélectionnée",
+    "clipboardEmpty": "Clipboard vide",
+    "notesCopied": "{count} note(s) copiée(s)",
+    "notesPasted": "{count} note(s) collée(s)",
+    "notesDeleted": "{count} note(s) supprimée(s)",
+    "saveModified": "Sauvegarder *",
+    "unsavedChanges": {
+      "title": "Modifications non sauvegardées",
+      "message": "Vous avez effectué des modifications qui n'ont pas été sauvegardées.",
+      "warning": "Si vous fermez maintenant, ces modifications seront PERDUES.",
+      "saveAndClose": "Sauvegarder et fermer",
+      "closeWithoutSave": "Fermer sans sauvegarder",
+      "cancel": "Annuler"
+    },
+    "changeChannelNotAvailable": "Fonction changer canal non disponible",
+    "channelChanged": "Canal changé pour {count} note(s)",
+    "instrumentApplied": "Canal {channel}: {instrument}",
+    "snapChanged": "Magnétisme: {snap}"
   },
   "errors": {
     "deviceNotFound": "Périphérique non trouvé: {deviceId}",
@@ -211,7 +233,8 @@
     "invalidMessage": "Message invalide: {errors}",
     "scanFailed": "Échec du scan",
     "pairingFailed": "Échec de l'appairage",
-    "disconnectFailed": "Échec de la déconnexion"
+    "disconnectFailed": "Échec de la déconnexion",
+    "saveFailed": "Erreur de sauvegarde"
   },
   "logs": {
     "applicationStarting": "=== MidiMind 5.0 Démarrage ===",

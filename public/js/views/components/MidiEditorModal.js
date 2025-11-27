@@ -1421,7 +1421,7 @@ class MidiEditorModal {
             if (response && response.success) {
                 this.isDirty = false;
                 this.updateSaveButton();
-                this.showNotification('Fichier sauvegardé avec succès', 'success');
+                this.showNotification(this.t('midiEditor.saveSuccess'), 'success');
 
                 // Émettre événement
                 if (this.eventBus) {
@@ -1430,12 +1430,12 @@ class MidiEditorModal {
                     });
                 }
             } else {
-                throw new Error('La réponse du serveur indique un échec');
+                throw new Error('Server response indicates failure');
             }
 
         } catch (error) {
             this.log('error', 'Failed to save MIDI file:', error);
-            this.showError(`Erreur de sauvegarde: ${error.message}`);
+            this.showError(`${this.t('errors.saveFailed')}: ${error.message}`);
         }
     }
 
@@ -1448,7 +1448,7 @@ class MidiEditorModal {
      */
     renderChannelButtons() {
         if (!this.channels || this.channels.length === 0) {
-            return '<div class="channel-buttons"><span>Aucun canal disponible</span></div>';
+            return `<div class="channel-buttons"><span>${this.t('midiEditor.noActiveChannel')}</span></div>`;
         }
 
         let buttons = '<div class="channel-buttons">';
@@ -2081,10 +2081,10 @@ class MidiEditorModal {
         if (saveBtn) {
             if (this.isDirty) {
                 saveBtn.classList.add('btn-warning');
-                saveBtn.innerHTML = '💾 Sauvegarder *';
+                saveBtn.innerHTML = `💾 ${this.t('midiEditor.saveModified')}`;
             } else {
                 saveBtn.classList.remove('btn-warning');
-                saveBtn.innerHTML = '💾 Sauvegarder';
+                saveBtn.innerHTML = `💾 ${this.t('midiEditor.save')}`;
             }
         }
     }
@@ -2178,13 +2178,13 @@ class MidiEditorModal {
      */
     copy() {
         if (!this.pianoRoll || typeof this.pianoRoll.copySelection !== 'function') {
-            this.showNotification('Fonction copier non disponible', 'error');
+            this.showNotification(this.t('midiEditor.copyNotAvailable'), 'error');
             return;
         }
 
         const count = this.getSelectionCount();
         if (count === 0) {
-            this.showNotification('Aucune note sélectionnée', 'info');
+            this.showNotification(this.t('midiEditor.noNoteSelected'), 'info');
             return;
         }
 
@@ -2192,7 +2192,7 @@ class MidiEditorModal {
         this.clipboard = this.pianoRoll.copySelection();
 
         this.log('info', `Copied ${this.clipboard.length} notes`);
-        this.showNotification(`${this.clipboard.length} note(s) copiée(s)`, 'success');
+        this.showNotification(this.t('midiEditor.notesCopied', { count: this.clipboard.length }), 'success');
 
         // Activer le bouton Paste
         const pasteBtn = document.getElementById('paste-btn');
@@ -2208,12 +2208,12 @@ class MidiEditorModal {
      */
     paste() {
         if (!this.clipboard || this.clipboard.length === 0) {
-            this.showNotification('Clipboard vide', 'info');
+            this.showNotification(this.t('midiEditor.clipboardEmpty'), 'info');
             return;
         }
 
         if (!this.pianoRoll || typeof this.pianoRoll.pasteNotes !== 'function') {
-            this.showNotification('Fonction coller non disponible', 'error');
+            this.showNotification(this.t('midiEditor.pasteNotAvailable'), 'error');
             return;
         }
 
@@ -2224,7 +2224,7 @@ class MidiEditorModal {
         this.pianoRoll.pasteNotes(this.clipboard, currentTime);
 
         this.log('info', `Pasted ${this.clipboard.length} notes`);
-        this.showNotification(`${this.clipboard.length} note(s) collée(s)`, 'success');
+        this.showNotification(this.t('midiEditor.notesPasted', { count: this.clipboard.length }), 'success');
 
         this.isDirty = true;
         this.updateSaveButton();
@@ -2237,13 +2237,13 @@ class MidiEditorModal {
      */
     deleteSelectedNotes() {
         if (!this.pianoRoll || typeof this.pianoRoll.deleteSelection !== 'function') {
-            this.showNotification('Fonction supprimer non disponible', 'error');
+            this.showNotification(this.t('midiEditor.deleteNotAvailable'), 'error');
             return;
         }
 
         const count = this.getSelectionCount();
         if (count === 0) {
-            this.showNotification('Aucune note sélectionnée', 'info');
+            this.showNotification(this.t('midiEditor.noNoteSelected'), 'info');
             return;
         }
 
@@ -2251,7 +2251,7 @@ class MidiEditorModal {
         this.pianoRoll.deleteSelection();
 
         this.log('info', `Deleted ${count} notes`);
-        this.showNotification(`${count} note(s) supprimée(s)`, 'success');
+        this.showNotification(this.t('midiEditor.notesDeleted', { count }), 'success');
 
         this.isDirty = true;
         this.updateSaveButton();
@@ -2264,13 +2264,13 @@ class MidiEditorModal {
      */
     changeChannel() {
         if (!this.pianoRoll || typeof this.pianoRoll.changeChannelSelection !== 'function') {
-            this.showNotification('Fonction changer canal non disponible', 'error');
+            this.showNotification(this.t('midiEditor.changeChannelNotAvailable'), 'error');
             return;
         }
 
         const count = this.getSelectionCount();
         if (count === 0) {
-            this.showNotification('Aucune note sélectionnée', 'info');
+            this.showNotification(this.t('midiEditor.noNoteSelected'), 'info');
             return;
         }
 
@@ -2293,7 +2293,7 @@ class MidiEditorModal {
         this.pianoRoll.changeChannelSelection(newChannel);
 
         this.log('info', `Changed channel of ${count} notes to ${newChannel}`);
-        this.showNotification(`Canal changé pour ${count} note(s)`, 'success');
+        this.showNotification(this.t('midiEditor.channelChanged', { count }), 'success');
 
         this.isDirty = true;
         this.updateSaveButton();
@@ -2380,7 +2380,7 @@ class MidiEditorModal {
         channelInfo.instrument = targetChannel === 9 ? 'Drums' : instrumentName;
 
         this.log('info', `Applied instrument ${instrumentName} to channel ${targetChannel}`);
-        this.showNotification(`Canal ${targetChannel + 1}: ${instrumentName}`, 'success');
+        this.showNotification(this.t('midiEditor.instrumentApplied', { channel: targetChannel + 1, instrument: instrumentName }), 'success');
 
         // Mettre à jour l'affichage des boutons de canal (pour refléter le nouvel instrument)
         // Régénérer complètement les boutons avec les nouveaux noms d'instrument
@@ -2428,7 +2428,7 @@ class MidiEditorModal {
         // Synchroniser tous les éditeurs
         this.syncAllEditors();
 
-        this.showNotification(`Magnétisme: ${currentSnap.label}`, 'info');
+        this.showNotification(this.t('midiEditor.snapChanged', { snap: currentSnap.label }), 'info');
     }
 
     /**
@@ -3350,16 +3350,16 @@ class MidiEditorModal {
                 <div style="display: flex; align-items: center; margin-bottom: 16px;">
                     <span style="font-size: 32px; margin-right: 12px;">⚠️</span>
                     <h2 style="margin: 0; color: #ff6b6b; font-size: 20px; font-family: sans-serif;">
-                        Modifications non sauvegardées
+                        ${this.t('midiEditor.unsavedChanges.title')}
                     </h2>
                 </div>
 
                 <div style="margin-bottom: 24px; color: #ddd; line-height: 1.6; font-family: sans-serif;">
                     <p style="margin: 0 0 12px 0;">
-                        Vous avez effectué des modifications qui n'ont pas été sauvegardées.
+                        ${this.t('midiEditor.unsavedChanges.message')}
                     </p>
                     <p style="margin: 0; font-weight: bold; color: #ff6b6b;">
-                        Si vous fermez maintenant, ces modifications seront PERDUES.
+                        ${this.t('midiEditor.unsavedChanges.warning')}
                     </p>
                 </div>
 
@@ -3374,7 +3374,7 @@ class MidiEditorModal {
                         font-size: 14px;
                         font-family: sans-serif;
                     ">
-                        ↩️ Annuler
+                        ↩️ ${this.t('midiEditor.unsavedChanges.cancel')}
                     </button>
                     <button id="unsaved-save-btn" style="
                         padding: 10px 20px;
@@ -3387,7 +3387,7 @@ class MidiEditorModal {
                         font-weight: bold;
                         font-family: sans-serif;
                     ">
-                        💾 Sauvegarder et fermer
+                        💾 ${this.t('midiEditor.unsavedChanges.saveAndClose')}
                     </button>
                     <button id="unsaved-discard-btn" style="
                         padding: 10px 20px;
@@ -3399,7 +3399,7 @@ class MidiEditorModal {
                         font-size: 14px;
                         font-family: sans-serif;
                     ">
-                        🗑️ Fermer sans sauvegarder
+                        🗑️ ${this.t('midiEditor.unsavedChanges.closeWithoutSave')}
                     </button>
                 </div>
             </div>

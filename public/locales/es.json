@@ -202,7 +202,29 @@
     "cannotSave": "Imposible guardar: editor no inicializado",
     "cannotOpen": "Imposible abrir el archivo: {error}",
     "libraryNotLoaded": "La biblioteca webaudio-pianoroll no está cargada. Verifique que el script esté incluido en index.html.",
-    "backendNotSupported": "El backend aún no soporta la lectura de archivos MIDI.\\n\\nEl comando \"file_read\" debe agregarse al backend.\\nMientras tanto, use el editor clásico."
+    "backendNotSupported": "El backend aún no soporta la lectura de archivos MIDI.\\n\\nEl comando \"file_read\" debe agregarse al backend.\\nMientras tanto, use el editor clásico.",
+    "saveSuccess": "Archivo guardado con éxito",
+    "copyNotAvailable": "Función copiar no disponible",
+    "pasteNotAvailable": "Función pegar no disponible",
+    "deleteNotAvailable": "Función eliminar no disponible",
+    "noNoteSelected": "Ninguna nota seleccionada",
+    "clipboardEmpty": "Portapapeles vacío",
+    "notesCopied": "{count} nota(s) copiada(s)",
+    "notesPasted": "{count} nota(s) pegada(s)",
+    "notesDeleted": "{count} nota(s) eliminada(s)",
+    "saveModified": "Guardar *",
+    "unsavedChanges": {
+      "title": "Cambios sin guardar",
+      "message": "Ha realizado cambios que no se han guardado.",
+      "warning": "Si cierra ahora, estos cambios se PERDERÁN.",
+      "saveAndClose": "Guardar y cerrar",
+      "closeWithoutSave": "Cerrar sin guardar",
+      "cancel": "Cancelar"
+    },
+    "changeChannelNotAvailable": "Función cambiar canal no disponible",
+    "channelChanged": "Canal cambiado para {count} nota(s)",
+    "instrumentApplied": "Canal {channel}: {instrument}",
+    "snapChanged": "Ajuste: {snap}"
   },
   "errors": {
     "deviceNotFound": "Dispositivo no encontrado: {deviceId}",
@@ -211,7 +233,8 @@
     "invalidMessage": "Mensaje inválido: {errors}",
     "scanFailed": "Escaneo fallido",
     "pairingFailed": "Emparejamiento fallido",
-    "disconnectFailed": "Desconexión fallida"
+    "disconnectFailed": "Desconexión fallida",
+    "saveFailed": "Error al guardar"
   },
   "logs": {
     "applicationStarting": "=== MidiMind 5.0 Iniciando ===",
