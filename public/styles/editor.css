@@ -822,10 +822,32 @@
 }
 
 /* ===== FILE RENAME IN HEADER ===== */
-.file-name-container {
+
+/* Modal title avec alignement horizontal */
+.midi-editor-modal .modal-title {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
+}
+
+.midi-editor-modal .modal-title h3 {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.title-separator {
+    color: var(--text-secondary, #888);
+    font-weight: 300;
+}
+
+.midi-editor-modal .file-name {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-secondary, #aaa);
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .btn-rename-file {
@@ -837,6 +859,7 @@
     border-radius: 4px;
     opacity: 0.6;
     transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
 .btn-rename-file:hover {
@@ -844,33 +867,57 @@
     opacity: 1;
 }
 
-/* Rename Dialog Overlay */
+/* Rename Dialog - Modal centré au premier plan */
 .rename-dialog-overlay {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10000;
+    z-index: 100000;
 }
 
 .rename-dialog {
     background: var(--bg-secondary, #2a2a2a);
     border-radius: 12px;
-    padding: 24px;
-    min-width: 350px;
-    max-width: 450px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    padding: 0;
+    min-width: 400px;
+    max-width: 500px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: renameModalIn 0.2s ease-out;
+}
+
+@keyframes renameModalIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.rename-dialog-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color, #333);
 }
 
 .rename-dialog h4 {
-    margin: 0 0 16px 0;
+    margin: 0;
     font-size: 18px;
     color: var(--text-primary, #fff);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rename-dialog-body {
+    padding: 24px;
 }
 
 .rename-input-container {
@@ -880,7 +927,6 @@
     border: 2px solid var(--border-color, #333);
     border-radius: 8px;
     padding: 4px;
-    margin-bottom: 20px;
 }
 
 .rename-input-container:focus-within {
@@ -891,33 +937,36 @@
     flex: 1;
     background: transparent;
     border: none;
-    padding: 10px 12px;
-    font-size: 15px;
+    padding: 12px 14px;
+    font-size: 16px;
     color: var(--text-primary, #fff);
     outline: none;
 }
 
 .rename-extension {
-    padding: 10px 12px;
+    padding: 12px 14px;
     font-size: 14px;
     color: var(--text-secondary, #888);
     background: rgba(255, 255, 255, 0.05);
     border-radius: 0 6px 6px 0;
 }
 
-.rename-buttons {
+.rename-dialog-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-color, #333);
     display: flex;
     justify-content: flex-end;
-    gap: 10px;
+    gap: 12px;
 }
 
 .rename-buttons .btn {
-    padding: 10px 20px;
+    padding: 10px 24px;
     font-size: 14px;
     border-radius: 8px;
     cursor: pointer;
     border: none;
     transition: all 0.2s ease;
+    font-weight: 500;
 }
 
 .rename-buttons .btn-secondary {

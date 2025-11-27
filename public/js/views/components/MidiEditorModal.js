@@ -1448,25 +1448,29 @@ class MidiEditorModal {
         const baseName = currentName.replace(/\.(mid|midi)$/i, '');
         const extension = currentName.match(/\.(mid|midi)$/i)?.[0] || '.mid';
 
-        // Créer le dialogue de renommage
+        // Créer le dialogue de renommage (modal centré)
         const dialog = document.createElement('div');
         dialog.className = 'rename-dialog-overlay';
         dialog.innerHTML = `
             <div class="rename-dialog">
-                <h4>${this.t('midiEditor.renameFile')}</h4>
-                <div class="rename-input-container">
-                    <input type="text" class="rename-input" value="${this.escapeHtml(baseName)}" />
-                    <span class="rename-extension">${extension}</span>
+                <div class="rename-dialog-header">
+                    <h4>✏️ ${this.t('midiEditor.renameFile')}</h4>
                 </div>
-                <div class="rename-buttons">
+                <div class="rename-dialog-body">
+                    <div class="rename-input-container">
+                        <input type="text" class="rename-input" value="${this.escapeHtml(baseName)}" />
+                        <span class="rename-extension">${extension}</span>
+                    </div>
+                </div>
+                <div class="rename-dialog-footer rename-buttons">
                     <button class="btn btn-secondary rename-cancel">${this.t('common.cancel')}</button>
                     <button class="btn btn-primary rename-confirm">${this.t('common.save')}</button>
                 </div>
             </div>
         `;
 
-        // Ajouter au DOM
-        this.container.appendChild(dialog);
+        // Ajouter au body pour être au premier plan de tout
+        document.body.appendChild(dialog);
 
         const input = dialog.querySelector('.rename-input');
         const cancelBtn = dialog.querySelector('.rename-cancel');
@@ -1740,10 +1744,9 @@ class MidiEditorModal {
                 <div class="modal-header">
                     <div class="modal-title">
                         <h3>🎹 ${this.t('midiEditor.title')}</h3>
-                        <div class="file-name-container">
-                            <span class="file-name" id="editor-file-name">${this.escapeHtml(this.currentFilename || this.currentFile || '')}</span>
-                            <button class="btn-rename-file" data-action="rename-file" title="${this.t('midiEditor.renameFile')}">✏️</button>
-                        </div>
+                        <span class="title-separator">—</span>
+                        <span class="file-name" id="editor-file-name">${this.escapeHtml(this.currentFilename || this.currentFile || '')}</span>
+                        <button class="btn-rename-file" data-action="rename-file" title="${this.t('midiEditor.renameFile')}">✏️</button>
                     </div>
                     <button class="modal-close" data-action="close">&times;</button>
                 </div>
