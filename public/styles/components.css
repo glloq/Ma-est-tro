@@ -206,13 +206,29 @@
 .modal-dialog {
     background-color: white;
     margin: auto !important;
-    padding: 20px;
+    padding: 0;
     border-radius: 16px;
-    width: 90%;
-    max-width: 600px;
+    width: 95%;
+    max-width: 800px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.2);
     animation: modalSlideIn 0.3s ease;
     position: relative !important;
+}
+
+/* Padding interne pour header/body/footer des modals */
+.modal-header,
+.modal-body,
+.modal-footer {
+    padding: 20px 24px;
+}
+
+/* Exception: garder le modal éditeur MIDI avec ses propres styles */
+.midi-editor-modal .modal-dialog {
+    padding: 0;
+    max-width: 98vw;
+    width: 98vw;
+    height: 95vh;
+    max-height: 95vh;
 }
 
 @keyframes modalSlideIn {

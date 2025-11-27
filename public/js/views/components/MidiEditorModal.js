@@ -1439,6 +1439,106 @@ class MidiEditorModal {
         }
     }
 
+    /**
+     * Afficher la boîte de dialogue pour renommer le fichier
+     */
+    showRenameDialog() {
+        // Extraire le nom sans extension
+        const currentName = this.currentFilename || this.currentFile || '';
+        const baseName = currentName.replace(/\.(mid|midi)$/i, '');
+        const extension = currentName.match(/\.(mid|midi)$/i)?.[0] || '.mid';
+
+        // Créer le dialogue de renommage
+        const dialog = document.createElement('div');
+        dialog.className = 'rename-dialog-overlay';
+        dialog.innerHTML = `
+            <div class="rename-dialog">
+                <h4>${this.t('midiEditor.renameFile')}</h4>
+                <div class="rename-input-container">
+                    <input type="text" class="rename-input" value="${this.escapeHtml(baseName)}" />
+                    <span class="rename-extension">${extension}</span>
+                </div>
+                <div class="rename-buttons">
+                    <button class="btn btn-secondary rename-cancel">${this.t('common.cancel')}</button>
+                    <button class="btn btn-primary rename-confirm">${this.t('common.save')}</button>
+                </div>
+            </div>
+        `;
+
+        // Ajouter au DOM
+        this.container.appendChild(dialog);
+
+        const input = dialog.querySelector('.rename-input');
+        const cancelBtn = dialog.querySelector('.rename-cancel');
+        const confirmBtn = dialog.querySelector('.rename-confirm');
+
+        // Focus et sélection du texte
+        input.focus();
+        input.select();
+
+        // Fonction de fermeture
+        const closeDialog = () => {
+            dialog.remove();
+        };
+
+        // Fonction de validation
+        const confirmRename = async () => {
+            const newName = input.value.trim();
+            if (!newName) {
+                this.showError(this.t('midiEditor.renameEmpty'));
+                return;
+            }
+
+            const newFilename = newName + extension;
+
+            try {
+                // Appeler l'API pour renommer le fichier
+                const response = await this.api.sendCommand('file_rename', {
+                    fileId: this.currentFile,
+                    newFilename: newFilename
+                });
+
+                if (response && response.success) {
+                    // Mettre à jour le nom affiché
+                    this.currentFilename = newFilename;
+                    const fileNameSpan = this.container.querySelector('#editor-file-name');
+                    if (fileNameSpan) {
+                        fileNameSpan.textContent = newFilename;
+                    }
+
+                    this.showNotification(this.t('midiEditor.renameSuccess'), 'success');
+
+                    // Émettre événement pour rafraîchir la liste des fichiers
+                    if (this.eventBus) {
+                        this.eventBus.emit('midi_editor:file_renamed', {
+                            fileId: this.currentFile,
+                            oldFilename: currentName,
+                            newFilename: newFilename
+                        });
+                    }
+                } else {
+                    throw new Error(response?.error || 'Rename failed');
+                }
+            } catch (error) {
+                this.log('error', 'Failed to rename file:', error);
+                this.showError(`${this.t('midiEditor.renameFailed')}: ${error.message}`);
+            }
+
+            closeDialog();
+        };
+
+        // Événements
+        cancelBtn.addEventListener('click', closeDialog);
+        confirmBtn.addEventListener('click', confirmRename);
+        dialog.addEventListener('click', (e) => {
+            if (e.target === dialog) closeDialog();
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') confirmRename();
+            if (e.key === 'Escape') closeDialog();
+        });
+    }
+
     // ========================================================================
     // RENDU
     // ========================================================================
@@ -1640,7 +1740,10 @@ class MidiEditorModal {
                 <div class="modal-header">
                     <div class="modal-title">
                         <h3>🎹 ${this.t('midiEditor.title')}</h3>
-                        <span class="file-name">${this.escapeHtml(this.currentFilename || this.currentFile || '')}</span>
+                        <div class="file-name-container">
+                            <span class="file-name" id="editor-file-name">${this.escapeHtml(this.currentFilename || this.currentFile || '')}</span>
+                            <button class="btn-rename-file" data-action="rename-file" title="${this.t('midiEditor.renameFile')}">✏️</button>
+                        </div>
                     </div>
                     <button class="modal-close" data-action="close">&times;</button>
                 </div>
@@ -2614,6 +2717,9 @@ class MidiEditorModal {
                     break;
                 case 'cycle-snap':
                     this.cycleSnap();
+                    break;
+                case 'rename-file':
+                    this.showRenameDialog();
                     break;
 
                 // Modes d'édition

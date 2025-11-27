@@ -57,8 +57,8 @@
     background: white !important;
     border-radius: 16px !important;
     box-shadow: 0 20px 60px rgba(155, 89, 182, 0.3) !important;
-    max-width: 650px !important;
-    width: 92% !important;
+    max-width: 850px !important;
+    width: 95% !important;
     max-height: 90vh !important;
     margin: auto !important;
     display: flex !important;
@@ -66,6 +66,7 @@
     animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden !important;
     position: relative !important;
+    padding: 0 !important;
 }
 
 @keyframes slideUp {

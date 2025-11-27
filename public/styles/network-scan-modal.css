@@ -53,13 +53,14 @@
     background: white;
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(52, 152, 219, 0.3);
-    max-width: 650px;
-    width: 92%;
+    max-width: 850px;
+    width: 95%;
     max-height: 90vh;
     display: flex !important;
     flex-direction: column !important;
     animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
+    padding: 0;
 }
 
 @keyframes slideUp {
