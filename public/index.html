@@ -1208,6 +1208,65 @@
             border-color: #667eea;
         }
 
+        /* Piano navigation wrapper */
+        .piano-nav-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .piano-nav-btn {
+            width: 36px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(180deg, #f5f5f5 0%, #e0e0e0 100%);
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            color: #555;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .piano-nav-btn:hover:not(:disabled) {
+            background: linear-gradient(180deg, #667eea 0%, #5a6fd6 100%);
+            border-color: #4a5fc4;
+            color: #fff;
+        }
+
+        .piano-nav-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .piano-viewport {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .piano-octave-indicator {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        body.theme-dark .piano-nav-btn {
+            background: linear-gradient(180deg, #444 0%, #333 100%);
+            border-color: #555;
+            color: #ccc;
+        }
+
+        body.theme-dark .piano-nav-btn:hover:not(:disabled) {
+            background: linear-gradient(180deg, #667eea 0%, #5a6fd6 100%);
+            border-color: #4a5fc4;
+            color: #fff;
+        }
+
         .identity-section {
             background: #f9fafb;
             padding: 16px;
@@ -3767,7 +3826,14 @@
                                             : (i18n.t('instrumentSettings.clickToSelect') || 'Cliquez sur les touches pour définir la plage')}</span>
                                         <span class="range-display" id="pianoRangeDisplay"></span>
                                     </div>
-                                    <div class="piano-keyboard-mini" id="pianoKeyboardMini"></div>
+                                    <div class="piano-nav-wrapper">
+                                        <button type="button" class="piano-nav-btn" id="pianoNavLeft" onclick="navigatePiano(-1)">◀</button>
+                                        <div class="piano-viewport">
+                                            <div class="piano-keyboard-mini" id="pianoKeyboardMini"></div>
+                                        </div>
+                                        <button type="button" class="piano-nav-btn" id="pianoNavRight" onclick="navigatePiano(1)">▶</button>
+                                    </div>
+                                    <div class="piano-octave-indicator" id="pianoOctaveIndicator"></div>
                                     <div class="piano-legend" id="pianoLegend">
                                         <div class="piano-legend-item" id="legendRangeStart">
                                             <div class="piano-legend-color selected"></div>
@@ -3786,17 +3852,10 @@
                                             <span>${i18n.t('instrumentSettings.outOfRange') || 'Hors plage / Non sélectionnée'}</span>
                                         </div>
                                     </div>
-                                    <div class="piano-range-buttons" id="rangeButtons">
+                                    <div class="piano-range-buttons" id="pianoPresetButtons">
                                         <button type="button" class="btn-small" onclick="setPianoPreset(21, 108)">Piano 88</button>
                                         <button type="button" class="btn-small" onclick="setPianoPreset(36, 96)">Piano 61</button>
-                                        <button type="button" class="btn-small" onclick="setPianoPreset(48, 72)">2 octaves</button>
-                                        <button type="button" class="btn-small" onclick="setPianoPreset(0, 127)">${i18n.t('instrumentSettings.allNotes') || 'Toutes'}</button>
-                                        <button type="button" class="btn-small" onclick="clearPianoRange()">${i18n.t('common.clear') || 'Effacer'}</button>
-                                    </div>
-                                    <div class="piano-range-buttons" id="discreteButtons" style="display: none;">
-                                        <button type="button" class="btn-small" onclick="setDrumPreset()">🥁 ${i18n.t('instrumentSettings.drumKit') || 'Batterie GM'}</button>
-                                        <button type="button" class="btn-small" onclick="selectAllWhiteKeys()">⬜ ${i18n.t('instrumentSettings.whiteKeys') || 'Touches blanches'}</button>
-                                        <button type="button" class="btn-small" onclick="selectAllBlackKeys()">⬛ ${i18n.t('instrumentSettings.blackKeys') || 'Touches noires'}</button>
+                                        <button type="button" class="btn-small" onclick="setPianoPreset(48, 72)">2 ${i18n.t('common.octaves') || 'octaves'}</button>
                                         <button type="button" class="btn-small" onclick="selectAllNotes()">${i18n.t('instrumentSettings.allNotes') || 'Toutes'}</button>
                                         <button type="button" class="btn-small" onclick="clearPianoRange()">${i18n.t('common.clear') || 'Effacer'}</button>
                                     </div>
@@ -3855,6 +3914,12 @@
         let currentNoteSelectionMode = 'range'; // 'range' ou 'discrete'
         let selectedDiscreteNotes = new Set(); // Pour le mode discrete
 
+        // Navigation du piano (3 octaves visibles à la fois)
+        const VISIBLE_OCTAVES = 3;
+        const MIN_OCTAVE = -1; // C-1 (note 0)
+        const MAX_OCTAVE = 9;  // G9 (note 127 = G9)
+        let currentPianoStartOctave = 3; // Commence à C3 (octave du milieu)
+
         // Convertir un numéro MIDI en nom de note avec octave
         function getNoteNameWithOctave(midiNote) {
             if (midiNote === null || midiNote === undefined) return '?';
@@ -3889,28 +3954,22 @@
                 }
             });
 
-            // Afficher/masquer les éléments appropriés
-            const rangeButtons = document.getElementById('rangeButtons');
-            const discreteButtons = document.getElementById('discreteButtons');
+            // Afficher/masquer les éléments de légende appropriés
             const legendRangeStart = document.getElementById('legendRangeStart');
             const legendInRange = document.getElementById('legendInRange');
             const legendSelected = document.getElementById('legendSelected');
             const pianoModeHelp = document.getElementById('pianoModeHelp');
 
             if (mode === 'discrete') {
-                rangeButtons.style.display = 'none';
-                discreteButtons.style.display = 'flex';
-                legendRangeStart.style.display = 'none';
-                legendInRange.style.display = 'none';
-                legendSelected.style.display = 'flex';
-                pianoModeHelp.textContent = i18n.t('instrumentSettings.clickToToggle') || 'Cliquez sur les touches pour les activer/désactiver';
+                if (legendRangeStart) legendRangeStart.style.display = 'none';
+                if (legendInRange) legendInRange.style.display = 'none';
+                if (legendSelected) legendSelected.style.display = 'flex';
+                if (pianoModeHelp) pianoModeHelp.textContent = i18n.t('instrumentSettings.clickToToggle') || 'Cliquez pour sélectionner/désélectionner';
             } else {
-                rangeButtons.style.display = 'flex';
-                discreteButtons.style.display = 'none';
-                legendRangeStart.style.display = 'flex';
-                legendInRange.style.display = 'flex';
-                legendSelected.style.display = 'none';
-                pianoModeHelp.textContent = i18n.t('instrumentSettings.clickToSelect') || 'Cliquez sur les touches pour définir la plage';
+                if (legendRangeStart) legendRangeStart.style.display = 'flex';
+                if (legendInRange) legendInRange.style.display = 'flex';
+                if (legendSelected) legendSelected.style.display = 'none';
+                if (pianoModeHelp) pianoModeHelp.textContent = i18n.t('instrumentSettings.clickToSelect') || 'Cliquez sur les touches pour définir la plage';
             }
 
             // Rafraîchir l'affichage
@@ -3928,20 +3987,55 @@
 
         // Initialiser le clavier piano
         function initPianoKeyboard(minNote, maxNote, mode = 'range', selectedNotes = []) {
-            const container = document.getElementById('pianoKeyboardMini');
-            if (!container) return;
-
             currentNoteSelectionMode = mode;
             selectedDiscreteNotes = new Set(selectedNotes);
 
+            // Déterminer l'octave de départ selon les notes sélectionnées
+            if (mode === 'range' && minNote !== null && minNote !== undefined) {
+                currentPianoStartOctave = Math.floor(minNote / 12) - 1;
+            } else if (mode === 'discrete' && selectedNotes.length > 0) {
+                const firstNote = Math.min(...selectedNotes);
+                currentPianoStartOctave = Math.floor(firstNote / 12) - 1;
+            } else {
+                currentPianoStartOctave = 3; // Par défaut C3
+            }
+
+            // S'assurer que l'octave est dans les limites
+            currentPianoStartOctave = Math.max(MIN_OCTAVE, Math.min(MAX_OCTAVE - VISIBLE_OCTAVES + 1, currentPianoStartOctave));
+
+            // Rendre le piano
+            renderPianoKeyboard();
+
+            // Mettre à jour l'UI selon le mode
+            setNoteSelectionMode(mode);
+
+            // Mettre à jour l'affichage initial
+            if (mode === 'range') {
+                updatePianoKeyboardDisplay(minNote, maxNote);
+            } else {
+                updatePianoKeyboardDisplayDiscrete();
+            }
+        }
+
+        // Rendre le clavier piano (3 octaves visibles)
+        function renderPianoKeyboard() {
+            const container = document.getElementById('pianoKeyboardMini');
+            if (!container) return;
+
             container.innerHTML = '';
 
-            // Créer les touches de 0 à 127
-            let currentOctave = -1;
+            const startOctave = currentPianoStartOctave;
+            const endOctave = startOctave + VISIBLE_OCTAVES - 1;
+
+            // Calculer les notes de début et fin
+            const startNote = Math.max(0, (startOctave + 1) * 12); // C de l'octave
+            const endNote = Math.min(127, (endOctave + 2) * 12 - 1); // Fin de l'octave
+
+            let currentOctave = -2;
             let octaveDiv = null;
             let whiteKeyIndex = 0;
 
-            for (let note = 0; note <= 127; note++) {
+            for (let note = startNote; note <= endNote; note++) {
                 const octave = Math.floor(note / 12) - 1;
 
                 // Nouvelle octave
@@ -3990,14 +4084,60 @@
                 container.appendChild(octaveDiv);
             }
 
-            // Mettre à jour l'UI selon le mode
-            setNoteSelectionMode(mode);
+            // Mettre à jour l'indicateur et les boutons de navigation
+            updatePianoOctaveIndicator();
+            updatePianoNavButtons();
 
-            // Mettre à jour l'affichage initial
-            if (mode === 'range') {
-                updatePianoKeyboardDisplay(minNote, maxNote);
+            // Rafraîchir l'affichage des notes sélectionnées
+            if (currentNoteSelectionMode === 'range') {
+                const minInput = document.getElementById('noteRangeMin');
+                const maxInput = document.getElementById('noteRangeMax');
+                if (minInput && maxInput) {
+                    updatePianoKeyboardDisplay(
+                        minInput.value !== '' ? parseInt(minInput.value) : null,
+                        maxInput.value !== '' ? parseInt(maxInput.value) : null
+                    );
+                }
             } else {
                 updatePianoKeyboardDisplayDiscrete();
+            }
+        }
+
+        // Naviguer dans le piano
+        function navigatePiano(direction) {
+            currentPianoStartOctave += direction;
+
+            // Limiter la navigation
+            if (currentPianoStartOctave < MIN_OCTAVE) {
+                currentPianoStartOctave = MIN_OCTAVE;
+            }
+            if (currentPianoStartOctave > MAX_OCTAVE - VISIBLE_OCTAVES + 1) {
+                currentPianoStartOctave = MAX_OCTAVE - VISIBLE_OCTAVES + 1;
+            }
+
+            renderPianoKeyboard();
+        }
+
+        // Mettre à jour l'indicateur d'octave
+        function updatePianoOctaveIndicator() {
+            const indicator = document.getElementById('pianoOctaveIndicator');
+            if (indicator) {
+                const startOctave = currentPianoStartOctave;
+                const endOctave = startOctave + VISIBLE_OCTAVES - 1;
+                indicator.textContent = `C${startOctave} → C${endOctave + 1}`;
+            }
+        }
+
+        // Mettre à jour les boutons de navigation
+        function updatePianoNavButtons() {
+            const leftBtn = document.getElementById('pianoNavLeft');
+            const rightBtn = document.getElementById('pianoNavRight');
+
+            if (leftBtn) {
+                leftBtn.disabled = currentPianoStartOctave <= MIN_OCTAVE;
+            }
+            if (rightBtn) {
+                rightBtn.disabled = currentPianoStartOctave >= MAX_OCTAVE - VISIBLE_OCTAVES + 1;
             }
         }
 
@@ -4132,87 +4272,35 @@
             scrollToNote(min);
         }
 
-        // Scroll vers une note
+        // Naviguer vers une note (change l'octave visible)
         function scrollToNote(note) {
-            const container = document.getElementById('pianoKeyboardMini');
-            if (container) {
-                const targetKey = container.querySelector(`[data-note="${note}"]`);
-                if (targetKey) {
-                    const containerRect = container.getBoundingClientRect();
-                    const keyRect = targetKey.getBoundingClientRect();
-                    container.scrollLeft = keyRect.left - containerRect.left + container.scrollLeft - 50;
-                }
-            }
-        }
-
-        // Préréglage batterie GM (notes 35-81)
-        function setDrumPreset() {
-            // Passer en mode discrete
-            if (currentNoteSelectionMode !== 'discrete') {
-                document.querySelector('input[name="noteSelectionMode"][value="discrete"]').checked = true;
-                setNoteSelectionMode('discrete');
-            }
-
-            // Notes de la batterie GM standard
-            const drumNotes = [
-                35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
-                50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64,
-                65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81
-            ];
-
-            selectedDiscreteNotes = new Set(drumNotes);
-            updateSelectedNotesInput();
-            updatePianoKeyboardDisplayDiscrete();
-            scrollToNote(35);
-        }
-
-        // Sélectionner toutes les touches blanches
-        function selectAllWhiteKeys() {
-            if (currentNoteSelectionMode !== 'discrete') {
-                document.querySelector('input[name="noteSelectionMode"][value="discrete"]').checked = true;
-                setNoteSelectionMode('discrete');
-            }
-
-            selectedDiscreteNotes.clear();
-            for (let note = 0; note <= 127; note++) {
-                if (!isBlackKey(note)) {
-                    selectedDiscreteNotes.add(note);
-                }
-            }
-            updateSelectedNotesInput();
-            updatePianoKeyboardDisplayDiscrete();
-        }
-
-        // Sélectionner toutes les touches noires
-        function selectAllBlackKeys() {
-            if (currentNoteSelectionMode !== 'discrete') {
-                document.querySelector('input[name="noteSelectionMode"][value="discrete"]').checked = true;
-                setNoteSelectionMode('discrete');
-            }
-
-            selectedDiscreteNotes.clear();
-            for (let note = 0; note <= 127; note++) {
-                if (isBlackKey(note)) {
-                    selectedDiscreteNotes.add(note);
-                }
-            }
-            updateSelectedNotesInput();
-            updatePianoKeyboardDisplayDiscrete();
+            if (note === null || note === undefined) return;
+            const targetOctave = Math.floor(note / 12) - 1;
+            currentPianoStartOctave = Math.max(MIN_OCTAVE, Math.min(MAX_OCTAVE - VISIBLE_OCTAVES + 1, targetOctave));
+            renderPianoKeyboard();
         }
 
         // Sélectionner toutes les notes
         function selectAllNotes() {
-            if (currentNoteSelectionMode !== 'discrete') {
-                document.querySelector('input[name="noteSelectionMode"][value="discrete"]').checked = true;
-                setNoteSelectionMode('discrete');
-            }
+            if (currentNoteSelectionMode === 'discrete') {
+                // Mode discrete: sélectionner toutes les notes
+                selectedDiscreteNotes.clear();
+                for (let note = 0; note <= 127; note++) {
+                    selectedDiscreteNotes.add(note);
+                }
+                updateSelectedNotesInput();
+                updatePianoKeyboardDisplayDiscrete();
+            } else {
+                // Mode range: définir la plage complète 0-127
+                const minInput = document.getElementById('noteRangeMin');
+                const maxInput = document.getElementById('noteRangeMax');
 
-            selectedDiscreteNotes.clear();
-            for (let note = 0; note <= 127; note++) {
-                selectedDiscreteNotes.add(note);
+                minInput.value = 0;
+                maxInput.value = 127;
+                pianoRangeSelectionMode = 'start';
+
+                updatePianoKeyboardDisplay(0, 127);
             }
-            updateSelectedNotesInput();
-            updatePianoKeyboardDisplayDiscrete();
         }
 
         // Effacer la plage ou les notes sélectionnées
