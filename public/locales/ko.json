@@ -311,6 +311,7 @@
     "capabilities": "악기 기능",
     "capabilitiesHelp": "MIDI 라우팅을 최적화하기 위해 이 악기의 기능을 정의합니다.",
     "noteRange": "음역대",
+    "noteSelection": "Note Selection",
     "noteMin": "최저음 (0-127)",
     "noteMax": "최고음 (0-127)",
     "noteRangeHelp": "예: 88건반 피아노 = 21 (A0) ~ 108 (C8). 모든 음을 사용하려면 비워두세요.",

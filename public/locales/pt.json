@@ -311,6 +311,7 @@
     "capabilities": "Capacidades do instrumento",
     "capabilitiesHelp": "Defina as capacidades deste instrumento para otimizar o roteamento MIDI.",
     "noteRange": "Faixa de notas",
+    "noteSelection": "Note Selection",
     "noteMin": "Nota mín (0-127)",
     "noteMax": "Nota máx (0-127)",
     "noteRangeHelp": "Ex: Piano 88 teclas = 21 (A0) a 108 (C8). Deixe vazio para todas as notas.",

@@ -311,6 +311,7 @@
     "capabilities": "Kemampuan Instrumen",
     "capabilitiesHelp": "Tentukan kemampuan instrumen ini untuk mengoptimalkan routing MIDI.",
     "noteRange": "Rentang Not",
+    "noteSelection": "Note Selection",
     "noteMin": "Not min (0-127)",
     "noteMax": "Not maks (0-127)",
     "noteRangeHelp": "Contoh: Piano 88 tuts = 21 (A0) hingga 108 (C8). Kosongkan untuk semua not.",

@@ -311,6 +311,7 @@
     "capabilities": "Hangszer képességek",
     "capabilitiesHelp": "Határozza meg a hangszer képességeit a MIDI útválasztás optimalizálásához.",
     "noteRange": "Hangtartomány",
+    "noteSelection": "Note Selection",
     "noteMin": "Min hang (0-127)",
     "noteMax": "Max hang (0-127)",
     "noteRangeHelp": "Pl.: 88 billentyűs zongora = 21 (A0) és 108 (C8). Hagyja üresen az összes hanghoz.",

@@ -311,6 +311,7 @@
     "capabilities": "Instrumentfunksjoner",
     "capabilitiesHelp": "Definer funksjonene til dette instrumentet for å optimalisere MIDI-ruting.",
     "noteRange": "Toneområde",
+    "noteSelection": "Note Selection",
     "noteMin": "Min tone (0-127)",
     "noteMax": "Maks tone (0-127)",
     "noteRangeHelp": "F.eks.: 88-tangenters piano = 21 (A0) til 108 (C8). La stå tomt for alle toner.",

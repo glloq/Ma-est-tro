@@ -311,6 +311,7 @@
     "capabilities": "Instrumentenfähigkeiten",
     "capabilitiesHelp": "Definieren Sie die Fähigkeiten dieses Instruments zur Optimierung des MIDI-Routings.",
     "noteRange": "Notenbereich",
+    "noteSelection": "Note Selection",
     "noteMin": "Min. Note (0-127)",
     "noteMax": "Max. Note (0-127)",
     "noteRangeHelp": "Z.B.: 88-Tasten-Klavier = 21 (A0) bis 108 (C8). Leer lassen für alle Noten.",

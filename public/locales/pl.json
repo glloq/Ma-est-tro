@@ -311,6 +311,7 @@
     "capabilities": "Możliwości instrumentu",
     "capabilitiesHelp": "Określ możliwości tego instrumentu, aby zoptymalizować routing MIDI.",
     "noteRange": "Zakres nut",
+    "noteSelection": "Note Selection",
     "noteMin": "Min nuta (0-127)",
     "noteMax": "Max nuta (0-127)",
     "noteRangeHelp": "Np.: fortepian 88-klawiszowy = 21 (A0) do 108 (C8). Pozostaw puste dla wszystkich nut.",
