@@ -17,36 +17,36 @@
             this.currentLocale = 'fr';
             this.fallbackLocale = 'fr';
             this.translations = {};
-            this.supportedLocales = ['fr', 'en', 'es', 'de', 'it', 'pt', 'nl', 'pl', 'ru', 'ja', 'zh-CN', 'ko', 'hi', 'tr', 'sv', 'no', 'el', 'id', 'vi', 'bn', 'th', 'da', 'fi', 'cs', 'hu', 'tl', 'uk', 'eo'];
+            this.supportedLocales = ['id', 'cs', 'da', 'de', 'en', 'eo', 'es', 'tl', 'fr', 'it', 'hu', 'nl', 'no', 'pl', 'pt', 'fi', 'sv', 'vi', 'tr', 'el', 'ru', 'uk', 'bn', 'hi', 'th', 'ko', 'ja', 'zh-CN'];
             this.localeNames = {
-                'fr': 'Français',
-                'en': 'English',
-                'es': 'Español',
-                'de': 'Deutsch',
-                'it': 'Italiano',
-                'pt': 'Português',
-                'nl': 'Nederlands',
-                'pl': 'Polski',
-                'ru': 'Русский',
-                'ja': '日本語',
-                'zh-CN': '简体中文',
-                'ko': '한국어',
-                'hi': 'हिन्दी',
-                'tr': 'Türkçe',
-                'sv': 'Svenska',
-                'no': 'Norsk',
-                'el': 'Ελληνικά',
                 'id': 'Bahasa Indonesia',
-                'vi': 'Tiếng Việt',
-                'bn': 'বাংলা',
-                'th': 'ไทย',
-                'da': 'Dansk',
-                'fi': 'Suomi',
                 'cs': 'Čeština',
-                'hu': 'Magyar',
+                'da': 'Dansk',
+                'de': 'Deutsch',
+                'en': 'English',
+                'eo': 'Esperanto',
+                'es': 'Español',
                 'tl': 'Filipino',
+                'fr': 'Français',
+                'it': 'Italiano',
+                'hu': 'Magyar',
+                'nl': 'Nederlands',
+                'no': 'Norsk',
+                'pl': 'Polski',
+                'pt': 'Português',
+                'fi': 'Suomi',
+                'sv': 'Svenska',
+                'vi': 'Tiếng Việt',
+                'tr': 'Türkçe',
+                'el': 'Ελληνικά',
+                'ru': 'Русский',
                 'uk': 'Українська',
-                'eo': 'Esperanto'
+                'bn': 'বাংলা',
+                'hi': 'हिन्दी',
+                'th': 'ไทย',
+                'ko': '한국어',
+                'ja': '日本語',
+                'zh-CN': '简体中文'
             };
             this.listeners = [];
             this.initialized = false;
