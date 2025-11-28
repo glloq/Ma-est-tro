@@ -20,7 +20,8 @@
     "seconds": "seconds",
     "octave": "octave",
     "octaves": "octaves",
-    "keys": "keys"
+    "keys": "keys",
+    "clear": "Clear"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI Orchestration System",
@@ -318,8 +319,21 @@
     "noteMin": "Min note (0-127)",
     "noteMax": "Max note (0-127)",
     "noteRangeHelp": "E.g.: 88-key piano = 21 (A0) to 108 (C8). Leave empty for all notes.",
+    "clickToSelect": "Click on keys to define the range",
+    "rangeStartEnd": "Start/End",
+    "inRange": "In range",
+    "outOfRange": "Out of range",
+    "allNotes": "All",
     "supportedCCs": "Supported CCs",
-    "supportedCCsHelp": "List of CC numbers separated by commas. E.g.: 1=Modulation, 7=Volume, 64=Sustain. Leave empty for all CCs."
+    "supportedCCsHelp": "List of CC numbers separated by commas. E.g.: 1=Modulation, 7=Volume, 64=Sustain. Leave empty for all CCs.",
+    "modeRange": "Continuous range",
+    "modeDiscrete": "Individual notes",
+    "clickToToggle": "Click to select/deselect",
+    "selectedNote": "Selected note",
+    "notesSelected": "{count} notes selected",
+    "drumKit": "GM Drum Kit",
+    "whiteKeys": "White keys",
+    "blackKeys": "Black keys"
   },
   "channelRouter": {
     "title": "MIDI Routing Configuration",

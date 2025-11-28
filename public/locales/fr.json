@@ -20,7 +20,8 @@
     "seconds": "secondes",
     "octave": "octave",
     "octaves": "octaves",
-    "keys": "touches"
+    "keys": "touches",
+    "clear": "Effacer"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI Orchestration System",
@@ -318,8 +319,21 @@
     "noteMin": "Note min (0-127)",
     "noteMax": "Note max (0-127)",
     "noteRangeHelp": "Ex: Piano 88 touches = 21 (A0) à 108 (C8). Laissez vide pour toutes les notes.",
+    "clickToSelect": "Cliquez sur les touches pour définir la plage",
+    "rangeStartEnd": "Début/Fin",
+    "inRange": "Dans la plage",
+    "outOfRange": "Hors plage",
+    "allNotes": "Toutes",
     "supportedCCs": "CC supportés",
-    "supportedCCsHelp": "Liste des numéros CC séparés par des virgules. Ex: 1=Modulation, 7=Volume, 64=Sustain. Laissez vide pour tous les CC."
+    "supportedCCsHelp": "Liste des numéros CC séparés par des virgules. Ex: 1=Modulation, 7=Volume, 64=Sustain. Laissez vide pour tous les CC.",
+    "modeRange": "Plage continue",
+    "modeDiscrete": "Notes individuelles",
+    "clickToToggle": "Cliquez pour sélectionner/désélectionner",
+    "selectedNote": "Note sélectionnée",
+    "notesSelected": "{count} notes sélectionnées",
+    "drumKit": "Kit batterie GM",
+    "whiteKeys": "Touches blanches",
+    "blackKeys": "Touches noires"
   },
   "channelRouter": {
     "title": "Configuration du routage MIDI",

@@ -302,6 +302,8 @@ class CommandHandler {
       note_range_min: data.note_range_min,
       note_range_max: data.note_range_max,
       supported_ccs: data.supported_ccs,
+      note_selection_mode: data.note_selection_mode,
+      selected_notes: data.selected_notes,
       capabilities_source: data.capabilities_source || 'manual'
     });
 
