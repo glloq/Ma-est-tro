@@ -21,7 +21,10 @@ class DatabaseManager {
     this.ensureDataDir();
     this.connect();
     this.runMigrations();
-    
+
+    // Ensure instrument capabilities columns exist (safety net)
+    this.ensureInstrumentCapabilitiesColumns();
+
     // Initialize sub-modules
     this.midiDB = new MidiDatabase(this.db, this.app.logger);
     this.instrumentDB = new InstrumentDatabase(this.db, this.app.logger);
@@ -100,25 +103,59 @@ class DatabaseManager {
 
     try {
       this.app.logger.info(`Running migration ${version}: ${filename}`);
-      
+
       // Run migration in transaction
       this.db.exec('BEGIN TRANSACTION');
       this.db.exec(sql);
-      
+
       // Record migration
       const stmt = this.db.prepare(`
-        INSERT INTO migrations (version, name, executed_at) 
+        INSERT INTO migrations (version, name, executed_at)
         VALUES (?, ?, ?)
       `);
       stmt.run(version, filename, new Date().toISOString());
-      
+
       this.db.exec('COMMIT');
-      
+
       this.app.logger.info(`Migration ${version} completed`);
     } catch (error) {
       this.db.exec('ROLLBACK');
       this.app.logger.error(`Migration ${version} failed: ${error.message}`);
       throw error;
+    }
+  }
+
+  /**
+   * Ensure required columns exist in instruments_latency table
+   * This is a safety net for partial migration failures
+   */
+  ensureInstrumentCapabilitiesColumns() {
+    const requiredColumns = [
+      { name: 'note_range_min', sql: 'ALTER TABLE instruments_latency ADD COLUMN note_range_min INTEGER' },
+      { name: 'note_range_max', sql: 'ALTER TABLE instruments_latency ADD COLUMN note_range_max INTEGER' },
+      { name: 'supported_ccs', sql: 'ALTER TABLE instruments_latency ADD COLUMN supported_ccs TEXT' },
+      { name: 'note_selection_mode', sql: "ALTER TABLE instruments_latency ADD COLUMN note_selection_mode TEXT DEFAULT 'range'" },
+      { name: 'selected_notes', sql: 'ALTER TABLE instruments_latency ADD COLUMN selected_notes TEXT' },
+      { name: 'capabilities_source', sql: "ALTER TABLE instruments_latency ADD COLUMN capabilities_source TEXT DEFAULT 'manual'" },
+      { name: 'capabilities_updated_at', sql: 'ALTER TABLE instruments_latency ADD COLUMN capabilities_updated_at TEXT' }
+    ];
+
+    try {
+      const existingColumns = this.db.prepare("SELECT name FROM pragma_table_info('instruments_latency')").all();
+      const existingNames = new Set(existingColumns.map(c => c.name));
+
+      for (const col of requiredColumns) {
+        if (!existingNames.has(col.name)) {
+          try {
+            this.db.exec(col.sql);
+            this.app.logger.info(`Added missing column: ${col.name}`);
+          } catch (err) {
+            this.app.logger.warn(`Could not add column ${col.name}: ${err.message}`);
+          }
+        }
+      }
+    } catch (error) {
+      this.app.logger.warn(`ensureInstrumentCapabilitiesColumns: ${error.message}`);
     }
   }
 
