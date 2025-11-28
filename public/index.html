@@ -260,6 +260,15 @@
             background: linear-gradient(180deg, #333 0%, #222 100%);
         }
 
+        body.theme-dark .piano-key-white.selected {
+            background: linear-gradient(180deg, #667eea 0%, #5a6fd6 100%) !important;
+            border-color: #4a5fc4 !important;
+        }
+
+        body.theme-dark .piano-key-black.selected {
+            background: linear-gradient(180deg, #4a5fc4 0%, #3a4fa4 100%) !important;
+        }
+
         body.theme-dark .piano-octave-label {
             color: #aaa;
         }
@@ -1122,6 +1131,16 @@
             background: linear-gradient(180deg, #666 0%, #555 100%);
             cursor: not-allowed;
             opacity: 0.5;
+        }
+
+        /* Style pour les notes sélectionnées en mode discrete */
+        .piano-key-white.selected {
+            background: linear-gradient(180deg, #667eea 0%, #5a6fd6 100%) !important;
+            border-color: #4a5fc4 !important;
+        }
+
+        .piano-key-black.selected {
+            background: linear-gradient(180deg, #4a5fc4 0%, #3a4fa4 100%) !important;
         }
 
         .piano-key-number {
@@ -3923,9 +3942,34 @@
 
         // Changer le mode de sélection
         function setNoteSelectionMode(mode) {
+            const previousMode = currentNoteSelectionMode;
             currentNoteSelectionMode = mode;
             const modeInput = document.getElementById('noteSelectionModeInput');
             if (modeInput) modeInput.value = mode;
+
+            // Convertir la sélection lors du changement de mode
+            const minInput = document.getElementById('noteRangeMin');
+            const maxInput = document.getElementById('noteRangeMax');
+
+            if (previousMode === 'range' && mode === 'discrete') {
+                // Range → Discrete : convertir la plage en notes individuelles
+                const minNote = minInput && minInput.value !== '' ? parseInt(minInput.value) : null;
+                const maxNote = maxInput && maxInput.value !== '' ? parseInt(maxInput.value) : null;
+                if (minNote !== null && maxNote !== null) {
+                    selectedDiscreteNotes.clear();
+                    for (let note = minNote; note <= maxNote; note++) {
+                        selectedDiscreteNotes.add(note);
+                    }
+                    updateSelectedNotesInput();
+                }
+            } else if (previousMode === 'discrete' && mode === 'range') {
+                // Discrete → Range : utiliser les bornes des notes sélectionnées
+                if (selectedDiscreteNotes.size > 0) {
+                    const notes = [...selectedDiscreteNotes].sort((a, b) => a - b);
+                    if (minInput) minInput.value = notes[0];
+                    if (maxInput) maxInput.value = notes[notes.length - 1];
+                }
+            }
 
             // Mettre à jour l'UI des toggles
             const modeToggles = document.querySelectorAll('.mode-toggle');
@@ -3954,8 +3998,6 @@
 
             // Rafraîchir l'affichage
             if (mode === 'range') {
-                const minInput = document.getElementById('noteRangeMin');
-                const maxInput = document.getElementById('noteRangeMax');
                 updatePianoKeyboardDisplay(
                     minInput && minInput.value !== '' ? parseInt(minInput.value) : null,
                     maxInput && maxInput.value !== '' ? parseInt(maxInput.value) : null
@@ -4236,10 +4278,9 @@
                 key.classList.remove('in-range', 'range-start', 'range-end', 'disabled', 'selected');
 
                 if (selectedDiscreteNotes.has(note)) {
-                    key.classList.add('range-start'); // Utiliser le même style que selected
-                } else {
-                    key.classList.add('disabled');
+                    key.classList.add('selected'); // Marquer comme sélectionné
                 }
+                // En mode discrete, toutes les touches restent cliquables (pas de disabled)
             });
 
             // Mettre à jour l'affichage texte
