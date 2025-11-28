@@ -311,6 +311,7 @@
     "capabilities": "Khả năng của nhạc cụ",
     "capabilitiesHelp": "Xác định khả năng của nhạc cụ này để tối ưu hóa định tuyến MIDI.",
     "noteRange": "Phạm vi nốt",
+    "noteSelection": "Note Selection",
     "noteMin": "Nốt tối thiểu (0-127)",
     "noteMax": "Nốt tối đa (0-127)",
     "noteRangeHelp": "Ví dụ: Piano 88 phím = 21 (A0) đến 108 (C8). Để trống cho tất cả các nốt.",

@@ -311,6 +311,7 @@
     "capabilities": "Možnosti nástroje",
     "capabilitiesHelp": "Definujte možnosti tohoto nástroje pro optimalizaci MIDI směrování.",
     "noteRange": "Rozsah not",
+    "noteSelection": "Note Selection",
     "noteMin": "Min nota (0-127)",
     "noteMax": "Max nota (0-127)",
     "noteRangeHelp": "Např.: 88klávesový klavír = 21 (A0) do 108 (C8). Nechte prázdné pro všechny noty.",

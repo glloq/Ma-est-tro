@@ -311,6 +311,7 @@
     "capabilities": "Mga Kakayahan ng Instrumento",
     "capabilitiesHelp": "Tukuyin ang mga kakayahan ng instrumentong ito para ma-optimize ang MIDI routing.",
     "noteRange": "Saklaw ng Nota",
+    "noteSelection": "Note Selection",
     "noteMin": "Min nota (0-127)",
     "noteMax": "Max nota (0-127)",
     "noteRangeHelp": "Hal: 88-key piano = 21 (A0) hanggang 108 (C8). Iwanang walang laman para sa lahat ng nota.",

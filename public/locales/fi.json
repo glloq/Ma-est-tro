@@ -311,6 +311,7 @@
     "capabilities": "Soittimen ominaisuudet",
     "capabilitiesHelp": "Määritä tämän soittimen ominaisuudet MIDI-reitityksen optimoimiseksi.",
     "noteRange": "Sävelkorkeus",
+    "noteSelection": "Note Selection",
     "noteMin": "Min nuotti (0-127)",
     "noteMax": "Max nuotti (0-127)",
     "noteRangeHelp": "Esim.: 88-koskettiminen piano = 21 (A0) - 108 (C8). Jätä tyhjäksi kaikille nuoteille.",

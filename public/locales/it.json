@@ -311,6 +311,7 @@
     "capabilities": "Capacità dello strumento",
     "capabilitiesHelp": "Definisci le capacità di questo strumento per ottimizzare il routing MIDI.",
     "noteRange": "Intervallo di note",
+    "noteSelection": "Note Selection",
     "noteMin": "Nota min (0-127)",
     "noteMax": "Nota max (0-127)",
     "noteRangeHelp": "Es: Pianoforte 88 tasti = 21 (A0) a 108 (C8). Lascia vuoto per tutte le note.",

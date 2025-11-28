@@ -311,6 +311,7 @@
     "capabilities": "Enstrüman Özellikleri",
     "capabilitiesHelp": "MIDI yönlendirmesini optimize etmek için bu enstrümanın özelliklerini tanımlayın.",
     "noteRange": "Nota Aralığı",
+    "noteSelection": "Note Selection",
     "noteMin": "Min nota (0-127)",
     "noteMax": "Max nota (0-127)",
     "noteRangeHelp": "Örn: 88 tuşlu piyano = 21 (A0) ile 108 (C8). Tüm notalar için boş bırakın.",

@@ -311,6 +311,7 @@
     "capabilities": "Instrumentmogelijkheden",
     "capabilitiesHelp": "Definieer de mogelijkheden van dit instrument om MIDI-routing te optimaliseren.",
     "noteRange": "Notenbereik",
+    "noteSelection": "Note Selection",
     "noteMin": "Min noot (0-127)",
     "noteMax": "Max noot (0-127)",
     "noteRangeHelp": "Bijv: 88-toetsen piano = 21 (A0) tot 108 (C8). Laat leeg voor alle noten.",

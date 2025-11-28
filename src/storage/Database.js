@@ -404,6 +404,11 @@ class DatabaseManager {
   findInstrumentByMac(macAddress) { return this.instrumentDB.findInstrumentByMac(macAddress); }
   findInstrumentByUsbSerial(usbSerialNumber) { return this.instrumentDB.findInstrumentByUsbSerial(usbSerialNumber); }
 
+  // Instrument Capabilities
+  updateInstrumentCapabilities(deviceId, capabilities) { return this.instrumentDB.updateInstrumentCapabilities(deviceId, capabilities); }
+  getInstrumentCapabilities(deviceId) { return this.instrumentDB.getInstrumentCapabilities(deviceId); }
+  getAllInstrumentCapabilities() { return this.instrumentDB.getAllInstrumentCapabilities(); }
+
   // ==================== UTILITIES ====================
 
   close() {

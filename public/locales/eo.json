@@ -311,6 +311,7 @@
     "capabilities": "Instrumento-kapabloj",
     "capabilitiesHelp": "Difinu la kapablojn de ĉi tiu instrumento por optimumigi MIDI-direktadon.",
     "noteRange": "Nota-intervalo",
+    "noteSelection": "Note Selection",
     "noteMin": "Min noto (0-127)",
     "noteMax": "Maks noto (0-127)",
     "noteRangeHelp": "Ekz.: 88-klava piano = 21 (A0) ĝis 108 (C8). Lasu malplena por ĉiuj notoj.",

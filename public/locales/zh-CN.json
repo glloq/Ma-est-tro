@@ -311,6 +311,7 @@
     "capabilities": "乐器功能",
     "capabilitiesHelp": "定义此乐器的功能以优化MIDI路由。",
     "noteRange": "音符范围",
+    "noteSelection": "Note Selection",
     "noteMin": "最低音符 (0-127)",
     "noteMax": "最高音符 (0-127)",
     "noteRangeHelp": "例如：88键钢琴 = 21 (A0) 到 108 (C8)。留空表示所有音符。",
