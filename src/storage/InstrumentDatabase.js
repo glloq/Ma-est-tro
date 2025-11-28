@@ -515,12 +515,14 @@ class InstrumentDatabase {
   // ==================== INSTRUMENT CAPABILITIES ====================
 
   /**
-   * Update instrument capabilities (note range, supported CCs)
+   * Update instrument capabilities (note range, supported CCs, selected notes)
    * @param {string} deviceId - Device identifier
    * @param {Object} capabilities - Capability settings
    * @param {number|null} capabilities.note_range_min - Minimum playable note (0-127)
    * @param {number|null} capabilities.note_range_max - Maximum playable note (0-127)
    * @param {number[]|null} capabilities.supported_ccs - Array of supported CC numbers
+   * @param {string} capabilities.note_selection_mode - 'range' or 'discrete'
+   * @param {number[]|null} capabilities.selected_notes - Array of individual notes (for discrete mode)
    * @param {string} capabilities.capabilities_source - Source: 'manual', 'sysex', 'auto'
    */
   updateInstrumentCapabilities(deviceId, capabilities) {
@@ -560,6 +562,24 @@ class InstrumentDatabase {
         }
       }
 
+      // Convert selected_notes array to JSON string
+      let selectedNotesJson = null;
+      if (capabilities.selected_notes !== undefined && capabilities.selected_notes !== null) {
+        if (Array.isArray(capabilities.selected_notes)) {
+          // Validate each note is in range 0-127
+          for (const note of capabilities.selected_notes) {
+            if (note < 0 || note > 127) {
+              throw new Error('Note values must be between 0 and 127');
+            }
+          }
+          // Sort and deduplicate
+          const uniqueNotes = [...new Set(capabilities.selected_notes)].sort((a, b) => a - b);
+          selectedNotesJson = JSON.stringify(uniqueNotes);
+        } else if (typeof capabilities.selected_notes === 'string') {
+          selectedNotesJson = capabilities.selected_notes;
+        }
+      }
+
       if (existing) {
         // Update existing entry
         const fields = [];
@@ -576,6 +596,14 @@ class InstrumentDatabase {
         if (supportedCcsJson !== undefined) {
           fields.push('supported_ccs = ?');
           values.push(supportedCcsJson);
+        }
+        if (capabilities.note_selection_mode !== undefined) {
+          fields.push('note_selection_mode = ?');
+          values.push(capabilities.note_selection_mode);
+        }
+        if (selectedNotesJson !== undefined) {
+          fields.push('selected_notes = ?');
+          values.push(selectedNotesJson);
         }
         if (capabilities.capabilities_source !== undefined) {
           fields.push('capabilities_source = ?');
@@ -604,8 +632,9 @@ class InstrumentDatabase {
           INSERT INTO instruments_latency (
             id, device_id, channel, name,
             note_range_min, note_range_max, supported_ccs,
+            note_selection_mode, selected_notes,
             capabilities_source, capabilities_updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
         const id = `${deviceId}_0`; // Default channel 0
@@ -617,6 +646,8 @@ class InstrumentDatabase {
           capabilities.note_range_min || null,
           capabilities.note_range_max || null,
           supportedCcsJson,
+          capabilities.note_selection_mode || 'range',
+          selectedNotesJson,
           capabilities.capabilities_source || 'manual',
           now
         );
@@ -632,13 +663,14 @@ class InstrumentDatabase {
   /**
    * Get instrument capabilities
    * @param {string} deviceId - Device identifier
-   * @returns {Object|null} Capabilities object with parsed supported_ccs array
+   * @returns {Object|null} Capabilities object with parsed arrays
    */
   getInstrumentCapabilities(deviceId) {
     try {
       const stmt = this.db.prepare(`
         SELECT
           note_range_min, note_range_max, supported_ccs,
+          note_selection_mode, selected_notes,
           capabilities_source, capabilities_updated_at
         FROM instruments_latency
         WHERE device_id = ?
@@ -659,10 +691,22 @@ class InstrumentDatabase {
         }
       }
 
+      // Parse selected_notes JSON string to array
+      let selectedNotes = null;
+      if (result.selected_notes) {
+        try {
+          selectedNotes = JSON.parse(result.selected_notes);
+        } catch (e) {
+          this.logger.warn(`Failed to parse selected_notes for ${deviceId}: ${e.message}`);
+        }
+      }
+
       return {
         note_range_min: result.note_range_min,
         note_range_max: result.note_range_max,
         supported_ccs: supportedCcs,
+        note_selection_mode: result.note_selection_mode || 'range',
+        selected_notes: selectedNotes,
         capabilities_source: result.capabilities_source,
         capabilities_updated_at: result.capabilities_updated_at
       };
@@ -682,13 +726,14 @@ class InstrumentDatabase {
         SELECT
           device_id, name, custom_name,
           note_range_min, note_range_max, supported_ccs,
+          note_selection_mode, selected_notes,
           capabilities_source, capabilities_updated_at
         FROM instruments_latency
         ORDER BY device_id
       `);
       const results = stmt.all();
 
-      // Parse supported_ccs for each result
+      // Parse JSON arrays for each result
       return results.map(result => {
         let supportedCcs = null;
         if (result.supported_ccs) {
@@ -698,9 +743,21 @@ class InstrumentDatabase {
             this.logger.warn(`Failed to parse supported_ccs for ${result.device_id}`);
           }
         }
+
+        let selectedNotes = null;
+        if (result.selected_notes) {
+          try {
+            selectedNotes = JSON.parse(result.selected_notes);
+          } catch (e) {
+            this.logger.warn(`Failed to parse selected_notes for ${result.device_id}`);
+          }
+        }
+
         return {
           ...result,
-          supported_ccs: supportedCcs
+          supported_ccs: supportedCcs,
+          note_selection_mode: result.note_selection_mode || 'range',
+          selected_notes: selectedNotes
         };
       });
     } catch (error) {

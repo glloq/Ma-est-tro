@@ -49,6 +49,18 @@ ALTER TABLE instruments_latency ADD COLUMN note_range_max INTEGER
 ALTER TABLE instruments_latency ADD COLUMN supported_ccs TEXT
     CHECK(supported_ccs IS NULL OR json_valid(supported_ccs));
 
+-- Note selection mode: 'range' or 'discrete'
+-- 'range' = use note_range_min/max
+-- 'discrete' = use selected_notes array
+ALTER TABLE instruments_latency ADD COLUMN note_selection_mode TEXT DEFAULT 'range'
+    CHECK(note_selection_mode IN ('range', 'discrete'));
+
+-- Selected notes for discrete mode (JSON array)
+-- Format: [36, 38, 40, 41, 42, 44, 46, 48, 49, 51] for drum pads
+-- or [0, 2, 4, 5, 7, 9, 11, 12, 14, 16, ...] for 7-note scales
+ALTER TABLE instruments_latency ADD COLUMN selected_notes TEXT
+    CHECK(selected_notes IS NULL OR json_valid(selected_notes));
+
 -- Capabilities source: how the capabilities were obtained
 -- 'manual' = configured manually by user
 -- 'sysex' = retrieved via SysEx request

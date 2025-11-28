@@ -325,7 +325,15 @@
     "outOfRange": "Hors plage",
     "allNotes": "Toutes",
     "supportedCCs": "CC supportés",
-    "supportedCCsHelp": "Liste des numéros CC séparés par des virgules. Ex: 1=Modulation, 7=Volume, 64=Sustain. Laissez vide pour tous les CC."
+    "supportedCCsHelp": "Liste des numéros CC séparés par des virgules. Ex: 1=Modulation, 7=Volume, 64=Sustain. Laissez vide pour tous les CC.",
+    "modeRange": "Plage continue",
+    "modeDiscrete": "Notes individuelles",
+    "clickToToggle": "Cliquez pour sélectionner/désélectionner",
+    "selectedNote": "Note sélectionnée",
+    "notesSelected": "{count} notes sélectionnées",
+    "drumKit": "Kit batterie GM",
+    "whiteKeys": "Touches blanches",
+    "blackKeys": "Touches noires"
   },
   "channelRouter": {
     "title": "Configuration du routage MIDI",
