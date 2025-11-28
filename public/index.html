@@ -233,6 +233,65 @@
             color: #ffffff;
         }
 
+        /* Piano Range Selector en mode dark */
+        body.theme-dark .piano-range-container {
+            background: #3d3d3d;
+        }
+
+        body.theme-dark .piano-range-info {
+            color: #cccccc;
+        }
+
+        body.theme-dark .piano-key-white {
+            background: linear-gradient(180deg, #f5f5f5 0%, #e0e0e0 100%);
+            border-color: #999;
+        }
+
+        body.theme-dark .piano-key-white:hover:not(.disabled) {
+            background: linear-gradient(180deg, #d2e3fc 0%, #b8d4f8 100%);
+        }
+
+        body.theme-dark .piano-key-white.disabled {
+            background: linear-gradient(180deg, #555 0%, #444 100%);
+            border-color: #666;
+        }
+
+        body.theme-dark .piano-key-black.disabled {
+            background: linear-gradient(180deg, #333 0%, #222 100%);
+        }
+
+        body.theme-dark .piano-octave-label {
+            color: #aaa;
+        }
+
+        body.theme-dark .piano-legend {
+            color: #ccc;
+        }
+
+        body.theme-dark .piano-legend-color {
+            border-color: #666;
+        }
+
+        body.theme-dark .piano-legend-color.disabled {
+            background: #555;
+            border-color: #666;
+        }
+
+        body.theme-dark .piano-range-buttons .btn-small {
+            background: #4d4d4d;
+            border-color: #666;
+            color: #fff;
+        }
+
+        body.theme-dark .piano-range-buttons .btn-small:hover {
+            background: #5d5d5d;
+            border-color: #8b9bea;
+        }
+
+        body.theme-dark .capabilities-section {
+            border-color: #4d4d4d !important;
+        }
+
         /* Header time et file name en mode dark */
         body.theme-dark .header-file-name {
             color: #8b9bea;
@@ -900,15 +959,15 @@
         .modal-content {
             background: white;
             border-radius: 12px;
-            padding: 24px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 80vh;
+            padding: 28px 32px;
+            max-width: 700px;
+            width: 95%;
+            max-height: 85vh;
             overflow-y: auto;
         }
 
         .modal-header {
-            margin: 0 0 20px 0;
+            margin: 0 0 24px 0;
             color: #667eea;
             display: flex;
             justify-content: space-between;
@@ -928,13 +987,13 @@
         }
 
         .form-group {
-            margin-bottom: 16px;
+            margin-bottom: 20px;
         }
 
         .form-group label {
             display: block;
             font-weight: 600;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             color: #333;
         }
 
@@ -950,6 +1009,203 @@
             font-size: 12px;
             color: #666;
             margin-top: 4px;
+        }
+
+        /* Piano Range Selector */
+        .piano-range-container {
+            margin: 16px 0;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .piano-range-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .piano-range-info .range-display {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .piano-keyboard-mini {
+            display: flex;
+            position: relative;
+            height: 80px;
+            min-width: 100%;
+            user-select: none;
+        }
+
+        .piano-octave {
+            display: flex;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .piano-octave-label {
+            position: absolute;
+            bottom: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #888;
+            font-weight: 500;
+        }
+
+        .piano-key {
+            position: relative;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .piano-key-white {
+            width: 18px;
+            height: 70px;
+            background: linear-gradient(180deg, #fff 0%, #f5f5f5 100%);
+            border: 1px solid #ccc;
+            border-radius: 0 0 3px 3px;
+            margin-right: -1px;
+            z-index: 1;
+        }
+
+        .piano-key-white:hover:not(.disabled) {
+            background: linear-gradient(180deg, #e8f0fe 0%, #d2e3fc 100%);
+        }
+
+        .piano-key-white.in-range {
+            background: linear-gradient(180deg, #e8f4e8 0%, #c8e6c9 100%);
+            border-color: #81c784;
+        }
+
+        .piano-key-white.range-start,
+        .piano-key-white.range-end {
+            background: linear-gradient(180deg, #667eea 0%, #5a6fd6 100%) !important;
+            border-color: #4a5fc4 !important;
+        }
+
+        .piano-key-white.disabled {
+            background: linear-gradient(180deg, #e0e0e0 0%, #bdbdbd 100%);
+            border-color: #aaa;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .piano-key-black {
+            position: absolute;
+            width: 12px;
+            height: 45px;
+            background: linear-gradient(180deg, #333 0%, #1a1a1a 100%);
+            border-radius: 0 0 2px 2px;
+            z-index: 2;
+            margin-left: -6px;
+        }
+
+        .piano-key-black:hover:not(.disabled) {
+            background: linear-gradient(180deg, #444 0%, #2a2a2a 100%);
+        }
+
+        .piano-key-black.in-range {
+            background: linear-gradient(180deg, #2e7d32 0%, #1b5e20 100%);
+        }
+
+        .piano-key-black.range-start,
+        .piano-key-black.range-end {
+            background: linear-gradient(180deg, #4a5fc4 0%, #3a4fa4 100%) !important;
+        }
+
+        .piano-key-black.disabled {
+            background: linear-gradient(180deg, #666 0%, #555 100%);
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .piano-key-number {
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+            color: #888;
+            pointer-events: none;
+        }
+
+        .piano-key-white .piano-key-number {
+            color: #666;
+        }
+
+        .piano-key-black .piano-key-number {
+            color: #aaa;
+            bottom: 2px;
+            font-size: 7px;
+        }
+
+        .piano-key.range-start .piano-key-number,
+        .piano-key.range-end .piano-key-number {
+            color: #fff !important;
+            font-weight: bold;
+        }
+
+        .piano-legend {
+            display: flex;
+            gap: 16px;
+            margin-top: 12px;
+            font-size: 11px;
+            color: #666;
+            flex-wrap: wrap;
+        }
+
+        .piano-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .piano-legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            border: 1px solid #ccc;
+        }
+
+        .piano-legend-color.in-range {
+            background: #c8e6c9;
+            border-color: #81c784;
+        }
+
+        .piano-legend-color.selected {
+            background: #667eea;
+            border-color: #4a5fc4;
+        }
+
+        .piano-legend-color.disabled {
+            background: #bdbdbd;
+            border-color: #999;
+        }
+
+        .piano-range-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .piano-range-buttons .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .piano-range-buttons .btn-small:hover {
+            background: #f0f0f0;
+            border-color: #667eea;
         }
 
         .identity-section {
@@ -3482,28 +3738,54 @@
                             </div>
                         </div>
 
-                        <div class="capabilities-section" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                        <div class="capabilities-section" style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
                             <h3>🎹 ${i18n.t('instrumentSettings.capabilities') || 'Capacités de l\'instrument'}</h3>
-                            <small class="form-text" style="display: block; margin-bottom: 12px;">
+                            <small class="form-text" style="display: block; margin-bottom: 16px;">
                                 ${i18n.t('instrumentSettings.capabilitiesHelp') || 'Définissez les capacités de cet instrument pour optimiser le routage MIDI.'}
                             </small>
 
                             <div class="form-group">
                                 <label>${i18n.t('instrumentSettings.noteRange') || 'Plage de notes'}</label>
-                                <div style="display: flex; gap: 10px; align-items: center;">
-                                    <div style="flex: 1;">
-                                        <input type="number" id="noteRangeMin" value="${settings.note_range_min !== null && settings.note_range_min !== undefined ? settings.note_range_min : ''}" min="0" max="127" placeholder="0">
-                                        <small class="form-text">${i18n.t('instrumentSettings.noteMin') || 'Note min (0-127)'}</small>
+
+                                <!-- Piano Range Selector -->
+                                <div class="piano-range-container">
+                                    <div class="piano-range-info">
+                                        <span>${i18n.t('instrumentSettings.clickToSelect') || 'Cliquez sur les touches pour définir la plage'}</span>
+                                        <span class="range-display" id="pianoRangeDisplay">
+                                            ${settings.note_range_min !== null && settings.note_range_min !== undefined
+                                                ? getNoteNameWithOctave(settings.note_range_min) + ' (' + settings.note_range_min + ')'
+                                                : '?'} → ${settings.note_range_max !== null && settings.note_range_max !== undefined
+                                                ? getNoteNameWithOctave(settings.note_range_max) + ' (' + settings.note_range_max + ')'
+                                                : '?'}
+                                        </span>
                                     </div>
-                                    <span>→</span>
-                                    <div style="flex: 1;">
-                                        <input type="number" id="noteRangeMax" value="${settings.note_range_max !== null && settings.note_range_max !== undefined ? settings.note_range_max : ''}" min="0" max="127" placeholder="127">
-                                        <small class="form-text">${i18n.t('instrumentSettings.noteMax') || 'Note max (0-127)'}</small>
+                                    <div class="piano-keyboard-mini" id="pianoKeyboardMini"></div>
+                                    <div class="piano-legend">
+                                        <div class="piano-legend-item">
+                                            <div class="piano-legend-color selected"></div>
+                                            <span>${i18n.t('instrumentSettings.rangeStartEnd') || 'Début/Fin'}</span>
+                                        </div>
+                                        <div class="piano-legend-item">
+                                            <div class="piano-legend-color in-range"></div>
+                                            <span>${i18n.t('instrumentSettings.inRange') || 'Dans la plage'}</span>
+                                        </div>
+                                        <div class="piano-legend-item">
+                                            <div class="piano-legend-color disabled"></div>
+                                            <span>${i18n.t('instrumentSettings.outOfRange') || 'Hors plage'}</span>
+                                        </div>
+                                    </div>
+                                    <div class="piano-range-buttons">
+                                        <button type="button" class="btn-small" onclick="setPianoPreset(21, 108)">Piano 88</button>
+                                        <button type="button" class="btn-small" onclick="setPianoPreset(36, 96)">Piano 61</button>
+                                        <button type="button" class="btn-small" onclick="setPianoPreset(48, 72)">2 octaves</button>
+                                        <button type="button" class="btn-small" onclick="setPianoPreset(0, 127)">${i18n.t('instrumentSettings.allNotes') || 'Toutes'}</button>
+                                        <button type="button" class="btn-small" onclick="clearPianoRange()">${i18n.t('common.clear') || 'Effacer'}</button>
                                     </div>
                                 </div>
-                                <small class="form-text" style="margin-top: 4px;">
-                                    ${i18n.t('instrumentSettings.noteRangeHelp') || 'Ex: Piano 88 touches = 21 (A0) à 108 (C8). Laissez vide pour toutes les notes.'}
-                                </small>
+
+                                <!-- Hidden inputs for form data -->
+                                <input type="hidden" id="noteRangeMin" value="${settings.note_range_min !== null && settings.note_range_min !== undefined ? settings.note_range_min : ''}">
+                                <input type="hidden" id="noteRangeMax" value="${settings.note_range_max !== null && settings.note_range_max !== undefined ? settings.note_range_max : ''}">
                             </div>
 
                             <div class="form-group">
@@ -3525,6 +3807,9 @@
                 document.body.appendChild(modal);
                 currentSettingsModal = modal;
 
+                // Initialiser le piano après l'ajout au DOM
+                initPianoKeyboard(settings.note_range_min, settings.note_range_max);
+
             } catch (error) {
                 log(`Erreur chargement réglages: ${error.message}`, 'error');
                 await showAlert(`Impossible de charger les réglages: ${error.message}`, {
@@ -3532,6 +3817,197 @@
                     icon: '❌'
                 });
             }
+        }
+
+        // ========== PIANO RANGE SELECTOR ==========
+
+        // Noms des notes
+        const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+        // Variables pour la sélection de plage
+        let pianoRangeSelectionMode = 'start'; // 'start' ou 'end'
+
+        // Convertir un numéro MIDI en nom de note avec octave
+        function getNoteNameWithOctave(midiNote) {
+            if (midiNote === null || midiNote === undefined) return '?';
+            const noteName = NOTE_NAMES[midiNote % 12];
+            const octave = Math.floor(midiNote / 12) - 1;
+            return noteName + octave;
+        }
+
+        // Vérifier si une note est noire
+        function isBlackKey(midiNote) {
+            const noteInOctave = midiNote % 12;
+            return [1, 3, 6, 8, 10].includes(noteInOctave);
+        }
+
+        // Initialiser le clavier piano
+        function initPianoKeyboard(minNote, maxNote) {
+            const container = document.getElementById('pianoKeyboardMini');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            // Créer les touches de 0 à 127
+            let currentOctave = -1;
+            let octaveDiv = null;
+            let whiteKeyIndex = 0;
+
+            for (let note = 0; note <= 127; note++) {
+                const octave = Math.floor(note / 12) - 1;
+
+                // Nouvelle octave
+                if (octave !== currentOctave) {
+                    if (octaveDiv) {
+                        container.appendChild(octaveDiv);
+                    }
+                    octaveDiv = document.createElement('div');
+                    octaveDiv.className = 'piano-octave';
+                    currentOctave = octave;
+                    whiteKeyIndex = 0;
+
+                    // Label d'octave
+                    const label = document.createElement('span');
+                    label.className = 'piano-octave-label';
+                    label.textContent = 'C' + octave;
+                    octaveDiv.appendChild(label);
+                }
+
+                const isBlack = isBlackKey(note);
+                const key = document.createElement('div');
+                key.className = `piano-key ${isBlack ? 'piano-key-black' : 'piano-key-white'}`;
+                key.dataset.note = note;
+
+                // Numéro MIDI sur la touche
+                const noteNumber = document.createElement('span');
+                noteNumber.className = 'piano-key-number';
+                noteNumber.textContent = note;
+                key.appendChild(noteNumber);
+
+                // Gestionnaire de clic
+                key.addEventListener('click', () => onPianoKeyClick(note));
+
+                if (isBlack) {
+                    // Positionner la touche noire au-dessus de la touche blanche précédente
+                    key.style.left = (whiteKeyIndex * 18 - 6) + 'px';
+                } else {
+                    whiteKeyIndex++;
+                }
+
+                octaveDiv.appendChild(key);
+            }
+
+            // Ajouter la dernière octave
+            if (octaveDiv) {
+                container.appendChild(octaveDiv);
+            }
+
+            // Mettre à jour l'affichage initial
+            updatePianoKeyboardDisplay(minNote, maxNote);
+        }
+
+        // Clic sur une touche du piano
+        function onPianoKeyClick(note) {
+            const minInput = document.getElementById('noteRangeMin');
+            const maxInput = document.getElementById('noteRangeMax');
+
+            let currentMin = minInput.value !== '' ? parseInt(minInput.value) : null;
+            let currentMax = maxInput.value !== '' ? parseInt(maxInput.value) : null;
+
+            if (pianoRangeSelectionMode === 'start' || currentMin === null) {
+                // Définir le début
+                minInput.value = note;
+                if (currentMax !== null && note > currentMax) {
+                    maxInput.value = note;
+                }
+                pianoRangeSelectionMode = 'end';
+            } else {
+                // Définir la fin
+                if (note < currentMin) {
+                    // Si on clique avant le début, échanger
+                    maxInput.value = currentMin;
+                    minInput.value = note;
+                } else {
+                    maxInput.value = note;
+                }
+                pianoRangeSelectionMode = 'start';
+            }
+
+            updatePianoKeyboardDisplay(
+                minInput.value !== '' ? parseInt(minInput.value) : null,
+                maxInput.value !== '' ? parseInt(maxInput.value) : null
+            );
+        }
+
+        // Mettre à jour l'affichage du clavier
+        function updatePianoKeyboardDisplay(minNote, maxNote) {
+            const container = document.getElementById('pianoKeyboardMini');
+            if (!container) return;
+
+            const keys = container.querySelectorAll('.piano-key');
+            keys.forEach(key => {
+                const note = parseInt(key.dataset.note);
+                key.classList.remove('in-range', 'range-start', 'range-end', 'disabled');
+
+                if (minNote !== null && maxNote !== null) {
+                    if (note === minNote) {
+                        key.classList.add('range-start');
+                    } else if (note === maxNote) {
+                        key.classList.add('range-end');
+                    } else if (note > minNote && note < maxNote) {
+                        key.classList.add('in-range');
+                    } else {
+                        key.classList.add('disabled');
+                    }
+                } else if (minNote !== null && note === minNote) {
+                    key.classList.add('range-start');
+                } else if (maxNote !== null && note === maxNote) {
+                    key.classList.add('range-end');
+                }
+            });
+
+            // Mettre à jour l'affichage texte
+            const display = document.getElementById('pianoRangeDisplay');
+            if (display) {
+                const minText = minNote !== null ? getNoteNameWithOctave(minNote) + ' (' + minNote + ')' : '?';
+                const maxText = maxNote !== null ? getNoteNameWithOctave(maxNote) + ' (' + maxNote + ')' : '?';
+                display.textContent = minText + ' → ' + maxText;
+            }
+        }
+
+        // Définir un préréglage
+        function setPianoPreset(min, max) {
+            const minInput = document.getElementById('noteRangeMin');
+            const maxInput = document.getElementById('noteRangeMax');
+
+            minInput.value = min;
+            maxInput.value = max;
+            pianoRangeSelectionMode = 'start';
+
+            updatePianoKeyboardDisplay(min, max);
+
+            // Scroll vers le début de la plage
+            const container = document.getElementById('pianoKeyboardMini');
+            if (container) {
+                const targetKey = container.querySelector(`[data-note="${min}"]`);
+                if (targetKey) {
+                    const containerRect = container.getBoundingClientRect();
+                    const keyRect = targetKey.getBoundingClientRect();
+                    container.scrollLeft = keyRect.left - containerRect.left + container.scrollLeft - 50;
+                }
+            }
+        }
+
+        // Effacer la plage
+        function clearPianoRange() {
+            const minInput = document.getElementById('noteRangeMin');
+            const maxInput = document.getElementById('noteRangeMax');
+
+            minInput.value = '';
+            maxInput.value = '';
+            pianoRangeSelectionMode = 'start';
+
+            updatePianoKeyboardDisplay(null, null);
         }
 
         // Rendre les informations d'identité SysEx
