@@ -21,6 +21,9 @@ class CommandHandler {
       'device_save_sysex_identity': (data) => this.deviceSaveSysExIdentity(data),
       'instrument_update_settings': (data) => this.instrumentUpdateSettings(data),
       'instrument_get_settings': (data) => this.instrumentGetSettings(data),
+      'instrument_update_capabilities': (data) => this.instrumentUpdateCapabilities(data),
+      'instrument_get_capabilities': (data) => this.instrumentGetCapabilities(data),
+      'instrument_list_capabilities': () => this.instrumentListCapabilities(),
       'ble_scan_start': (data) => this.bleScanStart(data),
       'ble_scan_stop': () => this.bleScanStop(),
       'ble_connect': (data) => this.bleConnect(data),
@@ -283,6 +286,56 @@ class CommandHandler {
 
     return {
       settings: settings || null
+    };
+  }
+
+  async instrumentUpdateCapabilities(data) {
+    if (!this.app.database) {
+      throw new Error('Database not available');
+    }
+
+    if (!data.deviceId) {
+      throw new Error('deviceId is required');
+    }
+
+    const id = this.app.database.updateInstrumentCapabilities(data.deviceId, {
+      note_range_min: data.note_range_min,
+      note_range_max: data.note_range_max,
+      supported_ccs: data.supported_ccs,
+      capabilities_source: data.capabilities_source || 'manual'
+    });
+
+    return {
+      success: true,
+      id: id
+    };
+  }
+
+  async instrumentGetCapabilities(data) {
+    if (!this.app.database) {
+      throw new Error('Database not available');
+    }
+
+    if (!data.deviceId) {
+      throw new Error('deviceId is required');
+    }
+
+    const capabilities = this.app.database.getInstrumentCapabilities(data.deviceId);
+
+    return {
+      capabilities: capabilities || null
+    };
+  }
+
+  async instrumentListCapabilities() {
+    if (!this.app.database) {
+      throw new Error('Database not available');
+    }
+
+    const instruments = this.app.database.getAllInstrumentCapabilities();
+
+    return {
+      instruments: instruments
     };
   }
 
