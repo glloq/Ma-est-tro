@@ -3414,7 +3414,19 @@
                     deviceId: device.id
                 });
 
-                const settings = response.settings || {};
+                // Charger les capacités existantes
+                let capabilities = {};
+                try {
+                    const capResponse = await api.sendCommand('instrument_get_capabilities', {
+                        deviceId: device.id
+                    });
+                    capabilities = capResponse.capabilities || {};
+                } catch (capError) {
+                    console.warn('Impossible de charger les capacités:', capError);
+                }
+
+                // Fusionner les réglages et les capacités
+                const settings = { ...(response.settings || {}), ...capabilities };
                 currentDeviceSettings = { device, settings };
 
                 // Créer la modale
@@ -3467,6 +3479,39 @@
                             </button>
                             <div id="identityInfo" style="margin-top: 12px;">
                                 ${settings.sysex_manufacturer_id ? renderIdentityInfo(settings) : `<p class="info-text">${i18n.t('instrumentSettings.noIdentity')}</p>`}
+                            </div>
+                        </div>
+
+                        <div class="capabilities-section" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                            <h3>🎹 ${i18n.t('instrumentSettings.capabilities') || 'Capacités de l\'instrument'}</h3>
+                            <small class="form-text" style="display: block; margin-bottom: 12px;">
+                                ${i18n.t('instrumentSettings.capabilitiesHelp') || 'Définissez les capacités de cet instrument pour optimiser le routage MIDI.'}
+                            </small>
+
+                            <div class="form-group">
+                                <label>${i18n.t('instrumentSettings.noteRange') || 'Plage de notes'}</label>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <div style="flex: 1;">
+                                        <input type="number" id="noteRangeMin" value="${settings.note_range_min !== null && settings.note_range_min !== undefined ? settings.note_range_min : ''}" min="0" max="127" placeholder="0">
+                                        <small class="form-text">${i18n.t('instrumentSettings.noteMin') || 'Note min (0-127)'}</small>
+                                    </div>
+                                    <span>→</span>
+                                    <div style="flex: 1;">
+                                        <input type="number" id="noteRangeMax" value="${settings.note_range_max !== null && settings.note_range_max !== undefined ? settings.note_range_max : ''}" min="0" max="127" placeholder="127">
+                                        <small class="form-text">${i18n.t('instrumentSettings.noteMax') || 'Note max (0-127)'}</small>
+                                    </div>
+                                </div>
+                                <small class="form-text" style="margin-top: 4px;">
+                                    ${i18n.t('instrumentSettings.noteRangeHelp') || 'Ex: Piano 88 touches = 21 (A0) à 108 (C8). Laissez vide pour toutes les notes.'}
+                                </small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>${i18n.t('instrumentSettings.supportedCCs') || 'CC supportés'}</label>
+                                <input type="text" id="supportedCCs" value="${settings.supported_ccs ? (Array.isArray(settings.supported_ccs) ? settings.supported_ccs.join(', ') : settings.supported_ccs) : ''}" placeholder="1, 7, 10, 11, 64, 74">
+                                <small class="form-text">
+                                    ${i18n.t('instrumentSettings.supportedCCsHelp') || 'Liste des numéros CC séparés par des virgules. Ex: 1=Modulation, 7=Volume, 64=Sustain. Laissez vide pour tous les CC.'}
+                                </small>
                             </div>
                         </div>
 
@@ -3582,8 +3627,42 @@
                 const syncDelay = parseInt(document.getElementById('syncDelay').value) || 0;
                 const macAddress = document.getElementById('macAddress').value.trim();
 
+                // Récupérer les capacités
+                const noteRangeMinInput = document.getElementById('noteRangeMin').value.trim();
+                const noteRangeMaxInput = document.getElementById('noteRangeMax').value.trim();
+                const supportedCCsInput = document.getElementById('supportedCCs').value.trim();
+
+                // Parser la plage de notes
+                const noteRangeMin = noteRangeMinInput !== '' ? parseInt(noteRangeMinInput) : null;
+                const noteRangeMax = noteRangeMaxInput !== '' ? parseInt(noteRangeMaxInput) : null;
+
+                // Valider la plage de notes
+                if (noteRangeMin !== null && (noteRangeMin < 0 || noteRangeMin > 127)) {
+                    throw new Error('La note minimum doit être entre 0 et 127');
+                }
+                if (noteRangeMax !== null && (noteRangeMax < 0 || noteRangeMax > 127)) {
+                    throw new Error('La note maximum doit être entre 0 et 127');
+                }
+                if (noteRangeMin !== null && noteRangeMax !== null && noteRangeMin > noteRangeMax) {
+                    throw new Error('La note minimum doit être inférieure ou égale à la note maximum');
+                }
+
+                // Parser les CC supportés
+                let supportedCCs = null;
+                if (supportedCCsInput !== '') {
+                    supportedCCs = supportedCCsInput
+                        .split(',')
+                        .map(s => parseInt(s.trim()))
+                        .filter(n => !isNaN(n) && n >= 0 && n <= 127);
+
+                    if (supportedCCs.length === 0) {
+                        supportedCCs = null;
+                    }
+                }
+
                 log(`💾 Sauvegarde des réglages pour ${currentDeviceSettings.device.name}...`);
 
+                // Sauvegarder les réglages de base
                 await api.sendCommand('instrument_update_settings', {
                     deviceId: currentDeviceSettings.device.id,
                     custom_name: customName || null,
@@ -3592,7 +3671,16 @@
                     name: currentDeviceSettings.device.name
                 });
 
-                log('✓ Réglages sauvegardés', 'info');
+                // Sauvegarder les capacités
+                await api.sendCommand('instrument_update_capabilities', {
+                    deviceId: currentDeviceSettings.device.id,
+                    note_range_min: noteRangeMin,
+                    note_range_max: noteRangeMax,
+                    supported_ccs: supportedCCs,
+                    capabilities_source: 'manual'
+                });
+
+                log('✓ Réglages et capacités sauvegardés', 'info');
                 closeInstrumentSettings();
 
                 // Rafraîchir la liste des périphériques pour afficher le nouveau nom

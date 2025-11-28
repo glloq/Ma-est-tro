@@ -311,7 +311,15 @@
     "rawResponse": "Réponse brute",
     "sysexHelp": "Vérifiez que l'appareil supporte les messages SysEx Identity Request.",
     "loadError": "Impossible de charger les réglages",
-    "saveError": "Impossible de sauvegarder les réglages"
+    "saveError": "Impossible de sauvegarder les réglages",
+    "capabilities": "Capacités de l'instrument",
+    "capabilitiesHelp": "Définissez les capacités de cet instrument pour optimiser le routage MIDI.",
+    "noteRange": "Plage de notes",
+    "noteMin": "Note min (0-127)",
+    "noteMax": "Note max (0-127)",
+    "noteRangeHelp": "Ex: Piano 88 touches = 21 (A0) à 108 (C8). Laissez vide pour toutes les notes.",
+    "supportedCCs": "CC supportés",
+    "supportedCCsHelp": "Liste des numéros CC séparés par des virgules. Ex: 1=Modulation, 7=Volume, 64=Sustain. Laissez vide pour tous les CC."
   },
   "channelRouter": {
     "title": "Configuration du routage MIDI",

@@ -311,7 +311,15 @@
     "rawResponse": "Raw response",
     "sysexHelp": "Make sure the device supports SysEx Identity Request messages.",
     "loadError": "Unable to load settings",
-    "saveError": "Unable to save settings"
+    "saveError": "Unable to save settings",
+    "capabilities": "Instrument Capabilities",
+    "capabilitiesHelp": "Define the capabilities of this instrument to optimize MIDI routing.",
+    "noteRange": "Note Range",
+    "noteMin": "Min note (0-127)",
+    "noteMax": "Max note (0-127)",
+    "noteRangeHelp": "E.g.: 88-key piano = 21 (A0) to 108 (C8). Leave empty for all notes.",
+    "supportedCCs": "Supported CCs",
+    "supportedCCsHelp": "List of CC numbers separated by commas. E.g.: 1=Modulation, 7=Volume, 64=Sustain. Leave empty for all CCs."
   },
   "channelRouter": {
     "title": "MIDI Routing Configuration",

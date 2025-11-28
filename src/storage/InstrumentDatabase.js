@@ -511,6 +511,203 @@ class InstrumentDatabase {
       throw error;
     }
   }
+
+  // ==================== INSTRUMENT CAPABILITIES ====================
+
+  /**
+   * Update instrument capabilities (note range, supported CCs)
+   * @param {string} deviceId - Device identifier
+   * @param {Object} capabilities - Capability settings
+   * @param {number|null} capabilities.note_range_min - Minimum playable note (0-127)
+   * @param {number|null} capabilities.note_range_max - Maximum playable note (0-127)
+   * @param {number[]|null} capabilities.supported_ccs - Array of supported CC numbers
+   * @param {string} capabilities.capabilities_source - Source: 'manual', 'sysex', 'auto'
+   */
+  updateInstrumentCapabilities(deviceId, capabilities) {
+    try {
+      // Check if entry exists for this device
+      const existing = this.db.prepare(
+        'SELECT id FROM instruments_latency WHERE device_id = ?'
+      ).get(deviceId);
+
+      const now = new Date().toISOString();
+
+      // Validate note range
+      if (capabilities.note_range_min !== undefined && capabilities.note_range_min !== null) {
+        if (capabilities.note_range_min < 0 || capabilities.note_range_min > 127) {
+          throw new Error('note_range_min must be between 0 and 127');
+        }
+      }
+      if (capabilities.note_range_max !== undefined && capabilities.note_range_max !== null) {
+        if (capabilities.note_range_max < 0 || capabilities.note_range_max > 127) {
+          throw new Error('note_range_max must be between 0 and 127');
+        }
+      }
+
+      // Convert supported_ccs array to JSON string
+      let supportedCcsJson = null;
+      if (capabilities.supported_ccs !== undefined && capabilities.supported_ccs !== null) {
+        if (Array.isArray(capabilities.supported_ccs)) {
+          // Validate each CC is in range 0-127
+          for (const cc of capabilities.supported_ccs) {
+            if (cc < 0 || cc > 127) {
+              throw new Error('CC values must be between 0 and 127');
+            }
+          }
+          supportedCcsJson = JSON.stringify(capabilities.supported_ccs);
+        } else if (typeof capabilities.supported_ccs === 'string') {
+          supportedCcsJson = capabilities.supported_ccs;
+        }
+      }
+
+      if (existing) {
+        // Update existing entry
+        const fields = [];
+        const values = [];
+
+        if (capabilities.note_range_min !== undefined) {
+          fields.push('note_range_min = ?');
+          values.push(capabilities.note_range_min);
+        }
+        if (capabilities.note_range_max !== undefined) {
+          fields.push('note_range_max = ?');
+          values.push(capabilities.note_range_max);
+        }
+        if (supportedCcsJson !== undefined) {
+          fields.push('supported_ccs = ?');
+          values.push(supportedCcsJson);
+        }
+        if (capabilities.capabilities_source !== undefined) {
+          fields.push('capabilities_source = ?');
+          values.push(capabilities.capabilities_source);
+        }
+
+        // Always update timestamp
+        fields.push('capabilities_updated_at = ?');
+        values.push(now);
+
+        if (fields.length === 0) {
+          return existing.id;
+        }
+
+        values.push(deviceId);
+
+        const stmt = this.db.prepare(`
+          UPDATE instruments_latency SET ${fields.join(', ')} WHERE device_id = ?
+        `);
+
+        stmt.run(...values);
+        return existing.id;
+      } else {
+        // Insert new entry
+        const stmt = this.db.prepare(`
+          INSERT INTO instruments_latency (
+            id, device_id, channel, name,
+            note_range_min, note_range_max, supported_ccs,
+            capabilities_source, capabilities_updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        const id = `${deviceId}_0`; // Default channel 0
+        stmt.run(
+          id,
+          deviceId,
+          0,
+          'Unnamed Instrument',
+          capabilities.note_range_min || null,
+          capabilities.note_range_max || null,
+          supportedCcsJson,
+          capabilities.capabilities_source || 'manual',
+          now
+        );
+
+        return id;
+      }
+    } catch (error) {
+      this.logger.error(`Failed to update instrument capabilities: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Get instrument capabilities
+   * @param {string} deviceId - Device identifier
+   * @returns {Object|null} Capabilities object with parsed supported_ccs array
+   */
+  getInstrumentCapabilities(deviceId) {
+    try {
+      const stmt = this.db.prepare(`
+        SELECT
+          note_range_min, note_range_max, supported_ccs,
+          capabilities_source, capabilities_updated_at
+        FROM instruments_latency
+        WHERE device_id = ?
+      `);
+      const result = stmt.get(deviceId);
+
+      if (!result) {
+        return null;
+      }
+
+      // Parse supported_ccs JSON string to array
+      let supportedCcs = null;
+      if (result.supported_ccs) {
+        try {
+          supportedCcs = JSON.parse(result.supported_ccs);
+        } catch (e) {
+          this.logger.warn(`Failed to parse supported_ccs for ${deviceId}: ${e.message}`);
+        }
+      }
+
+      return {
+        note_range_min: result.note_range_min,
+        note_range_max: result.note_range_max,
+        supported_ccs: supportedCcs,
+        capabilities_source: result.capabilities_source,
+        capabilities_updated_at: result.capabilities_updated_at
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get instrument capabilities: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all instruments with their capabilities
+   * @returns {Array} List of instruments with capabilities
+   */
+  getAllInstrumentCapabilities() {
+    try {
+      const stmt = this.db.prepare(`
+        SELECT
+          device_id, name, custom_name,
+          note_range_min, note_range_max, supported_ccs,
+          capabilities_source, capabilities_updated_at
+        FROM instruments_latency
+        ORDER BY device_id
+      `);
+      const results = stmt.all();
+
+      // Parse supported_ccs for each result
+      return results.map(result => {
+        let supportedCcs = null;
+        if (result.supported_ccs) {
+          try {
+            supportedCcs = JSON.parse(result.supported_ccs);
+          } catch (e) {
+            this.logger.warn(`Failed to parse supported_ccs for ${result.device_id}`);
+          }
+        }
+        return {
+          ...result,
+          supported_ccs: supportedCcs
+        };
+      });
+    } catch (error) {
+      this.logger.error(`Failed to get all instrument capabilities: ${error.message}`);
+      throw error;
+    }
+  }
 }
 
 export default InstrumentDatabase;
