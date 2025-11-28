@@ -959,7 +959,7 @@
         .modal-content {
             background: white;
             border-radius: 12px;
-            padding: 28px 32px;
+            padding: 5px;
             max-width: 700px;
             width: 95%;
             max-height: 85vh;
@@ -3834,29 +3834,7 @@
                                         <button type="button" class="piano-nav-btn" id="pianoNavRight" onclick="navigatePiano(1)">▶</button>
                                     </div>
                                     <div class="piano-octave-indicator" id="pianoOctaveIndicator"></div>
-                                    <div class="piano-legend" id="pianoLegend">
-                                        <div class="piano-legend-item" id="legendRangeStart">
-                                            <div class="piano-legend-color selected"></div>
-                                            <span>${i18n.t('instrumentSettings.rangeStartEnd') || 'Début/Fin'}</span>
-                                        </div>
-                                        <div class="piano-legend-item" id="legendInRange">
-                                            <div class="piano-legend-color in-range"></div>
-                                            <span>${i18n.t('instrumentSettings.inRange') || 'Dans la plage'}</span>
-                                        </div>
-                                        <div class="piano-legend-item" id="legendSelected" style="display: none;">
-                                            <div class="piano-legend-color selected"></div>
-                                            <span>${i18n.t('instrumentSettings.selectedNote') || 'Sélectionnée'}</span>
-                                        </div>
-                                        <div class="piano-legend-item">
-                                            <div class="piano-legend-color disabled"></div>
-                                            <span>${i18n.t('instrumentSettings.outOfRange') || 'Hors plage / Non sélectionnée'}</span>
-                                        </div>
-                                    </div>
                                     <div class="piano-range-buttons" id="pianoPresetButtons">
-                                        <button type="button" class="btn-small" onclick="setPianoPreset(21, 108)">Piano 88</button>
-                                        <button type="button" class="btn-small" onclick="setPianoPreset(36, 96)">Piano 61</button>
-                                        <button type="button" class="btn-small" onclick="setPianoPreset(48, 72)">2 ${i18n.t('common.octaves') || 'octaves'}</button>
-                                        <button type="button" class="btn-small" onclick="selectAllNotes()">${i18n.t('instrumentSettings.allNotes') || 'Toutes'}</button>
                                         <button type="button" class="btn-small" onclick="clearPianoRange()">${i18n.t('common.clear') || 'Effacer'}</button>
                                     </div>
                                 </div>
@@ -3914,11 +3892,20 @@
         let currentNoteSelectionMode = 'range'; // 'range' ou 'discrete'
         let selectedDiscreteNotes = new Set(); // Pour le mode discrete
 
-        // Navigation du piano (3 octaves visibles à la fois)
-        const VISIBLE_OCTAVES = 3;
+        // Navigation du piano
         const MIN_OCTAVE = -1; // C-1 (note 0)
         const MAX_OCTAVE = 9;  // G9 (note 127 = G9)
+        const OCTAVE_WIDTH = 126; // Largeur approximative d'une octave en pixels (7 touches blanches x 18px)
         let currentPianoStartOctave = 3; // Commence à C3 (octave du milieu)
+
+        // Calculer le nombre d'octaves visibles en fonction de la taille de la fenêtre
+        function getVisibleOctaves() {
+            const viewport = document.querySelector('.piano-viewport');
+            if (!viewport) return 3; // Défaut
+            const availableWidth = viewport.clientWidth - 20; // Marge de sécurité
+            const octaves = Math.max(1, Math.floor(availableWidth / OCTAVE_WIDTH));
+            return Math.min(octaves, 11); // Max 11 octaves (toute la plage MIDI)
+        }
 
         // Convertir un numéro MIDI en nom de note avec octave
         function getNoteNameWithOctave(midiNote) {
@@ -3937,13 +3924,14 @@
         // Changer le mode de sélection
         function setNoteSelectionMode(mode) {
             currentNoteSelectionMode = mode;
-            document.getElementById('noteSelectionModeInput').value = mode;
+            const modeInput = document.getElementById('noteSelectionModeInput');
+            if (modeInput) modeInput.value = mode;
 
-            // Mettre à jour l'UI
+            // Mettre à jour l'UI des toggles
             const modeToggles = document.querySelectorAll('.mode-toggle');
             modeToggles.forEach(toggle => {
                 const input = toggle.querySelector('input');
-                if (input.value === mode) {
+                if (input && input.value === mode) {
                     toggle.classList.add('active');
                     toggle.style.borderColor = '#667eea';
                     toggle.style.background = '#f0f4ff';
@@ -3954,22 +3942,14 @@
                 }
             });
 
-            // Afficher/masquer les éléments de légende appropriés
-            const legendRangeStart = document.getElementById('legendRangeStart');
-            const legendInRange = document.getElementById('legendInRange');
-            const legendSelected = document.getElementById('legendSelected');
+            // Mettre à jour le texte d'aide
             const pianoModeHelp = document.getElementById('pianoModeHelp');
-
-            if (mode === 'discrete') {
-                if (legendRangeStart) legendRangeStart.style.display = 'none';
-                if (legendInRange) legendInRange.style.display = 'none';
-                if (legendSelected) legendSelected.style.display = 'flex';
-                if (pianoModeHelp) pianoModeHelp.textContent = i18n.t('instrumentSettings.clickToToggle') || 'Cliquez pour sélectionner/désélectionner';
-            } else {
-                if (legendRangeStart) legendRangeStart.style.display = 'flex';
-                if (legendInRange) legendInRange.style.display = 'flex';
-                if (legendSelected) legendSelected.style.display = 'none';
-                if (pianoModeHelp) pianoModeHelp.textContent = i18n.t('instrumentSettings.clickToSelect') || 'Cliquez sur les touches pour définir la plage';
+            if (pianoModeHelp) {
+                if (mode === 'discrete') {
+                    pianoModeHelp.textContent = i18n.t('instrumentSettings.clickToToggle') || 'Cliquez pour sélectionner/désélectionner';
+                } else {
+                    pianoModeHelp.textContent = i18n.t('instrumentSettings.clickToSelect') || 'Cliquez sur les touches pour définir la plage';
+                }
             }
 
             // Rafraîchir l'affichage
@@ -3977,8 +3957,8 @@
                 const minInput = document.getElementById('noteRangeMin');
                 const maxInput = document.getElementById('noteRangeMax');
                 updatePianoKeyboardDisplay(
-                    minInput.value !== '' ? parseInt(minInput.value) : null,
-                    maxInput.value !== '' ? parseInt(maxInput.value) : null
+                    minInput && minInput.value !== '' ? parseInt(minInput.value) : null,
+                    maxInput && maxInput.value !== '' ? parseInt(maxInput.value) : null
                 );
             } else {
                 updatePianoKeyboardDisplayDiscrete();
@@ -4001,7 +3981,8 @@
             }
 
             // S'assurer que l'octave est dans les limites
-            currentPianoStartOctave = Math.max(MIN_OCTAVE, Math.min(MAX_OCTAVE - VISIBLE_OCTAVES + 1, currentPianoStartOctave));
+            const visibleOctaves = getVisibleOctaves();
+            currentPianoStartOctave = Math.max(MIN_OCTAVE, Math.min(MAX_OCTAVE - visibleOctaves + 1, currentPianoStartOctave));
 
             // Rendre le piano
             renderPianoKeyboard();
@@ -4017,15 +3998,28 @@
             }
         }
 
-        // Rendre le clavier piano (3 octaves visibles)
+        // Réagir au redimensionnement de la fenêtre
+        let resizeTimeout = null;
+        window.addEventListener('resize', () => {
+            if (resizeTimeout) clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                const container = document.getElementById('pianoKeyboardMini');
+                if (container) {
+                    renderPianoKeyboard();
+                }
+            }, 150);
+        });
+
+        // Rendre le clavier piano (octaves visibles selon taille)
         function renderPianoKeyboard() {
             const container = document.getElementById('pianoKeyboardMini');
             if (!container) return;
 
             container.innerHTML = '';
 
+            const visibleOctaves = getVisibleOctaves();
             const startOctave = currentPianoStartOctave;
-            const endOctave = startOctave + VISIBLE_OCTAVES - 1;
+            const endOctave = startOctave + visibleOctaves - 1;
 
             // Calculer les notes de début et fin
             const startNote = Math.max(0, (startOctave + 1) * 12); // C de l'octave
@@ -4105,14 +4099,15 @@
 
         // Naviguer dans le piano
         function navigatePiano(direction) {
+            const visibleOctaves = getVisibleOctaves();
             currentPianoStartOctave += direction;
 
             // Limiter la navigation
             if (currentPianoStartOctave < MIN_OCTAVE) {
                 currentPianoStartOctave = MIN_OCTAVE;
             }
-            if (currentPianoStartOctave > MAX_OCTAVE - VISIBLE_OCTAVES + 1) {
-                currentPianoStartOctave = MAX_OCTAVE - VISIBLE_OCTAVES + 1;
+            if (currentPianoStartOctave > MAX_OCTAVE - visibleOctaves + 1) {
+                currentPianoStartOctave = MAX_OCTAVE - visibleOctaves + 1;
             }
 
             renderPianoKeyboard();
@@ -4122,14 +4117,16 @@
         function updatePianoOctaveIndicator() {
             const indicator = document.getElementById('pianoOctaveIndicator');
             if (indicator) {
+                const visibleOctaves = getVisibleOctaves();
                 const startOctave = currentPianoStartOctave;
-                const endOctave = startOctave + VISIBLE_OCTAVES - 1;
+                const endOctave = startOctave + visibleOctaves - 1;
                 indicator.textContent = `C${startOctave} → C${endOctave + 1}`;
             }
         }
 
         // Mettre à jour les boutons de navigation
         function updatePianoNavButtons() {
+            const visibleOctaves = getVisibleOctaves();
             const leftBtn = document.getElementById('pianoNavLeft');
             const rightBtn = document.getElementById('pianoNavRight');
 
@@ -4137,7 +4134,7 @@
                 leftBtn.disabled = currentPianoStartOctave <= MIN_OCTAVE;
             }
             if (rightBtn) {
-                rightBtn.disabled = currentPianoStartOctave >= MAX_OCTAVE - VISIBLE_OCTAVES + 1;
+                rightBtn.disabled = currentPianoStartOctave >= MAX_OCTAVE - visibleOctaves + 1;
             }
         }
 
@@ -4275,8 +4272,9 @@
         // Naviguer vers une note (change l'octave visible)
         function scrollToNote(note) {
             if (note === null || note === undefined) return;
+            const visibleOctaves = getVisibleOctaves();
             const targetOctave = Math.floor(note / 12) - 1;
-            currentPianoStartOctave = Math.max(MIN_OCTAVE, Math.min(MAX_OCTAVE - VISIBLE_OCTAVES + 1, targetOctave));
+            currentPianoStartOctave = Math.max(MIN_OCTAVE, Math.min(MAX_OCTAVE - visibleOctaves + 1, targetOctave));
             renderPianoKeyboard();
         }
 
