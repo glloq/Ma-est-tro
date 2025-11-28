@@ -16,6 +16,7 @@ class KeyboardModalNew {
         // État
         this.devices = [];
         this.selectedDevice = null;
+        this.selectedDeviceCapabilities = null; // Capacités de l'instrument sélectionné
         this.activeNotes = new Set();
         this.velocity = 80;
         this.octaveOffset = 0;
@@ -373,6 +374,11 @@ class KeyboardModalNew {
                 whiteKey.dataset.baseNote = noteNumber; // Note fixe sans octaveOffset
                 whiteKey.dataset.noteName = noteName + currentOctave;
 
+                // Vérifier si la note est jouable par l'instrument sélectionné
+                if (!this.isNotePlayable(noteNumber)) {
+                    whiteKey.classList.add('disabled');
+                }
+
                 // Label avec nom + octave
                 const label = document.createElement('span');
                 label.className = 'key-label';
@@ -389,6 +395,11 @@ class KeyboardModalNew {
                     blackKey.dataset.note = blackNoteNumber;
                     blackKey.dataset.baseNote = blackNoteNumber;
                     blackKey.dataset.noteName = noteName + '#' + currentOctave;
+
+                    // Vérifier si la note noire est jouable
+                    if (!this.isNotePlayable(blackNoteNumber)) {
+                        blackKey.classList.add('disabled');
+                    }
 
                     // Positionner la touche noire
                     blackKey.style.left = `calc(${whiteKeyIndex * (100 / totalWhiteKeys)}% + ${(100 / totalWhiteKeys) * 0.7}%)`;
@@ -418,6 +429,64 @@ class KeyboardModalNew {
                 key.classList.remove('active');
             }
         });
+    }
+
+    /**
+     * Charger les capacités d'un instrument
+     * @param {string} deviceId - ID de l'appareil
+     */
+    async loadDeviceCapabilities(deviceId) {
+        if (!deviceId) {
+            this.selectedDeviceCapabilities = null;
+            return;
+        }
+
+        try {
+            const response = await this.backend.sendCommand('instrument_get_capabilities', { deviceId });
+            this.selectedDeviceCapabilities = response.capabilities || null;
+            this.logger.info(`[KeyboardModal] Capacités chargées pour ${deviceId}:`, this.selectedDeviceCapabilities);
+        } catch (error) {
+            this.logger.warn(`[KeyboardModal] Impossible de charger les capacités pour ${deviceId}:`, error);
+            this.selectedDeviceCapabilities = null;
+        }
+    }
+
+    /**
+     * Vérifier si une note est jouable par l'instrument sélectionné
+     * @param {number} noteNumber - Numéro MIDI de la note
+     * @returns {boolean} - true si la note est jouable
+     */
+    isNotePlayable(noteNumber) {
+        if (!this.selectedDeviceCapabilities) {
+            return true; // Pas de restrictions si pas de capacités définies
+        }
+
+        const caps = this.selectedDeviceCapabilities;
+
+        // Mode discrete : vérifier si la note est dans la liste
+        if (caps.note_selection_mode === 'discrete' && caps.selected_notes) {
+            try {
+                const selectedNotes = typeof caps.selected_notes === 'string'
+                    ? JSON.parse(caps.selected_notes)
+                    : caps.selected_notes;
+                return Array.isArray(selectedNotes) && selectedNotes.includes(noteNumber);
+            } catch (e) {
+                return true;
+            }
+        }
+
+        // Mode range : vérifier si la note est dans la plage
+        const minNote = caps.note_range_min;
+        const maxNote = caps.note_range_max;
+
+        if (minNote !== null && minNote !== undefined && noteNumber < minNote) {
+            return false;
+        }
+        if (maxNote !== null && maxNote !== undefined && noteNumber > maxNote) {
+            return false;
+        }
+
+        return true;
     }
 
     regeneratePianoKeys() {
@@ -497,9 +566,15 @@ class KeyboardModalNew {
         });
 
         // Device select
-        document.getElementById('keyboard-device-select')?.addEventListener('change', (e) => {
+        document.getElementById('keyboard-device-select')?.addEventListener('change', async (e) => {
             const deviceId = e.target.value;
             this.selectedDevice = this.devices.find(d => d.device_id === deviceId || d.id === deviceId) || null;
+
+            // Charger les capacités de l'instrument sélectionné
+            await this.loadDeviceCapabilities(deviceId);
+
+            // Régénérer le clavier pour appliquer les restrictions
+            this.regeneratePianoKeys();
         });
 
         // Velocity
@@ -564,6 +639,11 @@ class KeyboardModalNew {
         const key = e.currentTarget;
         const note = parseInt(key.dataset.note);
 
+        // Ne pas jouer si la touche est désactivée
+        if (key.classList.contains('disabled')) {
+            return;
+        }
+
         if (!this.activeNotes.has(note)) {
             this.playNote(note);
         }
@@ -585,6 +665,11 @@ class KeyboardModalNew {
 
         const key = e.currentTarget;
         const note = parseInt(key.dataset.note);
+
+        // Ne pas jouer si la touche est désactivée
+        if (key.classList.contains('disabled')) {
+            return;
+        }
 
         if (!this.activeNotes.has(note)) {
             this.playNote(note);
