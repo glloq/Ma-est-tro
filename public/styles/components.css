@@ -206,7 +206,7 @@
 .modal-dialog {
     background-color: white;
     margin: auto !important;
-    padding: 0;
+    padding: 15px;
     border-radius: 16px;
     width: 95%;
     max-width: 800px;
