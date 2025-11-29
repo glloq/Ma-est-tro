@@ -464,12 +464,20 @@ class KeyboardModalNew {
         const caps = this.selectedDeviceCapabilities;
 
         // Mode discrete : vérifier si la note est dans la liste
-        if (caps.note_selection_mode === 'discrete' && caps.selected_notes) {
+        if (caps.note_selection_mode === 'discrete') {
+            // Si pas de notes sélectionnées, autoriser toutes les notes
+            if (!caps.selected_notes) {
+                return true;
+            }
             try {
                 const selectedNotes = typeof caps.selected_notes === 'string'
                     ? JSON.parse(caps.selected_notes)
                     : caps.selected_notes;
-                return Array.isArray(selectedNotes) && selectedNotes.includes(noteNumber);
+                // Si la liste est vide, autoriser toutes les notes
+                if (!Array.isArray(selectedNotes) || selectedNotes.length === 0) {
+                    return true;
+                }
+                return selectedNotes.includes(noteNumber);
             } catch (e) {
                 return true;
             }
@@ -478,6 +486,12 @@ class KeyboardModalNew {
         // Mode range : vérifier si la note est dans la plage
         const minNote = caps.note_range_min;
         const maxNote = caps.note_range_max;
+
+        // Si aucune plage définie, autoriser toutes les notes
+        if ((minNote === null || minNote === undefined) &&
+            (maxNote === null || maxNote === undefined)) {
+            return true;
+        }
 
         if (minNote !== null && minNote !== undefined && noteNumber < minNote) {
             return false;
