@@ -3121,6 +3121,22 @@ class MidiEditorModal {
             // Ajouter au DOM
             document.body.appendChild(modal);
 
+            // Fonction de fermeture centralisée
+            const closeModal = (result) => {
+                // Supprimer les listeners AVANT de fermer
+                modal.removeEventListener('click', handleClick);
+                document.removeEventListener('keydown', handleKeydown);
+
+                // Animation de sortie
+                modal.classList.remove('visible');
+                setTimeout(() => {
+                    if (modal.parentNode) {
+                        modal.remove();
+                    }
+                    resolve(result);
+                }, 200);
+            };
+
             // Animation d'entrée
             requestAnimationFrame(() => {
                 modal.classList.add('visible');
@@ -3128,6 +3144,12 @@ class MidiEditorModal {
 
             // Gestionnaire de clic
             const handleClick = (e) => {
+                // Clic sur l'overlay (fond) = annuler
+                if (e.target === modal) {
+                    closeModal(false);
+                    return;
+                }
+
                 const btn = e.target.closest('.confirm-modal-btn');
                 if (!btn) return;
 
@@ -3142,12 +3164,7 @@ class MidiEditorModal {
                     result = btn.dataset.value;
                 }
 
-                // Animation de sortie
-                modal.classList.remove('visible');
-                setTimeout(() => {
-                    modal.remove();
-                    resolve(result);
-                }, 200);
+                closeModal(result);
             };
 
             modal.addEventListener('click', handleClick);
@@ -3155,12 +3172,7 @@ class MidiEditorModal {
             // Fermer avec Escape
             const handleKeydown = (e) => {
                 if (e.key === 'Escape') {
-                    modal.classList.remove('visible');
-                    setTimeout(() => {
-                        modal.remove();
-                        resolve(false);
-                    }, 200);
-                    document.removeEventListener('keydown', handleKeydown);
+                    closeModal(false);
                 }
             };
             document.addEventListener('keydown', handleKeydown);
