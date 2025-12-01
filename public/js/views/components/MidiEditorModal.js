@@ -45,6 +45,13 @@ class MidiEditorModal {
         this.ccEvents = []; // Événements CC et pitchbend
         this.ccSectionExpanded = false; // État du collapse de la section CC
 
+        // Playback (synthétiseur intégré)
+        this.synthesizer = null;
+        this.isPlaying = false;
+        this.isPaused = false;
+        this.playbackStartTick = 0;
+        this.playbackEndTick = 0
+
         // Grille de snap pour l'édition (contrainte de positionnement)
         // Valeurs en ticks (basé sur 480 ticks par noire)
         // Progression optimisée : précision maximale pour 1/16, valeurs raisonnables pour subdivisions larges
@@ -1753,6 +1760,24 @@ class MidiEditorModal {
                 <div class="modal-body">
                     <!-- Toolbar d'édition -->
                     <div class="editor-toolbar">
+                        <!-- Section Playback -->
+                        <div class="toolbar-section playback-section">
+                            <button class="tool-btn playback-btn" data-action="playback-play" id="play-btn" title="${this.t('midiEditor.play')} (Space)">
+                                <span class="icon play-icon">▶</span>
+                                <span class="btn-label">${this.t('midiEditor.play')}</span>
+                            </button>
+                            <button class="tool-btn playback-btn" data-action="playback-pause" id="pause-btn" title="${this.t('midiEditor.pause')}" style="display: none;">
+                                <span class="icon pause-icon">⏸</span>
+                                <span class="btn-label">${this.t('midiEditor.pause')}</span>
+                            </button>
+                            <button class="tool-btn playback-btn" data-action="playback-stop" id="stop-btn" title="${this.t('midiEditor.stop')}" disabled>
+                                <span class="icon stop-icon">⏹</span>
+                                <span class="btn-label">${this.t('midiEditor.stop')}</span>
+                            </button>
+                        </div>
+
+                        <div class="toolbar-divider"></div>
+
                         <!-- Section Undo/Redo -->
                         <div class="toolbar-section">
                             <button class="tool-btn" data-action="undo" id="undo-btn" title="${this.t('midiEditor.undo')} (Ctrl+Z)" disabled>
@@ -2044,9 +2069,11 @@ class MidiEditorModal {
         this.pianoRoll.setAttribute('wheelzoom', '1');
         this.pianoRoll.setAttribute('xscroll', '1');
         this.pianoRoll.setAttribute('yscroll', '1');
-        // Pas de marqueurs (triangles vert/orange)
-        this.pianoRoll.setAttribute('markstart', '-1');
-        this.pianoRoll.setAttribute('markend', '-1');
+        // Marqueurs de lecture (triangles verts) - début et fin de la séquence
+        this.pianoRoll.setAttribute('markstart', '0');
+        this.pianoRoll.setAttribute('markend', maxTick.toString());
+        // Curseur de lecture (triangle orange) - au début
+        this.pianoRoll.setAttribute('cursor', '0');
 
         this.log('info', `Piano roll configured: xrange=${xrange}, yrange=${noteRange}, yoffset=${yoffset} (centered), tempo=${this.tempo || 120} BPM, timebase=${this.ticksPerBeat || 480} ticks/beat`);
 
@@ -2636,9 +2663,273 @@ class MidiEditorModal {
                     this.deleteSelectedNotes();
                 }
             }
+
+            // Space = Play/Pause
+            else if (e.key === ' ' || e.code === 'Space') {
+                e.preventDefault();
+                this.togglePlayback();
+            }
         };
 
         document.addEventListener('keydown', this.keyboardHandler);
+    }
+
+    // ========================================================================
+    // PLAYBACK (Synthétiseur intégré)
+    // ========================================================================
+
+    /**
+     * Initialiser le synthétiseur
+     */
+    async initSynthesizer() {
+        if (this.synthesizer) {
+            return true;
+        }
+
+        try {
+            // Vérifier que MidiSynthesizer est disponible
+            if (typeof MidiSynthesizer === 'undefined') {
+                this.log('error', 'MidiSynthesizer class not found. Please include MidiSynthesizer.js');
+                return false;
+            }
+
+            this.synthesizer = new MidiSynthesizer();
+            const initialized = await this.synthesizer.initialize();
+
+            if (initialized) {
+                // Configurer les callbacks
+                this.synthesizer.onTickUpdate = (tick) => this.updatePlaybackCursor(tick);
+                this.synthesizer.onPlaybackEnd = () => this.onPlaybackComplete();
+
+                this.log('info', 'Synthesizer initialized successfully');
+                return true;
+            } else {
+                this.log('error', 'Failed to initialize synthesizer');
+                return false;
+            }
+        } catch (error) {
+            this.log('error', 'Error initializing synthesizer:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Charger la séquence dans le synthétiseur
+     */
+    loadSequenceForPlayback() {
+        if (!this.synthesizer) return;
+
+        // Utiliser fullSequence pour jouer toutes les notes
+        const sequence = this.fullSequence.length > 0 ? this.fullSequence : this.sequence;
+
+        // Obtenir le tempo depuis les métadonnées MIDI
+        const tempo = this.tempo || 120;
+        const ticksPerBeat = this.ticksPerBeat || 480;
+
+        this.synthesizer.loadSequence(sequence, tempo, ticksPerBeat);
+
+        // Configurer les instruments pour chaque canal
+        this.channels.forEach(ch => {
+            this.synthesizer.setChannelInstrument(ch.channel, ch.program || 0);
+        });
+
+        // Définir la plage de lecture depuis les marqueurs
+        this.updatePlaybackRange();
+    }
+
+    /**
+     * Mettre à jour la plage de lecture depuis les marqueurs du piano roll
+     */
+    updatePlaybackRange() {
+        if (!this.synthesizer || !this.pianoRoll) return;
+
+        // Obtenir les valeurs des marqueurs (en ticks)
+        const markstart = this.pianoRoll.markstart || 0;
+        let markend = this.pianoRoll.markend;
+
+        // Si markend n'est pas défini ou est à -1, utiliser la fin de la séquence
+        if (markend === undefined || markend < 0) {
+            markend = this.midiData?.maxTick || this.getSequenceEndTick();
+        }
+
+        this.playbackStartTick = markstart;
+        this.playbackEndTick = markend;
+
+        this.synthesizer.setPlaybackRange(this.playbackStartTick, this.playbackEndTick);
+
+        this.log('debug', `Playback range: ${this.playbackStartTick} - ${this.playbackEndTick} ticks`);
+    }
+
+    /**
+     * Obtenir le tick de fin de la séquence
+     */
+    getSequenceEndTick() {
+        let maxTick = 0;
+        const sequence = this.fullSequence.length > 0 ? this.fullSequence : this.sequence;
+
+        sequence.forEach(note => {
+            const endTick = note.t + note.g;
+            if (endTick > maxTick) maxTick = endTick;
+        });
+
+        return maxTick;
+    }
+
+    /**
+     * Démarrer ou reprendre la lecture
+     */
+    async playbackPlay() {
+        // Initialiser le synthétiseur si nécessaire
+        if (!this.synthesizer) {
+            const initialized = await this.initSynthesizer();
+            if (!initialized) {
+                this.showNotification(this.t('midiEditor.synthInitError'), 'error');
+                return;
+            }
+        }
+
+        // Charger/recharger la séquence si nécessaire
+        if (!this.isPlaying && !this.isPaused) {
+            this.loadSequenceForPlayback();
+        }
+
+        // Démarrer la lecture
+        await this.synthesizer.play();
+
+        this.isPlaying = true;
+        this.isPaused = false;
+
+        // Mettre à jour l'UI
+        this.updatePlaybackButtons();
+
+        this.log('info', 'Playback started');
+    }
+
+    /**
+     * Mettre en pause la lecture
+     */
+    playbackPause() {
+        if (!this.synthesizer || !this.isPlaying) return;
+
+        this.synthesizer.pause();
+
+        this.isPlaying = false;
+        this.isPaused = true;
+
+        this.updatePlaybackButtons();
+
+        this.log('info', 'Playback paused');
+    }
+
+    /**
+     * Arrêter la lecture
+     */
+    playbackStop() {
+        if (!this.synthesizer) return;
+
+        this.synthesizer.stop();
+
+        this.isPlaying = false;
+        this.isPaused = false;
+
+        // Remettre le curseur au début
+        if (this.pianoRoll) {
+            this.pianoRoll.cursor = this.playbackStartTick;
+        }
+
+        this.updatePlaybackButtons();
+
+        this.log('info', 'Playback stopped');
+    }
+
+    /**
+     * Basculer entre play et pause
+     */
+    togglePlayback() {
+        if (this.isPlaying) {
+            this.playbackPause();
+        } else {
+            this.playbackPlay();
+        }
+    }
+
+    /**
+     * Mettre à jour le curseur pendant la lecture
+     * @param {number} tick - Position actuelle en ticks
+     */
+    updatePlaybackCursor(tick) {
+        if (!this.pianoRoll) return;
+
+        // Mettre à jour la position du curseur
+        this.pianoRoll.cursor = tick;
+
+        // Faire défiler automatiquement si le curseur sort de la vue
+        const xoffset = this.pianoRoll.xoffset || 0;
+        const xrange = this.pianoRoll.xrange || 1920;
+
+        // Si le curseur est proche du bord droit (90% de la vue), faire défiler
+        if (tick > xoffset + xrange * 0.9) {
+            this.pianoRoll.xoffset = tick - xrange * 0.2;
+        }
+        // Si le curseur est avant le début de la vue, remettre au début
+        else if (tick < xoffset) {
+            this.pianoRoll.xoffset = Math.max(0, tick - xrange * 0.1);
+        }
+    }
+
+    /**
+     * Callback quand la lecture est terminée
+     */
+    onPlaybackComplete() {
+        this.isPlaying = false;
+        this.isPaused = false;
+
+        // Remettre le curseur au début de la plage
+        if (this.pianoRoll) {
+            this.pianoRoll.cursor = this.playbackStartTick;
+        }
+
+        this.updatePlaybackButtons();
+
+        this.log('info', 'Playback complete');
+    }
+
+    /**
+     * Mettre à jour les boutons de playback
+     */
+    updatePlaybackButtons() {
+        const playBtn = document.getElementById('play-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const stopBtn = document.getElementById('stop-btn');
+
+        if (this.isPlaying) {
+            // En lecture : montrer Pause, cacher Play
+            if (playBtn) playBtn.style.display = 'none';
+            if (pauseBtn) pauseBtn.style.display = '';
+            if (stopBtn) stopBtn.disabled = false;
+        } else if (this.isPaused) {
+            // En pause : montrer Play, cacher Pause
+            if (playBtn) playBtn.style.display = '';
+            if (pauseBtn) pauseBtn.style.display = 'none';
+            if (stopBtn) stopBtn.disabled = false;
+        } else {
+            // Arrêté : montrer Play, cacher Pause, désactiver Stop
+            if (playBtn) playBtn.style.display = '';
+            if (pauseBtn) pauseBtn.style.display = 'none';
+            if (stopBtn) stopBtn.disabled = true;
+        }
+    }
+
+    /**
+     * Nettoyer le synthétiseur
+     */
+    disposeSynthesizer() {
+        if (this.synthesizer) {
+            this.synthesizer.dispose();
+            this.synthesizer = null;
+        }
+        this.isPlaying = false;
+        this.isPaused = false;
     }
 
     // ========================================================================
@@ -2723,6 +3014,17 @@ class MidiEditorModal {
                     break;
                 case 'rename-file':
                     this.showRenameDialog();
+                    break;
+
+                // Playback controls
+                case 'playback-play':
+                    this.playbackPlay();
+                    break;
+                case 'playback-pause':
+                    this.playbackPause();
+                    break;
+                case 'playback-stop':
+                    this.playbackStop();
                     break;
 
                 // Modes d'édition
@@ -3595,6 +3897,9 @@ class MidiEditorModal {
             this.velocityEditor.destroy();
             this.velocityEditor = null;
         }
+
+        // Nettoyer le synthétiseur
+        this.disposeSynthesizer();
 
         // Retirer l'événement escape
         if (this.escapeHandler) {
