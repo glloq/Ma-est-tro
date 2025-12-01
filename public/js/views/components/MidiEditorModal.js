@@ -2287,13 +2287,14 @@ class MidiEditorModal {
             return [];
         }
 
-        // Utiliser la méthode publique du piano roll
+        // Utiliser la méthode publique du piano roll si disponible
         if (typeof this.pianoRoll.getSelectedNotes === 'function') {
             return this.pianoRoll.getSelectedNotes();
         }
 
-        this.log('warn', 'Piano roll does not support getSelectedNotes');
-        return [];
+        // Fallback: filtrer directement la séquence
+        const sequence = this.pianoRoll.sequence || [];
+        return sequence.filter(note => note.f === 1); // f=1 indique une note sélectionnée
     }
 
     /**
@@ -2460,17 +2461,6 @@ class MidiEditorModal {
         this.updateInstrumentSelector();
 
         this.updateEditButtons();
-    }
-
-    /**
-     * Obtenir les notes sélectionnées
-     * @returns {Array}
-     */
-    getSelectedNotes() {
-        if (!this.pianoRoll) return [];
-
-        const sequence = this.pianoRoll.sequence || [];
-        return sequence.filter(note => note.f === 1); // f=1 indique une note sélectionnée
     }
 
     /**

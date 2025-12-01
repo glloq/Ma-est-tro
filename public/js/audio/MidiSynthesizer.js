@@ -1,17 +1,17 @@
 // ============================================================================
 // Fichier: public/js/audio/MidiSynthesizer.js
-// Version: v2.1.0 - Synthétiseur MIDI avec Web Audio API (oscillateurs)
-// Description: Lecteur MIDI intégré au navigateur
+// Version: v2.0.0 - Synthétiseur MIDI avec WebAudioFont (samples réels)
+// Description: Lecteur MIDI intégré au navigateur avec sons de qualité
 // ============================================================================
 
 /**
- * MidiSynthesizer - Synthétiseur MIDI utilisant Web Audio API
+ * MidiSynthesizer - Synthétiseur MIDI utilisant WebAudioFont
+ * Utilise des samples réels pour un rendu de qualité professionnelle
  */
 class MidiSynthesizer {
     constructor() {
         this.audioContext = null;
-        this.masterGain = null;
-        this.compressor = null;
+        this.player = null;
         this.isInitialized = false;
         this.isPlaying = false;
         this.isPaused = false;
@@ -23,18 +23,25 @@ class MidiSynthesizer {
         this.startTime = 0;
 
         // Tempo et timing
-        this.tempo = 120;
-        this.ticksPerBeat = 480;
+        this.tempo = 120; // BPM
+        this.ticksPerBeat = 480; // PPQ standard
 
         // Canaux et instruments
         this.channelInstruments = new Array(16).fill(0);
         this.channelVolumes = new Array(16).fill(100);
 
+        // Instruments chargés (cache)
+        this.loadedInstruments = new Map(); // program -> instrument data
+        this.loadingInstruments = new Map(); // program -> Promise
+
         // Scheduler
         this.schedulerInterval = null;
         this.animationFrame = null;
-        this.scheduleAheadTime = 0.15;
+        this.scheduleAheadTime = 0.2; // 200ms de lookahead
         this.lastScheduledTick = 0;
+
+        // Notes actives pour pouvoir les arrêter
+        this.activeEnvelopes = [];
 
         // Callbacks
         this.onTickUpdate = null;
@@ -46,70 +53,200 @@ class MidiSynthesizer {
         // Logger
         this.logger = window.logger || console;
 
-        // Presets d'instruments
-        this.presets = this.createPresets();
+        // Mapping General MIDI vers WebAudioFont
+        // Format: [fichier, variable] pour chaque programme GM (0-127)
+        this.gmInstrumentMap = this.createGMInstrumentMap();
+
+        // Drums (canal 9)
+        this.drumKitFile = '12835_0_FluidR3_GM_sf2_file';
+        this.drumKitVar = '_drum_35_0_FluidR3_GM_sf2_file';
+        this.drumKit = null;
     }
 
     /**
-     * Créer les presets d'instruments
+     * Créer le mapping des 128 instruments GM vers les fichiers WebAudioFont
+     * Utilise les sons de FluidR3_GM qui sont de bonne qualité
      */
-    createPresets() {
-        return {
-            piano: { wave: 'triangle', attack: 0.005, decay: 0.3, sustain: 0.4, release: 0.3 },
-            chromatic: { wave: 'sine', attack: 0.001, decay: 0.5, sustain: 0.3, release: 0.5 },
-            organ: { wave: 'sine', attack: 0.01, decay: 0.1, sustain: 0.9, release: 0.1 },
-            guitar: { wave: 'triangle', attack: 0.002, decay: 0.4, sustain: 0.2, release: 0.3 },
-            bass: { wave: 'sawtooth', attack: 0.01, decay: 0.2, sustain: 0.6, release: 0.2 },
-            strings: { wave: 'sawtooth', attack: 0.15, decay: 0.2, sustain: 0.8, release: 0.4 },
-            brass: { wave: 'sawtooth', attack: 0.05, decay: 0.2, sustain: 0.7, release: 0.2 },
-            reed: { wave: 'square', attack: 0.03, decay: 0.15, sustain: 0.6, release: 0.2 },
-            pipe: { wave: 'sine', attack: 0.05, decay: 0.1, sustain: 0.7, release: 0.3 },
-            synth: { wave: 'sawtooth', attack: 0.01, decay: 0.2, sustain: 0.6, release: 0.2 },
-            drums: { wave: 'triangle', attack: 0.001, decay: 0.15, sustain: 0.05, release: 0.1 }
-        };
+    createGMInstrumentMap() {
+        // Base URL pour les instruments
+        const base = 'https://surikov.github.io/webaudiofontdata/sound/';
+
+        // Mapping simplifié - utilise FluidR3_GM pour tous les instruments
+        // Format: [url_sans_extension, nom_variable]
+        const instruments = [
+            // Piano (0-7)
+            ['0000_FluidR3_GM_sf2_file', '_tone_0000_FluidR3_GM_sf2_file'],
+            ['0010_FluidR3_GM_sf2_file', '_tone_0010_FluidR3_GM_sf2_file'],
+            ['0020_FluidR3_GM_sf2_file', '_tone_0020_FluidR3_GM_sf2_file'],
+            ['0030_FluidR3_GM_sf2_file', '_tone_0030_FluidR3_GM_sf2_file'],
+            ['0040_FluidR3_GM_sf2_file', '_tone_0040_FluidR3_GM_sf2_file'],
+            ['0050_FluidR3_GM_sf2_file', '_tone_0050_FluidR3_GM_sf2_file'],
+            ['0060_FluidR3_GM_sf2_file', '_tone_0060_FluidR3_GM_sf2_file'],
+            ['0070_FluidR3_GM_sf2_file', '_tone_0070_FluidR3_GM_sf2_file'],
+            // Chromatic Percussion (8-15)
+            ['0080_FluidR3_GM_sf2_file', '_tone_0080_FluidR3_GM_sf2_file'],
+            ['0090_FluidR3_GM_sf2_file', '_tone_0090_FluidR3_GM_sf2_file'],
+            ['0100_FluidR3_GM_sf2_file', '_tone_0100_FluidR3_GM_sf2_file'],
+            ['0110_FluidR3_GM_sf2_file', '_tone_0110_FluidR3_GM_sf2_file'],
+            ['0120_FluidR3_GM_sf2_file', '_tone_0120_FluidR3_GM_sf2_file'],
+            ['0130_FluidR3_GM_sf2_file', '_tone_0130_FluidR3_GM_sf2_file'],
+            ['0140_FluidR3_GM_sf2_file', '_tone_0140_FluidR3_GM_sf2_file'],
+            ['0150_FluidR3_GM_sf2_file', '_tone_0150_FluidR3_GM_sf2_file'],
+            // Organ (16-23)
+            ['0160_FluidR3_GM_sf2_file', '_tone_0160_FluidR3_GM_sf2_file'],
+            ['0170_FluidR3_GM_sf2_file', '_tone_0170_FluidR3_GM_sf2_file'],
+            ['0180_FluidR3_GM_sf2_file', '_tone_0180_FluidR3_GM_sf2_file'],
+            ['0190_FluidR3_GM_sf2_file', '_tone_0190_FluidR3_GM_sf2_file'],
+            ['0200_FluidR3_GM_sf2_file', '_tone_0200_FluidR3_GM_sf2_file'],
+            ['0210_FluidR3_GM_sf2_file', '_tone_0210_FluidR3_GM_sf2_file'],
+            ['0220_FluidR3_GM_sf2_file', '_tone_0220_FluidR3_GM_sf2_file'],
+            ['0230_FluidR3_GM_sf2_file', '_tone_0230_FluidR3_GM_sf2_file'],
+            // Guitar (24-31)
+            ['0240_FluidR3_GM_sf2_file', '_tone_0240_FluidR3_GM_sf2_file'],
+            ['0250_FluidR3_GM_sf2_file', '_tone_0250_FluidR3_GM_sf2_file'],
+            ['0260_FluidR3_GM_sf2_file', '_tone_0260_FluidR3_GM_sf2_file'],
+            ['0270_FluidR3_GM_sf2_file', '_tone_0270_FluidR3_GM_sf2_file'],
+            ['0280_FluidR3_GM_sf2_file', '_tone_0280_FluidR3_GM_sf2_file'],
+            ['0290_FluidR3_GM_sf2_file', '_tone_0290_FluidR3_GM_sf2_file'],
+            ['0300_FluidR3_GM_sf2_file', '_tone_0300_FluidR3_GM_sf2_file'],
+            ['0310_FluidR3_GM_sf2_file', '_tone_0310_FluidR3_GM_sf2_file'],
+            // Bass (32-39)
+            ['0320_FluidR3_GM_sf2_file', '_tone_0320_FluidR3_GM_sf2_file'],
+            ['0330_FluidR3_GM_sf2_file', '_tone_0330_FluidR3_GM_sf2_file'],
+            ['0340_FluidR3_GM_sf2_file', '_tone_0340_FluidR3_GM_sf2_file'],
+            ['0350_FluidR3_GM_sf2_file', '_tone_0350_FluidR3_GM_sf2_file'],
+            ['0360_FluidR3_GM_sf2_file', '_tone_0360_FluidR3_GM_sf2_file'],
+            ['0370_FluidR3_GM_sf2_file', '_tone_0370_FluidR3_GM_sf2_file'],
+            ['0380_FluidR3_GM_sf2_file', '_tone_0380_FluidR3_GM_sf2_file'],
+            ['0390_FluidR3_GM_sf2_file', '_tone_0390_FluidR3_GM_sf2_file'],
+            // Strings (40-47)
+            ['0400_FluidR3_GM_sf2_file', '_tone_0400_FluidR3_GM_sf2_file'],
+            ['0410_FluidR3_GM_sf2_file', '_tone_0410_FluidR3_GM_sf2_file'],
+            ['0420_FluidR3_GM_sf2_file', '_tone_0420_FluidR3_GM_sf2_file'],
+            ['0430_FluidR3_GM_sf2_file', '_tone_0430_FluidR3_GM_sf2_file'],
+            ['0440_FluidR3_GM_sf2_file', '_tone_0440_FluidR3_GM_sf2_file'],
+            ['0450_FluidR3_GM_sf2_file', '_tone_0450_FluidR3_GM_sf2_file'],
+            ['0460_FluidR3_GM_sf2_file', '_tone_0460_FluidR3_GM_sf2_file'],
+            ['0470_FluidR3_GM_sf2_file', '_tone_0470_FluidR3_GM_sf2_file'],
+            // Ensemble (48-55)
+            ['0480_FluidR3_GM_sf2_file', '_tone_0480_FluidR3_GM_sf2_file'],
+            ['0490_FluidR3_GM_sf2_file', '_tone_0490_FluidR3_GM_sf2_file'],
+            ['0500_FluidR3_GM_sf2_file', '_tone_0500_FluidR3_GM_sf2_file'],
+            ['0510_FluidR3_GM_sf2_file', '_tone_0510_FluidR3_GM_sf2_file'],
+            ['0520_FluidR3_GM_sf2_file', '_tone_0520_FluidR3_GM_sf2_file'],
+            ['0530_FluidR3_GM_sf2_file', '_tone_0530_FluidR3_GM_sf2_file'],
+            ['0540_FluidR3_GM_sf2_file', '_tone_0540_FluidR3_GM_sf2_file'],
+            ['0550_FluidR3_GM_sf2_file', '_tone_0550_FluidR3_GM_sf2_file'],
+            // Brass (56-63)
+            ['0560_FluidR3_GM_sf2_file', '_tone_0560_FluidR3_GM_sf2_file'],
+            ['0570_FluidR3_GM_sf2_file', '_tone_0570_FluidR3_GM_sf2_file'],
+            ['0580_FluidR3_GM_sf2_file', '_tone_0580_FluidR3_GM_sf2_file'],
+            ['0590_FluidR3_GM_sf2_file', '_tone_0590_FluidR3_GM_sf2_file'],
+            ['0600_FluidR3_GM_sf2_file', '_tone_0600_FluidR3_GM_sf2_file'],
+            ['0610_FluidR3_GM_sf2_file', '_tone_0610_FluidR3_GM_sf2_file'],
+            ['0620_FluidR3_GM_sf2_file', '_tone_0620_FluidR3_GM_sf2_file'],
+            ['0630_FluidR3_GM_sf2_file', '_tone_0630_FluidR3_GM_sf2_file'],
+            // Reed (64-71)
+            ['0640_FluidR3_GM_sf2_file', '_tone_0640_FluidR3_GM_sf2_file'],
+            ['0650_FluidR3_GM_sf2_file', '_tone_0650_FluidR3_GM_sf2_file'],
+            ['0660_FluidR3_GM_sf2_file', '_tone_0660_FluidR3_GM_sf2_file'],
+            ['0670_FluidR3_GM_sf2_file', '_tone_0670_FluidR3_GM_sf2_file'],
+            ['0680_FluidR3_GM_sf2_file', '_tone_0680_FluidR3_GM_sf2_file'],
+            ['0690_FluidR3_GM_sf2_file', '_tone_0690_FluidR3_GM_sf2_file'],
+            ['0700_FluidR3_GM_sf2_file', '_tone_0700_FluidR3_GM_sf2_file'],
+            ['0710_FluidR3_GM_sf2_file', '_tone_0710_FluidR3_GM_sf2_file'],
+            // Pipe (72-79)
+            ['0720_FluidR3_GM_sf2_file', '_tone_0720_FluidR3_GM_sf2_file'],
+            ['0730_FluidR3_GM_sf2_file', '_tone_0730_FluidR3_GM_sf2_file'],
+            ['0740_FluidR3_GM_sf2_file', '_tone_0740_FluidR3_GM_sf2_file'],
+            ['0750_FluidR3_GM_sf2_file', '_tone_0750_FluidR3_GM_sf2_file'],
+            ['0760_FluidR3_GM_sf2_file', '_tone_0760_FluidR3_GM_sf2_file'],
+            ['0770_FluidR3_GM_sf2_file', '_tone_0770_FluidR3_GM_sf2_file'],
+            ['0780_FluidR3_GM_sf2_file', '_tone_0780_FluidR3_GM_sf2_file'],
+            ['0790_FluidR3_GM_sf2_file', '_tone_0790_FluidR3_GM_sf2_file'],
+            // Synth Lead (80-87)
+            ['0800_FluidR3_GM_sf2_file', '_tone_0800_FluidR3_GM_sf2_file'],
+            ['0810_FluidR3_GM_sf2_file', '_tone_0810_FluidR3_GM_sf2_file'],
+            ['0820_FluidR3_GM_sf2_file', '_tone_0820_FluidR3_GM_sf2_file'],
+            ['0830_FluidR3_GM_sf2_file', '_tone_0830_FluidR3_GM_sf2_file'],
+            ['0840_FluidR3_GM_sf2_file', '_tone_0840_FluidR3_GM_sf2_file'],
+            ['0850_FluidR3_GM_sf2_file', '_tone_0850_FluidR3_GM_sf2_file'],
+            ['0860_FluidR3_GM_sf2_file', '_tone_0860_FluidR3_GM_sf2_file'],
+            ['0870_FluidR3_GM_sf2_file', '_tone_0870_FluidR3_GM_sf2_file'],
+            // Synth Pad (88-95)
+            ['0880_FluidR3_GM_sf2_file', '_tone_0880_FluidR3_GM_sf2_file'],
+            ['0890_FluidR3_GM_sf2_file', '_tone_0890_FluidR3_GM_sf2_file'],
+            ['0900_FluidR3_GM_sf2_file', '_tone_0900_FluidR3_GM_sf2_file'],
+            ['0910_FluidR3_GM_sf2_file', '_tone_0910_FluidR3_GM_sf2_file'],
+            ['0920_FluidR3_GM_sf2_file', '_tone_0920_FluidR3_GM_sf2_file'],
+            ['0930_FluidR3_GM_sf2_file', '_tone_0930_FluidR3_GM_sf2_file'],
+            ['0940_FluidR3_GM_sf2_file', '_tone_0940_FluidR3_GM_sf2_file'],
+            ['0950_FluidR3_GM_sf2_file', '_tone_0950_FluidR3_GM_sf2_file'],
+            // Synth Effects (96-103)
+            ['0960_FluidR3_GM_sf2_file', '_tone_0960_FluidR3_GM_sf2_file'],
+            ['0970_FluidR3_GM_sf2_file', '_tone_0970_FluidR3_GM_sf2_file'],
+            ['0980_FluidR3_GM_sf2_file', '_tone_0980_FluidR3_GM_sf2_file'],
+            ['0990_FluidR3_GM_sf2_file', '_tone_0990_FluidR3_GM_sf2_file'],
+            ['1000_FluidR3_GM_sf2_file', '_tone_1000_FluidR3_GM_sf2_file'],
+            ['1010_FluidR3_GM_sf2_file', '_tone_1010_FluidR3_GM_sf2_file'],
+            ['1020_FluidR3_GM_sf2_file', '_tone_1020_FluidR3_GM_sf2_file'],
+            ['1030_FluidR3_GM_sf2_file', '_tone_1030_FluidR3_GM_sf2_file'],
+            // Ethnic (104-111)
+            ['1040_FluidR3_GM_sf2_file', '_tone_1040_FluidR3_GM_sf2_file'],
+            ['1050_FluidR3_GM_sf2_file', '_tone_1050_FluidR3_GM_sf2_file'],
+            ['1060_FluidR3_GM_sf2_file', '_tone_1060_FluidR3_GM_sf2_file'],
+            ['1070_FluidR3_GM_sf2_file', '_tone_1070_FluidR3_GM_sf2_file'],
+            ['1080_FluidR3_GM_sf2_file', '_tone_1080_FluidR3_GM_sf2_file'],
+            ['1090_FluidR3_GM_sf2_file', '_tone_1090_FluidR3_GM_sf2_file'],
+            ['1100_FluidR3_GM_sf2_file', '_tone_1100_FluidR3_GM_sf2_file'],
+            ['1110_FluidR3_GM_sf2_file', '_tone_1110_FluidR3_GM_sf2_file'],
+            // Percussive (112-119)
+            ['1120_FluidR3_GM_sf2_file', '_tone_1120_FluidR3_GM_sf2_file'],
+            ['1130_FluidR3_GM_sf2_file', '_tone_1130_FluidR3_GM_sf2_file'],
+            ['1140_FluidR3_GM_sf2_file', '_tone_1140_FluidR3_GM_sf2_file'],
+            ['1150_FluidR3_GM_sf2_file', '_tone_1150_FluidR3_GM_sf2_file'],
+            ['1160_FluidR3_GM_sf2_file', '_tone_1160_FluidR3_GM_sf2_file'],
+            ['1170_FluidR3_GM_sf2_file', '_tone_1170_FluidR3_GM_sf2_file'],
+            ['1180_FluidR3_GM_sf2_file', '_tone_1180_FluidR3_GM_sf2_file'],
+            ['1190_FluidR3_GM_sf2_file', '_tone_1190_FluidR3_GM_sf2_file'],
+            // Sound Effects (120-127)
+            ['1200_FluidR3_GM_sf2_file', '_tone_1200_FluidR3_GM_sf2_file'],
+            ['1210_FluidR3_GM_sf2_file', '_tone_1210_FluidR3_GM_sf2_file'],
+            ['1220_FluidR3_GM_sf2_file', '_tone_1220_FluidR3_GM_sf2_file'],
+            ['1230_FluidR3_GM_sf2_file', '_tone_1230_FluidR3_GM_sf2_file'],
+            ['1240_FluidR3_GM_sf2_file', '_tone_1240_FluidR3_GM_sf2_file'],
+            ['1250_FluidR3_GM_sf2_file', '_tone_1250_FluidR3_GM_sf2_file'],
+            ['1260_FluidR3_GM_sf2_file', '_tone_1260_FluidR3_GM_sf2_file'],
+            ['1270_FluidR3_GM_sf2_file', '_tone_1270_FluidR3_GM_sf2_file'],
+        ];
+
+        return instruments.map(([file, varName]) => ({
+            url: base + file + '.js',
+            variable: varName
+        }));
     }
 
     /**
-     * Obtenir le preset pour un programme
-     */
-    getPreset(program, channel) {
-        if (channel === 9) return this.presets.drums;
-        if (program < 8) return this.presets.piano;
-        if (program < 16) return this.presets.chromatic;
-        if (program < 24) return this.presets.organ;
-        if (program < 32) return this.presets.guitar;
-        if (program < 40) return this.presets.bass;
-        if (program < 56) return this.presets.strings;
-        if (program < 64) return this.presets.brass;
-        if (program < 72) return this.presets.reed;
-        if (program < 80) return this.presets.pipe;
-        return this.presets.synth;
-    }
-
-    /**
-     * Initialiser
+     * Initialiser le synthétiseur
      */
     async initialize() {
         if (this.isInitialized) return true;
 
         try {
+            // Vérifier que WebAudioFont est chargé
+            if (typeof WebAudioFontPlayer === 'undefined') {
+                throw new Error('WebAudioFontPlayer not loaded');
+            }
+
+            // Créer le contexte audio
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-            this.masterGain = this.audioContext.createGain();
-            this.masterGain.gain.value = 0.5;
-
-            this.compressor = this.audioContext.createDynamicsCompressor();
-            this.compressor.threshold.value = -24;
-            this.compressor.knee.value = 30;
-            this.compressor.ratio.value = 12;
-            this.compressor.attack.value = 0.003;
-            this.compressor.release.value = 0.25;
-
-            this.compressor.connect(this.masterGain);
-            this.masterGain.connect(this.audioContext.destination);
+            // Créer le player WebAudioFont
+            this.player = new WebAudioFontPlayer();
 
             this.isInitialized = true;
-            this.log('info', 'MidiSynthesizer initialized');
+            this.log('info', 'MidiSynthesizer initialized with WebAudioFont');
+
             return true;
         } catch (error) {
             this.log('error', 'Failed to initialize:', error);
@@ -118,38 +255,180 @@ class MidiSynthesizer {
     }
 
     /**
-     * Convertir note MIDI en fréquence
+     * Charger un instrument
+     * @param {number} program - Numéro de programme GM (0-127)
      */
-    midiToFrequency(note) {
-        return 440 * Math.pow(2, (note - 69) / 12);
+    async loadInstrument(program) {
+        if (program < 0 || program >= 128) {
+            program = 0;
+        }
+
+        // Déjà chargé ?
+        if (this.loadedInstruments.has(program)) {
+            return this.loadedInstruments.get(program);
+        }
+
+        // En cours de chargement ?
+        if (this.loadingInstruments.has(program)) {
+            return this.loadingInstruments.get(program);
+        }
+
+        const instrumentInfo = this.gmInstrumentMap[program];
+
+        const loadPromise = new Promise((resolve, reject) => {
+            // Charger le script de l'instrument
+            const script = document.createElement('script');
+            script.src = instrumentInfo.url;
+            script.onload = () => {
+                const instrument = window[instrumentInfo.variable];
+                if (instrument) {
+                    // Ajuster les zones de l'instrument
+                    this.player.adjustPreset(this.audioContext, instrument);
+                    this.loadedInstruments.set(program, instrument);
+                    this.loadingInstruments.delete(program);
+                    this.log('info', `Loaded instrument ${program}: ${instrumentInfo.variable}`);
+                    resolve(instrument);
+                } else {
+                    reject(new Error(`Instrument variable ${instrumentInfo.variable} not found`));
+                }
+            };
+            script.onerror = () => {
+                this.loadingInstruments.delete(program);
+                reject(new Error(`Failed to load ${instrumentInfo.url}`));
+            };
+            document.head.appendChild(script);
+        });
+
+        this.loadingInstruments.set(program, loadPromise);
+        return loadPromise;
     }
 
+    /**
+     * Charger le kit de drums
+     */
+    async loadDrumKit() {
+        if (this.drumKit) return this.drumKit;
+
+        const url = `https://surikov.github.io/webaudiofontdata/sound/${this.drumKitFile}.js`;
+
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = url;
+            script.onload = () => {
+                this.drumKit = window[this.drumKitVar];
+                if (this.drumKit) {
+                    this.player.adjustPreset(this.audioContext, this.drumKit);
+                    this.log('info', 'Drum kit loaded');
+                    resolve(this.drumKit);
+                } else {
+                    reject(new Error('Drum kit variable not found'));
+                }
+            };
+            script.onerror = () => reject(new Error('Failed to load drum kit'));
+            document.head.appendChild(script);
+        });
+    }
+
+    /**
+     * Précharger les instruments utilisés dans la séquence
+     */
+    async preloadInstruments() {
+        const usedPrograms = new Set();
+        let hasDrums = false;
+
+        // Collecter les instruments utilisés
+        this.sequence.forEach(note => {
+            if (note.c === 9) {
+                hasDrums = true;
+            } else {
+                const program = this.channelInstruments[note.c] || 0;
+                usedPrograms.add(program);
+            }
+        });
+
+        // Aussi vérifier les canaux configurés
+        this.channelInstruments.forEach((program, channel) => {
+            if (channel !== 9 && program !== undefined) {
+                usedPrograms.add(program);
+            }
+        });
+
+        // Si aucun instrument, charger le piano par défaut
+        if (usedPrograms.size === 0) {
+            usedPrograms.add(0);
+        }
+
+        this.log('info', `Preloading ${usedPrograms.size} instruments + ${hasDrums ? 'drums' : 'no drums'}`);
+
+        const promises = [];
+
+        usedPrograms.forEach(program => {
+            promises.push(this.loadInstrument(program).catch(e => {
+                this.log('warn', `Failed to load instrument ${program}:`, e.message);
+            }));
+        });
+
+        if (hasDrums) {
+            promises.push(this.loadDrumKit().catch(e => {
+                this.log('warn', 'Failed to load drum kit:', e.message);
+            }));
+        }
+
+        await Promise.all(promises);
+        this.log('info', 'Instruments preloaded');
+    }
+
+    /**
+     * Définir l'instrument pour un canal
+     */
     setChannelInstrument(channel, program) {
         if (channel >= 0 && channel < 16) {
             this.channelInstruments[channel] = program;
         }
     }
 
+    /**
+     * Définir le volume d'un canal
+     */
     setChannelVolume(channel, volume) {
         if (channel >= 0 && channel < 16) {
             this.channelVolumes[channel] = Math.max(0, Math.min(127, volume));
         }
     }
 
+    /**
+     * Convertir ticks en secondes
+     */
     ticksToSeconds(ticks) {
-        return ticks / (this.tempo / 60 * this.ticksPerBeat);
+        const beatsPerSecond = this.tempo / 60;
+        const ticksPerSecond = beatsPerSecond * this.ticksPerBeat;
+        return ticks / ticksPerSecond;
     }
 
+    /**
+     * Convertir secondes en ticks
+     */
     secondsToTicks(seconds) {
-        return Math.round(seconds * this.tempo / 60 * this.ticksPerBeat);
+        const beatsPerSecond = this.tempo / 60;
+        const ticksPerSecond = beatsPerSecond * this.ticksPerBeat;
+        return Math.round(seconds * ticksPerSecond);
     }
 
+    /**
+     * Charger une séquence
+     */
     loadSequence(sequence, tempo = 120, ticksPerBeat = 480) {
         this.sequence = sequence.map(note => ({
-            t: note.t, g: note.g, n: note.n, c: note.c || 0, v: note.v || 100
+            t: note.t,
+            g: note.g,
+            n: note.n,
+            c: note.c || 0,
+            v: note.v || 100
         }));
+
         this.tempo = tempo;
         this.ticksPerBeat = ticksPerBeat;
+
         this.sequence.sort((a, b) => a.t - b.t);
 
         let maxEndTick = 0;
@@ -161,9 +440,13 @@ class MidiSynthesizer {
         this.endTick = maxEndTick;
         this.startTick = 0;
         this.currentTick = 0;
-        this.log('info', `Sequence: ${this.sequence.length} notes, ${this.ticksToSeconds(maxEndTick).toFixed(2)}s`);
+
+        this.log('info', `Sequence loaded: ${this.sequence.length} notes, ${this.ticksToSeconds(maxEndTick).toFixed(2)}s at ${tempo} BPM`);
     }
 
+    /**
+     * Définir la plage de lecture
+     */
     setPlaybackRange(startTick, endTick) {
         this.startTick = Math.max(0, startTick);
         this.endTick = endTick;
@@ -173,62 +456,59 @@ class MidiSynthesizer {
     /**
      * Jouer une note
      */
-    playNote(note, velocity, channel, duration, time) {
-        if (!this.isInitialized) return;
+    playNote(note, velocity, channel, duration, time = null) {
+        if (!this.isInitialized || !this.player) return;
 
         const startTime = time || this.audioContext.currentTime;
-        const frequency = this.midiToFrequency(note);
-        const program = this.channelInstruments[channel];
-        const preset = this.getPreset(program, channel);
+        const volume = (velocity / 127) * (this.channelVolumes[channel] / 127);
 
-        const velocityGain = velocity / 127;
-        const channelGain = this.channelVolumes[channel] / 127;
-        const baseGain = velocityGain * channelGain * 0.12;
+        let instrument;
+        if (channel === 9) {
+            instrument = this.drumKit;
+        } else {
+            const program = this.channelInstruments[channel] || 0;
+            instrument = this.loadedInstruments.get(program);
+        }
+
+        if (!instrument) {
+            return;
+        }
 
         try {
-            const osc = this.audioContext.createOscillator();
-            osc.type = preset.wave;
-            osc.frequency.value = frequency;
+            const envelope = this.player.queueWaveTable(
+                this.audioContext,
+                this.audioContext.destination,
+                instrument,
+                startTime,
+                note,
+                duration,
+                volume
+            );
 
-            const gainNode = this.audioContext.createGain();
-            gainNode.gain.value = 0;
-
-            osc.connect(gainNode);
-            gainNode.connect(this.compressor);
-
-            const { attack, decay, sustain, release } = preset;
-            const attackEnd = startTime + attack;
-            const decayEnd = attackEnd + decay;
-            const releaseStart = startTime + duration;
-            const releaseEnd = releaseStart + release;
-
-            gainNode.gain.setValueAtTime(0, startTime);
-            gainNode.gain.linearRampToValueAtTime(baseGain, attackEnd);
-            gainNode.gain.linearRampToValueAtTime(baseGain * sustain, decayEnd);
-            gainNode.gain.setValueAtTime(baseGain * sustain, releaseStart);
-            gainNode.gain.linearRampToValueAtTime(0, releaseEnd);
-
-            osc.start(startTime);
-            osc.stop(releaseEnd + 0.1);
-
-            osc.onended = () => {
-                osc.disconnect();
-                gainNode.disconnect();
-            };
-        } catch (e) {
-            // Ignore
+            if (envelope) {
+                this.activeEnvelopes.push(envelope);
+            }
+        } catch (error) {
+            // Ignorer les erreurs silencieusement
         }
     }
 
+    /**
+     * Démarrer la lecture
+     */
     async play() {
         if (!this.isInitialized) {
-            const ok = await this.initialize();
-            if (!ok) return;
+            const initialized = await this.initialize();
+            if (!initialized) return;
         }
 
+        // Reprendre le contexte si suspendu
         if (this.audioContext.state === 'suspended') {
             await this.audioContext.resume();
         }
+
+        // Précharger les instruments
+        await this.preloadInstruments();
 
         if (this.isPaused) {
             this.isPaused = false;
@@ -241,30 +521,61 @@ class MidiSynthesizer {
 
         this.isPlaying = true;
         this.startScheduler();
+
         this.log('info', `Playback started at tick ${this.currentTick}`);
     }
 
+    /**
+     * Pause
+     */
     pause() {
         if (!this.isPlaying) return;
+
         this.isPlaying = false;
         this.isPaused = true;
         this.stopScheduler();
+        this.cancelAllNotes();
+
         this.log('info', `Playback paused at tick ${this.currentTick}`);
     }
 
+    /**
+     * Stop
+     */
     stop() {
         this.isPlaying = false;
         this.isPaused = false;
         this.stopScheduler();
+        this.cancelAllNotes();
         this.currentTick = this.startTick;
         this.lastScheduledTick = this.startTick;
 
         if (this.onTickUpdate) {
             this.onTickUpdate(this.currentTick);
         }
+
         this.log('info', 'Playback stopped');
     }
 
+    /**
+     * Annuler toutes les notes en cours
+     */
+    cancelAllNotes() {
+        this.activeEnvelopes.forEach(envelope => {
+            try {
+                if (envelope && typeof envelope.cancel === 'function') {
+                    envelope.cancel();
+                }
+            } catch (e) {
+                // Ignorer
+            }
+        });
+        this.activeEnvelopes = [];
+    }
+
+    /**
+     * Seek
+     */
     seek(tick) {
         const wasPlaying = this.isPlaying;
         if (wasPlaying) this.pause();
@@ -282,6 +593,9 @@ class MidiSynthesizer {
         }
     }
 
+    /**
+     * Démarrer le scheduler
+     */
     startScheduler() {
         if (this.schedulerInterval) clearInterval(this.schedulerInterval);
         if (this.animationFrame) cancelAnimationFrame(this.animationFrame);
@@ -290,18 +604,23 @@ class MidiSynthesizer {
 
         const updateCursor = () => {
             if (this.isPlaying) {
-                const elapsed = this.audioContext.currentTime - this.startTime;
-                this.currentTick = this.startTick + this.secondsToTicks(elapsed);
+                const currentTime = this.audioContext.currentTime;
+                const elapsedTime = currentTime - this.startTime;
+                this.currentTick = this.startTick + this.secondsToTicks(elapsedTime);
 
                 if (this.onTickUpdate) {
                     this.onTickUpdate(this.currentTick);
                 }
+
                 this.animationFrame = requestAnimationFrame(updateCursor);
             }
         };
         this.animationFrame = requestAnimationFrame(updateCursor);
     }
 
+    /**
+     * Arrêter le scheduler
+     */
     stopScheduler() {
         if (this.schedulerInterval) {
             clearInterval(this.schedulerInterval);
@@ -313,12 +632,15 @@ class MidiSynthesizer {
         }
     }
 
+    /**
+     * Planifier les notes
+     */
     scheduleNotes() {
         if (!this.isPlaying) return;
 
         const currentTime = this.audioContext.currentTime;
-        const elapsed = currentTime - this.startTime;
-        const currentTick = this.startTick + this.secondsToTicks(elapsed);
+        const elapsedTime = currentTime - this.startTime;
+        const currentTick = this.startTick + this.secondsToTicks(elapsedTime);
 
         if (currentTick >= this.endTick) {
             this.stop();
@@ -334,27 +656,38 @@ class MidiSynthesizer {
             if (note.t > this.endTick) break;
 
             if (note.t > this.lastScheduledTick && note.t <= scheduleEndTick) {
-                const noteStart = this.startTime + this.ticksToSeconds(note.t - this.startTick);
-                const noteDur = this.ticksToSeconds(note.g);
-                this.playNote(note.n, note.v, note.c, noteDur, noteStart);
+                const noteStartTime = this.startTime + this.ticksToSeconds(note.t - this.startTick);
+                const noteDuration = this.ticksToSeconds(note.g);
+                this.playNote(note.n, note.v, note.c, noteDuration, noteStartTime);
             }
         }
 
         this.lastScheduledTick = Math.max(this.lastScheduledTick, scheduleEndTick);
     }
 
+    /**
+     * Libérer les ressources
+     */
     dispose() {
         this.stop();
+        this.cancelAllNotes();
+
         if (this.audioContext && this.audioContext.state !== 'closed') {
             this.audioContext.close();
         }
+
         this.audioContext = null;
-        this.masterGain = null;
-        this.compressor = null;
+        this.player = null;
+        this.loadedInstruments.clear();
+        this.drumKit = null;
         this.isInitialized = false;
+
         this.log('info', 'MidiSynthesizer disposed');
     }
 
+    /**
+     * Logger
+     */
     log(level, ...args) {
         if (this.logger && typeof this.logger[level] === 'function') {
             this.logger[level]('[MidiSynthesizer]', ...args);
@@ -364,4 +697,5 @@ class MidiSynthesizer {
     }
 }
 
+// Export
 window.MidiSynthesizer = MidiSynthesizer;
