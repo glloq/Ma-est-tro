@@ -78,8 +78,7 @@ Available in 28 languages: English, French, Spanish, German, Italian, Portuguese
 ## Documentation
 
 - [Installation Guide](./docs/INSTALLATION.md)
-- [Bluetooth Setup](./docs/BLUETOOTH_SETUP.md)
-- [Network MIDI Setup](./docs/NETWORK_MIDI_SETUP.md)
+- [SysEx Identity Protocol](./docs/SYSEX_IDENTITY.md) - DIY instrument auto-identification
 
 ## License
 
