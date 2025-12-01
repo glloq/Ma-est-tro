@@ -71,7 +71,6 @@ npm start
 
 # With PM2 (recommended)
 npm run pm2:start
-npm run pm2:logs
 ```
 
 ### Accessing the Web Interface
