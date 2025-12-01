@@ -121,7 +121,7 @@
    ============================================================================ */
 
 .keyboard-modal .modal-body {
-    padding: 24px !important;
+    padding: 0 !important;
     background: white;
     overflow-y: auto !important;
     overflow-x: hidden !important;
@@ -565,7 +565,7 @@
     }
 
     .keyboard-modal .modal-body {
-        padding: 16px;
+        padding: 0;
     }
 
     .keyboard-header {
