@@ -229,11 +229,17 @@
     "changeChannelNotAvailable": "Fonction changer canal non disponible",
     "channelChanged": "Canal changé pour {count} note(s)",
     "instrumentApplied": "Canal {channel}: {instrument}",
+    "instrumentAppliedToSelection": "{count} note(s) → {instrument}",
     "snapChanged": "Magnétisme: {snap}",
     "play": "Lecture",
     "pause": "Pause",
     "stop": "Arrêt",
-    "synthInitError": "Impossible d'initialiser le synthétiseur audio"
+    "synthInitError": "Impossible d'initialiser le synthétiseur audio",
+    "changeChannelTitle": "Changer de canal",
+    "changeInstrumentTitle": "Changer d'instrument",
+    "apply": "Appliquer",
+    "sameInstrument": "Même instrument déjà sélectionné",
+    "noChannelAvailable": "Aucun canal disponible"
   },
   "errors": {
     "deviceNotFound": "Périphérique non trouvé: {deviceId}",

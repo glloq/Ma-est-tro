@@ -2395,7 +2395,7 @@ class MidiEditorModal {
     /**
      * Changer le canal des notes sélectionnées
      */
-    changeChannel() {
+    async changeChannel() {
         if (!this.pianoRoll || typeof this.pianoRoll.changeChannelSelection !== 'function') {
             this.showNotification(this.t('midiEditor.changeChannelNotAvailable'), 'error');
             return;
@@ -2412,6 +2412,18 @@ class MidiEditorModal {
 
         const newChannel = parseInt(channelSelector.value);
         const instrumentSelector = document.getElementById('instrument-selector');
+
+        // Déterminer le canal actuel des notes sélectionnées
+        const selectedNotes = this.getSelectedNotes();
+        const currentChannels = new Set(selectedNotes.map(n => n.c));
+        const currentChannel = currentChannels.size === 1 ? Array.from(currentChannels)[0] : -1;
+
+        // Afficher le modal de confirmation
+        const confirmed = await this.showChangeChannelModal(count, currentChannel, newChannel);
+        if (!confirmed) {
+            this.log('info', 'Channel change cancelled by user');
+            return;
+        }
 
         // Vérifier si c'est un nouveau canal
         const channelExists = this.channels.find(ch => ch.channel === newChannel);
@@ -2442,6 +2454,29 @@ class MidiEditorModal {
         }
 
         // Rafraîchir l'affichage des boutons de canal
+        this.refreshChannelButtons();
+
+        // Mettre à jour le sélecteur d'instrument pour refléter le nouveau canal
+        this.updateInstrumentSelector();
+
+        this.updateEditButtons();
+    }
+
+    /**
+     * Obtenir les notes sélectionnées
+     * @returns {Array}
+     */
+    getSelectedNotes() {
+        if (!this.pianoRoll) return [];
+
+        const sequence = this.pianoRoll.sequence || [];
+        return sequence.filter(note => note.f === 1); // f=1 indique une note sélectionnée
+    }
+
+    /**
+     * Rafraîchir les boutons de canal
+     */
+    refreshChannelButtons() {
         const channelsToolbar = this.container?.querySelector('.channels-toolbar');
         if (channelsToolbar) {
             channelsToolbar.innerHTML = this.renderChannelButtons();
@@ -2456,17 +2491,12 @@ class MidiEditorModal {
                 });
             });
         }
-
-        // Mettre à jour le sélecteur d'instrument pour refléter le nouveau canal
-        this.updateInstrumentSelector();
-
-        this.updateEditButtons();
     }
 
     /**
-     * Appliquer l'instrument sélectionné au canal ciblé
+     * Appliquer l'instrument sélectionné au canal ciblé ou aux notes sélectionnées
      */
-    applyInstrument() {
+    async applyInstrument() {
         if (this.activeChannels.size === 0) {
             this.showNotification(this.t('midiEditor.noActiveChannel'), 'info');
             return;
@@ -2496,44 +2526,147 @@ class MidiEditorModal {
             return;
         }
 
-        // Vérifier si le canal a des notes et si l'instrument change
-        if (channelInfo.noteCount > 0 && channelInfo.program !== selectedProgram) {
-            const message = `Voulez-vous changer l'instrument du canal ${targetChannel + 1} ?\n\n` +
-                `  Actuel: ${channelInfo.instrument} (${channelInfo.noteCount} notes)\n` +
-                `  Nouveau: ${instrumentName}`;
-
-            if (!confirm(message)) {
-                this.log('info', 'Instrument change cancelled by user');
-                return;
-            }
+        // Vérifier si l'instrument change
+        if (channelInfo.program === selectedProgram) {
+            this.showNotification(this.t('midiEditor.sameInstrument') || 'Même instrument', 'info');
+            return;
         }
 
-        // Appliquer l'instrument au canal ciblé
-        channelInfo.program = selectedProgram;
-        channelInfo.instrument = targetChannel === 9 ? 'Drums' : instrumentName;
+        // Vérifier s'il y a des notes sélectionnées
+        const selectionCount = this.getSelectionCount();
+        const hasSelection = selectionCount > 0;
 
-        this.log('info', `Applied instrument ${instrumentName} to channel ${targetChannel}`);
-        this.showNotification(this.t('midiEditor.instrumentApplied', { channel: targetChannel + 1, instrument: instrumentName }), 'success');
+        // Afficher le modal de confirmation
+        const result = await this.showChangeInstrumentModal({
+            noteCount: selectionCount,
+            channelNoteCount: channelInfo.noteCount,
+            channel: targetChannel,
+            currentInstrument: channelInfo.instrument,
+            newInstrument: instrumentName,
+            hasSelection
+        });
 
-        // Mettre à jour l'affichage des boutons de canal (pour refléter le nouvel instrument)
-        // Régénérer complètement les boutons avec les nouveaux noms d'instrument
-        const channelsToolbar = this.container?.querySelector('.channels-toolbar');
-        if (channelsToolbar) {
-            channelsToolbar.innerHTML = this.renderChannelButtons();
-
-            // Réattacher les événements sur les nouveaux boutons
-            const channelButtons = this.container.querySelectorAll('.channel-btn');
-            channelButtons.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const channel = parseInt(btn.dataset.channel);
-                    this.toggleChannel(channel);
-                });
-            });
+        if (result === false) {
+            this.log('info', 'Instrument change cancelled by user');
+            return;
         }
+
+        if (result === true && hasSelection) {
+            // Changer uniquement les notes sélectionnées
+            // On doit les déplacer vers un nouveau canal avec le nouvel instrument
+            await this.applyInstrumentToSelection(selectedProgram, instrumentName);
+        } else {
+            // Changer tout le canal (result === 'channel' ou pas de sélection)
+            this.applyInstrumentToChannel(targetChannel, selectedProgram, instrumentName, channelInfo);
+        }
+    }
+
+    /**
+     * Appliquer l'instrument uniquement aux notes sélectionnées
+     * Crée un nouveau canal si nécessaire
+     */
+    async applyInstrumentToSelection(program, instrumentName) {
+        const selectedNotes = this.getSelectedNotes();
+        if (selectedNotes.length === 0) return;
+
+        // Trouver un canal libre pour les notes avec le nouvel instrument
+        let newChannel = this.findAvailableChannel(program);
+
+        if (newChannel === -1) {
+            this.showNotification(this.t('midiEditor.noChannelAvailable') || 'Aucun canal disponible', 'error');
+            return;
+        }
+
+        // Ajouter le nouveau canal à la liste s'il n'existe pas
+        let channelInfo = this.channels.find(ch => ch.channel === newChannel);
+        if (!channelInfo) {
+            channelInfo = {
+                channel: newChannel,
+                program: program,
+                instrument: newChannel === 9 ? 'Drums' : instrumentName,
+                noteCount: 0
+            };
+            this.channels.push(channelInfo);
+        } else {
+            // Mettre à jour l'instrument du canal
+            channelInfo.program = program;
+            channelInfo.instrument = newChannel === 9 ? 'Drums' : instrumentName;
+        }
+
+        // Déplacer les notes sélectionnées vers le nouveau canal
+        if (this.pianoRoll && typeof this.pianoRoll.changeChannelSelection === 'function') {
+            this.pianoRoll.changeChannelSelection(newChannel);
+        }
+
+        this.log('info', `Applied instrument ${instrumentName} to ${selectedNotes.length} selected notes (moved to channel ${newChannel + 1})`);
+        this.showNotification(
+            this.t('midiEditor.instrumentAppliedToSelection', { count: selectedNotes.length, instrument: instrumentName }) ||
+            `${selectedNotes.length} note(s) → ${instrumentName}`,
+            'success'
+        );
 
         this.isDirty = true;
         this.updateSaveButton();
+        this.syncFullSequenceFromPianoRoll();
+        this.updateChannelsFromSequence();
+
+        // Activer le nouveau canal
+        if (!this.activeChannels.has(newChannel)) {
+            this.activeChannels.add(newChannel);
+            this.updateSequenceFromActiveChannels();
+        }
+
+        this.refreshChannelButtons();
+        this.updateInstrumentSelector();
+        this.updateEditButtons();
+    }
+
+    /**
+     * Appliquer l'instrument à tout un canal
+     */
+    applyInstrumentToChannel(channel, program, instrumentName, channelInfo) {
+        channelInfo.program = program;
+        channelInfo.instrument = channel === 9 ? 'Drums' : instrumentName;
+
+        this.log('info', `Applied instrument ${instrumentName} to channel ${channel + 1}`);
+        this.showNotification(this.t('midiEditor.instrumentApplied', { channel: channel + 1, instrument: instrumentName }), 'success');
+
+        this.refreshChannelButtons();
+        this.isDirty = true;
+        this.updateSaveButton();
+    }
+
+    /**
+     * Trouver un canal disponible pour un instrument
+     * Priorité : canal existant avec le même instrument, sinon nouveau canal libre
+     */
+    findAvailableChannel(program) {
+        // Chercher d'abord un canal existant avec le même instrument
+        const existingChannel = this.channels.find(ch => ch.program === program && ch.channel !== 9);
+        if (existingChannel) {
+            return existingChannel.channel;
+        }
+
+        // Sinon, trouver un canal libre (0-15, sauf 9 pour drums)
+        const usedChannels = new Set(this.channels.map(ch => ch.channel));
+
+        for (let i = 0; i < 16; i++) {
+            if (i === 9) continue; // Skip drum channel
+            if (!usedChannels.has(i)) {
+                return i;
+            }
+        }
+
+        // Si tous les canaux sont utilisés, utiliser le premier disponible qui n'est pas le canal actuel
+        for (let i = 0; i < 16; i++) {
+            if (i === 9) continue;
+            const channelInfo = this.channels.find(ch => ch.channel === i);
+            if (channelInfo && channelInfo.noteCount === 0) {
+                return i;
+            }
+        }
+
+        return -1; // Aucun canal disponible
     }
 
     /**
@@ -2930,6 +3063,217 @@ class MidiEditorModal {
         }
         this.isPlaying = false;
         this.isPaused = false;
+    }
+
+    // ========================================================================
+    // MODAL DE CONFIRMATION MODERNE
+    // ========================================================================
+
+    /**
+     * Afficher un modal de confirmation moderne
+     * @param {Object} options - Options du modal
+     * @param {string} options.title - Titre du modal
+     * @param {string} options.message - Message principal
+     * @param {string} options.details - Détails supplémentaires (optionnel)
+     * @param {string} options.icon - Icône emoji (optionnel, défaut: ⚠️)
+     * @param {string} options.confirmText - Texte du bouton de confirmation
+     * @param {string} options.cancelText - Texte du bouton d'annulation
+     * @param {string} options.confirmClass - Classe CSS pour le bouton de confirmation (primary, danger, success)
+     * @param {Array} options.extraButtons - Boutons supplémentaires [{text, class, value}]
+     * @returns {Promise<string|boolean>} - Résultat de la confirmation
+     */
+    showConfirmModal(options) {
+        return new Promise((resolve) => {
+            const {
+                title = this.t('common.confirm') || 'Confirmation',
+                message = '',
+                details = '',
+                icon = '⚠️',
+                confirmText = this.t('common.confirm') || 'Confirmer',
+                cancelText = this.t('common.cancel') || 'Annuler',
+                confirmClass = 'primary',
+                extraButtons = []
+            } = options;
+
+            // Créer le modal
+            const modal = document.createElement('div');
+            modal.className = 'confirm-modal-overlay';
+            modal.innerHTML = `
+                <div class="confirm-modal">
+                    <div class="confirm-modal-header">
+                        <span class="confirm-modal-icon">${icon}</span>
+                        <h3 class="confirm-modal-title">${title}</h3>
+                    </div>
+                    <div class="confirm-modal-body">
+                        <p class="confirm-modal-message">${message}</p>
+                        ${details ? `<div class="confirm-modal-details">${details}</div>` : ''}
+                    </div>
+                    <div class="confirm-modal-footer">
+                        <button class="confirm-modal-btn cancel" data-action="cancel">${cancelText}</button>
+                        ${extraButtons.map(btn => `
+                            <button class="confirm-modal-btn ${btn.class || 'secondary'}" data-action="extra" data-value="${btn.value}">${btn.text}</button>
+                        `).join('')}
+                        <button class="confirm-modal-btn ${confirmClass}" data-action="confirm">${confirmText}</button>
+                    </div>
+                </div>
+            `;
+
+            // Ajouter au DOM
+            document.body.appendChild(modal);
+
+            // Animation d'entrée
+            requestAnimationFrame(() => {
+                modal.classList.add('visible');
+            });
+
+            // Gestionnaire de clic
+            const handleClick = (e) => {
+                const btn = e.target.closest('.confirm-modal-btn');
+                if (!btn) return;
+
+                const action = btn.dataset.action;
+                let result;
+
+                if (action === 'confirm') {
+                    result = true;
+                } else if (action === 'cancel') {
+                    result = false;
+                } else if (action === 'extra') {
+                    result = btn.dataset.value;
+                }
+
+                // Animation de sortie
+                modal.classList.remove('visible');
+                setTimeout(() => {
+                    modal.remove();
+                    resolve(result);
+                }, 200);
+            };
+
+            modal.addEventListener('click', handleClick);
+
+            // Fermer avec Escape
+            const handleKeydown = (e) => {
+                if (e.key === 'Escape') {
+                    modal.classList.remove('visible');
+                    setTimeout(() => {
+                        modal.remove();
+                        resolve(false);
+                    }, 200);
+                    document.removeEventListener('keydown', handleKeydown);
+                }
+            };
+            document.addEventListener('keydown', handleKeydown);
+
+            // Focus sur le bouton de confirmation
+            setTimeout(() => {
+                const confirmBtn = modal.querySelector('.confirm-modal-btn.primary, .confirm-modal-btn.success, .confirm-modal-btn.danger');
+                if (confirmBtn) confirmBtn.focus();
+            }, 50);
+        });
+    }
+
+    /**
+     * Modal de changement de canal avec options
+     * @param {number} noteCount - Nombre de notes sélectionnées
+     * @param {number} currentChannel - Canal actuel (ou -1 si mixte)
+     * @param {number} newChannel - Nouveau canal
+     * @returns {Promise<boolean>}
+     */
+    async showChangeChannelModal(noteCount, currentChannel, newChannel) {
+        const currentChannelText = currentChannel >= 0
+            ? `Canal ${currentChannel + 1}`
+            : 'Canaux mixtes';
+
+        const channelInfo = this.channels.find(ch => ch.channel === newChannel);
+        const newChannelInstrument = channelInfo
+            ? channelInfo.instrument
+            : this.gmInstruments[this.selectedInstrument] || 'Piano';
+
+        return this.showConfirmModal({
+            title: this.t('midiEditor.changeChannelTitle') || 'Changer de canal',
+            icon: '🎹',
+            message: `Déplacer <strong>${noteCount}</strong> note(s) vers le <strong>Canal ${newChannel + 1}</strong> ?`,
+            details: `
+                <div class="confirm-detail-row">
+                    <span class="confirm-detail-label">Depuis :</span>
+                    <span class="confirm-detail-value">${currentChannelText}</span>
+                </div>
+                <div class="confirm-detail-row">
+                    <span class="confirm-detail-label">Vers :</span>
+                    <span class="confirm-detail-value">Canal ${newChannel + 1} (${newChannelInstrument})</span>
+                </div>
+            `,
+            confirmText: this.t('midiEditor.apply') || 'Appliquer',
+            confirmClass: 'primary'
+        });
+    }
+
+    /**
+     * Modal de changement d'instrument avec choix
+     * @param {Object} options
+     * @returns {Promise<string|boolean>} - 'selection', 'channel', ou false
+     */
+    async showChangeInstrumentModal(options) {
+        const {
+            noteCount = 0,
+            channelNoteCount = 0,
+            channel,
+            currentInstrument,
+            newInstrument,
+            hasSelection
+        } = options;
+
+        if (hasSelection && noteCount > 0) {
+            // Proposer le choix : sélection ou tout le canal
+            return this.showConfirmModal({
+                title: this.t('midiEditor.changeInstrumentTitle') || "Changer d'instrument",
+                icon: '🎵',
+                message: `Changer l'instrument vers <strong>${newInstrument}</strong> ?`,
+                details: `
+                    <div class="confirm-detail-row">
+                        <span class="confirm-detail-label">Instrument actuel :</span>
+                        <span class="confirm-detail-value">${currentInstrument}</span>
+                    </div>
+                    <div class="confirm-detail-row">
+                        <span class="confirm-detail-label">Nouvel instrument :</span>
+                        <span class="confirm-detail-value">${newInstrument}</span>
+                    </div>
+                    <div class="confirm-choice-info">
+                        <p>📌 <strong>${noteCount}</strong> note(s) sélectionnée(s)</p>
+                        <p>📋 Canal ${channel + 1} contient <strong>${channelNoteCount}</strong> note(s) au total</p>
+                    </div>
+                `,
+                confirmText: `Sélection (${noteCount})`,
+                confirmClass: 'success',
+                extraButtons: [
+                    { text: `Tout le canal (${channelNoteCount})`, class: 'primary', value: 'channel' }
+                ]
+            });
+        } else {
+            // Pas de sélection, changer tout le canal
+            return this.showConfirmModal({
+                title: this.t('midiEditor.changeInstrumentTitle') || "Changer d'instrument",
+                icon: '🎵',
+                message: `Changer l'instrument du <strong>Canal ${channel + 1}</strong> ?`,
+                details: `
+                    <div class="confirm-detail-row">
+                        <span class="confirm-detail-label">Instrument actuel :</span>
+                        <span class="confirm-detail-value">${currentInstrument}</span>
+                    </div>
+                    <div class="confirm-detail-row">
+                        <span class="confirm-detail-label">Nouvel instrument :</span>
+                        <span class="confirm-detail-value">${newInstrument}</span>
+                    </div>
+                    <div class="confirm-detail-row">
+                        <span class="confirm-detail-label">Notes affectées :</span>
+                        <span class="confirm-detail-value">${channelNoteCount} note(s)</span>
+                    </div>
+                `,
+                confirmText: this.t('midiEditor.apply') || 'Appliquer',
+                confirmClass: 'primary'
+            });
+        }
     }
 
     // ========================================================================
