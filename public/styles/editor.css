@@ -1086,12 +1086,14 @@
     align-items: center;
     z-index: 10000;
     opacity: 0;
+    pointer-events: none;
     transition: opacity 0.2s ease;
     backdrop-filter: blur(4px);
 }
 
 .confirm-modal-overlay.visible {
     opacity: 1;
+    pointer-events: auto;
 }
 
 .confirm-modal {
