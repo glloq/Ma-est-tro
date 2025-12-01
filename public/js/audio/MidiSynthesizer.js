@@ -29,6 +29,7 @@ class MidiSynthesizer {
         // Canaux et instruments
         this.channelInstruments = new Array(16).fill(0);
         this.channelVolumes = new Array(16).fill(100);
+        this.mutedChannels = new Set(); // Canaux mutés
 
         // Instruments chargés (cache)
         this.loadedInstruments = new Map(); // program -> instrument data
@@ -558,6 +559,42 @@ class MidiSynthesizer {
     }
 
     /**
+     * Muter un canal
+     * @param {number} channel - Numéro du canal (0-15)
+     */
+    muteChannel(channel) {
+        this.mutedChannels.add(channel);
+        this.log('debug', `Channel ${channel} muted`);
+    }
+
+    /**
+     * Démuter un canal
+     * @param {number} channel - Numéro du canal (0-15)
+     */
+    unmuteChannel(channel) {
+        this.mutedChannels.delete(channel);
+        this.log('debug', `Channel ${channel} unmuted`);
+    }
+
+    /**
+     * Définir les canaux mutés
+     * @param {Set|Array} channels - Canaux à muter
+     */
+    setMutedChannels(channels) {
+        this.mutedChannels = new Set(channels);
+        this.log('debug', `Muted channels set to: ${Array.from(this.mutedChannels).join(', ')}`);
+    }
+
+    /**
+     * Vérifier si un canal est muté
+     * @param {number} channel - Numéro du canal
+     * @returns {boolean}
+     */
+    isChannelMuted(channel) {
+        return this.mutedChannels.has(channel);
+    }
+
+    /**
      * Annuler toutes les notes en cours
      */
     cancelAllNotes() {
@@ -654,6 +691,9 @@ class MidiSynthesizer {
         for (const note of this.sequence) {
             if (note.t < this.startTick) continue;
             if (note.t > this.endTick) break;
+
+            // Ignorer les canaux mutés
+            if (this.mutedChannels.has(note.c)) continue;
 
             if (note.t > this.lastScheduledTick && note.t <= scheduleEndTick) {
                 const noteStartTime = this.startTime + this.ticksToSeconds(note.t - this.startTick);

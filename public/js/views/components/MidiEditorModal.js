@@ -626,6 +626,9 @@ class MidiEditorModal {
 
         // Mettre à jour le canal pour l'édition CC
         this.updateCCEditorChannel();
+
+        // Synchroniser les canaux mutés avec le synthétiseur (pendant la lecture)
+        this.syncMutedChannels();
     }
 
     /**
@@ -2898,8 +2901,30 @@ class MidiEditorModal {
             this.synthesizer.setChannelInstrument(ch.channel, ch.program || 0);
         });
 
+        // Synchroniser les canaux mutés (canaux non actifs = mutés)
+        this.syncMutedChannels();
+
         // Définir la plage de lecture depuis les marqueurs
         this.updatePlaybackRange();
+    }
+
+    /**
+     * Synchroniser les canaux mutés avec le synthétiseur
+     * Les canaux non actifs (cachés) sont mutés
+     */
+    syncMutedChannels() {
+        if (!this.synthesizer) return;
+
+        // Trouver tous les canaux qui ne sont pas actifs
+        const mutedChannels = [];
+        this.channels.forEach(ch => {
+            if (!this.activeChannels.has(ch.channel)) {
+                mutedChannels.push(ch.channel);
+            }
+        });
+
+        this.synthesizer.setMutedChannels(mutedChannels);
+        this.log('debug', `Muted channels: ${mutedChannels.map(c => c + 1).join(', ') || 'none'}`);
     }
 
     /**
