@@ -2419,6 +2419,12 @@ class MidiEditorModal {
         const currentChannels = new Set(selectedNotes.map(n => n.c));
         const currentChannel = currentChannels.size === 1 ? Array.from(currentChannels)[0] : -1;
 
+        // Vérifier si on essaie de déplacer vers le même canal
+        if (currentChannel === newChannel) {
+            this.showNotification(this.t('midiEditor.sameChannel') || 'Les notes sont déjà sur ce canal', 'info');
+            return;
+        }
+
         // Afficher le modal de confirmation
         const confirmed = await this.showChangeChannelModal(count, currentChannel, newChannel);
         if (!confirmed) {
@@ -2426,16 +2432,19 @@ class MidiEditorModal {
             return;
         }
 
-        // Vérifier si c'est un nouveau canal
-        const channelExists = this.channels.find(ch => ch.channel === newChannel);
+        // Mémoriser les canaux source avant le déplacement
+        const sourceChannels = new Set(selectedNotes.map(n => n.c));
+
+        // Vérifier si le canal cible existe déjà
+        const targetChannelInfo = this.channels.find(ch => ch.channel === newChannel);
 
         // Si c'est un nouveau canal, utiliser l'instrument sélectionné dans le sélecteur
-        if (!channelExists && instrumentSelector) {
+        if (!targetChannelInfo && instrumentSelector) {
             this.selectedInstrument = parseInt(instrumentSelector.value);
             this.log('info', `New channel ${newChannel} will use instrument: ${this.gmInstruments[this.selectedInstrument]}`);
         }
 
-        // Utiliser la méthode du piano roll
+        // Utiliser la méthode du piano roll pour déplacer les notes
         this.pianoRoll.changeChannelSelection(newChannel);
 
         this.log('info', `Changed channel of ${count} notes to ${newChannel}`);
@@ -2445,14 +2454,29 @@ class MidiEditorModal {
         this.updateSaveButton();
         this.syncFullSequenceFromPianoRoll();
 
-        // Mettre à jour la liste des canaux pour inclure le nouveau canal
+        // Mettre à jour la liste des canaux (supprime les canaux vides automatiquement)
         this.updateChannelsFromSequence();
+
+        // Nettoyer activeChannels : retirer les canaux qui n'existent plus
+        const existingChannelNumbers = new Set(this.channels.map(ch => ch.channel));
+        const channelsToRemove = [];
+        this.activeChannels.forEach(ch => {
+            if (!existingChannelNumbers.has(ch)) {
+                channelsToRemove.push(ch);
+            }
+        });
+        channelsToRemove.forEach(ch => {
+            this.activeChannels.delete(ch);
+            this.log('info', `Removed empty channel ${ch} from active channels`);
+        });
 
         // Activer automatiquement le nouveau canal s'il n'était pas actif
         if (!this.activeChannels.has(newChannel)) {
             this.activeChannels.add(newChannel);
-            this.updateSequenceFromActiveChannels();
         }
+
+        // Mettre à jour la séquence affichée
+        this.updateSequenceFromActiveChannels();
 
         // Rafraîchir l'affichage des boutons de canal
         this.refreshChannelButtons();
