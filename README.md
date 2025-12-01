@@ -17,7 +17,6 @@ git clone https://github.com/glloq/Ma-est-tro.git
 cd Ma-est-tro
 chmod +x scripts/Install.sh
 ./scripts/Install.sh
-npm run pm2:start
 ```
 
 Access the interface: `http://<Raspberry-Pi-IP>:8080`
@@ -78,7 +77,7 @@ Available in 28 languages: English, French, Spanish, German, Italian, Portuguese
 ## Documentation
 
 - [Installation Guide](./docs/INSTALLATION.md)
-- [SysEx Identity Protocol](./docs/SYSEX_IDENTITY.md) - DIY instrument auto-identification
+
 
 ## License
 
