@@ -631,12 +631,15 @@ class MidiEditorModal {
     /**
      * Mettre à jour la séquence depuis les canaux actifs
      * @param {Set} previousActiveChannels - Canaux qui étaient actifs AVANT le changement (optionnel)
+     * @param {boolean} skipSync - Si true, ne pas synchroniser fullSequence (déjà fait)
      */
-    updateSequenceFromActiveChannels(previousActiveChannels = null) {
+    updateSequenceFromActiveChannels(previousActiveChannels = null, skipSync = false) {
         // D'ABORD: synchroniser fullSequence avec le piano roll actuel
         // pour ne pas perdre les modifications
         // Passer les canaux précédents pour savoir quelles notes sont dans le piano roll
-        this.syncFullSequenceFromPianoRoll(previousActiveChannels);
+        if (!skipSync) {
+            this.syncFullSequenceFromPianoRoll(previousActiveChannels);
+        }
 
         if (this.activeChannels.size === 0) {
             this.sequence = [];
@@ -2475,8 +2478,8 @@ class MidiEditorModal {
             this.activeChannels.add(newChannel);
         }
 
-        // Mettre à jour la séquence affichée
-        this.updateSequenceFromActiveChannels();
+        // Mettre à jour la séquence affichée (skipSync=true car déjà synchronisé)
+        this.updateSequenceFromActiveChannels(null, true);
 
         // Rafraîchir l'affichage des boutons de canal
         this.refreshChannelButtons();
@@ -2624,11 +2627,26 @@ class MidiEditorModal {
         this.syncFullSequenceFromPianoRoll();
         this.updateChannelsFromSequence();
 
+        // Nettoyer activeChannels : retirer les canaux qui n'existent plus
+        const existingChannelNumbers = new Set(this.channels.map(ch => ch.channel));
+        const channelsToRemove = [];
+        this.activeChannels.forEach(ch => {
+            if (!existingChannelNumbers.has(ch)) {
+                channelsToRemove.push(ch);
+            }
+        });
+        channelsToRemove.forEach(ch => {
+            this.activeChannels.delete(ch);
+            this.log('info', `Removed empty channel ${ch} from active channels`);
+        });
+
         // Activer le nouveau canal
         if (!this.activeChannels.has(newChannel)) {
             this.activeChannels.add(newChannel);
-            this.updateSequenceFromActiveChannels();
         }
+
+        // Mettre à jour la séquence affichée (skipSync=true car déjà synchronisé)
+        this.updateSequenceFromActiveChannels(null, true);
 
         this.refreshChannelButtons();
         this.updateInstrumentSelector();
