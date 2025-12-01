@@ -17,7 +17,6 @@ git clone https://github.com/glloq/Ma-est-tro.git
 cd Ma-est-tro
 chmod +x scripts/Install.sh
 ./scripts/Install.sh
-npm run pm2:start
 ```
 
 Access the interface: `http://<Raspberry-Pi-IP>:8080`
@@ -78,8 +77,7 @@ Available in 28 languages: English, French, Spanish, German, Italian, Portuguese
 ## Documentation
 
 - [Installation Guide](./docs/INSTALLATION.md)
-- [Bluetooth Setup](./docs/BLUETOOTH_SETUP.md)
-- [Network MIDI Setup](./docs/NETWORK_MIDI_SETUP.md)
+
 
 ## License
 
