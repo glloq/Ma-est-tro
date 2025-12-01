@@ -840,8 +840,6 @@
     padding: 4px 6px;
     background: #252525;
     border-bottom: 1px solid #3a3a3a;
-    overflow-y: auto;
-    max-height: 120px; /* Permet jusqu'à ~3 lignes de boutons */
     flex-shrink: 0;
 }
 
@@ -1061,10 +1059,10 @@
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    padding: 6px 10px;
+    padding: 12px 12px;
     background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
-    border: 2px solid #555;
-    border-radius: 6px;
+    border: 3px solid #555;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
     min-width: auto;
@@ -1111,13 +1109,13 @@
 }
 
 .midi-editor-modal .channel-label {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     font-weight: 600;
     color: #fff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 120px;
+    max-width: 180px;
     position: relative;
     z-index: 1;
     text-shadow: 0 0 10px rgba(0,0,0,1),
