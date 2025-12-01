@@ -836,10 +836,12 @@
 .midi-editor-modal .channels-toolbar {
     display: flex;
     flex-wrap: wrap;
+    align-content: flex-start;
     gap: 4px;
-    padding: 4px 6px;
+    padding: 2px 4px;
     background: #252525;
     border-bottom: 1px solid #3a3a3a;
+    min-height: 42px;
     flex-shrink: 0;
 }
 
