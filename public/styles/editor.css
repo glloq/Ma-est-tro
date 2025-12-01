@@ -988,3 +988,84 @@
 .rename-buttons .btn-primary:hover {
     background: var(--primary-hover, #45B7D1);
 }
+
+/* ============================================================================
+   PLAYBACK CONTROLS - Boutons de lecture
+   ============================================================================ */
+
+.playback-section {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.playback-btn {
+    min-width: 40px;
+    padding: 6px 10px;
+    transition: all 0.15s ease;
+}
+
+.playback-btn .icon {
+    font-size: 14px;
+}
+
+/* Play button - vert */
+.playback-btn[data-action="playback-play"] {
+    background: linear-gradient(180deg, #2d8a4e 0%, #1e6b38 100%);
+    border-color: #3a9d5c;
+}
+
+.playback-btn[data-action="playback-play"]:hover:not(:disabled) {
+    background: linear-gradient(180deg, #3a9d5c 0%, #2d8a4e 100%);
+    box-shadow: 0 0 8px rgba(58, 157, 92, 0.5);
+}
+
+.playback-btn[data-action="playback-play"]:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+/* Pause button - jaune/orange */
+.playback-btn[data-action="playback-pause"] {
+    background: linear-gradient(180deg, #d4a017 0%, #b8860b 100%);
+    border-color: #e6b422;
+}
+
+.playback-btn[data-action="playback-pause"]:hover:not(:disabled) {
+    background: linear-gradient(180deg, #e6b422 0%, #d4a017 100%);
+    box-shadow: 0 0 8px rgba(230, 180, 34, 0.5);
+}
+
+/* Stop button - rouge */
+.playback-btn[data-action="playback-stop"] {
+    background: linear-gradient(180deg, #8a2d2d 0%, #6b1e1e 100%);
+    border-color: #9d3a3a;
+}
+
+.playback-btn[data-action="playback-stop"]:hover:not(:disabled) {
+    background: linear-gradient(180deg, #9d3a3a 0%, #8a2d2d 100%);
+    box-shadow: 0 0 8px rgba(157, 58, 58, 0.5);
+}
+
+.playback-btn[data-action="playback-stop"]:disabled {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Icons styling */
+.play-icon {
+    color: #90ee90;
+}
+
+.pause-icon {
+    color: #ffd700;
+}
+
+.stop-icon {
+    color: #ff6b6b;
+}
+
+.playback-btn:disabled .stop-icon {
+    color: var(--text-disabled);
+}

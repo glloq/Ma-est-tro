@@ -229,7 +229,11 @@
     "changeChannelNotAvailable": "Change channel function not available",
     "channelChanged": "Channel changed for {count} note(s)",
     "instrumentApplied": "Channel {channel}: {instrument}",
-    "snapChanged": "Snap: {snap}"
+    "snapChanged": "Snap: {snap}",
+    "play": "Play",
+    "pause": "Pause",
+    "stop": "Stop",
+    "synthInitError": "Unable to initialize audio synthesizer"
   },
   "errors": {
     "deviceNotFound": "Device not found: {deviceId}",
