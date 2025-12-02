@@ -1050,7 +1050,7 @@
 .midi-editor-modal .channel-buttons {
     display: flex;
     gap: 6px;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
 }
 
 .midi-editor-modal .channel-btn {
