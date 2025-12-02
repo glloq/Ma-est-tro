@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "Instrument-agordoj",
+    "settingsButton": "Instrument-agordoj",
     "deviceName": "Aparatnomo",
     "deviceNameAuto": "Nomo aŭtomate detektita",
     "serialNumber": "USB-seria numero",
@@ -364,6 +365,12 @@
     "configure": "Agordi"
   },
   "fileOperations": {
+    "edit": "Redakti",
+    "configureRouting": "Agordi direktadon",
+    "playFile": "Ludi dosieron",
+    "playWarning": "Agordu direktadon antaŭ ludado",
+    "toggleFolder": "Malfermi/Fermi",
+    "folderNotEmpty": "Dosierujo devas esti malplena",
     "deleteFolder": "Forigi dosierujon",
     "deleteFolderConfirm": "Ĉu vi vere volas forigi la dosierujon \"{folder}\"?",
     "folderDeleted": "Dosierujo \"{folder}\" forigita",

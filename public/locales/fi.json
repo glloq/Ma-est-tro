@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "Soittimen asetukset",
+    "settingsButton": "Soittimen asetukset",
     "deviceName": "Laitteen nimi",
     "deviceNameAuto": "Automaattisesti tunnistettu nimi",
     "serialNumber": "USB-sarjanumero",
@@ -364,6 +365,12 @@
     "configure": "Määritä"
   },
   "fileOperations": {
+    "edit": "Muokkaa",
+    "configureRouting": "Määritä reititys",
+    "playFile": "Toista tiedosto",
+    "playWarning": "Määritä reititys ennen toistoa",
+    "toggleFolder": "Avaa/Sulje",
+    "folderNotEmpty": "Kansion täytyy olla tyhjä",
     "deleteFolder": "Poista kansio",
     "deleteFolderConfirm": "Haluatko todella poistaa kansion \"{folder}\"?",
     "folderDeleted": "Kansio \"{folder}\" poistettu",

@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "악기 설정",
+    "settingsButton": "악기 설정",
     "deviceName": "장치 이름",
     "deviceNameAuto": "자동으로 감지된 이름",
     "serialNumber": "USB 시리얼 번호",
@@ -364,6 +365,12 @@
     "configure": "설정"
   },
   "fileOperations": {
+    "edit": "편집",
+    "configureRouting": "라우팅 설정",
+    "playFile": "파일 재생",
+    "playWarning": "재생 전 라우팅 설정 필요",
+    "toggleFolder": "열기/닫기",
+    "folderNotEmpty": "폴더가 비어 있어야 합니다",
     "deleteFolder": "폴더 삭제",
     "deleteFolderConfirm": "\"{folder}\" 폴더를 삭제하시겠습니까?",
     "folderDeleted": "\"{folder}\" 폴더가 삭제되었습니다",

@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "Instrumentinställningar",
+    "settingsButton": "Instrumentinställningar",
     "deviceName": "Enhetsnamn",
     "deviceNameAuto": "Automatiskt detekterat namn",
     "serialNumber": "USB-serienummer",
@@ -364,6 +365,12 @@
     "configure": "Konfigurera"
   },
   "fileOperations": {
+    "edit": "Redigera",
+    "configureRouting": "Konfigurera routing",
+    "playFile": "Spela fil",
+    "playWarning": "Konfigurera routing innan uppspelning",
+    "toggleFolder": "Öppna/Stäng",
+    "folderNotEmpty": "Mappen måste vara tom",
     "deleteFolder": "Ta bort mapp",
     "deleteFolderConfirm": "Vill du verkligen ta bort mappen \"{folder}\"?",
     "folderDeleted": "Mappen \"{folder}\" borttagen",

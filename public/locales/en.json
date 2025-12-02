@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "Instrument Settings",
+    "settingsButton": "Instrument settings",
     "deviceName": "Device name",
     "deviceNameAuto": "Automatically detected name",
     "serialNumber": "USB serial number",
@@ -364,6 +365,12 @@
     "configure": "Configure"
   },
   "fileOperations": {
+    "edit": "Edit",
+    "configureRouting": "Configure routing",
+    "playFile": "Play file",
+    "playWarning": "Configure routing before playing",
+    "toggleFolder": "Open/Close",
+    "folderNotEmpty": "Folder must be empty",
     "deleteFolder": "Delete folder",
     "deleteFolderConfirm": "Do you really want to delete the folder \"{folder}\"?",
     "folderDeleted": "Folder \"{folder}\" deleted",

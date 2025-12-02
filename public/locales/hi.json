@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "इंस्ट्रूमेंट सेटिंग्स",
+    "settingsButton": "इंस्ट्रूमेंट सेटिंग्स",
     "deviceName": "डिवाइस का नाम",
     "deviceNameAuto": "स्वचालित रूप से पता लगाया गया नाम",
     "serialNumber": "USB सीरियल नंबर",
@@ -364,6 +365,12 @@
     "configure": "कॉन्फ़िगर करें"
   },
   "fileOperations": {
+    "edit": "संपादित करें",
+    "configureRouting": "रूटिंग कॉन्फ़िगर करें",
+    "playFile": "फाइल चलाएं",
+    "playWarning": "चलाने से पहले रूटिंग कॉन्फ़िगर करें",
+    "toggleFolder": "खोलें/बंद करें",
+    "folderNotEmpty": "फोल्डर खाली होना चाहिए",
     "deleteFolder": "फोल्डर हटाएं",
     "deleteFolderConfirm": "क्या आप वाकई \"{folder}\" फोल्डर हटाना चाहते हैं?",
     "folderDeleted": "फोल्डर \"{folder}\" हटाया गया",

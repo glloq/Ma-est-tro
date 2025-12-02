@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "Impostazioni strumento",
+    "settingsButton": "Impostazioni strumento",
     "deviceName": "Nome dispositivo",
     "deviceNameAuto": "Nome rilevato automaticamente",
     "serialNumber": "Numero di serie USB",
@@ -364,6 +365,12 @@
     "configure": "Configura"
   },
   "fileOperations": {
+    "edit": "Modifica",
+    "configureRouting": "Configura routing",
+    "playFile": "Riproduci file",
+    "playWarning": "Configura routing prima di riprodurre",
+    "toggleFolder": "Apri/Chiudi",
+    "folderNotEmpty": "La cartella deve essere vuota",
     "deleteFolder": "Elimina cartella",
     "deleteFolderConfirm": "Vuoi davvero eliminare la cartella \"{folder}\"?",
     "folderDeleted": "Cartella \"{folder}\" eliminata",

@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "Pengaturan Instrumen",
+    "settingsButton": "Pengaturan instrumen",
     "deviceName": "Nama perangkat",
     "deviceNameAuto": "Nama terdeteksi otomatis",
     "serialNumber": "Nomor seri USB",
@@ -364,6 +365,12 @@
     "configure": "Konfigurasi"
   },
   "fileOperations": {
+    "edit": "Edit",
+    "configureRouting": "Konfigurasi routing",
+    "playFile": "Putar file",
+    "playWarning": "Konfigurasi routing sebelum memutar",
+    "toggleFolder": "Buka/Tutup",
+    "folderNotEmpty": "Folder harus kosong",
     "deleteFolder": "Hapus folder",
     "deleteFolderConfirm": "Apakah Anda yakin ingin menghapus folder \"{folder}\"?",
     "folderDeleted": "Folder \"{folder}\" dihapus",

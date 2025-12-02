@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "Cài đặt Nhạc cụ",
+    "settingsButton": "Cài đặt nhạc cụ",
     "deviceName": "Tên thiết bị",
     "deviceNameAuto": "Tên phát hiện tự động",
     "serialNumber": "Số serial USB",
@@ -364,6 +365,12 @@
     "configure": "Cấu hình"
   },
   "fileOperations": {
+    "edit": "Chỉnh sửa",
+    "configureRouting": "Cấu hình định tuyến",
+    "playFile": "Phát tệp",
+    "playWarning": "Cấu hình định tuyến trước khi phát",
+    "toggleFolder": "Mở/Đóng",
+    "folderNotEmpty": "Thư mục phải trống",
     "deleteFolder": "Xóa thư mục",
     "deleteFolderConfirm": "Bạn có chắc muốn xóa thư mục \"{folder}\"?",
     "folderDeleted": "Thư mục \"{folder}\" đã xóa",

@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "Configurações do instrumento",
+    "settingsButton": "Configurações do instrumento",
     "deviceName": "Nome do dispositivo",
     "deviceNameAuto": "Nome detectado automaticamente",
     "serialNumber": "Número de série USB",
@@ -364,6 +365,12 @@
     "configure": "Configurar"
   },
   "fileOperations": {
+    "edit": "Editar",
+    "configureRouting": "Configurar roteamento",
+    "playFile": "Reproduzir arquivo",
+    "playWarning": "Configurar roteamento antes de reproduzir",
+    "toggleFolder": "Abrir/Fechar",
+    "folderNotEmpty": "A pasta deve estar vazia",
     "deleteFolder": "Excluir pasta",
     "deleteFolderConfirm": "Você realmente deseja excluir a pasta \"{folder}\"?",
     "folderDeleted": "Pasta \"{folder}\" excluída",

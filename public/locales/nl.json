@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "Instrumentinstellingen",
+    "settingsButton": "Instrumentinstellingen",
     "deviceName": "Apparaatnaam",
     "deviceNameAuto": "Automatisch gedetecteerde naam",
     "serialNumber": "USB-serienummer",
@@ -364,6 +365,12 @@
     "configure": "Configureren"
   },
   "fileOperations": {
+    "edit": "Bewerken",
+    "configureRouting": "Routering configureren",
+    "playFile": "Bestand afspelen",
+    "playWarning": "Configureer routering voor afspelen",
+    "toggleFolder": "Openen/Sluiten",
+    "folderNotEmpty": "Map moet leeg zijn",
     "deleteFolder": "Map verwijderen",
     "deleteFolderConfirm": "Wilt u de map \"{folder}\" echt verwijderen?",
     "folderDeleted": "Map \"{folder}\" verwijderd",
