@@ -3968,8 +3968,16 @@
                         await api.sendCommand('playback_pause');
                     } else if (isPaused) {
                         await api.sendCommand('playback_resume');
+                        // Émettre playback:play pour ouvrir le piano roll
+                        if (window.eventBus) {
+                            window.eventBus.emit('playback:play', { fileId: currentFileId });
+                        }
                     } else {
                         await api.sendCommand('playback_start', { fileId: currentFileId });
+                        // Émettre playback:play pour ouvrir le piano roll
+                        if (window.eventBus) {
+                            window.eventBus.emit('playback:play', { fileId: currentFileId });
+                        }
                     }
                 }
             } catch (error) {
