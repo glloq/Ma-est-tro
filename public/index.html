@@ -2132,21 +2132,24 @@
                         await this.loadInstruments();
 
                         // IMPORTANT: Utiliser le callback du synthétiseur pour la synchronisation parfaite
-                        const ticksPerSecond = (this.tempo / 60) * this.ticksPerBeat;
-                        this.synthesizer.onTickUpdate = (tick) => {
-                            const currentTime = tick / ticksPerSecond;
-                            const progress = Math.min(currentTime / this.duration, 1.0);
+                        // Utiliser directement le temps audio écoulé (sans conversion tick)
+                        const synth = this.synthesizer;
+                        const duration = this.duration;
+                        synth.onTickUpdate = () => {
+                            // Temps écoulé DIRECT depuis le contexte audio - pas de conversion!
+                            const currentTime = synth.audioContext.currentTime - synth.startTime;
+                            const progress = Math.min(currentTime / duration, 1.0);
 
                             // Émettre progression pour l'UI
                             document.dispatchEvent(new CustomEvent('virtualplayback_progress', {
-                                detail: { position: currentTime, duration: this.duration, progress }
+                                detail: { position: currentTime, duration: duration, progress }
                             }));
 
-                            // Émettre pour le piano roll - timing EXACT du synthétiseur
+                            // Émettre pour le piano roll - temps audio EXACT
                             if (window.eventBus) {
                                 window.eventBus.emit('playback:time', {
                                     time: currentTime,
-                                    duration: this.duration
+                                    duration: duration
                                 });
                             }
                         };
