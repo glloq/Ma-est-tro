@@ -2367,9 +2367,10 @@
                 isPaused = true;
                 updatePlaybackControls();
 
-                // Émettre l'événement playback:pause pour le piano roll view
+                // Émettre l'événement playback:pause pour le piano roll view (HIGH priority!)
                 if (window.eventBus) {
-                    window.eventBus.emit('playback:pause', { fileId: this.fileId });
+                    const priority = window.EventPriority ? window.EventPriority.HIGH : undefined;
+                    window.eventBus.emit('playback:pause', { fileId: this.fileId }, priority);
                 }
 
                 this.logger.info('[VirtualPlayer] ⏸️ Pause');
@@ -2390,9 +2391,10 @@
                 isPaused = false;
                 updatePlaybackControls();
 
-                // Émettre l'événement playback:stop pour le piano roll view
+                // Émettre l'événement playback:stop pour le piano roll view (HIGH priority!)
                 if (window.eventBus) {
-                    window.eventBus.emit('playback:stop', { fileId: this.fileId });
+                    const priority = window.EventPriority ? window.EventPriority.HIGH : undefined;
+                    window.eventBus.emit('playback:stop', { fileId: this.fileId }, priority);
                 }
 
                 this.logger.info('[VirtualPlayer] ⏹️ Arrêt');
@@ -2643,9 +2645,10 @@
                     document.getElementById('headerFileName').textContent = i18n.t('ui.noFileSelected');
                     document.getElementById('headerTime').textContent = '00:00 / 00:00';
                     log('⏹️ Lecture arrêtée');
-                    // Émettre pour le piano roll
+                    // Émettre pour le piano roll (HIGH priority pour arrêt immédiat)
                     if (window.eventBus) {
-                        window.eventBus.emit('playback:stop', { fileId: currentFileId });
+                        const priority = window.EventPriority ? window.EventPriority.HIGH : undefined;
+                        window.eventBus.emit('playback:stop', { fileId: currentFileId }, priority);
                     }
                 });
 
@@ -2654,9 +2657,10 @@
                     isPaused = true;
                     updatePlaybackControls();
                     log('⏸️ Lecture en pause');
-                    // Émettre pour le piano roll
+                    // Émettre pour le piano roll (HIGH priority pour arrêt immédiat)
                     if (window.eventBus) {
-                        window.eventBus.emit('playback:pause', { fileId: currentFileId });
+                        const priority = window.EventPriority ? window.EventPriority.HIGH : undefined;
+                        window.eventBus.emit('playback:pause', { fileId: currentFileId }, priority);
                     }
                 });
 
