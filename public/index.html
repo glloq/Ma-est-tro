@@ -3836,6 +3836,9 @@
                         virtualPlayer.stop(); // Arrêter toute lecture en cours
                     }
 
+                    // IMPORTANT: Exposer le player globalement pour accès direct au timing
+                    window.virtualPlayer = virtualPlayer;
+
                     // Charger le fichier et démarrer la lecture
                     await virtualPlayer.load(fileId, filename, config.channels);
                     virtualPlayer.play();

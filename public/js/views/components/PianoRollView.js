@@ -1,6 +1,6 @@
 // ============================================================================
 // Fichier: public/js/views/components/PianoRollView.js
-// Version: v5.0.0 - Utilise les événements pré-parsés de VirtualMidiPlayer
+// Version: v6.0.0 - Lecture DIRECTE du temps depuis le synthétiseur audio
 // ============================================================================
 
 class PianoRollView {
@@ -61,7 +61,7 @@ class PianoRollView {
         this.createDOM();
         this.setupEvents();
         this.loadSettings();
-        this.log('info', 'v5 initialized (pre-parsed events)');
+        this.log('info', 'v6 initialized (direct audio timing)');
     }
 
     loadSettings() {
@@ -124,40 +124,75 @@ class PianoRollView {
             }
         });
 
-        // Play
+        // Play - démarrer notre propre boucle d'animation
         this.eventBus.on('playback:play', () => {
             this.isPlaying = true;
             if (this.isEnabled && this.notes.length > 0) {
                 this.show();
+                this.startAnimationLoop();
             }
         });
 
         // Pause - arrêt immédiat
         this.eventBus.on('playback:pause', () => {
             this.isPlaying = false;
+            this.stopAnimationLoop();
         });
 
         // Stop
         this.eventBus.on('playback:stop', () => {
             this.isPlaying = false;
             this.currentTime = 0;
+            this.stopAnimationLoop();
             this.hide();
         });
 
-        // Temps - UTILISER time directement en SECONDES (pas de conversion!)
+        // Temps - utiliser comme source de timing DIRECTE
         this.eventBus.on('playback:time', (data) => {
-            // IMPORTANT: Ignorer si pas en lecture (évite les events retardataires)
-            if (!this.isPlaying) return;
-
             if (data.time !== undefined) {
                 this.currentTime = data.time;
             }
+        });
+    }
 
-            // Redessiner si visible
+    // Boucle d'animation propre au piano roll - LIT LE TEMPS DIRECTEMENT depuis l'audio
+    startAnimationLoop() {
+        if (this.animationFrame) return;
+
+        const animate = () => {
+            if (!this.isPlaying) return;
+
+            // LIRE LE TEMPS DIRECTEMENT depuis le synthétiseur - PAS via événements!
+            this.updateTimeFromSynth();
+
             if (this.isVisible) {
                 this.draw();
             }
-        });
+            this.animationFrame = requestAnimationFrame(animate);
+        };
+        this.animationFrame = requestAnimationFrame(animate);
+    }
+
+    // Obtenir le temps DIRECTEMENT depuis le synthétiseur audio
+    updateTimeFromSynth() {
+        // Accéder au player virtuel exposé globalement
+        const player = window.virtualPlayer;
+        if (!player || !player.synthesizer) return;
+
+        const synth = player.synthesizer;
+        if (!synth.audioContext) return;
+
+        // Temps EXACT de l'audio: currentTime du contexte - startTime de la lecture
+        const audioTime = synth.audioContext.currentTime;
+        const startTime = synth.startTime || 0;
+        this.currentTime = Math.max(0, audioTime - startTime);
+    }
+
+    stopAnimationLoop() {
+        if (this.animationFrame) {
+            cancelAnimationFrame(this.animationFrame);
+            this.animationFrame = null;
+        }
     }
 
     loadMidiData(midiData) {
@@ -429,5 +464,5 @@ class PianoRollView {
 
 if (typeof window !== 'undefined') {
     window.PianoRollView = PianoRollView;
-    console.log('✓ PianoRollView v5 loaded (pre-parsed events)');
+    console.log('✓ PianoRollView v6 loaded (direct audio timing)');
 }
