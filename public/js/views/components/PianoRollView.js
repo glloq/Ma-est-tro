@@ -1,7 +1,7 @@
 // ============================================================================
 // Fichier: public/js/views/components/PianoRollView.js
-// Version: v1.0.0 - Piano roll view pour l'écran principal
-// Description: Affiche un piano roll des notes à venir pendant la lecture
+// Version: v2.0.0 - Réécriture complète avec Canvas simple
+// Description: Affiche les notes à venir pendant la lecture (sans grille)
 // ============================================================================
 
 class PianoRollView {
@@ -11,199 +11,91 @@ class PianoRollView {
 
         // État
         this.isVisible = false;
-        this.midiData = null;
-        this.sequence = [];
-        this.fullSequence = [];
-        this.channels = [];
-        this.activeChannels = new Set();
+        this.isEnabled = false;
+        this.isPlaying = false;
+
+        // Données MIDI
+        this.notes = [];           // Notes formatées pour l'affichage
+        this.channels = [];        // Infos des canaux
         this.mutedChannels = new Set();
 
-        // Piano roll element
-        this.pianoRoll = null;
+        // Timing - valeurs reçues de l'extérieur uniquement
+        this.currentTimeMs = 0;    // Temps actuel en ms (de la source externe)
+        this.durationMs = 0;       // Durée totale en ms
+
+        // Paramètres d'affichage
+        this.displayWindowMs = 5000;  // Fenêtre d'affichage: 5 secondes
+        this.noteMinY = 21;           // Note MIDI min (A0)
+        this.noteMaxY = 108;          // Note MIDI max (C8)
+
+        // Canvas
+        this.canvas = null;
+        this.ctx = null;
         this.container = null;
 
-        // Playback state
-        this.isPlaying = false;
-        this.currentTick = 0;
-        this.ticksPerBeat = 480;
-        this.tempo = 120;
-        this.displayTimeSeconds = 20;
+        // Animation - flag simple
+        this.animationId = null;
 
-        // Timing interne pour animation fluide
-        this.playbackStartTime = 0;      // performance.now() au moment du play
-        this.playbackStartTick = 0;      // Tick de départ
-        this.lastSyncTick = 0;           // Dernier tick reçu de l'extérieur (pour resync)
-        this.lastSyncTime = 0;           // Temps du dernier sync
-
-        // Animation
-        this.animationFrameId = null;
-        this.lastUpdateTime = 0;
-        this.lastSequenceUpdateTime = 0;
-        this.sequenceThrottleMs = 100; // Throttle sequence filtering to 10fps
-
-        // Feature enabled state (from settings)
-        this.isEnabled = false;
-
-        // Performance limits
-        this.maxVisibleNotes = 500; // Maximum notes to display at once
-        this.visibleWindowTicks = 0; // Calculated based on displayTimeSeconds
-
-        // Couleurs éclatantes pour les 16 canaux MIDI
+        // Couleurs des canaux
         this.channelColors = [
-            '#FF0066', // 1 - Rose/Magenta vif
-            '#00FFFF', // 2 - Cyan éclatant
-            '#FF00FF', // 3 - Magenta pur
-            '#FFFF00', // 4 - Jaune vif
-            '#00FF00', // 5 - Vert pur
-            '#FF6600', // 6 - Orange éclatant
-            '#9D00FF', // 7 - Violet vif
-            '#00FF99', // 8 - Vert menthe éclatant
-            '#FF0000', // 9 - Rouge pur
-            '#00BFFF', // 10 - Bleu ciel éclatant (Drums)
-            '#FFD700', // 11 - Or éclatant
-            '#FF1493', // 12 - Rose profond
-            '#00FFAA', // 13 - Turquoise éclatant
-            '#FF4500', // 14 - Orange-rouge vif
-            '#7FFF00', // 15 - Vert chartreuse
-            '#FF69B4'  // 16 - Rose chaud
+            '#FF0066', '#00FFFF', '#FF00FF', '#FFFF00',
+            '#00FF00', '#FF6600', '#9D00FF', '#00FF99',
+            '#FF0000', '#00BFFF', '#FFD700', '#FF1493',
+            '#00FFAA', '#FF4500', '#7FFF00', '#FF69B4'
         ];
-
-        // Couleur grise pour les canaux mutés
-        this.mutedColor = '#666666';
-
-        // Table des instruments General MIDI (simplifiée)
-        this.gmInstruments = [
-            'Acoustic Grand Piano', 'Bright Acoustic Piano', 'Electric Grand Piano', 'Honky-tonk Piano',
-            'Electric Piano 1', 'Electric Piano 2', 'Harpsichord', 'Clavinet',
-            'Celesta', 'Glockenspiel', 'Music Box', 'Vibraphone', 'Marimba', 'Xylophone', 'Tubular Bells', 'Dulcimer',
-            'Drawbar Organ', 'Percussive Organ', 'Rock Organ', 'Church Organ', 'Reed Organ', 'Accordion', 'Harmonica', 'Tango Accordion',
-            'Acoustic Guitar (nylon)', 'Acoustic Guitar (steel)', 'Electric Guitar (jazz)', 'Electric Guitar (clean)',
-            'Electric Guitar (muted)', 'Overdriven Guitar', 'Distortion Guitar', 'Guitar harmonics',
-            'Acoustic Bass', 'Electric Bass (finger)', 'Electric Bass (pick)', 'Fretless Bass',
-            'Slap Bass 1', 'Slap Bass 2', 'Synth Bass 1', 'Synth Bass 2',
-            'Violin', 'Viola', 'Cello', 'Contrabass', 'Tremolo Strings', 'Pizzicato Strings', 'Orchestral Harp', 'Timpani',
-            'String Ensemble 1', 'String Ensemble 2', 'Synth Strings 1', 'Synth Strings 2',
-            'Choir Aahs', 'Voice Oohs', 'Synth Voice', 'Orchestra Hit',
-            'Trumpet', 'Trombone', 'Tuba', 'Muted Trumpet', 'French Horn', 'Brass Section', 'Synth Brass 1', 'Synth Brass 2',
-            'Soprano Sax', 'Alto Sax', 'Tenor Sax', 'Baritone Sax', 'Oboe', 'English Horn', 'Bassoon', 'Clarinet',
-            'Piccolo', 'Flute', 'Recorder', 'Pan Flute', 'Blown Bottle', 'Shakuhachi', 'Whistle', 'Ocarina',
-            'Lead 1 (square)', 'Lead 2 (sawtooth)', 'Lead 3 (calliope)', 'Lead 4 (chiff)', 'Lead 5 (charang)', 'Lead 6 (voice)', 'Lead 7 (fifths)', 'Lead 8 (bass + lead)',
-            'Pad 1 (new age)', 'Pad 2 (warm)', 'Pad 3 (polysynth)', 'Pad 4 (choir)', 'Pad 5 (bowed)', 'Pad 6 (metallic)', 'Pad 7 (halo)', 'Pad 8 (sweep)',
-            'FX 1 (rain)', 'FX 2 (soundtrack)', 'FX 3 (crystal)', 'FX 4 (atmosphere)', 'FX 5 (brightness)', 'FX 6 (goblins)', 'FX 7 (echoes)', 'FX 8 (sci-fi)',
-            'Sitar', 'Banjo', 'Shamisen', 'Koto', 'Kalimba', 'Bag pipe', 'Fiddle', 'Shanai',
-            'Tinkle Bell', 'Agogo', 'Steel Drums', 'Woodblock', 'Taiko Drum', 'Melodic Tom', 'Synth Drum', 'Reverse Cymbal',
-            'Guitar Fret Noise', 'Breath Noise', 'Seashore', 'Bird Tweet', 'Telephone Ring', 'Helicopter', 'Applause', 'Gunshot'
-        ];
+        this.mutedColor = '#444444';
+        this.bgColor = '#1a1a1a';
+        this.playheadColor = '#ffffff';
 
         this.init();
     }
 
-    /**
-     * Traduction helper
-     */
-    t(key, params = {}) {
-        if (typeof i18n !== 'undefined' && i18n.t) {
-            return i18n.t(key, params);
-        }
-        return key;
-    }
-
-    /**
-     * Logging helper
-     */
     log(level, ...args) {
-        if (this.logger) {
-            // Format message with all args
-            const message = `[PianoRollView] ${args.join(' ')}`;
-            if (typeof this.logger[level] === 'function') {
-                this.logger[level](message);
-            } else if (typeof this.logger.log === 'function') {
-                this.logger.log(`[${level.toUpperCase()}] ${message}`);
-            }
+        const msg = `[PianoRollView] ${args.join(' ')}`;
+        if (this.logger && this.logger[level]) {
+            this.logger[level](msg);
         } else {
-            // Fallback to console
-            console.log(`[PianoRollView] [${level}]`, ...args);
+            console.log(msg);
         }
     }
 
-    /**
-     * Initialisation
-     */
     init() {
-        this.createContainer();
-        this.setupEventListeners();
-        this.setupWindowListeners();
+        this.createDOM();
+        this.setupEvents();
         this.loadSettings();
-        this.log('info', 'PianoRollView initialized');
+        this.log('info', 'Initialized');
     }
 
-    /**
-     * Configurer les écouteurs de fenêtre
-     */
-    setupWindowListeners() {
-        // Recalculer la position lors du redimensionnement
-        window.addEventListener('resize', () => {
-            if (this.isVisible) {
-                this.updatePosition();
-            }
-        });
-
-        // Recalculer après le scroll (au cas où)
-        window.addEventListener('scroll', () => {
-            if (this.isVisible) {
-                this.updatePosition();
-            }
-        });
-    }
-
-    /**
-     * Charger les paramètres
-     */
     loadSettings() {
         try {
             const saved = localStorage.getItem('maestro_settings');
             if (saved) {
                 const settings = JSON.parse(saved);
-                this.displayTimeSeconds = settings.noteDisplayTime || 20;
-                // Just store the enabled state, don't show yet
-                // Piano roll will show when playback starts
                 this.isEnabled = settings.showPianoRoll || false;
-                this.log('info', `Settings loaded: showPianoRoll=${this.isEnabled}, displayTime=${this.displayTimeSeconds}s`);
-            } else {
-                this.log('info', 'No saved settings found, using defaults');
+                this.displayWindowMs = (settings.noteDisplayTime || 5) * 1000;
             }
-        } catch (error) {
-            this.log('error', 'Failed to load settings:', error);
+        } catch (e) {
+            this.log('error', 'Failed to load settings');
         }
     }
 
-    /**
-     * Créer le conteneur HTML
-     */
-    createContainer() {
-        // Créer le conteneur principal
+    createDOM() {
         this.container = document.createElement('div');
         this.container.id = 'piano-roll-view';
         this.container.className = 'piano-roll-view hidden';
-
         this.container.innerHTML = `
             <div class="piano-roll-view-header">
                 <div class="piano-roll-view-title">
                     <span class="piano-roll-icon">🎹</span>
-                    <span class="piano-roll-title-text">${this.t('pianoRoll.title')}</span>
+                    <span class="piano-roll-title-text">Piano Roll</span>
                 </div>
-                <div class="piano-roll-view-channels" id="pianoRollChannelButtons">
-                    <!-- Les boutons de canal seront générés ici -->
-                </div>
+                <div class="piano-roll-view-channels" id="pianoRollChannelButtons"></div>
             </div>
             <div class="piano-roll-view-content">
-                <div class="piano-roll-view-container" id="pianoRollViewContainer">
-                    <!-- Le piano roll sera inséré ici -->
-                </div>
+                <canvas id="pianoRollCanvas"></canvas>
             </div>
         `;
 
-        // Insérer dans le body, après le container principal
         const mainContainer = document.querySelector('.container');
         if (mainContainer) {
             mainContainer.appendChild(this.container);
@@ -211,232 +103,144 @@ class PianoRollView {
             document.body.appendChild(this.container);
         }
 
-        this.log('info', 'Piano roll container created');
+        this.canvas = document.getElementById('pianoRollCanvas');
+        this.ctx = this.canvas.getContext('2d');
     }
 
-    /**
-     * Configurer les écouteurs d'événements
-     */
-    setupEventListeners() {
-        if (!this.eventBus) {
-            this.log('error', 'EventBus not available!');
-            return;
-        }
+    setupEvents() {
+        if (!this.eventBus) return;
 
-        this.log('info', 'Setting up event listeners...');
-
-        // Changement de paramètres - just update enabled state
+        // Activation/désactivation
         this.eventBus.on('settings:piano_roll_changed', (data) => {
-            this.log('info', `settings:piano_roll_changed received - enabled: ${data.enabled}`);
             this.isEnabled = data.enabled;
-            // If disabled while visible, hide immediately
-            if (!this.isEnabled && this.isVisible) {
-                this.hide();
-            }
-        });
-
-        this.eventBus.on('settings:display_time_changed', (data) => {
-            this.displayTimeSeconds = data.time;
-            this.updatePianoRollRange();
+            if (!this.isEnabled && this.isVisible) this.hide();
         });
 
         // Fichier MIDI chargé
         this.eventBus.on('file:selected', (data) => {
-            this.log('info', `file:selected received - hasMidiData: ${!!data.midiData}`);
             if (data.midiData) {
                 this.loadMidiData(data.midiData);
             }
         });
 
-        // Playback events
+        // LECTURE - source externe de vérité
         this.eventBus.on('playback:play', () => {
-            this.log('info', `playback:play received - isEnabled: ${this.isEnabled}, hasMidiData: ${!!this.midiData}`);
-
-            // Initialiser le timing interne
-            this.playbackStartTime = performance.now();
-            this.playbackStartTick = this.currentTick; // Reprendre depuis la position actuelle
+            this.log('info', 'playback:play');
             this.isPlaying = true;
-
-            // Show piano roll when playback starts (if enabled and has data)
-            if (this.isEnabled && this.midiData) {
+            if (this.isEnabled && this.notes.length > 0) {
                 this.show();
-            } else {
-                this.log('warn', `Piano roll not shown: isEnabled=${this.isEnabled}, hasMidiData=${!!this.midiData}`);
             }
-            this.startAnimation();
         });
 
         this.eventBus.on('playback:pause', () => {
-            this.log('info', 'playback:pause received');
-            // Arrêter IMMÉDIATEMENT - pas besoin d'attendre
+            this.log('info', 'playback:pause');
             this.isPlaying = false;
+            // Arrêt immédiat - pas d'animation
             this.stopAnimation();
-            // Garder la position actuelle pour la reprise
-            this.playbackStartTick = this.currentTick;
-            // Keep piano roll visible during pause
         });
 
         this.eventBus.on('playback:stop', () => {
-            this.log('info', 'playback:stop received');
+            this.log('info', 'playback:stop');
             this.isPlaying = false;
-            this.currentTick = 0;
-            this.playbackStartTick = 0;
+            this.currentTimeMs = 0;
             this.stopAnimation();
-            // Hide piano roll when stopped
             this.hide();
         });
 
-        this.log('info', 'Event listeners setup complete');
-
-        // Synchronisation avec les événements externes (correction de drift)
+        // TEMPS - source externe uniquement
         this.eventBus.on('playback:time', (data) => {
-            let externalTick;
-            if (data.tick !== undefined) {
-                externalTick = data.tick;
-            } else if (data.time !== undefined) {
-                externalTick = this.timeToTicks(data.time);
+            if (data.time !== undefined) {
+                this.currentTimeMs = data.time * 1000; // Convertir s en ms
             }
-
-            if (externalTick !== undefined) {
-                // Stocker pour resynchronisation
-                this.lastSyncTick = externalTick;
-                this.lastSyncTime = performance.now();
-
-                // Si pas en lecture, mettre à jour directement
-                if (!this.isPlaying) {
-                    this.currentTick = externalTick;
-                    this.playbackStartTick = externalTick;
-                    this.updateView();
-                }
-                // En lecture: correction de drift si écart > 500ms en ticks
-                else {
-                    const ticksPerMs = (this.ticksPerBeat * this.tempo) / 60000;
-                    const drift = Math.abs(this.currentTick - externalTick);
-                    const maxDrift = ticksPerMs * 500; // 500ms de tolérance
-                    if (drift > maxDrift) {
-                        // Resynchroniser
-                        this.playbackStartTime = performance.now();
-                        this.playbackStartTick = externalTick;
-                        this.log('debug', `Resync: drift=${drift.toFixed(0)} ticks`);
-                    }
-                }
+            if (data.duration !== undefined) {
+                this.durationMs = data.duration * 1000;
+            }
+            // Redessiner si visible et en lecture
+            if (this.isVisible && this.isPlaying) {
+                this.draw();
             }
         });
 
-        // Position de lecture mise à jour par le synthétiseur
-        this.eventBus.on('synthesizer:position', (data) => {
-            if (!this.isPlaying && data.tick !== undefined) {
-                this.currentTick = data.tick;
-                this.playbackStartTick = data.tick;
-                this.updateView();
-            }
+        // Mute canal
+        this.eventBus.on('pianoroll:channel_toggled', (data) => {
+            // Géré par les boutons locaux
         });
     }
 
-    /**
-     * Charger les données MIDI
-     */
     loadMidiData(midiData) {
-        this.midiData = midiData;
-        this.convertMidiToSequence();
-        this.extractChannelInfo();
-        this.initializePianoRoll();
-        this.renderChannelButtons();
-        this.updateView();
-        this.log('info', `MIDI data loaded: ${this.sequence.length} notes`);
-    }
-
-    /**
-     * Convertir les données MIDI en format séquence pour webaudio-pianoroll
-     */
-    convertMidiToSequence() {
-        if (!this.midiData || !this.midiData.tracks) {
-            this.sequence = [];
-            this.fullSequence = [];
-            this.log('warn', 'No MIDI data or tracks available');
+        if (!midiData || !midiData.tracks) {
+            this.notes = [];
+            this.channels = [];
             return;
         }
 
-        const allNotes = [];
-        // Support multiple formats for ticksPerBeat
-        this.ticksPerBeat = this.midiData.ticksPerQuarter ||
-                           this.midiData.header?.ticksPerBeat ||
-                           this.midiData.ticksPerBeat || 480;
+        // Extraire tempo et PPQ
+        const ticksPerBeat = midiData.ticksPerQuarter ||
+                            midiData.header?.ticksPerBeat ||
+                            midiData.ticksPerBeat || 480;
+        let tempo = 120;
 
-        // Extract tempo from midiData or from setTempo events
-        if (this.midiData.tempo) {
-            this.tempo = this.midiData.tempo;
-        } else {
-            // Scan tracks for setTempo event
-            for (const track of this.midiData.tracks) {
-                const events = track.events || track;
-                if (!events || !Array.isArray(events)) continue;
-
-                const tempoEvent = events.find(e =>
-                    e.type === 'setTempo' ||
-                    e.subtype === 'setTempo' ||
-                    (e.type === 'meta' && e.subtype === 'setTempo')
-                );
-                if (tempoEvent && tempoEvent.microsecondsPerBeat) {
-                    this.tempo = Math.round(60000000 / tempoEvent.microsecondsPerBeat);
-                    break;
-                }
+        // Chercher tempo
+        for (const track of midiData.tracks) {
+            const events = track.events || track;
+            if (!Array.isArray(events)) continue;
+            const tempoEvent = events.find(e =>
+                e.type === 'setTempo' && e.microsecondsPerBeat
+            );
+            if (tempoEvent) {
+                tempo = Math.round(60000000 / tempoEvent.microsecondsPerBeat);
+                break;
             }
         }
 
-        this.log('info', `Processing ${this.midiData.tracks.length} tracks, ticksPerBeat: ${this.ticksPerBeat}, tempo: ${this.tempo} BPM`);
+        const msPerTick = 60000 / (tempo * ticksPerBeat);
+        this.log('info', `Tempo: ${tempo} BPM, PPQ: ${ticksPerBeat}, msPerTick: ${msPerTick.toFixed(4)}`);
 
-        this.midiData.tracks.forEach((track, trackIndex) => {
-            // Support both formats: track as array of events, or track.events as array
+        // Extraire les notes
+        this.notes = [];
+        const channelSet = new Set();
+        const channelPrograms = new Map();
+
+        midiData.tracks.forEach(track => {
             const events = track.events || track;
-            if (!events || !Array.isArray(events)) {
-                this.log('debug', `Track ${trackIndex}: no events array`);
-                return;
-            }
+            if (!Array.isArray(events)) return;
 
             const noteOns = {};
-            let currentTick = 0; // For deltaTime-based format
+            let currentTick = 0;
 
             events.forEach(event => {
-                // Accumulate ticks for deltaTime-based format
                 if (event.deltaTime !== undefined) {
                     currentTick += event.deltaTime;
                 }
+                const tick = event.time !== undefined ? event.time : currentTick;
+                const channel = event.channel || 0;
 
-                // Get note number and velocity - support multiple formats
-                const noteNumber = event.noteNumber !== undefined ? event.noteNumber :
-                                  event.data1 !== undefined ? event.data1 :
-                                  event.note;
-                const velocity = event.velocity !== undefined ? event.velocity :
-                                event.data2 !== undefined ? event.data2 : 0;
-                const channel = event.channel !== undefined ? event.channel : 0;
-
-                // Get tick position - support both absolute time and deltaTime
-                const tickPosition = event.time !== undefined ? event.time : currentTick;
-
-                // Handle noteOn
-                if ((event.type === 'noteOn' || event.subtype === 'noteOn') && velocity > 0 && noteNumber !== undefined) {
-                    const key = `${channel}_${noteNumber}`;
-                    noteOns[key] = {
-                        tick: tickPosition,
-                        velocity: velocity,
-                        channel: channel,
-                        note: noteNumber
-                    };
+                // Program change
+                if (event.type === 'programChange') {
+                    channelPrograms.set(channel, event.programNumber || 0);
                 }
-                // Handle noteOff
+
+                // Note on
+                const noteNum = event.noteNumber ?? event.note ?? event.data1;
+                const velocity = event.velocity ?? event.data2 ?? 0;
+
+                if ((event.type === 'noteOn' || event.subtype === 'noteOn') && velocity > 0 && noteNum !== undefined) {
+                    const key = `${channel}_${noteNum}`;
+                    noteOns[key] = { tick, channel, note: noteNum, velocity };
+                    channelSet.add(channel);
+                }
+                // Note off
                 else if ((event.type === 'noteOff' || event.subtype === 'noteOff' ||
-                         ((event.type === 'noteOn' || event.subtype === 'noteOn') && velocity === 0)) &&
-                         noteNumber !== undefined) {
-                    const key = `${channel}_${noteNumber}`;
+                         (event.type === 'noteOn' && velocity === 0)) && noteNum !== undefined) {
+                    const key = `${channel}_${noteNum}`;
                     if (noteOns[key]) {
-                        const noteOn = noteOns[key];
-                        allNotes.push({
-                            tick: noteOn.tick,
-                            gate: tickPosition - noteOn.tick,
-                            note: noteOn.note,
-                            channel: noteOn.channel,
-                            velocity: noteOn.velocity
+                        const on = noteOns[key];
+                        this.notes.push({
+                            startMs: on.tick * msPerTick,
+                            endMs: tick * msPerTick,
+                            note: on.note,
+                            channel: on.channel,
+                            velocity: on.velocity
                         });
                         delete noteOns[key];
                     }
@@ -444,583 +248,230 @@ class PianoRollView {
             });
         });
 
-        // Convertir en format webaudio-pianoroll
-        this.fullSequence = allNotes.map(note => ({
-            t: note.tick,
-            g: note.gate,
-            n: note.note,
-            c: note.channel,
-            v: note.velocity
+        // Trier par temps de début
+        this.notes.sort((a, b) => a.startMs - b.startMs);
+
+        // Calculer la plage de notes
+        if (this.notes.length > 0) {
+            let minNote = 127, maxNote = 0;
+            this.notes.forEach(n => {
+                if (n.note < minNote) minNote = n.note;
+                if (n.note > maxNote) maxNote = n.note;
+            });
+            this.noteMinY = Math.max(0, minNote - 2);
+            this.noteMaxY = Math.min(127, maxNote + 2);
+        }
+
+        // Construire infos canaux
+        this.channels = Array.from(channelSet).sort((a, b) => a - b).map(ch => ({
+            channel: ch,
+            program: channelPrograms.get(ch) || 0
         }));
 
-        // Trier par tick
-        this.fullSequence.sort((a, b) => a.t - b.t);
-
-        // Initialiser la séquence avec toutes les notes
-        this.sequence = [...this.fullSequence];
-
-        this.log('info', `Converted MIDI: ${this.fullSequence.length} notes, tempo: ${this.tempo} BPM`);
+        this.renderChannelButtons();
+        this.log('info', `Loaded ${this.notes.length} notes, ${this.channels.length} channels`);
     }
 
-    /**
-     * Extraire les informations des canaux
-     */
-    extractChannelInfo() {
-        this.channels = [];
-        this.activeChannels.clear();
-        const channelMap = new Map();
-
-        if (!this.midiData || !this.midiData.tracks) return;
-
-        this.midiData.tracks.forEach((track, trackIndex) => {
-            // Support both formats: track as array of events, or track.events as array
-            const events = track.events || track;
-            if (!events || !Array.isArray(events)) return;
-
-            events.forEach(event => {
-                const channel = event.channel !== undefined ? event.channel : 0;
-
-                // Handle programChange - support multiple formats
-                if (event.type === 'programChange' || event.subtype === 'programChange') {
-                    const program = event.programNumber !== undefined ? event.programNumber :
-                                   event.data1 !== undefined ? event.data1 : 0;
-                    if (!channelMap.has(channel)) {
-                        channelMap.set(channel, { program, noteCount: 0 });
-                    } else {
-                        channelMap.get(channel).program = program;
-                    }
-                }
-
-                // Handle noteOn - support multiple formats
-                const velocity = event.velocity !== undefined ? event.velocity :
-                                event.data2 !== undefined ? event.data2 : 0;
-                if ((event.type === 'noteOn' || event.subtype === 'noteOn') && velocity > 0) {
-                    if (!channelMap.has(channel)) {
-                        channelMap.set(channel, { program: 0, noteCount: 0 });
-                    }
-                    channelMap.get(channel).noteCount++;
-                }
-            });
-        });
-
-        // Construire la liste des canaux
-        channelMap.forEach((data, channel) => {
-            if (data.noteCount > 0) {
-                const instrumentName = channel === 9 ? 'Drums' : (this.gmInstruments[data.program] || `Program ${data.program}`);
-                this.channels.push({
-                    channel: channel,
-                    program: data.program,
-                    instrument: instrumentName,
-                    noteCount: data.noteCount
-                });
-                this.activeChannels.add(channel);
-            }
-        });
-
-        // Trier par numéro de canal
-        this.channels.sort((a, b) => a.channel - b.channel);
-
-        this.log('info', `Extracted ${this.channels.length} channels with notes`);
-    }
-
-    /**
-     * Initialiser le piano roll
-     */
-    initializePianoRoll() {
-        const container = document.getElementById('pianoRollViewContainer');
-        if (!container) return;
-
-        // Supprimer l'ancien piano roll s'il existe
-        if (this.pianoRoll) {
-            container.innerHTML = '';
-        }
-
-        // Créer le nouvel élément piano roll
-        this.pianoRoll = document.createElement('webaudio-pianoroll');
-
-        // Calculer les dimensions
-        const width = container.clientWidth || 800;
-        const height = container.clientHeight || 200;
-
-        // Calculer la plage de notes (yoffset et yrange)
-        const { yoffset, yrange } = this.calculateNoteRange();
-
-        // Calculer xrange basé sur le temps d'affichage
-        const xrange = this.calculateXRange();
-
-        // Configurer le piano roll
-        this.pianoRoll.setAttribute('width', width);
-        this.pianoRoll.setAttribute('height', height);
-        this.pianoRoll.setAttribute('editmode', 'none'); // Lecture seule
-        this.pianoRoll.setAttribute('xrange', xrange);
-        this.pianoRoll.setAttribute('yrange', yrange);
-        this.pianoRoll.setAttribute('yoffset', yoffset);
-        this.pianoRoll.setAttribute('wheelzoom', '0');
-        this.pianoRoll.setAttribute('xscroll', '0');
-        this.pianoRoll.setAttribute('yscroll', '0');
-        this.pianoRoll.setAttribute('grid', '120'); // 1/16 note
-        this.pianoRoll.setAttribute('snap', '0');
-        this.pianoRoll.setAttribute('timebase', this.ticksPerBeat);
-
-        // Ajouter au container
-        container.appendChild(this.pianoRoll);
-
-        // Configurer les couleurs des canaux
-        this.pianoRoll.channelColors = this.getChannelColorsWithMuted();
-
-        // Charger la séquence
-        this.updateSequence();
-
-        // Observer les changements de taille
-        this.setupResizeObserver();
-
-        this.log('info', 'Piano roll initialized');
-    }
-
-    /**
-     * Calculer la plage de notes (yoffset et yrange)
-     */
-    calculateNoteRange() {
-        if (this.sequence.length === 0) {
-            return { yoffset: 36, yrange: 48 }; // Valeurs par défaut
-        }
-
-        let minNote = 127;
-        let maxNote = 0;
-
-        this.sequence.forEach(note => {
-            if (note.n < minNote) minNote = note.n;
-            if (note.n > maxNote) maxNote = note.n;
-        });
-
-        // Ajouter une marge
-        const margin = 4;
-        minNote = Math.max(0, minNote - margin);
-        maxNote = Math.min(127, maxNote + margin);
-
-        const range = maxNote - minNote + 1;
-        const yrange = Math.max(24, Math.min(48, range)); // Entre 24 et 48 notes visibles
-
-        // Centrer sur les notes
-        const center = (minNote + maxNote) / 2;
-        const yoffset = Math.max(0, Math.min(127 - yrange, Math.floor(center - yrange / 2)));
-
-        return { yoffset, yrange };
-    }
-
-    /**
-     * Calculer xrange basé sur le temps d'affichage
-     */
-    calculateXRange() {
-        // Convertir le temps d'affichage en ticks
-        const ticksPerSecond = (this.ticksPerBeat * this.tempo) / 60;
-        return Math.floor(ticksPerSecond * this.displayTimeSeconds);
-    }
-
-    /**
-     * Obtenir les couleurs des canaux avec les canaux mutés en gris
-     */
-    getChannelColorsWithMuted() {
-        const colors = [...this.channelColors];
-        this.mutedChannels.forEach(channel => {
-            if (channel >= 0 && channel < 16) {
-                colors[channel] = this.mutedColor;
-            }
-        });
-        // Griser aussi les canaux sans instrument attribué
-        for (let i = 0; i < 16; i++) {
-            const hasInstrument = this.channels.some(ch => ch.channel === i);
-            if (!hasInstrument && !this.activeChannels.has(i)) {
-                colors[i] = this.mutedColor;
-            }
-        }
-        return colors;
-    }
-
-    /**
-     * Mettre à jour la séquence affichée (avec optimisation de performance)
-     */
-    updateSequence() {
-        if (!this.pianoRoll) return;
-
-        // Calculer la fenêtre de temps visible
-        const xrange = this.calculateXRange();
-        this.visibleWindowTicks = xrange;
-        const windowStart = Math.max(0, this.currentTick - xrange * 0.1); // 10% avant
-        const windowEnd = this.currentTick + xrange * 1.2; // 120% après
-
-        // Filtrer par canaux actifs et fenêtre de temps
-        let visibleNotes = this.fullSequence.filter(note => {
-            const noteEnd = note.t + note.g;
-            const inWindow = noteEnd >= windowStart && note.t <= windowEnd;
-            const notMuted = !this.mutedChannels.has(note.c);
-            return inWindow && notMuted;
-        });
-
-        // Ajouter les notes mutées dans la fenêtre (seront grises)
-        const mutedNotes = this.fullSequence.filter(note => {
-            const noteEnd = note.t + note.g;
-            const inWindow = noteEnd >= windowStart && note.t <= windowEnd;
-            return inWindow && this.mutedChannels.has(note.c);
-        });
-
-        // Combiner
-        let displaySequence = [...visibleNotes, ...mutedNotes];
-
-        // Limiter le nombre de notes pour les performances
-        if (displaySequence.length > this.maxVisibleNotes) {
-            // Trier par proximité au tick actuel et garder les plus proches
-            displaySequence.sort((a, b) => {
-                const distA = Math.abs(a.t - this.currentTick);
-                const distB = Math.abs(b.t - this.currentTick);
-                return distA - distB;
-            });
-            displaySequence = displaySequence.slice(0, this.maxVisibleNotes);
-            // Re-trier par tick pour l'affichage
-            displaySequence.sort((a, b) => a.t - b.t);
-        }
-
-        this.sequence = visibleNotes;
-
-        // Mettre à jour le piano roll
-        this.pianoRoll.sequence = displaySequence;
-        this.pianoRoll.channelColors = this.getChannelColorsWithMuted();
-
-        if (typeof this.pianoRoll.redraw === 'function') {
-            this.pianoRoll.redraw();
-        }
-    }
-
-    /**
-     * Mettre à jour la plage d'affichage du piano roll
-     */
-    updatePianoRollRange() {
-        if (!this.pianoRoll) return;
-
-        const xrange = this.calculateXRange();
-        this.pianoRoll.setAttribute('xrange', xrange);
-        this.pianoRoll.xrange = xrange;
-
-        if (typeof this.pianoRoll.redraw === 'function') {
-            this.pianoRoll.redraw();
-        }
-    }
-
-    /**
-     * Générer les boutons de canal
-     */
     renderChannelButtons() {
         const container = document.getElementById('pianoRollChannelButtons');
         if (!container) return;
 
         if (this.channels.length === 0) {
-            container.innerHTML = `<span class="no-channels">${this.t('pianoRoll.noChannels')}</span>`;
+            container.innerHTML = '<span style="color:#666;font-style:italic">Aucun canal</span>';
             return;
         }
 
-        let html = '';
-        this.channels.forEach(ch => {
-            const isActive = this.activeChannels.has(ch.channel);
+        container.innerHTML = this.channels.map(ch => {
             const isMuted = this.mutedChannels.has(ch.channel);
-            const color = this.channelColors[ch.channel % this.channelColors.length];
-
-            const activeClass = isActive && !isMuted ? 'active' : '';
-            const mutedClass = isMuted ? 'muted' : '';
-
-            const style = isActive && !isMuted
-                ? `background: ${color}; border-color: ${color};`
-                : `--channel-color: ${color}; border-color: ${color};`;
-
-            // Icône de mute
-            const muteIcon = isMuted ? '🔇' : '🔊';
-
-            html += `
-                <div class="channel-btn-group" data-channel="${ch.channel}">
-                    <button
-                        class="channel-btn ${activeClass} ${mutedClass}"
+            const color = this.channelColors[ch.channel % 16];
+            const style = isMuted
+                ? 'background:#333;border-color:#555;color:#888;'
+                : `background:${color};border-color:${color};color:#000;`;
+            return `
+                <button class="channel-btn ${isMuted ? 'muted' : ''}"
                         data-channel="${ch.channel}"
-                        style="${style}"
-                        title="${ch.instrument} (${ch.noteCount} notes) - Click to toggle mute"
-                    >
-                        ${ch.channel + 1}: ${ch.instrument.split(' ')[0]}
-                    </button>
-                    <button
-                        class="mute-btn ${mutedClass}"
-                        data-channel="${ch.channel}"
-                        title="${isMuted ? 'Unmute' : 'Mute'} channel ${ch.channel + 1}"
-                    >
-                        ${muteIcon}
-                    </button>
-                </div>
+                        style="${style}">
+                    Ch ${ch.channel + 1}
+                </button>
             `;
-        });
+        }).join('');
 
-        container.innerHTML = html;
-
-        // Attacher les événements aux boutons de canal (toggle mute)
         container.querySelectorAll('.channel-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const channel = parseInt(btn.dataset.channel);
-                this.toggleChannel(channel);
-            });
-        });
-
-        // Attacher les événements aux boutons mute
-        container.querySelectorAll('.mute-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const channel = parseInt(btn.dataset.channel);
-                this.toggleChannel(channel);
+            btn.addEventListener('click', () => {
+                const ch = parseInt(btn.dataset.channel);
+                this.toggleMute(ch);
             });
         });
     }
 
-    /**
-     * Basculer un canal (mute/unmute)
-     */
-    toggleChannel(channel) {
+    toggleMute(channel) {
         if (this.mutedChannels.has(channel)) {
             this.mutedChannels.delete(channel);
         } else {
             this.mutedChannels.add(channel);
         }
-
         this.renderChannelButtons();
-        this.updateSequence();
 
-        // Émettre un événement pour synchroniser avec le synthétiseur
-        this.eventBus?.emit('pianoroll:channel_toggled', {
-            channel: channel,
-            muted: this.mutedChannels.has(channel)
-        });
-
-        this.log('info', `Channel ${channel} ${this.mutedChannels.has(channel) ? 'muted' : 'unmuted'}`);
-    }
-
-    /**
-     * Calculer le tick actuel basé sur le temps écoulé
-     */
-    calculateCurrentTick() {
-        if (!this.isPlaying) {
-            return this.currentTick;
+        // Émettre événement
+        if (this.eventBus) {
+            this.eventBus.emit('pianoroll:channel_toggled', {
+                channel,
+                muted: this.mutedChannels.has(channel)
+            });
         }
 
-        const now = performance.now();
-        const elapsedMs = now - this.playbackStartTime;
-
-        // Convertir ms en ticks: ticks = ms * (ticksPerBeat * tempo) / 60000
-        const ticksPerMs = (this.ticksPerBeat * this.tempo) / 60000;
-        const elapsedTicks = elapsedMs * ticksPerMs;
-
-        return this.playbackStartTick + elapsedTicks;
+        // Redessiner
+        if (this.isVisible) this.draw();
     }
 
-    /**
-     * Mettre à jour la vue (calcul interne de position pour fluidité)
-     */
-    updateView() {
-        if (!this.pianoRoll || !this.isVisible) return;
-
-        const now = performance.now();
-
-        // Calculer la position actuelle internement (pas dépendant des événements)
-        if (this.isPlaying) {
-            this.currentTick = this.calculateCurrentTick();
-        }
-
-        // Mettre à jour la position de lecture (xoffset)
-        this.pianoRoll.xoffset = this.currentTick;
-
-        // Redessiner le piano roll pour un défilement fluide
-        if (typeof this.pianoRoll.redraw === 'function') {
-            this.pianoRoll.redraw();
-        }
-
-        // Mettre à jour la séquence visible moins fréquemment (optimisation)
-        if (now - this.lastSequenceUpdateTime >= this.sequenceThrottleMs) {
-            this.lastSequenceUpdateTime = now;
-            this.updateSequence();
-        }
-    }
-
-    /**
-     * Démarrer l'animation de lecture
-     */
-    startAnimation() {
-        if (this.animationFrameId) return;
-
-        this.lastSequenceUpdateTime = 0; // Reset sequence throttle
-
-        const animate = (timestamp) => {
-            if (!this.isPlaying) {
-                this.animationFrameId = null;
-                return;
-            }
-
-            this.updateView();
-            this.animationFrameId = requestAnimationFrame(animate);
-        };
-
-        this.animationFrameId = requestAnimationFrame(animate);
-    }
-
-    /**
-     * Arrêter l'animation
-     */
-    stopAnimation() {
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
-    }
-
-    /**
-     * Convertir le temps en ticks
-     */
-    timeToTicks(timeSeconds) {
-        const ticksPerSecond = (this.ticksPerBeat * this.tempo) / 60;
-        return Math.floor(timeSeconds * ticksPerSecond);
-    }
-
-    /**
-     * Observer les changements de taille
-     */
-    setupResizeObserver() {
-        const container = document.getElementById('pianoRollViewContainer');
-        if (!container) return;
-
-        const resizeObserver = new ResizeObserver(entries => {
-            for (const entry of entries) {
-                const { width, height } = entry.contentRect;
-                if (this.pianoRoll && width > 0 && height > 0) {
-                    this.pianoRoll.setAttribute('width', Math.floor(width));
-                    this.pianoRoll.setAttribute('height', Math.floor(height));
-                    if (typeof this.pianoRoll.redraw === 'function') {
-                        this.pianoRoll.redraw();
-                    }
-                }
-            }
-        });
-
-        resizeObserver.observe(container);
-    }
-
-    /**
-     * Calculer la position du piano roll sous le header
-     */
-    updatePosition() {
-        const header = document.querySelector('header');
-        if (header && this.container) {
-            const headerRect = header.getBoundingClientRect();
-            const topPosition = headerRect.bottom + 16; // 16px de marge
-            this.container.style.top = `${topPosition}px`;
-            this.log('debug', `Position updated: top=${topPosition}px`);
-        }
-    }
-
-    /**
-     * Afficher le piano roll
-     */
     show() {
-        this.log('info', `show() called - isVisible: ${this.isVisible}, isEnabled: ${this.isEnabled}, hasMidiData: ${!!this.midiData}`);
-
-        if (this.isVisible) {
-            this.log('debug', 'Already visible, skipping');
-            return;
-        }
-
-        if (!this.container) {
-            this.log('error', 'Container not found!');
-            return;
-        }
-
+        if (this.isVisible) return;
         this.isVisible = true;
-
-        // D'abord rendre visible
         this.container.classList.remove('hidden');
         this.container.classList.add('fullscreen');
 
-        // Cacher les cartes fichiers/périphériques
+        // Cacher autres éléments
         const mainGrid = document.querySelector('.main-grid');
-        if (mainGrid) {
-            mainGrid.classList.add('hidden-for-pianoroll');
-        }
+        if (mainGrid) mainGrid.classList.add('hidden-for-pianoroll');
 
-        // Cacher la console de debug si visible
-        const debugConsole = document.getElementById('debugConsole');
-        if (debugConsole && !debugConsole.classList.contains('hidden')) {
-            this._debugWasVisible = true;
-            debugConsole.classList.add('hidden-for-pianoroll');
-        }
-
-        // Calculer la position après que le DOM soit mis à jour
+        // Position sous le header
         requestAnimationFrame(() => {
             this.updatePosition();
-
-            // Initialiser le piano roll si on a des données
-            if (this.midiData) {
-                this.initializePianoRoll();
-                this.log('info', 'Piano roll initialized with MIDI data');
-            } else {
-                this.log('warn', 'No MIDI data available for piano roll');
-            }
+            this.resizeCanvas();
+            this.draw();
         });
-
-        this.log('info', 'Piano roll view shown');
     }
 
-    /**
-     * Cacher le piano roll
-     */
     hide() {
         this.isVisible = false;
-        if (this.container) {
-            this.container.classList.add('hidden');
-            this.container.classList.remove('fullscreen');
-        }
-
-        // Réafficher les cartes fichiers/périphériques
-        const mainGrid = document.querySelector('.main-grid');
-        if (mainGrid) {
-            mainGrid.classList.remove('hidden-for-pianoroll');
-        }
-
-        // Réafficher la console de debug si elle était visible
-        const debugConsole = document.getElementById('debugConsole');
-        if (debugConsole && this._debugWasVisible) {
-            debugConsole.classList.remove('hidden-for-pianoroll');
-            this._debugWasVisible = false;
-        }
-
         this.stopAnimation();
-        this.log('info', 'Piano roll view hidden');
+        this.container.classList.add('hidden');
+        this.container.classList.remove('fullscreen');
+
+        const mainGrid = document.querySelector('.main-grid');
+        if (mainGrid) mainGrid.classList.remove('hidden-for-pianoroll');
     }
 
-    /**
-     * Basculer la visibilité
-     */
-    toggle() {
-        if (this.isVisible) {
-            this.hide();
-        } else {
-            this.show();
+    updatePosition() {
+        const header = document.querySelector('header');
+        if (header && this.container) {
+            const rect = header.getBoundingClientRect();
+            this.container.style.top = `${rect.bottom + 8}px`;
         }
     }
 
-    /**
-     * Détruire le composant
-     */
+    resizeCanvas() {
+        if (!this.canvas) return;
+        const content = this.canvas.parentElement;
+        if (!content) return;
+
+        const rect = content.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+
+        this.canvas.width = rect.width * dpr;
+        this.canvas.height = rect.height * dpr;
+        this.canvas.style.width = `${rect.width}px`;
+        this.canvas.style.height = `${rect.height}px`;
+
+        this.ctx.scale(dpr, dpr);
+    }
+
+    stopAnimation() {
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
+    }
+
+    draw() {
+        if (!this.ctx || !this.canvas) return;
+
+        const width = this.canvas.width / (window.devicePixelRatio || 1);
+        const height = this.canvas.height / (window.devicePixelRatio || 1);
+
+        // Fond
+        this.ctx.fillStyle = this.bgColor;
+        this.ctx.fillRect(0, 0, width, height);
+
+        if (this.notes.length === 0) {
+            this.ctx.fillStyle = '#666';
+            this.ctx.font = '14px sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('Aucune note', width / 2, height / 2);
+            return;
+        }
+
+        // Paramètres de rendu
+        const currentMs = this.currentTimeMs;
+        const windowMs = this.displayWindowMs;
+        const startMs = currentMs;
+        const endMs = currentMs + windowMs;
+
+        const noteRange = this.noteMaxY - this.noteMinY;
+        const noteHeight = Math.max(4, height / noteRange);
+
+        // Position du playhead (bord gauche)
+        const playheadX = 50; // Marge gauche pour le playhead
+
+        // Dessiner les notes dans la fenêtre
+        for (const note of this.notes) {
+            // Hors fenêtre?
+            if (note.endMs < startMs || note.startMs > endMs) continue;
+
+            // Canal muté?
+            const isMuted = this.mutedChannels.has(note.channel);
+
+            // Position X (temps -> position)
+            const relativeStartMs = note.startMs - currentMs;
+            const relativeEndMs = note.endMs - currentMs;
+
+            const x1 = playheadX + (relativeStartMs / windowMs) * (width - playheadX);
+            const x2 = playheadX + (relativeEndMs / windowMs) * (width - playheadX);
+
+            // Position Y (note -> position, inversé car Y=0 est en haut)
+            const y = height - ((note.note - this.noteMinY) / noteRange) * height;
+
+            // Couleur
+            this.ctx.fillStyle = isMuted ? this.mutedColor : this.channelColors[note.channel % 16];
+
+            // Dessiner la note
+            const noteWidth = Math.max(2, x2 - x1);
+            this.ctx.fillRect(x1, y - noteHeight / 2, noteWidth, noteHeight);
+        }
+
+        // Ligne du playhead
+        this.ctx.strokeStyle = this.playheadColor;
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.moveTo(playheadX, 0);
+        this.ctx.lineTo(playheadX, height);
+        this.ctx.stroke();
+
+        // Afficher le temps
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = '12px monospace';
+        this.ctx.textAlign = 'left';
+        const timeStr = this.formatTime(currentMs);
+        this.ctx.fillText(timeStr, 5, 15);
+    }
+
+    formatTime(ms) {
+        const s = Math.floor(ms / 1000);
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return `${m}:${sec.toString().padStart(2, '0')}`;
+    }
+
     destroy() {
         this.stopAnimation();
         if (this.container && this.container.parentNode) {
             this.container.parentNode.removeChild(this.container);
         }
-        this.pianoRoll = null;
-        this.container = null;
     }
 }
 
-// Export global
+// Export
 if (typeof window !== 'undefined') {
     window.PianoRollView = PianoRollView;
-    console.log('✓ PianoRollView class loaded');
+    console.log('✓ PianoRollView v2 loaded');
 }
