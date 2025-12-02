@@ -32,7 +32,9 @@ class PianoRollView {
         // Animation
         this.animationFrameId = null;
         this.lastUpdateTime = 0;
-        this.updateThrottleMs = 50; // Throttle updates to 20fps max
+        this.lastSequenceUpdateTime = 0;
+        this.scrollThrottleMs = 0; // No throttle for scroll position (instant)
+        this.sequenceThrottleMs = 100; // Throttle sequence filtering to 10fps (less critical)
 
         // Feature enabled state (from settings)
         this.isEnabled = false;
@@ -741,22 +743,26 @@ class PianoRollView {
     }
 
     /**
-     * Mettre à jour la vue (avec throttling)
+     * Mettre à jour la vue (scroll position immédiat, séquence throttlée)
      */
     updateView() {
         if (!this.pianoRoll || !this.isVisible) return;
 
         const now = performance.now();
-        if (now - this.lastUpdateTime < this.updateThrottleMs) {
-            return; // Skip update if too soon
-        }
-        this.lastUpdateTime = now;
 
-        // Mettre à jour la position de lecture (xoffset)
+        // Toujours mettre à jour la position de lecture (xoffset) - priorité visuelle
         this.pianoRoll.xoffset = this.currentTick;
 
-        // Mettre à jour la séquence visible (filtrage par fenêtre de temps)
-        this.updateSequence();
+        // Redessiner le piano roll pour un défilement fluide
+        if (typeof this.pianoRoll.redraw === 'function') {
+            this.pianoRoll.redraw();
+        }
+
+        // Mettre à jour la séquence visible moins fréquemment (optimisation)
+        if (now - this.lastSequenceUpdateTime >= this.sequenceThrottleMs) {
+            this.lastSequenceUpdateTime = now;
+            this.updateSequence();
+        }
     }
 
     /**
@@ -765,7 +771,7 @@ class PianoRollView {
     startAnimation() {
         if (this.animationFrameId) return;
 
-        this.lastUpdateTime = 0; // Reset throttle
+        this.lastSequenceUpdateTime = 0; // Reset sequence throttle
 
         const animate = (timestamp) => {
             if (!this.isPlaying) {
