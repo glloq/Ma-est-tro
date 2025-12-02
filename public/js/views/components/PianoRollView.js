@@ -156,6 +156,9 @@ class PianoRollView {
                 // Just store the enabled state, don't show yet
                 // Piano roll will show when playback starts
                 this.isEnabled = settings.showPianoRoll || false;
+                this.log('info', `Settings loaded: showPianoRoll=${this.isEnabled}, displayTime=${this.displayTimeSeconds}s`);
+            } else {
+                this.log('info', 'No saved settings found, using defaults');
             }
         } catch (error) {
             this.log('error', 'Failed to load settings:', error);
@@ -203,8 +206,16 @@ class PianoRollView {
      * Configurer les écouteurs d'événements
      */
     setupEventListeners() {
+        if (!this.eventBus) {
+            this.log('error', 'EventBus not available!');
+            return;
+        }
+
+        this.log('info', 'Setting up event listeners...');
+
         // Changement de paramètres - just update enabled state
-        this.eventBus?.on('settings:piano_roll_changed', (data) => {
+        this.eventBus.on('settings:piano_roll_changed', (data) => {
+            this.log('info', `settings:piano_roll_changed received - enabled: ${data.enabled}`);
             this.isEnabled = data.enabled;
             // If disabled while visible, hide immediately
             if (!this.isEnabled && this.isVisible) {
@@ -212,35 +223,41 @@ class PianoRollView {
             }
         });
 
-        this.eventBus?.on('settings:display_time_changed', (data) => {
+        this.eventBus.on('settings:display_time_changed', (data) => {
             this.displayTimeSeconds = data.time;
             this.updatePianoRollRange();
         });
 
         // Fichier MIDI chargé
-        this.eventBus?.on('file:selected', (data) => {
+        this.eventBus.on('file:selected', (data) => {
+            this.log('info', `file:selected received - hasMidiData: ${!!data.midiData}`);
             if (data.midiData) {
                 this.loadMidiData(data.midiData);
             }
         });
 
         // Playback events
-        this.eventBus?.on('playback:play', () => {
+        this.eventBus.on('playback:play', () => {
+            this.log('info', `playback:play received - isEnabled: ${this.isEnabled}, hasMidiData: ${!!this.midiData}`);
             this.isPlaying = true;
             // Show piano roll when playback starts (if enabled and has data)
             if (this.isEnabled && this.midiData) {
                 this.show();
+            } else {
+                this.log('warn', `Piano roll not shown: isEnabled=${this.isEnabled}, hasMidiData=${!!this.midiData}`);
             }
             this.startAnimation();
         });
 
-        this.eventBus?.on('playback:pause', () => {
+        this.eventBus.on('playback:pause', () => {
+            this.log('info', 'playback:pause received');
             this.isPlaying = false;
             this.stopAnimation();
             // Keep piano roll visible during pause
         });
 
-        this.eventBus?.on('playback:stop', () => {
+        this.eventBus.on('playback:stop', () => {
+            this.log('info', 'playback:stop received');
             this.isPlaying = false;
             this.currentTick = 0;
             this.stopAnimation();
@@ -248,7 +265,9 @@ class PianoRollView {
             this.hide();
         });
 
-        this.eventBus?.on('playback:time', (data) => {
+        this.log('info', 'Event listeners setup complete');
+
+        this.eventBus.on('playback:time', (data) => {
             if (data.tick !== undefined) {
                 this.currentTick = data.tick;
             } else if (data.time !== undefined) {
@@ -261,7 +280,7 @@ class PianoRollView {
         });
 
         // Position de lecture mise à jour par le synthétiseur
-        this.eventBus?.on('synthesizer:position', (data) => {
+        this.eventBus.on('synthesizer:position', (data) => {
             this.currentTick = data.tick || 0;
             if (!this.isPlaying) {
                 this.updateView();
