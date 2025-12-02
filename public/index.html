@@ -3727,6 +3727,11 @@
 
                 await api.sendCommand('playback_start', { fileId });
                 log(`▶️ Lecture de ${filename}`, 'info');
+
+                // Émettre l'événement pour le piano roll (le backend peut ne pas envoyer playback_started)
+                if (window.eventBus) {
+                    window.eventBus.emit('playback:play', { fileId: fileId });
+                }
             } catch (error) {
                 log(`Erreur lecture: ${error.message}`, 'error');
                 currentFileId = null;
