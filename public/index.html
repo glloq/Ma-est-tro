@@ -2316,15 +2316,16 @@
             }
 
             // Démarrer la lecture
-            play() {
+            async play() {
                 if (this.playing && !this.paused) {
                     this.logger.warn('[VirtualPlayer] Déjà en lecture');
                     return;
                 }
 
                 // Utiliser le synthétiseur pour la lecture (timing précis)
+                // IMPORTANT: Attendre que play() soit terminé pour que startTime soit défini
                 if (this.synthesizer && this.synthesizerReady) {
-                    this.synthesizer.play();
+                    await this.synthesizer.play();
                 }
 
                 if (this.paused) {
@@ -3841,7 +3842,7 @@
 
                     // Charger le fichier et démarrer la lecture
                     await virtualPlayer.load(fileId, filename, config.channels);
-                    virtualPlayer.play();
+                    await virtualPlayer.play();
 
                     log(`▶️ Lecture virtuelle de ${filename}`, 'info');
                 } catch (error) {
@@ -3954,9 +3955,9 @@
                     if (isPlaying) {
                         virtualPlayer.pause();
                     } else if (isPaused) {
-                        virtualPlayer.play();
+                        await virtualPlayer.play();
                     } else {
-                        virtualPlayer.play();
+                        await virtualPlayer.play();
                     }
                 } else {
                     // Backend
