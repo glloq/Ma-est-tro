@@ -260,44 +260,71 @@ class PianoRollView {
         if (!this.midiData || !this.midiData.tracks) {
             this.sequence = [];
             this.fullSequence = [];
+            this.log('warn', 'No MIDI data or tracks available');
             return;
         }
 
         const allNotes = [];
-        this.ticksPerBeat = this.midiData.ticksPerQuarter || this.midiData.header?.ticksPerBeat || 480;
+        // Support multiple formats for ticksPerBeat
+        this.ticksPerBeat = this.midiData.ticksPerQuarter ||
+                           this.midiData.header?.ticksPerBeat ||
+                           this.midiData.ticksPerBeat || 480;
 
         // Also get tempo from midiData if available
         if (this.midiData.tempo) {
             this.tempo = this.midiData.tempo;
         }
 
+        this.log('info', `Processing ${this.midiData.tracks.length} tracks, ticksPerBeat: ${this.ticksPerBeat}`);
+
         this.midiData.tracks.forEach((track, trackIndex) => {
             // Support both formats: track as array of events, or track.events as array
             const events = track.events || track;
-            if (!events || !Array.isArray(events)) return;
+            if (!events || !Array.isArray(events)) {
+                this.log('debug', `Track ${trackIndex}: no events array`);
+                return;
+            }
 
             const noteOns = {};
+            let currentTick = 0; // For deltaTime-based format
 
             events.forEach(event => {
-                // Handle MidiParser format: type is 'noteOn', 'noteOff', etc.
-                // with data1 = noteNumber, data2 = velocity, time = tick position
-                if (event.type === 'noteOn' && event.data2 > 0) {
-                    const channel = event.channel !== undefined ? event.channel : 0;
-                    const key = `${channel}_${event.data1}`;
+                // Accumulate ticks for deltaTime-based format
+                if (event.deltaTime !== undefined) {
+                    currentTick += event.deltaTime;
+                }
+
+                // Get note number and velocity - support multiple formats
+                const noteNumber = event.noteNumber !== undefined ? event.noteNumber :
+                                  event.data1 !== undefined ? event.data1 :
+                                  event.note;
+                const velocity = event.velocity !== undefined ? event.velocity :
+                                event.data2 !== undefined ? event.data2 : 0;
+                const channel = event.channel !== undefined ? event.channel : 0;
+
+                // Get tick position - support both absolute time and deltaTime
+                const tickPosition = event.time !== undefined ? event.time : currentTick;
+
+                // Handle noteOn
+                if ((event.type === 'noteOn' || event.subtype === 'noteOn') && velocity > 0 && noteNumber !== undefined) {
+                    const key = `${channel}_${noteNumber}`;
                     noteOns[key] = {
-                        tick: event.time,
-                        velocity: event.data2,
+                        tick: tickPosition,
+                        velocity: velocity,
                         channel: channel,
-                        note: event.data1
+                        note: noteNumber
                     };
-                } else if (event.type === 'noteOff' || (event.type === 'noteOn' && event.data2 === 0)) {
-                    const channel = event.channel !== undefined ? event.channel : 0;
-                    const key = `${channel}_${event.data1}`;
+                }
+                // Handle noteOff
+                else if ((event.type === 'noteOff' || event.subtype === 'noteOff' ||
+                         ((event.type === 'noteOn' || event.subtype === 'noteOn') && velocity === 0)) &&
+                         noteNumber !== undefined) {
+                    const key = `${channel}_${noteNumber}`;
                     if (noteOns[key]) {
                         const noteOn = noteOns[key];
                         allNotes.push({
                             tick: noteOn.tick,
-                            gate: event.time - noteOn.tick,
+                            gate: tickPosition - noteOn.tick,
                             note: noteOn.note,
                             channel: noteOn.channel,
                             velocity: noteOn.velocity
@@ -344,9 +371,10 @@ class PianoRollView {
             events.forEach(event => {
                 const channel = event.channel !== undefined ? event.channel : 0;
 
-                // Handle programChange (MidiParser format)
-                if (event.type === 'programChange') {
-                    const program = event.data1 !== undefined ? event.data1 : 0;
+                // Handle programChange - support multiple formats
+                if (event.type === 'programChange' || event.subtype === 'programChange') {
+                    const program = event.programNumber !== undefined ? event.programNumber :
+                                   event.data1 !== undefined ? event.data1 : 0;
                     if (!channelMap.has(channel)) {
                         channelMap.set(channel, { program, noteCount: 0 });
                     } else {
@@ -354,8 +382,10 @@ class PianoRollView {
                     }
                 }
 
-                // Handle noteOn (MidiParser format)
-                if (event.type === 'noteOn' && event.data2 > 0) {
+                // Handle noteOn - support multiple formats
+                const velocity = event.velocity !== undefined ? event.velocity :
+                                event.data2 !== undefined ? event.data2 : 0;
+                if ((event.type === 'noteOn' || event.subtype === 'noteOn') && velocity > 0) {
                     if (!channelMap.has(channel)) {
                         channelMap.set(channel, { program: 0, noteCount: 0 });
                     }
@@ -706,10 +736,26 @@ class PianoRollView {
     }
 
     /**
+     * Calculer la position du piano roll sous le header
+     */
+    updatePosition() {
+        const header = document.querySelector('header');
+        if (header && this.container) {
+            const headerRect = header.getBoundingClientRect();
+            const topPosition = headerRect.bottom + 16; // 16px de marge
+            this.container.style.setProperty('--piano-roll-top', `${topPosition}px`);
+        }
+    }
+
+    /**
      * Afficher le piano roll
      */
     show() {
         this.isVisible = true;
+
+        // Calculer la position sous le header
+        this.updatePosition();
+
         if (this.container) {
             this.container.classList.remove('hidden');
             this.container.classList.add('fullscreen');

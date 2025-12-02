@@ -23,13 +23,13 @@
 /* ===== MODE FULLSCREEN ===== */
 .piano-roll-view.fullscreen {
     position: fixed;
-    top: 80px; /* Hauteur du header */
-    left: 0;
-    right: 0;
-    bottom: 0;
+    top: var(--piano-roll-top, 200px); /* Hauteur du header (calculée dynamiquement par JS) */
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
     z-index: 100;
     margin: 0;
-    border-radius: 0;
+    border-radius: 12px;
     max-height: none;
 }
 
@@ -37,7 +37,7 @@
     flex: 1;
     min-height: 0;
     max-height: none;
-    height: calc(100vh - 80px - 60px); /* viewport - header - piano roll header */
+    height: 100%;
 }
 
 .piano-roll-view.fullscreen .piano-roll-view-container {
@@ -275,14 +275,12 @@ body.theme-colored .piano-roll-view-header {
         max-height: 200px;
     }
 
-    /* Fullscreen mode takes full height on mobile too */
+    /* Fullscreen mode on mobile */
     .piano-roll-view.fullscreen {
-        top: 60px;
-    }
-
-    .piano-roll-view.fullscreen .piano-roll-view-content {
-        max-height: none;
-        height: calc(100vh - 60px - 80px);
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        border-radius: 8px;
     }
 }
 
@@ -308,9 +306,10 @@ body.theme-colored .piano-roll-view-header {
         max-height: 160px;
     }
 
-    .piano-roll-view.fullscreen .piano-roll-view-content {
-        max-height: none;
-        height: calc(100vh - 60px - 70px);
+    .piano-roll-view.fullscreen {
+        left: 4px;
+        right: 4px;
+        bottom: 4px;
     }
 }
 
