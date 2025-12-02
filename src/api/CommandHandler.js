@@ -72,7 +72,7 @@ class CommandHandler {
       'file_export': (data) => this.fileExport(data),
       'file_search': (data) => this.fileSearch(data),
 
-      // ==================== PLAYBACK (13 commands) ====================
+      // ==================== PLAYBACK (14 commands) ====================
       'playback_start': (data) => this.playbackStart(data),
       'playback_stop': () => this.playbackStop(),
       'playback_pause': () => this.playbackPause(),
@@ -86,6 +86,7 @@ class CommandHandler {
       'playback_get_channels': () => this.playbackGetChannels(),
       'playback_set_channel_routing': (data) => this.playbackSetChannelRouting(data),
       'playback_clear_channel_routing': () => this.playbackClearChannelRouting(),
+      'playback_mute_channel': (data) => this.playbackMuteChannel(data),
 
       // ==================== LATENCY (8 commands) ====================
       'latency_measure': (data) => this.latencyMeasure(data),
@@ -827,6 +828,30 @@ class CommandHandler {
   async playbackClearChannelRouting() {
     this.app.midiPlayer.clearChannelRouting();
     return { success: true };
+  }
+
+  async playbackMuteChannel(data) {
+    if (data.channel === undefined) {
+      throw new Error('Missing channel parameter');
+    }
+
+    const channel = parseInt(data.channel);
+    if (isNaN(channel) || channel < 0 || channel > 15) {
+      throw new Error('Invalid channel (must be 0-15)');
+    }
+
+    if (data.muted) {
+      this.app.midiPlayer.muteChannel(channel);
+    } else {
+      this.app.midiPlayer.unmuteChannel(channel);
+    }
+
+    return {
+      success: true,
+      channel: channel,
+      channelDisplay: channel + 1,
+      muted: data.muted
+    };
   }
 
   // ==================== LATENCY HANDLERS ====================
