@@ -20,7 +20,8 @@
     "seconds": "sekuntia",
     "octave": "oktaavi",
     "octaves": "oktaavia",
-    "keys": "kosketinta"
+    "keys": "kosketinta",
+    "clear": "Tyhjennä"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI-orkesterointijärjestelmä",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Kieli",
       "select": "Valitse kieli"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Näytä piano roll",
+      "description": "Näyttää tulevat nuotit toiston aikana",
+      "enabled": "Piano roll käytössä",
+      "disabled": "Piano roll pois käytöstä"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "Kanavan vaihto ei ole käytettävissä",
     "channelChanged": "Kanava vaihdettu {count} nuotille",
     "instrumentApplied": "Kanava {channel}: {instrument}",
-    "snapChanged": "Tarttuminen: {snap}"
+    "snapChanged": "Tarttuminen: {snap}",
+    "play": "Toista",
+    "pause": "Tauko",
+    "stop": "Pysäytä",
+    "synthInitError": "Äänisyntetisaattorin alustus epäonnistui",
+    "changeChannelTitle": "Vaihda kanava",
+    "changeInstrumentTitle": "Vaihda soitin",
+    "apply": "Käytä",
+    "sameInstrument": "Sama soitin on jo valittu",
+    "noChannelAvailable": "Ei kanavaa käytettävissä",
+    "instrumentAppliedToSelection": "{count} nuotti(a) → {instrument}",
+    "renameFile": "Nimeä tiedosto uudelleen",
+    "renameEmpty": "Tiedostonimi ei voi olla tyhjä",
+    "renameSuccess": "Tiedoston nimeäminen onnistui",
+    "renameFailed": "Uudelleennimeäminen epäonnistui"
   },
   "errors": {
     "deviceNotFound": "Laitetta ei löytynyt: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Uuden kansion nimi:",
     "folderCreated": "Kansio \"{folder}\" luotu",
     "uploadSuccess": "Ladataan {filename}...",
-    "uploadComplete": "Tiedosto ladattu"
+    "uploadComplete": "Tiedosto ladattu",
+    "newFolder": "Uusi kansio",
+    "folderNamePlaceholder": "Kansion nimi...",
+    "create": "Luo",
+    "folderExists": "Kansio \"{folder}\" on jo olemassa",
+    "folderExistsTitle": "Kansio on olemassa"
+  },
+  "pianoRoll": {
+    "title": "Tulevat nuotit",
+    "noChannels": "Ei kanavia"
   }
 }

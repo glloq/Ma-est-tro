@@ -20,7 +20,8 @@
     "seconds": "วินาที",
     "octave": "อ็อกเทฟ",
     "octaves": "อ็อกเทฟ",
-    "keys": "คีย์"
+    "keys": "คีย์",
+    "clear": "ล้าง"
   },
   "app": {
     "title": "MidiMind 5.0 - ระบบออร์เคสตร้า MIDI",
@@ -55,6 +56,13 @@
     "language": {
       "title": "ภาษา",
       "select": "เลือกภาษา"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "แสดง piano roll",
+      "description": "แสดงโน้ตที่กำลังจะมาถึงระหว่างการเล่น",
+      "enabled": "เปิดใช้งาน Piano roll",
+      "disabled": "ปิดใช้งาน Piano roll"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "ฟังก์ชันเปลี่ยนช่องไม่พร้อมใช้งาน",
     "channelChanged": "เปลี่ยนช่องสำหรับ {count} โน้ตแล้ว",
     "instrumentApplied": "ช่อง {channel}: {instrument}",
-    "snapChanged": "Snap: {snap}"
+    "snapChanged": "Snap: {snap}",
+    "play": "เล่น",
+    "pause": "หยุดชั่วคราว",
+    "stop": "หยุด",
+    "synthInitError": "ไม่สามารถเริ่มต้นตัวสังเคราะห์เสียงได้",
+    "changeChannelTitle": "เปลี่ยนช่อง",
+    "changeInstrumentTitle": "เปลี่ยนเครื่องดนตรี",
+    "apply": "ใช้",
+    "sameInstrument": "เครื่องดนตรีเดียวกันถูกเลือกแล้ว",
+    "noChannelAvailable": "ไม่มีช่องว่าง",
+    "instrumentAppliedToSelection": "{count} โน้ต → {instrument}",
+    "renameFile": "เปลี่ยนชื่อไฟล์",
+    "renameEmpty": "ชื่อไฟล์ไม่สามารถเว้นว่างได้",
+    "renameSuccess": "เปลี่ยนชื่อไฟล์สำเร็จ",
+    "renameFailed": "การเปลี่ยนชื่อล้มเหลว"
   },
   "errors": {
     "deviceNotFound": "ไม่พบอุปกรณ์: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "ชื่อโฟลเดอร์ใหม่:",
     "folderCreated": "สร้างโฟลเดอร์ \"{folder}\" แล้ว",
     "uploadSuccess": "กำลังอัปโหลด {filename}...",
-    "uploadComplete": "อัปโหลดไฟล์สำเร็จ"
+    "uploadComplete": "อัปโหลดไฟล์สำเร็จ",
+    "newFolder": "โฟลเดอร์ใหม่",
+    "folderNamePlaceholder": "ชื่อโฟลเดอร์...",
+    "create": "สร้าง",
+    "folderExists": "โฟลเดอร์ \"{folder}\" มีอยู่แล้ว",
+    "folderExistsTitle": "โฟลเดอร์มีอยู่แล้ว"
+  },
+  "pianoRoll": {
+    "title": "โน้ตที่กำลังจะมาถึง",
+    "noChannels": "ไม่มีช่อง"
   }
 }

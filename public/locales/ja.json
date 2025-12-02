@@ -20,7 +20,8 @@
     "seconds": "秒",
     "octave": "オクターブ",
     "octaves": "オクターブ",
-    "keys": "鍵"
+    "keys": "鍵",
+    "clear": "クリア"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI Orchestration System",
@@ -55,6 +56,13 @@
     "language": {
       "title": "言語",
       "select": "言語を選択"
+    },
+    "pianoRoll": {
+      "title": "ピアノロール",
+      "enable": "ピアノロールを表示",
+      "description": "再生中に次のノートを表示します",
+      "enabled": "ピアノロール有効",
+      "disabled": "ピアノロール無効"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "チャンネル変更機能は利用できません",
     "channelChanged": "{count}個のノートのチャンネルを変更しました",
     "instrumentApplied": "チャンネル {channel}: {instrument}",
-    "snapChanged": "スナップ: {snap}"
+    "snapChanged": "スナップ: {snap}",
+    "play": "再生",
+    "pause": "一時停止",
+    "stop": "停止",
+    "synthInitError": "オーディオシンセサイザーを初期化できません",
+    "changeChannelTitle": "チャンネルを変更",
+    "changeInstrumentTitle": "楽器を変更",
+    "apply": "適用",
+    "sameInstrument": "同じ楽器がすでに選択されています",
+    "noChannelAvailable": "利用可能なチャンネルがありません",
+    "instrumentAppliedToSelection": "{count}個のノート → {instrument}",
+    "renameFile": "ファイル名を変更",
+    "renameEmpty": "ファイル名は空にできません",
+    "renameSuccess": "ファイル名を変更しました",
+    "renameFailed": "名前変更に失敗しました"
   },
   "errors": {
     "deviceNotFound": "デバイスが見つかりません: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "新しいフォルダの名前:",
     "folderCreated": "フォルダ \"{folder}\" を作成しました",
     "uploadSuccess": "{filename}をアップロード中...",
-    "uploadComplete": "ファイルが正常にアップロードされました"
+    "uploadComplete": "ファイルが正常にアップロードされました",
+    "newFolder": "新しいフォルダ",
+    "folderNamePlaceholder": "フォルダ名...",
+    "create": "作成",
+    "folderExists": "フォルダ \"{folder}\" はすでに存在します",
+    "folderExistsTitle": "フォルダが存在します"
+  },
+  "pianoRoll": {
+    "title": "次のノート",
+    "noChannels": "チャンネルなし"
   }
 }

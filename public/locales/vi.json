@@ -20,7 +20,8 @@
     "seconds": "giây",
     "octave": "quãng tám",
     "octaves": "quãng tám",
-    "keys": "phím"
+    "keys": "phím",
+    "clear": "Xóa"
   },
   "app": {
     "title": "MidiMind 5.0 - Hệ thống Phối khí MIDI",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Ngôn ngữ",
       "select": "Chọn ngôn ngữ"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Hiển thị piano roll",
+      "description": "Hiển thị các nốt sắp tới trong khi phát",
+      "enabled": "Piano roll đã bật",
+      "disabled": "Piano roll đã tắt"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "Chức năng thay đổi kênh không khả dụng",
     "channelChanged": "Đã thay đổi kênh cho {count} nốt",
     "instrumentApplied": "Kênh {channel}: {instrument}",
-    "snapChanged": "Snap: {snap}"
+    "snapChanged": "Snap: {snap}",
+    "play": "Phát",
+    "pause": "Tạm dừng",
+    "stop": "Dừng",
+    "synthInitError": "Không thể khởi tạo bộ tổng hợp âm thanh",
+    "changeChannelTitle": "Thay đổi kênh",
+    "changeInstrumentTitle": "Thay đổi nhạc cụ",
+    "apply": "Áp dụng",
+    "sameInstrument": "Nhạc cụ giống nhau đã được chọn",
+    "noChannelAvailable": "Không có kênh khả dụng",
+    "instrumentAppliedToSelection": "{count} nốt → {instrument}",
+    "renameFile": "Đổi tên tệp",
+    "renameEmpty": "Tên tệp không được để trống",
+    "renameSuccess": "Đổi tên tệp thành công",
+    "renameFailed": "Đổi tên thất bại"
   },
   "errors": {
     "deviceNotFound": "Không tìm thấy thiết bị: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Tên thư mục mới:",
     "folderCreated": "Thư mục \"{folder}\" đã tạo",
     "uploadSuccess": "Đang tải lên {filename}...",
-    "uploadComplete": "Tệp đã tải lên thành công"
+    "uploadComplete": "Tệp đã tải lên thành công",
+    "newFolder": "Thư mục mới",
+    "folderNamePlaceholder": "Tên thư mục...",
+    "create": "Tạo",
+    "folderExists": "Thư mục \"{folder}\" đã tồn tại",
+    "folderExistsTitle": "Thư mục đã tồn tại"
+  },
+  "pianoRoll": {
+    "title": "Các nốt sắp tới",
+    "noChannels": "Không có kênh"
   }
 }

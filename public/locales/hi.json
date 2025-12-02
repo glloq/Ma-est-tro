@@ -20,7 +20,8 @@
     "seconds": "सेकंड",
     "octave": "ऑक्टेव",
     "octaves": "ऑक्टेव",
-    "keys": "कुंजियाँ"
+    "keys": "कुंजियाँ",
+    "clear": "साफ़ करें"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI ऑर्केस्ट्रेशन सिस्टम",
@@ -55,6 +56,13 @@
     "language": {
       "title": "भाषा",
       "select": "भाषा चुनें"
+    },
+    "pianoRoll": {
+      "title": "पियानो रोल",
+      "enable": "पियानो रोल दिखाएं",
+      "description": "प्लेबैक के दौरान आगामी नोट्स प्रदर्शित करता है",
+      "enabled": "पियानो रोल सक्षम",
+      "disabled": "पियानो रोल अक्षम"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "चैनल बदलें फंक्शन उपलब्ध नहीं",
     "channelChanged": "{count} नोट्स का चैनल बदला गया",
     "instrumentApplied": "चैनल {channel}: {instrument}",
-    "snapChanged": "स्नैप: {snap}"
+    "snapChanged": "स्नैप: {snap}",
+    "play": "चलाएं",
+    "pause": "रोकें",
+    "stop": "बंद करें",
+    "synthInitError": "ऑडियो सिंथेसाइज़र प्रारंभ करने में असमर्थ",
+    "changeChannelTitle": "चैनल बदलें",
+    "changeInstrumentTitle": "इंस्ट्रूमेंट बदलें",
+    "apply": "लागू करें",
+    "sameInstrument": "समान इंस्ट्रूमेंट पहले से चुना गया है",
+    "noChannelAvailable": "कोई चैनल उपलब्ध नहीं",
+    "instrumentAppliedToSelection": "{count} नोट(स) → {instrument}",
+    "renameFile": "फ़ाइल का नाम बदलें",
+    "renameEmpty": "फ़ाइल नाम खाली नहीं हो सकता",
+    "renameSuccess": "फ़ाइल का नाम सफलतापूर्वक बदला गया",
+    "renameFailed": "नाम बदलना विफल"
   },
   "errors": {
     "deviceNotFound": "डिवाइस नहीं मिला: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "नया फोल्डर नाम:",
     "folderCreated": "फोल्डर \"{folder}\" बनाया गया",
     "uploadSuccess": "{filename} अपलोड हो रहा है...",
-    "uploadComplete": "फाइल सफलतापूर्वक अपलोड हुई"
+    "uploadComplete": "फाइल सफलतापूर्वक अपलोड हुई",
+    "newFolder": "नया फ़ोल्डर",
+    "folderNamePlaceholder": "फ़ोल्डर का नाम...",
+    "create": "बनाएं",
+    "folderExists": "फ़ोल्डर \"{folder}\" पहले से मौजूद है",
+    "folderExistsTitle": "फ़ोल्डर मौजूद है"
+  },
+  "pianoRoll": {
+    "title": "आगामी नोट्स",
+    "noChannels": "कोई चैनल नहीं"
   }
 }

@@ -20,7 +20,8 @@
     "seconds": "másodperc",
     "octave": "oktáv",
     "octaves": "oktáv",
-    "keys": "billentyű"
+    "keys": "billentyű",
+    "clear": "Törlés"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI Hangszerelési rendszer",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Nyelv",
       "select": "Nyelv kiválasztása"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Piano roll megjelenítése",
+      "description": "Megjeleníti a közelgő hangokat lejátszás közben",
+      "enabled": "Piano roll engedélyezve",
+      "disabled": "Piano roll letiltva"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "A csatorna módosítás funkció nem érhető el",
     "channelChanged": "Csatorna módosítva {count} hangnál",
     "instrumentApplied": "{channel}. csatorna: {instrument}",
-    "snapChanged": "Illesztés: {snap}"
+    "snapChanged": "Illesztés: {snap}",
+    "play": "Lejátszás",
+    "pause": "Szünet",
+    "stop": "Állj",
+    "synthInitError": "Nem sikerült inicializálni az audio szintetizátort",
+    "changeChannelTitle": "Csatorna váltása",
+    "changeInstrumentTitle": "Hangszer váltása",
+    "apply": "Alkalmazás",
+    "sameInstrument": "Ugyanaz a hangszer már ki van választva",
+    "noChannelAvailable": "Nincs elérhető csatorna",
+    "instrumentAppliedToSelection": "{count} hangjegy → {instrument}",
+    "renameFile": "Fájl átnevezése",
+    "renameEmpty": "A fájlnév nem lehet üres",
+    "renameSuccess": "Fájl sikeresen átnevezve",
+    "renameFailed": "Átnevezés sikertelen"
   },
   "errors": {
     "deviceNotFound": "Eszköz nem található: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Új mappa neve:",
     "folderCreated": "\"{folder}\" mappa létrehozva",
     "uploadSuccess": "{filename} feltöltése...",
-    "uploadComplete": "Fájl sikeresen feltöltve"
+    "uploadComplete": "Fájl sikeresen feltöltve",
+    "newFolder": "Új mappa",
+    "folderNamePlaceholder": "Mappa neve...",
+    "create": "Létrehozás",
+    "folderExists": "A(z) \"{folder}\" mappa már létezik",
+    "folderExistsTitle": "A mappa létezik"
+  },
+  "pianoRoll": {
+    "title": "Közelgő hangok",
+    "noChannels": "Nincsenek csatornák"
   }
 }

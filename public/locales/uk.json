@@ -20,7 +20,8 @@
     "seconds": "секунд",
     "octave": "октава",
     "octaves": "октав",
-    "keys": "клавіш"
+    "keys": "клавіш",
+    "clear": "Очистити"
   },
   "app": {
     "title": "MidiMind 5.0 - Система оркестрації MIDI",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Мова",
       "select": "Вибрати мову"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Показати piano roll",
+      "description": "Відображає майбутні ноти під час відтворення",
+      "enabled": "Piano roll увімкнено",
+      "disabled": "Piano roll вимкнено"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "Функція зміни каналу недоступна",
     "channelChanged": "Канал змінено для {count} нот(и)",
     "instrumentApplied": "Канал {channel}: {instrument}",
-    "snapChanged": "Магнітність: {snap}"
+    "snapChanged": "Магнітність: {snap}",
+    "play": "Відтворити",
+    "pause": "Пауза",
+    "stop": "Стоп",
+    "synthInitError": "Неможливо ініціалізувати аудіо синтезатор",
+    "changeChannelTitle": "Змінити канал",
+    "changeInstrumentTitle": "Змінити інструмент",
+    "apply": "Застосувати",
+    "sameInstrument": "Той самий інструмент вже вибрано",
+    "noChannelAvailable": "Немає доступного каналу",
+    "instrumentAppliedToSelection": "{count} нот(и) → {instrument}",
+    "renameFile": "Перейменувати файл",
+    "renameEmpty": "Ім'я файлу не може бути порожнім",
+    "renameSuccess": "Файл успішно перейменовано",
+    "renameFailed": "Помилка перейменування"
   },
   "errors": {
     "deviceNotFound": "Пристрій не знайдено: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Назва нової папки:",
     "folderCreated": "Папку \"{folder}\" створено",
     "uploadSuccess": "Завантаження {filename}...",
-    "uploadComplete": "Файл успішно завантажено"
+    "uploadComplete": "Файл успішно завантажено",
+    "newFolder": "Нова папка",
+    "folderNamePlaceholder": "Назва папки...",
+    "create": "Створити",
+    "folderExists": "Папка \"{folder}\" вже існує",
+    "folderExistsTitle": "Папка існує"
+  },
+  "pianoRoll": {
+    "title": "Майбутні ноти",
+    "noChannels": "Немає каналів"
   }
 }

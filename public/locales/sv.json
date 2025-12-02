@@ -20,7 +20,8 @@
     "seconds": "sekunder",
     "octave": "oktav",
     "octaves": "oktaver",
-    "keys": "tangenter"
+    "keys": "tangenter",
+    "clear": "Rensa"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI Orkestreringssystem",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Språk",
       "select": "Välj språk"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Visa piano roll",
+      "description": "Visar kommande noter under uppspelning",
+      "enabled": "Piano roll aktiverad",
+      "disabled": "Piano roll inaktiverad"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "Ändra kanal-funktionen är inte tillgänglig",
     "channelChanged": "Kanal ändrad för {count} not(er)",
     "instrumentApplied": "Kanal {channel}: {instrument}",
-    "snapChanged": "Snap: {snap}"
+    "snapChanged": "Snap: {snap}",
+    "play": "Spela",
+    "pause": "Pausa",
+    "stop": "Stoppa",
+    "synthInitError": "Kan inte initiera ljudsynt",
+    "changeChannelTitle": "Ändra kanal",
+    "changeInstrumentTitle": "Ändra instrument",
+    "apply": "Verkställ",
+    "sameInstrument": "Samma instrument redan valt",
+    "noChannelAvailable": "Ingen kanal tillgänglig",
+    "instrumentAppliedToSelection": "{count} not(er) → {instrument}",
+    "renameFile": "Byt namn på fil",
+    "renameEmpty": "Filnamn kan inte vara tomt",
+    "renameSuccess": "Fil omdöpt",
+    "renameFailed": "Namnbyte misslyckades"
   },
   "errors": {
     "deviceNotFound": "Enhet hittades inte: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Nytt mappnamn:",
     "folderCreated": "Mappen \"{folder}\" skapad",
     "uploadSuccess": "Laddar upp {filename}...",
-    "uploadComplete": "Filen laddades upp"
+    "uploadComplete": "Filen laddades upp",
+    "newFolder": "Ny mapp",
+    "folderNamePlaceholder": "Mappnamn...",
+    "create": "Skapa",
+    "folderExists": "Mappen \"{folder}\" finns redan",
+    "folderExistsTitle": "Mappen finns"
+  },
+  "pianoRoll": {
+    "title": "Kommande noter",
+    "noChannels": "Inga kanaler"
   }
 }

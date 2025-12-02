@@ -20,7 +20,8 @@
     "seconds": "সেকেন্ড",
     "octave": "অক্টেভ",
     "octaves": "অক্টেভ",
-    "keys": "কী"
+    "keys": "কী",
+    "clear": "সাফ করুন"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI অর্কেস্ট্রেশন সিস্টেম",
@@ -55,6 +56,13 @@
     "language": {
       "title": "ভাষা",
       "select": "ভাষা নির্বাচন করুন"
+    },
+    "pianoRoll": {
+      "title": "পিয়ানো রোল",
+      "enable": "পিয়ানো রোল দেখান",
+      "description": "প্লেব্যাকের সময় আসন্ন নোটগুলি প্রদর্শন করে",
+      "enabled": "পিয়ানো রোল সক্রিয়",
+      "disabled": "পিয়ানো রোল নিষ্ক্রিয়"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "চ্যানেল পরিবর্তন ফাংশন উপলব্ধ নয়",
     "channelChanged": "{count}টি নোটের চ্যানেল পরিবর্তন করা হয়েছে",
     "instrumentApplied": "চ্যানেল {channel}: {instrument}",
-    "snapChanged": "স্ন্যাপ: {snap}"
+    "snapChanged": "স্ন্যাপ: {snap}",
+    "play": "চালান",
+    "pause": "বিরতি",
+    "stop": "থামান",
+    "synthInitError": "অডিও সিনথেসাইজার আরম্ভ করতে অক্ষম",
+    "changeChannelTitle": "চ্যানেল পরিবর্তন করুন",
+    "changeInstrumentTitle": "যন্ত্র পরিবর্তন করুন",
+    "apply": "প্রয়োগ করুন",
+    "sameInstrument": "একই যন্ত্র ইতিমধ্যে নির্বাচিত",
+    "noChannelAvailable": "কোন চ্যানেল উপলব্ধ নেই",
+    "instrumentAppliedToSelection": "{count} নোট → {instrument}",
+    "renameFile": "ফাইল পুনঃনামকরণ করুন",
+    "renameEmpty": "ফাইলের নাম খালি থাকতে পারে না",
+    "renameSuccess": "ফাইল সফলভাবে পুনঃনামকরণ করা হয়েছে",
+    "renameFailed": "পুনঃনামকরণ ব্যর্থ"
   },
   "errors": {
     "deviceNotFound": "ডিভাইস পাওয়া যায়নি: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "নতুন ফোল্ডারের নাম:",
     "folderCreated": "ফোল্ডার \"{folder}\" তৈরি হয়েছে",
     "uploadSuccess": "{filename} আপলোড হচ্ছে...",
-    "uploadComplete": "ফাইল সফলভাবে আপলোড হয়েছে"
+    "uploadComplete": "ফাইল সফলভাবে আপলোড হয়েছে",
+    "newFolder": "নতুন ফোল্ডার",
+    "folderNamePlaceholder": "ফোল্ডারের নাম...",
+    "create": "তৈরি করুন",
+    "folderExists": "ফোল্ডার \"{folder}\" ইতিমধ্যে বিদ্যমান",
+    "folderExistsTitle": "ফোল্ডার বিদ্যমান"
+  },
+  "pianoRoll": {
+    "title": "আসন্ন নোটগুলি",
+    "noChannels": "কোন চ্যানেল নেই"
   }
 }

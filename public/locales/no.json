@@ -20,7 +20,8 @@
     "seconds": "sekunder",
     "octave": "oktav",
     "octaves": "oktaver",
-    "keys": "tangenter"
+    "keys": "tangenter",
+    "clear": "Tøm"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI Orkestreringssystem",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Språk",
       "select": "Velg språk"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Vis piano roll",
+      "description": "Viser kommende noter under avspilling",
+      "enabled": "Piano roll aktivert",
+      "disabled": "Piano roll deaktivert"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "Endre kanal-funksjonen er ikke tilgjengelig",
     "channelChanged": "Kanal endret for {count} note(r)",
     "instrumentApplied": "Kanal {channel}: {instrument}",
-    "snapChanged": "Snap: {snap}"
+    "snapChanged": "Snap: {snap}",
+    "play": "Spill",
+    "pause": "Pause",
+    "stop": "Stopp",
+    "synthInitError": "Kan ikke initialisere lydsynth",
+    "changeChannelTitle": "Endre kanal",
+    "changeInstrumentTitle": "Endre instrument",
+    "apply": "Bruk",
+    "sameInstrument": "Samme instrument allerede valgt",
+    "noChannelAvailable": "Ingen kanal tilgjengelig",
+    "instrumentAppliedToSelection": "{count} note(r) → {instrument}",
+    "renameFile": "Gi nytt navn til fil",
+    "renameEmpty": "Filnavn kan ikke være tomt",
+    "renameSuccess": "Fil omdøpt",
+    "renameFailed": "Omdøping mislyktes"
   },
   "errors": {
     "deviceNotFound": "Enhet ikke funnet: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Nytt mappenavn:",
     "folderCreated": "Mappen \"{folder}\" opprettet",
     "uploadSuccess": "Laster opp {filename}...",
-    "uploadComplete": "Filen ble lastet opp"
+    "uploadComplete": "Filen ble lastet opp",
+    "newFolder": "Ny mappe",
+    "folderNamePlaceholder": "Mappenavn...",
+    "create": "Opprett",
+    "folderExists": "Mappen \"{folder}\" finnes allerede",
+    "folderExistsTitle": "Mappe eksisterer"
+  },
+  "pianoRoll": {
+    "title": "Kommende noter",
+    "noChannels": "Ingen kanaler"
   }
 }

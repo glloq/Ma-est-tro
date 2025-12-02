@@ -20,7 +20,8 @@
     "seconds": "segundos",
     "octave": "oitava",
     "octaves": "oitavas",
-    "keys": "teclas"
+    "keys": "teclas",
+    "clear": "Limpar"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI Orchestration System",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Idioma",
       "select": "Selecionar idioma"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Mostrar piano roll",
+      "description": "Exibe notas futuras durante a reprodução",
+      "enabled": "Piano roll ativado",
+      "disabled": "Piano roll desativado"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "Função alterar canal não disponível",
     "channelChanged": "Canal alterado para {count} nota(s)",
     "instrumentApplied": "Canal {channel}: {instrument}",
-    "snapChanged": "Magnetismo: {snap}"
+    "snapChanged": "Magnetismo: {snap}",
+    "play": "Reproduzir",
+    "pause": "Pausar",
+    "stop": "Parar",
+    "synthInitError": "Impossível inicializar sintetizador de áudio",
+    "changeChannelTitle": "Alterar Canal",
+    "changeInstrumentTitle": "Alterar Instrumento",
+    "apply": "Aplicar",
+    "sameInstrument": "Mesmo instrumento já selecionado",
+    "noChannelAvailable": "Nenhum canal disponível",
+    "instrumentAppliedToSelection": "{count} nota(s) → {instrument}",
+    "renameFile": "Renomear arquivo",
+    "renameEmpty": "O nome do arquivo não pode estar vazio",
+    "renameSuccess": "Arquivo renomeado com sucesso",
+    "renameFailed": "Falha ao renomear"
   },
   "errors": {
     "deviceNotFound": "Dispositivo não encontrado: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Nome da nova pasta:",
     "folderCreated": "Pasta \"{folder}\" criada",
     "uploadSuccess": "Enviando {filename}...",
-    "uploadComplete": "Arquivo enviado com sucesso"
+    "uploadComplete": "Arquivo enviado com sucesso",
+    "newFolder": "Nova pasta",
+    "folderNamePlaceholder": "Nome da pasta...",
+    "create": "Criar",
+    "folderExists": "A pasta \"{folder}\" já existe",
+    "folderExistsTitle": "Pasta existe"
+  },
+  "pianoRoll": {
+    "title": "Notas Futuras",
+    "noChannels": "Sem canais"
   }
 }

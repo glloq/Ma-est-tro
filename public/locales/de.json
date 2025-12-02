@@ -20,7 +20,8 @@
     "seconds": "Sekunden",
     "octave": "Oktave",
     "octaves": "Oktaven",
-    "keys": "Tasten"
+    "keys": "Tasten",
+    "clear": "Löschen"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI Orchestration System",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Sprache",
       "select": "Sprache auswählen"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Piano Roll anzeigen",
+      "description": "Zeigt bevorstehende Noten während der Wiedergabe an",
+      "enabled": "Piano Roll aktiviert",
+      "disabled": "Piano Roll deaktiviert"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "Kanalwechsel nicht verfügbar",
     "channelChanged": "Kanal geändert für {count} Note(n)",
     "instrumentApplied": "Kanal {channel}: {instrument}",
-    "snapChanged": "Raster: {snap}"
+    "snapChanged": "Raster: {snap}",
+    "play": "Abspielen",
+    "pause": "Pause",
+    "stop": "Stopp",
+    "synthInitError": "Audio-Synthesizer kann nicht initialisiert werden",
+    "changeChannelTitle": "Kanal ändern",
+    "changeInstrumentTitle": "Instrument ändern",
+    "apply": "Anwenden",
+    "sameInstrument": "Gleiches Instrument bereits ausgewählt",
+    "noChannelAvailable": "Kein Kanal verfügbar",
+    "instrumentAppliedToSelection": "{count} Note(n) → {instrument}",
+    "renameFile": "Datei umbenennen",
+    "renameEmpty": "Dateiname darf nicht leer sein",
+    "renameSuccess": "Datei erfolgreich umbenannt",
+    "renameFailed": "Umbenennung fehlgeschlagen"
   },
   "errors": {
     "deviceNotFound": "Gerät nicht gefunden: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Name des neuen Ordners:",
     "folderCreated": "Ordner \"{folder}\" erstellt",
     "uploadSuccess": "Hochladen von {filename}...",
-    "uploadComplete": "Datei erfolgreich hochgeladen"
+    "uploadComplete": "Datei erfolgreich hochgeladen",
+    "newFolder": "Neuer Ordner",
+    "folderNamePlaceholder": "Ordnername...",
+    "create": "Erstellen",
+    "folderExists": "Ordner \"{folder}\" existiert bereits",
+    "folderExistsTitle": "Ordner existiert"
+  },
+  "pianoRoll": {
+    "title": "Bevorstehende Noten",
+    "noChannels": "Keine Kanäle"
   }
 }

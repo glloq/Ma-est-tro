@@ -20,7 +20,8 @@
     "seconds": "saniye",
     "octave": "oktav",
     "octaves": "oktav",
-    "keys": "tuş"
+    "keys": "tuş",
+    "clear": "Temizle"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI Orkestrasyon Sistemi",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Dil",
       "select": "Dil seçin"
+    },
+    "pianoRoll": {
+      "title": "Piyano Rulosu",
+      "enable": "Piyano rulosunu göster",
+      "description": "Oynatma sırasında yaklaşan notaları görüntüler",
+      "enabled": "Piyano rulosu etkin",
+      "disabled": "Piyano rulosu devre dışı"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "Kanal değiştirme işlevi kullanılamıyor",
     "channelChanged": "{count} notanın kanalı değiştirildi",
     "instrumentApplied": "Kanal {channel}: {instrument}",
-    "snapChanged": "Yapış: {snap}"
+    "snapChanged": "Yapış: {snap}",
+    "play": "Oynat",
+    "pause": "Duraklat",
+    "stop": "Durdur",
+    "synthInitError": "Ses sentezleyici başlatılamıyor",
+    "changeChannelTitle": "Kanal Değiştir",
+    "changeInstrumentTitle": "Enstrüman Değiştir",
+    "apply": "Uygula",
+    "sameInstrument": "Aynı enstrüman zaten seçili",
+    "noChannelAvailable": "Kullanılabilir kanal yok",
+    "instrumentAppliedToSelection": "{count} nota → {instrument}",
+    "renameFile": "Dosyayı yeniden adlandır",
+    "renameEmpty": "Dosya adı boş olamaz",
+    "renameSuccess": "Dosya başarıyla yeniden adlandırıldı",
+    "renameFailed": "Yeniden adlandırma başarısız"
   },
   "errors": {
     "deviceNotFound": "Cihaz bulunamadı: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Yeni klasör adı:",
     "folderCreated": "\"{folder}\" klasörü oluşturuldu",
     "uploadSuccess": "{filename} yükleniyor...",
-    "uploadComplete": "Dosya başarıyla yüklendi"
+    "uploadComplete": "Dosya başarıyla yüklendi",
+    "newFolder": "Yeni klasör",
+    "folderNamePlaceholder": "Klasör adı...",
+    "create": "Oluştur",
+    "folderExists": "\"{folder}\" klasörü zaten var",
+    "folderExistsTitle": "Klasör mevcut"
+  },
+  "pianoRoll": {
+    "title": "Yaklaşan Notalar",
+    "noChannels": "Kanal yok"
   }
 }

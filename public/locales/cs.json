@@ -20,7 +20,8 @@
     "seconds": "sekund",
     "octave": "oktáva",
     "octaves": "oktávy",
-    "keys": "kláves"
+    "keys": "kláves",
+    "clear": "Vymazat"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI Orchestrační systém",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Jazyk",
       "select": "Vybrat jazyk"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Zobrazit piano roll",
+      "description": "Zobrazuje nadcházející noty během přehrávání",
+      "enabled": "Piano roll zapnuto",
+      "disabled": "Piano roll vypnuto"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "Funkce změny kanálu není dostupná",
     "channelChanged": "Kanál změněn pro {count} not",
     "instrumentApplied": "Kanál {channel}: {instrument}",
-    "snapChanged": "Přichytávání: {snap}"
+    "snapChanged": "Přichytávání: {snap}",
+    "play": "Přehrát",
+    "pause": "Pozastavit",
+    "stop": "Zastavit",
+    "synthInitError": "Nelze inicializovat audio syntezátor",
+    "changeChannelTitle": "Změnit kanál",
+    "changeInstrumentTitle": "Změnit nástroj",
+    "apply": "Použít",
+    "sameInstrument": "Stejný nástroj již vybrán",
+    "noChannelAvailable": "Žádný kanál k dispozici",
+    "instrumentAppliedToSelection": "{count} not(y) → {instrument}",
+    "renameFile": "Přejmenovat soubor",
+    "renameEmpty": "Název souboru nemůže být prázdný",
+    "renameSuccess": "Soubor úspěšně přejmenován",
+    "renameFailed": "Přejmenování selhalo"
   },
   "errors": {
     "deviceNotFound": "Zařízení nenalezeno: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Název nové složky:",
     "folderCreated": "Složka \"{folder}\" vytvořena",
     "uploadSuccess": "Nahrávání {filename}...",
-    "uploadComplete": "Soubor úspěšně nahrán"
+    "uploadComplete": "Soubor úspěšně nahrán",
+    "newFolder": "Nová složka",
+    "folderNamePlaceholder": "Název složky...",
+    "create": "Vytvořit",
+    "folderExists": "Složka \"{folder}\" již existuje",
+    "folderExistsTitle": "Složka existuje"
+  },
+  "pianoRoll": {
+    "title": "Nadcházející noty",
+    "noChannels": "Žádné kanály"
   }
 }

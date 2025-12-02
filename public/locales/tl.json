@@ -20,7 +20,8 @@
     "seconds": "segundo",
     "octave": "oktaba",
     "octaves": "oktaba",
-    "keys": "mga key"
+    "keys": "mga key",
+    "clear": "I-clear"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI Orchestration System",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Wika",
       "select": "Pumili ng wika"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Ipakita ang piano roll",
+      "description": "Nagpapakita ng mga paparating na nota sa playback",
+      "enabled": "Piano roll enabled",
+      "disabled": "Piano roll disabled"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "Hindi available ang change channel function",
     "channelChanged": "Nabago ang channel para sa {count} nota",
     "instrumentApplied": "Channel {channel}: {instrument}",
-    "snapChanged": "Snap: {snap}"
+    "snapChanged": "Snap: {snap}",
+    "play": "I-play",
+    "pause": "I-pause",
+    "stop": "I-stop",
+    "synthInitError": "Hindi ma-initialize ang audio synthesizer",
+    "changeChannelTitle": "Palitan ang Channel",
+    "changeInstrumentTitle": "Palitan ang Instrumento",
+    "apply": "I-apply",
+    "sameInstrument": "Parehong instrumento ay napili na",
+    "noChannelAvailable": "Walang available na channel",
+    "instrumentAppliedToSelection": "{count} nota → {instrument}",
+    "renameFile": "I-rename ang file",
+    "renameEmpty": "Hindi maaaring walang laman ang filename",
+    "renameSuccess": "Matagumpay na na-rename ang file",
+    "renameFailed": "Nabigo ang pag-rename"
   },
   "errors": {
     "deviceNotFound": "Hindi nahanap ang device: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Pangalan ng bagong folder:",
     "folderCreated": "Nagawa ang folder na \"{folder}\"",
     "uploadSuccess": "Nag-a-upload ng {filename}...",
-    "uploadComplete": "Matagumpay na na-upload ang file"
+    "uploadComplete": "Matagumpay na na-upload ang file",
+    "newFolder": "Bagong folder",
+    "folderNamePlaceholder": "Pangalan ng folder...",
+    "create": "Lumikha",
+    "folderExists": "Ang folder na \"{folder}\" ay mayroon na",
+    "folderExistsTitle": "Mayroon nang folder"
+  },
+  "pianoRoll": {
+    "title": "Mga Paparating na Nota",
+    "noChannels": "Walang mga channel"
   }
 }

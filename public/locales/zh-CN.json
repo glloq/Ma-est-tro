@@ -20,7 +20,8 @@
     "seconds": "秒",
     "octave": "八度",
     "octaves": "八度",
-    "keys": "键"
+    "keys": "键",
+    "clear": "清除"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI Orchestration System",
@@ -55,6 +56,13 @@
     "language": {
       "title": "语言",
       "select": "选择语言"
+    },
+    "pianoRoll": {
+      "title": "钢琴卷帘",
+      "enable": "显示钢琴卷帘",
+      "description": "播放期间显示即将到来的音符",
+      "enabled": "钢琴卷帘已启用",
+      "disabled": "钢琴卷帘已禁用"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "更改通道功能不可用",
     "channelChanged": "已为{count}个音符更改通道",
     "instrumentApplied": "通道 {channel}：{instrument}",
-    "snapChanged": "吸附：{snap}"
+    "snapChanged": "吸附：{snap}",
+    "play": "播放",
+    "pause": "暂停",
+    "stop": "停止",
+    "synthInitError": "无法初始化音频合成器",
+    "changeChannelTitle": "更改通道",
+    "changeInstrumentTitle": "更改乐器",
+    "apply": "应用",
+    "sameInstrument": "已选择相同的乐器",
+    "noChannelAvailable": "没有可用的通道",
+    "instrumentAppliedToSelection": "{count}个音符 → {instrument}",
+    "renameFile": "重命名文件",
+    "renameEmpty": "文件名不能为空",
+    "renameSuccess": "文件重命名成功",
+    "renameFailed": "重命名失败"
   },
   "errors": {
     "deviceNotFound": "未找到设备：{deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "新文件夹名称：",
     "folderCreated": "文件夹\"{folder}\"已创建",
     "uploadSuccess": "正在上传{filename}...",
-    "uploadComplete": "文件上传成功"
+    "uploadComplete": "文件上传成功",
+    "newFolder": "新建文件夹",
+    "folderNamePlaceholder": "文件夹名称...",
+    "create": "创建",
+    "folderExists": "文件夹\"{folder}\"已存在",
+    "folderExistsTitle": "文件夹已存在"
+  },
+  "pianoRoll": {
+    "title": "即将到来的音符",
+    "noChannels": "无通道"
   }
 }

@@ -20,7 +20,8 @@
     "seconds": "초",
     "octave": "옥타브",
     "octaves": "옥타브",
-    "keys": "건반"
+    "keys": "건반",
+    "clear": "지우기"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI 오케스트레이션 시스템",
@@ -55,6 +56,13 @@
     "language": {
       "title": "언어",
       "select": "언어 선택"
+    },
+    "pianoRoll": {
+      "title": "피아노 롤",
+      "enable": "피아노 롤 표시",
+      "description": "재생 중 다가오는 노트 표시",
+      "enabled": "피아노 롤 활성화됨",
+      "disabled": "피아노 롤 비활성화됨"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "채널 변경 기능을 사용할 수 없음",
     "channelChanged": "{count}개 노트의 채널이 변경됨",
     "instrumentApplied": "채널 {channel}: {instrument}",
-    "snapChanged": "스냅: {snap}"
+    "snapChanged": "스냅: {snap}",
+    "play": "재생",
+    "pause": "일시정지",
+    "stop": "정지",
+    "synthInitError": "오디오 신디사이저를 초기화할 수 없음",
+    "changeChannelTitle": "채널 변경",
+    "changeInstrumentTitle": "악기 변경",
+    "apply": "적용",
+    "sameInstrument": "동일한 악기가 이미 선택됨",
+    "noChannelAvailable": "사용 가능한 채널 없음",
+    "instrumentAppliedToSelection": "{count}개 노트 → {instrument}",
+    "renameFile": "파일 이름 변경",
+    "renameEmpty": "파일 이름은 비워둘 수 없습니다",
+    "renameSuccess": "파일 이름이 성공적으로 변경되었습니다",
+    "renameFailed": "이름 변경 실패"
   },
   "errors": {
     "deviceNotFound": "장치를 찾을 수 없음: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "새 폴더 이름:",
     "folderCreated": "\"{folder}\" 폴더가 생성되었습니다",
     "uploadSuccess": "{filename} 업로드 중...",
-    "uploadComplete": "파일이 성공적으로 업로드되었습니다"
+    "uploadComplete": "파일이 성공적으로 업로드되었습니다",
+    "newFolder": "새 폴더",
+    "folderNamePlaceholder": "폴더 이름...",
+    "create": "생성",
+    "folderExists": "\"{folder}\" 폴더가 이미 존재합니다",
+    "folderExistsTitle": "폴더가 존재합니다"
+  },
+  "pianoRoll": {
+    "title": "다가오는 노트",
+    "noChannels": "채널 없음"
   }
 }
