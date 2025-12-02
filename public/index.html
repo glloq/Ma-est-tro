@@ -2123,14 +2123,16 @@
                     this.logger.info(`[VirtualPlayer] Fichier chargé: ${this.events.length} événements, ${this.tempo} BPM, durée: ${this.duration.toFixed(1)}s`);
 
                     // Émettre l'événement file:selected pour le piano roll view
-                    // IMPORTANT: Envoyer tempo et ticksPerBeat pour synchronisation
+                    // IMPORTANT: Envoyer les événements déjà parsés pour synchronisation PARFAITE
                     if (window.eventBus) {
                         window.eventBus.emit('file:selected', {
                             fileId: fileId,
                             filename: filename,
                             midiData: this.midiData,
                             tempo: this.tempo,
-                            ticksPerBeat: this.ticksPerBeat
+                            ticksPerBeat: this.ticksPerBeat,
+                            // NOUVEAU: événements avec timing en secondes (identiques à ceux utilisés pour l'audio)
+                            parsedEvents: this.events
                         });
                     }
 

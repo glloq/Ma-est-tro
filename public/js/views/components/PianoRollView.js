@@ -1,6 +1,6 @@
 // ============================================================================
 // Fichier: public/js/views/components/PianoRollView.js
-// Version: v4.0.0 - Synchronisation directe en SECONDES (pas de conversion ticks)
+// Version: v5.0.0 - Utilise les événements pré-parsés de VirtualMidiPlayer
 // ============================================================================
 
 class PianoRollView {
@@ -61,7 +61,7 @@ class PianoRollView {
         this.createDOM();
         this.setupEvents();
         this.loadSettings();
-        this.log('info', 'v4 initialized (time-based sync)');
+        this.log('info', 'v5 initialized (pre-parsed events)');
     }
 
     loadSettings() {
@@ -109,14 +109,18 @@ class PianoRollView {
             if (!this.isEnabled && this.isVisible) this.hide();
         });
 
-        // Fichier chargé - UTILISER tempo et ticksPerBeat de la source AVANT parsing
+        // Fichier chargé - UTILISER parsedEvents si disponible (timing IDENTIQUE à l'audio)
         this.eventBus.on('file:selected', (data) => {
-            // IMPORTANT: Set tempo/ticksPerBeat BEFORE loadMidiData for correct time conversion
             if (data.tempo) this.tempo = data.tempo;
             if (data.ticksPerBeat) this.ticksPerBeat = data.ticksPerBeat;
-            this.log('info', `Tempo: ${this.tempo} BPM, PPQ: ${this.ticksPerBeat}`);
-            if (data.midiData) {
+
+            // PRIORITÉ: utiliser parsedEvents s'ils existent (timing exact de VirtualMidiPlayer)
+            if (data.parsedEvents && data.parsedEvents.length > 0) {
+                this.loadFromParsedEvents(data.parsedEvents);
+                this.log('info', `Using pre-parsed events: ${this.notes.length} notes`);
+            } else if (data.midiData) {
                 this.loadMidiData(data.midiData);
+                this.log('info', `Parsed MIDI: ${this.notes.length} notes`);
             }
         });
 
@@ -224,7 +228,56 @@ class PianoRollView {
 
         this.channels = Array.from(channelSet).sort((a, b) => a - b).map(ch => ({ channel: ch }));
         this.renderButtons();
-        this.log('info', `Loaded ${this.notes.length} notes`);
+    }
+
+    // Charger depuis les événements pré-parsés de VirtualMidiPlayer
+    // Ces événements ont EXACTEMENT le même timing que l'audio
+    loadFromParsedEvents(events) {
+        this.notes = [];
+        const channelSet = new Set();
+        const noteOns = {}; // key: "channel_note" -> {time, channel, note, velocity}
+
+        // Coupler noteOn/noteOff (événements déjà triés par temps)
+        for (const event of events) {
+            const key = `${event.channel}_${event.note}`;
+
+            if (event.type === 'noteOn' && event.velocity > 0) {
+                noteOns[key] = {
+                    time: event.time,
+                    channel: event.channel,
+                    note: event.note,
+                    velocity: event.velocity
+                };
+                channelSet.add(event.channel);
+            } else if (event.type === 'noteOff' || (event.type === 'noteOn' && event.velocity === 0)) {
+                if (noteOns[key]) {
+                    const on = noteOns[key];
+                    this.notes.push({
+                        startTime: on.time,
+                        endTime: event.time,
+                        note: on.note,
+                        channel: on.channel
+                    });
+                    delete noteOns[key];
+                }
+            }
+        }
+
+        this.notes.sort((a, b) => a.startTime - b.startTime);
+
+        // Plage de notes
+        if (this.notes.length > 0) {
+            let minN = 127, maxN = 0;
+            this.notes.forEach(n => {
+                if (n.note < minN) minN = n.note;
+                if (n.note > maxN) maxN = n.note;
+            });
+            this.noteMin = Math.max(0, minN - 2);
+            this.noteMax = Math.min(127, maxN + 2);
+        }
+
+        this.channels = Array.from(channelSet).sort((a, b) => a - b).map(ch => ({ channel: ch }));
+        this.renderButtons();
     }
 
     renderButtons() {
@@ -373,5 +426,5 @@ class PianoRollView {
 
 if (typeof window !== 'undefined') {
     window.PianoRollView = PianoRollView;
-    console.log('✓ PianoRollView v4 loaded (time-based sync)');
+    console.log('✓ PianoRollView v5 loaded (pre-parsed events)');
 }
