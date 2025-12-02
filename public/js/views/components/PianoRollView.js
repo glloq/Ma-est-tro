@@ -736,10 +736,26 @@ class PianoRollView {
     }
 
     /**
+     * Calculer la position du piano roll sous le header
+     */
+    updatePosition() {
+        const header = document.querySelector('header');
+        if (header && this.container) {
+            const headerRect = header.getBoundingClientRect();
+            const topPosition = headerRect.bottom + 16; // 16px de marge
+            this.container.style.setProperty('--piano-roll-top', `${topPosition}px`);
+        }
+    }
+
+    /**
      * Afficher le piano roll
      */
     show() {
         this.isVisible = true;
+
+        // Calculer la position sous le header
+        this.updatePosition();
+
         if (this.container) {
             this.container.classList.remove('hidden');
             this.container.classList.add('fullscreen');
