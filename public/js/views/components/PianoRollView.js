@@ -106,11 +106,16 @@ class PianoRollView {
      */
     log(level, ...args) {
         if (this.logger) {
+            // Format message with all args
+            const message = `[PianoRollView] ${args.join(' ')}`;
             if (typeof this.logger[level] === 'function') {
-                this.logger[level]('[PianoRollView]', ...args);
+                this.logger[level](message);
             } else if (typeof this.logger.log === 'function') {
-                this.logger.log(`[${level.toUpperCase()}] [PianoRollView]`, ...args);
+                this.logger.log(`[${level.toUpperCase()}] ${message}`);
             }
+        } else {
+            // Fallback to console
+            console.log(`[PianoRollView] [${level}]`, ...args);
         }
     }
 
