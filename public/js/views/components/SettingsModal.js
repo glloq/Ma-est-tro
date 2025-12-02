@@ -40,7 +40,8 @@ class SettingsModal {
             theme: 'light',
             keyboardOctaves: 2, // 2 octaves par défaut (24 touches)
             noteDisplayTime: 20, // secondes
-            virtualInstrument: false
+            virtualInstrument: false,
+            showPianoRoll: false // Afficher le piano roll des notes à venir
         };
 
         try {
@@ -359,6 +360,32 @@ class SettingsModal {
                     </label>
                 </div>
             </div>
+
+            <!-- Piano Roll -->
+            <div class="settings-section" style="margin-top: 24px;">
+                <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #333;">🎹 ${i18n.t('settings.pianoRoll.title')}</h3>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+                    <div style="flex: 1;">
+                        <p style="margin: 0 0 4px 0; font-size: 14px; color: #333;">${i18n.t('settings.pianoRoll.enable')}</p>
+                        <p style="margin: 0; font-size: 12px; color: #666;">${i18n.t('settings.pianoRoll.description')}</p>
+                    </div>
+                    <label class="toggle-switch" style="position: relative; display: inline-block; width: 60px; height: 30px;">
+                        <input type="checkbox" id="showPianoRollToggle" ${this.settings.showPianoRoll ? 'checked' : ''}
+                               style="opacity: 0; width: 0; height: 0;">
+                        <span class="toggle-slider" style="
+                            position: absolute;
+                            cursor: pointer;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            background-color: #ccc;
+                            transition: 0.4s;
+                            border-radius: 30px;
+                        "></span>
+                    </label>
+                </div>
+            </div>
         `;
     }
 
@@ -604,6 +631,9 @@ class SettingsModal {
         if (timeValue) timeValue.textContent = this.settings.noteDisplayTime + 's';
         if (virtualToggle) virtualToggle.checked = this.settings.virtualInstrument;
 
+        const pianoRollToggle = this.modal.querySelector('#showPianoRollToggle');
+        if (pianoRollToggle) pianoRollToggle.checked = this.settings.showPianoRoll;
+
         this.logger?.info('Settings modal opened');
     }
 
@@ -624,12 +654,14 @@ class SettingsModal {
         const keyboardRange = this.modal.querySelector('#keyboardOctavesRange');
         const timeRange = this.modal.querySelector('#noteDisplayTimeRange');
         const virtualToggle = this.modal.querySelector('#virtualInstrumentToggle');
+        const pianoRollToggle = this.modal.querySelector('#showPianoRollToggle');
 
         const newSettings = {
             theme: activeThemeBtn ? activeThemeBtn.dataset.theme : this.settings.theme,
             keyboardOctaves: keyboardRange ? parseInt(keyboardRange.value) : this.settings.keyboardOctaves,
             noteDisplayTime: timeRange ? parseInt(timeRange.value) : this.settings.noteDisplayTime,
-            virtualInstrument: virtualToggle ? virtualToggle.checked : this.settings.virtualInstrument
+            virtualInstrument: virtualToggle ? virtualToggle.checked : this.settings.virtualInstrument,
+            showPianoRoll: pianoRollToggle ? pianoRollToggle.checked : this.settings.showPianoRoll
         };
 
         // Vérifier les changements
@@ -637,6 +669,7 @@ class SettingsModal {
         const keyboardChanged = newSettings.keyboardOctaves !== this.settings.keyboardOctaves;
         const timeChanged = newSettings.noteDisplayTime !== this.settings.noteDisplayTime;
         const virtualInstrumentChanged = newSettings.virtualInstrument !== this.settings.virtualInstrument;
+        const pianoRollChanged = newSettings.showPianoRoll !== this.settings.showPianoRoll;
 
         // Mettre à jour les paramètres
         this.settings = newSettings;
@@ -660,6 +693,15 @@ class SettingsModal {
                 this.logger?.info(`🎵 ${i18n.t('settings.virtualInstrument.enabled')}`);
             } else {
                 this.logger?.info(`🎵 ${i18n.t('settings.virtualInstrument.disabled')}`);
+            }
+        }
+        if (pianoRollChanged) {
+            this.eventBus?.emit('settings:piano_roll_changed', { enabled: newSettings.showPianoRoll });
+
+            if (newSettings.showPianoRoll) {
+                this.logger?.info(`🎹 ${i18n.t('settings.pianoRoll.enabled')}`);
+            } else {
+                this.logger?.info(`🎹 ${i18n.t('settings.pianoRoll.disabled')}`);
             }
         }
 

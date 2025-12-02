@@ -53,6 +53,13 @@
       "enabled": "Instrument virtuel activé - Les messages MIDI seront envoyés aux logs",
       "disabled": "Instrument virtuel désactivé"
     },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Afficher le piano roll",
+      "description": "Affiche les notes à venir pendant la lecture",
+      "enabled": "Piano roll activé",
+      "disabled": "Piano roll désactivé"
+    },
     "language": {
       "title": "Langue",
       "select": "Sélectionner la langue"
@@ -376,5 +383,9 @@
     "create": "Créer",
     "folderExists": "Le dossier \"{folder}\" existe déjà",
     "folderExistsTitle": "Dossier existant"
+  },
+  "pianoRoll": {
+    "title": "Notes à venir",
+    "noChannels": "Aucun canal"
   }
 }
