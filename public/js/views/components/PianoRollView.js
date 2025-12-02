@@ -115,8 +115,28 @@ class PianoRollView {
     init() {
         this.createContainer();
         this.setupEventListeners();
+        this.setupWindowListeners();
         this.loadSettings();
         this.log('info', 'PianoRollView initialized');
+    }
+
+    /**
+     * Configurer les écouteurs de fenêtre
+     */
+    setupWindowListeners() {
+        // Recalculer la position lors du redimensionnement
+        window.addEventListener('resize', () => {
+            if (this.isVisible) {
+                this.updatePosition();
+            }
+        });
+
+        // Recalculer après le scroll (au cas où)
+        window.addEventListener('scroll', () => {
+            if (this.isVisible) {
+                this.updatePosition();
+            }
+        });
     }
 
     /**
@@ -743,7 +763,8 @@ class PianoRollView {
         if (header && this.container) {
             const headerRect = header.getBoundingClientRect();
             const topPosition = headerRect.bottom + 16; // 16px de marge
-            this.container.style.setProperty('--piano-roll-top', `${topPosition}px`);
+            this.container.style.top = `${topPosition}px`;
+            this.log('debug', `Position updated: top=${topPosition}px`);
         }
     }
 
@@ -751,12 +772,12 @@ class PianoRollView {
      * Afficher le piano roll
      */
     show() {
+        if (this.isVisible) return; // Déjà visible
+
         this.isVisible = true;
 
-        // Calculer la position sous le header
-        this.updatePosition();
-
         if (this.container) {
+            // D'abord rendre visible pour pouvoir calculer les positions
             this.container.classList.remove('hidden');
             this.container.classList.add('fullscreen');
         }
@@ -774,9 +795,16 @@ class PianoRollView {
             debugConsole.classList.add('hidden-for-pianoroll');
         }
 
-        if (this.midiData) {
-            this.initializePianoRoll();
-        }
+        // Calculer la position après que le DOM soit mis à jour
+        requestAnimationFrame(() => {
+            this.updatePosition();
+
+            // Initialiser le piano roll si on a des données
+            if (this.midiData) {
+                this.initializePianoRoll();
+            }
+        });
+
         this.log('info', 'Piano roll view shown');
     }
 

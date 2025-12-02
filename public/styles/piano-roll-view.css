@@ -23,7 +23,7 @@
 /* ===== MODE FULLSCREEN ===== */
 .piano-roll-view.fullscreen {
     position: fixed;
-    top: var(--piano-roll-top, 200px); /* Hauteur du header (calculée dynamiquement par JS) */
+    /* top is set dynamically by JS */
     left: 16px;
     right: 16px;
     bottom: 16px;
