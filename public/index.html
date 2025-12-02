@@ -2933,7 +2933,7 @@
             // Bouton Éditer
             const editBtn = document.createElement('button');
             editBtn.className = 'btn btn-secondary btn-sm';
-            editBtn.title = 'Éditer';
+            editBtn.title = i18n.t('fileOperations.edit');
             editBtn.textContent = '✏️';
             editBtn.onclick = (e) => {
                 e.stopPropagation();
@@ -2944,7 +2944,7 @@
             // Bouton Router
             const routeBtn = document.createElement('button');
             routeBtn.className = `btn ${routed ? 'btn-success' : 'btn-secondary'} btn-sm`;
-            routeBtn.title = 'Configurer le routage';
+            routeBtn.title = i18n.t('fileOperations.configureRouting');
             routeBtn.textContent = '🔀';
             routeBtn.onclick = (e) => {
                 e.stopPropagation();
@@ -2955,7 +2955,7 @@
             // Bouton Play
             const playBtn = document.createElement('button');
             playBtn.className = `btn ${routed ? 'btn-success' : 'btn-warning'} btn-sm`;
-            playBtn.title = routed ? 'Lire le fichier' : 'Configurer le routage avant de lire';
+            playBtn.title = routed ? i18n.t('fileOperations.playFile') : i18n.t('fileOperations.playWarning');
             playBtn.textContent = routed ? '▶️' : '⚠️▶️';
             playBtn.onclick = (e) => {
                 e.stopPropagation();
@@ -2966,7 +2966,7 @@
             // Bouton Supprimer
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'btn btn-danger btn-sm';
-            deleteBtn.title = 'Supprimer';
+            deleteBtn.title = i18n.t('fileOperations.delete');
             deleteBtn.textContent = '🗑️';
             deleteBtn.onclick = (e) => {
                 e.stopPropagation();
@@ -3006,7 +3006,7 @@
             // Bouton pour ouvrir/fermer
             const toggleBtn = document.createElement('button');
             toggleBtn.className = 'btn btn-secondary btn-sm';
-            toggleBtn.title = 'Ouvrir/Fermer';
+            toggleBtn.title = i18n.t('fileOperations.toggleFolder');
             toggleBtn.textContent = '▼';
             toggleBtn.onclick = (e) => {
                 e.stopPropagation();
@@ -3018,7 +3018,7 @@
             const folderFiles = folderStructure[folderPath].files || [];
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'btn btn-danger btn-sm';
-            deleteBtn.title = folderFiles.length > 0 ? 'Le dossier doit être vide' : 'Supprimer le dossier';
+            deleteBtn.title = folderFiles.length > 0 ? i18n.t('fileOperations.folderNotEmpty') : i18n.t('fileOperations.deleteFolder');
             deleteBtn.textContent = '🗑️';
 
             // Utiliser une classe au lieu de disabled pour permettre le clic
@@ -3479,7 +3479,7 @@
                     // Bouton Réglages
                     const settingsBtn = document.createElement('button');
                     settingsBtn.className = 'btn-icon';
-                    settingsBtn.title = 'Réglages de l\'instrument';
+                    settingsBtn.title = i18n.t('instrumentSettings.settingsButton');
                     settingsBtn.textContent = '⚙️';
                     settingsBtn.onclick = () => showInstrumentSettings(device);
 

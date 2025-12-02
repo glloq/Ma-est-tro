@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "Instrumenteneinstellungen",
+    "settingsButton": "Instrumenteneinstellungen",
     "deviceName": "Gerätename",
     "deviceNameAuto": "Automatisch erkannter Name",
     "serialNumber": "USB-Seriennummer",
@@ -364,6 +365,12 @@
     "configure": "Konfigurieren"
   },
   "fileOperations": {
+    "edit": "Bearbeiten",
+    "configureRouting": "Routing konfigurieren",
+    "playFile": "Datei abspielen",
+    "playWarning": "Routing vor dem Abspielen konfigurieren",
+    "toggleFolder": "Öffnen/Schließen",
+    "folderNotEmpty": "Ordner muss leer sein",
     "deleteFolder": "Ordner löschen",
     "deleteFolderConfirm": "Möchten Sie den Ordner \"{folder}\" wirklich löschen?",
     "folderDeleted": "Ordner \"{folder}\" gelöscht",

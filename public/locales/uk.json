@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "Налаштування інструмента",
+    "settingsButton": "Налаштування інструмента",
     "deviceName": "Назва пристрою",
     "deviceNameAuto": "Назва визначена автоматично",
     "serialNumber": "Серійний номер USB",
@@ -364,6 +365,12 @@
     "configure": "Налаштувати"
   },
   "fileOperations": {
+    "edit": "Редагувати",
+    "configureRouting": "Налаштувати маршрутизацію",
+    "playFile": "Відтворити файл",
+    "playWarning": "Налаштуйте маршрутизацію перед відтворенням",
+    "toggleFolder": "Відкрити/Закрити",
+    "folderNotEmpty": "Папка повинна бути порожньою",
     "deleteFolder": "Видалити папку",
     "deleteFolderConfirm": "Ви дійсно хочете видалити папку \"{folder}\"?",
     "folderDeleted": "Папку \"{folder}\" видалено",

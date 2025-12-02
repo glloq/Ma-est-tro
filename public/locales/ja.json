@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "楽器の設定",
+    "settingsButton": "楽器の設定",
     "deviceName": "デバイス名",
     "deviceNameAuto": "自動検出された名前",
     "serialNumber": "USBシリアル番号",
@@ -364,6 +365,12 @@
     "configure": "設定"
   },
   "fileOperations": {
+    "edit": "編集",
+    "configureRouting": "ルーティングを設定",
+    "playFile": "ファイルを再生",
+    "playWarning": "再生前にルーティングを設定してください",
+    "toggleFolder": "開く/閉じる",
+    "folderNotEmpty": "フォルダは空でなければなりません",
     "deleteFolder": "フォルダを削除",
     "deleteFolderConfirm": "フォルダ \"{folder}\" を本当に削除しますか？",
     "folderDeleted": "フォルダ \"{folder}\" を削除しました",

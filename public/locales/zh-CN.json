@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "乐器设置",
+    "settingsButton": "乐器设置",
     "deviceName": "设备名称",
     "deviceNameAuto": "自动检测的名称",
     "serialNumber": "USB序列号",
@@ -364,6 +365,12 @@
     "configure": "配置"
   },
   "fileOperations": {
+    "edit": "编辑",
+    "configureRouting": "配置路由",
+    "playFile": "播放文件",
+    "playWarning": "播放前请先配置路由",
+    "toggleFolder": "打开/关闭",
+    "folderNotEmpty": "文件夹必须为空",
     "deleteFolder": "删除文件夹",
     "deleteFolderConfirm": "您确定要删除文件夹\"{folder}\"吗？",
     "folderDeleted": "文件夹\"{folder}\"已删除",

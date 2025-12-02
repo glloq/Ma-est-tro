@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "Ρυθμίσεις Οργάνου",
+    "settingsButton": "Ρυθμίσεις οργάνου",
     "deviceName": "Όνομα συσκευής",
     "deviceNameAuto": "Αυτόματα ανιχνευμένο όνομα",
     "serialNumber": "Σειριακός αριθμός USB",
@@ -364,6 +365,12 @@
     "configure": "Διαμόρφωση"
   },
   "fileOperations": {
+    "edit": "Επεξεργασία",
+    "configureRouting": "Διαμόρφωση δρομολόγησης",
+    "playFile": "Αναπαραγωγή αρχείου",
+    "playWarning": "Διαμορφώστε τη δρομολόγηση πριν την αναπαραγωγή",
+    "toggleFolder": "Άνοιγμα/Κλείσιμο",
+    "folderNotEmpty": "Ο φάκελος πρέπει να είναι κενός",
     "deleteFolder": "Διαγραφή φακέλου",
     "deleteFolderConfirm": "Θέλετε σίγουρα να διαγράψετε τον φάκελο \"{folder}\";",
     "folderDeleted": "Ο φάκελος \"{folder}\" διαγράφηκε",

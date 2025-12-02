@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "যন্ত্র সেটিংস",
+    "settingsButton": "যন্ত্র সেটিংস",
     "deviceName": "ডিভাইসের নাম",
     "deviceNameAuto": "স্বয়ংক্রিয়ভাবে সনাক্ত করা নাম",
     "serialNumber": "USB সিরিয়াল নম্বর",
@@ -364,6 +365,12 @@
     "configure": "কনফিগার করুন"
   },
   "fileOperations": {
+    "edit": "সম্পাদনা",
+    "configureRouting": "রাউটিং কনফিগার করুন",
+    "playFile": "ফাইল চালান",
+    "playWarning": "চালানোর আগে রাউটিং কনফিগার করুন",
+    "toggleFolder": "খোলা/বন্ধ",
+    "folderNotEmpty": "ফোল্ডার খালি থাকতে হবে",
     "deleteFolder": "ফোল্ডার মুছুন",
     "deleteFolderConfirm": "আপনি কি সত্যিই \"{folder}\" ফোল্ডার মুছতে চান?",
     "folderDeleted": "ফোল্ডার \"{folder}\" মুছে ফেলা হয়েছে",

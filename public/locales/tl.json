@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "Mga Setting ng Instrumento",
+    "settingsButton": "Mga setting ng instrumento",
     "deviceName": "Pangalan ng device",
     "deviceNameAuto": "Awtomatikong nakitang pangalan",
     "serialNumber": "USB serial number",
@@ -364,6 +365,12 @@
     "configure": "I-configure"
   },
   "fileOperations": {
+    "edit": "I-edit",
+    "configureRouting": "I-configure ang routing",
+    "playFile": "I-play ang file",
+    "playWarning": "I-configure ang routing bago mag-play",
+    "toggleFolder": "Buksan/Isara",
+    "folderNotEmpty": "Dapat walang laman ang folder",
     "deleteFolder": "Burahin ang folder",
     "deleteFolderConfirm": "Sigurado ka bang gusto mong burahin ang folder na \"{folder}\"?",
     "folderDeleted": "Nabura ang folder na \"{folder}\"",

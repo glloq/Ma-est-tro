@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "Hangszer beállítások",
+    "settingsButton": "Hangszer beállítások",
     "deviceName": "Eszköz neve",
     "deviceNameAuto": "Automatikusan felismert név",
     "serialNumber": "USB sorozatszám",
@@ -364,6 +365,12 @@
     "configure": "Beállítás"
   },
   "fileOperations": {
+    "edit": "Szerkesztés",
+    "configureRouting": "Útvonal beállítása",
+    "playFile": "Fájl lejátszása",
+    "playWarning": "Állítsa be az útvonalat lejátszás előtt",
+    "toggleFolder": "Megnyitás/Bezárás",
+    "folderNotEmpty": "A mappának üresnek kell lennie",
     "deleteFolder": "Mappa törlése",
     "deleteFolderConfirm": "Biztosan törli a \"{folder}\" mappát?",
     "folderDeleted": "\"{folder}\" mappa törölve",

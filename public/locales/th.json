@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "การตั้งค่าเครื่องดนตรี",
+    "settingsButton": "การตั้งค่าเครื่องดนตรี",
     "deviceName": "ชื่ออุปกรณ์",
     "deviceNameAuto": "ชื่อที่ตรวจพบอัตโนมัติ",
     "serialNumber": "หมายเลขซีเรียล USB",
@@ -364,6 +365,12 @@
     "configure": "กำหนดค่า"
   },
   "fileOperations": {
+    "edit": "แก้ไข",
+    "configureRouting": "กำหนดค่าการกำหนดเส้นทาง",
+    "playFile": "เล่นไฟล์",
+    "playWarning": "กำหนดค่าการกำหนดเส้นทางก่อนเล่น",
+    "toggleFolder": "เปิด/ปิด",
+    "folderNotEmpty": "โฟลเดอร์ต้องว่างเปล่า",
     "deleteFolder": "ลบโฟลเดอร์",
     "deleteFolderConfirm": "คุณต้องการลบโฟลเดอร์ \"{folder}\" หรือไม่?",
     "folderDeleted": "ลบโฟลเดอร์ \"{folder}\" แล้ว",

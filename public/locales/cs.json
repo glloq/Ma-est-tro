@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "Nastavení nástroje",
+    "settingsButton": "Nastavení nástroje",
     "deviceName": "Název zařízení",
     "deviceNameAuto": "Automaticky detekovaný název",
     "serialNumber": "USB sériové číslo",
@@ -364,6 +365,12 @@
     "configure": "Konfigurovat"
   },
   "fileOperations": {
+    "edit": "Upravit",
+    "configureRouting": "Konfigurovat směrování",
+    "playFile": "Přehrát soubor",
+    "playWarning": "Před přehráním nakonfigurujte směrování",
+    "toggleFolder": "Otevřít/Zavřít",
+    "folderNotEmpty": "Složka musí být prázdná",
     "deleteFolder": "Smazat složku",
     "deleteFolderConfirm": "Opravdu chcete smazat složku \"{folder}\"?",
     "folderDeleted": "Složka \"{folder}\" smazána",

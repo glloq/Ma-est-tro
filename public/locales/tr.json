@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "Enstrüman Ayarları",
+    "settingsButton": "Enstrüman ayarları",
     "deviceName": "Cihaz adı",
     "deviceNameAuto": "Otomatik algılanan ad",
     "serialNumber": "USB seri numarası",
@@ -364,6 +365,12 @@
     "configure": "Yapılandır"
   },
   "fileOperations": {
+    "edit": "Düzenle",
+    "configureRouting": "Yönlendirmeyi yapılandır",
+    "playFile": "Dosyayı oynat",
+    "playWarning": "Oynatmadan önce yönlendirmeyi yapılandırın",
+    "toggleFolder": "Aç/Kapat",
+    "folderNotEmpty": "Klasör boş olmalıdır",
     "deleteFolder": "Klasörü sil",
     "deleteFolderConfirm": "\"{folder}\" klasörünü silmek istediğinizden emin misiniz?",
     "folderDeleted": "\"{folder}\" klasörü silindi",

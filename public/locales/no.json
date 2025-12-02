@@ -306,6 +306,7 @@
   },
   "instrumentSettings": {
     "title": "Instrumentinnstillinger",
+    "settingsButton": "Instrumentinnstillinger",
     "deviceName": "Enhetsnavn",
     "deviceNameAuto": "Automatisk oppdaget navn",
     "serialNumber": "USB-serienummer",
@@ -364,6 +365,12 @@
     "configure": "Konfigurer"
   },
   "fileOperations": {
+    "edit": "Rediger",
+    "configureRouting": "Konfigurer ruting",
+    "playFile": "Spill av fil",
+    "playWarning": "Konfigurer ruting før avspilling",
+    "toggleFolder": "Åpne/Lukke",
+    "folderNotEmpty": "Mappen må være tom",
     "deleteFolder": "Slett mappe",
     "deleteFolderConfirm": "Vil du virkelig slette mappen \"{folder}\"?",
     "folderDeleted": "Mappen \"{folder}\" slettet",
