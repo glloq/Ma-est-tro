@@ -1619,6 +1619,7 @@
     <link rel="stylesheet" href="styles/keyboard-polish.css">
     <link rel="stylesheet" href="styles/keyboard-modal.css">
     <link rel="stylesheet" href="styles/cc-pitchbend-editor.css">
+    <link rel="stylesheet" href="styles/piano-roll-view.css">
 </head>
 <body>
     <!-- Modal de confirmation personnalisée -->
@@ -1790,6 +1791,9 @@
 
     <!-- Settings Modal Component -->
     <script src="js/views/components/SettingsModal.js"></script>
+
+    <!-- Piano Roll View Component -->
+    <script src="js/views/components/PianoRollView.js"></script>
 
     <script>
         // ========== SYSTÈME DE MODAL DE CONFIRMATION ==========
@@ -1998,6 +2002,9 @@
         // 🆕 Instance du modal de réglages
         let settingsModal = null;
 
+        // 🆕 Instance du piano roll view
+        let pianoRollView = null;
+
         // 🆕 Instance du player MIDI virtuel
         let virtualPlayer = null;
 
@@ -2061,6 +2068,15 @@
                     this.buildEventList();
 
                     this.logger.info(`[VirtualPlayer] Fichier chargé: ${this.events.length} événements, ${this.tempo} BPM, durée: ${this.duration.toFixed(1)}s`);
+
+                    // Émettre l'événement file:selected pour le piano roll view
+                    if (window.eventBus) {
+                        window.eventBus.emit('file:selected', {
+                            fileId: fileId,
+                            filename: filename,
+                            midiData: this.midiData
+                        });
+                    }
 
                     return true;
                 } catch (error) {
@@ -2164,6 +2180,11 @@
                 isPaused = false;
                 updatePlaybackControls();
 
+                // Émettre l'événement playback:play pour le piano roll view
+                if (window.eventBus) {
+                    window.eventBus.emit('playback:play', { fileId: this.fileId });
+                }
+
                 // Démarrer l'envoi des événements
                 this.scheduleNextEvent();
 
@@ -2193,6 +2214,11 @@
                 isPaused = true;
                 updatePlaybackControls();
 
+                // Émettre l'événement playback:pause pour le piano roll view
+                if (window.eventBus) {
+                    window.eventBus.emit('playback:pause', { fileId: this.fileId });
+                }
+
                 this.logger.info('[VirtualPlayer] ⏸️ Pause');
             }
 
@@ -2214,6 +2240,11 @@
                 isPlaying = false;
                 isPaused = false;
                 updatePlaybackControls();
+
+                // Émettre l'événement playback:stop pour le piano roll view
+                if (window.eventBus) {
+                    window.eventBus.emit('playback:stop', { fileId: this.fileId });
+                }
 
                 this.logger.info('[VirtualPlayer] ⏹️ Arrêt');
             }
@@ -2292,6 +2323,10 @@
                         const currentTime = (Date.now() - this.startTime) / 1000;
                         const progress = Math.min(currentTime / this.duration, 1.0);
 
+                        // Convertir le temps en ticks pour le piano roll
+                        const ticksPerSecond = (this.ticksPerBeat * this.tempo) / 60;
+                        const currentTick = Math.floor(currentTime * ticksPerSecond);
+
                         // Émettre l'événement de progression
                         const progressEvent = new CustomEvent('virtualplayback_progress', {
                             detail: {
@@ -2301,6 +2336,15 @@
                             }
                         });
                         document.dispatchEvent(progressEvent);
+
+                        // Émettre l'événement playback:time pour le piano roll view
+                        if (window.eventBus) {
+                            window.eventBus.emit('playback:time', {
+                                time: currentTime,
+                                tick: currentTick,
+                                duration: this.duration
+                            });
+                        }
                     }
                 }, 100); // Mise à jour toutes les 100ms
             }
@@ -4615,57 +4659,61 @@
             if (!settingsModal) {
                 log('Initialisation du modal de réglages...', 'info');
 
-                // Créer un EventBus simple si nécessaire
-                const eventBus = {
-                    emit: (event, data) => {
-                        log(`Event: ${event}`, 'debug', data);
-                    }
-                };
-
-                settingsModal = new SettingsModal(eventBus, {
+                // Utiliser le EventBus global
+                settingsModal = new SettingsModal(window.eventBus, {
                     info: (msg, data) => log(msg, 'info', data),
                     error: (msg, data) => log(msg, 'error', data)
                 });
-
-                // Écouter les événements de changement de paramètres
-                settingsModal.eventBus.emit = (event, data) => {
-                    log(`Settings event: ${event}`, 'info', data);
-
-                    // Gérer le changement de nombre d'octaves du clavier
-                    if (event === 'settings:keyboard_changed') {
-                        if (keyboardModal) {
-                            keyboardModal.setOctaves(data.octaves);
-                            log(`🎹 Clavier virtuel: ${data.octaves} octave(s) (${data.octaves * 12} touches)`, 'info');
-                        }
-                    }
-
-                    // Gérer l'instrument virtuel
-                    if (event === 'settings:virtual_instrument_changed') {
-                        if (data.enabled) {
-                            log(`🎵 ${i18n.t('ui.virtualInstrumentEnabled')}`, 'success');
-                            // Ajouter le périphérique virtuel
-                            loadDevices();
-
-                            // Rafraîchir le KeyboardModal si ouvert
-                            if (keyboardModal && keyboardModal.isOpen) {
-                                keyboardModal.refreshDevices();
-                            }
-                        } else {
-                            log(`🎵 ${i18n.t('ui.virtualInstrumentDisabled')}`, 'info');
-                            // Retirer le périphérique virtuel
-                            loadDevices();
-
-                            // Rafraîchir le KeyboardModal si ouvert
-                            if (keyboardModal && keyboardModal.isOpen) {
-                                keyboardModal.refreshDevices();
-                            }
-                        }
-                    }
-                };
             }
 
             settingsModal.open();
         });
+
+        // Écouter les événements de réglages via le EventBus global
+        if (window.eventBus) {
+            // Gérer le changement de nombre d'octaves du clavier
+            window.eventBus.on('settings:keyboard_changed', (data) => {
+                log(`Settings event: settings:keyboard_changed`, 'info', data);
+                if (keyboardModal) {
+                    keyboardModal.setOctaves(data.octaves);
+                    log(`🎹 Clavier virtuel: ${data.octaves} octave(s) (${data.octaves * 12} touches)`, 'info');
+                }
+            });
+
+            // Gérer l'instrument virtuel
+            window.eventBus.on('settings:virtual_instrument_changed', (data) => {
+                log(`Settings event: settings:virtual_instrument_changed`, 'info', data);
+                if (data.enabled) {
+                    log(`🎵 ${i18n.t('ui.virtualInstrumentEnabled')}`, 'success');
+                    // Ajouter le périphérique virtuel
+                    loadDevices();
+
+                    // Rafraîchir le KeyboardModal si ouvert
+                    if (keyboardModal && keyboardModal.isOpen) {
+                        keyboardModal.refreshDevices();
+                    }
+                } else {
+                    log(`🎵 ${i18n.t('ui.virtualInstrumentDisabled')}`, 'info');
+                    // Retirer le périphérique virtuel
+                    loadDevices();
+
+                    // Rafraîchir le KeyboardModal si ouvert
+                    if (keyboardModal && keyboardModal.isOpen) {
+                        keyboardModal.refreshDevices();
+                    }
+                }
+            });
+
+            // Gérer le changement du piano roll
+            window.eventBus.on('settings:piano_roll_changed', (data) => {
+                log(`Settings event: settings:piano_roll_changed`, 'info', data);
+                if (data.enabled) {
+                    log(`🎹 ${i18n.t('settings.pianoRoll.enabled')}`, 'info');
+                } else {
+                    log(`🎹 ${i18n.t('settings.pianoRoll.disabled')}`, 'info');
+                }
+            });
+        }
 
         // Event listeners pour la zone de drop dédiée (racine)
         const dropZoneRoot = document.getElementById('dropZoneRoot');
@@ -5099,6 +5147,19 @@
             };
 
             loadSavedSettings();
+
+            // 🆕 Initialiser le piano roll view
+            if (typeof PianoRollView !== 'undefined' && window.eventBus) {
+                pianoRollView = new PianoRollView(window.eventBus, {
+                    info: (msg) => log(msg, 'info'),
+                    warn: (msg) => log(msg, 'warning'),
+                    error: (msg) => log(msg, 'error'),
+                    debug: (msg) => {} // Silent debug
+                });
+                log('✓ Piano Roll View initialisé', 'info');
+            } else {
+                log('⚠️ PianoRollView non disponible', 'warning');
+            }
 
             // Afficher l'app
             document.getElementById('loading').classList.add('hidden');

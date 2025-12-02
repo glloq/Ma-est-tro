@@ -1,0 +1,251 @@
+/* ============================================================================
+   Fichier: frontend/styles/piano-roll-view.css
+   Version: v1.0.0
+   Description: Styles pour le piano roll view sur l'écran principal
+   ============================================================================ */
+
+/* ===== CONTAINER PRINCIPAL ===== */
+.piano-roll-view {
+    width: 100%;
+    background: #1a1a1a;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.piano-roll-view.hidden {
+    display: none !important;
+}
+
+/* ===== HEADER ===== */
+.piano-roll-view-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 100%);
+    border-bottom: 1px solid #333;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.piano-roll-view-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.piano-roll-icon {
+    font-size: 20px;
+}
+
+.piano-roll-title-text {
+    color: #4ECDC4;
+}
+
+/* ===== BOUTONS DE CANAL ===== */
+.piano-roll-view-channels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.piano-roll-view-channels .channel-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 2px solid;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.piano-roll-view-channels .channel-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.piano-roll-view-channels .channel-btn.active {
+    color: #000;
+    text-shadow: none;
+    font-weight: 700;
+}
+
+.piano-roll-view-channels .channel-btn.muted {
+    background: #333 !important;
+    border-color: #555 !important;
+    color: #888;
+    opacity: 0.7;
+}
+
+.piano-roll-view-channels .channel-btn.muted:hover {
+    opacity: 1;
+    background: #444 !important;
+}
+
+.piano-roll-view-channels .channel-btn::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--channel-color, currentColor);
+    margin-right: 6px;
+}
+
+.piano-roll-view-channels .channel-btn.active::before {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+.piano-roll-view-channels .channel-btn.muted::before {
+    background-color: #666;
+}
+
+.piano-roll-view-channels .no-channels {
+    color: #666;
+    font-size: 13px;
+    font-style: italic;
+}
+
+/* ===== CONTENU DU PIANO ROLL ===== */
+.piano-roll-view-content {
+    flex: 1;
+    min-height: 180px;
+    max-height: 300px;
+    overflow: hidden;
+    background: #111;
+}
+
+.piano-roll-view-container {
+    width: 100%;
+    height: 100%;
+    min-height: 180px;
+}
+
+.piano-roll-view-container webaudio-pianoroll {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+}
+
+/* ===== THEME DARK ===== */
+body.theme-dark .piano-roll-view {
+    background: #1a1a1a;
+}
+
+body.theme-dark .piano-roll-view-header {
+    background: linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 100%);
+}
+
+/* ===== THEME LIGHT ===== */
+body.theme-light .piano-roll-view {
+    background: #2d2d2d;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+body.theme-light .piano-roll-view-header {
+    background: linear-gradient(180deg, #3a3a3a 0%, #2d2d2d 100%);
+    border-bottom-color: #444;
+}
+
+body.theme-light .piano-roll-view-title {
+    color: #fff;
+}
+
+body.theme-light .piano-roll-title-text {
+    color: #4ECDC4;
+}
+
+/* ===== THEME COLORED ===== */
+body.theme-colored .piano-roll-view {
+    background: rgba(26, 26, 26, 0.95);
+    backdrop-filter: blur(10px);
+}
+
+body.theme-colored .piano-roll-view-header {
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.95) 0%, rgba(31, 31, 31, 0.95) 100%);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .piano-roll-view-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .piano-roll-view-channels {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .piano-roll-view-channels .channel-btn {
+        padding: 4px 8px;
+        font-size: 10px;
+    }
+
+    .piano-roll-view-content {
+        min-height: 150px;
+        max-height: 200px;
+    }
+}
+
+@media (max-width: 480px) {
+    .piano-roll-view-channels .channel-btn {
+        padding: 3px 6px;
+        font-size: 9px;
+    }
+
+    .piano-roll-view-channels .channel-btn::before {
+        width: 6px;
+        height: 6px;
+        margin-right: 4px;
+    }
+
+    .piano-roll-view-content {
+        min-height: 120px;
+        max-height: 160px;
+    }
+}
+
+/* ===== ANIMATION DE LECTURE ===== */
+.piano-roll-view.playing .piano-roll-view-title .piano-roll-icon {
+    animation: pulse-icon 1s ease-in-out infinite;
+}
+
+@keyframes pulse-icon {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+/* ===== NO DATA STATE ===== */
+.piano-roll-view-container.no-data {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    font-size: 14px;
+    font-style: italic;
+}
+
+.piano-roll-view-container.no-data::before {
+    content: "Aucun fichier MIDI chargé";
+}

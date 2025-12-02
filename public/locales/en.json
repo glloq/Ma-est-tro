@@ -53,6 +53,13 @@
       "enabled": "Virtual instrument enabled - MIDI messages will be sent to logs",
       "disabled": "Virtual instrument disabled"
     },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Show piano roll",
+      "description": "Displays upcoming notes during playback",
+      "enabled": "Piano roll enabled",
+      "disabled": "Piano roll disabled"
+    },
     "language": {
       "title": "Language",
       "select": "Select language"
@@ -376,5 +383,9 @@
     "create": "Create",
     "folderExists": "Folder \"{folder}\" already exists",
     "folderExistsTitle": "Folder exists"
+  },
+  "pianoRoll": {
+    "title": "Upcoming Notes",
+    "noChannels": "No channels"
   }
 }
