@@ -20,7 +20,8 @@
     "seconds": "segundos",
     "octave": "octava",
     "octaves": "octavas",
-    "keys": "teclas"
+    "keys": "teclas",
+    "clear": "Borrar"
   },
   "app": {
     "title": "MidiMind 5.0 - Sistema de Orquestación MIDI",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Idioma",
       "select": "Seleccionar idioma"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Mostrar piano roll",
+      "description": "Muestra las notas próximas durante la reproducción",
+      "enabled": "Piano roll activado",
+      "disabled": "Piano roll desactivado"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "Función cambiar canal no disponible",
     "channelChanged": "Canal cambiado para {count} nota(s)",
     "instrumentApplied": "Canal {channel}: {instrument}",
-    "snapChanged": "Ajuste: {snap}"
+    "snapChanged": "Ajuste: {snap}",
+    "play": "Reproducir",
+    "pause": "Pausa",
+    "stop": "Detener",
+    "synthInitError": "No se puede inicializar el sintetizador de audio",
+    "changeChannelTitle": "Cambiar canal",
+    "changeInstrumentTitle": "Cambiar instrumento",
+    "apply": "Aplicar",
+    "sameInstrument": "Mismo instrumento ya seleccionado",
+    "noChannelAvailable": "No hay canal disponible",
+    "instrumentAppliedToSelection": "{count} nota(s) → {instrument}",
+    "renameFile": "Renombrar archivo",
+    "renameEmpty": "El nombre del archivo no puede estar vacío",
+    "renameSuccess": "Archivo renombrado con éxito",
+    "renameFailed": "Error al renombrar"
   },
   "errors": {
     "deviceNotFound": "Dispositivo no encontrado: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Nombre de la nueva carpeta:",
     "folderCreated": "Carpeta \"{folder}\" creada",
     "uploadSuccess": "Subiendo {filename}...",
-    "uploadComplete": "Archivo subido con éxito"
+    "uploadComplete": "Archivo subido con éxito",
+    "newFolder": "Nueva carpeta",
+    "folderNamePlaceholder": "Nombre de carpeta...",
+    "create": "Crear",
+    "folderExists": "La carpeta \"{folder}\" ya existe",
+    "folderExistsTitle": "Carpeta existente"
+  },
+  "pianoRoll": {
+    "title": "Notas próximas",
+    "noChannels": "Sin canales"
   }
 }

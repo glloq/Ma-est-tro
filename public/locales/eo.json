@@ -20,7 +20,8 @@
     "seconds": "sekundoj",
     "octave": "oktavo",
     "octaves": "oktavoj",
-    "keys": "klavoj"
+    "keys": "klavoj",
+    "clear": "Viŝi"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI-Orkestra Sistemo",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Lingvo",
       "select": "Elekti lingvon"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Montri piano roll",
+      "description": "Montras venontajn notojn dum ludado",
+      "enabled": "Piano roll ebligita",
+      "disabled": "Piano roll malebligita"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "Ŝanĝi kanalo-funkcio ne disponebla",
     "channelChanged": "Kanalo ŝanĝita por {count} noto(j)",
     "instrumentApplied": "Kanalo {channel}: {instrument}",
-    "snapChanged": "Magneteco: {snap}"
+    "snapChanged": "Magneteco: {snap}",
+    "play": "Ludi",
+    "pause": "Paŭzi",
+    "stop": "Haltigi",
+    "synthInitError": "Ne eblas komenci sonsintezilon",
+    "changeChannelTitle": "Ŝanĝi Kanalon",
+    "changeInstrumentTitle": "Ŝanĝi Instrumenton",
+    "apply": "Apliki",
+    "sameInstrument": "Sama instrumento jam elektita",
+    "noChannelAvailable": "Neniu kanalo disponebla",
+    "instrumentAppliedToSelection": "{count} not(oj) → {instrument}",
+    "renameFile": "Renomi dosieron",
+    "renameEmpty": "Dosiernomo ne povas esti malplena",
+    "renameSuccess": "Dosiero sukcese renomita",
+    "renameFailed": "Renomado malsukcesis"
   },
   "errors": {
     "deviceNotFound": "Aparato ne trovita: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Nomo de nova dosierujo:",
     "folderCreated": "Dosierujo \"{folder}\" kreita",
     "uploadSuccess": "Alŝutante {filename}...",
-    "uploadComplete": "Dosiero sukcese alŝutita"
+    "uploadComplete": "Dosiero sukcese alŝutita",
+    "newFolder": "Nova dosierujo",
+    "folderNamePlaceholder": "Dosierujo nomo...",
+    "create": "Krei",
+    "folderExists": "Dosierujo \"{folder}\" jam ekzistas",
+    "folderExistsTitle": "Dosierujo ekzistas"
+  },
+  "pianoRoll": {
+    "title": "Venontaj Notoj",
+    "noChannels": "Neniuj kanaloj"
   }
 }

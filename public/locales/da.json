@@ -20,7 +20,8 @@
     "seconds": "sekunder",
     "octave": "oktav",
     "octaves": "oktaver",
-    "keys": "tangenter"
+    "keys": "tangenter",
+    "clear": "Ryd"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI Orkestreringssystem",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Sprog",
       "select": "Vælg sprog"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Vis piano roll",
+      "description": "Viser kommende noder under afspilning",
+      "enabled": "Piano roll aktiveret",
+      "disabled": "Piano roll deaktiveret"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "Skift kanal-funktionen er ikke tilgængelig",
     "channelChanged": "Kanal ændret for {count} node(r)",
     "instrumentApplied": "Kanal {channel}: {instrument}",
-    "snapChanged": "Snap: {snap}"
+    "snapChanged": "Snap: {snap}",
+    "play": "Afspil",
+    "pause": "Pause",
+    "stop": "Stop",
+    "synthInitError": "Kan ikke initialisere lydsynthesizer",
+    "changeChannelTitle": "Skift kanal",
+    "changeInstrumentTitle": "Skift instrument",
+    "apply": "Anvend",
+    "sameInstrument": "Samme instrument allerede valgt",
+    "noChannelAvailable": "Ingen kanal tilgængelig",
+    "instrumentAppliedToSelection": "{count} node(r) → {instrument}",
+    "renameFile": "Omdøb fil",
+    "renameEmpty": "Filnavn kan ikke være tomt",
+    "renameSuccess": "Fil omdøbt",
+    "renameFailed": "Omdøbning mislykkedes"
   },
   "errors": {
     "deviceNotFound": "Enhed ikke fundet: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Nyt mappenavn:",
     "folderCreated": "Mappen \"{folder}\" oprettet",
     "uploadSuccess": "Uploader {filename}...",
-    "uploadComplete": "Filen blev uploadet"
+    "uploadComplete": "Filen blev uploadet",
+    "newFolder": "Ny mappe",
+    "folderNamePlaceholder": "Mappenavn...",
+    "create": "Opret",
+    "folderExists": "Mappen \"{folder}\" findes allerede",
+    "folderExistsTitle": "Mappe eksisterer"
+  },
+  "pianoRoll": {
+    "title": "Kommende noder",
+    "noChannels": "Ingen kanaler"
   }
 }

@@ -187,7 +187,7 @@
         /* Modals et formulaires en mode dark */
         body.theme-dark .modal-content {
             background: #2d2d2d;
-            color: #ffffff;
+            color: #e0e0e0;
         }
 
         body.theme-dark .modal-header {
@@ -203,7 +203,7 @@
         }
 
         body.theme-dark .form-group label {
-            color: #ffffff;
+            color: #e0e0e0;
         }
 
         body.theme-dark .form-group input,
@@ -230,7 +230,7 @@
         }
 
         body.theme-dark .info-value {
-            color: #ffffff;
+            color: #e0e0e0;
         }
 
         /* Piano Range Selector en mode dark */
@@ -398,6 +398,7 @@
             background: white;
             border-radius: 12px;
             padding: 24px;
+            margin: 10px;
             margin-bottom: 24px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             position: relative;
@@ -536,6 +537,7 @@
             background: white;
             border-radius: 12px;
             padding: 24px;
+            margin: 10px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
@@ -1572,13 +1574,13 @@
 
         body.theme-dark .folder-modal-close:hover {
             background: #3d3d3d;
-            color: #fff;
+            color: #e0e0e0;
         }
 
         body.theme-dark .folder-modal-input {
             background: #3d3d3d;
             border-color: #555;
-            color: #fff;
+            color: #e0e0e0;
         }
 
         body.theme-dark .folder-modal-input:focus {
@@ -2853,28 +2855,44 @@
             editBtn.className = 'btn btn-secondary btn-sm';
             editBtn.title = 'Éditer';
             editBtn.textContent = '✏️';
-            editBtn.onclick = () => editFile(file.id, file.filename);
+            editBtn.onclick = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                editFile(file.id, file.filename);
+            };
 
             // Bouton Router
             const routeBtn = document.createElement('button');
             routeBtn.className = `btn ${routed ? 'btn-success' : 'btn-secondary'} btn-sm`;
             routeBtn.title = 'Configurer le routage';
             routeBtn.textContent = '🔀';
-            routeBtn.onclick = () => configureRouting(file.id, file.filename);
+            routeBtn.onclick = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                configureRouting(file.id, file.filename);
+            };
 
             // Bouton Play
             const playBtn = document.createElement('button');
             playBtn.className = `btn ${routed ? 'btn-success' : 'btn-warning'} btn-sm`;
             playBtn.title = routed ? 'Lire le fichier' : 'Configurer le routage avant de lire';
             playBtn.textContent = routed ? '▶️' : '⚠️▶️';
-            playBtn.onclick = () => playFile(file.id, file.filename);
+            playBtn.onclick = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                playFile(file.id, file.filename);
+            };
 
             // Bouton Supprimer
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'btn btn-danger btn-sm';
             deleteBtn.title = 'Supprimer';
             deleteBtn.textContent = '🗑️';
-            deleteBtn.onclick = () => deleteFile(file.id);
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                deleteFile(file.id);
+            };
 
             actionsDiv.appendChild(editBtn);
             actionsDiv.appendChild(routeBtn);
@@ -2912,6 +2930,7 @@
             toggleBtn.textContent = '▼';
             toggleBtn.onclick = (e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 toggleFolder(folderPath);
             };
 
@@ -2930,6 +2949,7 @@
 
             deleteBtn.onclick = async (e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 // Vérifier à nouveau au moment du clic
                 const currentFiles = folderStructure[folderPath].files || [];
                 if (currentFiles.length > 0) {

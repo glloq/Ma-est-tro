@@ -20,7 +20,8 @@
     "seconds": "δευτερόλεπτα",
     "octave": "οκτάβα",
     "octaves": "οκτάβες",
-    "keys": "πλήκτρα"
+    "keys": "πλήκτρα",
+    "clear": "Καθαρισμός"
   },
   "app": {
     "title": "MidiMind 5.0 - Σύστημα Ενορχήστρωσης MIDI",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Γλώσσα",
       "select": "Επιλέξτε γλώσσα"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Εμφάνιση piano roll",
+      "description": "Εμφανίζει τις επερχόμενες νότες κατά την αναπαραγωγή",
+      "enabled": "Piano roll ενεργοποιημένο",
+      "disabled": "Piano roll απενεργοποιημένο"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "Η λειτουργία αλλαγής καναλιού δεν είναι διαθέσιμη",
     "channelChanged": "Το κανάλι άλλαξε για {count} νότα(ες)",
     "instrumentApplied": "Κανάλι {channel}: {instrument}",
-    "snapChanged": "Snap: {snap}"
+    "snapChanged": "Snap: {snap}",
+    "play": "Αναπαραγωγή",
+    "pause": "Παύση",
+    "stop": "Διακοπή",
+    "synthInitError": "Αδυναμία αρχικοποίησης συνθεσάιζερ ήχου",
+    "changeChannelTitle": "Αλλαγή καναλιού",
+    "changeInstrumentTitle": "Αλλαγή οργάνου",
+    "apply": "Εφαρμογή",
+    "sameInstrument": "Το ίδιο όργανο είναι ήδη επιλεγμένο",
+    "noChannelAvailable": "Δεν υπάρχει διαθέσιμο κανάλι",
+    "instrumentAppliedToSelection": "{count} νότ(ες) → {instrument}",
+    "renameFile": "Μετονομασία αρχείου",
+    "renameEmpty": "Το όνομα αρχείου δεν μπορεί να είναι κενό",
+    "renameSuccess": "Το αρχείο μετονομάστηκε επιτυχώς",
+    "renameFailed": "Η μετονομασία απέτυχε"
   },
   "errors": {
     "deviceNotFound": "Η συσκευή δεν βρέθηκε: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Νέο όνομα φακέλου:",
     "folderCreated": "Ο φάκελος \"{folder}\" δημιουργήθηκε",
     "uploadSuccess": "Μεταφόρτωση {filename}...",
-    "uploadComplete": "Το αρχείο μεταφορτώθηκε επιτυχώς"
+    "uploadComplete": "Το αρχείο μεταφορτώθηκε επιτυχώς",
+    "newFolder": "Νέος φάκελος",
+    "folderNamePlaceholder": "Όνομα φακέλου...",
+    "create": "Δημιουργία",
+    "folderExists": "Ο φάκελος \"{folder}\" υπάρχει ήδη",
+    "folderExistsTitle": "Ο φάκελος υπάρχει"
+  },
+  "pianoRoll": {
+    "title": "Επερχόμενες νότες",
+    "noChannels": "Δεν υπάρχουν κανάλια"
   }
 }

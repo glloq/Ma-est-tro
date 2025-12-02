@@ -20,7 +20,8 @@
     "seconds": "detik",
     "octave": "oktaf",
     "octaves": "oktaf",
-    "keys": "tuts"
+    "keys": "tuts",
+    "clear": "Bersihkan"
   },
   "app": {
     "title": "MidiMind 5.0 - Sistem Orkestrasi MIDI",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Bahasa",
       "select": "Pilih bahasa"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Tampilkan piano roll",
+      "description": "Menampilkan not yang akan datang saat pemutaran",
+      "enabled": "Piano roll diaktifkan",
+      "disabled": "Piano roll dinonaktifkan"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "Fungsi ubah channel tidak tersedia",
     "channelChanged": "Channel diubah untuk {count} not",
     "instrumentApplied": "Channel {channel}: {instrument}",
-    "snapChanged": "Snap: {snap}"
+    "snapChanged": "Snap: {snap}",
+    "play": "Putar",
+    "pause": "Jeda",
+    "stop": "Berhenti",
+    "synthInitError": "Tidak dapat menginisialisasi synthesizer audio",
+    "changeChannelTitle": "Ubah Kanal",
+    "changeInstrumentTitle": "Ubah Instrumen",
+    "apply": "Terapkan",
+    "sameInstrument": "Instrumen yang sama sudah dipilih",
+    "noChannelAvailable": "Tidak ada kanal tersedia",
+    "instrumentAppliedToSelection": "{count} not → {instrument}",
+    "renameFile": "Ganti nama file",
+    "renameEmpty": "Nama file tidak boleh kosong",
+    "renameSuccess": "File berhasil diganti namanya",
+    "renameFailed": "Gagal mengganti nama"
   },
   "errors": {
     "deviceNotFound": "Perangkat tidak ditemukan: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Nama folder baru:",
     "folderCreated": "Folder \"{folder}\" dibuat",
     "uploadSuccess": "Mengunggah {filename}...",
-    "uploadComplete": "File berhasil diunggah"
+    "uploadComplete": "File berhasil diunggah",
+    "newFolder": "Folder baru",
+    "folderNamePlaceholder": "Nama folder...",
+    "create": "Buat",
+    "folderExists": "Folder \"{folder}\" sudah ada",
+    "folderExistsTitle": "Folder sudah ada"
+  },
+  "pianoRoll": {
+    "title": "Not yang Akan Datang",
+    "noChannels": "Tidak ada kanal"
   }
 }

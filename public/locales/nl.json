@@ -20,7 +20,8 @@
     "seconds": "seconden",
     "octave": "octaaf",
     "octaves": "octaven",
-    "keys": "toetsen"
+    "keys": "toetsen",
+    "clear": "Wissen"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI Orchestration System",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Taal",
       "select": "Taal selecteren"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Piano roll tonen",
+      "description": "Toont aankomende noten tijdens afspelen",
+      "enabled": "Piano roll ingeschakeld",
+      "disabled": "Piano roll uitgeschakeld"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "Kanaalwijziging niet beschikbaar",
     "channelChanged": "Kanaal gewijzigd voor {count} no(o)t(en)",
     "instrumentApplied": "Kanaal {channel}: {instrument}",
-    "snapChanged": "Magnetisme: {snap}"
+    "snapChanged": "Magnetisme: {snap}",
+    "play": "Afspelen",
+    "pause": "Pauzeren",
+    "stop": "Stoppen",
+    "synthInitError": "Kan audio-synthesizer niet initialiseren",
+    "changeChannelTitle": "Kanaal wijzigen",
+    "changeInstrumentTitle": "Instrument wijzigen",
+    "apply": "Toepassen",
+    "sameInstrument": "Hetzelfde instrument is al geselecteerd",
+    "noChannelAvailable": "Geen kanaal beschikbaar",
+    "instrumentAppliedToSelection": "{count} no(o)t(en) → {instrument}",
+    "renameFile": "Bestand hernoemen",
+    "renameEmpty": "Bestandsnaam mag niet leeg zijn",
+    "renameSuccess": "Bestand succesvol hernoemd",
+    "renameFailed": "Hernoemen mislukt"
   },
   "errors": {
     "deviceNotFound": "Apparaat niet gevonden: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Naam van de nieuwe map:",
     "folderCreated": "Map \"{folder}\" aangemaakt",
     "uploadSuccess": "Uploaden van {filename}...",
-    "uploadComplete": "Bestand succesvol geüpload"
+    "uploadComplete": "Bestand succesvol geüpload",
+    "newFolder": "Nieuwe map",
+    "folderNamePlaceholder": "Mapnaam...",
+    "create": "Aanmaken",
+    "folderExists": "Map \"{folder}\" bestaat al",
+    "folderExistsTitle": "Map bestaat"
+  },
+  "pianoRoll": {
+    "title": "Aankomende Noten",
+    "noChannels": "Geen kanalen"
   }
 }

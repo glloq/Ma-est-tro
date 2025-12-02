@@ -20,7 +20,8 @@
     "seconds": "secondi",
     "octave": "ottava",
     "octaves": "ottave",
-    "keys": "tasti"
+    "keys": "tasti",
+    "clear": "Cancella"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI Orchestration System",
@@ -55,6 +56,13 @@
     "language": {
       "title": "Lingua",
       "select": "Seleziona lingua"
+    },
+    "pianoRoll": {
+      "title": "Piano Roll",
+      "enable": "Mostra piano roll",
+      "description": "Visualizza le note in arrivo durante la riproduzione",
+      "enabled": "Piano roll attivato",
+      "disabled": "Piano roll disattivato"
     }
   },
   "bluetooth": {
@@ -224,7 +232,21 @@
     "changeChannelNotAvailable": "Funzione cambio canale non disponibile",
     "channelChanged": "Canale cambiato per {count} nota/e",
     "instrumentApplied": "Canale {channel}: {instrument}",
-    "snapChanged": "Magnetismo: {snap}"
+    "snapChanged": "Magnetismo: {snap}",
+    "play": "Riproduci",
+    "pause": "Pausa",
+    "stop": "Stop",
+    "synthInitError": "Impossibile inizializzare il sintetizzatore audio",
+    "changeChannelTitle": "Cambia canale",
+    "changeInstrumentTitle": "Cambia strumento",
+    "apply": "Applica",
+    "sameInstrument": "Stesso strumento già selezionato",
+    "noChannelAvailable": "Nessun canale disponibile",
+    "instrumentAppliedToSelection": "{count} nota/e → {instrument}",
+    "renameFile": "Rinomina file",
+    "renameEmpty": "Il nome del file non può essere vuoto",
+    "renameSuccess": "File rinominato con successo",
+    "renameFailed": "Rinomina fallita"
   },
   "errors": {
     "deviceNotFound": "Dispositivo non trovato: {deviceId}",
@@ -355,6 +377,15 @@
     "createFolderPrompt": "Nome della nuova cartella:",
     "folderCreated": "Cartella \"{folder}\" creata",
     "uploadSuccess": "Caricamento di {filename}...",
-    "uploadComplete": "File caricato con successo"
+    "uploadComplete": "File caricato con successo",
+    "newFolder": "Nuova cartella",
+    "folderNamePlaceholder": "Nome cartella...",
+    "create": "Crea",
+    "folderExists": "La cartella \"{folder}\" esiste già",
+    "folderExistsTitle": "Cartella esistente"
+  },
+  "pianoRoll": {
+    "title": "Note in arrivo",
+    "noChannels": "Nessun canale"
   }
 }
