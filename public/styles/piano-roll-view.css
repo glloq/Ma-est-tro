@@ -27,17 +27,22 @@
     left: 16px;
     right: 16px;
     bottom: 16px;
-    z-index: 100;
+    z-index: 50; /* Plus bas que le header de l'app */
     margin: 0;
     border-radius: 12px;
     max-height: none;
+}
+
+.piano-roll-view.fullscreen .piano-roll-view-header {
+    flex-shrink: 0;
+    min-height: 60px;
+    padding: 16px 20px;
 }
 
 .piano-roll-view.fullscreen .piano-roll-view-content {
     flex: 1;
     min-height: 0;
     max-height: none;
-    height: 100%;
 }
 
 .piano-roll-view.fullscreen .piano-roll-view-container {
