@@ -2035,6 +2035,9 @@
                 this.mutedChannels = new Set(); // Canaux mutés
                 this.synthesizer = null; // Synthétiseur pour l'audio
                 this.synthesizerReady = false;
+                // Timing basé sur audioContext pour synchronisation parfaite
+                this.audioStartTime = 0;
+                this.audioPauseTime = 0;
 
                 // Écouter les événements de mute du piano roll
                 if (window.eventBus) {
@@ -2073,6 +2076,15 @@
                 } else {
                     this.logger.warn('[VirtualPlayer] MidiSynthesizer non chargé - pas d\'audio');
                 }
+            }
+
+            // Obtenir le temps audio actuel (synchronisé avec l'audio)
+            getAudioTime() {
+                if (this.synthesizer && this.synthesizer.audioContext) {
+                    return this.synthesizer.audioContext.currentTime;
+                }
+                // Fallback si pas d'audio context
+                return performance.now() / 1000;
             }
 
             // Charger un fichier MIDI
@@ -2282,15 +2294,15 @@
                 }
 
                 if (this.paused) {
-                    // Reprendre depuis la pause
+                    // Reprendre depuis la pause - utiliser audioContext.currentTime
                     this.paused = false;
                     this.playing = true;
-                    this.startTime = Date.now() - this.pauseTime;
+                    this.audioStartTime = this.getAudioTime() - this.audioPauseTime;
                     this.logger.info('[VirtualPlayer] ▶️ Reprise de la lecture');
                 } else {
-                    // Démarrer depuis le début
+                    // Démarrer depuis le début - utiliser audioContext.currentTime
                     this.currentEventIndex = 0;
-                    this.startTime = Date.now();
+                    this.audioStartTime = this.getAudioTime();
                     this.playing = true;
                     this.paused = false;
                     this.logger.info('[VirtualPlayer] ▶️ Lecture démarrée');
@@ -2321,7 +2333,7 @@
 
                 this.paused = true;
                 this.playing = false;
-                this.pauseTime = Date.now() - this.startTime;
+                this.audioPauseTime = this.getAudioTime() - this.audioStartTime;
 
                 if (this.timeoutId) {
                     clearTimeout(this.timeoutId);
@@ -2389,7 +2401,8 @@
                 }
 
                 const event = this.events[this.currentEventIndex];
-                const currentTime = (Date.now() - this.startTime) / 1000;
+                // Utiliser audioContext.currentTime pour synchronisation parfaite
+                const currentTime = this.getAudioTime() - this.audioStartTime;
                 const delay = Math.max(0, (event.time - currentTime) * 1000);
 
                 this.timeoutId = setTimeout(() => {
@@ -2450,12 +2463,9 @@
 
                 this.progressInterval = setInterval(() => {
                     if (this.playing && !this.paused) {
-                        const currentTime = (Date.now() - this.startTime) / 1000;
+                        // IMPORTANT: Utiliser audioContext.currentTime pour synchronisation parfaite
+                        const currentTime = this.getAudioTime() - this.audioStartTime;
                         const progress = Math.min(currentTime / this.duration, 1.0);
-
-                        // Convertir le temps en ticks pour le piano roll
-                        const ticksPerSecond = (this.ticksPerBeat * this.tempo) / 60;
-                        const currentTick = Math.floor(currentTime * ticksPerSecond);
 
                         // Émettre l'événement de progression
                         const progressEvent = new CustomEvent('virtualplayback_progress', {
@@ -2471,12 +2481,11 @@
                         if (window.eventBus) {
                             window.eventBus.emit('playback:time', {
                                 time: currentTime,
-                                tick: currentTick,
                                 duration: this.duration
                             });
                         }
                     }
-                }, 33); // Mise à jour toutes les 33ms (~30fps) pour un défilement fluide
+                }, 16); // ~60fps pour un défilement très fluide
             }
 
             // Arrêter les mises à jour de progression
@@ -2492,7 +2501,7 @@
                 return {
                     playing: this.playing,
                     paused: this.paused,
-                    position: this.playing ? (Date.now() - this.startTime) / 1000 : this.pauseTime / 1000,
+                    position: this.playing ? (this.getAudioTime() - this.audioStartTime) : this.audioPauseTime,
                     duration: this.duration
                 };
             }
