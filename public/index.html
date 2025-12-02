@@ -2130,6 +2130,32 @@
                         this.synthesizer.loadSequence(sequence, this.tempo, this.ticksPerBeat);
                         // Extraire et charger les instruments
                         await this.loadInstruments();
+
+                        // IMPORTANT: Utiliser le callback du synthétiseur pour la synchronisation parfaite
+                        const ticksPerSecond = (this.tempo / 60) * this.ticksPerBeat;
+                        this.synthesizer.onTickUpdate = (tick) => {
+                            const currentTime = tick / ticksPerSecond;
+                            const progress = Math.min(currentTime / this.duration, 1.0);
+
+                            // Émettre progression pour l'UI
+                            document.dispatchEvent(new CustomEvent('virtualplayback_progress', {
+                                detail: { position: currentTime, duration: this.duration, progress }
+                            }));
+
+                            // Émettre pour le piano roll - timing EXACT du synthétiseur
+                            if (window.eventBus) {
+                                window.eventBus.emit('playback:time', {
+                                    time: currentTime,
+                                    duration: this.duration
+                                });
+                            }
+                        };
+
+                        // Callback fin de lecture
+                        this.synthesizer.onPlaybackEnd = () => {
+                            this.logger.info('[VirtualPlayer] ✅ Lecture terminée');
+                            this.stop();
+                        };
                     }
 
                     this.logger.info(`[VirtualPlayer] Fichier chargé: ${this.events.length} événements, ${this.tempo} BPM, durée: ${this.duration.toFixed(1)}s`);
@@ -2293,16 +2319,16 @@
                     return;
                 }
 
+                // Utiliser le synthétiseur pour la lecture (timing précis)
+                if (this.synthesizer && this.synthesizerReady) {
+                    this.synthesizer.play();
+                }
+
                 if (this.paused) {
-                    // Reprendre depuis la pause - utiliser audioContext.currentTime
                     this.paused = false;
                     this.playing = true;
-                    this.audioStartTime = this.getAudioTime() - this.audioPauseTime;
                     this.logger.info('[VirtualPlayer] ▶️ Reprise de la lecture');
                 } else {
-                    // Démarrer depuis le début - utiliser audioContext.currentTime
-                    this.currentEventIndex = 0;
-                    this.audioStartTime = this.getAudioTime();
                     this.playing = true;
                     this.paused = false;
                     this.logger.info('[VirtualPlayer] ▶️ Lecture démarrée');
@@ -2317,12 +2343,6 @@
                 if (window.eventBus) {
                     window.eventBus.emit('playback:play', { fileId: this.fileId });
                 }
-
-                // Démarrer l'envoi des événements
-                this.scheduleNextEvent();
-
-                // Démarrer la mise à jour de la progression
-                this.startProgressUpdates();
             }
 
             // Mettre en pause
@@ -2331,16 +2351,13 @@
                     return;
                 }
 
-                this.paused = true;
-                this.playing = false;
-                this.audioPauseTime = this.getAudioTime() - this.audioStartTime;
-
-                if (this.timeoutId) {
-                    clearTimeout(this.timeoutId);
-                    this.timeoutId = null;
+                // Utiliser le synthétiseur pour la pause
+                if (this.synthesizer && this.synthesizerReady) {
+                    this.synthesizer.pause();
                 }
 
-                this.stopProgressUpdates();
+                this.paused = true;
+                this.playing = false;
 
                 // Mettre à jour les états globaux
                 isPlaying = false;
@@ -2357,22 +2374,13 @@
 
             // Arrêter la lecture
             stop() {
+                // Utiliser le synthétiseur pour l'arrêt
+                if (this.synthesizer && this.synthesizerReady) {
+                    this.synthesizer.stop();
+                }
+
                 this.playing = false;
                 this.paused = false;
-                this.currentEventIndex = 0;
-                this.pauseTime = 0;
-
-                if (this.timeoutId) {
-                    clearTimeout(this.timeoutId);
-                    this.timeoutId = null;
-                }
-
-                this.stopProgressUpdates();
-
-                // Arrêter les notes en cours sur le synthétiseur
-                if (this.synthesizer) {
-                    this.synthesizer.cancelAllNotes();
-                }
 
                 // Mettre à jour les états globaux
                 isPlaying = false;
