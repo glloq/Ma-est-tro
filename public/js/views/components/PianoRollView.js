@@ -32,9 +32,14 @@ class PianoRollView {
         // Animation
         this.animationFrameId = null;
         this.lastUpdateTime = 0;
+        this.updateThrottleMs = 50; // Throttle updates to 20fps max
 
         // Feature enabled state (from settings)
         this.isEnabled = false;
+
+        // Performance limits
+        this.maxVisibleNotes = 500; // Maximum notes to display at once
+        this.visibleWindowTicks = 0; // Calculated based on displayTimeSeconds
 
         // Couleurs éclatantes pour les 16 canaux MIDI
         this.channelColors = [
@@ -183,11 +188,15 @@ class PianoRollView {
             </div>
         `;
 
-        // Insérer après le header
-        const header = document.querySelector('header');
-        if (header && header.parentNode) {
-            header.parentNode.insertBefore(this.container, header.nextSibling);
+        // Insérer dans le body, après le container principal
+        const mainContainer = document.querySelector('.container');
+        if (mainContainer) {
+            mainContainer.appendChild(this.container);
+        } else {
+            document.body.appendChild(this.container);
         }
+
+        this.log('info', 'Piano roll container created');
     }
 
     /**
@@ -549,23 +558,49 @@ class PianoRollView {
     }
 
     /**
-     * Mettre à jour la séquence affichée
+     * Mettre à jour la séquence affichée (avec optimisation de performance)
      */
     updateSequence() {
         if (!this.pianoRoll) return;
 
-        // Filtrer par canaux actifs (non mutés)
-        this.sequence = this.fullSequence.filter(note =>
-            this.activeChannels.has(note.c) && !this.mutedChannels.has(note.c)
-        );
+        // Calculer la fenêtre de temps visible
+        const xrange = this.calculateXRange();
+        this.visibleWindowTicks = xrange;
+        const windowStart = Math.max(0, this.currentTick - xrange * 0.1); // 10% avant
+        const windowEnd = this.currentTick + xrange * 1.2; // 120% après
 
-        // Ajouter aussi les notes mutées (mais elles seront grises)
-        const mutedNotes = this.fullSequence.filter(note =>
-            this.mutedChannels.has(note.c)
-        );
+        // Filtrer par canaux actifs et fenêtre de temps
+        let visibleNotes = this.fullSequence.filter(note => {
+            const noteEnd = note.t + note.g;
+            const inWindow = noteEnd >= windowStart && note.t <= windowEnd;
+            const notMuted = !this.mutedChannels.has(note.c);
+            return inWindow && notMuted;
+        });
 
-        // Combiner avec les notes mutées
-        const displaySequence = [...this.sequence, ...mutedNotes];
+        // Ajouter les notes mutées dans la fenêtre (seront grises)
+        const mutedNotes = this.fullSequence.filter(note => {
+            const noteEnd = note.t + note.g;
+            const inWindow = noteEnd >= windowStart && note.t <= windowEnd;
+            return inWindow && this.mutedChannels.has(note.c);
+        });
+
+        // Combiner
+        let displaySequence = [...visibleNotes, ...mutedNotes];
+
+        // Limiter le nombre de notes pour les performances
+        if (displaySequence.length > this.maxVisibleNotes) {
+            // Trier par proximité au tick actuel et garder les plus proches
+            displaySequence.sort((a, b) => {
+                const distA = Math.abs(a.t - this.currentTick);
+                const distB = Math.abs(b.t - this.currentTick);
+                return distA - distB;
+            });
+            displaySequence = displaySequence.slice(0, this.maxVisibleNotes);
+            // Re-trier par tick pour l'affichage
+            displaySequence.sort((a, b) => a.t - b.t);
+        }
+
+        this.sequence = visibleNotes;
 
         // Mettre à jour le piano roll
         this.pianoRoll.sequence = displaySequence;
@@ -682,17 +717,22 @@ class PianoRollView {
     }
 
     /**
-     * Mettre à jour la vue
+     * Mettre à jour la vue (avec throttling)
      */
     updateView() {
         if (!this.pianoRoll || !this.isVisible) return;
 
+        const now = performance.now();
+        if (now - this.lastUpdateTime < this.updateThrottleMs) {
+            return; // Skip update if too soon
+        }
+        this.lastUpdateTime = now;
+
         // Mettre à jour la position de lecture (xoffset)
         this.pianoRoll.xoffset = this.currentTick;
 
-        if (typeof this.pianoRoll.redraw === 'function') {
-            this.pianoRoll.redraw();
-        }
+        // Mettre à jour la séquence visible (filtrage par fenêtre de temps)
+        this.updateSequence();
     }
 
     /**
@@ -700,6 +740,8 @@ class PianoRollView {
      */
     startAnimation() {
         if (this.animationFrameId) return;
+
+        this.lastUpdateTime = 0; // Reset throttle
 
         const animate = (timestamp) => {
             if (!this.isPlaying) {
@@ -772,15 +814,23 @@ class PianoRollView {
      * Afficher le piano roll
      */
     show() {
-        if (this.isVisible) return; // Déjà visible
+        this.log('info', `show() called - isVisible: ${this.isVisible}, isEnabled: ${this.isEnabled}, hasMidiData: ${!!this.midiData}`);
+
+        if (this.isVisible) {
+            this.log('debug', 'Already visible, skipping');
+            return;
+        }
+
+        if (!this.container) {
+            this.log('error', 'Container not found!');
+            return;
+        }
 
         this.isVisible = true;
 
-        if (this.container) {
-            // D'abord rendre visible pour pouvoir calculer les positions
-            this.container.classList.remove('hidden');
-            this.container.classList.add('fullscreen');
-        }
+        // D'abord rendre visible
+        this.container.classList.remove('hidden');
+        this.container.classList.add('fullscreen');
 
         // Cacher les cartes fichiers/périphériques
         const mainGrid = document.querySelector('.main-grid');
@@ -802,6 +852,9 @@ class PianoRollView {
             // Initialiser le piano roll si on a des données
             if (this.midiData) {
                 this.initializePianoRoll();
+                this.log('info', 'Piano roll initialized with MIDI data');
+            } else {
+                this.log('warn', 'No MIDI data available for piano roll');
             }
         });
 
