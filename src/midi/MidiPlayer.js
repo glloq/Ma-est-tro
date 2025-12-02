@@ -20,6 +20,7 @@ class MidiPlayer {
     this.loop = false;
     this.channels = []; // MIDI channels found in file
     this.channelRouting = new Map(); // channel -> device mapping
+    this.mutedChannels = new Set(); // Muted channels
 
     this.app.logger.info('MidiPlayer initialized');
   }
@@ -375,6 +376,11 @@ class MidiPlayer {
       return;
     }
 
+    // Skip muted channels
+    if (this.mutedChannels.has(event.channel)) {
+      return;
+    }
+
     const device = this.app.deviceManager;
     // Use channel-specific routing if available
     const targetDevice = this.getOutputForChannel(event.channel);
@@ -499,6 +505,40 @@ class MidiPlayer {
   getOutputForChannel(channel) {
     // Get specific device for this channel, or default device
     return this.channelRouting.get(channel) || this.outputDevice;
+  }
+
+  // Mute a channel
+  muteChannel(channel) {
+    this.mutedChannels.add(channel);
+    this.app.logger.info(`Channel ${channel + 1} muted`);
+
+    // Send All Notes Off for this channel to stop currently playing notes
+    if (this.outputDevice) {
+      const targetDevice = this.getOutputForChannel(channel);
+      if (targetDevice) {
+        this.app.deviceManager.sendMessage(targetDevice, 'cc', {
+          channel: channel,
+          controller: 123, // All Notes Off
+          value: 0
+        });
+      }
+    }
+  }
+
+  // Unmute a channel
+  unmuteChannel(channel) {
+    this.mutedChannels.delete(channel);
+    this.app.logger.info(`Channel ${channel + 1} unmuted`);
+  }
+
+  // Check if a channel is muted
+  isChannelMuted(channel) {
+    return this.mutedChannels.has(channel);
+  }
+
+  // Get all muted channels
+  getMutedChannels() {
+    return Array.from(this.mutedChannels);
   }
 }
 
