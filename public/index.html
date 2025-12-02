@@ -2466,6 +2466,10 @@
                     isPaused = false;
                     updatePlaybackControls();
                     log('▶️ Lecture démarrée');
+                    // Émettre pour le piano roll
+                    if (window.eventBus) {
+                        window.eventBus.emit('playback:play', { fileId: currentFileId });
+                    }
                 });
 
                 api.on('playback_stopped', () => {
@@ -2477,6 +2481,10 @@
                     document.getElementById('headerFileName').textContent = i18n.t('ui.noFileSelected');
                     document.getElementById('headerTime').textContent = '00:00 / 00:00';
                     log('⏹️ Lecture arrêtée');
+                    // Émettre pour le piano roll
+                    if (window.eventBus) {
+                        window.eventBus.emit('playback:stop', { fileId: currentFileId });
+                    }
                 });
 
                 api.on('playback_paused', () => {
@@ -2484,6 +2492,10 @@
                     isPaused = true;
                     updatePlaybackControls();
                     log('⏸️ Lecture en pause');
+                    // Émettre pour le piano roll
+                    if (window.eventBus) {
+                        window.eventBus.emit('playback:pause', { fileId: currentFileId });
+                    }
                 });
 
                 api.on('playback_resumed', () => {
@@ -2491,6 +2503,10 @@
                     isPaused = false;
                     updatePlaybackControls();
                     log('▶️ Lecture reprise');
+                    // Émettre pour le piano roll
+                    if (window.eventBus) {
+                        window.eventBus.emit('playback:play', { fileId: currentFileId });
+                    }
                 });
 
                 // Événements du player virtuel
@@ -3694,6 +3710,20 @@
                 currentFileId = fileId;
                 document.getElementById('headerFileName').textContent = filename;
                 updatePlaybackControls();
+
+                // Charger les données MIDI pour le piano roll (même en mode backend)
+                try {
+                    const fileData = await api.sendCommand('file_read', { fileId });
+                    if (fileData && fileData.midiData && fileData.midiData.midi && window.eventBus) {
+                        window.eventBus.emit('file:selected', {
+                            fileId: fileId,
+                            filename: filename,
+                            midiData: fileData.midiData.midi
+                        });
+                    }
+                } catch (midiError) {
+                    console.warn('Could not load MIDI data for piano roll:', midiError);
+                }
 
                 await api.sendCommand('playback_start', { fileId });
                 log(`▶️ Lecture de ${filename}`, 'info');
