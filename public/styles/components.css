@@ -799,7 +799,7 @@
     flex-direction: column;
     padding: 0;
     margin: 0; /* AJOUT: Supprimer margin-bottom:20px de la règle générale */
-    overflow: hidden;
+    overflow: visible;
     background: #1a1a1a;
     min-height: 0; /* Important pour flex container */
     border-radius: 0 0 12px 12px; /* AJOUT: Correspond aux coins arrondis du parent */
@@ -1061,7 +1061,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    padding: 12px 12px;
+    padding: 8px 10px;
     background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
     border: 3px solid #555;
     border-radius: 8px;
