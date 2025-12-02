@@ -2457,6 +2457,14 @@
                         document.getElementById('headerProgressFill').style.width = `${percent}%`;
                         const timeText = `${formatTime(data.position * 1000)} / ${formatTime(currentDuration * 1000)}`;
                         document.getElementById('headerTime').textContent = timeText;
+
+                        // Émettre pour le piano roll (position en secondes)
+                        if (window.eventBus) {
+                            window.eventBus.emit('playback:time', {
+                                time: data.position,
+                                duration: currentDuration
+                            });
+                        }
                     }
                 });
 
@@ -3780,9 +3788,15 @@
                     virtualPlayer.stop();
                 } else {
                     await api.sendCommand('playback_stop');
+                    // Émettre l'événement pour le piano roll (le backend peut ne pas envoyer playback_stopped)
+                    if (window.eventBus) {
+                        window.eventBus.emit('playback:stop', { fileId: currentFileId });
+                    }
                 }
                 // Réinitialiser l'état de pause
                 isPaused = false;
+                isPlaying = false;
+                updatePlaybackControls();
                 // Ne pas réinitialiser currentFileId pour permettre de relancer
             } catch (error) {
                 log(`Erreur stop: ${error.message}`, 'error');
