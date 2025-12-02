@@ -5150,15 +5150,23 @@
             loadSavedSettings();
 
             // 🆕 Initialiser le piano roll view
+            console.log('🎹 Initializing PianoRollView...', typeof PianoRollView, !!window.eventBus);
             if (typeof PianoRollView !== 'undefined' && window.eventBus) {
-                pianoRollView = new PianoRollView(window.eventBus, {
-                    info: (msg) => log(msg, 'info'),
-                    warn: (msg) => log(msg, 'warning'),
-                    error: (msg) => log(msg, 'error'),
-                    debug: (msg) => {} // Silent debug
-                });
-                log('✓ Piano Roll View initialisé', 'info');
+                try {
+                    pianoRollView = new PianoRollView(window.eventBus, {
+                        info: (msg) => { console.log(msg); log(msg, 'info'); },
+                        warn: (msg) => { console.warn(msg); log(msg, 'warning'); },
+                        error: (msg) => { console.error(msg); log(msg, 'error'); },
+                        debug: (msg) => console.log('[DEBUG]', msg)
+                    });
+                    console.log('✓ Piano Roll View créé avec succès');
+                    log('✓ Piano Roll View initialisé', 'info');
+                } catch (error) {
+                    console.error('❌ Erreur création PianoRollView:', error);
+                    log(`❌ Erreur PianoRollView: ${error.message}`, 'error');
+                }
             } else {
+                console.warn('⚠️ PianoRollView non disponible - PianoRollView:', typeof PianoRollView, ', eventBus:', !!window.eventBus);
                 log('⚠️ PianoRollView non disponible', 'warning');
             }
 

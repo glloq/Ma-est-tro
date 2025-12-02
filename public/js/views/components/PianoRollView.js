@@ -939,4 +939,5 @@ class PianoRollView {
 // Export global
 if (typeof window !== 'undefined') {
     window.PianoRollView = PianoRollView;
+    console.log('✓ PianoRollView class loaded');
 }
