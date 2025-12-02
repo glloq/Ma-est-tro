@@ -23,8 +23,8 @@ class PianoRollView {
         this.tempo = 120;
         this.ticksPerBeat = 480;
 
-        // Fenêtre d'affichage en secondes
-        this.displayWindowSeconds = 5;
+        // Fenêtre d'affichage en secondes (par défaut 20s, comme dans les réglages)
+        this.displayWindowSeconds = 20;
 
         // Plage de notes
         this.noteMin = 21;
@@ -70,7 +70,7 @@ class PianoRollView {
             if (saved) {
                 const s = JSON.parse(saved);
                 this.isEnabled = s.showPianoRoll || false;
-                this.displayWindowSeconds = s.noteDisplayTime || 5;
+                this.displayWindowSeconds = s.noteDisplayTime || 20;
             }
         } catch (e) {}
     }
@@ -107,6 +107,14 @@ class PianoRollView {
         this.eventBus.on('settings:piano_roll_changed', (d) => {
             this.isEnabled = d.enabled;
             if (!this.isEnabled && this.isVisible) this.hide();
+        });
+
+        // Temps d'affichage en preview
+        this.eventBus.on('settings:display_time_changed', (d) => {
+            if (d.time) {
+                this.displayWindowSeconds = d.time;
+                this.log('info', `Display window set to ${d.time}s`);
+            }
         });
 
         // Fichier chargé - UTILISER parsedEvents si disponible (timing IDENTIQUE à l'audio)
