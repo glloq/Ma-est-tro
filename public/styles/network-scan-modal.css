@@ -894,5 +894,138 @@
 }
 
 /* ============================================================================
+   THÈME SOMBRE
+   ============================================================================ */
+
+body.theme-dark .network-scan-modal .device-name {
+    color: #e0e0e0;
+}
+
+body.theme-dark .network-scan-modal .device-ip {
+    color: #b0b0b0;
+}
+
+body.theme-dark .network-scan-modal .device-signal {
+    color: #b0b0b0;
+}
+
+body.theme-dark .network-scan-modal .scan-header h3 {
+    color: #e0e0e0;
+}
+
+body.theme-dark .network-scan-modal .connected-section h3 {
+    color: #e0e0e0;
+}
+
+body.theme-dark .network-scan-modal .info-section p {
+    color: #b0b0b0;
+}
+
+body.theme-dark .network-scan-modal .devices-empty p {
+    color: #e0e0e0;
+}
+
+body.theme-dark .network-scan-modal .devices-empty .text-muted {
+    color: #b0b0b0 !important;
+}
+
+body.theme-dark .network-scan-modal .devices-scanning p {
+    color: #e0e0e0;
+}
+
+body.theme-dark .network-scan-modal .devices-scanning .text-muted {
+    color: #b0b0b0 !important;
+}
+
+body.theme-dark .network-scan-modal .network-device {
+    background: #3d3d3d;
+    border-color: #4d4d4d;
+}
+
+body.theme-dark .network-scan-modal .network-device:hover {
+    background: #2d2d2d;
+    border-color: #3498db;
+}
+
+body.theme-dark .network-scan-modal .network-device.connected {
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(41, 128, 185, 0.15));
+    border-color: rgba(52, 152, 219, 0.3);
+}
+
+body.theme-dark .network-scan-modal .modal-body {
+    background: #1a1a1a !important;
+}
+
+body.theme-dark .network-scan-modal .modal-dialog {
+    background: #2d2d2d !important;
+}
+
+body.theme-dark .network-scan-modal .modal-header {
+    background: linear-gradient(135deg, #2980b9 0%, #1a5276 100%) !important;
+}
+
+body.theme-dark .network-scan-modal .modal-footer {
+    background: #2d2d2d;
+    border-top-color: #4d4d4d;
+}
+
+body.theme-dark .network-scan-modal .manual-ip-section {
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(41, 128, 185, 0.15));
+    border-color: #3498db;
+}
+
+body.theme-dark .network-scan-modal .manual-ip-header h3 {
+    color: #e0e0e0;
+}
+
+body.theme-dark .network-scan-modal .form-group label {
+    color: #e0e0e0;
+}
+
+body.theme-dark .network-scan-modal .form-group input {
+    background: #3d3d3d;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+body.theme-dark .network-scan-modal .checkbox-label span {
+    color: #e0e0e0;
+}
+
+body.theme-dark .network-scan-modal .devices-empty,
+body.theme-dark .network-scan-modal .devices-scanning {
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(41, 128, 185, 0.15));
+}
+
+body.theme-dark .disconnect-modal {
+    background: #2d2d2d;
+}
+
+body.theme-dark .disconnect-modal-header {
+    background: linear-gradient(135deg, #4a3535 0%, #3a2525 100%);
+}
+
+body.theme-dark .disconnect-modal-header h3 {
+    color: #e74c3c;
+}
+
+body.theme-dark .disconnect-modal-body p {
+    color: #e0e0e0;
+}
+
+body.theme-dark .disconnect-device-info {
+    background: #3d3d3d;
+}
+
+body.theme-dark .disconnect-device-info strong {
+    color: #e0e0e0;
+}
+
+body.theme-dark .disconnect-modal-footer {
+    background: #3d3d3d;
+    border-top-color: #4d4d4d;
+}
+
+/* ============================================================================
    FIN network-scan-modal.css
    ============================================================================ */
