@@ -146,6 +146,9 @@ class PianoRollView {
 
         // Temps - UTILISER time directement en SECONDES (pas de conversion!)
         this.eventBus.on('playback:time', (data) => {
+            // IMPORTANT: Ignorer si pas en lecture (évite les events retardataires)
+            if (!this.isPlaying) return;
+
             if (data.time !== undefined) {
                 this.currentTime = data.time;
             }
