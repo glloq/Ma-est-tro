@@ -1956,7 +1956,7 @@
                 };
 
                 const cleanup = () => {
-                    modal.classList.remove('show');
+                    modal.classList.remove('visible');
                     okBtn.removeEventListener('click', handleOk);
                     cancelBtn.removeEventListener('click', handleCancel);
                     document.removeEventListener('keydown', handleEscape);
@@ -1970,7 +1970,7 @@
                 modal.addEventListener('click', handleOverlayClick);
 
                 // Afficher la modal
-                modal.classList.add('show');
+                modal.classList.add('visible');
 
                 // Focus sur le bouton annuler par défaut (pour éviter les suppressions accidentelles)
                 cancelBtn.focus();
@@ -2035,7 +2035,7 @@
                 };
 
                 const cleanup = () => {
-                    modal.classList.remove('show');
+                    modal.classList.remove('visible');
                     okBtn.removeEventListener('click', handleOk);
                     document.removeEventListener('keydown', handleEscape);
                     modal.removeEventListener('click', handleOverlayClick);
@@ -2052,7 +2052,7 @@
                 modal.addEventListener('click', handleOverlayClick);
 
                 // Afficher la modal
-                modal.classList.add('show');
+                modal.classList.add('visible');
 
                 // Focus sur le bouton OK
                 okBtn.focus();
