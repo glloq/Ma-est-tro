@@ -255,40 +255,45 @@ class PianoRollView {
         }
 
         const allNotes = [];
-        this.ticksPerBeat = this.midiData.header?.ticksPerBeat || 480;
+        this.ticksPerBeat = this.midiData.ticksPerQuarter || this.midiData.header?.ticksPerBeat || 480;
+
+        // Also get tempo from midiData if available
+        if (this.midiData.tempo) {
+            this.tempo = this.midiData.tempo;
+        }
 
         this.midiData.tracks.forEach((track, trackIndex) => {
+            // Support both formats: track as array of events, or track.events as array
+            const events = track.events || track;
+            if (!events || !Array.isArray(events)) return;
+
             const noteOns = {};
-            let currentTick = 0;
-            let currentChannel = trackIndex % 16;
 
-            track.forEach(event => {
-                currentTick += event.deltaTime || 0;
-
-                if (event.type === 'channel') {
-                    currentChannel = event.channel || 0;
-
-                    if (event.subtype === 'noteOn' && event.velocity > 0) {
-                        const key = `${currentChannel}_${event.noteNumber}`;
-                        noteOns[key] = {
-                            tick: currentTick,
-                            velocity: event.velocity,
-                            channel: currentChannel,
-                            note: event.noteNumber
-                        };
-                    } else if (event.subtype === 'noteOff' || (event.subtype === 'noteOn' && event.velocity === 0)) {
-                        const key = `${currentChannel}_${event.noteNumber}`;
-                        if (noteOns[key]) {
-                            const noteOn = noteOns[key];
-                            allNotes.push({
-                                tick: noteOn.tick,
-                                gate: currentTick - noteOn.tick,
-                                note: noteOn.note,
-                                channel: noteOn.channel,
-                                velocity: noteOn.velocity
-                            });
-                            delete noteOns[key];
-                        }
+            events.forEach(event => {
+                // Handle MidiParser format: type is 'noteOn', 'noteOff', etc.
+                // with data1 = noteNumber, data2 = velocity, time = tick position
+                if (event.type === 'noteOn' && event.data2 > 0) {
+                    const channel = event.channel !== undefined ? event.channel : 0;
+                    const key = `${channel}_${event.data1}`;
+                    noteOns[key] = {
+                        tick: event.time,
+                        velocity: event.data2,
+                        channel: channel,
+                        note: event.data1
+                    };
+                } else if (event.type === 'noteOff' || (event.type === 'noteOn' && event.data2 === 0)) {
+                    const channel = event.channel !== undefined ? event.channel : 0;
+                    const key = `${channel}_${event.data1}`;
+                    if (noteOns[key]) {
+                        const noteOn = noteOns[key];
+                        allNotes.push({
+                            tick: noteOn.tick,
+                            gate: event.time - noteOn.tick,
+                            note: noteOn.note,
+                            channel: noteOn.channel,
+                            velocity: noteOn.velocity
+                        });
+                        delete noteOns[key];
                     }
                 }
             });
@@ -308,6 +313,8 @@ class PianoRollView {
 
         // Initialiser la séquence avec toutes les notes
         this.sequence = [...this.fullSequence];
+
+        this.log('info', `Converted MIDI: ${this.fullSequence.length} notes, tempo: ${this.tempo} BPM`);
     }
 
     /**
@@ -321,28 +328,29 @@ class PianoRollView {
         if (!this.midiData || !this.midiData.tracks) return;
 
         this.midiData.tracks.forEach((track, trackIndex) => {
-            let currentChannel = trackIndex % 16;
-            let program = 0;
+            // Support both formats: track as array of events, or track.events as array
+            const events = track.events || track;
+            if (!events || !Array.isArray(events)) return;
 
-            track.forEach(event => {
-                if (event.type === 'channel') {
-                    currentChannel = event.channel || 0;
+            events.forEach(event => {
+                const channel = event.channel !== undefined ? event.channel : 0;
 
-                    if (event.subtype === 'programChange') {
-                        program = event.programNumber || 0;
-                        if (!channelMap.has(currentChannel)) {
-                            channelMap.set(currentChannel, { program, noteCount: 0 });
-                        } else {
-                            channelMap.get(currentChannel).program = program;
-                        }
+                // Handle programChange (MidiParser format)
+                if (event.type === 'programChange') {
+                    const program = event.data1 !== undefined ? event.data1 : 0;
+                    if (!channelMap.has(channel)) {
+                        channelMap.set(channel, { program, noteCount: 0 });
+                    } else {
+                        channelMap.get(channel).program = program;
                     }
+                }
 
-                    if (event.subtype === 'noteOn' && event.velocity > 0) {
-                        if (!channelMap.has(currentChannel)) {
-                            channelMap.set(currentChannel, { program: 0, noteCount: 0 });
-                        }
-                        channelMap.get(currentChannel).noteCount++;
+                // Handle noteOn (MidiParser format)
+                if (event.type === 'noteOn' && event.data2 > 0) {
+                    if (!channelMap.has(channel)) {
+                        channelMap.set(channel, { program: 0, noteCount: 0 });
                     }
+                    channelMap.get(channel).noteCount++;
                 }
             });
         });
@@ -363,6 +371,8 @@ class PianoRollView {
 
         // Trier par numéro de canal
         this.channels.sort((a, b) => a.channel - b.channel);
+
+        this.log('info', `Extracted ${this.channels.length} channels with notes`);
     }
 
     /**
@@ -547,22 +557,42 @@ class PianoRollView {
                 ? `background: ${color}; border-color: ${color};`
                 : `--channel-color: ${color}; border-color: ${color};`;
 
+            // Icône de mute
+            const muteIcon = isMuted ? '🔇' : '🔊';
+
             html += `
-                <button
-                    class="channel-btn ${activeClass} ${mutedClass}"
-                    data-channel="${ch.channel}"
-                    style="${style}"
-                    title="${ch.instrument} (${ch.noteCount} notes)"
-                >
-                    ${ch.channel + 1}: ${ch.instrument.split(' ')[0]}
-                </button>
+                <div class="channel-btn-group" data-channel="${ch.channel}">
+                    <button
+                        class="channel-btn ${activeClass} ${mutedClass}"
+                        data-channel="${ch.channel}"
+                        style="${style}"
+                        title="${ch.instrument} (${ch.noteCount} notes) - Click to toggle mute"
+                    >
+                        ${ch.channel + 1}: ${ch.instrument.split(' ')[0]}
+                    </button>
+                    <button
+                        class="mute-btn ${mutedClass}"
+                        data-channel="${ch.channel}"
+                        title="${isMuted ? 'Unmute' : 'Mute'} channel ${ch.channel + 1}"
+                    >
+                        ${muteIcon}
+                    </button>
+                </div>
             `;
         });
 
         container.innerHTML = html;
 
-        // Attacher les événements
+        // Attacher les événements aux boutons de canal (toggle mute)
         container.querySelectorAll('.channel-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const channel = parseInt(btn.dataset.channel);
+                this.toggleChannel(channel);
+            });
+        });
+
+        // Attacher les événements aux boutons mute
+        container.querySelectorAll('.mute-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const channel = parseInt(btn.dataset.channel);
                 this.toggleChannel(channel);
@@ -673,7 +703,22 @@ class PianoRollView {
         this.isVisible = true;
         if (this.container) {
             this.container.classList.remove('hidden');
+            this.container.classList.add('fullscreen');
         }
+
+        // Cacher les cartes fichiers/périphériques
+        const mainGrid = document.querySelector('.main-grid');
+        if (mainGrid) {
+            mainGrid.classList.add('hidden-for-pianoroll');
+        }
+
+        // Cacher la console de debug si visible
+        const debugConsole = document.getElementById('debugConsole');
+        if (debugConsole && !debugConsole.classList.contains('hidden')) {
+            this._debugWasVisible = true;
+            debugConsole.classList.add('hidden-for-pianoroll');
+        }
+
         if (this.midiData) {
             this.initializePianoRoll();
         }
@@ -687,7 +732,22 @@ class PianoRollView {
         this.isVisible = false;
         if (this.container) {
             this.container.classList.add('hidden');
+            this.container.classList.remove('fullscreen');
         }
+
+        // Réafficher les cartes fichiers/périphériques
+        const mainGrid = document.querySelector('.main-grid');
+        if (mainGrid) {
+            mainGrid.classList.remove('hidden-for-pianoroll');
+        }
+
+        // Réafficher la console de debug si elle était visible
+        const debugConsole = document.getElementById('debugConsole');
+        if (debugConsole && this._debugWasVisible) {
+            debugConsole.classList.remove('hidden-for-pianoroll');
+            this._debugWasVisible = false;
+        }
+
         this.stopAnimation();
         this.log('info', 'Piano roll view hidden');
     }
