@@ -397,9 +397,8 @@
         header {
             background: white;
             border-radius: 12px;
-            padding: 24px;
-            margin: 10px;
-            margin-bottom: 24px;
+            padding: 10px;
+            margin-bottom: 10px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             position: relative;
             z-index: 60; /* Au-dessus du piano roll */
@@ -529,15 +528,14 @@
         .main-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 24px;
-            margin-bottom: 24px;
+            gap: 10px;
+            margin-bottom: 10px;
         }
 
         .card {
             background: white;
             border-radius: 12px;
-            padding: 24px;
-            margin: 10px;
+            padding: 10px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
@@ -1388,7 +1386,7 @@
             right: 0;
             bottom: 0;
             background: rgba(0, 0, 0, 0.6);
-            z-index: 9999;
+            z-index: 100000;
             align-items: center;
             justify-content: center;
         }
@@ -1465,6 +1463,88 @@
 
         body.theme-dark .confirm-modal-message {
             color: #b0b0b0;
+        }
+
+        /* Modal de routage - styles pour dark mode */
+        .routing-modal-container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .routing-modal-title {
+            margin: 0 0 16px 0;
+            color: #667eea;
+        }
+
+        .routing-modal-file {
+            margin-bottom: 16px;
+            color: #333;
+        }
+
+        .routing-channel-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .routing-channel-info {
+            flex: 1;
+        }
+
+        .routing-channel-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .routing-channel-tracks {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .routing-modal-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            justify-content: flex-end;
+        }
+
+        body.theme-dark .routing-modal-container {
+            background: #2d2d2d;
+        }
+
+        body.theme-dark .routing-modal-title {
+            color: #8b9bea;
+        }
+
+        body.theme-dark .routing-modal-file {
+            color: #e0e0e0;
+        }
+
+        body.theme-dark .routing-channel-row {
+            background: #3d3d3d;
+        }
+
+        body.theme-dark .routing-channel-name {
+            color: #e0e0e0;
+        }
+
+        body.theme-dark .routing-channel-tracks {
+            color: #b0b0b0;
+        }
+
+        body.theme-dark .routing-modal-container select {
+            background: #3d3d3d;
+            color: #e0e0e0;
+            border-color: #555;
         }
 
         /* Modal de création de dossier */
@@ -3722,10 +3802,10 @@
                 const currentDevice = currentConfig.channels[ch.channel] || '';
 
                 return `
-                    <div style="display: flex; gap: 10px; align-items: center; padding: 10px; background: #f8f9fa; border-radius: 6px; margin-bottom: 8px;">
-                        <div style="flex: 1;">
-                            <strong>Canal ${ch.channelDisplay || (ch.channel + 1)}</strong><br>
-                            <small style="color: #666;">${trackNames}</small>
+                    <div class="routing-channel-row">
+                        <div class="routing-channel-info">
+                            <span class="routing-channel-name">Canal ${ch.channelDisplay || (ch.channel + 1)}</span><br>
+                            <small class="routing-channel-tracks">${trackNames}</small>
                         </div>
                         <select id="channel_${ch.channel}" style="flex: 1; padding: 8px;">
                             <option value="">-- Aucun --</option>
@@ -3738,14 +3818,14 @@
             }).join('');
 
             modal.innerHTML = `
-                <div style="background: white; border-radius: 12px; padding: 24px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
-                    <h2 style="margin: 0 0 16px 0; color: #667eea;">🔀 ${i18n.t('channelRouter.title')}</h2>
-                    <p style="margin-bottom: 16px; color: #666;"><strong>${i18n.t('channelRouter.file')}:</strong> ${filename}</p>
-                    <p style="margin-bottom: 16px; color: #666;"><strong>${i18n.t('channelRouter.channelsFound')}:</strong> ${channels.length}</p>
+                <div class="routing-modal-container">
+                    <h2 class="routing-modal-title">🔀 ${i18n.t('channelRouter.title')}</h2>
+                    <p class="routing-modal-file"><strong>${i18n.t('channelRouter.file')}:</strong> ${filename}</p>
+                    <p class="routing-modal-file"><strong>${i18n.t('channelRouter.channelsFound')}:</strong> ${channels.length}</p>
                     <div style="margin-bottom: 20px;">
                         ${channelHTML}
                     </div>
-                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <div class="routing-modal-buttons">
                         <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">${i18n.t('common.cancel')}</button>
                         <button class="btn" onclick="saveRouting(${fileId})">✓ ${i18n.t('channelRouter.saveRouting')}</button>
                     </div>
