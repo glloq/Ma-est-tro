@@ -163,7 +163,8 @@ class PianoRollView {
             return;
         }
 
-        // Parser les notes - stocker en TICKS
+        // Parser les notes - EXACTEMENT comme VirtualMidiPlayer
+        // UNIQUEMENT deltaTime accumulation, jamais event.time
         this.notes = [];
         const channelSet = new Set();
         const noteOns = {};
@@ -172,27 +173,29 @@ class PianoRollView {
             const events = track.events || track;
             if (!Array.isArray(events)) return;
 
-            let tick = 0;
-            events.forEach(event => {
-                if (event.deltaTime !== undefined) {
-                    tick += event.deltaTime;
-                }
-                const t = event.time !== undefined ? event.time : tick;
-                const ch = event.channel || 0;
-                const note = event.noteNumber ?? event.note ?? event.data1;
-                const vel = event.velocity ?? event.data2 ?? 0;
+            let currentTick = 0; // Accumulation de deltaTime uniquement
 
-                if ((event.type === 'noteOn' || event.subtype === 'noteOn') && vel > 0 && note !== undefined) {
-                    noteOns[`${ch}_${note}`] = { t, ch, note, vel };
+            events.forEach(event => {
+                // TOUJOURS accumuler deltaTime (comme VirtualMidiPlayer)
+                currentTick += event.deltaTime || 0;
+
+                const ch = event.channel !== undefined ? event.channel : 0;
+                const note = event.noteNumber; // VirtualMidiPlayer utilise noteNumber
+                const vel = event.velocity || 0;
+
+                // noteOn avec velocity > 0
+                if (event.type === 'noteOn' && vel > 0 && note !== undefined) {
+                    noteOns[`${ch}_${note}`] = { tick: currentTick, ch, note, vel };
                     channelSet.add(ch);
-                } else if ((event.type === 'noteOff' || event.subtype === 'noteOff' ||
-                           (event.type === 'noteOn' && vel === 0)) && note !== undefined) {
+                }
+                // noteOff ou noteOn avec velocity 0
+                else if ((event.type === 'noteOff' || (event.type === 'noteOn' && vel === 0)) && note !== undefined) {
                     const key = `${ch}_${note}`;
                     if (noteOns[key]) {
                         const on = noteOns[key];
                         this.notes.push({
-                            startTick: on.t,
-                            endTick: t,
+                            startTick: on.tick,
+                            endTick: currentTick,
                             note: on.note,
                             channel: on.ch
                         });
