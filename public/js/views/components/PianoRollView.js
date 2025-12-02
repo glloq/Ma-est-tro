@@ -325,12 +325,28 @@ class PianoRollView {
                            this.midiData.header?.ticksPerBeat ||
                            this.midiData.ticksPerBeat || 480;
 
-        // Also get tempo from midiData if available
+        // Extract tempo from midiData or from setTempo events
         if (this.midiData.tempo) {
             this.tempo = this.midiData.tempo;
+        } else {
+            // Scan tracks for setTempo event
+            for (const track of this.midiData.tracks) {
+                const events = track.events || track;
+                if (!events || !Array.isArray(events)) continue;
+
+                const tempoEvent = events.find(e =>
+                    e.type === 'setTempo' ||
+                    e.subtype === 'setTempo' ||
+                    (e.type === 'meta' && e.subtype === 'setTempo')
+                );
+                if (tempoEvent && tempoEvent.microsecondsPerBeat) {
+                    this.tempo = Math.round(60000000 / tempoEvent.microsecondsPerBeat);
+                    break;
+                }
+            }
         }
 
-        this.log('info', `Processing ${this.midiData.tracks.length} tracks, ticksPerBeat: ${this.ticksPerBeat}`);
+        this.log('info', `Processing ${this.midiData.tracks.length} tracks, ticksPerBeat: ${this.ticksPerBeat}, tempo: ${this.tempo} BPM`);
 
         this.midiData.tracks.forEach((track, trackIndex) => {
             // Support both formats: track as array of events, or track.events as array
