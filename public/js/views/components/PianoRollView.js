@@ -173,37 +173,33 @@ class PianoRollView {
         this.animationFrame = requestAnimationFrame(animate);
     }
 
-    // Obtenir le temps DIRECTEMENT depuis le synthétiseur audio
+    // Obtenir le temps depuis la source appropriée
     updateTimeFromSynth() {
-        // Accéder au player virtuel exposé globalement
+        // Essayer d'abord le player virtuel (mode instrument virtuel)
         const player = window.virtualPlayer;
-        if (!player || !player.synthesizer) {
-            // DEBUG: Log if player/synth not available
-            if (!this._debugLoggedNoPlayer) {
-                console.warn('[PianoRoll DEBUG] No virtualPlayer or synthesizer!', { player: !!player, synth: player?.synthesizer });
-                this._debugLoggedNoPlayer = true;
+        if (player && player.synthesizer && player.synthesizer.audioContext) {
+            const synth = player.synthesizer;
+            const audioTime = synth.audioContext.currentTime;
+            const startTime = synth.startTime || 0;
+            const newTime = Math.max(0, audioTime - startTime);
+
+            // DEBUG: Log timing every second
+            if (!this._lastDebugLog || newTime - this._lastDebugLog >= 1) {
+                console.log(`[PianoRoll DEBUG] VIRTUAL mode: time=${newTime.toFixed(2)}s`);
+                this._lastDebugLog = newTime;
             }
+
+            this.currentTime = newTime;
             return;
         }
 
-        const synth = player.synthesizer;
-        if (!synth.audioContext) {
-            console.warn('[PianoRoll DEBUG] No audioContext!');
-            return;
-        }
-
-        // Temps EXACT de l'audio: currentTime du contexte - startTime de la lecture
-        const audioTime = synth.audioContext.currentTime;
-        const startTime = synth.startTime || 0;
-        const newTime = Math.max(0, audioTime - startTime);
-
+        // Mode backend: utiliser le temps reçu via playback:time events
+        // (déjà mis à jour par l'event handler)
         // DEBUG: Log timing every second
-        if (!this._lastDebugLog || newTime - this._lastDebugLog >= 1) {
-            console.log(`[PianoRoll DEBUG] time=${newTime.toFixed(2)}s, audioCtx=${audioTime.toFixed(2)}, startTime=${startTime.toFixed(2)}, synthPlaying=${synth.isPlaying}`);
-            this._lastDebugLog = newTime;
+        if (!this._lastDebugLog || this.currentTime - this._lastDebugLog >= 1) {
+            console.log(`[PianoRoll DEBUG] BACKEND mode: time=${this.currentTime.toFixed(2)}s`);
+            this._lastDebugLog = this.currentTime;
         }
-
-        this.currentTime = newTime;
     }
 
     stopAnimationLoop() {

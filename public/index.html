@@ -2145,12 +2145,13 @@
                                 detail: { position: currentTime, duration: duration, progress }
                             }));
 
-                            // Émettre pour le piano roll - temps audio EXACT
+                            // Émettre pour le piano roll - temps audio EXACT (HIGH priority!)
                             if (window.eventBus) {
+                                const priority = window.EventPriority ? window.EventPriority.HIGH : undefined;
                                 window.eventBus.emit('playback:time', {
                                     time: currentTime,
                                     duration: duration
-                                });
+                                }, priority);
                             }
                         };
 
@@ -2491,12 +2492,13 @@
                         });
                         document.dispatchEvent(progressEvent);
 
-                        // Émettre l'événement playback:time pour le piano roll view
+                        // Émettre l'événement playback:time pour le piano roll view (HIGH priority!)
                         if (window.eventBus) {
+                            const priority = window.EventPriority ? window.EventPriority.HIGH : undefined;
                             window.eventBus.emit('playback:time', {
                                 time: currentTime,
                                 duration: this.duration
-                            });
+                            }, priority);
                         }
                     }
                 }, 16); // ~60fps pour un défilement très fluide
@@ -2614,13 +2616,14 @@
                         const ticksPerSecond = (currentTicksPerBeat * currentTempo) / 60;
                         const currentTick = Math.floor(data.position * ticksPerSecond);
 
-                        // Émettre pour le piano roll (avec tick calculé)
+                        // Émettre pour le piano roll (avec tick calculé) - HIGH priority pour éviter la queue!
                         if (window.eventBus) {
+                            const priority = window.EventPriority ? window.EventPriority.HIGH : undefined;
                             window.eventBus.emit('playback:time', {
                                 time: data.position,
                                 tick: currentTick,
                                 duration: currentDuration
-                            });
+                            }, priority);
                         }
                     }
                 });
