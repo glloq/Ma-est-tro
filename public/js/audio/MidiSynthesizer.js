@@ -523,6 +523,14 @@ class MidiSynthesizer {
         this.isPlaying = true;
         this.startScheduler();
 
+        // DEBUG: Log timing info at start
+        console.log(`[Synth DEBUG] Play started: startTime=${this.startTime.toFixed(3)}, audioCtx.currentTime=${this.audioContext.currentTime.toFixed(3)}, tempo=${this.tempo}, ticksPerBeat=${this.ticksPerBeat}`);
+        if (this.sequence.length > 0) {
+            const firstNote = this.sequence[0];
+            const firstNoteTime = this.ticksToSeconds(firstNote.t - this.startTick);
+            console.log(`[Synth DEBUG] First note: tick=${firstNote.t}, time=${firstNoteTime.toFixed(3)}s, scheduledAt=${(this.startTime + firstNoteTime).toFixed(3)}`);
+        }
+
         this.log('info', `Playback started at tick ${this.currentTick}`);
     }
 

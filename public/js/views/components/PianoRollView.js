@@ -177,15 +177,33 @@ class PianoRollView {
     updateTimeFromSynth() {
         // Accéder au player virtuel exposé globalement
         const player = window.virtualPlayer;
-        if (!player || !player.synthesizer) return;
+        if (!player || !player.synthesizer) {
+            // DEBUG: Log if player/synth not available
+            if (!this._debugLoggedNoPlayer) {
+                console.warn('[PianoRoll DEBUG] No virtualPlayer or synthesizer!', { player: !!player, synth: player?.synthesizer });
+                this._debugLoggedNoPlayer = true;
+            }
+            return;
+        }
 
         const synth = player.synthesizer;
-        if (!synth.audioContext) return;
+        if (!synth.audioContext) {
+            console.warn('[PianoRoll DEBUG] No audioContext!');
+            return;
+        }
 
         // Temps EXACT de l'audio: currentTime du contexte - startTime de la lecture
         const audioTime = synth.audioContext.currentTime;
         const startTime = synth.startTime || 0;
-        this.currentTime = Math.max(0, audioTime - startTime);
+        const newTime = Math.max(0, audioTime - startTime);
+
+        // DEBUG: Log timing every second
+        if (!this._lastDebugLog || newTime - this._lastDebugLog >= 1) {
+            console.log(`[PianoRoll DEBUG] time=${newTime.toFixed(2)}s, audioCtx=${audioTime.toFixed(2)}, startTime=${startTime.toFixed(2)}, synthPlaying=${synth.isPlaying}`);
+            this._lastDebugLog = newTime;
+        }
+
+        this.currentTime = newTime;
     }
 
     stopAnimationLoop() {
@@ -312,6 +330,16 @@ class PianoRollView {
             });
             this.noteMin = Math.max(0, minN - 2);
             this.noteMax = Math.min(127, maxN + 2);
+        }
+
+        // DEBUG: Log first few notes timing
+        if (this.notes.length > 0) {
+            console.log('[PianoRoll DEBUG] First 5 notes loaded:', this.notes.slice(0, 5).map(n => ({
+                start: n.startTime.toFixed(3),
+                end: n.endTime.toFixed(3),
+                note: n.note,
+                ch: n.channel
+            })));
         }
 
         this.channels = Array.from(channelSet).sort((a, b) => a - b).map(ch => ({ channel: ch }));
