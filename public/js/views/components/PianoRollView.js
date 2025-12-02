@@ -29,12 +29,17 @@ class PianoRollView {
         this.tempo = 120;
         this.displayTimeSeconds = 20;
 
+        // Timing interne pour animation fluide
+        this.playbackStartTime = 0;      // performance.now() au moment du play
+        this.playbackStartTick = 0;      // Tick de départ
+        this.lastSyncTick = 0;           // Dernier tick reçu de l'extérieur (pour resync)
+        this.lastSyncTime = 0;           // Temps du dernier sync
+
         // Animation
         this.animationFrameId = null;
         this.lastUpdateTime = 0;
         this.lastSequenceUpdateTime = 0;
-        this.scrollThrottleMs = 0; // No throttle for scroll position (instant)
-        this.sequenceThrottleMs = 100; // Throttle sequence filtering to 10fps (less critical)
+        this.sequenceThrottleMs = 100; // Throttle sequence filtering to 10fps
 
         // Feature enabled state (from settings)
         this.isEnabled = false;
@@ -246,7 +251,12 @@ class PianoRollView {
         // Playback events
         this.eventBus.on('playback:play', () => {
             this.log('info', `playback:play received - isEnabled: ${this.isEnabled}, hasMidiData: ${!!this.midiData}`);
+
+            // Initialiser le timing interne
+            this.playbackStartTime = performance.now();
+            this.playbackStartTick = this.currentTick; // Reprendre depuis la position actuelle
             this.isPlaying = true;
+
             // Show piano roll when playback starts (if enabled and has data)
             if (this.isEnabled && this.midiData) {
                 this.show();
@@ -258,8 +268,11 @@ class PianoRollView {
 
         this.eventBus.on('playback:pause', () => {
             this.log('info', 'playback:pause received');
+            // Arrêter IMMÉDIATEMENT - pas besoin d'attendre
             this.isPlaying = false;
             this.stopAnimation();
+            // Garder la position actuelle pour la reprise
+            this.playbackStartTick = this.currentTick;
             // Keep piano roll visible during pause
         });
 
@@ -267,6 +280,7 @@ class PianoRollView {
             this.log('info', 'playback:stop received');
             this.isPlaying = false;
             this.currentTick = 0;
+            this.playbackStartTick = 0;
             this.stopAnimation();
             // Hide piano roll when stopped
             this.hide();
@@ -274,22 +288,46 @@ class PianoRollView {
 
         this.log('info', 'Event listeners setup complete');
 
+        // Synchronisation avec les événements externes (correction de drift)
         this.eventBus.on('playback:time', (data) => {
+            let externalTick;
             if (data.tick !== undefined) {
-                this.currentTick = data.tick;
+                externalTick = data.tick;
             } else if (data.time !== undefined) {
-                // Convertir le temps en ticks
-                this.currentTick = this.timeToTicks(data.time);
+                externalTick = this.timeToTicks(data.time);
             }
-            if (!this.isPlaying) {
-                this.updateView();
+
+            if (externalTick !== undefined) {
+                // Stocker pour resynchronisation
+                this.lastSyncTick = externalTick;
+                this.lastSyncTime = performance.now();
+
+                // Si pas en lecture, mettre à jour directement
+                if (!this.isPlaying) {
+                    this.currentTick = externalTick;
+                    this.playbackStartTick = externalTick;
+                    this.updateView();
+                }
+                // En lecture: correction de drift si écart > 500ms en ticks
+                else {
+                    const ticksPerMs = (this.ticksPerBeat * this.tempo) / 60000;
+                    const drift = Math.abs(this.currentTick - externalTick);
+                    const maxDrift = ticksPerMs * 500; // 500ms de tolérance
+                    if (drift > maxDrift) {
+                        // Resynchroniser
+                        this.playbackStartTime = performance.now();
+                        this.playbackStartTick = externalTick;
+                        this.log('debug', `Resync: drift=${drift.toFixed(0)} ticks`);
+                    }
+                }
             }
         });
 
         // Position de lecture mise à jour par le synthétiseur
         this.eventBus.on('synthesizer:position', (data) => {
-            this.currentTick = data.tick || 0;
-            if (!this.isPlaying) {
+            if (!this.isPlaying && data.tick !== undefined) {
+                this.currentTick = data.tick;
+                this.playbackStartTick = data.tick;
                 this.updateView();
             }
         });
@@ -759,14 +797,37 @@ class PianoRollView {
     }
 
     /**
-     * Mettre à jour la vue (scroll position immédiat, séquence throttlée)
+     * Calculer le tick actuel basé sur le temps écoulé
+     */
+    calculateCurrentTick() {
+        if (!this.isPlaying) {
+            return this.currentTick;
+        }
+
+        const now = performance.now();
+        const elapsedMs = now - this.playbackStartTime;
+
+        // Convertir ms en ticks: ticks = ms * (ticksPerBeat * tempo) / 60000
+        const ticksPerMs = (this.ticksPerBeat * this.tempo) / 60000;
+        const elapsedTicks = elapsedMs * ticksPerMs;
+
+        return this.playbackStartTick + elapsedTicks;
+    }
+
+    /**
+     * Mettre à jour la vue (calcul interne de position pour fluidité)
      */
     updateView() {
         if (!this.pianoRoll || !this.isVisible) return;
 
         const now = performance.now();
 
-        // Toujours mettre à jour la position de lecture (xoffset) - priorité visuelle
+        // Calculer la position actuelle internement (pas dépendant des événements)
+        if (this.isPlaying) {
+            this.currentTick = this.calculateCurrentTick();
+        }
+
+        // Mettre à jour la position de lecture (xoffset)
         this.pianoRoll.xoffset = this.currentTick;
 
         // Redessiner le piano roll pour un défilement fluide
