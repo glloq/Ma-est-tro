@@ -1984,6 +1984,8 @@
         let isPlaying = false;
         let isPaused = false; // Nouveau: tracker si on est en pause
         let currentDuration = 0; // Durée totale du fichier en cours (en secondes)
+        let currentTempo = 120; // Tempo du fichier en cours (BPM)
+        let currentTicksPerBeat = 480; // Résolution MIDI du fichier en cours
 
         // 🆕 Stockage du routage configuré par fichier
         let fileRoutingConfig = {};
@@ -2031,17 +2033,45 @@
                 this.routing = {}; // canal -> deviceId
                 this.progressInterval = null;
                 this.mutedChannels = new Set(); // Canaux mutés
+                this.synthesizer = null; // Synthétiseur pour l'audio
+                this.synthesizerReady = false;
 
                 // Écouter les événements de mute du piano roll
                 if (window.eventBus) {
                     window.eventBus.on('pianoroll:channel_toggled', (data) => {
                         if (data.muted) {
                             this.mutedChannels.add(data.channel);
+                            // Synchroniser avec le synthétiseur
+                            if (this.synthesizer) {
+                                this.synthesizer.muteChannel(data.channel);
+                            }
                         } else {
                             this.mutedChannels.delete(data.channel);
+                            if (this.synthesizer) {
+                                this.synthesizer.unmuteChannel(data.channel);
+                            }
                         }
                         this.logger.info(`[VirtualPlayer] Canal ${data.channel + 1} ${data.muted ? 'muté' : 'démuté'}`);
                     });
+                }
+
+                // Initialiser le synthétiseur si disponible
+                this.initSynthesizer();
+            }
+
+            // Initialiser le synthétiseur audio
+            async initSynthesizer() {
+                if (typeof MidiSynthesizer !== 'undefined') {
+                    try {
+                        this.synthesizer = new MidiSynthesizer();
+                        await this.synthesizer.initialize();
+                        this.synthesizerReady = true;
+                        this.logger.info('[VirtualPlayer] ✓ Synthétiseur audio initialisé');
+                    } catch (error) {
+                        this.logger.warn(`[VirtualPlayer] Synthétiseur non disponible: ${error.message}`);
+                    }
+                } else {
+                    this.logger.warn('[VirtualPlayer] MidiSynthesizer non chargé - pas d\'audio');
                 }
             }
 
@@ -2080,6 +2110,15 @@
 
                     // Construire la liste d'événements avec timing absolu
                     this.buildEventList();
+
+                    // Préparer le synthétiseur avec les instruments et la séquence
+                    if (this.synthesizer && this.synthesizerReady) {
+                        // Extraire la séquence pour le synthétiseur
+                        const sequence = this.buildSynthesizerSequence();
+                        this.synthesizer.loadSequence(sequence, this.tempo, this.ticksPerBeat);
+                        // Extraire et charger les instruments
+                        await this.loadInstruments();
+                    }
 
                     this.logger.info(`[VirtualPlayer] Fichier chargé: ${this.events.length} événements, ${this.tempo} BPM, durée: ${this.duration.toFixed(1)}s`);
 
@@ -2167,6 +2206,69 @@
                 this.duration = maxTime + 1; // +1 seconde de marge
             }
 
+            // Construire la séquence pour le synthétiseur (format note avec durée)
+            buildSynthesizerSequence() {
+                const sequence = [];
+                const noteOns = {}; // channel_note -> {tick, velocity}
+                const beatsPerSecond = this.tempo / 60;
+                const ticksPerSecond = beatsPerSecond * this.ticksPerBeat;
+
+                // Parcourir les événements pour coupler noteOn/noteOff
+                for (const event of this.events) {
+                    const tick = Math.round(event.time * ticksPerSecond);
+                    const key = `${event.channel}_${event.note}`;
+
+                    if (event.type === 'noteOn') {
+                        noteOns[key] = { tick, velocity: event.velocity, channel: event.channel };
+                    } else if (event.type === 'noteOff' && noteOns[key]) {
+                        const noteOn = noteOns[key];
+                        sequence.push({
+                            t: noteOn.tick,
+                            g: tick - noteOn.tick, // gate (durée)
+                            n: event.note,
+                            c: noteOn.channel,
+                            v: noteOn.velocity
+                        });
+                        delete noteOns[key];
+                    }
+                }
+
+                return sequence;
+            }
+
+            // Charger les instruments pour les canaux utilisés
+            async loadInstruments() {
+                if (!this.synthesizer) return;
+
+                const usedPrograms = new Map(); // channel -> program
+                let hasDrums = false;
+
+                // Extraire les changements de programme
+                for (const event of this.events) {
+                    if (event.type === 'programChange') {
+                        usedPrograms.set(event.channel, event.program);
+                    } else if (event.type === 'noteOn' && event.channel === 9) {
+                        hasDrums = true;
+                    }
+                }
+
+                // Configurer les instruments sur chaque canal
+                for (const [channel, program] of usedPrograms) {
+                    this.synthesizer.setChannelInstrument(channel, program);
+                    await this.synthesizer.loadInstrument(program).catch(() => {});
+                }
+
+                // Charger le drum kit si nécessaire
+                if (hasDrums) {
+                    await this.synthesizer.loadDrumKit().catch(() => {});
+                }
+
+                // Charger le piano par défaut pour les canaux sans programme
+                await this.synthesizer.loadInstrument(0).catch(() => {});
+
+                this.logger.info(`[VirtualPlayer] Instruments chargés pour ${usedPrograms.size} canaux`);
+            }
+
             // Démarrer la lecture
             play() {
                 if (this.playing && !this.paused) {
@@ -2250,6 +2352,11 @@
 
                 this.stopProgressUpdates();
 
+                // Arrêter les notes en cours sur le synthétiseur
+                if (this.synthesizer) {
+                    this.synthesizer.cancelAllNotes();
+                }
+
                 // Mettre à jour les états globaux
                 isPlaying = false;
                 isPaused = false;
@@ -2287,12 +2394,12 @@
                 }, delay);
             }
 
-            // Envoyer un événement MIDI (vers les logs)
+            // Envoyer un événement MIDI (audio + logs)
             sendEvent(event) {
                 // Vérifier si ce canal est routé vers l'instrument virtuel
                 const deviceId = this.routing[event.channel];
                 if (deviceId !== 'virtual-instrument') {
-                    return; // Ne pas logger si pas routé vers virtuel
+                    return; // Ne pas traiter si pas routé vers virtuel
                 }
 
                 // Vérifier si le canal est muté
@@ -2300,28 +2407,27 @@
                     return; // Ne pas envoyer si le canal est muté
                 }
 
-                let message = '';
-
-                switch (event.type) {
-                    case 'noteOn':
-                        message = `🎹 [Virtual] Ch${event.channel + 1} Note ON: ${this.getNoteName(event.note)} (${event.note}) velocity=${event.velocity}`;
-                        break;
-                    case 'noteOff':
-                        message = `🎹 [Virtual] Ch${event.channel + 1} Note OFF: ${this.getNoteName(event.note)} (${event.note})`;
-                        break;
-                    case 'cc':
-                        message = `🎹 [Virtual] Ch${event.channel + 1} CC${event.controller}=${event.value}`;
-                        break;
-                    case 'pitchBend':
-                        message = `🎹 [Virtual] Ch${event.channel + 1} PitchBend=${event.value}`;
-                        break;
-                    case 'programChange':
-                        message = `🎹 [Virtual] Ch${event.channel + 1} Program=${event.program}`;
-                        break;
-                }
-
-                if (message) {
-                    log(message, 'info');
+                // Jouer l'audio via le synthétiseur
+                if (this.synthesizer && this.synthesizerReady) {
+                    switch (event.type) {
+                        case 'noteOn':
+                            // Trouver la durée de cette note (chercher le noteOff correspondant)
+                            let duration = 0.5; // Durée par défaut
+                            for (let i = this.currentEventIndex + 1; i < this.events.length; i++) {
+                                const nextEvent = this.events[i];
+                                if (nextEvent.type === 'noteOff' &&
+                                    nextEvent.channel === event.channel &&
+                                    nextEvent.note === event.note) {
+                                    duration = nextEvent.time - event.time;
+                                    break;
+                                }
+                            }
+                            this.synthesizer.playNote(event.note, event.velocity, event.channel, duration);
+                            break;
+                        case 'programChange':
+                            this.synthesizer.setChannelInstrument(event.channel, event.program);
+                            break;
+                    }
                 }
             }
 
@@ -2476,10 +2582,15 @@
                         const timeText = `${formatTime(data.position * 1000)} / ${formatTime(currentDuration * 1000)}`;
                         document.getElementById('headerTime').textContent = timeText;
 
-                        // Émettre pour le piano roll (position en secondes)
+                        // Calculer le tick à partir du temps (utilise tempo et ticksPerBeat du fichier)
+                        const ticksPerSecond = (currentTicksPerBeat * currentTempo) / 60;
+                        const currentTick = Math.floor(data.position * ticksPerSecond);
+
+                        // Émettre pour le piano roll (avec tick calculé)
                         if (window.eventBus) {
                             window.eventBus.emit('playback:time', {
                                 time: data.position,
+                                tick: currentTick,
                                 duration: currentDuration
                             });
                         }
@@ -3740,12 +3851,40 @@
                 // Charger les données MIDI pour le piano roll (même en mode backend)
                 try {
                     const fileData = await api.sendCommand('file_read', { fileId });
-                    if (fileData && fileData.midiData && fileData.midiData.midi && window.eventBus) {
-                        window.eventBus.emit('file:selected', {
-                            fileId: fileId,
-                            filename: filename,
-                            midiData: fileData.midiData.midi
-                        });
+                    if (fileData && fileData.midiData && fileData.midiData.midi) {
+                        const midiData = fileData.midiData.midi;
+
+                        // Extraire tempo et ticksPerBeat pour la synchronisation
+                        currentTicksPerBeat = midiData.ticksPerQuarter ||
+                                             midiData.header?.ticksPerBeat ||
+                                             midiData.ticksPerBeat || 480;
+
+                        // Chercher le tempo dans les événements
+                        currentTempo = 120; // Valeur par défaut
+                        if (midiData.tracks) {
+                            for (const track of midiData.tracks) {
+                                const events = track.events || track;
+                                if (!events || !Array.isArray(events)) continue;
+                                const tempoEvent = events.find(e =>
+                                    e.type === 'setTempo' ||
+                                    e.subtype === 'setTempo' ||
+                                    (e.type === 'meta' && e.subtype === 'setTempo')
+                                );
+                                if (tempoEvent && tempoEvent.microsecondsPerBeat) {
+                                    currentTempo = Math.round(60000000 / tempoEvent.microsecondsPerBeat);
+                                    break;
+                                }
+                            }
+                        }
+                        console.log(`[Playback] File tempo: ${currentTempo} BPM, PPQ: ${currentTicksPerBeat}`);
+
+                        if (window.eventBus) {
+                            window.eventBus.emit('file:selected', {
+                                fileId: fileId,
+                                filename: filename,
+                                midiData: midiData
+                            });
+                        }
                     }
                 } catch (midiError) {
                     console.warn('Could not load MIDI data for piano roll:', midiError);
