@@ -2030,6 +2030,19 @@
                 this.ticksPerBeat = 480;
                 this.routing = {}; // canal -> deviceId
                 this.progressInterval = null;
+                this.mutedChannels = new Set(); // Canaux mutés
+
+                // Écouter les événements de mute du piano roll
+                if (window.eventBus) {
+                    window.eventBus.on('pianoroll:channel_toggled', (data) => {
+                        if (data.muted) {
+                            this.mutedChannels.add(data.channel);
+                        } else {
+                            this.mutedChannels.delete(data.channel);
+                        }
+                        this.logger.info(`[VirtualPlayer] Canal ${data.channel + 1} ${data.muted ? 'muté' : 'démuté'}`);
+                    });
+                }
             }
 
             // Charger un fichier MIDI
@@ -2282,6 +2295,11 @@
                     return; // Ne pas logger si pas routé vers virtuel
                 }
 
+                // Vérifier si le canal est muté
+                if (this.mutedChannels.has(event.channel)) {
+                    return; // Ne pas envoyer si le canal est muté
+                }
+
                 let message = '';
 
                 switch (event.type) {
@@ -2347,7 +2365,7 @@
                             });
                         }
                     }
-                }, 100); // Mise à jour toutes les 100ms
+                }, 33); // Mise à jour toutes les 33ms (~30fps) pour un défilement fluide
             }
 
             // Arrêter les mises à jour de progression
@@ -5209,6 +5227,23 @@
                         debug: (msg) => console.log('[DEBUG]', msg)
                     });
                     console.log('✓ Piano Roll View créé avec succès');
+
+                    // Écouter les changements de mute du piano roll pour les envoyer au backend
+                    window.eventBus.on('pianoroll:channel_toggled', async (data) => {
+                        console.log(`🔇 Piano roll channel ${data.channel + 1} ${data.muted ? 'muted' : 'unmuted'}`);
+                        // Essayer d'envoyer la commande de mute au backend
+                        if (api && isPlaying) {
+                            try {
+                                await api.sendCommand('playback_mute_channel', {
+                                    channel: data.channel,
+                                    muted: data.muted
+                                });
+                            } catch (error) {
+                                // La commande n'est peut-être pas supportée par le backend
+                                console.debug('playback_mute_channel not supported:', error.message);
+                            }
+                        }
+                    });
                     log('✓ Piano Roll View initialisé', 'info');
                 } catch (error) {
                     console.error('❌ Erreur création PianoRollView:', error);
