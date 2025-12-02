@@ -832,19 +832,14 @@
     font-weight: 600;
 }
 
-/* Toolbar des canaux - Permet le retour à la ligne des boutons */
+/* Toolbar des canaux - Retour à la ligne des boutons */
 .midi-editor-modal .channels-toolbar {
     display: flex;
     flex-wrap: wrap;
-    align-content: flex-start;
     gap: 4px;
     padding: 4px 6px;
     background: #252525;
     border-bottom: 1px solid #3a3a3a;
-    min-height: 44px;
-    max-height: 150px;
-    overflow-y: auto;
-    flex-shrink: 0;
 }
 
 /* Sections de la toolbar */
