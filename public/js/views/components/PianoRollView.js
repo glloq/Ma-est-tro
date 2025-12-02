@@ -33,6 +33,9 @@ class PianoRollView {
         this.animationFrameId = null;
         this.lastUpdateTime = 0;
 
+        // Feature enabled state (from settings)
+        this.isEnabled = false;
+
         // Couleurs éclatantes pour les 16 canaux MIDI
         this.channelColors = [
             '#FF0066', // 1 - Rose/Magenta vif
@@ -125,9 +128,9 @@ class PianoRollView {
             if (saved) {
                 const settings = JSON.parse(saved);
                 this.displayTimeSeconds = settings.noteDisplayTime || 20;
-                if (settings.showPianoRoll) {
-                    this.show();
-                }
+                // Just store the enabled state, don't show yet
+                // Piano roll will show when playback starts
+                this.isEnabled = settings.showPianoRoll || false;
             }
         } catch (error) {
             this.log('error', 'Failed to load settings:', error);
@@ -171,11 +174,11 @@ class PianoRollView {
      * Configurer les écouteurs d'événements
      */
     setupEventListeners() {
-        // Changement de paramètres
+        // Changement de paramètres - just update enabled state
         this.eventBus?.on('settings:piano_roll_changed', (data) => {
-            if (data.enabled) {
-                this.show();
-            } else {
+            this.isEnabled = data.enabled;
+            // If disabled while visible, hide immediately
+            if (!this.isEnabled && this.isVisible) {
                 this.hide();
             }
         });
@@ -195,19 +198,25 @@ class PianoRollView {
         // Playback events
         this.eventBus?.on('playback:play', () => {
             this.isPlaying = true;
+            // Show piano roll when playback starts (if enabled and has data)
+            if (this.isEnabled && this.midiData) {
+                this.show();
+            }
             this.startAnimation();
         });
 
         this.eventBus?.on('playback:pause', () => {
             this.isPlaying = false;
             this.stopAnimation();
+            // Keep piano roll visible during pause
         });
 
         this.eventBus?.on('playback:stop', () => {
             this.isPlaying = false;
             this.currentTick = 0;
             this.stopAnimation();
-            this.updateView();
+            // Hide piano roll when stopped
+            this.hide();
         });
 
         this.eventBus?.on('playback:time', (data) => {
