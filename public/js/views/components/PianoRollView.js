@@ -1,6 +1,6 @@
 // ============================================================================
 // Fichier: public/js/views/components/PianoRollView.js
-// Version: v3.0.0 - Synchronisation par ticks (pas de conversion temps)
+// Version: v4.0.0 - Synchronisation directe en SECONDES (pas de conversion ticks)
 // ============================================================================
 
 class PianoRollView {
@@ -13,17 +13,17 @@ class PianoRollView {
         this.isEnabled = false;
         this.isPlaying = false;
 
-        // Données MIDI - stockées en TICKS (pas en ms)
+        // Données MIDI - stockées en SECONDES (comme VirtualMidiPlayer)
         this.notes = [];
         this.channels = [];
         this.mutedChannels = new Set();
 
-        // Timing - reçu de la source externe
-        this.currentTick = 0;
+        // Timing - reçu DIRECTEMENT de la source externe en SECONDES
+        this.currentTime = 0;
         this.tempo = 120;
         this.ticksPerBeat = 480;
 
-        // Fenêtre d'affichage en secondes (converti en ticks à l'usage)
+        // Fenêtre d'affichage en secondes
         this.displayWindowSeconds = 5;
 
         // Plage de notes
@@ -61,7 +61,7 @@ class PianoRollView {
         this.createDOM();
         this.setupEvents();
         this.loadSettings();
-        this.log('info', 'v3 initialized');
+        this.log('info', 'v4 initialized (time-based sync)');
     }
 
     loadSettings() {
@@ -109,11 +109,12 @@ class PianoRollView {
             if (!this.isEnabled && this.isVisible) this.hide();
         });
 
-        // Fichier chargé - UTILISER tempo et ticksPerBeat de la source
+        // Fichier chargé - UTILISER tempo et ticksPerBeat de la source AVANT parsing
         this.eventBus.on('file:selected', (data) => {
+            // IMPORTANT: Set tempo/ticksPerBeat BEFORE loadMidiData for correct time conversion
             if (data.tempo) this.tempo = data.tempo;
             if (data.ticksPerBeat) this.ticksPerBeat = data.ticksPerBeat;
-            this.log('info', `Tempo from source: ${this.tempo} BPM, PPQ: ${this.ticksPerBeat}`);
+            this.log('info', `Tempo: ${this.tempo} BPM, PPQ: ${this.ticksPerBeat}`);
             if (data.midiData) {
                 this.loadMidiData(data.midiData);
             }
@@ -135,18 +136,14 @@ class PianoRollView {
         // Stop
         this.eventBus.on('playback:stop', () => {
             this.isPlaying = false;
-            this.currentTick = 0;
+            this.currentTime = 0;
             this.hide();
         });
 
-        // Temps - UTILISER tick directement, pas de conversion
+        // Temps - UTILISER time directement en SECONDES (pas de conversion!)
         this.eventBus.on('playback:time', (data) => {
-            if (data.tick !== undefined) {
-                this.currentTick = data.tick;
-            } else if (data.time !== undefined) {
-                // Fallback: convertir temps en ticks avec le tempo de la source
-                const ticksPerSecond = (this.ticksPerBeat * this.tempo) / 60;
-                this.currentTick = data.time * ticksPerSecond;
+            if (data.time !== undefined) {
+                this.currentTime = data.time;
             }
 
             // Redessiner si visible
@@ -163,36 +160,46 @@ class PianoRollView {
             return;
         }
 
-        // Parser les notes - stocker en TICKS
+        // Parser les notes - EXACTEMENT comme VirtualMidiPlayer.buildEventList()
+        // Stocker en SECONDES pour synchronisation parfaite
         this.notes = [];
         const channelSet = new Set();
         const noteOns = {};
 
+        // Calculer ticksPerSecond avec tempo et ticksPerBeat de la source
+        const beatsPerSecond = this.tempo / 60;
+        const ticksPerSecond = beatsPerSecond * this.ticksPerBeat;
+
         midiData.tracks.forEach(track => {
-            const events = track.events || track;
-            if (!Array.isArray(events)) return;
+            if (!track.events) return;
+            const events = track.events;
 
-            let tick = 0;
+            let currentTick = 0; // Accumulation de deltaTime
+
             events.forEach(event => {
-                if (event.deltaTime !== undefined) {
-                    tick += event.deltaTime;
-                }
-                const t = event.time !== undefined ? event.time : tick;
-                const ch = event.channel || 0;
-                const note = event.noteNumber ?? event.note ?? event.data1;
-                const vel = event.velocity ?? event.data2 ?? 0;
+                // Accumuler deltaTime (comme VirtualMidiPlayer)
+                currentTick += event.deltaTime || 0;
 
-                if ((event.type === 'noteOn' || event.subtype === 'noteOn') && vel > 0 && note !== undefined) {
-                    noteOns[`${ch}_${note}`] = { t, ch, note, vel };
+                // Convertir en secondes EXACTEMENT comme VirtualMidiPlayer
+                const timeInSeconds = currentTick / ticksPerSecond;
+
+                const ch = event.channel !== undefined ? event.channel : 0;
+                const note = event.noteNumber;
+                const vel = event.velocity || 0;
+
+                // noteOn avec velocity > 0
+                if (event.type === 'noteOn' && vel > 0 && note !== undefined) {
+                    noteOns[`${ch}_${note}`] = { time: timeInSeconds, ch, note, vel };
                     channelSet.add(ch);
-                } else if ((event.type === 'noteOff' || event.subtype === 'noteOff' ||
-                           (event.type === 'noteOn' && vel === 0)) && note !== undefined) {
+                }
+                // noteOff ou noteOn avec velocity 0
+                else if ((event.type === 'noteOff' || (event.type === 'noteOn' && vel === 0)) && note !== undefined) {
                     const key = `${ch}_${note}`;
                     if (noteOns[key]) {
                         const on = noteOns[key];
                         this.notes.push({
-                            startTick: on.t,
-                            endTick: t,
+                            startTime: on.time,
+                            endTime: timeInSeconds,
                             note: on.note,
                             channel: on.ch
                         });
@@ -202,7 +209,7 @@ class PianoRollView {
             });
         });
 
-        this.notes.sort((a, b) => a.startTick - b.startTick);
+        this.notes.sort((a, b) => a.startTime - b.startTime);
 
         // Plage de notes
         if (this.notes.length > 0) {
@@ -312,12 +319,10 @@ class PianoRollView {
             return;
         }
 
-        // Calcul fenêtre en ticks
-        const ticksPerSecond = (this.ticksPerBeat * this.tempo) / 60;
-        const windowTicks = this.displayWindowSeconds * ticksPerSecond;
-
-        const startTick = this.currentTick;
-        const endTick = startTick + windowTicks;
+        // Fenêtre d'affichage directement en SECONDES
+        const windowSeconds = this.displayWindowSeconds;
+        const startTime = this.currentTime;
+        const endTime = startTime + windowSeconds;
 
         // Dimensions
         const noteRange = this.noteMax - this.noteMin;
@@ -326,13 +331,13 @@ class PianoRollView {
 
         // Dessiner notes visibles
         for (const n of this.notes) {
-            if (n.endTick < startTick || n.startTick > endTick) continue;
+            if (n.endTime < startTime || n.startTime > endTime) continue;
 
             const muted = this.mutedChannels.has(n.channel);
 
-            // X position
-            const x1 = playheadX + ((n.startTick - startTick) / windowTicks) * (w - playheadX);
-            const x2 = playheadX + ((n.endTick - startTick) / windowTicks) * (w - playheadX);
+            // X position - directement en secondes
+            const x1 = playheadX + ((n.startTime - startTime) / windowSeconds) * (w - playheadX);
+            const x2 = playheadX + ((n.endTime - startTime) / windowSeconds) * (w - playheadX);
 
             // Y position (inversé)
             const y = h - ((n.note - this.noteMin) / noteRange) * h;
@@ -350,10 +355,9 @@ class PianoRollView {
         this.ctx.lineTo(playheadX, h);
         this.ctx.stroke();
 
-        // Temps
-        const seconds = this.currentTick / ticksPerSecond;
-        const m = Math.floor(seconds / 60);
-        const s = Math.floor(seconds % 60);
+        // Temps - directement en secondes
+        const m = Math.floor(this.currentTime / 60);
+        const s = Math.floor(this.currentTime % 60);
         this.ctx.fillStyle = '#fff';
         this.ctx.font = '12px monospace';
         this.ctx.textAlign = 'left';
@@ -369,5 +373,5 @@ class PianoRollView {
 
 if (typeof window !== 'undefined') {
     window.PianoRollView = PianoRollView;
-    console.log('✓ PianoRollView v3 loaded');
+    console.log('✓ PianoRollView v4 loaded (time-based sync)');
 }
