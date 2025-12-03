@@ -251,7 +251,10 @@
     "renameFile": "Rinomina file",
     "renameEmpty": "Il nome del file non può essere vuoto",
     "renameSuccess": "File rinominato con successo",
-    "renameFailed": "Rinomina fallita"
+    "renameFailed": "Rinomina fallita",
+    "connectedDevice": "Uscita:",
+    "connectedDeviceTip": "Seleziona un dispositivo di uscita per vedere quali note può suonare",
+    "noDeviceFilter": "-- Tutte le note --"
   },
   "errors": {
     "deviceNotFound": "Dispositivo non trovato: {deviceId}",

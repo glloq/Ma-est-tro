@@ -251,7 +251,10 @@
     "renameFile": "Перейменувати файл",
     "renameEmpty": "Ім'я файлу не може бути порожнім",
     "renameSuccess": "Файл успішно перейменовано",
-    "renameFailed": "Помилка перейменування"
+    "renameFailed": "Помилка перейменування",
+    "connectedDevice": "Вихід:",
+    "connectedDeviceTip": "Виберіть пристрій виведення, щоб побачити які ноти він може відтворювати",
+    "noDeviceFilter": "-- Всі ноти --"
   },
   "errors": {
     "deviceNotFound": "Пристрій не знайдено: {deviceId}",

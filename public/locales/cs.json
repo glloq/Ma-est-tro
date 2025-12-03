@@ -251,7 +251,10 @@
     "renameFile": "Přejmenovat soubor",
     "renameEmpty": "Název souboru nemůže být prázdný",
     "renameSuccess": "Soubor úspěšně přejmenován",
-    "renameFailed": "Přejmenování selhalo"
+    "renameFailed": "Přejmenování selhalo",
+    "connectedDevice": "Výstup:",
+    "connectedDeviceTip": "Vyberte výstupní zařízení pro zobrazení, jaké noty může hrát",
+    "noDeviceFilter": "-- Všechny noty --"
   },
   "errors": {
     "deviceNotFound": "Zařízení nenalezeno: {deviceId}",

@@ -251,7 +251,10 @@
     "renameFile": "Đổi tên tệp",
     "renameEmpty": "Tên tệp không được để trống",
     "renameSuccess": "Đổi tên tệp thành công",
-    "renameFailed": "Đổi tên thất bại"
+    "renameFailed": "Đổi tên thất bại",
+    "connectedDevice": "Đầu ra:",
+    "connectedDeviceTip": "Chọn thiết bị đầu ra để xem nốt nào có thể phát được",
+    "noDeviceFilter": "-- Tất cả các nốt --"
   },
   "errors": {
     "deviceNotFound": "Không tìm thấy thiết bị: {deviceId}",

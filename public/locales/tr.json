@@ -251,7 +251,10 @@
     "renameFile": "Dosyayı yeniden adlandır",
     "renameEmpty": "Dosya adı boş olamaz",
     "renameSuccess": "Dosya başarıyla yeniden adlandırıldı",
-    "renameFailed": "Yeniden adlandırma başarısız"
+    "renameFailed": "Yeniden adlandırma başarısız",
+    "connectedDevice": "Çıkış:",
+    "connectedDeviceTip": "Hangi notaları çalabileceğini görmek için bir çıkış cihazı seçin",
+    "noDeviceFilter": "-- Tüm notalar --"
   },
   "errors": {
     "deviceNotFound": "Cihaz bulunamadı: {deviceId}",

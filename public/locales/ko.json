@@ -251,7 +251,10 @@
     "renameFile": "파일 이름 변경",
     "renameEmpty": "파일 이름은 비워둘 수 없습니다",
     "renameSuccess": "파일 이름이 성공적으로 변경되었습니다",
-    "renameFailed": "이름 변경 실패"
+    "renameFailed": "이름 변경 실패",
+    "connectedDevice": "출력:",
+    "connectedDeviceTip": "출력 장치를 선택하면 재생 가능한 노트를 확인할 수 있습니다",
+    "noDeviceFilter": "-- 모든 노트 --"
   },
   "errors": {
     "deviceNotFound": "장치를 찾을 수 없음: {deviceId}",

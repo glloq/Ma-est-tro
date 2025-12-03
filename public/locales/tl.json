@@ -251,7 +251,10 @@
     "renameFile": "I-rename ang file",
     "renameEmpty": "Hindi maaaring walang laman ang filename",
     "renameSuccess": "Matagumpay na na-rename ang file",
-    "renameFailed": "Nabigo ang pag-rename"
+    "renameFailed": "Nabigo ang pag-rename",
+    "connectedDevice": "Output:",
+    "connectedDeviceTip": "Pumili ng output device para makita kung anong mga nota ang mai-play nito",
+    "noDeviceFilter": "-- Lahat ng nota --"
   },
   "errors": {
     "deviceNotFound": "Hindi nahanap ang device: {deviceId}",

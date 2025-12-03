@@ -251,7 +251,10 @@
     "renameFile": "Omdøb fil",
     "renameEmpty": "Filnavn kan ikke være tomt",
     "renameSuccess": "Fil omdøbt",
-    "renameFailed": "Omdøbning mislykkedes"
+    "renameFailed": "Omdøbning mislykkedes",
+    "connectedDevice": "Udgang:",
+    "connectedDeviceTip": "Vælg en udgangsenhed for at se hvilke noder den kan spille",
+    "noDeviceFilter": "-- Alle noder --"
   },
   "errors": {
     "deviceNotFound": "Enhed ikke fundet: {deviceId}",

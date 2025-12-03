@@ -251,7 +251,10 @@
     "renameFile": "ফাইল পুনঃনামকরণ করুন",
     "renameEmpty": "ফাইলের নাম খালি থাকতে পারে না",
     "renameSuccess": "ফাইল সফলভাবে পুনঃনামকরণ করা হয়েছে",
-    "renameFailed": "পুনঃনামকরণ ব্যর্থ"
+    "renameFailed": "পুনঃনামকরণ ব্যর্থ",
+    "connectedDevice": "আউটপুট:",
+    "connectedDeviceTip": "কোন নোট বাজানো যায় দেখতে আউটপুট ডিভাইস নির্বাচন করুন",
+    "noDeviceFilter": "-- সব নোট --"
   },
   "errors": {
     "deviceNotFound": "ডিভাইস পাওয়া যায়নি: {deviceId}",

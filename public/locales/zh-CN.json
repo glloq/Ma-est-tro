@@ -251,7 +251,10 @@
     "renameFile": "重命名文件",
     "renameEmpty": "文件名不能为空",
     "renameSuccess": "文件重命名成功",
-    "renameFailed": "重命名失败"
+    "renameFailed": "重命名失败",
+    "connectedDevice": "输出:",
+    "connectedDeviceTip": "选择输出设备以查看它可以播放哪些音符",
+    "noDeviceFilter": "-- 所有音符 --"
   },
   "errors": {
     "deviceNotFound": "未找到设备：{deviceId}",

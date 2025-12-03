@@ -251,7 +251,10 @@
     "renameFile": "Renombrar archivo",
     "renameEmpty": "El nombre del archivo no puede estar vacío",
     "renameSuccess": "Archivo renombrado con éxito",
-    "renameFailed": "Error al renombrar"
+    "renameFailed": "Error al renombrar",
+    "connectedDevice": "Salida:",
+    "connectedDeviceTip": "Seleccione un dispositivo de salida para ver qué notas puede reproducir",
+    "noDeviceFilter": "-- Todas las notas --"
   },
   "errors": {
     "deviceNotFound": "Dispositivo no encontrado: {deviceId}",

@@ -251,7 +251,10 @@
     "renameFile": "ファイル名を変更",
     "renameEmpty": "ファイル名は空にできません",
     "renameSuccess": "ファイル名を変更しました",
-    "renameFailed": "名前変更に失敗しました"
+    "renameFailed": "名前変更に失敗しました",
+    "connectedDevice": "出力:",
+    "connectedDeviceTip": "出力デバイスを選択すると、再生可能なノートを確認できます",
+    "noDeviceFilter": "-- 全てのノート --"
   },
   "errors": {
     "deviceNotFound": "デバイスが見つかりません: {deviceId}",

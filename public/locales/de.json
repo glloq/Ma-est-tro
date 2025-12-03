@@ -251,7 +251,10 @@
     "renameFile": "Datei umbenennen",
     "renameEmpty": "Dateiname darf nicht leer sein",
     "renameSuccess": "Datei erfolgreich umbenannt",
-    "renameFailed": "Umbenennung fehlgeschlagen"
+    "renameFailed": "Umbenennung fehlgeschlagen",
+    "connectedDevice": "Ausgabe:",
+    "connectedDeviceTip": "Wählen Sie ein Ausgabegerät, um zu sehen, welche Noten es spielen kann",
+    "noDeviceFilter": "-- Alle Noten --"
   },
   "errors": {
     "deviceNotFound": "Gerät nicht gefunden: {deviceId}",
