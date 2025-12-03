@@ -60,6 +60,11 @@
       "enabled": "Piano roll enabled",
       "disabled": "Piano roll disabled"
     },
+    "debugButton": {
+      "title": "Debug Button",
+      "enable": "Show debug button",
+      "description": "Shows the button to open the debug console"
+    },
     "language": {
       "title": "Language",
       "select": "Select language"

@@ -60,6 +60,11 @@
       "enabled": "Piano roll activé",
       "disabled": "Piano roll désactivé"
     },
+    "debugButton": {
+      "title": "Bouton Debug",
+      "enable": "Afficher le bouton debug",
+      "description": "Affiche le bouton pour ouvrir la console de débogage"
+    },
     "language": {
       "title": "Langue",
       "select": "Sélectionner la langue"

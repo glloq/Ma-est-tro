@@ -41,7 +41,8 @@ class SettingsModal {
             keyboardOctaves: 2, // 2 octaves par défaut (24 touches)
             noteDisplayTime: 20, // secondes
             virtualInstrument: false,
-            showPianoRoll: false // Afficher le piano roll des notes à venir
+            showPianoRoll: false, // Afficher le piano roll des notes à venir
+            showDebugButton: true // Afficher le bouton de debug
         };
 
         try {
@@ -386,6 +387,32 @@ class SettingsModal {
                     </label>
                 </div>
             </div>
+
+            <!-- Bouton Debug -->
+            <div class="settings-section" style="margin-top: 24px;">
+                <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #333;">🐞 ${i18n.t('settings.debugButton.title')}</h3>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+                    <div style="flex: 1;">
+                        <p style="margin: 0 0 4px 0; font-size: 14px; color: #333;">${i18n.t('settings.debugButton.enable')}</p>
+                        <p style="margin: 0; font-size: 12px; color: #666;">${i18n.t('settings.debugButton.description')}</p>
+                    </div>
+                    <label class="toggle-switch" style="position: relative; display: inline-block; width: 60px; height: 30px;">
+                        <input type="checkbox" id="showDebugButtonToggle" ${this.settings.showDebugButton ? 'checked' : ''}
+                               style="opacity: 0; width: 0; height: 0;">
+                        <span class="toggle-slider" style="
+                            position: absolute;
+                            cursor: pointer;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            background-color: #ccc;
+                            transition: 0.4s;
+                            border-radius: 30px;
+                        "></span>
+                    </label>
+                </div>
+            </div>
         `;
     }
 
@@ -634,6 +661,9 @@ class SettingsModal {
         const pianoRollToggle = this.modal.querySelector('#showPianoRollToggle');
         if (pianoRollToggle) pianoRollToggle.checked = this.settings.showPianoRoll;
 
+        const debugButtonToggle = this.modal.querySelector('#showDebugButtonToggle');
+        if (debugButtonToggle) debugButtonToggle.checked = this.settings.showDebugButton;
+
         this.logger?.info('Settings modal opened');
     }
 
@@ -655,13 +685,15 @@ class SettingsModal {
         const timeRange = this.modal.querySelector('#noteDisplayTimeRange');
         const virtualToggle = this.modal.querySelector('#virtualInstrumentToggle');
         const pianoRollToggle = this.modal.querySelector('#showPianoRollToggle');
+        const debugButtonToggle = this.modal.querySelector('#showDebugButtonToggle');
 
         const newSettings = {
             theme: activeThemeBtn ? activeThemeBtn.dataset.theme : this.settings.theme,
             keyboardOctaves: keyboardRange ? parseInt(keyboardRange.value) : this.settings.keyboardOctaves,
             noteDisplayTime: timeRange ? parseInt(timeRange.value) : this.settings.noteDisplayTime,
             virtualInstrument: virtualToggle ? virtualToggle.checked : this.settings.virtualInstrument,
-            showPianoRoll: pianoRollToggle ? pianoRollToggle.checked : this.settings.showPianoRoll
+            showPianoRoll: pianoRollToggle ? pianoRollToggle.checked : this.settings.showPianoRoll,
+            showDebugButton: debugButtonToggle ? debugButtonToggle.checked : this.settings.showDebugButton
         };
 
         // Vérifier les changements
@@ -670,6 +702,7 @@ class SettingsModal {
         const timeChanged = newSettings.noteDisplayTime !== this.settings.noteDisplayTime;
         const virtualInstrumentChanged = newSettings.virtualInstrument !== this.settings.virtualInstrument;
         const pianoRollChanged = newSettings.showPianoRoll !== this.settings.showPianoRoll;
+        const debugButtonChanged = newSettings.showDebugButton !== this.settings.showDebugButton;
 
         // Mettre à jour les paramètres
         this.settings = newSettings;
@@ -704,6 +737,10 @@ class SettingsModal {
                 this.logger?.info(`🎹 ${i18n.t('settings.pianoRoll.disabled')}`);
             }
         }
+        if (debugButtonChanged) {
+            this.eventBus?.emit('settings:debug_button_changed', { enabled: newSettings.showDebugButton });
+            this.applyDebugButton(newSettings.showDebugButton);
+        }
 
         this.close();
         this.logger?.info('Settings saved and applied', newSettings);
@@ -714,9 +751,20 @@ class SettingsModal {
      */
     applySettings() {
         this.applyTheme(this.settings.theme);
+        this.applyDebugButton(this.settings.showDebugButton);
 
         // Les autres paramètres seront appliqués par les composants concernés
         // via les événements de l'EventBus
+    }
+
+    /**
+     * Appliquer la visibilité du bouton debug
+     */
+    applyDebugButton(show) {
+        const debugToggle = document.getElementById('debugToggle');
+        if (debugToggle) {
+            debugToggle.style.display = show ? '' : 'none';
+        }
     }
 
     /**
