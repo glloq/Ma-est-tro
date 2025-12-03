@@ -622,21 +622,22 @@
         }
 
         .file-list::-webkit-scrollbar {
-            width: 8px;
+            width: 12px;
         }
 
         .file-list::-webkit-scrollbar-track {
             background: #f1f1f1;
-            border-radius: 4px;
+            border-radius: 6px;
         }
 
         .file-list::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
+            background: linear-gradient(180deg, #a0a0a0 0%, #888888 100%);
+            border-radius: 6px;
+            border: 2px solid #f1f1f1;
         }
 
         .file-list::-webkit-scrollbar-thumb:hover {
-            background: #555;
+            background: linear-gradient(180deg, #888888 0%, #666666 100%);
         }
 
         .file-list.drag-over-root {
