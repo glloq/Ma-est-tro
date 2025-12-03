@@ -196,8 +196,23 @@ class CommandHandler {
 
   async deviceList() {
     const devices = this.app.deviceManager.getDeviceList();
+
+    // Enrichir les appareils avec les noms personnalisés depuis la base de données
+    if (this.app.database) {
+      for (const device of devices) {
+        try {
+          const settings = this.app.database.getInstrumentSettings(device.id);
+          if (settings && settings.custom_name) {
+            device.displayName = settings.custom_name;
+          }
+        } catch (error) {
+          // Ignorer les erreurs - l'appareil n'a peut-être pas de settings
+        }
+      }
+    }
+
     this.app.logger.debug(`[CommandHandler] deviceList returning ${devices.length} devices:`,
-      devices.map(d => `"${d.name}" (${d.type})`).join(', '));
+      devices.map(d => `"${d.displayName || d.name}" (${d.type})`).join(', '));
     return { devices: devices };
   }
 
