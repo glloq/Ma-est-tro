@@ -1006,10 +1006,20 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             this.dragging={o:null,x:this.downpos.x,y:this.downpos.y,offsx:this.xoffset,offsy:this.yoffset};
             this.canvas.focus();
 
-            // Empêcher le déplacement de la vue depuis la barre de temps (xruler)
+            // Clic sur la barre de temps (xruler) : déplacer le curseur à cette position
             if(this.downht.m === "x") {
-                // Bloquer le dragging depuis le ruler horizontal
-                this.dragging.o = "blocked";
+                // Calculer la position en ticks depuis le clic
+                const tick = this.downht.t;
+                this.cursor = Math.max(0, tick);
+                this.redrawMarker();
+
+                // Émettre un événement pour notifier le changement de position du curseur
+                this.dispatchEvent(new CustomEvent('cursorchange', {
+                    detail: { tick: this.cursor }
+                }));
+
+                // Permettre le drag pour ajuster la position
+                this.dragging = { o: "P", x: this.downpos.x, m: this.cursor };
                 ev.preventDefault();
                 ev.stopPropagation();
                 return false;
