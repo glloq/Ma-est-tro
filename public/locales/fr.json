@@ -60,6 +60,11 @@
       "enabled": "Piano roll activé",
       "disabled": "Piano roll désactivé"
     },
+    "debugButton": {
+      "title": "Bouton Debug",
+      "enable": "Afficher le bouton debug",
+      "description": "Affiche le bouton pour ouvrir la console de débogage"
+    },
     "language": {
       "title": "Langue",
       "select": "Sélectionner la langue"
@@ -350,6 +355,9 @@
     "clickToToggle": "Cliquez pour sélectionner/désélectionner",
     "selectedNote": "Note sélectionnée",
     "notesSelected": "{count} notes sélectionnées",
+    "gmInstrument": "Type d'instrument (General MIDI)",
+    "gmInstrumentHelp": "Sélectionnez le type d'instrument pour le routage MIDI",
+    "selectInstrumentType": "Sélectionner un type",
     "drumKit": "Kit batterie GM",
     "whiteKeys": "Touches blanches",
     "blackKeys": "Touches noires"

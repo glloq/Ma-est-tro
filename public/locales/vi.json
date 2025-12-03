@@ -63,6 +63,11 @@
       "description": "Hiển thị các nốt sắp tới trong khi phát",
       "enabled": "Piano roll đã bật",
       "disabled": "Piano roll đã tắt"
+    },
+    "debugButton": {
+      "title": "Nút Gỡ lỗi",
+      "enable": "Hiển thị nút gỡ lỗi",
+      "description": "Hiển thị nút để mở bảng điều khiển gỡ lỗi"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "Nhấp để chọn/bỏ chọn",
     "selectedNote": "Nốt đã chọn",
     "notesSelected": "Đã chọn {count} nốt",
+    "gmInstrument": "Loại Nhạc cụ (General MIDI)",
+    "gmInstrumentHelp": "Chọn loại nhạc cụ cho định tuyến MIDI",
+    "selectInstrumentType": "Chọn loại",
     "drumKit": "Bộ trống GM",
     "whiteKeys": "Phím trắng",
     "blackKeys": "Phím đen"

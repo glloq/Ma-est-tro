@@ -63,6 +63,11 @@
       "description": "Megjeleníti a közelgő hangokat lejátszás közben",
       "enabled": "Piano roll engedélyezve",
       "disabled": "Piano roll letiltva"
+    },
+    "debugButton": {
+      "title": "Hibakereső gomb",
+      "enable": "Hibakereső gomb megjelenítése",
+      "description": "Megjeleníti a gombot a hibakereső konzol megnyitásához"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "Kattintson a kiválasztáshoz/törléshez",
     "selectedNote": "Kiválasztott hang",
     "notesSelected": "{count} hang kiválasztva",
+    "gmInstrument": "Hangszer típusa (General MIDI)",
+    "gmInstrumentHelp": "Válassza ki a hangszer típusát a MIDI útvonalhoz",
+    "selectInstrumentType": "Típus kiválasztása",
     "drumKit": "GM Dobkészlet",
     "whiteKeys": "Fehér billentyűk",
     "blackKeys": "Fekete billentyűk"

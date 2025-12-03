@@ -63,6 +63,11 @@
       "description": "Відображає майбутні ноти під час відтворення",
       "enabled": "Piano roll увімкнено",
       "disabled": "Piano roll вимкнено"
+    },
+    "debugButton": {
+      "title": "Кнопка налагодження",
+      "enable": "Показати кнопку налагодження",
+      "description": "Показує кнопку для відкриття консолі налагодження"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "Натисніть для вибору/скасування",
     "selectedNote": "Вибрана нота",
     "notesSelected": "Вибрано {count} нот",
+    "gmInstrument": "Тип інструмента (General MIDI)",
+    "gmInstrumentHelp": "Виберіть тип інструмента для маршрутизації MIDI",
+    "selectInstrumentType": "Виберіть тип",
     "drumKit": "GM Ударні",
     "whiteKeys": "Білі клавіші",
     "blackKeys": "Чорні клавіші"

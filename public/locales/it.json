@@ -63,6 +63,11 @@
       "description": "Visualizza le note in arrivo durante la riproduzione",
       "enabled": "Piano roll attivato",
       "disabled": "Piano roll disattivato"
+    },
+    "debugButton": {
+      "title": "Pulsante Debug",
+      "enable": "Mostra pulsante debug",
+      "description": "Mostra il pulsante per aprire la console di debug"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "Clicca per selezionare/deselezionare",
     "selectedNote": "Nota selezionata",
     "notesSelected": "{count} note selezionate",
+    "gmInstrument": "Tipo di strumento (General MIDI)",
+    "gmInstrumentHelp": "Seleziona il tipo di strumento per il routing MIDI",
+    "selectInstrumentType": "Seleziona un tipo",
     "drumKit": "Kit batteria GM",
     "whiteKeys": "Tasti bianchi",
     "blackKeys": "Tasti neri"

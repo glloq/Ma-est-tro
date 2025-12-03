@@ -63,6 +63,11 @@
       "description": "Viser kommende noter under avspilling",
       "enabled": "Piano roll aktivert",
       "disabled": "Piano roll deaktivert"
+    },
+    "debugButton": {
+      "title": "Feilsøkingsknapp",
+      "enable": "Vis feilsøkingsknapp",
+      "description": "Viser knappen for å åpne feilsøkingskonsollen"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "Klikk for å velge/fjerne valg",
     "selectedNote": "Valgt tone",
     "notesSelected": "{count} toner valgt",
+    "gmInstrument": "Instrumenttype (General MIDI)",
+    "gmInstrumentHelp": "Velg instrumenttype for MIDI-ruting",
+    "selectInstrumentType": "Velg en type",
     "drumKit": "GM Trommesett",
     "whiteKeys": "Hvite tangenter",
     "blackKeys": "Svarte tangenter"

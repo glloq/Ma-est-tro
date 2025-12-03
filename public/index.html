@@ -622,21 +622,22 @@
         }
 
         .file-list::-webkit-scrollbar {
-            width: 8px;
+            width: 12px;
         }
 
         .file-list::-webkit-scrollbar-track {
             background: #f1f1f1;
-            border-radius: 4px;
+            border-radius: 6px;
         }
 
         .file-list::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
+            background: linear-gradient(180deg, #a0a0a0 0%, #888888 100%);
+            border-radius: 6px;
+            border: 2px solid #f1f1f1;
         }
 
         .file-list::-webkit-scrollbar-thumb:hover {
-            background: #555;
+            background: linear-gradient(180deg, #888888 0%, #666666 100%);
         }
 
         .file-list.drag-over-root {
@@ -1779,7 +1780,10 @@
             <div class="main-grid">
                 <!-- Fichiers MIDI -->
                 <div class="card">
-                    <h2>📁 <span data-i18n="ui.midiFiles">Fichiers MIDI</span></h2>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                        <h2 style="margin: 0;">📁 <span data-i18n="ui.midiFiles">Fichiers MIDI</span></h2>
+                        <button class="btn btn-secondary" id="createFolderBtn" style="flex-shrink: 0;">📁&nbsp;&nbsp;<span data-i18n="ui.newFolder">Nouveau dossier</span></button>
+                    </div>
 
                     <input type="file" id="fileInput" accept=".mid,.midi" multiple style="display: none;">
                     <div class="file-input-wrapper">
@@ -1787,11 +1791,7 @@
                             📂&nbsp;&nbsp;<span data-i18n="ui.browse">Parcourir</span>
                         </button>
                         <span class="file-input-label" id="fileInputLabel" data-i18n="ui.noFileSelectedShort">Aucun fichier sélectionné</span>
-                    </div>
-
-                    <div class="btn-group">
-                        <button class="btn" id="uploadBtn">📤&nbsp;&nbsp;<span data-i18n="ui.upload">Envoyer</span></button>
-                        <button class="btn btn-secondary" id="createFolderBtn">📁&nbsp;&nbsp;<span data-i18n="ui.newFolder">Nouveau dossier</span></button>
+                        <button class="btn" id="uploadBtn" style="margin-left: auto;">📤&nbsp;&nbsp;<span data-i18n="ui.upload">Envoyer</span></button>
                     </div>
 
                     <div class="drop-zone-root" id="dropZoneRoot" data-i18n="ui.dropToRoot">
@@ -4140,6 +4140,80 @@
         let currentSettingsModal = null;
         let currentDeviceSettings = null;
 
+        // Liste des instruments General MIDI
+        const GM_INSTRUMENTS = [
+            // Piano (0-7)
+            'Acoustic Grand Piano', 'Bright Acoustic Piano', 'Electric Grand Piano', 'Honky-tonk Piano',
+            'Electric Piano 1', 'Electric Piano 2', 'Harpsichord', 'Clavinet',
+            // Chromatic Percussion (8-15)
+            'Celesta', 'Glockenspiel', 'Music Box', 'Vibraphone', 'Marimba', 'Xylophone', 'Tubular Bells', 'Dulcimer',
+            // Organ (16-23)
+            'Drawbar Organ', 'Percussive Organ', 'Rock Organ', 'Church Organ', 'Reed Organ', 'Accordion', 'Harmonica', 'Tango Accordion',
+            // Guitar (24-31)
+            'Acoustic Guitar (nylon)', 'Acoustic Guitar (steel)', 'Electric Guitar (jazz)', 'Electric Guitar (clean)',
+            'Electric Guitar (muted)', 'Overdriven Guitar', 'Distortion Guitar', 'Guitar Harmonics',
+            // Bass (32-39)
+            'Acoustic Bass', 'Electric Bass (finger)', 'Electric Bass (pick)', 'Fretless Bass',
+            'Slap Bass 1', 'Slap Bass 2', 'Synth Bass 1', 'Synth Bass 2',
+            // Strings (40-47)
+            'Violin', 'Viola', 'Cello', 'Contrabass', 'Tremolo Strings', 'Pizzicato Strings', 'Orchestral Harp', 'Timpani',
+            // Ensemble (48-55)
+            'String Ensemble 1', 'String Ensemble 2', 'Synth Strings 1', 'Synth Strings 2', 'Choir Aahs', 'Voice Oohs', 'Synth Voice', 'Orchestra Hit',
+            // Brass (56-63)
+            'Trumpet', 'Trombone', 'Tuba', 'Muted Trumpet', 'French Horn', 'Brass Section', 'Synth Brass 1', 'Synth Brass 2',
+            // Reed (64-71)
+            'Soprano Sax', 'Alto Sax', 'Tenor Sax', 'Baritone Sax', 'Oboe', 'English Horn', 'Bassoon', 'Clarinet',
+            // Pipe (72-79)
+            'Piccolo', 'Flute', 'Recorder', 'Pan Flute', 'Blown Bottle', 'Shakuhachi', 'Whistle', 'Ocarina',
+            // Synth Lead (80-87)
+            'Lead 1 (square)', 'Lead 2 (sawtooth)', 'Lead 3 (calliope)', 'Lead 4 (chiff)', 'Lead 5 (charang)', 'Lead 6 (voice)', 'Lead 7 (fifths)', 'Lead 8 (bass + lead)',
+            // Synth Pad (88-95)
+            'Pad 1 (new age)', 'Pad 2 (warm)', 'Pad 3 (polysynth)', 'Pad 4 (choir)', 'Pad 5 (bowed)', 'Pad 6 (metallic)', 'Pad 7 (halo)', 'Pad 8 (sweep)',
+            // Synth Effects (96-103)
+            'FX 1 (rain)', 'FX 2 (soundtrack)', 'FX 3 (crystal)', 'FX 4 (atmosphere)', 'FX 5 (brightness)', 'FX 6 (goblins)', 'FX 7 (echoes)', 'FX 8 (sci-fi)',
+            // Ethnic (104-111)
+            'Sitar', 'Banjo', 'Shamisen', 'Koto', 'Kalimba', 'Bag Pipe', 'Fiddle', 'Shanai',
+            // Percussive (112-119)
+            'Tinkle Bell', 'Agogo', 'Steel Drums', 'Woodblock', 'Taiko Drum', 'Melodic Tom', 'Synth Drum', 'Reverse Cymbal',
+            // Sound Effects (120-127)
+            'Guitar Fret Noise', 'Breath Noise', 'Seashore', 'Bird Tweet', 'Telephone Ring', 'Helicopter', 'Applause', 'Gunshot'
+        ];
+
+        // Groupes d'instruments GM pour la liste déroulante
+        const GM_INSTRUMENT_GROUPS = [
+            { name: 'Piano', start: 0, count: 8 },
+            { name: 'Chromatic Percussion', start: 8, count: 8 },
+            { name: 'Organ', start: 16, count: 8 },
+            { name: 'Guitar', start: 24, count: 8 },
+            { name: 'Bass', start: 32, count: 8 },
+            { name: 'Strings', start: 40, count: 8 },
+            { name: 'Ensemble', start: 48, count: 8 },
+            { name: 'Brass', start: 56, count: 8 },
+            { name: 'Reed', start: 64, count: 8 },
+            { name: 'Pipe', start: 72, count: 8 },
+            { name: 'Synth Lead', start: 80, count: 8 },
+            { name: 'Synth Pad', start: 88, count: 8 },
+            { name: 'Synth Effects', start: 96, count: 8 },
+            { name: 'Ethnic', start: 104, count: 8 },
+            { name: 'Percussive', start: 112, count: 8 },
+            { name: 'Sound Effects', start: 120, count: 8 }
+        ];
+
+        // Générer les options du select pour les instruments GM
+        function renderGMInstrumentOptions(selectedProgram) {
+            let options = '<option value="">-- ' + (i18n.t('instrumentSettings.selectInstrumentType') || 'Sélectionner un type') + ' --</option>';
+            for (const group of GM_INSTRUMENT_GROUPS) {
+                options += `<optgroup label="${group.name}">`;
+                for (let i = 0; i < group.count; i++) {
+                    const programNum = group.start + i;
+                    const selected = programNum === selectedProgram ? 'selected' : '';
+                    options += `<option value="${programNum}" ${selected}>${programNum}: ${GM_INSTRUMENTS[programNum]}</option>`;
+                }
+                options += '</optgroup>';
+            }
+            return options;
+        }
+
         // ========== RÉGLAGES D'INSTRUMENTS ==========
 
         // Afficher la modale de réglages d'instrument
@@ -4196,6 +4270,14 @@
                             <label>${i18n.t('instrumentSettings.customName')}</label>
                             <input type="text" id="customName" value="${settings.custom_name || ''}" placeholder="${i18n.t('instrumentSettings.customNamePlaceholder')}">
                             <small class="form-text">${i18n.t('instrumentSettings.customNameHelp')}</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>${i18n.t('instrumentSettings.gmInstrument') || 'Type d\'instrument (General MIDI)'}</label>
+                            <select id="gmProgramSelect" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                                ${renderGMInstrumentOptions(settings.gm_program)}
+                            </select>
+                            <small class="form-text">${i18n.t('instrumentSettings.gmInstrumentHelp') || 'Sélectionnez le type d\'instrument pour le routage MIDI'}</small>
                         </div>
 
                         <div class="form-group">
@@ -4856,6 +4938,8 @@
                 const customName = document.getElementById('customName').value.trim();
                 const syncDelay = parseInt(document.getElementById('syncDelay').value) || 0;
                 const macAddress = document.getElementById('macAddress').value.trim();
+                const gmProgramSelect = document.getElementById('gmProgramSelect');
+                const gmProgram = gmProgramSelect && gmProgramSelect.value !== '' ? parseInt(gmProgramSelect.value) : null;
 
                 // Récupérer le mode de sélection des notes
                 const noteSelectionMode = document.getElementById('noteSelectionModeInput').value || 'range';
@@ -4914,7 +4998,8 @@
                     custom_name: customName || null,
                     sync_delay: syncDelay,
                     mac_address: macAddress || null,
-                    name: currentDeviceSettings.device.name
+                    name: currentDeviceSettings.device.name,
+                    gm_program: gmProgram
                 });
 
                 // Sauvegarder les capacités

@@ -63,6 +63,11 @@
       "description": "再生中に次のノートを表示します",
       "enabled": "ピアノロール有効",
       "disabled": "ピアノロール無効"
+    },
+    "debugButton": {
+      "title": "デバッグボタン",
+      "enable": "デバッグボタンを表示",
+      "description": "デバッグコンソールを開くボタンを表示します"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "クリックで選択/解除",
     "selectedNote": "選択されたノート",
     "notesSelected": "{count}個のノートを選択",
+    "gmInstrument": "楽器タイプ (General MIDI)",
+    "gmInstrumentHelp": "MIDIルーティング用の楽器タイプを選択",
+    "selectInstrumentType": "タイプを選択",
     "drumKit": "GMドラムキット",
     "whiteKeys": "白鍵",
     "blackKeys": "黒鍵"

@@ -63,6 +63,11 @@
       "description": "Nagpapakita ng mga paparating na nota sa playback",
       "enabled": "Piano roll enabled",
       "disabled": "Piano roll disabled"
+    },
+    "debugButton": {
+      "title": "Debug Button",
+      "enable": "Ipakita ang debug button",
+      "description": "Nagpapakita ng button para buksan ang debug console"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "I-click para pumili/tanggalin",
     "selectedNote": "Napiling nota",
     "notesSelected": "{count} nota ang napili",
+    "gmInstrument": "Uri ng Instrumento (General MIDI)",
+    "gmInstrumentHelp": "Pumili ng uri ng instrumento para sa MIDI routing",
+    "selectInstrumentType": "Pumili ng uri",
     "drumKit": "GM Drum Kit",
     "whiteKeys": "Puting key",
     "blackKeys": "Itim na key"

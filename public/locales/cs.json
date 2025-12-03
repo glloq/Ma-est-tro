@@ -63,6 +63,11 @@
       "description": "Zobrazuje nadcházející noty během přehrávání",
       "enabled": "Piano roll zapnuto",
       "disabled": "Piano roll vypnuto"
+    },
+    "debugButton": {
+      "title": "Tlačítko ladění",
+      "enable": "Zobrazit tlačítko ladění",
+      "description": "Zobrazuje tlačítko pro otevření ladicí konzole"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "Klikněte pro výběr/zrušení",
     "selectedNote": "Vybraná nota",
     "notesSelected": "Vybráno {count} not",
+    "gmInstrument": "Typ nástroje (General MIDI)",
+    "gmInstrumentHelp": "Vyberte typ nástroje pro MIDI směrování",
+    "selectInstrumentType": "Vyberte typ",
     "drumKit": "GM Bicí sada",
     "whiteKeys": "Bílé klávesy",
     "blackKeys": "Černé klávesy"

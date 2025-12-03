@@ -269,7 +269,8 @@ class CommandHandler {
       sync_delay: data.sync_delay,
       mac_address: data.mac_address,
       usb_serial_number: usbSerialNumber,
-      name: data.name
+      name: data.name,
+      gm_program: data.gm_program
     });
 
     return {

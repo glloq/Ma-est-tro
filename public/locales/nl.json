@@ -63,6 +63,11 @@
       "description": "Toont aankomende noten tijdens afspelen",
       "enabled": "Piano roll ingeschakeld",
       "disabled": "Piano roll uitgeschakeld"
+    },
+    "debugButton": {
+      "title": "Debug-knop",
+      "enable": "Debug-knop tonen",
+      "description": "Toont de knop om de debug-console te openen"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "Klik om te selecteren/deselecteren",
     "selectedNote": "Geselecteerde noot",
     "notesSelected": "{count} noten geselecteerd",
+    "gmInstrument": "Instrumenttype (General MIDI)",
+    "gmInstrumentHelp": "Selecteer het instrumenttype voor MIDI-routering",
+    "selectInstrumentType": "Selecteer een type",
     "drumKit": "GM Drumkit",
     "whiteKeys": "Witte toetsen",
     "blackKeys": "Zwarte toetsen"

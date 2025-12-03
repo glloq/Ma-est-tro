@@ -360,6 +360,10 @@ class InstrumentDatabase {
           fields.push('name = ?');
           values.push(settings.name);
         }
+        if (settings.gm_program !== undefined) {
+          fields.push('gm_program = ?');
+          values.push(settings.gm_program);
+        }
 
         if (fields.length === 0) {
           return existing.id;
@@ -377,8 +381,8 @@ class InstrumentDatabase {
         // Insert new entry
         const stmt = this.db.prepare(`
           INSERT INTO instruments_latency (
-            id, device_id, channel, name, custom_name, sync_delay, mac_address, usb_serial_number
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            id, device_id, channel, name, custom_name, sync_delay, mac_address, usb_serial_number, gm_program
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
         const id = `${deviceId}_0`; // Default channel 0
@@ -390,7 +394,8 @@ class InstrumentDatabase {
           settings.custom_name || null,
           settings.sync_delay || 0,
           settings.mac_address || null,
-          settings.usb_serial_number || null
+          settings.usb_serial_number || null,
+          settings.gm_program !== undefined ? settings.gm_program : null
         );
 
         return id;

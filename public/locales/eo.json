@@ -63,6 +63,11 @@
       "description": "Montras venontajn notojn dum ludado",
       "enabled": "Piano roll ebligita",
       "disabled": "Piano roll malebligita"
+    },
+    "debugButton": {
+      "title": "Sencimiga Butono",
+      "enable": "Montri sencimigan butonon",
+      "description": "Montras la butonon por malfermi la sencimigan konzolon"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "Alklaku por elekti/malelekti",
     "selectedNote": "Elektita noto",
     "notesSelected": "{count} notoj elektitaj",
+    "gmInstrument": "Tipo de Instrumento (General MIDI)",
+    "gmInstrumentHelp": "Elektu la tipon de instrumento por MIDI-direktado",
+    "selectInstrumentType": "Elektu tipon",
     "drumKit": "GM Tamburo-aro",
     "whiteKeys": "Blankaj klavoj",
     "blackKeys": "Nigraj klavoj"

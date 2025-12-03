@@ -63,6 +63,11 @@
       "description": "প্লেব্যাকের সময় আসন্ন নোটগুলি প্রদর্শন করে",
       "enabled": "পিয়ানো রোল সক্রিয়",
       "disabled": "পিয়ানো রোল নিষ্ক্রিয়"
+    },
+    "debugButton": {
+      "title": "ডিবাগ বোতাম",
+      "enable": "ডিবাগ বোতাম দেখান",
+      "description": "ডিবাগ কনসোল খুলতে বোতাম দেখায়"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "নির্বাচন/বাতিল করতে ক্লিক করুন",
     "selectedNote": "নির্বাচিত নোট",
     "notesSelected": "{count} নোট নির্বাচিত",
+    "gmInstrument": "যন্ত্রের ধরন (General MIDI)",
+    "gmInstrumentHelp": "MIDI রাউটিংয়ের জন্য যন্ত্রের ধরন নির্বাচন করুন",
+    "selectInstrumentType": "একটি ধরন নির্বাচন করুন",
     "drumKit": "GM ড্রাম কিট",
     "whiteKeys": "সাদা কী",
     "blackKeys": "কালো কী"

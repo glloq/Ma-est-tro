@@ -63,6 +63,11 @@
       "description": "播放期间显示即将到来的音符",
       "enabled": "钢琴卷帘已启用",
       "disabled": "钢琴卷帘已禁用"
+    },
+    "debugButton": {
+      "title": "调试按钮",
+      "enable": "显示调试按钮",
+      "description": "显示打开调试控制台的按钮"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "点击选择/取消选择",
     "selectedNote": "已选音符",
     "notesSelected": "已选择 {count} 个音符",
+    "gmInstrument": "乐器类型 (General MIDI)",
+    "gmInstrumentHelp": "选择MIDI路由的乐器类型",
+    "selectInstrumentType": "选择类型",
     "drumKit": "GM鼓组",
     "whiteKeys": "白键",
     "blackKeys": "黑键"

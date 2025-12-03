@@ -63,6 +63,11 @@
       "description": "Εμφανίζει τις επερχόμενες νότες κατά την αναπαραγωγή",
       "enabled": "Piano roll ενεργοποιημένο",
       "disabled": "Piano roll απενεργοποιημένο"
+    },
+    "debugButton": {
+      "title": "Κουμπί Αποσφαλμάτωσης",
+      "enable": "Εμφάνιση κουμπιού αποσφαλμάτωσης",
+      "description": "Εμφανίζει το κουμπί για το άνοιγμα της κονσόλας αποσφαλμάτωσης"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "Κλικ για επιλογή/αποεπιλογή",
     "selectedNote": "Επιλεγμένη νότα",
     "notesSelected": "{count} νότες επιλεγμένες",
+    "gmInstrument": "Τύπος Οργάνου (General MIDI)",
+    "gmInstrumentHelp": "Επιλέξτε τον τύπο οργάνου για τη δρομολόγηση MIDI",
+    "selectInstrumentType": "Επιλέξτε έναν τύπο",
     "drumKit": "GM Drums",
     "whiteKeys": "Λευκά πλήκτρα",
     "blackKeys": "Μαύρα πλήκτρα"

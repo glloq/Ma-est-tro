@@ -63,6 +63,11 @@
       "description": "Oynatma sırasında yaklaşan notaları görüntüler",
       "enabled": "Piyano rulosu etkin",
       "disabled": "Piyano rulosu devre dışı"
+    },
+    "debugButton": {
+      "title": "Hata Ayıklama Düğmesi",
+      "enable": "Hata ayıklama düğmesini göster",
+      "description": "Hata ayıklama konsolunu açmak için düğmeyi gösterir"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "Seçmek/kaldırmak için tıklayın",
     "selectedNote": "Seçilen nota",
     "notesSelected": "{count} nota seçildi",
+    "gmInstrument": "Enstrüman Türü (General MIDI)",
+    "gmInstrumentHelp": "MIDI yönlendirme için enstrüman türünü seçin",
+    "selectInstrumentType": "Bir tür seçin",
     "drumKit": "GM Davul Seti",
     "whiteKeys": "Beyaz tuşlar",
     "blackKeys": "Siyah tuşlar"
