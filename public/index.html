@@ -5234,6 +5234,15 @@
                 log(`⚠️ Erreur chargement langue: ${error.message}`, 'error');
             }
 
+            // 🆕 Initialiser le modal de réglages au chargement pour appliquer les préférences
+            if (!settingsModal) {
+                settingsModal = new SettingsModal(window.eventBus, {
+                    info: (msg, data) => log(msg, 'info', data),
+                    error: (msg, data) => log(msg, 'error', data)
+                });
+                log('✓ Modal réglages initialisé', 'info');
+            }
+
             // 🆕 Charger la configuration de routage
             loadRoutingConfig();
 
