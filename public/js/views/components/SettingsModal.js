@@ -762,8 +762,15 @@ class SettingsModal {
      */
     applyDebugButton(show) {
         const debugToggle = document.getElementById('debugToggle');
+        const settingsToggle = document.getElementById('settingsToggle');
+
         if (debugToggle) {
             debugToggle.style.display = show ? '' : 'none';
+        }
+
+        // Déplacer le bouton réglages à droite quand debug est caché
+        if (settingsToggle) {
+            settingsToggle.style.right = show ? '75px' : '20px';
         }
     }
 
