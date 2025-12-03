@@ -167,6 +167,11 @@ class MidiEditorModal {
         this.currentFilename = filename || fileId;
         this.isDirty = false;
 
+        // Réinitialiser la sélection d'instrument connecté (pas de filtre par défaut)
+        this.selectedConnectedDevice = null;
+        this.selectedDeviceCapabilities = null;
+        this.playableNotes = null;
+
         // CommandHistory n'est plus utilisé - le piano roll gère undo/redo nativement
 
         try {
