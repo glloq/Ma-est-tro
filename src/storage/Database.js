@@ -137,7 +137,8 @@ class DatabaseManager {
       { name: 'note_selection_mode', sql: "ALTER TABLE instruments_latency ADD COLUMN note_selection_mode TEXT DEFAULT 'range'" },
       { name: 'selected_notes', sql: 'ALTER TABLE instruments_latency ADD COLUMN selected_notes TEXT' },
       { name: 'capabilities_source', sql: "ALTER TABLE instruments_latency ADD COLUMN capabilities_source TEXT DEFAULT 'manual'" },
-      { name: 'capabilities_updated_at', sql: 'ALTER TABLE instruments_latency ADD COLUMN capabilities_updated_at TEXT' }
+      { name: 'capabilities_updated_at', sql: 'ALTER TABLE instruments_latency ADD COLUMN capabilities_updated_at TEXT' },
+      { name: 'gm_program', sql: 'ALTER TABLE instruments_latency ADD COLUMN gm_program INTEGER' }
     ];
 
     try {

@@ -355,6 +355,9 @@
     "clickToToggle": "Click to select/deselect",
     "selectedNote": "Selected note",
     "notesSelected": "{count} notes selected",
+    "gmInstrument": "Instrument Type (General MIDI)",
+    "gmInstrumentHelp": "Select the instrument type for MIDI routing",
+    "selectInstrumentType": "Select a type",
     "drumKit": "GM Drum Kit",
     "whiteKeys": "White keys",
     "blackKeys": "Black keys"
