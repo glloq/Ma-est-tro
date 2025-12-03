@@ -1754,7 +1754,8 @@ class MidiEditorModal {
 
         this.connectedDevices.forEach(device => {
             const selected = this.selectedConnectedDevice === device.id ? 'selected' : '';
-            const name = device.name || device.id;
+            // Utiliser displayName (nom personnalisé) s'il existe, sinon le nom par défaut
+            const name = device.displayName || device.name || device.id;
             options += `<option value="${device.id}" ${selected}>${name}</option>`;
         });
 
