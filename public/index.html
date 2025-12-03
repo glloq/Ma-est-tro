@@ -1520,6 +1520,13 @@
             font-size: 0.9em;
         }
 
+        .routing-channel-instrument {
+            color: #667eea;
+            font-size: 0.85em;
+            margin-left: 8px;
+            font-weight: 500;
+        }
+
         .routing-modal-buttons {
             display: flex;
             gap: 12px;
@@ -1549,6 +1556,10 @@
 
         body.theme-dark .routing-channel-tracks {
             color: #b0b0b0;
+        }
+
+        body.theme-dark .routing-channel-instrument {
+            color: #a78bfa;
         }
 
         body.theme-dark .routing-modal-container select {
@@ -3623,7 +3634,7 @@
                 }
 
                 const tracks = midiData.midi.tracks;
-                const channelMap = new Map(); // canal -> { tracks: Set(), noteCount: number }
+                const channelMap = new Map(); // canal -> { tracks: Set(), noteCount: number, program: number }
 
                 // Parcourir toutes les pistes
                 tracks.forEach((track, trackIndex) => {
@@ -3640,7 +3651,8 @@
                             if (!channelMap.has(channel)) {
                                 channelMap.set(channel, {
                                     tracks: new Set(),
-                                    noteCount: 0
+                                    noteCount: 0,
+                                    program: null // Programme MIDI (instrument)
                                 });
                             }
 
@@ -3651,6 +3663,11 @@
                             if (event.type === 'noteOn' && event.velocity > 0) {
                                 channelInfo.noteCount++;
                             }
+
+                            // Récupérer le programme (instrument) pour ce canal
+                            if (event.type === 'programChange' && event.programNumber !== undefined) {
+                                channelInfo.program = event.programNumber;
+                            }
                         }
                     });
                 });
@@ -3658,11 +3675,21 @@
                 // Convertir en format attendu par le système de routage
                 const channels = [];
                 channelMap.forEach((info, channel) => {
+                    // Déterminer le nom de l'instrument
+                    let instrumentName = null;
+                    if (channel === 9) {
+                        instrumentName = 'Drums'; // Canal 10 = Drums en MIDI
+                    } else if (info.program !== null && typeof GM_INSTRUMENTS !== 'undefined' && GM_INSTRUMENTS[info.program]) {
+                        instrumentName = GM_INSTRUMENTS[info.program];
+                    }
+
                     channels.push({
                         channel: channel,
                         channelDisplay: `Canal ${channel + 1}`,
                         tracks: Array.from(info.tracks).map(name => ({ name })),
-                        noteCount: info.noteCount
+                        noteCount: info.noteCount,
+                        program: info.program,
+                        instrumentName: instrumentName
                     });
                 });
 
@@ -3670,7 +3697,7 @@
                 channels.sort((a, b) => a.channel - b.channel);
 
                 console.log(`[extractChannelsFromMidiData] Found ${channels.length} channel(s):`,
-                    channels.map(c => `Ch${c.channel} (${c.noteCount} notes)`).join(', '));
+                    channels.map(c => `Ch${c.channel} (${c.noteCount} notes, ${c.instrumentName || 'No instrument'})`).join(', '));
 
                 return channels;
             } catch (error) {
@@ -3809,11 +3836,16 @@
             let channelHTML = channels.map(ch => {
                 const trackNames = ch.tracks.map(t => t.name).join(', ');
                 const currentDevice = currentConfig.channels[ch.channel] || '';
+                // Afficher l'instrument si disponible
+                const instrumentDisplay = ch.instrumentName
+                    ? `<span class="routing-channel-instrument">🎹 ${ch.instrumentName}</span>`
+                    : '';
 
                 return `
                     <div class="routing-channel-row">
                         <div class="routing-channel-info">
-                            <span class="routing-channel-name">Canal ${ch.channelDisplay || (ch.channel + 1)}</span><br>
+                            <span class="routing-channel-name">Canal ${ch.channelDisplay || (ch.channel + 1)}</span>
+                            ${instrumentDisplay}<br>
                             <small class="routing-channel-tracks">${trackNames}</small>
                         </div>
                         <select id="channel_${ch.channel}" style="flex: 1; padding: 8px;">
