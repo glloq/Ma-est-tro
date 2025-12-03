@@ -2564,6 +2564,25 @@ class MidiEditorModal {
     }
 
     /**
+     * Sélectionner toutes les notes affichées (canaux actifs)
+     */
+    selectAllNotes() {
+        if (!this.pianoRoll || typeof this.pianoRoll.selectAll !== 'function') {
+            this.log('warn', 'selectAll not available on piano roll');
+            return;
+        }
+
+        // Sélectionner toutes les notes
+        this.pianoRoll.selectAll();
+
+        // Mettre à jour les boutons d'édition
+        this.updateEditButtons();
+
+        const count = this.getSelectionCount();
+        this.log('info', `Selected all notes: ${count}`);
+    }
+
+    /**
      * Changer le canal des notes sélectionnées
      */
     async changeChannel() {
@@ -2982,6 +3001,12 @@ class MidiEditorModal {
             else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
                 e.preventDefault();
                 this.paste();
+            }
+
+            // Ctrl/Cmd + A = Select All
+            else if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+                e.preventDefault();
+                this.selectAllNotes();
             }
 
             // Delete ou Backspace = Delete
