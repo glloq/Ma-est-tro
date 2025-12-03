@@ -251,7 +251,10 @@
     "renameFile": "Ganti nama file",
     "renameEmpty": "Nama file tidak boleh kosong",
     "renameSuccess": "File berhasil diganti namanya",
-    "renameFailed": "Gagal mengganti nama"
+    "renameFailed": "Gagal mengganti nama",
+    "connectedDevice": "Output:",
+    "connectedDeviceTip": "Pilih perangkat output untuk melihat not mana yang dapat dimainkan",
+    "noDeviceFilter": "-- Semua not --"
   },
   "errors": {
     "deviceNotFound": "Perangkat tidak ditemukan: {deviceId}",

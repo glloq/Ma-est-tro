@@ -251,7 +251,10 @@
     "renameFile": "เปลี่ยนชื่อไฟล์",
     "renameEmpty": "ชื่อไฟล์ไม่สามารถเว้นว่างได้",
     "renameSuccess": "เปลี่ยนชื่อไฟล์สำเร็จ",
-    "renameFailed": "การเปลี่ยนชื่อล้มเหลว"
+    "renameFailed": "การเปลี่ยนชื่อล้มเหลว",
+    "connectedDevice": "เอาต์พุต:",
+    "connectedDeviceTip": "เลือกอุปกรณ์เอาต์พุตเพื่อดูว่าโน้ตใดที่สามารถเล่นได้",
+    "noDeviceFilter": "-- โน้ตทั้งหมด --"
   },
   "errors": {
     "deviceNotFound": "ไม่พบอุปกรณ์: {deviceId}",

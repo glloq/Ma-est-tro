@@ -251,7 +251,10 @@
     "renameFile": "Bestand hernoemen",
     "renameEmpty": "Bestandsnaam mag niet leeg zijn",
     "renameSuccess": "Bestand succesvol hernoemd",
-    "renameFailed": "Hernoemen mislukt"
+    "renameFailed": "Hernoemen mislukt",
+    "connectedDevice": "Uitvoer:",
+    "connectedDeviceTip": "Selecteer een uitvoerapparaat om te zien welke noten het kan spelen",
+    "noDeviceFilter": "-- Alle noten --"
   },
   "errors": {
     "deviceNotFound": "Apparaat niet gevonden: {deviceId}",

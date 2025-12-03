@@ -251,7 +251,10 @@
     "renameFile": "Μετονομασία αρχείου",
     "renameEmpty": "Το όνομα αρχείου δεν μπορεί να είναι κενό",
     "renameSuccess": "Το αρχείο μετονομάστηκε επιτυχώς",
-    "renameFailed": "Η μετονομασία απέτυχε"
+    "renameFailed": "Η μετονομασία απέτυχε",
+    "connectedDevice": "Έξοδος:",
+    "connectedDeviceTip": "Επιλέξτε μια συσκευή εξόδου για να δείτε ποιες νότες μπορεί να παίξει",
+    "noDeviceFilter": "-- Όλες οι νότες --"
   },
   "errors": {
     "deviceNotFound": "Η συσκευή δεν βρέθηκε: {deviceId}",

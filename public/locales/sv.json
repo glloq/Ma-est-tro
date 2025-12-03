@@ -251,7 +251,10 @@
     "renameFile": "Byt namn på fil",
     "renameEmpty": "Filnamn kan inte vara tomt",
     "renameSuccess": "Fil omdöpt",
-    "renameFailed": "Namnbyte misslyckades"
+    "renameFailed": "Namnbyte misslyckades",
+    "connectedDevice": "Utgång:",
+    "connectedDeviceTip": "Välj en utgångsenhet för att se vilka noter den kan spela",
+    "noDeviceFilter": "-- Alla noter --"
   },
   "errors": {
     "deviceNotFound": "Enhet hittades inte: {deviceId}",

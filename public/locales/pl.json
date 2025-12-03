@@ -251,7 +251,10 @@
     "renameFile": "Zmień nazwę pliku",
     "renameEmpty": "Nazwa pliku nie może być pusta",
     "renameSuccess": "Nazwa pliku zmieniona pomyślnie",
-    "renameFailed": "Zmiana nazwy nie powiodła się"
+    "renameFailed": "Zmiana nazwy nie powiodła się",
+    "connectedDevice": "Wyjście:",
+    "connectedDeviceTip": "Wybierz urządzenie wyjściowe, aby zobaczyć jakie nuty może odtwarzać",
+    "noDeviceFilter": "-- Wszystkie nuty --"
   },
   "errors": {
     "deviceNotFound": "Urządzenie nie znalezione: {deviceId}",

@@ -251,7 +251,10 @@
     "renameFile": "Renomi dosieron",
     "renameEmpty": "Dosiernomo ne povas esti malplena",
     "renameSuccess": "Dosiero sukcese renomita",
-    "renameFailed": "Renomado malsukcesis"
+    "renameFailed": "Renomado malsukcesis",
+    "connectedDevice": "Eligo:",
+    "connectedDeviceTip": "Elektu eligan aparaton por vidi kiujn notojn ĝi povas ludi",
+    "noDeviceFilter": "-- Ĉiuj notoj --"
   },
   "errors": {
     "deviceNotFound": "Aparato ne trovita: {deviceId}",

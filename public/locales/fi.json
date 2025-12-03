@@ -251,7 +251,10 @@
     "renameFile": "Nimeä tiedosto uudelleen",
     "renameEmpty": "Tiedostonimi ei voi olla tyhjä",
     "renameSuccess": "Tiedoston nimeäminen onnistui",
-    "renameFailed": "Uudelleennimeäminen epäonnistui"
+    "renameFailed": "Uudelleennimeäminen epäonnistui",
+    "connectedDevice": "Lähtö:",
+    "connectedDeviceTip": "Valitse lähtölaite nähdäksesi mitä nuotteja se voi soittaa",
+    "noDeviceFilter": "-- Kaikki nuotit --"
   },
   "errors": {
     "deviceNotFound": "Laitetta ei löytynyt: {deviceId}",

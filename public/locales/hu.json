@@ -251,7 +251,10 @@
     "renameFile": "Fájl átnevezése",
     "renameEmpty": "A fájlnév nem lehet üres",
     "renameSuccess": "Fájl sikeresen átnevezve",
-    "renameFailed": "Átnevezés sikertelen"
+    "renameFailed": "Átnevezés sikertelen",
+    "connectedDevice": "Kimenet:",
+    "connectedDeviceTip": "Válasszon egy kimeneti eszközt, hogy lássa, mely hangokat tudja lejátszani",
+    "noDeviceFilter": "-- Összes hang --"
   },
   "errors": {
     "deviceNotFound": "Eszköz nem található: {deviceId}",

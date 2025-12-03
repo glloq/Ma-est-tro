@@ -251,7 +251,10 @@
     "renameFile": "Gi nytt navn til fil",
     "renameEmpty": "Filnavn kan ikke være tomt",
     "renameSuccess": "Fil omdøpt",
-    "renameFailed": "Omdøping mislyktes"
+    "renameFailed": "Omdøping mislyktes",
+    "connectedDevice": "Utgang:",
+    "connectedDeviceTip": "Velg en utgangsenhet for å se hvilke noter den kan spille",
+    "noDeviceFilter": "-- Alle noter --"
   },
   "errors": {
     "deviceNotFound": "Enhet ikke funnet: {deviceId}",
