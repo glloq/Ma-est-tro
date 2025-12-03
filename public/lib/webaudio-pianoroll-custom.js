@@ -1406,11 +1406,28 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 console.log('[PianoRoll Grid] yrange:', this.yrange, 'ygrid:', ygrid, 'xrange:', this.xrange, 'grid:', this.grid);
             }
 
+            // Couleurs pour les notes non jouables (grisées)
+            const colUnplayableLt = '#707070'; // Gris clair pour notes blanches non jouables
+            const colUnplayableDk = '#505050'; // Gris foncé pour notes noires non jouables
+
             for(let y=0;y<128;++y){
-                if(this.semiflag[y%12]&1)
-                    this.ctx.fillStyle=this.coldk;
-                else
-                    this.ctx.fillStyle=this.collt;
+                // Vérifier si la note est jouable
+                const isPlayable = !this.playableNotes || this.playableNotes.has(y);
+
+                if(isPlayable) {
+                    // Note jouable : couleur normale
+                    if(this.semiflag[y%12]&1)
+                        this.ctx.fillStyle=this.coldk;
+                    else
+                        this.ctx.fillStyle=this.collt;
+                } else {
+                    // Note non jouable : couleur grisée
+                    if(this.semiflag[y%12]&1)
+                        this.ctx.fillStyle=colUnplayableDk;
+                    else
+                        this.ctx.fillStyle=colUnplayableLt;
+                }
+
                 let ys = this.height - (y - this.yoffset) * this.steph;
                 this.ctx.fillRect(this.yruler+this.kbwidth, ys|0, this.swidth,-this.steph);
 

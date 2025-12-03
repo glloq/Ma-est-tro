@@ -251,7 +251,10 @@
     "changeInstrumentTitle": "Changer d'instrument",
     "apply": "Appliquer",
     "sameInstrument": "Même instrument déjà sélectionné",
-    "noChannelAvailable": "Aucun canal disponible"
+    "noChannelAvailable": "Aucun canal disponible",
+    "connectedDevice": "Sortie :",
+    "connectedDeviceTip": "Sélectionnez un appareil de sortie pour voir les notes qu'il peut jouer (grisé = non jouable)",
+    "noDeviceFilter": "-- Toutes les notes --"
   },
   "errors": {
     "deviceNotFound": "Périphérique non trouvé: {deviceId}",

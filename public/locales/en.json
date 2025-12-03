@@ -251,7 +251,10 @@
     "changeInstrumentTitle": "Change Instrument",
     "apply": "Apply",
     "sameInstrument": "Same instrument already selected",
-    "noChannelAvailable": "No channel available"
+    "noChannelAvailable": "No channel available",
+    "connectedDevice": "Output:",
+    "connectedDeviceTip": "Select an output device to see which notes it can play (grayed out = unplayable)",
+    "noDeviceFilter": "-- All notes --"
   },
   "errors": {
     "deviceNotFound": "Device not found: {deviceId}",
