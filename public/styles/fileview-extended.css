@@ -143,13 +143,13 @@
 .file-list-compact {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
 }
 
 .file-row {
     display: flex;
     align-items: center;
-    padding: 8px 12px;
+    padding: 4px;
     background: white;
     border: 1px solid #dee2e6;
     border-radius: 6px;
