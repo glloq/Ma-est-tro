@@ -1731,8 +1731,8 @@ class MidiEditorModal {
         try {
             const result = await this.api.sendCommand('device_list');
             if (result && result.devices) {
-                // Filtrer uniquement les appareils de sortie (output)
-                this.connectedDevices = result.devices.filter(d => d.type === 'output' || d.direction === 'output');
+                // Filtrer uniquement les appareils qui ont une sortie (output: true)
+                this.connectedDevices = result.devices.filter(d => d.output === true);
                 this.log('info', `Loaded ${this.connectedDevices.length} connected output devices`);
                 this.updateConnectedDeviceSelector();
             }
