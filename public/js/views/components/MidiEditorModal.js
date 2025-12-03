@@ -3167,9 +3167,19 @@ class MidiEditorModal {
             }
         }
 
-        // Charger/recharger la séquence si nécessaire
+        // Charger/recharger la séquence si nécessaire (seulement si pas en pause)
         if (!this.isPlaying && !this.isPaused) {
             this.loadSequenceForPlayback();
+
+            // Si le curseur a été déplacé manuellement, démarrer depuis cette position
+            if (this.pianoRoll && this.pianoRoll.cursor > 0) {
+                this.synthesizer.seek(this.pianoRoll.cursor);
+            }
+        } else if (this.isPaused) {
+            // En pause : reprendre depuis la position actuelle du curseur (qui peut avoir été déplacé)
+            if (this.pianoRoll) {
+                this.synthesizer.seek(this.pianoRoll.cursor);
+            }
         }
 
         // Démarrer la lecture
