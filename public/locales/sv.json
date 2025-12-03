@@ -63,6 +63,11 @@
       "description": "Visar kommande noter under uppspelning",
       "enabled": "Piano roll aktiverad",
       "disabled": "Piano roll inaktiverad"
+    },
+    "debugButton": {
+      "title": "Felsökningsknapp",
+      "enable": "Visa felsökningsknapp",
+      "description": "Visar knappen för att öppna felsökningskonsolen"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "Klicka för att välja/avmarkera",
     "selectedNote": "Vald ton",
     "notesSelected": "{count} toner valda",
+    "gmInstrument": "Instrumenttyp (General MIDI)",
+    "gmInstrumentHelp": "Välj instrumenttyp för MIDI-routning",
+    "selectInstrumentType": "Välj en typ",
     "drumKit": "GM Trumset",
     "whiteKeys": "Vita tangenter",
     "blackKeys": "Svarta tangenter"

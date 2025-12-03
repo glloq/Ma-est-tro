@@ -63,6 +63,11 @@
       "description": "Näyttää tulevat nuotit toiston aikana",
       "enabled": "Piano roll käytössä",
       "disabled": "Piano roll pois käytöstä"
+    },
+    "debugButton": {
+      "title": "Virheenkorjauspainike",
+      "enable": "Näytä virheenkorjauspainike",
+      "description": "Näyttää painikkeen virheenkorjauskonsolin avaamiseen"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "Napsauta valitaksesi/poistaaksesi valinnan",
     "selectedNote": "Valittu nuotti",
     "notesSelected": "{count} nuottia valittu",
+    "gmInstrument": "Soittimen tyyppi (General MIDI)",
+    "gmInstrumentHelp": "Valitse soittimen tyyppi MIDI-reititykselle",
+    "selectInstrumentType": "Valitse tyyppi",
     "drumKit": "GM Rumpusetti",
     "whiteKeys": "Valkoiset koskettimet",
     "blackKeys": "Mustat koskettimet"

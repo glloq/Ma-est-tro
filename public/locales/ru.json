@@ -63,6 +63,11 @@
       "description": "Отображает предстоящие ноты во время воспроизведения",
       "enabled": "Piano roll включён",
       "disabled": "Piano roll выключен"
+    },
+    "debugButton": {
+      "title": "Кнопка отладки",
+      "enable": "Показать кнопку отладки",
+      "description": "Показывает кнопку для открытия консоли отладки"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "Нажмите для выбора/отмены",
     "selectedNote": "Выбранная нота",
     "notesSelected": "{count} нот выбрано",
+    "gmInstrument": "Тип инструмента (General MIDI)",
+    "gmInstrumentHelp": "Выберите тип инструмента для маршрутизации MIDI",
+    "selectInstrumentType": "Выберите тип",
     "drumKit": "GM Ударные",
     "whiteKeys": "Белые клавиши",
     "blackKeys": "Чёрные клавиши"

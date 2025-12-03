@@ -63,6 +63,11 @@
       "description": "재생 중 다가오는 노트 표시",
       "enabled": "피아노 롤 활성화됨",
       "disabled": "피아노 롤 비활성화됨"
+    },
+    "debugButton": {
+      "title": "디버그 버튼",
+      "enable": "디버그 버튼 표시",
+      "description": "디버그 콘솔을 여는 버튼을 표시합니다"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "클릭하여 선택/해제",
     "selectedNote": "선택된 노트",
     "notesSelected": "{count}개 노트 선택됨",
+    "gmInstrument": "악기 유형 (General MIDI)",
+    "gmInstrumentHelp": "MIDI 라우팅을 위한 악기 유형 선택",
+    "selectInstrumentType": "유형 선택",
     "drumKit": "GM 드럼 키트",
     "whiteKeys": "흰 건반",
     "blackKeys": "검은 건반"

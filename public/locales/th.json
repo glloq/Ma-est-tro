@@ -63,6 +63,11 @@
       "description": "แสดงโน้ตที่กำลังจะมาถึงระหว่างการเล่น",
       "enabled": "เปิดใช้งาน Piano roll",
       "disabled": "ปิดใช้งาน Piano roll"
+    },
+    "debugButton": {
+      "title": "ปุ่มดีบัก",
+      "enable": "แสดงปุ่มดีบัก",
+      "description": "แสดงปุ่มเพื่อเปิดคอนโซลดีบัก"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "คลิกเพื่อเลือก/ยกเลิก",
     "selectedNote": "โน้ตที่เลือก",
     "notesSelected": "เลือก {count} โน้ต",
+    "gmInstrument": "ประเภทเครื่องดนตรี (General MIDI)",
+    "gmInstrumentHelp": "เลือกประเภทเครื่องดนตรีสำหรับการกำหนดเส้นทาง MIDI",
+    "selectInstrumentType": "เลือกประเภท",
     "drumKit": "GM Drum Kit",
     "whiteKeys": "คีย์ขาว",
     "blackKeys": "คีย์ดำ"

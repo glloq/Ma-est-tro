@@ -63,6 +63,11 @@
       "description": "Menampilkan not yang akan datang saat pemutaran",
       "enabled": "Piano roll diaktifkan",
       "disabled": "Piano roll dinonaktifkan"
+    },
+    "debugButton": {
+      "title": "Tombol Debug",
+      "enable": "Tampilkan tombol debug",
+      "description": "Menampilkan tombol untuk membuka konsol debug"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "Klik untuk memilih/batalkan pilihan",
     "selectedNote": "Not terpilih",
     "notesSelected": "{count} not terpilih",
+    "gmInstrument": "Jenis Instrumen (General MIDI)",
+    "gmInstrumentHelp": "Pilih jenis instrumen untuk routing MIDI",
+    "selectInstrumentType": "Pilih jenis",
     "drumKit": "Kit Drum GM",
     "whiteKeys": "Tuts putih",
     "blackKeys": "Tuts hitam"

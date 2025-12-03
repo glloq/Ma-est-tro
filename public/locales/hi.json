@@ -63,6 +63,11 @@
       "description": "प्लेबैक के दौरान आगामी नोट्स प्रदर्शित करता है",
       "enabled": "पियानो रोल सक्षम",
       "disabled": "पियानो रोल अक्षम"
+    },
+    "debugButton": {
+      "title": "डिबग बटन",
+      "enable": "डिबग बटन दिखाएं",
+      "description": "डिबग कंसोल खोलने के लिए बटन दिखाता है"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "चुनने/हटाने के लिए क्लिक करें",
     "selectedNote": "चयनित नोट",
     "notesSelected": "{count} नोट्स चयनित",
+    "gmInstrument": "इंस्ट्रूमेंट प्रकार (General MIDI)",
+    "gmInstrumentHelp": "MIDI रूटिंग के लिए इंस्ट्रूमेंट प्रकार चुनें",
+    "selectInstrumentType": "एक प्रकार चुनें",
     "drumKit": "GM ड्रम किट",
     "whiteKeys": "सफेद कुंजियां",
     "blackKeys": "काली कुंजियां"

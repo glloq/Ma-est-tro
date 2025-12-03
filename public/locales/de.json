@@ -63,6 +63,11 @@
       "description": "Zeigt bevorstehende Noten während der Wiedergabe an",
       "enabled": "Piano Roll aktiviert",
       "disabled": "Piano Roll deaktiviert"
+    },
+    "debugButton": {
+      "title": "Debug-Schaltfläche",
+      "enable": "Debug-Schaltfläche anzeigen",
+      "description": "Zeigt die Schaltfläche zum Öffnen der Debug-Konsole"
     }
   },
   "bluetooth": {
@@ -350,6 +355,9 @@
     "clickToToggle": "Klicken zum Aus-/Abwählen",
     "selectedNote": "Ausgewählte Note",
     "notesSelected": "{count} Noten ausgewählt",
+    "gmInstrument": "Instrumenttyp (General MIDI)",
+    "gmInstrumentHelp": "Wählen Sie den Instrumenttyp für das MIDI-Routing",
+    "selectInstrumentType": "Typ auswählen",
     "drumKit": "GM Schlagzeug",
     "whiteKeys": "Weiße Tasten",
     "blackKeys": "Schwarze Tasten"
