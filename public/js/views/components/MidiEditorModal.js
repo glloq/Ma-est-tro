@@ -148,6 +148,19 @@ class MidiEditorModal {
         return typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
     }
 
+    /**
+     * Récupère le nom d'un instrument GM traduit
+     * @param {number} index - Index de l'instrument (0-127)
+     * @returns {string} - Nom de l'instrument traduit
+     */
+    getInstrumentName(index) {
+        const translatedList = this.t('instruments.list');
+        if (Array.isArray(translatedList) && translatedList[index]) {
+            return translatedList[index];
+        }
+        return this.gmInstruments[index] || `Instrument ${index}`;
+    }
+
     // ========================================================================
     // AFFICHAGE DE LA MODALE
     // ========================================================================
@@ -312,7 +325,7 @@ class MidiEditorModal {
                 if (event.type === 'programChange') {
                     const channel = event.channel || 0;
                     channelInstruments.set(channel, event.programNumber);
-                    this.log('debug', `Channel ${channel}: program ${event.programNumber} (${this.gmInstruments[event.programNumber]})`);
+                    this.log('debug', `Channel ${channel}: program ${event.programNumber} (${this.getInstrumentName(event.programNumber)})`);
                 }
 
                 // Note On
@@ -380,7 +393,7 @@ class MidiEditorModal {
         // Construire la liste des canaux disponibles
         channelNoteCount.forEach((count, channel) => {
             const programNumber = channelInstruments.get(channel) || 0;
-            const instrumentName = channel === 9 ? 'Drums' : this.gmInstruments[programNumber];
+            const instrumentName = channel === 9 ? this.t('midiEditor.drumKit') : this.getInstrumentName(programNumber);
 
             this.channels.push({
                 channel: channel,
@@ -1224,7 +1237,7 @@ class MidiEditorModal {
         this.channels = [];
         channelNoteCount.forEach((count, channel) => {
             const program = channelPrograms.get(channel) || 0;
-            const instrumentName = channel === 9 ? 'Drums' : this.gmInstruments[program];
+            const instrumentName = channel === 9 ? this.t('midiEditor.drumKit') : this.getInstrumentName(program);
 
             this.channels.push({
                 channel: channel,
@@ -1293,7 +1306,7 @@ class MidiEditorModal {
                     channel: channel,
                     programNumber: program
                 });
-                this.log('debug', `Added programChange for channel ${channel}: ${this.gmInstruments[program]}`);
+                this.log('debug', `Added programChange for channel ${channel}: ${this.getInstrumentName(program)}`);
             }
         });
 
@@ -1622,7 +1635,7 @@ class MidiEditorModal {
     renderChannelOptions() {
         let options = '';
         for (let i = 0; i < 16; i++) {
-            const instrumentName = i === 9 ? 'Drums' : this.gmInstruments[0];
+            const instrumentName = i === 9 ? this.t('midiEditor.drumKit') : this.getInstrumentName(0);
             options += `<option value="${i}">Canal ${i + 1}${i === 9 ? ' (Drums)' : ''}</option>`;
         }
         return options;
@@ -1636,29 +1649,30 @@ class MidiEditorModal {
 
         // Groupes d'instruments MIDI GM
         const groups = [
-            { name: 'Piano', start: 0, count: 8 },
-            { name: 'Chromatic Percussion', start: 8, count: 8 },
-            { name: 'Organ', start: 16, count: 8 },
-            { name: 'Guitar', start: 24, count: 8 },
-            { name: 'Bass', start: 32, count: 8 },
-            { name: 'Strings', start: 40, count: 8 },
-            { name: 'Ensemble', start: 48, count: 8 },
-            { name: 'Brass', start: 56, count: 8 },
-            { name: 'Reed', start: 64, count: 8 },
-            { name: 'Pipe', start: 72, count: 8 },
-            { name: 'Synth Lead', start: 80, count: 8 },
-            { name: 'Synth Pad', start: 88, count: 8 },
-            { name: 'Synth Effects', start: 96, count: 8 },
-            { name: 'Ethnic', start: 104, count: 8 },
-            { name: 'Percussive', start: 112, count: 8 },
-            { name: 'Sound Effects', start: 120, count: 8 }
+            { key: 'piano', start: 0, count: 8 },
+            { key: 'chromaticPercussion', start: 8, count: 8 },
+            { key: 'organ', start: 16, count: 8 },
+            { key: 'guitar', start: 24, count: 8 },
+            { key: 'bass', start: 32, count: 8 },
+            { key: 'strings', start: 40, count: 8 },
+            { key: 'ensemble', start: 48, count: 8 },
+            { key: 'brass', start: 56, count: 8 },
+            { key: 'reed', start: 64, count: 8 },
+            { key: 'pipe', start: 72, count: 8 },
+            { key: 'synthLead', start: 80, count: 8 },
+            { key: 'synthPad', start: 88, count: 8 },
+            { key: 'synthEffects', start: 96, count: 8 },
+            { key: 'ethnic', start: 104, count: 8 },
+            { key: 'percussive', start: 112, count: 8 },
+            { key: 'soundEffects', start: 120, count: 8 }
         ];
 
         groups.forEach(group => {
-            options += `<optgroup label="${group.name}">`;
+            const categoryName = this.t(`instruments.categories.${group.key}`);
+            options += `<optgroup label="${categoryName}">`;
             for (let i = 0; i < group.count; i++) {
                 const program = group.start + i;
-                const instrument = this.gmInstruments[program];
+                const instrument = this.getInstrumentName(program);
                 options += `<option value="${program}">${program}: ${instrument}</option>`;
             }
             options += `</optgroup>`;
@@ -2630,7 +2644,7 @@ class MidiEditorModal {
         // Si c'est un nouveau canal, utiliser l'instrument sélectionné dans le sélecteur
         if (!targetChannelInfo && instrumentSelector) {
             this.selectedInstrument = parseInt(instrumentSelector.value);
-            this.log('info', `New channel ${newChannel} will use instrument: ${this.gmInstruments[this.selectedInstrument]}`);
+            this.log('info', `New channel ${newChannel} will use instrument: ${this.getInstrumentName(this.selectedInstrument)}`);
         }
 
         // Utiliser la méthode du piano roll pour déplacer les notes
@@ -2718,7 +2732,7 @@ class MidiEditorModal {
         if (!instrumentSelector) return;
 
         const selectedProgram = parseInt(instrumentSelector.value);
-        const instrumentName = this.gmInstruments[selectedProgram];
+        const instrumentName = this.getInstrumentName(selectedProgram);
 
         // Un seul canal actif : c'est celui-ci qu'on modifie
         const targetChannel = Array.from(this.activeChannels)[0];
@@ -3456,7 +3470,7 @@ class MidiEditorModal {
         const channelInfo = this.channels.find(ch => ch.channel === newChannel);
         const newChannelInstrument = channelInfo
             ? channelInfo.instrument
-            : this.gmInstruments[this.selectedInstrument] || 'Piano';
+            : this.getInstrumentName(this.selectedInstrument);
 
         return this.showConfirmModal({
             title: this.t('midiEditor.changeChannelTitle') || 'Changer de canal',
@@ -3765,7 +3779,7 @@ class MidiEditorModal {
         if (instrumentSelector) {
             instrumentSelector.addEventListener('change', (e) => {
                 this.selectedInstrument = parseInt(e.target.value);
-                this.log('info', `Selected instrument changed to: ${this.gmInstruments[this.selectedInstrument]} (${this.selectedInstrument})`);
+                this.log('info', `Selected instrument changed to: ${this.getInstrumentName(this.selectedInstrument)} (${this.selectedInstrument})`);
             });
         }
 
