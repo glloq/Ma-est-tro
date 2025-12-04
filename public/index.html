@@ -3678,7 +3678,9 @@
                     // Déterminer le nom de l'instrument
                     let instrumentName = null;
                     if (channel === 9) {
-                        instrumentName = 'Drums'; // Canal 10 = Drums en MIDI
+                        instrumentName = i18n.t('midiEditor.drumKit') || 'Drums'; // Canal 10 = Drums en MIDI
+                    } else if (info.program !== null && typeof getGMInstrumentName === 'function') {
+                        instrumentName = getGMInstrumentName(info.program);
                     } else if (info.program !== null && typeof GM_INSTRUMENTS !== 'undefined' && GM_INSTRUMENTS[info.program]) {
                         instrumentName = GM_INSTRUMENTS[info.program];
                     }
@@ -4181,7 +4183,7 @@
         let currentSettingsModal = null;
         let currentDeviceSettings = null;
 
-        // Liste des instruments General MIDI
+        // Liste des instruments General MIDI (fallback)
         const GM_INSTRUMENTS = [
             // Piano (0-7)
             'Acoustic Grand Piano', 'Bright Acoustic Piano', 'Electric Grand Piano', 'Honky-tonk Piano',
@@ -4220,35 +4222,73 @@
             'Guitar Fret Noise', 'Breath Noise', 'Seashore', 'Bird Tweet', 'Telephone Ring', 'Helicopter', 'Applause', 'Gunshot'
         ];
 
+        // Récupère le nom d'un instrument GM traduit
+        function getGMInstrumentName(index) {
+            const translatedList = i18n.t('instruments.list');
+            if (Array.isArray(translatedList) && translatedList[index]) {
+                return translatedList[index];
+            }
+            return GM_INSTRUMENTS[index] || `Instrument ${index}`;
+        }
+
+        // Récupère le nom d'une catégorie d'instruments traduit
+        function getGMCategoryName(key) {
+            const translated = i18n.t(`instruments.categories.${key}`);
+            // Si la traduction retourne la clé elle-même, utiliser le fallback
+            if (translated === `instruments.categories.${key}`) {
+                const fallbacks = {
+                    piano: 'Piano',
+                    chromaticPercussion: 'Chromatic Percussion',
+                    organ: 'Organ',
+                    guitar: 'Guitar',
+                    bass: 'Bass',
+                    strings: 'Strings',
+                    ensemble: 'Ensemble',
+                    brass: 'Brass',
+                    reed: 'Reed',
+                    pipe: 'Pipe',
+                    synthLead: 'Synth Lead',
+                    synthPad: 'Synth Pad',
+                    synthEffects: 'Synth Effects',
+                    ethnic: 'Ethnic',
+                    percussive: 'Percussive',
+                    soundEffects: 'Sound Effects'
+                };
+                return fallbacks[key] || key;
+            }
+            return translated;
+        }
+
         // Groupes d'instruments GM pour la liste déroulante
         const GM_INSTRUMENT_GROUPS = [
-            { name: 'Piano', start: 0, count: 8 },
-            { name: 'Chromatic Percussion', start: 8, count: 8 },
-            { name: 'Organ', start: 16, count: 8 },
-            { name: 'Guitar', start: 24, count: 8 },
-            { name: 'Bass', start: 32, count: 8 },
-            { name: 'Strings', start: 40, count: 8 },
-            { name: 'Ensemble', start: 48, count: 8 },
-            { name: 'Brass', start: 56, count: 8 },
-            { name: 'Reed', start: 64, count: 8 },
-            { name: 'Pipe', start: 72, count: 8 },
-            { name: 'Synth Lead', start: 80, count: 8 },
-            { name: 'Synth Pad', start: 88, count: 8 },
-            { name: 'Synth Effects', start: 96, count: 8 },
-            { name: 'Ethnic', start: 104, count: 8 },
-            { name: 'Percussive', start: 112, count: 8 },
-            { name: 'Sound Effects', start: 120, count: 8 }
+            { key: 'piano', start: 0, count: 8 },
+            { key: 'chromaticPercussion', start: 8, count: 8 },
+            { key: 'organ', start: 16, count: 8 },
+            { key: 'guitar', start: 24, count: 8 },
+            { key: 'bass', start: 32, count: 8 },
+            { key: 'strings', start: 40, count: 8 },
+            { key: 'ensemble', start: 48, count: 8 },
+            { key: 'brass', start: 56, count: 8 },
+            { key: 'reed', start: 64, count: 8 },
+            { key: 'pipe', start: 72, count: 8 },
+            { key: 'synthLead', start: 80, count: 8 },
+            { key: 'synthPad', start: 88, count: 8 },
+            { key: 'synthEffects', start: 96, count: 8 },
+            { key: 'ethnic', start: 104, count: 8 },
+            { key: 'percussive', start: 112, count: 8 },
+            { key: 'soundEffects', start: 120, count: 8 }
         ];
 
         // Générer les options du select pour les instruments GM
         function renderGMInstrumentOptions(selectedProgram) {
             let options = '<option value="">-- ' + (i18n.t('instrumentSettings.selectInstrumentType') || 'Sélectionner un type') + ' --</option>';
             for (const group of GM_INSTRUMENT_GROUPS) {
-                options += `<optgroup label="${group.name}">`;
+                const categoryName = getGMCategoryName(group.key);
+                options += `<optgroup label="${categoryName}">`;
                 for (let i = 0; i < group.count; i++) {
                     const programNum = group.start + i;
                     const selected = programNum === selectedProgram ? 'selected' : '';
-                    options += `<option value="${programNum}" ${selected}>${programNum}: ${GM_INSTRUMENTS[programNum]}</option>`;
+                    options += `<option value="${programNum}" ${selected}>${programNum}: ${getGMInstrumentName(programNum)}</option>`;
                 }
                 options += '</optgroup>';
             }
