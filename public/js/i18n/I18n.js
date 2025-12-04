@@ -112,7 +112,7 @@
          * Traduit une clé
          * @param {string} key - Clé de traduction (ex: "settings.title")
          * @param {Object} params - Paramètres pour l'interpolation
-         * @returns {string} - Texte traduit ou clé si non trouvé
+         * @returns {string|Array|Object} - Texte traduit, tableau, objet ou clé si non trouvé
          */
         t(key, params = {}) {
             const keys = key.split('.');
@@ -126,6 +126,16 @@
                     console.warn(`[I18n] Missing translation: ${key}`);
                     return key;
                 }
+            }
+
+            // Si c'est un tableau, le retourner directement
+            if (Array.isArray(value)) {
+                return value;
+            }
+
+            // Si c'est un objet (pas un tableau), le retourner directement
+            if (typeof value === 'object' && value !== null) {
+                return value;
             }
 
             if (typeof value !== 'string') {
