@@ -38,11 +38,13 @@ class MidiEditorModal {
         // Instrument sélectionné pour les nouveaux canaux (program MIDI GM)
         this.selectedInstrument = 0; // Piano par défaut
 
-        // CC/Pitchbend/Velocity Editor
+        // CC/Pitchbend/Velocity/Tempo Editor
         this.ccEditor = null;
         this.velocityEditor = null;
-        this.currentCCType = 'cc1'; // 'cc1', 'cc7', 'cc10', 'cc11', 'pitchbend', 'velocity'
+        this.tempoEditor = null;
+        this.currentCCType = 'cc1'; // 'cc1', 'cc7', 'cc10', 'cc11', 'pitchbend', 'velocity', 'tempo'
         this.ccEvents = []; // Événements CC et pitchbend
+        this.tempoEvents = []; // Événements de tempo
         this.ccSectionExpanded = false; // État du collapse de la section CC
 
         // Instrument connecté sélectionné pour visualiser les notes jouables
@@ -834,11 +836,35 @@ class MidiEditorModal {
 
         const ccEditorContainer = document.getElementById('cc-editor-container');
         const velocityEditorContainer = document.getElementById('velocity-editor-container');
+        const tempoEditorContainer = document.getElementById('tempo-editor-container');
 
-        if (ccType === 'velocity') {
+        if (ccType === 'tempo') {
+            // Afficher l'éditeur de tempo
+            if (ccEditorContainer) ccEditorContainer.style.display = 'none';
+            if (velocityEditorContainer) velocityEditorContainer.style.display = 'none';
+            if (tempoEditorContainer) tempoEditorContainer.style.display = 'flex';
+
+            // Initialiser l'éditeur de tempo s'il n'existe pas
+            if (!this.tempoEditor) {
+                this.initTempoEditor();
+            } else {
+                // Attendre que le layout soit recalculé avant de resize
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        if (this.tempoEditor && this.tempoEditor.resize) {
+                            this.tempoEditor.resize();
+                        }
+                    });
+                });
+            }
+
+            // Afficher les boutons de courbes pour tempo
+            this.showCurveButtons();
+        } else if (ccType === 'velocity') {
             // Afficher l'éditeur de vélocité
             if (ccEditorContainer) ccEditorContainer.style.display = 'none';
             if (velocityEditorContainer) velocityEditorContainer.style.display = 'flex';
+            if (tempoEditorContainer) tempoEditorContainer.style.display = 'none';
 
             // Initialiser l'éditeur de vélocité s'il n'existe pas
             if (!this.velocityEditor) {
@@ -859,10 +885,13 @@ class MidiEditorModal {
 
             // Mettre à jour le sélecteur de canal pour la vélocité
             this.updateEditorChannelSelector();
+            // Masquer les boutons de courbes
+            this.hideCurveButtons();
         } else {
             // Afficher l'éditeur CC
             if (ccEditorContainer) ccEditorContainer.style.display = 'flex';
             if (velocityEditorContainer) velocityEditorContainer.style.display = 'none';
+            if (tempoEditorContainer) tempoEditorContainer.style.display = 'none';
 
             // Initialiser l'éditeur CC s'il n'existe pas
             if (!this.ccEditor) {
@@ -880,6 +909,9 @@ class MidiEditorModal {
                 // Mettre à jour le sélecteur de canal car les canaux utilisés peuvent varier selon le type CC
                 this.updateEditorChannelSelector();
             }
+
+            // Masquer les boutons de courbes
+            this.hideCurveButtons();
         }
 
         // Mettre à jour l'état du bouton de suppression après le changement de type
@@ -905,7 +937,10 @@ class MidiEditorModal {
      * Supprimer les éléments sélectionnés (CC/Velocity)
      */
     deleteSelectedCCVelocity() {
-        if (this.currentCCType === 'velocity' && this.velocityEditor) {
+        if (this.currentCCType === 'tempo' && this.tempoEditor) {
+            const selectedIds = Array.from(this.tempoEditor.selectedEvents);
+            this.tempoEditor.removeEvents(selectedIds);
+        } else if (this.currentCCType === 'velocity' && this.velocityEditor) {
             this.velocityEditor.deleteSelected();
         } else if (this.ccEditor) {
             this.ccEditor.deleteSelected();
@@ -923,7 +958,9 @@ class MidiEditorModal {
         if (!deleteBtn) return;
 
         let hasSelection = false;
-        if (this.currentCCType === 'velocity' && this.velocityEditor) {
+        if (this.currentCCType === 'tempo' && this.tempoEditor) {
+            hasSelection = this.tempoEditor.selectedEvents.size > 0;
+        } else if (this.currentCCType === 'velocity' && this.velocityEditor) {
             hasSelection = this.velocityEditor.selectedNotes.size > 0;
         } else if (this.ccEditor) {
             hasSelection = this.ccEditor.selectedEvents.size > 0;
@@ -1162,6 +1199,154 @@ class MidiEditorModal {
             });
         } else {
             this.log('error', `waitForVelocityEditorLayout: Max attempts reached (${maxAttempts}), height still ${height}px`);
+        }
+    }
+
+    /**
+     * Initialiser l'éditeur de tempo
+     */
+    initTempoEditor() {
+        const container = document.getElementById('tempo-editor-container');
+        if (!container) {
+            this.log('warn', 'Container tempo-editor-container not found');
+            return;
+        }
+
+        if (this.tempoEditor) {
+            this.log('info', 'Tempo Editor already initialized');
+            return;
+        }
+
+        this.log('info', 'Initializing Tempo Editor');
+
+        // Obtenir les paramètres du piano roll
+        const options = {
+            timebase: this.pianoRoll?.timebase || 480,
+            xrange: this.pianoRoll?.xrange || 1920,
+            xoffset: this.pianoRoll?.xoffset || 0,
+            grid: this.snapValues[this.currentSnapIndex].ticks,
+            minTempo: 20,
+            maxTempo: 300,
+            onChange: () => {
+                // Marquer comme modifié lors des changements de tempo
+                this.isDirty = true;
+                this.updateSaveButton();
+            }
+        };
+
+        // Créer l'éditeur
+        this.tempoEditor = new TempoEditor(container, options);
+
+        // Charger les événements de tempo existants
+        this.tempoEditor.setEvents(this.tempoEvents);
+
+        this.log('info', `Tempo Editor initialized with ${this.tempoEvents.length} events`);
+
+        // Attendre que le layout soit prêt
+        this.waitForTempoEditorLayout();
+    }
+
+    /**
+     * Attendre que l'éditeur de tempo ait une hauteur valide
+     */
+    waitForTempoEditorLayout(attempts = 0, maxAttempts = 60) {
+        if (!this.tempoEditor || !this.tempoEditor.element) {
+            this.log('warn', 'waitForTempoEditorLayout: tempoEditor or element not found');
+            return;
+        }
+
+        const height = this.tempoEditor.element.getBoundingClientRect().height;
+        this.log('debug', `waitForTempoEditorLayout attempt ${attempts}: height=${height}`);
+
+        if (height > 100) {
+            // Le layout est prêt, on peut resize
+            this.tempoEditor.resize();
+            this.log('info', `Tempo Editor layout ready after ${attempts} attempts (height=${height})`);
+        } else if (attempts < maxAttempts) {
+            // Le layout n'est pas encore prêt, réessayer au prochain frame
+            requestAnimationFrame(() => {
+                this.waitForTempoEditorLayout(attempts + 1, maxAttempts);
+            });
+        } else {
+            this.log('error', `waitForTempoEditorLayout: Max attempts reached (${maxAttempts}), height still ${height}px`);
+        }
+    }
+
+    /**
+     * Synchroniser l'éditeur de tempo avec le piano roll
+     */
+    syncTempoEditor() {
+        if (!this.tempoEditor || !this.pianoRoll) return;
+
+        this.tempoEditor.setXRange(this.pianoRoll.xrange);
+        this.tempoEditor.setXOffset(this.pianoRoll.xoffset);
+        this.tempoEditor.setGrid(this.snapValues[this.currentSnapIndex].ticks);
+    }
+
+    /**
+     * Afficher les boutons de courbes
+     */
+    showCurveButtons() {
+        // Créer les boutons s'ils n'existent pas
+        let curveSection = this.container.querySelector('.curve-section');
+        if (!curveSection) {
+            // Trouver la toolbar
+            const toolbar = this.container.querySelector('.cc-type-toolbar');
+            if (!toolbar) return;
+
+            // Créer la section de boutons de courbes
+            const curveHTML = `
+                <div class="cc-toolbar-divider"></div>
+                <div class="curve-section">
+                    <label class="cc-toolbar-label">${this.t('midiEditor.curveType') || 'Curve'}</label>
+                    <div class="cc-curve-buttons-horizontal">
+                        <button class="cc-curve-btn active" data-curve="linear" title="Linear">━</button>
+                        <button class="cc-curve-btn" data-curve="exponential" title="Exponential (Ease-in)">⌃</button>
+                        <button class="cc-curve-btn" data-curve="logarithmic" title="Logarithmic (Ease-out)">⌄</button>
+                        <button class="cc-curve-btn" data-curve="sine" title="Sine (Ease-in-out)">∿</button>
+                    </div>
+                </div>
+            `;
+
+            // Insérer avant le divider qui précède le bouton de suppression
+            const deleteBtn = this.container.querySelector('#cc-delete-btn');
+            if (deleteBtn && deleteBtn.previousElementSibling) {
+                deleteBtn.previousElementSibling.insertAdjacentHTML('beforebegin', curveHTML);
+
+                // Attacher les événements
+                const ccCurveButtons = this.container.querySelectorAll('.cc-curve-btn');
+                ccCurveButtons.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const curveType = btn.dataset.curve;
+                        if (curveType && this.tempoEditor) {
+                            // Désactiver tous les boutons
+                            ccCurveButtons.forEach(b => b.classList.remove('active'));
+                            // Activer le bouton cliqué
+                            btn.classList.add('active');
+                            // Changer le type de courbe
+                            this.tempoEditor.setCurveType(curveType);
+                        }
+                    });
+                });
+            }
+        } else {
+            // Les boutons existent déjà, les afficher
+            curveSection.style.display = 'flex';
+            curveSection.previousElementSibling.style.display = 'block'; // divider
+        }
+    }
+
+    /**
+     * Masquer les boutons de courbes
+     */
+    hideCurveButtons() {
+        const curveSection = this.container.querySelector('.curve-section');
+        if (curveSection) {
+            curveSection.style.display = 'none';
+            if (curveSection.previousElementSibling && curveSection.previousElementSibling.classList.contains('cc-toolbar-divider')) {
+                curveSection.previousElementSibling.style.display = 'none';
+            }
         }
     }
 
@@ -2144,6 +2329,9 @@ class MidiEditorModal {
                                         <button class="cc-type-btn" data-cc-type="velocity" title="Note Velocity">
                                             VEL <span class="cc-label">${this.t('midiEditor.velocity')}</span>
                                         </button>
+                                        <button class="cc-type-btn" data-cc-type="tempo" title="Tempo Automation">
+                                            ♩ <span class="cc-label">${this.t('midiEditor.tempo') || 'Tempo'}</span>
+                                        </button>
                                     </div>
 
                                     <div class="cc-toolbar-divider"></div>
@@ -2154,16 +2342,6 @@ class MidiEditorModal {
                                         <button class="cc-tool-btn" data-tool="move" title="${this.t('midiEditor.moveTool')}">✥</button>
                                         <button class="cc-tool-btn" data-tool="line" title="${this.t('midiEditor.lineTool')}">╱</button>
                                         <button class="cc-tool-btn" data-tool="draw" title="${this.t('midiEditor.drawTool')}">✎</button>
-                                    </div>
-
-                                    <div class="cc-toolbar-divider"></div>
-
-                                    <label class="cc-toolbar-label">${this.t('midiEditor.curveType') || 'Curve'}</label>
-                                    <div class="cc-curve-buttons-horizontal">
-                                        <button class="cc-curve-btn active" data-curve="linear" title="Linear">━</button>
-                                        <button class="cc-curve-btn" data-curve="exponential" title="Exponential (Ease-in)">⌃</button>
-                                        <button class="cc-curve-btn" data-curve="logarithmic" title="Logarithmic (Ease-out)">⌄</button>
-                                        <button class="cc-curve-btn" data-curve="sine" title="Sine (Ease-in-out)">∿</button>
                                     </div>
 
                                     <div class="cc-toolbar-divider"></div>
@@ -2182,9 +2360,10 @@ class MidiEditorModal {
 
                                 <!-- Layout de l'éditeur (pleine hauteur sans sidebar) -->
                                 <div class="cc-editor-layout">
-                                    <!-- Conteneur pour les éditeurs (CC ou Velocity) -->
+                                    <!-- Conteneur pour les éditeurs (CC, Velocity ou Tempo) -->
                                     <div id="cc-editor-container" class="cc-editor-main"></div>
                                     <div id="velocity-editor-container" class="cc-editor-main" style="display: none;"></div>
+                                    <div id="tempo-editor-container" class="cc-editor-main" style="display: none;"></div>
                                 </div>
                             </div>
                         </div>
@@ -3931,28 +4110,6 @@ class MidiEditorModal {
                         this.velocityEditor.setTool(tool);
                     } else if (this.ccEditor) {
                         this.ccEditor.setTool(tool);
-                    }
-                }
-            });
-        });
-
-        // Boutons de type de courbe (pour l'outil ligne)
-        const ccCurveButtons = this.container.querySelectorAll('.cc-curve-btn');
-        ccCurveButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const curveType = btn.dataset.curve;
-                if (curveType) {
-                    // Désactiver tous les boutons
-                    ccCurveButtons.forEach(b => b.classList.remove('active'));
-                    // Activer le bouton cliqué
-                    btn.classList.add('active');
-
-                    // Changer le type de courbe sur l'éditeur approprié
-                    if (this.currentCCType === 'velocity' && this.velocityEditor) {
-                        this.velocityEditor.setCurveType(curveType);
-                    } else if (this.ccEditor) {
-                        this.ccEditor.setCurveType(curveType);
                     }
                 }
             });

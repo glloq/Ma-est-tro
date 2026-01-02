@@ -31,7 +31,6 @@ class VelocityEditor {
         this.isDrawing = false;
         this.lastDrawPosition = null;
         this.lastDrawTicks = null;
-        this.curveType = 'linear'; // Type de courbe : 'linear', 'exponential', 'logarithmic', 'sine'
 
         // Historique pour undo/redo
         this.history = [];
@@ -152,11 +151,6 @@ class VelocityEditor {
     setTool(tool) {
         this.currentTool = tool;
         this.canvas.style.cursor = tool === 'draw' ? 'crosshair' : 'default';
-    }
-
-    setCurveType(curveType) {
-        this.curveType = curveType;
-        console.log(`VelocityEditor: Curve type set to ${curveType}`);
     }
 
     setChannel(channel) {
@@ -547,10 +541,9 @@ class VelocityEditor {
         // Trouver toutes les notes dans la plage temporelle
         this.sequence.forEach((note, index) => {
             if (note.t >= minTicks && note.t <= maxTicks && this.activeChannels.has(note.c)) {
-                // Interpolation avec courbe
+                // Interpolation linéaire
                 const t = (note.t - startTicks) / (endTicks - startTicks);
-                const curveT = this.applyCurve(t);
-                const velocity = Math.round(startVelocity + curveT * (endVelocity - startVelocity));
+                const velocity = Math.round(startVelocity + t * (endVelocity - startVelocity));
                 this.sequence[index].v = Math.max(1, Math.min(127, velocity));
             }
         });
@@ -558,41 +551,6 @@ class VelocityEditor {
         this.saveState();
         this.notifyChange();
         this.renderThrottled();
-    }
-
-    /**
-     * Applique une courbe d'interpolation sur un progrès linéaire [0..1]
-     * @param {number} t - Progrès linéaire (0 à 1)
-     * @returns {number} - Progrès avec courbe appliquée (0 à 1)
-     */
-    applyCurve(t) {
-        switch (this.curveType) {
-            case 'linear':
-                return t;
-
-            case 'exponential':
-                // Courbe exponentielle (ease-in) : démarrage lent, fin rapide
-                return t * t;
-
-            case 'logarithmic':
-                // Courbe logarithmique (ease-out) : démarrage rapide, fin lente
-                return Math.sqrt(t);
-
-            case 'sine':
-                // Courbe sinusoïdale (ease-in-out) : démarrage et fin en douceur
-                return (1 - Math.cos(t * Math.PI)) / 2;
-
-            case 'exponential-strong':
-                // Exponentielle forte (cubique)
-                return t * t * t;
-
-            case 'logarithmic-strong':
-                // Logarithmique forte (racine cubique)
-                return Math.pow(t, 1/3);
-
-            default:
-                return t;
-        }
     }
 
     // === Rendu ===
