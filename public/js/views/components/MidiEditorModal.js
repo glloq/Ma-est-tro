@@ -1285,6 +1285,16 @@ class MidiEditorModal {
         // Convertir la sequence en événements MIDI
         const events = [];
 
+        // Ajouter l'événement de tempo au début (tick 0)
+        const tempo = this.tempo || 120;
+        const microsecondsPerBeat = Math.round(60000000 / tempo);
+        events.push({
+            absoluteTime: 0,
+            type: 'setTempo',
+            microsecondsPerBeat: microsecondsPerBeat
+        });
+        this.log('debug', `Added tempo event: ${tempo} BPM (${microsecondsPerBeat} μs/beat)`);
+
         // Déterminer quels canaux sont utilisés et leurs instruments
         const usedChannels = new Map(); // canal -> program
         fullSequenceToSave.forEach(note => {
@@ -1397,6 +1407,10 @@ class MidiEditorModal {
                 trackEvent.value = event.value;
             } else if (event.type === 'pitchBend') {
                 trackEvent.value = event.value;
+            } else if (event.type === 'setTempo') {
+                trackEvent.microsecondsPerBeat = event.microsecondsPerBeat;
+                // Les événements setTempo n'ont pas de channel
+                delete trackEvent.channel;
             }
 
             return trackEvent;
@@ -1925,6 +1939,11 @@ class MidiEditorModal {
                         <span class="title-separator">—</span>
                         <span class="file-name" id="editor-file-name">${this.escapeHtml(this.currentFilename || this.currentFile || '')}</span>
                         <button class="btn-rename-file" data-action="rename-file" title="${this.t('midiEditor.renameFile')}">✏️</button>
+                        <span class="title-separator">—</span>
+                        <div class="tempo-control">
+                            <label for="tempo-input">♩ BPM:</label>
+                            <input type="number" id="tempo-input" class="tempo-input" min="20" max="300" step="1" value="${this.tempo || 120}" title="${this.t('midiEditor.tempoTip') || 'Set tempo (BPM)'}">
+                        </div>
                     </div>
                     <button class="modal-close" data-action="close">&times;</button>
                 </div>
@@ -2139,6 +2158,16 @@ class MidiEditorModal {
 
                                     <div class="cc-toolbar-divider"></div>
 
+                                    <label class="cc-toolbar-label">${this.t('midiEditor.curveType') || 'Curve'}</label>
+                                    <div class="cc-curve-buttons-horizontal">
+                                        <button class="cc-curve-btn active" data-curve="linear" title="Linear">━</button>
+                                        <button class="cc-curve-btn" data-curve="exponential" title="Exponential (Ease-in)">⌃</button>
+                                        <button class="cc-curve-btn" data-curve="logarithmic" title="Logarithmic (Ease-out)">⌄</button>
+                                        <button class="cc-curve-btn" data-curve="sine" title="Sine (Ease-in-out)">∿</button>
+                                    </div>
+
+                                    <div class="cc-toolbar-divider"></div>
+
                                     <button class="cc-delete-btn" id="cc-delete-btn" title="${this.t('midiEditor.deleteSelection')}" disabled>
                                         🗑️ <span class="btn-label">${this.t('midiEditor.delete')}</span>
                                     </button>
@@ -2336,17 +2365,29 @@ class MidiEditorModal {
             }
         }
 
+        // Stocker une copie de la séquence pour détecter les changements
+        let previousSequence = [];
+
         // Optimisation : utiliser un debounce pour éviter les appels multiples
         let changeTimeout = null;
         const handleChange = () => {
+            // Feedback audio instantané avant le debounce
+            this.handleNoteFeedback(previousSequence);
+
             if (changeTimeout) clearTimeout(changeTimeout);
             changeTimeout = setTimeout(() => {
                 this.isDirty = true;
                 this.updateSaveButton();
                 this.syncFullSequenceFromPianoRoll();
                 this.updateUndoRedoButtonsState(); // Mettre à jour undo/redo quand la séquence change
+
+                // Mettre à jour la copie de la séquence après la synchronisation
+                previousSequence = this.copySequence(this.pianoRoll.sequence);
             }, 100); // Debounce de 100ms
         };
+
+        // Initialiser la copie de la séquence
+        previousSequence = this.copySequence(this.pianoRoll.sequence);
 
         // Écouter les changements avec debounce
         this.pianoRoll.addEventListener('change', handleChange);
@@ -2565,8 +2606,14 @@ class MidiEditorModal {
             return;
         }
 
+        // Récupérer les notes sélectionnées avant suppression
+        const selectedNotes = this.getSelectedNotes();
+
         // Utiliser la méthode du piano roll
         this.pianoRoll.deleteSelection();
+
+        // Supprimer les CC/vélocité associés aux notes supprimées
+        this.deleteAssociatedCCAndVelocity(selectedNotes);
 
         this.log('info', `Deleted ${count} notes`);
         this.showNotification(this.t('midiEditor.notesDeleted', { count }), 'success');
@@ -2575,6 +2622,42 @@ class MidiEditorModal {
         this.updateSaveButton();
         this.syncFullSequenceFromPianoRoll();
         this.updateEditButtons();
+    }
+
+    /**
+     * Supprimer les événements CC et vélocité associés aux notes supprimées
+     */
+    deleteAssociatedCCAndVelocity(deletedNotes) {
+        if (!deletedNotes || deletedNotes.length === 0) return;
+
+        // Créer un Set des (tick, channel) des notes supprimées pour recherche rapide
+        const deletedPositions = new Set();
+        deletedNotes.forEach(note => {
+            // Créer une clé unique pour chaque position (tick + canal)
+            const key = `${note.t}_${note.c}`;
+            deletedPositions.add(key);
+        });
+
+        // Supprimer les événements CC/pitchbend aux mêmes positions
+        if (this.ccEditor && this.ccEditor.events) {
+            const initialCCCount = this.ccEditor.events.length;
+            this.ccEditor.events = this.ccEditor.events.filter(event => {
+                const key = `${event.ticks}_${event.channel}`;
+                return !deletedPositions.has(key);
+            });
+            const deletedCCCount = initialCCCount - this.ccEditor.events.length;
+            if (deletedCCCount > 0) {
+                this.log('info', `Deleted ${deletedCCCount} CC/pitchbend events associated with deleted notes`);
+                this.ccEditor.renderThrottled();
+            }
+        }
+
+        // Supprimer les vélocités des notes supprimées
+        // (La vélocité est déjà supprimée avec la note, mais on peut mettre à jour l'éditeur)
+        if (this.velocityEditor) {
+            this.velocityEditor.setSequence(this.pianoRoll.sequence);
+            this.velocityEditor.renderThrottled();
+        }
     }
 
     /**
@@ -2930,6 +3013,33 @@ class MidiEditorModal {
     }
 
     /**
+     * Changer le tempo BPM
+     */
+    setTempo(newTempo) {
+        if (!newTempo || isNaN(newTempo) || newTempo < 20 || newTempo > 300) {
+            this.log('warn', `Invalid tempo value: ${newTempo}`);
+            return;
+        }
+
+        this.tempo = newTempo;
+        this.isDirty = true;
+        this.updateSaveButton();
+
+        // Mettre à jour le piano roll
+        if (this.pianoRoll) {
+            this.pianoRoll.tempo = newTempo;
+        }
+
+        // Mettre à jour le synthétiseur si existant
+        if (this.synthesizer) {
+            this.synthesizer.tempo = newTempo;
+        }
+
+        this.log('info', `Tempo changed to ${newTempo} BPM`);
+        this.showNotification(`Tempo: ${newTempo} BPM`, 'info');
+    }
+
+    /**
      * Changer le mode d'édition
      */
     setEditMode(mode) {
@@ -3166,6 +3276,79 @@ class MidiEditorModal {
         });
 
         return maxTick;
+    }
+
+    /**
+     * Copier une séquence de notes
+     */
+    copySequence(sequence) {
+        if (!sequence || sequence.length === 0) return [];
+        return sequence.map(note => ({
+            t: note.t,
+            g: note.g,
+            n: note.n,
+            c: note.c,
+            v: note.v
+        }));
+    }
+
+    /**
+     * Gérer le feedback audio lors de changements de notes
+     */
+    handleNoteFeedback(previousSequence) {
+        if (!this.pianoRoll || !this.pianoRoll.sequence) return;
+
+        const currentSequence = this.pianoRoll.sequence;
+
+        // Créer des maps pour comparaison rapide
+        const previousMap = new Map();
+        previousSequence.forEach((note, index) => {
+            const key = `${note.t}_${note.c}_${index}`;
+            previousMap.set(key, note);
+        });
+
+        const currentMap = new Map();
+        currentSequence.forEach((note, index) => {
+            const key = `${note.t}_${note.c}_${index}`;
+            currentMap.set(key, note);
+        });
+
+        // Détecter les notes ajoutées ou modifiées
+        const notesToPlay = [];
+        currentSequence.forEach((note, index) => {
+            const key = `${note.t}_${note.c}_${index}`;
+            const prevNote = previousMap.get(key);
+
+            // Note ajoutée ou pitch changé (déplacement vertical)
+            if (!prevNote || prevNote.n !== note.n) {
+                notesToPlay.push(note);
+            }
+        });
+
+        // Jouer les notes modifiées/ajoutées (limiter à 5 pour éviter la surcharge)
+        if (notesToPlay.length > 0 && notesToPlay.length <= 5) {
+            notesToPlay.forEach(note => {
+                this.playNoteFeedback(note.n, note.v || 100, note.c || 0);
+            });
+        }
+    }
+
+    /**
+     * Jouer une note courte comme feedback audio
+     */
+    async playNoteFeedback(noteNumber, velocity = 100, channel = 0) {
+        // Initialiser le synthétiseur si nécessaire
+        if (!this.synthesizer) {
+            await this.initSynthesizer();
+        }
+
+        if (!this.synthesizer || !this.synthesizer.isInitialized) {
+            return;
+        }
+
+        // Jouer la note avec une durée courte (100ms)
+        const duration = 0.1; // 100ms
+        this.synthesizer.playNote(noteNumber, velocity, channel, duration);
     }
 
     /**
@@ -3688,6 +3871,28 @@ class MidiEditorModal {
             });
         }
 
+        // Input de tempo
+        const tempoInput = document.getElementById('tempo-input');
+        if (tempoInput) {
+            tempoInput.addEventListener('change', (e) => {
+                const newTempo = parseInt(e.target.value);
+                if (!isNaN(newTempo) && newTempo >= 20 && newTempo <= 300) {
+                    this.setTempo(newTempo);
+                } else {
+                    // Restaurer la valeur précédente si invalide
+                    e.target.value = this.tempo || 120;
+                }
+            });
+            // Aussi gérer le changement pendant la saisie (input event)
+            tempoInput.addEventListener('input', (e) => {
+                const newTempo = parseInt(e.target.value);
+                if (!isNaN(newTempo) && newTempo >= 20 && newTempo <= 300) {
+                    // Mise à jour en temps réel (optionnel, peut être retiré si trop de mises à jour)
+                    this.setTempo(newTempo);
+                }
+            });
+        }
+
         // Header de la section CC (collapse/expand)
         const ccSectionHeader = document.getElementById('cc-section-header');
         if (ccSectionHeader) {
@@ -3726,6 +3931,28 @@ class MidiEditorModal {
                         this.velocityEditor.setTool(tool);
                     } else if (this.ccEditor) {
                         this.ccEditor.setTool(tool);
+                    }
+                }
+            });
+        });
+
+        // Boutons de type de courbe (pour l'outil ligne)
+        const ccCurveButtons = this.container.querySelectorAll('.cc-curve-btn');
+        ccCurveButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const curveType = btn.dataset.curve;
+                if (curveType) {
+                    // Désactiver tous les boutons
+                    ccCurveButtons.forEach(b => b.classList.remove('active'));
+                    // Activer le bouton cliqué
+                    btn.classList.add('active');
+
+                    // Changer le type de courbe sur l'éditeur approprié
+                    if (this.currentCCType === 'velocity' && this.velocityEditor) {
+                        this.velocityEditor.setCurveType(curveType);
+                    } else if (this.ccEditor) {
+                        this.ccEditor.setCurveType(curveType);
                     }
                 }
             });
