@@ -38,11 +38,13 @@ class MidiEditorModal {
         // Instrument sélectionné pour les nouveaux canaux (program MIDI GM)
         this.selectedInstrument = 0; // Piano par défaut
 
-        // CC/Pitchbend/Velocity Editor
+        // CC/Pitchbend/Velocity/Tempo Editor
         this.ccEditor = null;
         this.velocityEditor = null;
-        this.currentCCType = 'cc1'; // 'cc1', 'cc7', 'cc10', 'cc11', 'pitchbend', 'velocity'
+        this.tempoEditor = null;
+        this.currentCCType = 'cc1'; // 'cc1', 'cc7', 'cc10', 'cc11', 'pitchbend', 'velocity', 'tempo'
         this.ccEvents = []; // Événements CC et pitchbend
+        this.tempoEvents = []; // Événements de tempo
         this.ccSectionExpanded = false; // État du collapse de la section CC
 
         // Instrument connecté sélectionné pour visualiser les notes jouables
@@ -834,11 +836,35 @@ class MidiEditorModal {
 
         const ccEditorContainer = document.getElementById('cc-editor-container');
         const velocityEditorContainer = document.getElementById('velocity-editor-container');
+        const tempoEditorContainer = document.getElementById('tempo-editor-container');
 
-        if (ccType === 'velocity') {
+        if (ccType === 'tempo') {
+            // Afficher l'éditeur de tempo
+            if (ccEditorContainer) ccEditorContainer.style.display = 'none';
+            if (velocityEditorContainer) velocityEditorContainer.style.display = 'none';
+            if (tempoEditorContainer) tempoEditorContainer.style.display = 'flex';
+
+            // Initialiser l'éditeur de tempo s'il n'existe pas
+            if (!this.tempoEditor) {
+                this.initTempoEditor();
+            } else {
+                // Attendre que le layout soit recalculé avant de resize
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        if (this.tempoEditor && this.tempoEditor.resize) {
+                            this.tempoEditor.resize();
+                        }
+                    });
+                });
+            }
+
+            // Afficher les boutons de courbes pour tempo
+            this.showCurveButtons();
+        } else if (ccType === 'velocity') {
             // Afficher l'éditeur de vélocité
             if (ccEditorContainer) ccEditorContainer.style.display = 'none';
             if (velocityEditorContainer) velocityEditorContainer.style.display = 'flex';
+            if (tempoEditorContainer) tempoEditorContainer.style.display = 'none';
 
             // Initialiser l'éditeur de vélocité s'il n'existe pas
             if (!this.velocityEditor) {
@@ -859,10 +885,13 @@ class MidiEditorModal {
 
             // Mettre à jour le sélecteur de canal pour la vélocité
             this.updateEditorChannelSelector();
+            // Masquer les boutons de courbes
+            this.hideCurveButtons();
         } else {
             // Afficher l'éditeur CC
             if (ccEditorContainer) ccEditorContainer.style.display = 'flex';
             if (velocityEditorContainer) velocityEditorContainer.style.display = 'none';
+            if (tempoEditorContainer) tempoEditorContainer.style.display = 'none';
 
             // Initialiser l'éditeur CC s'il n'existe pas
             if (!this.ccEditor) {
@@ -880,6 +909,9 @@ class MidiEditorModal {
                 // Mettre à jour le sélecteur de canal car les canaux utilisés peuvent varier selon le type CC
                 this.updateEditorChannelSelector();
             }
+
+            // Masquer les boutons de courbes
+            this.hideCurveButtons();
         }
 
         // Mettre à jour l'état du bouton de suppression après le changement de type
@@ -905,7 +937,10 @@ class MidiEditorModal {
      * Supprimer les éléments sélectionnés (CC/Velocity)
      */
     deleteSelectedCCVelocity() {
-        if (this.currentCCType === 'velocity' && this.velocityEditor) {
+        if (this.currentCCType === 'tempo' && this.tempoEditor) {
+            const selectedIds = Array.from(this.tempoEditor.selectedEvents);
+            this.tempoEditor.removeEvents(selectedIds);
+        } else if (this.currentCCType === 'velocity' && this.velocityEditor) {
             this.velocityEditor.deleteSelected();
         } else if (this.ccEditor) {
             this.ccEditor.deleteSelected();
@@ -923,7 +958,9 @@ class MidiEditorModal {
         if (!deleteBtn) return;
 
         let hasSelection = false;
-        if (this.currentCCType === 'velocity' && this.velocityEditor) {
+        if (this.currentCCType === 'tempo' && this.tempoEditor) {
+            hasSelection = this.tempoEditor.selectedEvents.size > 0;
+        } else if (this.currentCCType === 'velocity' && this.velocityEditor) {
             hasSelection = this.velocityEditor.selectedNotes.size > 0;
         } else if (this.ccEditor) {
             hasSelection = this.ccEditor.selectedEvents.size > 0;
@@ -1166,6 +1203,154 @@ class MidiEditorModal {
     }
 
     /**
+     * Initialiser l'éditeur de tempo
+     */
+    initTempoEditor() {
+        const container = document.getElementById('tempo-editor-container');
+        if (!container) {
+            this.log('warn', 'Container tempo-editor-container not found');
+            return;
+        }
+
+        if (this.tempoEditor) {
+            this.log('info', 'Tempo Editor already initialized');
+            return;
+        }
+
+        this.log('info', 'Initializing Tempo Editor');
+
+        // Obtenir les paramètres du piano roll
+        const options = {
+            timebase: this.pianoRoll?.timebase || 480,
+            xrange: this.pianoRoll?.xrange || 1920,
+            xoffset: this.pianoRoll?.xoffset || 0,
+            grid: this.snapValues[this.currentSnapIndex].ticks,
+            minTempo: 20,
+            maxTempo: 300,
+            onChange: () => {
+                // Marquer comme modifié lors des changements de tempo
+                this.isDirty = true;
+                this.updateSaveButton();
+            }
+        };
+
+        // Créer l'éditeur
+        this.tempoEditor = new TempoEditor(container, options);
+
+        // Charger les événements de tempo existants
+        this.tempoEditor.setEvents(this.tempoEvents);
+
+        this.log('info', `Tempo Editor initialized with ${this.tempoEvents.length} events`);
+
+        // Attendre que le layout soit prêt
+        this.waitForTempoEditorLayout();
+    }
+
+    /**
+     * Attendre que l'éditeur de tempo ait une hauteur valide
+     */
+    waitForTempoEditorLayout(attempts = 0, maxAttempts = 60) {
+        if (!this.tempoEditor || !this.tempoEditor.element) {
+            this.log('warn', 'waitForTempoEditorLayout: tempoEditor or element not found');
+            return;
+        }
+
+        const height = this.tempoEditor.element.getBoundingClientRect().height;
+        this.log('debug', `waitForTempoEditorLayout attempt ${attempts}: height=${height}`);
+
+        if (height > 100) {
+            // Le layout est prêt, on peut resize
+            this.tempoEditor.resize();
+            this.log('info', `Tempo Editor layout ready after ${attempts} attempts (height=${height})`);
+        } else if (attempts < maxAttempts) {
+            // Le layout n'est pas encore prêt, réessayer au prochain frame
+            requestAnimationFrame(() => {
+                this.waitForTempoEditorLayout(attempts + 1, maxAttempts);
+            });
+        } else {
+            this.log('error', `waitForTempoEditorLayout: Max attempts reached (${maxAttempts}), height still ${height}px`);
+        }
+    }
+
+    /**
+     * Synchroniser l'éditeur de tempo avec le piano roll
+     */
+    syncTempoEditor() {
+        if (!this.tempoEditor || !this.pianoRoll) return;
+
+        this.tempoEditor.setXRange(this.pianoRoll.xrange);
+        this.tempoEditor.setXOffset(this.pianoRoll.xoffset);
+        this.tempoEditor.setGrid(this.snapValues[this.currentSnapIndex].ticks);
+    }
+
+    /**
+     * Afficher les boutons de courbes
+     */
+    showCurveButtons() {
+        // Créer les boutons s'ils n'existent pas
+        let curveSection = this.container.querySelector('.curve-section');
+        if (!curveSection) {
+            // Trouver la toolbar
+            const toolbar = this.container.querySelector('.cc-type-toolbar');
+            if (!toolbar) return;
+
+            // Créer la section de boutons de courbes
+            const curveHTML = `
+                <div class="cc-toolbar-divider"></div>
+                <div class="curve-section">
+                    <label class="cc-toolbar-label">${this.t('midiEditor.curveType') || 'Curve'}</label>
+                    <div class="cc-curve-buttons-horizontal">
+                        <button class="cc-curve-btn active" data-curve="linear" title="Linear">━</button>
+                        <button class="cc-curve-btn" data-curve="exponential" title="Exponential (Ease-in)">⌃</button>
+                        <button class="cc-curve-btn" data-curve="logarithmic" title="Logarithmic (Ease-out)">⌄</button>
+                        <button class="cc-curve-btn" data-curve="sine" title="Sine (Ease-in-out)">∿</button>
+                    </div>
+                </div>
+            `;
+
+            // Insérer avant le divider qui précède le bouton de suppression
+            const deleteBtn = this.container.querySelector('#cc-delete-btn');
+            if (deleteBtn && deleteBtn.previousElementSibling) {
+                deleteBtn.previousElementSibling.insertAdjacentHTML('beforebegin', curveHTML);
+
+                // Attacher les événements
+                const ccCurveButtons = this.container.querySelectorAll('.cc-curve-btn');
+                ccCurveButtons.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const curveType = btn.dataset.curve;
+                        if (curveType && this.tempoEditor) {
+                            // Désactiver tous les boutons
+                            ccCurveButtons.forEach(b => b.classList.remove('active'));
+                            // Activer le bouton cliqué
+                            btn.classList.add('active');
+                            // Changer le type de courbe
+                            this.tempoEditor.setCurveType(curveType);
+                        }
+                    });
+                });
+            }
+        } else {
+            // Les boutons existent déjà, les afficher
+            curveSection.style.display = 'flex';
+            curveSection.previousElementSibling.style.display = 'block'; // divider
+        }
+    }
+
+    /**
+     * Masquer les boutons de courbes
+     */
+    hideCurveButtons() {
+        const curveSection = this.container.querySelector('.curve-section');
+        if (curveSection) {
+            curveSection.style.display = 'none';
+            if (curveSection.previousElementSibling && curveSection.previousElementSibling.classList.contains('cc-toolbar-divider')) {
+                curveSection.previousElementSibling.style.display = 'none';
+            }
+        }
+    }
+
+    /**
      * Synchroniser l'éditeur de vélocité avec le piano roll
      */
     syncVelocityEditor() {
@@ -1285,6 +1470,16 @@ class MidiEditorModal {
         // Convertir la sequence en événements MIDI
         const events = [];
 
+        // Ajouter l'événement de tempo au début (tick 0)
+        const tempo = this.tempo || 120;
+        const microsecondsPerBeat = Math.round(60000000 / tempo);
+        events.push({
+            absoluteTime: 0,
+            type: 'setTempo',
+            microsecondsPerBeat: microsecondsPerBeat
+        });
+        this.log('debug', `Added tempo event: ${tempo} BPM (${microsecondsPerBeat} μs/beat)`);
+
         // Déterminer quels canaux sont utilisés et leurs instruments
         const usedChannels = new Map(); // canal -> program
         fullSequenceToSave.forEach(note => {
@@ -1397,6 +1592,10 @@ class MidiEditorModal {
                 trackEvent.value = event.value;
             } else if (event.type === 'pitchBend') {
                 trackEvent.value = event.value;
+            } else if (event.type === 'setTempo') {
+                trackEvent.microsecondsPerBeat = event.microsecondsPerBeat;
+                // Les événements setTempo n'ont pas de channel
+                delete trackEvent.channel;
             }
 
             return trackEvent;
@@ -1925,6 +2124,11 @@ class MidiEditorModal {
                         <span class="title-separator">—</span>
                         <span class="file-name" id="editor-file-name">${this.escapeHtml(this.currentFilename || this.currentFile || '')}</span>
                         <button class="btn-rename-file" data-action="rename-file" title="${this.t('midiEditor.renameFile')}">✏️</button>
+                        <span class="title-separator">—</span>
+                        <div class="tempo-control">
+                            <label for="tempo-input">♩ BPM:</label>
+                            <input type="number" id="tempo-input" class="tempo-input" min="20" max="300" step="1" value="${this.tempo || 120}" title="${this.t('midiEditor.tempoTip') || 'Set tempo (BPM)'}">
+                        </div>
                     </div>
                     <button class="modal-close" data-action="close">&times;</button>
                 </div>
@@ -2125,6 +2329,9 @@ class MidiEditorModal {
                                         <button class="cc-type-btn" data-cc-type="velocity" title="Note Velocity">
                                             VEL <span class="cc-label">${this.t('midiEditor.velocity')}</span>
                                         </button>
+                                        <button class="cc-type-btn" data-cc-type="tempo" title="Tempo Automation">
+                                            ♩ <span class="cc-label">${this.t('midiEditor.tempo') || 'Tempo'}</span>
+                                        </button>
                                     </div>
 
                                     <div class="cc-toolbar-divider"></div>
@@ -2153,9 +2360,10 @@ class MidiEditorModal {
 
                                 <!-- Layout de l'éditeur (pleine hauteur sans sidebar) -->
                                 <div class="cc-editor-layout">
-                                    <!-- Conteneur pour les éditeurs (CC ou Velocity) -->
+                                    <!-- Conteneur pour les éditeurs (CC, Velocity ou Tempo) -->
                                     <div id="cc-editor-container" class="cc-editor-main"></div>
                                     <div id="velocity-editor-container" class="cc-editor-main" style="display: none;"></div>
+                                    <div id="tempo-editor-container" class="cc-editor-main" style="display: none;"></div>
                                 </div>
                             </div>
                         </div>
@@ -2336,17 +2544,29 @@ class MidiEditorModal {
             }
         }
 
+        // Stocker une copie de la séquence pour détecter les changements
+        let previousSequence = [];
+
         // Optimisation : utiliser un debounce pour éviter les appels multiples
         let changeTimeout = null;
         const handleChange = () => {
+            // Feedback audio instantané avant le debounce
+            this.handleNoteFeedback(previousSequence);
+
             if (changeTimeout) clearTimeout(changeTimeout);
             changeTimeout = setTimeout(() => {
                 this.isDirty = true;
                 this.updateSaveButton();
                 this.syncFullSequenceFromPianoRoll();
                 this.updateUndoRedoButtonsState(); // Mettre à jour undo/redo quand la séquence change
+
+                // Mettre à jour la copie de la séquence après la synchronisation
+                previousSequence = this.copySequence(this.pianoRoll.sequence);
             }, 100); // Debounce de 100ms
         };
+
+        // Initialiser la copie de la séquence
+        previousSequence = this.copySequence(this.pianoRoll.sequence);
 
         // Écouter les changements avec debounce
         this.pianoRoll.addEventListener('change', handleChange);
@@ -2565,8 +2785,14 @@ class MidiEditorModal {
             return;
         }
 
+        // Récupérer les notes sélectionnées avant suppression
+        const selectedNotes = this.getSelectedNotes();
+
         // Utiliser la méthode du piano roll
         this.pianoRoll.deleteSelection();
+
+        // Supprimer les CC/vélocité associés aux notes supprimées
+        this.deleteAssociatedCCAndVelocity(selectedNotes);
 
         this.log('info', `Deleted ${count} notes`);
         this.showNotification(this.t('midiEditor.notesDeleted', { count }), 'success');
@@ -2575,6 +2801,42 @@ class MidiEditorModal {
         this.updateSaveButton();
         this.syncFullSequenceFromPianoRoll();
         this.updateEditButtons();
+    }
+
+    /**
+     * Supprimer les événements CC et vélocité associés aux notes supprimées
+     */
+    deleteAssociatedCCAndVelocity(deletedNotes) {
+        if (!deletedNotes || deletedNotes.length === 0) return;
+
+        // Créer un Set des (tick, channel) des notes supprimées pour recherche rapide
+        const deletedPositions = new Set();
+        deletedNotes.forEach(note => {
+            // Créer une clé unique pour chaque position (tick + canal)
+            const key = `${note.t}_${note.c}`;
+            deletedPositions.add(key);
+        });
+
+        // Supprimer les événements CC/pitchbend aux mêmes positions
+        if (this.ccEditor && this.ccEditor.events) {
+            const initialCCCount = this.ccEditor.events.length;
+            this.ccEditor.events = this.ccEditor.events.filter(event => {
+                const key = `${event.ticks}_${event.channel}`;
+                return !deletedPositions.has(key);
+            });
+            const deletedCCCount = initialCCCount - this.ccEditor.events.length;
+            if (deletedCCCount > 0) {
+                this.log('info', `Deleted ${deletedCCCount} CC/pitchbend events associated with deleted notes`);
+                this.ccEditor.renderThrottled();
+            }
+        }
+
+        // Supprimer les vélocités des notes supprimées
+        // (La vélocité est déjà supprimée avec la note, mais on peut mettre à jour l'éditeur)
+        if (this.velocityEditor) {
+            this.velocityEditor.setSequence(this.pianoRoll.sequence);
+            this.velocityEditor.renderThrottled();
+        }
     }
 
     /**
@@ -2930,6 +3192,33 @@ class MidiEditorModal {
     }
 
     /**
+     * Changer le tempo BPM
+     */
+    setTempo(newTempo) {
+        if (!newTempo || isNaN(newTempo) || newTempo < 20 || newTempo > 300) {
+            this.log('warn', `Invalid tempo value: ${newTempo}`);
+            return;
+        }
+
+        this.tempo = newTempo;
+        this.isDirty = true;
+        this.updateSaveButton();
+
+        // Mettre à jour le piano roll
+        if (this.pianoRoll) {
+            this.pianoRoll.tempo = newTempo;
+        }
+
+        // Mettre à jour le synthétiseur si existant
+        if (this.synthesizer) {
+            this.synthesizer.tempo = newTempo;
+        }
+
+        this.log('info', `Tempo changed to ${newTempo} BPM`);
+        this.showNotification(`Tempo: ${newTempo} BPM`, 'info');
+    }
+
+    /**
      * Changer le mode d'édition
      */
     setEditMode(mode) {
@@ -3166,6 +3455,79 @@ class MidiEditorModal {
         });
 
         return maxTick;
+    }
+
+    /**
+     * Copier une séquence de notes
+     */
+    copySequence(sequence) {
+        if (!sequence || sequence.length === 0) return [];
+        return sequence.map(note => ({
+            t: note.t,
+            g: note.g,
+            n: note.n,
+            c: note.c,
+            v: note.v
+        }));
+    }
+
+    /**
+     * Gérer le feedback audio lors de changements de notes
+     */
+    handleNoteFeedback(previousSequence) {
+        if (!this.pianoRoll || !this.pianoRoll.sequence) return;
+
+        const currentSequence = this.pianoRoll.sequence;
+
+        // Créer des maps pour comparaison rapide
+        const previousMap = new Map();
+        previousSequence.forEach((note, index) => {
+            const key = `${note.t}_${note.c}_${index}`;
+            previousMap.set(key, note);
+        });
+
+        const currentMap = new Map();
+        currentSequence.forEach((note, index) => {
+            const key = `${note.t}_${note.c}_${index}`;
+            currentMap.set(key, note);
+        });
+
+        // Détecter les notes ajoutées ou modifiées
+        const notesToPlay = [];
+        currentSequence.forEach((note, index) => {
+            const key = `${note.t}_${note.c}_${index}`;
+            const prevNote = previousMap.get(key);
+
+            // Note ajoutée ou pitch changé (déplacement vertical)
+            if (!prevNote || prevNote.n !== note.n) {
+                notesToPlay.push(note);
+            }
+        });
+
+        // Jouer les notes modifiées/ajoutées (limiter à 5 pour éviter la surcharge)
+        if (notesToPlay.length > 0 && notesToPlay.length <= 5) {
+            notesToPlay.forEach(note => {
+                this.playNoteFeedback(note.n, note.v || 100, note.c || 0);
+            });
+        }
+    }
+
+    /**
+     * Jouer une note courte comme feedback audio
+     */
+    async playNoteFeedback(noteNumber, velocity = 100, channel = 0) {
+        // Initialiser le synthétiseur si nécessaire
+        if (!this.synthesizer) {
+            await this.initSynthesizer();
+        }
+
+        if (!this.synthesizer || !this.synthesizer.isInitialized) {
+            return;
+        }
+
+        // Jouer la note avec une durée courte (100ms)
+        const duration = 0.1; // 100ms
+        this.synthesizer.playNote(noteNumber, velocity, channel, duration);
     }
 
     /**
@@ -3685,6 +4047,28 @@ class MidiEditorModal {
             connectedDeviceSelector.addEventListener('change', async (e) => {
                 const deviceId = e.target.value;
                 await this.selectConnectedDevice(deviceId);
+            });
+        }
+
+        // Input de tempo
+        const tempoInput = document.getElementById('tempo-input');
+        if (tempoInput) {
+            tempoInput.addEventListener('change', (e) => {
+                const newTempo = parseInt(e.target.value);
+                if (!isNaN(newTempo) && newTempo >= 20 && newTempo <= 300) {
+                    this.setTempo(newTempo);
+                } else {
+                    // Restaurer la valeur précédente si invalide
+                    e.target.value = this.tempo || 120;
+                }
+            });
+            // Aussi gérer le changement pendant la saisie (input event)
+            tempoInput.addEventListener('input', (e) => {
+                const newTempo = parseInt(e.target.value);
+                if (!isNaN(newTempo) && newTempo >= 20 && newTempo <= 300) {
+                    // Mise à jour en temps réel (optionnel, peut être retiré si trop de mises à jour)
+                    this.setTempo(newTempo);
+                }
             });
         }
 
