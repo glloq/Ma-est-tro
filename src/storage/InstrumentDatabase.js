@@ -770,6 +770,76 @@ class InstrumentDatabase {
       throw error;
     }
   }
+
+  /**
+   * Get all instruments with full capabilities for auto-assignment
+   * @returns {Array} List of instruments with complete data
+   */
+  getInstrumentsWithCapabilities() {
+    try {
+      const stmt = this.db.prepare(`
+        SELECT
+          id, device_id, channel, name, custom_name,
+          gm_program, sync_delay,
+          note_range_min, note_range_max,
+          note_selection_mode, selected_notes, supported_ccs,
+          capabilities_source, capabilities_updated_at,
+          mac_address, usb_serial_number,
+          sysex_manufacturer_id, sysex_family, sysex_model, sysex_version
+        FROM instruments_latency
+        ORDER BY name, custom_name
+      `);
+      const results = stmt.all();
+
+      // Parse JSON fields and return
+      return results.map(result => {
+        let supportedCcs = null;
+        if (result.supported_ccs) {
+          try {
+            supportedCcs = JSON.parse(result.supported_ccs);
+          } catch (e) {
+            this.logger.warn(`Failed to parse supported_ccs for ${result.device_id}`);
+          }
+        }
+
+        let selectedNotes = null;
+        if (result.selected_notes) {
+          try {
+            selectedNotes = JSON.parse(result.selected_notes);
+          } catch (e) {
+            this.logger.warn(`Failed to parse selected_notes for ${result.device_id}`);
+          }
+        }
+
+        return {
+          id: result.id,
+          device_id: result.device_id,
+          channel: result.channel,
+          name: result.name,
+          custom_name: result.custom_name,
+          gm_program: result.gm_program,
+          sync_delay: result.sync_delay || 0,
+          note_range_min: result.note_range_min,
+          note_range_max: result.note_range_max,
+          note_selection_mode: result.note_selection_mode || 'range',
+          selected_notes: result.selected_notes, // Keep as JSON string for matcher
+          supported_ccs: result.supported_ccs,   // Keep as JSON string for matcher
+          capabilities_source: result.capabilities_source,
+          capabilities_updated_at: result.capabilities_updated_at,
+          // Additional fields for reference
+          mac_address: result.mac_address,
+          usb_serial_number: result.usb_serial_number,
+          sysex_manufacturer_id: result.sysex_manufacturer_id,
+          sysex_family: result.sysex_family,
+          sysex_model: result.sysex_model,
+          sysex_version: result.sysex_version
+        };
+      });
+    } catch (error) {
+      this.logger.error(`Failed to get instruments with capabilities: ${error.message}`);
+      throw error;
+    }
+  }
 }
 
 export default InstrumentDatabase;

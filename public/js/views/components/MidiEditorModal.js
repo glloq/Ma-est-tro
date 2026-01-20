@@ -1676,6 +1676,26 @@ class MidiEditorModal {
     }
 
     /**
+     * Show auto-assignment modal
+     */
+    showAutoAssignModal() {
+        // Check if current file is loaded
+        if (!this.currentFileId) {
+            this.showError('No file loaded. Please load a MIDI file first.');
+            return;
+        }
+
+        // Create and show AutoAssignModal
+        if (!window.AutoAssignModal) {
+            this.showError('AutoAssignModal component not loaded');
+            return;
+        }
+
+        const modal = new window.AutoAssignModal(this.api);
+        modal.show(this.currentFileId);
+    }
+
+    /**
      * Afficher la boîte de dialogue pour renommer le fichier
      */
     showRenameDialog() {
@@ -2372,6 +2392,9 @@ class MidiEditorModal {
                     <!-- Boutons flottants en overlay -->
                     <div class="modal-floating-buttons">
                         <button class="btn btn-secondary" data-action="close">${this.t('common.close')}</button>
+                        <button class="btn btn-info" data-action="auto-assign" id="auto-assign-btn" title="Automatically assign channels to available instruments">
+                            🎯 ${this.t('midiEditor.autoAssign') || 'Auto-Assign Instruments'}
+                        </button>
                         <button class="btn btn-primary" data-action="save" id="save-btn">
                             💾 ${this.t('midiEditor.save')}
                         </button>
@@ -3947,6 +3970,9 @@ class MidiEditorModal {
                     break;
                 case 'save':
                     this.saveMidiFile();
+                    break;
+                case 'auto-assign':
+                    this.showAutoAssignModal();
                     break;
                 case 'zoom-h-in':
                     this.zoomHorizontal(0.8);
