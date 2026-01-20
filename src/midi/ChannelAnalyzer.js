@@ -73,14 +73,15 @@ class ChannelAnalyzer {
     const trackNames = this.getTrackNames(midiData, channel);
     const density = this.calculateNoteDensity(noteEvents, midiData.duration || 0);
 
-    const estimatedType = this.estimateInstrumentType({
+    const typeEstimation = this.estimateInstrumentType({
       channel,
       noteRange,
       noteDistribution,
       totalNotes,
       polyphony,
       primaryProgram,
-      density
+      density,
+      trackNames
     });
 
     return {
@@ -95,7 +96,9 @@ class ChannelAnalyzer {
       primaryProgram,
       trackNames,
       density,
-      estimatedType
+      estimatedType: typeEstimation.type,
+      typeConfidence: typeEstimation.confidence,
+      typeScores: typeEstimation.scores
     };
   }
 
@@ -333,56 +336,168 @@ class ChannelAnalyzer {
   }
 
   /**
-   * Estime le type d'instrument basé sur les caractéristiques
+   * Estime le type d'instrument basé sur les caractéristiques (version améliorée)
    * @param {Object} analysis
-   * @returns {string} - 'drums', 'bass', 'melody', 'harmony', 'percussive', 'unknown'
+   * @returns {Object} - { type: string, confidence: number, scores: Object }
    */
   estimateInstrumentType(analysis) {
-    const { channel, noteRange, noteDistribution, polyphony, primaryProgram, density } = analysis;
+    const { channel, noteRange, noteDistribution, polyphony, primaryProgram, density, trackNames } = analysis;
 
-    // Canal 9 (MIDI 10) = toujours drums
+    // Scores pour chaque type (0-100)
+    const scores = {
+      drums: 0,
+      percussive: 0,
+      bass: 0,
+      melody: 0,
+      harmony: 0
+    };
+
+    // Canal 9 (MIDI 10) = toujours drums avec 100% confiance
     if (channel === 9) {
-      return 'drums';
+      return {
+        type: 'drums',
+        confidence: 100,
+        scores: { drums: 100, percussive: 0, bass: 0, melody: 0, harmony: 0 }
+      };
     }
 
-    // Programme MIDI indique le type
+    // 1. Analyse du programme MIDI (fort indicateur)
     if (primaryProgram !== null) {
       if (primaryProgram >= 112 && primaryProgram <= 119) {
-        return 'percussive';
-      }
-      if (primaryProgram >= 32 && primaryProgram <= 39) {
-        return 'bass';
-      }
-      if (primaryProgram >= 0 && primaryProgram <= 7) {
-        return 'harmony'; // Piano
-      }
-      if (primaryProgram >= 40 && primaryProgram <= 55) {
-        return 'harmony'; // Strings, ensemble
+        scores.percussive += 40;
+        scores.drums += 30;
+      } else if (primaryProgram >= 32 && primaryProgram <= 39) {
+        scores.bass += 40;
+      } else if (primaryProgram >= 0 && primaryProgram <= 7) {
+        scores.harmony += 35;
+        scores.melody += 15;
+      } else if (primaryProgram >= 40 && primaryProgram <= 55) {
+        scores.harmony += 40;
+      } else if (primaryProgram >= 56 && primaryProgram <= 79) {
+        scores.melody += 30;
+        scores.harmony += 20;
+      } else if (primaryProgram >= 80 && primaryProgram <= 103) {
+        scores.melody += 35;
+        scores.harmony += 15;
       }
     }
 
-    // Analyse des notes
+    // 2. Analyse de la plage de notes
     const avgNote = this.getAverageNote(noteDistribution);
     const span = noteRange.max - noteRange.min;
 
-    // Heuristiques basées sur plage et polyphonie
-    if (avgNote < 48 && polyphony.max <= 2) {
-      return 'bass'; // Notes basses, peu de polyphonie
+    // Notes très basses = bass
+    if (avgNote < 48) {
+      scores.bass += 25;
+    } else if (avgNote >= 48 && avgNote < 72) {
+      scores.melody += 15;
+      scores.harmony += 10;
+    } else {
+      scores.melody += 20;
     }
 
-    if (span >= 36 && polyphony.avg > 4) {
-      return 'harmony'; // Large plage, haute polyphonie (piano, strings)
+    // Plage restreinte en notes basses = drums
+    if (noteRange.min >= 35 && noteRange.max <= 60 && span < 25) {
+      scores.drums += 20;
+      scores.percussive += 15;
     }
 
-    if (density > 5 && span < 24) {
-      return 'drums'; // Haute densité, plage restreinte
+    // Large plage = harmony/piano
+    if (span >= 36) {
+      scores.harmony += 20;
+    } else if (span <= 12) {
+      scores.drums += 10;
+      scores.percussive += 10;
     }
 
-    if (polyphony.max <= 1) {
-      return 'melody'; // Monophonique
+    // 3. Analyse de la polyphonie
+    if (polyphony.max === 1) {
+      scores.melody += 25;
+      scores.bass += 20;
+      scores.drums -= 10;
+      scores.harmony -= 10;
+    } else if (polyphony.max >= 2 && polyphony.max <= 4) {
+      scores.melody += 15;
+      scores.harmony += 10;
+    } else if (polyphony.max >= 5) {
+      scores.harmony += 30;
+      scores.melody -= 10;
     }
 
-    return 'melody'; // Défaut
+    // Polyphonie moyenne basse avec max haute = drums (notes qui se chevauchent)
+    if (polyphony.max >= 3 && polyphony.avg < 1.5) {
+      scores.drums += 15;
+      scores.percussive += 10;
+    }
+
+    // 4. Analyse de la densité rythmique
+    if (density > 6) {
+      scores.drums += 20;
+      scores.percussive += 15;
+      scores.melody -= 5;
+    } else if (density > 3 && density <= 6) {
+      scores.melody += 10;
+    } else if (density <= 1) {
+      scores.harmony += 10;
+      scores.melody += 5;
+    }
+
+    // 5. Analyse des noms de tracks (keywords)
+    const trackNameLower = trackNames.join(' ').toLowerCase();
+
+    if (trackNameLower.includes('drum') || trackNameLower.includes('kick') ||
+        trackNameLower.includes('snare') || trackNameLower.includes('hat')) {
+      scores.drums += 30;
+      scores.percussive += 20;
+    }
+
+    if (trackNameLower.includes('bass')) {
+      scores.bass += 30;
+    }
+
+    if (trackNameLower.includes('piano') || trackNameLower.includes('keys')) {
+      scores.harmony += 25;
+    }
+
+    if (trackNameLower.includes('lead') || trackNameLower.includes('solo')) {
+      scores.melody += 25;
+    }
+
+    if (trackNameLower.includes('pad') || trackNameLower.includes('strings') ||
+        trackNameLower.includes('choir')) {
+      scores.harmony += 25;
+    }
+
+    if (trackNameLower.includes('perc')) {
+      scores.percussive += 25;
+      scores.drums += 15;
+    }
+
+    // 6. Normaliser les scores négatifs
+    for (const key in scores) {
+      scores[key] = Math.max(0, scores[key]);
+    }
+
+    // Trouver le type avec le meilleur score
+    let bestType = 'melody';
+    let bestScore = 0;
+
+    for (const [type, score] of Object.entries(scores)) {
+      if (score > bestScore) {
+        bestScore = score;
+        bestType = type;
+      }
+    }
+
+    // Calculer la confiance (0-100)
+    const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
+    const confidence = totalScore > 0 ? Math.round((bestScore / totalScore) * 100) : 50;
+
+    return {
+      type: bestType,
+      confidence: Math.min(100, confidence),
+      scores
+    };
   }
 
   /**

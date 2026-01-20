@@ -152,7 +152,10 @@ class AutoAssignModal {
             <button class="button button-secondary" onclick="autoAssignModalInstance.close()">
               Cancel
             </button>
-            <div>
+            <div style="display: flex; gap: 10px;">
+              <button class="button button-info" onclick="autoAssignModalInstance.quickAssign()" title="Auto-assign and apply in one click">
+                ⚡ Quick Assign & Apply
+              </button>
               <button class="button button-primary" onclick="autoAssignModalInstance.apply()">
                 Apply Assignments
               </button>
@@ -167,6 +170,60 @@ class AutoAssignModal {
 
     // Make instance globally accessible for event handlers
     window.autoAssignModalInstance = this;
+  }
+
+  /**
+   * Render channel statistics
+   */
+  renderChannelStats(channel) {
+    const analysis = this.selectedAssignments[channel]?.channelAnalysis;
+    if (!analysis) return '';
+
+    return `
+      <div style="background: #f0f8ff; padding: 10px; border-radius: 4px; margin-bottom: 10px; font-size: 12px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+          <div>
+            <strong>📝 Note Range:</strong><br>
+            ${analysis.noteRange.min} - ${analysis.noteRange.max} (${analysis.noteRange.max - analysis.noteRange.min} semitones)
+          </div>
+          <div>
+            <strong>🎵 Polyphony:</strong><br>
+            Max: ${analysis.polyphony.max} | Avg: ${analysis.polyphony.avg.toFixed(1)}
+          </div>
+          <div>
+            <strong>🎹 Type:</strong><br>
+            ${analysis.estimatedType} ${this.typeConfidences && this.typeConfidences[channel] ? `(${this.typeConfidences[channel]}% confidence)` : ''}
+          </div>
+        </div>
+        ${this.renderMiniPiano(analysis.noteRange)}
+      </div>
+    `;
+  }
+
+  /**
+   * Render mini piano visualization
+   */
+  renderMiniPiano(noteRange) {
+    const startOctave = Math.floor(noteRange.min / 12);
+    const endOctave = Math.ceil(noteRange.max / 12);
+    const octaves = [];
+
+    for (let oct = startOctave; oct <= endOctave; oct++) {
+      octaves.push(oct);
+    }
+
+    // Simplified piano viz (just showing range)
+    return `
+      <div style="margin-top: 8px;">
+        <div style="display: flex; align-items: center; gap: 4px; font-size: 10px;">
+          <span>Range:</span>
+          <div style="flex: 1; height: 20px; background: linear-gradient(to right, #ddd, #4CAF50, #ddd); border-radius: 3px; position: relative;">
+            <div style="position: absolute; left: 10%; width: 80%; height: 100%; background: #4CAF50; opacity: 0.5; border-radius: 3px;"></div>
+          </div>
+          <span>${noteRange.min} → ${noteRange.max}</span>
+        </div>
+      </div>
+    `;
   }
 
   /**
@@ -240,6 +297,7 @@ class AutoAssignModal {
           Channel ${channel + 1}
           ${channel === 9 ? '<span style="color: #888; font-size: 14px;">(MIDI 10 - Drums)</span>' : ''}
         </h3>
+        ${this.renderChannelStats(channel)}
         ${optionsHTML}
       </div>
     `;
@@ -376,6 +434,18 @@ class AutoAssignModal {
       alert('Error applying assignments: ' + error.message);
       this.close();
     }
+  }
+
+  /**
+   * Quick assign: apply auto-selection immediately without manual review
+   */
+  async quickAssign() {
+    if (!confirm('This will automatically assign all channels to the recommended instruments and apply immediately. Continue?')) {
+      return;
+    }
+
+    // Use auto-selection (already set in this.selectedAssignments)
+    await this.apply();
   }
 
   /**

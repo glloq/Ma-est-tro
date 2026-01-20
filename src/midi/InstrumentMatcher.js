@@ -1,6 +1,7 @@
 // src/midi/InstrumentMatcher.js
 
 const MidiUtils = require('../utils/MidiUtils');
+const ScoringConfig = require('./ScoringConfig');
 
 /**
  * InstrumentMatcher - Calcule la compatibilité entre canaux MIDI et instruments
@@ -13,8 +14,9 @@ const MidiUtils = require('../utils/MidiUtils');
  * - Type d'instrument
  */
 class InstrumentMatcher {
-  constructor(logger) {
+  constructor(logger, config = null) {
     this.logger = logger;
+    this.config = config || ScoringConfig;
 
     // Catégories General MIDI
     this.GM_CATEGORIES = {
@@ -133,7 +135,7 @@ class InstrumentMatcher {
     if (channelProgram === instrumentProgram) {
       const programName = MidiUtils.getGMInstrumentName(channelProgram);
       return {
-        score: 30,
+        score: this.config.getBonus('perfectProgramMatch'),
         info: `Perfect program match: ${programName} (${channelProgram})`
       };
     }
@@ -144,7 +146,7 @@ class InstrumentMatcher {
 
     if (channelCategory === instrumentCategory) {
       return {
-        score: 20,
+        score: this.config.getBonus('sameCategoryMatch'),
         info: `Same GM category: ${channelCategory}`
       };
     }

@@ -2,6 +2,7 @@
 
 const ChannelAnalyzer = require('./ChannelAnalyzer');
 const InstrumentMatcher = require('./InstrumentMatcher');
+const AnalysisCache = require('./AnalysisCache');
 
 /**
  * AutoAssigner - Génère des suggestions d'assignation automatique
@@ -15,6 +16,14 @@ class AutoAssigner {
     this.logger = logger;
     this.analyzer = new ChannelAnalyzer(logger);
     this.matcher = new InstrumentMatcher(logger);
+    this.cache = new AnalysisCache(100, 600000); // 100 entrées, 10 min TTL
+
+    // Cleanup périodique du cache (toutes les 5 minutes)
+    this.cleanupInterval = setInterval(() => {
+      this.cache.cleanup();
+      const stats = this.cache.getStats();
+      this.logger.debug(`Cache cleanup: ${stats.size}/${stats.maxSize} entries`);
+    }, 300000);
   }
 
   /**
@@ -217,12 +226,32 @@ class AutoAssigner {
 
   /**
    * Analyse un seul canal (utile pour l'API analyze_channel)
+   * Utilise le cache si fileId est fourni
    * @param {Object} midiData
    * @param {number} channel
+   * @param {number} [fileId] - Optionnel pour le cache
    * @returns {Object}
    */
-  analyzeChannel(midiData, channel) {
-    return this.analyzer.analyzeChannel(midiData, channel);
+  analyzeChannel(midiData, channel, fileId = null) {
+    // Vérifier le cache si fileId fourni
+    if (fileId !== null) {
+      const cached = this.cache.get(fileId, channel);
+      if (cached) {
+        this.logger.debug(`Cache hit for file ${fileId}, channel ${channel}`);
+        return cached;
+      }
+    }
+
+    // Analyser le canal
+    const analysis = this.analyzer.analyzeChannel(midiData, channel);
+
+    // Stocker dans le cache si fileId fourni
+    if (fileId !== null) {
+      this.cache.set(fileId, channel, analysis);
+      this.logger.debug(`Cache stored for file ${fileId}, channel ${channel}`);
+    }
+
+    return analysis;
   }
 
   /**
@@ -230,11 +259,33 @@ class AutoAssigner {
    * @param {Object} midiData
    * @param {number} channel
    * @param {Object} instrument
+   * @param {number} [fileId] - Optionnel pour le cache
    * @returns {Object}
    */
-  async calculateCompatibility(midiData, channel, instrument) {
-    const analysis = this.analyzer.analyzeChannel(midiData, channel);
+  async calculateCompatibility(midiData, channel, instrument, fileId = null) {
+    const analysis = this.analyzeChannel(midiData, channel, fileId);
     return this.matcher.calculateCompatibility(analysis, instrument);
+  }
+
+  /**
+   * Invalide le cache pour un fichier
+   * À appeler quand un fichier est modifié
+   * @param {number} fileId
+   */
+  invalidateCache(fileId) {
+    this.cache.invalidateFile(fileId);
+    this.logger.debug(`Cache invalidated for file ${fileId}`);
+  }
+
+  /**
+   * Nettoie les ressources (intervals, cache)
+   */
+  destroy() {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    this.cache.clear();
   }
 }
 
