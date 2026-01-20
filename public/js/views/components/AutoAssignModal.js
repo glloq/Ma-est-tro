@@ -10,10 +10,12 @@ class AutoAssignModal {
   constructor(apiClient) {
     this.apiClient = apiClient;
     this.fileId = null;
+    this.midiData = null; // Store MIDI data for preview
     this.suggestions = {};
     this.autoSelection = {};
     this.selectedAssignments = {}; // User's selections
     this.modal = null;
+    this.audioPreview = null; // Audio preview instance
   }
 
   /**
@@ -27,6 +29,12 @@ class AutoAssignModal {
     this.showLoading();
 
     try {
+      // Get MIDI file data for preview
+      const fileResponse = await this.apiClient.sendCommand('file_read', { fileId: fileId });
+      if (fileResponse && fileResponse.midiData) {
+        this.midiData = fileResponse.midiData;
+      }
+
       // Generate suggestions
       const response = await this.apiClient.sendCommand('generate_assignment_suggestions', {
         fileId: fileId,
@@ -45,6 +53,11 @@ class AutoAssignModal {
 
       // Initialize selected assignments with auto-selection
       this.selectedAssignments = JSON.parse(JSON.stringify(this.autoSelection));
+
+      // Initialize audio preview
+      if (!this.audioPreview && window.AudioPreview) {
+        this.audioPreview = new window.AudioPreview(this.apiClient);
+      }
 
       // Show suggestions modal
       this.showSuggestions();
@@ -148,10 +161,23 @@ class AutoAssignModal {
               ${channelsHTML}
             </div>
           </div>
-          <div class="modal-footer" style="display: flex; justify-content: space-between; padding: 20px; border-top: 1px solid #ddd;">
+          <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 20px; border-top: 1px solid #ddd;">
             <button class="button button-secondary" onclick="autoAssignModalInstance.close()">
               Cancel
             </button>
+            <div id="previewControls" style="display: flex; gap: 10px; align-items: center;">
+              ${this.midiData ? `
+                <button class="button button-secondary" onclick="autoAssignModalInstance.previewOriginal()" title="Preview original MIDI file">
+                  🎵 Preview Original
+                </button>
+                <button class="button button-secondary" onclick="autoAssignModalInstance.previewAdapted()" title="Preview adapted MIDI with transpositions">
+                  🎵 Preview Adapted
+                </button>
+                <button class="button button-secondary" id="stopPreviewBtn" onclick="autoAssignModalInstance.stopPreview()" style="display: none;">
+                  ⏹ Stop
+                </button>
+              ` : ''}
+            </div>
             <div style="display: flex; gap: 10px;">
               <button class="button button-info" onclick="autoAssignModalInstance.quickAssign()" title="Auto-assign and apply in one click">
                 ⚡ Quick Assign & Apply
@@ -291,6 +317,17 @@ class AutoAssignModal {
       `;
     }).join('');
 
+    // Add preview button for this channel
+    const previewButton = this.midiData ? `
+      <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+        <button class="button button-secondary"
+                onclick="autoAssignModalInstance.previewChannel(${channel})"
+                style="font-size: 13px; padding: 8px 12px;">
+          🔊 Preview Channel ${channel + 1}
+        </button>
+      </div>
+    ` : '';
+
     return `
       <div class="channel-suggestions" style="margin-bottom: 30px; padding: 20px; background: #fafafa; border: 1px solid #ddd; border-radius: 8px;">
         <h3 style="margin: 0 0 15px 0; color: #333;">
@@ -299,6 +336,7 @@ class AutoAssignModal {
         </h3>
         ${this.renderChannelStats(channel)}
         ${optionsHTML}
+        ${previewButton}
       </div>
     `;
   }
@@ -449,12 +487,147 @@ class AutoAssignModal {
   }
 
   /**
+   * Preview a specific channel with selected transposition
+   */
+  async previewChannel(channel) {
+    if (!this.audioPreview || !this.midiData) {
+      alert('Audio preview not available');
+      return;
+    }
+
+    try {
+      // Stop any existing playback
+      this.stopPreview();
+
+      // Get transposition for this channel
+      const assignment = this.selectedAssignments[channel];
+      const transpositions = {};
+
+      if (assignment && assignment.transposition) {
+        transpositions[channel] = {
+          semitones: assignment.transposition.semitones || 0,
+          noteRemapping: assignment.noteRemapping || null
+        };
+      }
+
+      // Preview 15 seconds starting from beginning
+      await this.audioPreview.previewAdapted(this.midiData, transpositions, 0, 15);
+
+      // Show stop button
+      this.showStopButton();
+    } catch (error) {
+      console.error('Preview error:', error);
+      alert('Failed to preview channel: ' + error.message);
+    }
+  }
+
+  /**
+   * Preview original MIDI file (no transpositions)
+   */
+  async previewOriginal() {
+    if (!this.audioPreview || !this.midiData) {
+      alert('Audio preview not available');
+      return;
+    }
+
+    try {
+      // Stop any existing playback
+      this.stopPreview();
+
+      // Preview 15 seconds of original
+      await this.audioPreview.previewOriginal(this.midiData, 0, 15);
+
+      // Show stop button
+      this.showStopButton();
+    } catch (error) {
+      console.error('Preview error:', error);
+      alert('Failed to preview original: ' + error.message);
+    }
+  }
+
+  /**
+   * Preview adapted MIDI with all transpositions
+   */
+  async previewAdapted() {
+    if (!this.audioPreview || !this.midiData) {
+      alert('Audio preview not available');
+      return;
+    }
+
+    try {
+      // Stop any existing playback
+      this.stopPreview();
+
+      // Build transpositions object from all selected assignments
+      const transpositions = {};
+
+      for (const [channel, assignment] of Object.entries(this.selectedAssignments)) {
+        const channelNum = parseInt(channel);
+        if (assignment && assignment.transposition) {
+          transpositions[channelNum] = {
+            semitones: assignment.transposition.semitones || 0,
+            noteRemapping: assignment.noteRemapping || null
+          };
+        }
+      }
+
+      // Preview 15 seconds with all transpositions
+      await this.audioPreview.previewAdapted(this.midiData, transpositions, 0, 15);
+
+      // Show stop button
+      this.showStopButton();
+    } catch (error) {
+      console.error('Preview error:', error);
+      alert('Failed to preview adapted: ' + error.message);
+    }
+  }
+
+  /**
+   * Stop audio preview
+   */
+  stopPreview() {
+    if (this.audioPreview) {
+      this.audioPreview.stop();
+    }
+    this.hideStopButton();
+  }
+
+  /**
+   * Show stop button in preview controls
+   */
+  showStopButton() {
+    const stopBtn = document.getElementById('stopPreviewBtn');
+    if (stopBtn) {
+      stopBtn.style.display = 'inline-block';
+    }
+  }
+
+  /**
+   * Hide stop button in preview controls
+   */
+  hideStopButton() {
+    const stopBtn = document.getElementById('stopPreviewBtn');
+    if (stopBtn) {
+      stopBtn.style.display = 'none';
+    }
+  }
+
+  /**
    * Close the modal
    */
   close() {
+    // Stop any audio preview
+    this.stopPreview();
+
     if (this.modal) {
       this.modal.remove();
       this.modal = null;
+    }
+
+    // Clean up audio preview
+    if (this.audioPreview) {
+      this.audioPreview.destroy();
+      this.audioPreview = null;
     }
 
     // Clean up global reference
