@@ -1,5 +1,8 @@
 // src/api/CommandHandler.js
 import JsonValidator from '../utils/JsonValidator.js';
+import AutoAssigner from '../midi/AutoAssigner.js';
+import MidiTransposer from '../midi/MidiTransposer.js';
+import JsonMidiConverter from '../storage/JsonMidiConverter.js';
 
 class CommandHandler {
   constructor(app) {
@@ -72,7 +75,7 @@ class CommandHandler {
       'file_export': (data) => this.fileExport(data),
       'file_search': (data) => this.fileSearch(data),
 
-      // ==================== PLAYBACK (14 commands) ====================
+      // ==================== PLAYBACK (17 commands) ====================
       'playback_start': (data) => this.playbackStart(data),
       'playback_stop': () => this.playbackStop(),
       'playback_pause': () => this.playbackPause(),
@@ -87,6 +90,9 @@ class CommandHandler {
       'playback_set_channel_routing': (data) => this.playbackSetChannelRouting(data),
       'playback_clear_channel_routing': () => this.playbackClearChannelRouting(),
       'playback_mute_channel': (data) => this.playbackMuteChannel(data),
+      'analyze_channel': (data) => this.analyzeChannel(data),
+      'generate_assignment_suggestions': (data) => this.generateAssignmentSuggestions(data),
+      'apply_assignments': (data) => this.applyAssignments(data),
 
       // ==================== LATENCY (8 commands) ====================
       'latency_measure': (data) => this.latencyMeasure(data),
@@ -1181,6 +1187,227 @@ class CommandHandler {
   async playlistAddFile(data) {
     // Future implementation with playlist_items table
     return { success: true };
+  }
+
+  // ==================== AUTO-ASSIGNMENT HANDLERS ====================
+
+  /**
+   * Analyze a specific MIDI channel
+   * @param {Object} data - { fileId, channel }
+   * @returns {Object} - Channel analysis
+   */
+  async analyzeChannel(data) {
+    if (!data.fileId) {
+      throw new Error('fileId is required');
+    }
+    if (data.channel === undefined) {
+      throw new Error('channel is required');
+    }
+
+    // Get MIDI file from database
+    const file = this.app.midiDatabase.getFile(data.fileId);
+    if (!file) {
+      throw new Error(`File not found: ${data.fileId}`);
+    }
+
+    // Parse MIDI data
+    let midiData;
+    try {
+      const buffer = Buffer.from(file.data, 'base64');
+      midiData = JsonMidiConverter.midiToJson(buffer);
+    } catch (error) {
+      throw new Error(`Failed to parse MIDI file: ${error.message}`);
+    }
+
+    // Create auto-assigner and analyze channel
+    const autoAssigner = new AutoAssigner(this.app.instrumentDatabase, this.app.logger);
+    const analysis = autoAssigner.analyzeChannel(midiData, data.channel);
+
+    return {
+      success: true,
+      channel: data.channel,
+      analysis
+    };
+  }
+
+  /**
+   * Generate auto-assignment suggestions for all channels
+   * @param {Object} data - { fileId, topN, minScore }
+   * @returns {Object} - Suggestions for all channels
+   */
+  async generateAssignmentSuggestions(data) {
+    if (!data.fileId) {
+      throw new Error('fileId is required');
+    }
+
+    const options = {
+      topN: data.topN || 5,
+      minScore: data.minScore || 30
+    };
+
+    // Get MIDI file from database
+    const file = this.app.midiDatabase.getFile(data.fileId);
+    if (!file) {
+      throw new Error(`File not found: ${data.fileId}`);
+    }
+
+    // Parse MIDI data
+    let midiData;
+    try {
+      const buffer = Buffer.from(file.data, 'base64');
+      midiData = JsonMidiConverter.midiToJson(buffer);
+    } catch (error) {
+      throw new Error(`Failed to parse MIDI file: ${error.message}`);
+    }
+
+    // Generate suggestions
+    const autoAssigner = new AutoAssigner(this.app.instrumentDatabase, this.app.logger);
+    const result = await autoAssigner.generateSuggestions(midiData, options);
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error,
+        suggestions: {},
+        autoSelection: {}
+      };
+    }
+
+    return {
+      success: true,
+      suggestions: result.suggestions,
+      autoSelection: result.autoSelection,
+      channelAnalyses: result.channelAnalyses,
+      confidenceScore: result.confidenceScore,
+      stats: result.stats
+    };
+  }
+
+  /**
+   * Apply auto-assignments (create adapted file and routings)
+   * @param {Object} data - { originalFileId, assignments, createAdaptedFile }
+   * @returns {Object} - Result with adapted file ID and routings
+   */
+  async applyAssignments(data) {
+    if (!data.originalFileId) {
+      throw new Error('originalFileId is required');
+    }
+    if (!data.assignments) {
+      throw new Error('assignments is required');
+    }
+
+    const createAdaptedFile = data.createAdaptedFile !== false; // Default true
+
+    // Get original MIDI file
+    const originalFile = this.app.midiDatabase.getFile(data.originalFileId);
+    if (!originalFile) {
+      throw new Error(`File not found: ${data.originalFileId}`);
+    }
+
+    // Parse original MIDI data
+    let midiData;
+    try {
+      const buffer = Buffer.from(originalFile.data, 'base64');
+      midiData = JsonMidiConverter.midiToJson(buffer);
+    } catch (error) {
+      throw new Error(`Failed to parse MIDI file: ${error.message}`);
+    }
+
+    let adaptedFileId = null;
+    let stats = null;
+
+    // Create adapted file if requested
+    if (createAdaptedFile) {
+      // Build transpositions object from assignments
+      const transpositions = {};
+      for (const [channel, assignment] of Object.entries(data.assignments)) {
+        const channelNum = parseInt(channel);
+        transpositions[channelNum] = {
+          semitones: assignment.transposition?.semitones || 0,
+          noteRemapping: assignment.noteRemapping || null
+        };
+      }
+
+      // Apply transpositions
+      const transposer = new MidiTransposer(this.app.logger);
+      const result = transposer.transposeChannels(midiData, transpositions);
+      const adaptedMidiData = result.midiData;
+      stats = result.stats;
+
+      // Convert back to MIDI binary
+      let adaptedBuffer;
+      try {
+        adaptedBuffer = JsonMidiConverter.jsonToMidi(adaptedMidiData);
+      } catch (error) {
+        throw new Error(`Failed to convert adapted MIDI: ${error.message}`);
+      }
+
+      // Generate adaptation metadata
+      const metadata = transposer.generateAdaptationMetadata(data.assignments, stats);
+
+      // Save adapted file to database
+      const adaptedFilename = originalFile.filename.replace(/\.mid$/i, '_adapted.mid');
+      const adaptedFile = {
+        filename: adaptedFilename,
+        data: adaptedBuffer.toString('base64'),
+        size: adaptedBuffer.length,
+        tracks: originalFile.tracks,
+        duration: originalFile.duration,
+        tempo: originalFile.tempo,
+        ppq: originalFile.ppq,
+        uploaded_at: new Date().toISOString(),
+        folder: originalFile.folder,
+        is_original: false,
+        parent_file_id: data.originalFileId,
+        adaptation_metadata: JSON.stringify(metadata)
+      };
+
+      adaptedFileId = this.app.midiDatabase.insertFile(adaptedFile);
+      this.app.logger.info(`Created adapted file: ${adaptedFileId} (${adaptedFilename})`);
+    }
+
+    // Create routings in database
+    const routings = [];
+    const targetFileId = adaptedFileId || data.originalFileId;
+
+    for (const [channel, assignment] of Object.entries(data.assignments)) {
+      const channelNum = parseInt(channel);
+
+      const routing = {
+        midi_file_id: targetFileId,
+        channel: channelNum,
+        device_id: assignment.deviceId,
+        instrument_name: assignment.instrumentName,
+        compatibility_score: assignment.score,
+        transposition_applied: assignment.transposition?.semitones || 0,
+        auto_assigned: true,
+        assignment_reason: assignment.info ? assignment.info.join('; ') : 'Auto-assigned',
+        note_remapping: assignment.noteRemapping ? JSON.stringify(assignment.noteRemapping) : null,
+        enabled: true,
+        created_at: Date.now()
+      };
+
+      // Insert routing (for now, we store in memory or extend the DB)
+      // Note: midi_instrument_routings table needs to be updated to use channel instead of track_id
+      routings.push(routing);
+
+      // Also apply to MidiPlayer if currently loaded
+      if (this.app.midiPlayer && this.app.midiPlayer.loadedFileId === targetFileId) {
+        this.app.midiPlayer.setChannelRouting(channelNum, assignment.deviceId);
+      }
+
+      this.app.logger.info(
+        `Assigned channel ${channelNum} to ${assignment.instrumentName} (score: ${assignment.score})`
+      );
+    }
+
+    return {
+      success: true,
+      adaptedFileId,
+      filename: adaptedFileId ? originalFile.filename.replace(/\.mid$/i, '_adapted.mid') : null,
+      stats,
+      routings
+    };
   }
 }
 

@@ -10,8 +10,9 @@ class MidiDatabase {
     try {
       const stmt = this.db.prepare(`
         INSERT INTO midi_files (
-          filename, data, size, tracks, duration, tempo, ppq, uploaded_at, folder
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          filename, data, size, tracks, duration, tempo, ppq, uploaded_at, folder,
+          is_original, parent_file_id, adaptation_metadata
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       const result = stmt.run(
@@ -23,7 +24,10 @@ class MidiDatabase {
         file.tempo || 120,
         file.ppq || 480,
         file.uploaded_at,
-        file.folder || '/'
+        file.folder || '/',
+        file.is_original !== undefined ? file.is_original : true,
+        file.parent_file_id || null,
+        file.adaptation_metadata || null
       );
 
       return result.lastInsertRowid;
@@ -99,6 +103,18 @@ class MidiDatabase {
       if (updates.folder !== undefined) {
         fields.push('folder = ?');
         values.push(updates.folder);
+      }
+      if (updates.is_original !== undefined) {
+        fields.push('is_original = ?');
+        values.push(updates.is_original);
+      }
+      if (updates.parent_file_id !== undefined) {
+        fields.push('parent_file_id = ?');
+        values.push(updates.parent_file_id);
+      }
+      if (updates.adaptation_metadata !== undefined) {
+        fields.push('adaptation_metadata = ?');
+        values.push(updates.adaptation_metadata);
       }
 
       if (fields.length === 0) {
