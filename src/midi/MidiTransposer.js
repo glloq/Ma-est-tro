@@ -46,54 +46,72 @@ class MidiTransposer {
         let modified = false;
         let newEvent = event; // Par défaut, garder la référence
 
-        // Appliquer transposition par semitones
-        if (transposition.semitones && transposition.semitones !== 0) {
-          if (event.type === 'noteOn' || event.type === 'noteOff') {
-            const originalNote = event.note || event.noteNumber;
-            const newNote = this.clampNote(originalNote + transposition.semitones);
+        // Process note events (noteOn, noteOff)
+        if (event.type === 'noteOn' || event.type === 'noteOff') {
+          const originalNote = event.note || event.noteNumber;
+          let currentNote = originalNote;
 
-            if (newNote !== originalNote) {
+          // Step 1: Apply transposition by semitones
+          if (transposition.semitones && transposition.semitones !== 0) {
+            currentNote = this.clampNote(currentNote + transposition.semitones);
+            if (currentNote !== originalNote) {
               if (!modified) {
                 newEvent = { ...event }; // Clone seulement si modification
                 modified = true;
               }
-              newEvent.note = newNote;
-              if (newEvent.noteNumber !== undefined) {
-                newEvent.noteNumber = newNote;
-              }
               notesChanged++;
             }
-          } else if (event.type === 'keyPressure' || event.type === 'polyAftertouch') {
-            // Aftertouch polyphonique
-            const originalNote = event.note || event.noteNumber;
-            const newNote = this.clampNote(originalNote + transposition.semitones);
-            if (!modified) {
-              newEvent = { ...event };
-              modified = true;
-            }
-            newEvent.note = newNote;
-            if (newEvent.noteNumber !== undefined) {
-              newEvent.noteNumber = newNote;
-            }
           }
-        }
 
-        // Appliquer remapping de notes (drums)
-        if (transposition.noteRemapping && Object.keys(transposition.noteRemapping).length > 0) {
-          if (event.type === 'noteOn' || event.type === 'noteOff') {
-            const originalNote = event.note || event.noteNumber;
-            const remappedNote = transposition.noteRemapping[originalNote];
-
+          // Step 2: Apply note remapping (on transposed note)
+          // This includes both discrete note mapping (drums) and octave wrapping
+          if (transposition.noteRemapping && Object.keys(transposition.noteRemapping).length > 0) {
+            const remappedNote = transposition.noteRemapping[currentNote];
             if (remappedNote !== undefined) {
               if (!modified) {
                 newEvent = { ...event };
                 modified = true;
               }
-              newEvent.note = remappedNote;
-              if (newEvent.noteNumber !== undefined) {
-                newEvent.noteNumber = remappedNote;
-              }
+              currentNote = remappedNote;
               notesRemapped++;
+            }
+          }
+
+          // Update note in event if modified
+          if (modified) {
+            newEvent.note = currentNote;
+            if (newEvent.noteNumber !== undefined) {
+              newEvent.noteNumber = currentNote;
+            }
+          }
+        } else if (event.type === 'keyPressure' || event.type === 'polyAftertouch') {
+          // Aftertouch polyphonique - apply same logic
+          const originalNote = event.note || event.noteNumber;
+          let currentNote = originalNote;
+
+          if (transposition.semitones && transposition.semitones !== 0) {
+            currentNote = this.clampNote(currentNote + transposition.semitones);
+            if (!modified) {
+              newEvent = { ...event };
+              modified = true;
+            }
+          }
+
+          if (transposition.noteRemapping && Object.keys(transposition.noteRemapping).length > 0) {
+            const remappedNote = transposition.noteRemapping[currentNote];
+            if (remappedNote !== undefined) {
+              if (!modified) {
+                newEvent = { ...event };
+                modified = true;
+              }
+              currentNote = remappedNote;
+            }
+          }
+
+          if (modified) {
+            newEvent.note = currentNote;
+            if (newEvent.noteNumber !== undefined) {
+              newEvent.noteNumber = currentNote;
             }
           }
         }

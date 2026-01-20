@@ -317,6 +317,24 @@ class AutoAssignModal {
       `;
     }).join('');
 
+    // Add octave wrapping toggle if available
+    const assignment = this.selectedAssignments[channel];
+    const octaveWrappingToggle = assignment && assignment.octaveWrappingInfo ? `
+      <div style="margin-top: 15px; padding: 10px; background: #fff9e6; border: 1px solid #ffd700; border-radius: 4px;">
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="checkbox"
+                 id="octaveWrapping_${channel}"
+                 ${assignment.octaveWrappingEnabled ? 'checked' : ''}
+                 onchange="autoAssignModalInstance.toggleOctaveWrapping(${channel}, this.checked)"
+                 style="cursor: pointer;">
+          <span style="font-size: 13px;">
+            <strong>🔄 Enable Octave Wrapping</strong><br>
+            <span style="color: #666; font-size: 12px;">${assignment.octaveWrappingInfo}</span>
+          </span>
+        </label>
+      </div>
+    ` : '';
+
     // Add preview button for this channel
     const previewButton = this.midiData ? `
       <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
@@ -336,6 +354,7 @@ class AutoAssignModal {
         </h3>
         ${this.renderChannelStats(channel)}
         ${optionsHTML}
+        ${octaveWrappingToggle}
         ${previewButton}
       </div>
     `;
@@ -408,12 +427,25 @@ class AutoAssignModal {
       score: selectedOption.compatibility.score,
       transposition: selectedOption.compatibility.transposition,
       noteRemapping: selectedOption.compatibility.noteRemapping,
+      octaveWrapping: selectedOption.compatibility.octaveWrapping,
+      octaveWrappingEnabled: selectedOption.compatibility.octaveWrappingEnabled || false,
+      octaveWrappingInfo: selectedOption.compatibility.octaveWrappingInfo,
       issues: selectedOption.compatibility.issues,
       info: selectedOption.compatibility.info
     };
 
     // Re-render suggestions to update selection
     this.showSuggestions();
+  }
+
+  /**
+   * Toggle octave wrapping for a channel
+   */
+  toggleOctaveWrapping(channel, enabled) {
+    if (this.selectedAssignments[channel]) {
+      this.selectedAssignments[channel].octaveWrappingEnabled = enabled;
+      console.log(`Octave wrapping for channel ${channel}: ${enabled ? 'enabled' : 'disabled'}`);
+    }
   }
 
   /**
@@ -437,10 +469,25 @@ class AutoAssignModal {
     }
 
     try {
+      // Prepare assignments with octave wrapping if enabled
+      const preparedAssignments = {};
+      for (const [channel, assignment] of Object.entries(this.selectedAssignments)) {
+        preparedAssignments[channel] = { ...assignment };
+
+        // Combine noteRemapping with octaveWrapping if enabled
+        if (assignment.octaveWrappingEnabled && assignment.octaveWrapping) {
+          const baseRemapping = assignment.noteRemapping || {};
+          preparedAssignments[channel].noteRemapping = {
+            ...baseRemapping,
+            ...assignment.octaveWrapping
+          };
+        }
+      }
+
       // Apply assignments
       const response = await this.apiClient.sendCommand('apply_assignments', {
         originalFileId: this.fileId,
-        assignments: this.selectedAssignments,
+        assignments: preparedAssignments,
         createAdaptedFile: true
       });
 
@@ -504,9 +551,16 @@ class AutoAssignModal {
       const transpositions = {};
 
       if (assignment && assignment.transposition) {
+        // Combine noteRemapping with octaveWrapping if enabled
+        let noteRemapping = assignment.noteRemapping || {};
+
+        if (assignment.octaveWrappingEnabled && assignment.octaveWrapping) {
+          noteRemapping = { ...noteRemapping, ...assignment.octaveWrapping };
+        }
+
         transpositions[channel] = {
           semitones: assignment.transposition.semitones || 0,
-          noteRemapping: assignment.noteRemapping || null
+          noteRemapping: Object.keys(noteRemapping).length > 0 ? noteRemapping : null
         };
       }
 
@@ -564,9 +618,16 @@ class AutoAssignModal {
       for (const [channel, assignment] of Object.entries(this.selectedAssignments)) {
         const channelNum = parseInt(channel);
         if (assignment && assignment.transposition) {
+          // Combine noteRemapping with octaveWrapping if enabled
+          let noteRemapping = assignment.noteRemapping || {};
+
+          if (assignment.octaveWrappingEnabled && assignment.octaveWrapping) {
+            noteRemapping = { ...noteRemapping, ...assignment.octaveWrapping };
+          }
+
           transpositions[channelNum] = {
             semitones: assignment.transposition.semitones || 0,
-            noteRemapping: assignment.noteRemapping || null
+            noteRemapping: Object.keys(noteRemapping).length > 0 ? noteRemapping : null
           };
         }
       }
