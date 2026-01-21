@@ -47,7 +47,8 @@
 
         body.theme-dark .btn-keyboard-toggle,
         body.theme-dark .btn-settings-toggle,
-        body.theme-dark .btn-debug-toggle {
+        body.theme-dark .btn-debug-toggle,
+        body.theme-dark .btn-instruments-toggle {
             background: #3d3d3d;
             border-color: #4d4d4d;
             color: #ffffff;
@@ -66,6 +67,11 @@
         body.theme-dark .btn-debug-toggle:hover {
             background: #667eea;
             border-color: #667eea;
+        }
+
+        body.theme-dark .btn-instruments-toggle:hover {
+            background: #8b5cf6;
+            border-color: #8b5cf6;
         }
 
         body.theme-dark input,
@@ -497,6 +503,32 @@
             border-color: #f59e0b;
             transform: scale(1.1) rotate(-10deg);
             box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-instruments-toggle {
+            position: absolute;
+            top: 20px;
+            right: 130px;
+            background: #f3f4f6;
+            border: 2px solid #e5e7eb;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            font-size: 22px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            z-index: 10;
+        }
+
+        .btn-instruments-toggle:hover {
+            background: #8b5cf6;
+            border-color: #8b5cf6;
+            transform: scale(1.1) rotate(10deg);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
         }
 
         .status-bar {
@@ -1783,6 +1815,10 @@
                     🐞
                 </button>
 
+                <button class="btn-instruments-toggle" id="instrumentsBtn" data-i18n-title="ui.instrumentManagement" title="Gestion des instruments">
+                    🎛️
+                </button>
+
                 <div class="header-playback">
                     <div class="header-controls">
                         <span class="header-file-name" id="headerFileName" data-i18n="ui.noFileSelected">Aucun fichier sélectionné</span>
@@ -1820,21 +1856,6 @@
 
                     <ul class="file-list" id="fileList">
                         <li class="info-text" data-i18n="ui.noFiles">Aucun fichier</li>
-                    </ul>
-                </div>
-
-                <!-- Périphériques MIDI -->
-                <div class="card">
-                    <h2>🎛️ <span data-i18n="ui.midiDevices">Périphériques MIDI</span></h2>
-
-                    <div class="btn-group">
-                        <button class="btn" id="scanDevicesBtn">🔌&nbsp;&nbsp;<span data-i18n="ui.scanUsb">Scan USB</span></button>
-                        <button class="btn" id="scanBluetoothBtn" style="background: #9b59b6 !important;">📡&nbsp;&nbsp;<span data-i18n="ui.scanBluetooth">Scan Bluetooth</span></button>
-                        <button class="btn" id="scanNetworkBtn" style="background: #3498db !important;">🌐&nbsp;&nbsp;<span data-i18n="ui.scanNetwork">Scan Réseau</span></button>
-                    </div>
-
-                    <ul class="device-list" id="deviceList">
-                        <li class="info-text" data-i18n="ui.noDevices">Aucun périphérique</li>
                     </ul>
                 </div>
 
@@ -1891,6 +1912,9 @@
 
     <!-- Instrument Capabilities Modal Component -->
     <script src="js/views/components/InstrumentCapabilitiesModal.js"></script>
+
+    <!-- Instrument Management Page Component -->
+    <script src="js/views/components/InstrumentManagementPage.js"></script>
 
     <!-- Bluetooth Scan Modal Component -->
     <script src="js/views/components/BluetoothScanModal.js"></script>
@@ -2112,6 +2136,9 @@
 
         // 🆕 Instance du modal clavier MIDI
         let keyboardModal = null;
+
+        // 🆕 Instance de la page de gestion des instruments
+        let instrumentManagementPage = null;
 
         // 🆕 Instance du modal de réglages
         let settingsModal = null;
@@ -3409,7 +3436,9 @@
 
                 const deviceList = document.getElementById('deviceList');
 
-                deviceList.innerHTML = '';
+                if (deviceList) {
+                    deviceList.innerHTML = '';
+                }
 
                 // Filtrer uniquement les périphériques connectés (status === 2)
                 let connectedDevices = devices.filter(d => d.status === 2 || d.connected);
@@ -3443,80 +3472,84 @@
                 }
 
                 if (connectedDevices.length === 0) {
-                    deviceList.innerHTML = `<li class="info-text">${i18n.t('ui.noDevicesConnected')}</li>`;
+                    if (deviceList) {
+                        deviceList.innerHTML = `<li class="info-text">${i18n.t('ui.noDevicesConnected')}</li>`;
+                    }
                     // Sauvegarder tous les périphériques pour le routage
                     availableDevices = devices;
                     log(`${devices.length} périphérique(s) trouvé(s), ${connectedDevices.length} connecté(s)`);
                     return;
                 }
 
-                // Charger les réglages pour afficher les noms personnalisés
-                for (const device of connectedDevices) {
-                    const li = document.createElement('li');
-                    li.className = 'device-item';
+                // Charger les réglages pour afficher les noms personnalisés (seulement si deviceList existe)
+                if (deviceList) {
+                    for (const device of connectedDevices) {
+                        const li = document.createElement('li');
+                        li.className = 'device-item';
 
-                    // Traitement spécial pour le périphérique virtuel
-                    if (device.isVirtual) {
+                        // Traitement spécial pour le périphérique virtuel
+                        if (device.isVirtual) {
+                            const deviceInfo = document.createElement('div');
+                            deviceInfo.className = 'device-info-section';
+                            deviceInfo.innerHTML = `
+                                <div class="device-name">${device.name}</div>
+                                <div class="device-type">${i18n.t('ui.virtualInstrumentType')}</div>
+                            `;
+
+                            const deviceActions = document.createElement('div');
+                            deviceActions.className = 'device-actions';
+
+                            // Badge "Virtual"
+                            const badge = document.createElement('span');
+                            badge.style.cssText = 'background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;';
+                            badge.textContent = 'VIRTUAL';
+                            deviceActions.appendChild(badge);
+
+                            li.appendChild(deviceInfo);
+                            li.appendChild(deviceActions);
+                            deviceList.appendChild(li);
+                            continue;
+                        }
+
+                        // Charger les réglages pour obtenir le nom personnalisé
+                        let displayName = device.name;
+                        try {
+                            const response = await api.sendCommand('instrument_get_settings', {
+                                deviceId: device.id
+                            });
+                            const settings = response.settings || {};
+                            if (settings.custom_name) {
+                                displayName = settings.custom_name;
+                            }
+                        } catch (error) {
+                            // Si on ne peut pas charger les settings, on utilise le nom par défaut
+                            console.warn(`Cannot load settings for ${device.id}:`, error);
+                        }
+
                         const deviceInfo = document.createElement('div');
                         deviceInfo.className = 'device-info-section';
+                        const serialInfo = device.usbSerialNumber ? ` • 🔢 SN: ${device.usbSerialNumber.substring(0, 8)}${device.usbSerialNumber.length > 8 ? '...' : ''}` : '';
                         deviceInfo.innerHTML = `
-                            <div class="device-name">${device.name}</div>
-                            <div class="device-type">${i18n.t('ui.virtualInstrumentType')}</div>
+                            <div class="device-name">${displayName}</div>
+                            <div class="device-type">${device.type} • ${device.id}${serialInfo}</div>
                         `;
 
                         const deviceActions = document.createElement('div');
                         deviceActions.className = 'device-actions';
 
-                        // Badge "Virtual"
-                        const badge = document.createElement('span');
-                        badge.style.cssText = 'background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;';
-                        badge.textContent = 'VIRTUAL';
-                        deviceActions.appendChild(badge);
+                        // Bouton Réglages
+                        const settingsBtn = document.createElement('button');
+                        settingsBtn.className = 'btn-icon';
+                        settingsBtn.title = i18n.t('instrumentSettings.settingsButton');
+                        settingsBtn.textContent = '⚙️';
+                        settingsBtn.onclick = () => showInstrumentSettings(device);
+
+                        deviceActions.appendChild(settingsBtn);
 
                         li.appendChild(deviceInfo);
                         li.appendChild(deviceActions);
                         deviceList.appendChild(li);
-                        continue;
                     }
-
-                    // Charger les réglages pour obtenir le nom personnalisé
-                    let displayName = device.name;
-                    try {
-                        const response = await api.sendCommand('instrument_get_settings', {
-                            deviceId: device.id
-                        });
-                        const settings = response.settings || {};
-                        if (settings.custom_name) {
-                            displayName = settings.custom_name;
-                        }
-                    } catch (error) {
-                        // Si on ne peut pas charger les settings, on utilise le nom par défaut
-                        console.warn(`Cannot load settings for ${device.id}:`, error);
-                    }
-
-                    const deviceInfo = document.createElement('div');
-                    deviceInfo.className = 'device-info-section';
-                    const serialInfo = device.usbSerialNumber ? ` • 🔢 SN: ${device.usbSerialNumber.substring(0, 8)}${device.usbSerialNumber.length > 8 ? '...' : ''}` : '';
-                    deviceInfo.innerHTML = `
-                        <div class="device-name">${displayName}</div>
-                        <div class="device-type">${device.type} • ${device.id}${serialInfo}</div>
-                    `;
-
-                    const deviceActions = document.createElement('div');
-                    deviceActions.className = 'device-actions';
-
-                    // Bouton Réglages
-                    const settingsBtn = document.createElement('button');
-                    settingsBtn.className = 'btn-icon';
-                    settingsBtn.title = i18n.t('instrumentSettings.settingsButton');
-                    settingsBtn.textContent = '⚙️';
-                    settingsBtn.onclick = () => showInstrumentSettings(device);
-
-                    deviceActions.appendChild(settingsBtn);
-
-                    li.appendChild(deviceInfo);
-                    li.appendChild(deviceActions);
-                    deviceList.appendChild(li);
                 }
 
                 log(`${devices.length} périphérique(s) trouvé(s), ${connectedDevices.length} connecté(s)`);
@@ -5133,25 +5166,6 @@
         });
         document.getElementById('createFolderBtn').addEventListener('click', createFolder);
         initFolderModal(); // Initialiser le modal de création de dossier
-        document.getElementById('scanDevicesBtn').addEventListener('click', loadDevices);
-
-        // Event listener pour le bouton de scan Bluetooth
-        document.getElementById('scanBluetoothBtn').addEventListener('click', () => {
-            if (bluetoothScanModal) {
-                bluetoothScanModal.open();
-            } else {
-                log('Bluetooth modal not initialized', 'error');
-            }
-        });
-
-        // Event listener pour le bouton de scan réseau
-        document.getElementById('scanNetworkBtn').addEventListener('click', () => {
-            if (networkScanModal) {
-                networkScanModal.open();
-            } else {
-                log('Network modal not initialized', 'error');
-            }
-        });
 
         // Event listener pour le bouton clavier MIDI
         document.getElementById('openKeyboardBtn').addEventListener('click', () => {
@@ -5159,6 +5173,15 @@
                 keyboardModal.open();
             } else {
                 log('Keyboard modal not initialized', 'error');
+            }
+        });
+
+        // Event listener pour le bouton de gestion des instruments
+        document.getElementById('instrumentsBtn').addEventListener('click', () => {
+            if (instrumentManagementPage) {
+                instrumentManagementPage.show();
+            } else {
+                log('Instrument management page not initialized', 'error');
             }
         });
 
@@ -5630,6 +5653,14 @@
                 log('✓ Modal clavier MIDI initialisée (version simplifiée)', 'info');
             } else {
                 log('⚠️ KeyboardModalNew non disponible', 'warning');
+            }
+
+            // 🆕 Initialiser la page de gestion des instruments
+            if (typeof InstrumentManagementPage !== 'undefined') {
+                instrumentManagementPage = new InstrumentManagementPage(api);
+                log('✓ Page de gestion des instruments initialisée', 'info');
+            } else {
+                log('⚠️ InstrumentManagementPage non disponible', 'warning');
             }
 
             // Charger et appliquer les paramètres sauvegardés
