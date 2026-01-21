@@ -1017,6 +1017,155 @@
             background: #5a6fd6;
         }
 
+        .upload-progress-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .upload-progress-overlay.show {
+            display: flex;
+        }
+
+        .upload-progress-modal {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+        }
+
+        body.theme-dark .upload-progress-modal {
+            background: #2d2d2d;
+        }
+
+        .upload-progress-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .upload-progress-title {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-progress-bar-container {
+            height: 24px;
+            background: #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .upload-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .upload-files-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 16px;
+            max-height: 400px;
+        }
+
+        .upload-file-item {
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        body.theme-dark .upload-file-item {
+            background: #3d3d3d;
+        }
+
+        .upload-file-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .upload-file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .upload-file-name {
+            font-weight: 500;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .upload-file-size {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+
+        .upload-file-status {
+            flex-shrink: 0;
+            font-size: 20px;
+        }
+
+        .upload-file-item.uploading .upload-file-icon {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .upload-file-item.success {
+            background: #d1fae5;
+            border: 1px solid #10b981;
+        }
+
+        body.theme-dark .upload-file-item.success {
+            background: #065f46;
+            border-color: #10b981;
+        }
+
+        .upload-file-item.error {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+        }
+
+        body.theme-dark .upload-file-item.error {
+            background: #7f1d1d;
+            border-color: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
         .file-name {
             flex: 1;
             font-weight: 500;
@@ -2044,6 +2193,30 @@
             <div class="folder-modal-footer">
                 <button class="btn btn-secondary" id="folderModalCancel" data-i18n="common.cancel">Annuler</button>
                 <button class="btn btn-primary" id="folderModalCreate" data-i18n="fileOperations.create">Créer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Progress Overlay -->
+    <div class="upload-progress-overlay" id="uploadProgressOverlay">
+        <div class="upload-progress-modal">
+            <div class="upload-progress-header">
+                <div class="upload-progress-title">
+                    📤 Upload en cours...
+                </div>
+            </div>
+            <div class="upload-progress-bar-container">
+                <div class="upload-progress-bar" id="uploadProgressBar" style="width: 0%">
+                    0%
+                </div>
+            </div>
+            <div class="upload-files-list" id="uploadFilesList">
+                <!-- Files will be added here dynamically -->
+            </div>
+            <div class="upload-actions">
+                <button class="btn btn-primary" id="uploadDoneBtn" style="display: none;">
+                    Terminer
+                </button>
             </div>
         </div>
     </div>
@@ -4387,29 +4560,90 @@
             }
         }
 
-        // Upload fichier
+        // Upload fichier avec progression
         async function uploadFile() {
             const input = document.getElementById('fileInput');
-            const files = input.files;
+            const files = Array.from(input.files);
 
             if (files.length === 0) {
                 log(i18n.t('ui.noFileSelected'), 'warning');
                 return;
             }
 
-            for (const file of files) {
+            // Afficher l'overlay de progression
+            const overlay = document.getElementById('uploadProgressOverlay');
+            const progressBar = document.getElementById('uploadProgressBar');
+            const filesList = document.getElementById('uploadFilesList');
+            const doneBtn = document.getElementById('uploadDoneBtn');
+
+            overlay.classList.add('show');
+            filesList.innerHTML = '';
+            doneBtn.style.display = 'none';
+
+            // Créer les éléments pour chaque fichier
+            const fileElements = files.map(file => {
+                const div = document.createElement('div');
+                div.className = 'upload-file-item uploading';
+                div.innerHTML = `
+                    <div class="upload-file-icon">📄</div>
+                    <div class="upload-file-info">
+                        <div class="upload-file-name">${file.name}</div>
+                        <div class="upload-file-size">${formatFileSize(file.size)}</div>
+                    </div>
+                    <div class="upload-file-status">⏳</div>
+                `;
+                filesList.appendChild(div);
+                return { file, element: div };
+            });
+
+            let completed = 0;
+            let hasErrors = false;
+
+            // Upload chaque fichier séquentiellement
+            for (const { file, element } of fileElements) {
                 try {
-                    log(`📤 Envoi de ${file.name}...`);
                     await api.uploadMidiFile(file, '/');
+                    element.classList.remove('uploading');
+                    element.classList.add('success');
+                    element.querySelector('.upload-file-status').textContent = '✓';
                     log(`✅ ${file.name} envoyé`);
                 } catch (error) {
+                    element.classList.remove('uploading');
+                    element.classList.add('error');
+                    element.querySelector('.upload-file-status').textContent = '✗';
+                    element.querySelector('.upload-file-size').textContent = error.message;
                     log(`❌ Erreur envoi ${file.name}: ${error.message}`, 'error');
+                    hasErrors = true;
                 }
+
+                // Mettre à jour la progression
+                completed++;
+                const progress = Math.round((completed / files.length) * 100);
+                progressBar.style.width = progress + '%';
+                progressBar.textContent = progress + '%';
             }
 
-            input.value = '';
-            document.getElementById('fileInputLabel').textContent = i18n.t('ui.noFileSelectedShort');
-            loadFiles();
+            // Afficher le bouton Terminer
+            doneBtn.style.display = 'block';
+            doneBtn.onclick = () => {
+                overlay.classList.remove('show');
+                input.value = '';
+                document.getElementById('fileInputLabel').textContent = i18n.t('ui.noFileSelectedShort');
+                loadFiles();
+            };
+
+            // Message de fin
+            if (hasErrors) {
+                log(`⚠️ Upload terminé avec des erreurs`, 'warning');
+            } else {
+                log(`✅ ${files.length} fichier${files.length > 1 ? 's' : ''} uploadé${files.length > 1 ? 's' : ''}`, 'success');
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
         }
 
         // Supprimer fichier
