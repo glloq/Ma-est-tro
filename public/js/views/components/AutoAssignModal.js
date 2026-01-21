@@ -29,13 +29,38 @@ class AutoAssignModal {
     this.showLoading();
 
     try {
-      // Get MIDI file data for preview
+      // Step 1: Validate instrument capabilities
+      const validationResponse = await this.apiClient.sendCommand('validate_instrument_capabilities', {});
+
+      if (validationResponse && validationResponse.incompleteInstruments && validationResponse.incompleteInstruments.length > 0) {
+        // Some instruments have incomplete capabilities
+        // Close loading modal
+        if (this.modal) {
+          this.modal.remove();
+          this.modal = null;
+        }
+
+        // Show capabilities modal
+        const capabilitiesModal = new window.InstrumentCapabilitiesModal(this.apiClient);
+
+        await new Promise((resolve) => {
+          capabilitiesModal.show(validationResponse.incompleteInstruments, (updates) => {
+            console.log('Capabilities updated:', updates);
+            resolve();
+          });
+        });
+
+        // Re-show loading after capabilities completion
+        this.showLoading();
+      }
+
+      // Step 2: Get MIDI file data for preview
       const fileResponse = await this.apiClient.sendCommand('file_read', { fileId: fileId });
       if (fileResponse && fileResponse.midiData) {
         this.midiData = fileResponse.midiData;
       }
 
-      // Generate suggestions
+      // Step 3: Generate suggestions
       const response = await this.apiClient.sendCommand('generate_assignment_suggestions', {
         fileId: fileId,
         topN: 5,
