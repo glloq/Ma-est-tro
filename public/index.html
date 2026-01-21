@@ -937,6 +937,17 @@
             border-left: 3px solid #10b981;
         }
 
+        .file-item.selected {
+            background: #e0e7ff;
+            border: 2px solid #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+
+        body.theme-dark .file-item.selected {
+            background: #3d4a7a;
+            border-color: #8b9bea;
+        }
+
         .file-name {
             flex: 1;
             font-weight: 500;
@@ -2949,6 +2960,7 @@
                     loadDevices();
                     initFileSearch(); // Initialiser la recherche de fichiers
                     initSortControls(); // Initialiser les contrôles de tri
+                    initKeyboardShortcuts(); // Initialiser les raccourcis clavier
                 });
 
                 api.on('disconnected', () => {
@@ -3207,6 +3219,42 @@
         // Cache pour les métadonnées des fichiers
         const metadataCache = new Map();
 
+        // ========== SÉLECTION FICHIERS ==========
+        let selectedFileId = null;
+
+        function selectFile(fileId) {
+            // Désélectionner l'ancien fichier
+            if (selectedFileId) {
+                const oldFile = document.querySelector(`.file-item[data-file-id="${selectedFileId}"]`);
+                if (oldFile) {
+                    oldFile.classList.remove('selected');
+                }
+            }
+
+            // Sélectionner le nouveau fichier
+            selectedFileId = fileId;
+            if (fileId) {
+                const newFile = document.querySelector(`.file-item[data-file-id="${fileId}"]`);
+                if (newFile) {
+                    newFile.classList.add('selected');
+                    // Scroll vers le fichier si nécessaire
+                    newFile.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            }
+        }
+
+        function getSelectedFile() {
+            if (!selectedFileId) return null;
+
+            const fileItem = document.querySelector(`.file-item[data-file-id="${selectedFileId}"]`);
+            if (!fileItem) return null;
+
+            return {
+                id: selectedFileId,
+                filename: fileItem.dataset.fileName
+            };
+        }
+
         // ========== TRI DES FICHIERS ==========
         let currentSortBy = 'name'; // 'name', 'date', 'size', 'duration'
         let currentSortOrder = 'asc'; // 'asc' or 'desc'
@@ -3341,6 +3389,15 @@
             // Événements drag and drop
             li.addEventListener('dragstart', handleDragStart);
             li.addEventListener('dragend', handleDragEnd);
+
+            // Clic pour sélectionner
+            li.addEventListener('click', (e) => {
+                // Ne pas sélectionner si on clique sur un bouton
+                if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                    return;
+                }
+                selectFile(file.id);
+            });
 
             const fileNameSpan = document.createElement('span');
             fileNameSpan.className = 'file-name';
@@ -5665,6 +5722,109 @@
             }
         }
 
+        // ========== RACCOURCIS CLAVIER ==========
+
+        function initKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                // Ignorer si on est dans un input/textarea ou un modal est ouvert
+                const isInputFocused = document.activeElement.tagName === 'INPUT' ||
+                                       document.activeElement.tagName === 'TEXTAREA' ||
+                                       document.activeElement.tagName === 'SELECT';
+
+                const isModalOpen = document.querySelector('.folder-modal-overlay.show') !== null ||
+                                    document.querySelector('.confirm-modal-overlay.show') !== null;
+
+                // Ctrl+F : Focus sur la recherche (toujours actif)
+                if (e.ctrlKey && e.key === 'f') {
+                    e.preventDefault();
+                    const searchInput = document.getElementById('fileSearchInput');
+                    if (searchInput) {
+                        searchInput.focus();
+                        searchInput.select();
+                    }
+                    return;
+                }
+
+                // Échap : Fermer les modals ou désélectionner
+                if (e.key === 'Escape') {
+                    if (isModalOpen) {
+                        // Les modals gèrent eux-mêmes l'Échap
+                        return;
+                    }
+                    if (selectedFileId) {
+                        selectFile(null);
+                        e.preventDefault();
+                    }
+                    return;
+                }
+
+                // Si input focalisé ou modal ouvert, ignorer les autres raccourcis
+                if (isInputFocused || isModalOpen) {
+                    return;
+                }
+
+                const selectedFile = getSelectedFile();
+
+                // F2 : Renommer le fichier sélectionné
+                if (e.key === 'F2') {
+                    e.preventDefault();
+                    if (selectedFile) {
+                        showRenameModal(selectedFile.id, selectedFile.filename);
+                    }
+                    return;
+                }
+
+                // Suppr/Delete : Supprimer le fichier sélectionné
+                if (e.key === 'Delete') {
+                    e.preventDefault();
+                    if (selectedFile) {
+                        deleteFile(selectedFile.id);
+                    }
+                    return;
+                }
+
+                // Entrée : Ouvrir l'éditeur
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (selectedFile) {
+                        editFile(selectedFile.id, selectedFile.filename);
+                    }
+                    return;
+                }
+
+                // Espace : Play/Pause
+                if (e.key === ' ' || e.code === 'Space') {
+                    e.preventDefault();
+                    if (selectedFile) {
+                        playFile(selectedFile.id, selectedFile.filename);
+                    }
+                    return;
+                }
+
+                // Flèches haut/bas : Navigation
+                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    const allFiles = Array.from(document.querySelectorAll('.file-item'));
+                    if (allFiles.length === 0) return;
+
+                    let currentIndex = selectedFile ?
+                        allFiles.findIndex(f => f.dataset.fileId === selectedFile.id) : -1;
+
+                    if (e.key === 'ArrowUp') {
+                        currentIndex = currentIndex <= 0 ? allFiles.length - 1 : currentIndex - 1;
+                    } else {
+                        currentIndex = currentIndex >= allFiles.length - 1 ? 0 : currentIndex + 1;
+                    }
+
+                    const newFile = allFiles[currentIndex];
+                    if (newFile) {
+                        selectFile(newFile.dataset.fileId);
+                    }
+                    return;
+                }
+            });
+        }
+
         // ========== RECHERCHE FICHIERS ==========
 
         // Fonction de recherche/filtre de fichiers
@@ -5763,15 +5923,6 @@
                 clearBtn.style.display = 'none';
                 filterFiles();
                 searchInput.focus();
-            });
-
-            // Raccourci Ctrl+F pour focus sur la recherche
-            document.addEventListener('keydown', (e) => {
-                if (e.ctrlKey && e.key === 'f') {
-                    e.preventDefault();
-                    searchInput.focus();
-                    searchInput.select();
-                }
             });
         }
 
