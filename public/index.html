@@ -3884,9 +3884,26 @@
             li.addEventListener('drop', handleDrop);
             li.addEventListener('dragleave', handleDragLeave);
 
+            const folderFiles = folderStructure[folderPath].files || [];
+
+            // Calculate folder statistics
+            let totalSize = 0;
+            folderFiles.forEach(fileId => {
+                const file = allFiles.find(f => String(f.id) === String(fileId));
+                if (file && file.size) {
+                    totalSize += file.size;
+                }
+            });
+
             const folderNameSpan = document.createElement('span');
             folderNameSpan.className = 'file-name';
-            folderNameSpan.textContent = `📁 ${folderPath}`;
+            folderNameSpan.innerHTML = `
+                <span>📁 ${folderPath}</span>
+                <span class="file-metadata" style="margin-left: 8px; font-size: 0.85em;">
+                    <span title="Nombre de fichiers">📄 ${folderFiles.length}</span>
+                    ${totalSize > 0 ? `<span title="Taille totale">💾 ${formatFileSize(totalSize)}</span>` : ''}
+                </span>
+            `;
 
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'file-actions';
@@ -3902,35 +3919,50 @@
                 toggleFolder(folderPath);
             };
 
-            // Bouton Supprimer (seulement si vide)
-            const folderFiles = folderStructure[folderPath].files || [];
+            // Bouton Renommer
+            const renameBtn = document.createElement('button');
+            renameBtn.className = 'btn btn-secondary btn-sm';
+            renameBtn.title = 'Renommer le dossier';
+            renameBtn.textContent = '✏️';
+            renameBtn.onclick = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                showRenameFolderModal(folderPath);
+            };
+
+            // Bouton Vider (seulement si non vide)
+            const emptyBtn = document.createElement('button');
+            emptyBtn.className = 'btn btn-warning btn-sm';
+            emptyBtn.title = folderFiles.length > 0 ? 'Vider le dossier (supprimer tous les fichiers)' : 'Dossier vide';
+            emptyBtn.textContent = '🗑️📄';
+            if (folderFiles.length === 0) {
+                emptyBtn.style.opacity = '0.5';
+                emptyBtn.style.cursor = 'not-allowed';
+            }
+            emptyBtn.onclick = async (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const currentFiles = folderStructure[folderPath].files || [];
+                if (currentFiles.length === 0) {
+                    return;
+                }
+                await emptyFolder(folderPath);
+            };
+
+            // Bouton Supprimer (avec ou sans contenu)
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'btn btn-danger btn-sm';
-            deleteBtn.title = folderFiles.length > 0 ? i18n.t('fileOperations.folderNotEmpty') : i18n.t('fileOperations.deleteFolder');
+            deleteBtn.title = folderFiles.length > 0 ? 'Supprimer le dossier et son contenu' : i18n.t('fileOperations.deleteFolder');
             deleteBtn.textContent = '🗑️';
-
-            // Utiliser une classe au lieu de disabled pour permettre le clic
-            if (folderFiles.length > 0) {
-                deleteBtn.style.opacity = '0.5';
-                deleteBtn.style.cursor = 'not-allowed';
-            }
-
             deleteBtn.onclick = async (e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                // Vérifier à nouveau au moment du clic
-                const currentFiles = folderStructure[folderPath].files || [];
-                if (currentFiles.length > 0) {
-                    await showAlert('Le dossier doit être vide pour être supprimé', {
-                        title: 'Impossible de supprimer',
-                        icon: '⚠️'
-                    });
-                    return;
-                }
                 deleteFolder(folderPath);
             };
 
             actionsDiv.appendChild(toggleBtn);
+            actionsDiv.appendChild(renameBtn);
+            actionsDiv.appendChild(emptyBtn);
             actionsDiv.appendChild(deleteBtn);
 
             li.appendChild(folderNameSpan);
@@ -4187,7 +4219,7 @@
             });
         }
 
-        // Supprimer un dossier (seulement si vide)
+        // Supprimer un dossier (avec ou sans contenu)
         async function deleteFolder(folderPath) {
             console.log('deleteFolder appelée pour:', folderPath);
 
@@ -4199,15 +4231,14 @@
             const folderFiles = folderStructure[folderPath].files || [];
             console.log('Fichiers dans le dossier:', folderFiles, 'Longueur:', folderFiles.length);
 
+            let confirmMessage;
             if (folderFiles.length > 0) {
-                await showAlert('Le dossier doit être vide pour être supprimé', {
-                    title: 'Impossible de supprimer',
-                    icon: '⚠️'
-                });
-                return;
+                confirmMessage = `Le dossier "${folderPath}" contient ${folderFiles.length} fichier${folderFiles.length > 1 ? 's' : ''}. Voulez-vous vraiment supprimer le dossier et tous ses fichiers ?`;
+            } else {
+                confirmMessage = i18n.t('fileOperations.deleteFolderConfirm', { folder: folderPath });
             }
 
-            const confirmed = await showConfirm(i18n.t('fileOperations.deleteFolderConfirm', { folder: folderPath }), {
+            const confirmed = await showConfirm(confirmMessage, {
                 title: i18n.t('fileOperations.deleteFolder'),
                 icon: '📁🗑️',
                 okText: i18n.t('fileOperations.delete'),
@@ -4218,10 +4249,167 @@
                 return;
             }
 
+            // Supprimer tous les fichiers du dossier
+            if (folderFiles.length > 0) {
+                for (const fileId of folderFiles) {
+                    try {
+                        await api.sendCommand('file_delete', { fileId: fileId });
+                    } catch (error) {
+                        console.error(`Erreur suppression fichier ${fileId}:`, error);
+                    }
+                }
+            }
+
+            // Supprimer le dossier de la structure
             delete folderStructure[folderPath];
             saveFolderStructure();
-            log(`🗑️ ${i18n.t('fileOperations.folderDeleted', { folder: folderPath })}`);
+            log(`🗑️ Dossier "${folderPath}" supprimé${folderFiles.length > 0 ? ` avec ${folderFiles.length} fichier(s)` : ''}`);
             loadFiles();
+        }
+
+        // Vider un dossier (supprimer tous ses fichiers)
+        async function emptyFolder(folderPath) {
+            if (!folderStructure[folderPath]) {
+                return;
+            }
+
+            const folderFiles = folderStructure[folderPath].files || [];
+            if (folderFiles.length === 0) {
+                return;
+            }
+
+            const confirmed = await showConfirm(
+                `Voulez-vous vraiment supprimer tous les ${folderFiles.length} fichier${folderFiles.length > 1 ? 's' : ''} du dossier "${folderPath}" ?`,
+                {
+                    title: 'Vider le dossier',
+                    icon: '🗑️📄',
+                    okText: 'Supprimer',
+                    cancelText: i18n.t('common.cancel')
+                }
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            // Supprimer tous les fichiers
+            for (const fileId of folderFiles) {
+                try {
+                    await api.sendCommand('file_delete', { fileId: fileId });
+                } catch (error) {
+                    console.error(`Erreur suppression fichier ${fileId}:`, error);
+                }
+            }
+
+            // Vider la liste des fichiers du dossier
+            folderStructure[folderPath].files = [];
+            saveFolderStructure();
+            log(`🗑️ Dossier "${folderPath}" vidé (${folderFiles.length} fichier(s) supprimé(s))`);
+            loadFiles();
+        }
+
+        // Afficher le modal de renommage de dossier
+        function showRenameFolderModal(folderPath) {
+            if (!folderStructure[folderPath]) {
+                return;
+            }
+
+            // Créer un modal similaire au modal de renommage de fichier
+            const modal = document.createElement('div');
+            modal.className = 'folder-modal-overlay show';
+            modal.id = 'renameFolderModal';
+            modal.innerHTML = `
+                <div class="folder-modal">
+                    <div class="folder-modal-header">
+                        <div class="folder-modal-title">
+                            <span>✏️</span>
+                            <span>Renommer le dossier</span>
+                        </div>
+                        <button class="folder-modal-close" id="renameFolderClose">&times;</button>
+                    </div>
+                    <div class="folder-modal-body">
+                        <p>Ancien nom : <strong>${folderPath}</strong></p>
+                        <input type="text" class="folder-modal-input" id="renameFolderInput" value="${folderPath}" />
+                    </div>
+                    <div class="folder-modal-footer">
+                        <button class="btn btn-secondary" id="renameFolderCancel">Annuler</button>
+                        <button class="btn btn-primary" id="renameFolderConfirm">Renommer</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            const input = modal.querySelector('#renameFolderInput');
+            const closeBtn = modal.querySelector('#renameFolderClose');
+            const cancelBtn = modal.querySelector('#renameFolderCancel');
+            const confirmBtn = modal.querySelector('#renameFolderConfirm');
+
+            // Focus et sélectionner le texte
+            setTimeout(() => {
+                input.focus();
+                input.select();
+            }, 100);
+
+            // Fermer le modal
+            const closeModal = () => {
+                modal.remove();
+            };
+
+            closeBtn.addEventListener('click', closeModal);
+            cancelBtn.addEventListener('click', closeModal);
+
+            // Confirmer le renommage
+            confirmBtn.addEventListener('click', async () => {
+                const newFolderName = input.value.trim();
+
+                if (!newFolderName) {
+                    await showAlert('Le nom du dossier ne peut pas être vide', {
+                        title: 'Erreur',
+                        icon: '⚠️'
+                    });
+                    return;
+                }
+
+                if (newFolderName === folderPath) {
+                    closeModal();
+                    return;
+                }
+
+                // Vérifier si le nouveau nom existe déjà
+                if (folderStructure[newFolderName]) {
+                    await showAlert(`Un dossier nommé "${newFolderName}" existe déjà`, {
+                        title: 'Erreur',
+                        icon: '⚠️'
+                    });
+                    return;
+                }
+
+                // Renommer le dossier dans la structure
+                folderStructure[newFolderName] = folderStructure[folderPath];
+                delete folderStructure[folderPath];
+                saveFolderStructure();
+
+                log(`✏️ Dossier renommé : "${folderPath}" → "${newFolderName}"`);
+                closeModal();
+                loadFiles();
+            });
+
+            // Entrée pour confirmer, Échap pour annuler
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    confirmBtn.click();
+                } else if (e.key === 'Escape') {
+                    closeModal();
+                }
+            });
+
+            // Clic sur l'overlay pour fermer
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
         }
 
         // Ouvrir/fermer un dossier
