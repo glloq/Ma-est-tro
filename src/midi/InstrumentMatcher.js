@@ -528,26 +528,55 @@ class InstrumentMatcher {
 
   /**
    * Score du type d'instrument
-   * @param {string} channelType
-   * @param {string} instrumentType
+   * @param {Object|string} channelType - { type, confidence, scores } ou string
+   * @param {string} instrumentType - 'melody', 'harmony', 'bass', 'percussive', 'unknown'
    * @returns {Object}
    */
   scoreInstrumentType(channelType, instrumentType) {
-    if (channelType === instrumentType) {
+    // Extraire le type depuis l'objet si nécessaire
+    const channelTypeStr = channelType?.type || channelType;
+
+    if (!channelTypeStr || channelTypeStr === 'unknown') {
+      return { score: 0 };
+    }
+
+    // Mapping des types détaillés (ChannelAnalyzer) vers types génériques (getInstrumentType)
+    const typeMapping = {
+      // Types détectés par ChannelAnalyzer → Types génériques acceptés
+      'piano': ['melody', 'harmony'],
+      'strings': ['melody', 'harmony'],
+      'organ': ['harmony', 'melody'],
+      'lead': ['melody'],
+      'pad': ['harmony', 'melody'],
+      'brass': ['melody', 'harmony'],
+      'percussive': ['percussive'],
+      'drums': ['percussive'],
+      'bass': ['bass', 'melody']
+    };
+
+    // Vérifier si le type de l'instrument est acceptable pour ce canal
+    const acceptableTypes = typeMapping[channelTypeStr];
+
+    if (acceptableTypes && acceptableTypes.includes(instrumentType)) {
+      // Score basé sur la position dans la liste (premier = meilleur)
+      const index = acceptableTypes.indexOf(instrumentType);
+      const baseScore = 10;
+      const score = index === 0 ? baseScore : Math.max(5, baseScore - index * 2);
+
       return {
-        score: 10,
-        info: `Instrument type match: ${channelType}`
+        score,
+        info: `Instrument type ${index === 0 ? 'perfect' : 'acceptable'} match: ${channelTypeStr} → ${instrumentType}`
       };
     }
 
-    // Certaines combinaisons sont acceptables
+    // Fallback: anciennes combinaisons acceptables pour types génériques
     const acceptableCombos = {
       'melody': ['harmony', 'bass'],
       'harmony': ['melody'],
       'bass': ['melody']
     };
 
-    if (acceptableCombos[channelType]?.includes(instrumentType)) {
+    if (acceptableCombos[channelTypeStr]?.includes(instrumentType)) {
       return { score: 5 };
     }
 

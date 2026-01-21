@@ -328,11 +328,16 @@ class InstrumentCapabilitiesModal {
       <div style="margin-top: 24px; padding: 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
         <button class="button button-secondary"
                 onclick="instrumentCapabilitiesModalInstance.applyDefaults()"
-                style="width: 100%;">
+                style="width: 100%; margin-bottom: 10px;">
           ✨ Apply Suggested Defaults
         </button>
+        <button class="button button-info"
+                onclick="instrumentCapabilitiesModalInstance.openFullSettings(${instrument.id})"
+                style="width: 100%;">
+          ⚙️ Open Full Instrument Settings
+        </button>
         <div style="color: #666; font-size: 12px; margin-top: 8px; text-align: center;">
-          Fills fields with intelligent default values based on instrument type
+          Access advanced configuration, latency settings, and more
         </div>
       </div>
     `;
@@ -499,6 +504,22 @@ class InstrumentCapabilitiesModal {
       console.error('Failed to save capabilities:', error);
       alert('Failed to save instrument capabilities');
     }
+  }
+
+  /**
+   * Ouvre la page complète de réglages de l'instrument
+   * @param {number} instrumentId
+   */
+  openFullSettings(instrumentId) {
+    // TODO: Implémenter la page de gestion complète des instruments
+    // Pour l'instant, afficher un message
+    alert(`Full instrument settings page coming soon!\n\nInstrument ID: ${instrumentId}\n\nThis feature will allow you to configure:\n- Advanced MIDI settings\n- Latency calibration\n- Bank MSB/LSB\n- Custom note mappings\n- And more...`);
+
+    // Future implementation:
+    // window.location.hash = `#instrument-settings/${instrumentId}`;
+    // ou
+    // const settingsModal = new InstrumentSettingsModal(this.apiClient);
+    // settingsModal.show(instrumentId);
   }
 
   /**
