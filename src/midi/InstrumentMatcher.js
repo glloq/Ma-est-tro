@@ -2,6 +2,7 @@
 
 const MidiUtils = require('../utils/MidiUtils');
 const ScoringConfig = require('./ScoringConfig');
+const DrumNoteMapper = require('./DrumNoteMapper');
 
 /**
  * InstrumentMatcher - Calcule la compatibilité entre canaux MIDI et instruments
@@ -12,11 +13,13 @@ const ScoringConfig = require('./ScoringConfig');
  * - Polyphonie suffisante
  * - Contrôleurs MIDI supportés
  * - Type d'instrument
+ * - Mapping intelligent des percussions (via DrumNoteMapper)
  */
 class InstrumentMatcher {
   constructor(logger, config = null) {
     this.logger = logger;
     this.config = config || ScoringConfig;
+    this.drumMapper = new DrumNoteMapper(logger);
 
     // Catégories General MIDI
     this.GM_CATEGORIES = {
@@ -66,11 +69,17 @@ class InstrumentMatcher {
         max: instrument.note_range_max,
         mode: instrument.note_selection_mode || 'range',
         selected: instrument.selected_notes ? JSON.parse(instrument.selected_notes) : null
-      }
+      },
+      channelAnalysis // Pass full analysis for intelligent drum mapping
     );
     score += noteScore.score;
     if (noteScore.issue) issues.push(noteScore.issue);
     if (noteScore.info) info.push(noteScore.info);
+
+    // Store drum mapping report if available
+    if (noteScore.drumMappingReport) {
+      info.push(`Drum mapping: ${noteScore.drumMappingReport.summary.qualityScore}/100 quality`);
+    }
 
     // 3. Polyphonie (+15 points max)
     const polyScore = this.scorePolyphony(
@@ -172,14 +181,15 @@ class InstrumentMatcher {
    * Score de compatibilité de notes avec transposition par octaves
    * @param {Object} channelRange - { min, max }
    * @param {Object} instrumentCaps - { min, max, mode, selected }
+   * @param {Object} channelAnalysis - Optional full channel analysis for intelligent drum mapping
    * @returns {Object}
    */
-  scoreNoteCompatibility(channelRange, instrumentCaps) {
+  scoreNoteCompatibility(channelRange, instrumentCaps, channelAnalysis = null) {
     const span = channelRange.max - channelRange.min;
 
     // Mode discrete (drums/pads)
     if (instrumentCaps.mode === 'discrete') {
-      return this.scoreDiscreteNotes(channelRange, instrumentCaps.selected);
+      return this.scoreDiscreteNotes(channelRange, instrumentCaps.selected, channelAnalysis);
     }
 
     // Si l'instrument n'a pas de plage définie (accepte tout)
@@ -362,11 +372,13 @@ class InstrumentMatcher {
 
   /**
    * Score pour instruments à notes discrètes (drums)
+   * Uses intelligent DrumNoteMapper for channel 9 (drums)
    * @param {Object} channelRange
    * @param {Array<number>|null} selectedNotes
+   * @param {Object} channelAnalysis - Optional, provides note events for intelligent mapping
    * @returns {Object}
    */
-  scoreDiscreteNotes(channelRange, selectedNotes) {
+  scoreDiscreteNotes(channelRange, selectedNotes, channelAnalysis = null) {
     if (!selectedNotes || selectedNotes.length === 0) {
       return {
         compatible: false,
@@ -378,7 +390,12 @@ class InstrumentMatcher {
       };
     }
 
-    // Vérifier combien de notes du canal sont supportées
+    // Use intelligent DrumNoteMapper for drums (channel 9)
+    if (channelAnalysis && channelAnalysis.channel === 9 && channelAnalysis.noteEvents) {
+      return this.scoreDiscreteDrumsIntelligent(channelAnalysis, selectedNotes);
+    }
+
+    // Fallback: simple closest-note mapping for non-drums discrete instruments
     const channelNotes = [];
     for (let note = channelRange.min; note <= channelRange.max; note++) {
       channelNotes.push(note);
@@ -418,6 +435,78 @@ class InstrumentMatcher {
       noteRemapping: Object.keys(noteRemapping).length > 0 ? noteRemapping : null,
       info
     };
+  }
+
+  /**
+   * Intelligent drum note scoring using DrumNoteMapper
+   * @param {Object} channelAnalysis
+   * @param {Array<number>} selectedNotes
+   * @returns {Object}
+   */
+  scoreDiscreteDrumsIntelligent(channelAnalysis, selectedNotes) {
+    try {
+      // Classify MIDI drum notes
+      const midiNotes = this.drumMapper.classifyDrumNotes(channelAnalysis.noteEvents || []);
+
+      // Generate intelligent mapping
+      const mappingResult = this.drumMapper.generateMapping(midiNotes, selectedNotes, {
+        allowSubstitution: true,
+        allowSharing: true,
+        allowOmission: true,
+        preserveEssentials: true
+      });
+
+      const { mapping, quality, substitutions, omissions } = mappingResult;
+
+      // Convert quality score (0-100) to compatibility score (0-25)
+      // Quality 100 → score 25, Quality 50 → score 12.5
+      const score = Math.round((quality.score / 100) * 25);
+
+      // Build info messages
+      const info = [];
+      info.push(`Intelligent drum mapping: ${quality.score}/100 quality`);
+      info.push(`${quality.mappedCount}/${quality.totalCount} notes mapped`);
+      if (quality.essentialScore < 100) {
+        info.push(`Essential preservation: ${quality.essentialScore}%`);
+      }
+      if (substitutions.length > 0) {
+        info.push(`${substitutions.length} intelligent substitutions`);
+      }
+      if (omissions.length > 0) {
+        info.push(`${omissions.length} notes omitted`);
+      }
+
+      // Build issues
+      const issues = [];
+      if (quality.score < 50) {
+        issues.push({
+          type: 'warning',
+          message: `Low drum mapping quality (${quality.score}/100). Many notes will be substituted or omitted.`
+        });
+      }
+      if (quality.essentialScore < 75) {
+        issues.push({
+          type: 'warning',
+          message: `Some essential drum elements (kick/snare/hi-hat) may be missing or substituted.`
+        });
+      }
+
+      this.logger.info(`[DrumMapping] Quality: ${quality.score}/100, Score: ${score}/25, Mapped: ${quality.mappedCount}/${quality.totalCount}`);
+
+      return {
+        compatible: quality.score >= 30, // Minimum 30% quality to be compatible
+        score,
+        noteRemapping: Object.keys(mapping).length > 0 ? mapping : null,
+        drumMappingQuality: quality,
+        drumMappingReport: this.drumMapper.getMappingReport(mappingResult),
+        info: info.join(', '),
+        issues: issues.length > 0 ? issues : undefined
+      };
+    } catch (error) {
+      this.logger.error(`[DrumMapping] Error: ${error.message}`);
+      // Fallback to simple mapping
+      return this.scoreDiscreteNotes(channelAnalysis.noteRange, selectedNotes, null);
+    }
   }
 
   /**

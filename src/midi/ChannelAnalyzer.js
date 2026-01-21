@@ -98,7 +98,8 @@ class ChannelAnalyzer {
       density,
       estimatedType: typeEstimation.type,
       typeConfidence: typeEstimation.confidence,
-      typeScores: typeEstimation.scores
+      typeScores: typeEstimation.scores,
+      noteEvents // Include note events for intelligent drum mapping
     };
   }
 
