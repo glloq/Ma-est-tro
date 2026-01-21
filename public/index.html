@@ -711,6 +711,95 @@
             font-weight: 600;
         }
 
+        .search-bar-container {
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .search-bar {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 10px 40px 10px 40px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: #ffffff;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-input::placeholder {
+            color: #9ca3af;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            color: #9ca3af;
+            font-size: 16px;
+            pointer-events: none;
+        }
+
+        .search-clear-btn {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            color: #9ca3af;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .search-clear-btn:hover {
+            color: #667eea;
+            transform: scale(1.2);
+        }
+
+        .search-stats {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 6px;
+            text-align: right;
+        }
+
+        body.theme-dark .search-input {
+            background: #2d2d2d;
+            border-color: #4d4d4d;
+            color: #ffffff;
+        }
+
+        body.theme-dark .search-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        body.theme-dark .search-icon,
+        body.theme-dark .search-clear-btn {
+            color: #9ca3af;
+        }
+
+        body.theme-dark .search-stats {
+            color: #9ca3af;
+        }
+
         .file-item {
             padding: 4px;
             background: #f9fafb;
@@ -791,8 +880,33 @@
             flex: 1;
             font-weight: 500;
             display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .file-name-text {
+            display: flex;
             align-items: center;
             gap: 8px;
+        }
+
+        .file-metadata {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 11px;
+            color: #6b7280;
+            font-weight: 400;
+        }
+
+        .file-metadata span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        body.theme-dark .file-metadata {
+            color: #9ca3af;
         }
 
         .routed-badge {
@@ -1854,6 +1968,22 @@
                         📂 Déposer ici pour remettre à la racine
                     </div>
 
+                    <!-- Search Bar -->
+                    <div class="search-bar-container">
+                        <div class="search-bar">
+                            <span class="search-icon">🔍</span>
+                            <input
+                                type="text"
+                                id="fileSearchInput"
+                                class="search-input"
+                                placeholder="Rechercher un fichier..."
+                                autocomplete="off"
+                            />
+                            <button class="search-clear-btn" id="searchClearBtn">×</button>
+                        </div>
+                        <div class="search-stats" id="searchStats"></div>
+                    </div>
+
                     <ul class="file-list" id="fileList">
                         <li class="info-text" data-i18n="ui.noFiles">Aucun fichier</li>
                     </ul>
@@ -2713,6 +2843,7 @@
                     log('✅ Connecté au serveur', 'info');
                     loadFiles();
                     loadDevices();
+                    initFileSearch(); // Initialiser la recherche de fichiers
                 });
 
                 api.on('disconnected', () => {
@@ -2965,6 +3096,48 @@
             return null;
         }
 
+        // Cache pour les métadonnées des fichiers
+        const metadataCache = new Map();
+
+        // Charger les métadonnées d'un fichier
+        async function loadFileMetadata(fileId) {
+            try {
+                // Vérifier le cache
+                if (metadataCache.has(fileId)) {
+                    updateMetadataDisplay(fileId, metadataCache.get(fileId));
+                    return;
+                }
+
+                // Récupérer depuis l'API
+                const response = await api.sendCommand('file_metadata', { fileId: fileId });
+
+                if (response.success && response.metadata) {
+                    const metadata = response.metadata;
+                    metadataCache.set(fileId, metadata);
+                    updateMetadataDisplay(fileId, metadata);
+                }
+            } catch (error) {
+                console.error(`Erreur chargement métadonnées pour ${fileId}:`, error);
+                const metadataDiv = document.getElementById(`metadata-${fileId}`);
+                if (metadataDiv) {
+                    metadataDiv.innerHTML = '<span style="color: #ef4444;">⚠️ Erreur</span>';
+                }
+            }
+        }
+
+        // Mettre à jour l'affichage des métadonnées
+        function updateMetadataDisplay(fileId, metadata) {
+            const metadataDiv = document.getElementById(`metadata-${fileId}`);
+            if (!metadataDiv) return;
+
+            metadataDiv.innerHTML = `
+                <span title="Durée">⏱ ${metadata.durationFormatted}</span>
+                <span title="Taille du fichier">💾 ${metadata.sizeFormatted}</span>
+                <span title="Canaux MIDI">🎹 ${metadata.channelCount} ${metadata.channelCount > 1 ? 'canaux' : 'canal'}</span>
+                <span title="Tempo">♩ ${metadata.tempo} BPM</span>
+            `;
+        }
+
         // Créer l'élément HTML pour un fichier
         function createFileElement(file) {
             const routed = isFileRouted(file.id);
@@ -2981,7 +3154,17 @@
 
             const fileNameSpan = document.createElement('span');
             fileNameSpan.className = 'file-name';
-            fileNameSpan.innerHTML = `${file.filename}${routed ? '<span class="routed-badge">✓</span>' : ''}`;
+            fileNameSpan.innerHTML = `
+                <div class="file-name-text">
+                    ${file.filename}${routed ? '<span class="routed-badge">✓</span>' : ''}
+                </div>
+                <div class="file-metadata" id="metadata-${file.id}">
+                    <span>⏳ Chargement...</span>
+                </div>
+            `;
+
+            // Charger les métadonnées de manière asynchrone
+            loadFileMetadata(file.id);
 
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'file-actions';
@@ -5149,6 +5332,116 @@
                     icon: '❌'
                 });
             }
+        }
+
+        // ========== RECHERCHE FICHIERS ==========
+
+        // Fonction de recherche/filtre de fichiers
+        function initFileSearch() {
+            const searchInput = document.getElementById('fileSearchInput');
+            const clearBtn = document.getElementById('searchClearBtn');
+            const searchStats = document.getElementById('searchStats');
+            const fileList = document.getElementById('fileList');
+
+            if (!searchInput) return;
+
+            // Fonction pour filtrer les fichiers
+            function filterFiles() {
+                const query = searchInput.value.toLowerCase().trim();
+
+                // Afficher/cacher le bouton clear
+                if (query) {
+                    clearBtn.style.display = 'flex';
+                } else {
+                    clearBtn.style.display = 'none';
+                }
+
+                // Obtenir tous les fichiers (pas les dossiers)
+                const allFileItems = fileList.querySelectorAll('.file-item');
+                const allFolderItems = fileList.querySelectorAll('.folder-item');
+
+                let visibleCount = 0;
+                let totalCount = 0;
+
+                // Filtrer les fichiers
+                allFileItems.forEach(fileItem => {
+                    const fileName = (fileItem.dataset.fileName || '').toLowerCase();
+                    totalCount++;
+
+                    if (!query || fileName.includes(query)) {
+                        fileItem.style.display = 'flex';
+                        visibleCount++;
+                    } else {
+                        fileItem.style.display = 'none';
+                    }
+                });
+
+                // Gérer les dossiers : afficher seulement si au moins un fichier dedans est visible
+                allFolderItems.forEach(folderItem => {
+                    const folderChildren = folderItem.querySelector('.folder-children');
+                    if (folderChildren) {
+                        const visibleFiles = folderChildren.querySelectorAll('.file-item[style="display: flex;"]');
+                        if (query && visibleFiles.length === 0) {
+                            // Si recherche active et aucun fichier visible, cacher le dossier
+                            folderItem.style.display = 'none';
+                        } else {
+                            // Sinon afficher le dossier
+                            folderItem.style.display = 'block';
+                        }
+                    } else if (query) {
+                        // Dossier fermé pendant une recherche : le cacher
+                        folderItem.style.display = 'none';
+                    } else {
+                        // Pas de recherche : afficher normalement
+                        folderItem.style.display = 'block';
+                    }
+                });
+
+                // Afficher les statistiques
+                if (query) {
+                    searchStats.textContent = `${visibleCount} résultat${visibleCount > 1 ? 's' : ''} sur ${totalCount} fichier${totalCount > 1 ? 's' : ''}`;
+                    searchStats.style.display = 'block';
+                } else {
+                    searchStats.textContent = '';
+                    searchStats.style.display = 'none';
+                }
+
+                // Afficher message si aucun résultat
+                if (totalCount > 0 && visibleCount === 0 && query) {
+                    if (!fileList.querySelector('.no-results-msg')) {
+                        const noResultsMsg = document.createElement('li');
+                        noResultsMsg.className = 'info-text no-results-msg';
+                        noResultsMsg.textContent = 'Aucun fichier ne correspond à votre recherche';
+                        fileList.appendChild(noResultsMsg);
+                    }
+                } else {
+                    // Supprimer le message si il existe
+                    const noResultsMsg = fileList.querySelector('.no-results-msg');
+                    if (noResultsMsg) {
+                        noResultsMsg.remove();
+                    }
+                }
+            }
+
+            // Event listener sur l'input
+            searchInput.addEventListener('input', filterFiles);
+
+            // Event listener sur le bouton clear
+            clearBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                clearBtn.style.display = 'none';
+                filterFiles();
+                searchInput.focus();
+            });
+
+            // Raccourci Ctrl+F pour focus sur la recherche
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 'f') {
+                    e.preventDefault();
+                    searchInput.focus();
+                    searchInput.select();
+                }
+            });
         }
 
         // ========== ÉVÉNEMENTS ==========

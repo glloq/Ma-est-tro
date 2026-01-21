@@ -62,9 +62,10 @@ class CommandHandler {
       'route_import': (data) => this.routeImport(data),
       'route_clear_all': () => this.routeClearAll(),
 
-      // ==================== FILE MANAGEMENT (12 commands) ====================
+      // ==================== FILE MANAGEMENT (13 commands) ====================
       'file_upload': (data) => this.fileUpload(data),
       'file_list': (data) => this.fileList(data),
+      'file_metadata': (data) => this.fileMetadata(data),
       'file_load': (data) => this.fileLoad(data),
       'file_read': (data) => this.fileRead(data),
       'file_write': (data) => this.fileWrite(data),
@@ -688,6 +689,11 @@ class CommandHandler {
   async fileList(data) {
     const files = this.app.fileManager.listFiles(data.folder || '/');
     return { files: files };
+  }
+
+  async fileMetadata(data) {
+    const metadata = await this.app.fileManager.getFileMetadata(data.fileId);
+    return { success: true, metadata: metadata };
   }
 
   async fileLoad(data) {
