@@ -551,6 +551,14 @@ class InstrumentDatabase {
         }
       }
 
+      // Validate polyphony
+      if (capabilities.polyphony !== undefined && capabilities.polyphony !== null) {
+        const poly = parseInt(capabilities.polyphony);
+        if (isNaN(poly) || poly < 1) {
+          throw new Error('polyphony must be a positive number (minimum 1)');
+        }
+      }
+
       // Convert supported_ccs array to JSON string
       let supportedCcsJson = null;
       if (capabilities.supported_ccs !== undefined && capabilities.supported_ccs !== null) {

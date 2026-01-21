@@ -3,6 +3,7 @@ import JsonValidator from '../utils/JsonValidator.js';
 import AutoAssigner from '../midi/AutoAssigner.js';
 import MidiTransposer from '../midi/MidiTransposer.js';
 import JsonMidiConverter from '../storage/JsonMidiConverter.js';
+import InstrumentCapabilitiesValidator from '../midi/InstrumentCapabilitiesValidator.js';
 
 class CommandHandler {
   constructor(app) {
@@ -61,14 +62,16 @@ class CommandHandler {
       'route_import': (data) => this.routeImport(data),
       'route_clear_all': () => this.routeClearAll(),
 
-      // ==================== FILE MANAGEMENT (12 commands) ====================
+      // ==================== FILE MANAGEMENT (13 commands) ====================
       'file_upload': (data) => this.fileUpload(data),
       'file_list': (data) => this.fileList(data),
+      'file_metadata': (data) => this.fileMetadata(data),
       'file_load': (data) => this.fileLoad(data),
       'file_read': (data) => this.fileRead(data),
       'file_write': (data) => this.fileWrite(data),
       'file_delete': (data) => this.fileDelete(data),
       'file_save': (data) => this.fileSave(data),
+      'file_save_as': (data) => this.fileSaveAs(data),
       'file_rename': (data) => this.fileRename(data),
       'file_move': (data) => this.fileMove(data),
       'file_duplicate': (data) => this.fileDuplicate(data),
@@ -93,6 +96,9 @@ class CommandHandler {
       'analyze_channel': (data) => this.analyzeChannel(data),
       'generate_assignment_suggestions': (data) => this.generateAssignmentSuggestions(data),
       'apply_assignments': (data) => this.applyAssignments(data),
+      'validate_instrument_capabilities': (data) => this.validateInstrumentCapabilities(data),
+      'get_instrument_defaults': (data) => this.getInstrumentDefaults(data),
+      'update_instrument_capabilities': (data) => this.updateInstrumentCapabilities(data),
 
       // ==================== LATENCY (8 commands) ====================
       'latency_measure': (data) => this.latencyMeasure(data),
@@ -686,6 +692,11 @@ class CommandHandler {
     return { files: files };
   }
 
+  async fileMetadata(data) {
+    const metadata = await this.app.fileManager.getFileMetadata(data.fileId);
+    return { success: true, metadata: metadata };
+  }
+
   async fileLoad(data) {
     const result = await this.app.fileManager.loadFile(data.fileId);
     return result;
@@ -715,6 +726,11 @@ class CommandHandler {
   async fileSave(data) {
     await this.app.fileManager.saveFile(data.fileId, data.midi);
     return { success: true };
+  }
+
+  async fileSaveAs(data) {
+    const result = await this.app.fileManager.saveFileAs(data.fileId, data.newFilename, data.midiData);
+    return result;
   }
 
   async fileRename(data) {
@@ -1407,6 +1423,134 @@ class CommandHandler {
       filename: adaptedFileId ? originalFile.filename.replace(/\.mid$/i, '_adapted.mid') : null,
       stats,
       routings
+    };
+  }
+
+  /**
+   * Valide les capacités des instruments
+   * @returns {Object}
+   */
+  async validateInstrumentCapabilities() {
+    const validator = new InstrumentCapabilitiesValidator();
+
+    // Récupérer tous les instruments
+    const instruments = this.app.instrumentDatabase.getInstrumentsWithCapabilities();
+
+    // Valider
+    const validation = validator.validateInstruments(instruments);
+
+    return {
+      success: true,
+      allValid: validation.allValid,
+      validCount: validation.validCount,
+      completeCount: validation.completeCount,
+      totalCount: validation.totalCount,
+      incompleteInstruments: validation.incomplete
+    };
+  }
+
+  /**
+   * Obtient les valeurs par défaut suggérées pour un instrument
+   * @param {Object} data - { instrumentId, type }
+   * @returns {Object}
+   */
+  async getInstrumentDefaults(data) {
+    const validator = new InstrumentCapabilitiesValidator();
+
+    // Récupérer l'instrument
+    const instrument = this.app.instrumentDatabase.getInstrument(data.instrumentId);
+
+    if (!instrument) {
+      throw new Error(`Instrument not found: ${data.instrumentId}`);
+    }
+
+    // Obtenir les suggestions
+    const defaults = validator.getSuggestedDefaults(instrument);
+
+    return {
+      success: true,
+      defaults
+    };
+  }
+
+  /**
+   * Met à jour les capacités des instruments
+   * @param {Object} data - { updates: { instrumentId: { field: value, ... }, ... } }
+   * @returns {Object}
+   */
+  async updateInstrumentCapabilities(data) {
+    if (!data.updates) {
+      throw new Error('updates is required');
+    }
+
+    const updated = [];
+    const failed = [];
+
+    for (const [instrumentId, fields] of Object.entries(data.updates)) {
+      try {
+        // Convertir instrumentId en nombre
+        const id = parseInt(instrumentId);
+
+        // Récupérer l'instrument
+        const instrument = this.app.instrumentDatabase.getInstrument(id);
+
+        if (!instrument) {
+          failed.push({
+            instrumentId: id,
+            error: 'Instrument not found'
+          });
+          continue;
+        }
+
+        // Séparer les champs selon leur type
+        const basicFields = {};
+        const capabilityFields = {};
+
+        const capabilityFieldNames = ['note_range_min', 'note_range_max', 'polyphony',
+                                      'mode', 'supported_ccs', 'selected_notes',
+                                      'note_selection_mode'];
+
+        for (const [field, value] of Object.entries(fields)) {
+          if (capabilityFieldNames.includes(field)) {
+            capabilityFields[field] = value;
+          } else {
+            basicFields[field] = value;
+          }
+        }
+
+        // Mettre à jour les champs basiques (type, gm_program, etc.)
+        if (Object.keys(basicFields).length > 0) {
+          this.app.instrumentDatabase.updateInstrument(id, basicFields);
+        }
+
+        // Mettre à jour les capacités
+        if (Object.keys(capabilityFields).length > 0) {
+          // Mapper 'mode' vers 'note_selection_mode' si nécessaire
+          if (capabilityFields.mode && !capabilityFields.note_selection_mode) {
+            capabilityFields.note_selection_mode = capabilityFields.mode;
+            delete capabilityFields.mode;
+          }
+
+          this.app.instrumentDatabase.updateInstrumentCapabilities(instrument.device_id, capabilityFields);
+        }
+
+        updated.push(id);
+
+        this.app.logger.info(`Updated capabilities for instrument ${id}: ${Object.keys(fields).join(', ')}`);
+
+      } catch (error) {
+        failed.push({
+          instrumentId: parseInt(instrumentId),
+          error: error.message
+        });
+      }
+    }
+
+    return {
+      success: true,
+      updated: updated.length,
+      failed: failed.length,
+      failedDetails: failed
     };
   }
 }

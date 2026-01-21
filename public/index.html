@@ -47,7 +47,8 @@
 
         body.theme-dark .btn-keyboard-toggle,
         body.theme-dark .btn-settings-toggle,
-        body.theme-dark .btn-debug-toggle {
+        body.theme-dark .btn-debug-toggle,
+        body.theme-dark .btn-instruments-toggle {
             background: #3d3d3d;
             border-color: #4d4d4d;
             color: #ffffff;
@@ -66,6 +67,11 @@
         body.theme-dark .btn-debug-toggle:hover {
             background: #667eea;
             border-color: #667eea;
+        }
+
+        body.theme-dark .btn-instruments-toggle:hover {
+            background: #8b5cf6;
+            border-color: #8b5cf6;
         }
 
         body.theme-dark input,
@@ -499,6 +505,32 @@
             box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
         }
 
+        .btn-instruments-toggle {
+            position: absolute;
+            top: 20px;
+            right: 130px;
+            background: #f3f4f6;
+            border: 2px solid #e5e7eb;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            font-size: 22px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            z-index: 10;
+        }
+
+        .btn-instruments-toggle:hover {
+            background: #8b5cf6;
+            border-color: #8b5cf6;
+            transform: scale(1.1) rotate(10deg);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
         .status-bar {
             display: flex;
             gap: 16px;
@@ -679,6 +711,156 @@
             font-weight: 600;
         }
 
+        .search-bar-container {
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .search-bar {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 10px 40px 10px 40px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: #ffffff;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-input::placeholder {
+            color: #9ca3af;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            color: #9ca3af;
+            font-size: 16px;
+            pointer-events: none;
+        }
+
+        .search-clear-btn {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            color: #9ca3af;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .search-clear-btn:hover {
+            color: #667eea;
+            transform: scale(1.2);
+        }
+
+        .search-stats {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 6px;
+            text-align: right;
+        }
+
+        body.theme-dark .search-input {
+            background: #2d2d2d;
+            border-color: #4d4d4d;
+            color: #ffffff;
+        }
+
+        body.theme-dark .search-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        body.theme-dark .search-icon,
+        body.theme-dark .search-clear-btn {
+            color: #9ca3af;
+        }
+
+        body.theme-dark .search-stats {
+            color: #9ca3af;
+        }
+
+        .sort-controls {
+            display: flex;
+            gap: 4px;
+        }
+
+        .sort-select {
+            padding: 8px 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #ffffff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+
+        .sort-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .sort-order-btn {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: #ffffff;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sort-order-btn:hover {
+            background: #f3f4f6;
+            border-color: #667eea;
+        }
+
+        .sort-order-btn.ascending {
+            transform: rotate(180deg);
+        }
+
+        body.theme-dark .sort-select,
+        body.theme-dark .sort-order-btn {
+            background: #2d2d2d;
+            border-color: #4d4d4d;
+            color: #ffffff;
+        }
+
+        body.theme-dark .sort-select:focus,
+        body.theme-dark .sort-order-btn:hover {
+            border-color: #667eea;
+        }
+
+        body.theme-dark .sort-order-btn:hover {
+            background: #3d3d3d;
+        }
+
         .file-item {
             padding: 4px;
             background: #f9fafb;
@@ -755,12 +937,266 @@
             border-left: 3px solid #10b981;
         }
 
+        .file-item.selected {
+            background: #e0e7ff;
+            border: 2px solid #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+
+        body.theme-dark .file-item.selected {
+            background: #3d4a7a;
+            border-color: #8b9bea;
+        }
+
+        .file-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            flex-shrink: 0;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .file-item:hover .file-checkbox,
+        .file-checkbox:checked {
+            opacity: 1;
+        }
+
+        .batch-actions-bar {
+            position: sticky;
+            top: 0;
+            background: #667eea;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            z-index: 10;
+        }
+
+        .batch-actions-bar.show {
+            display: flex;
+        }
+
+        .batch-actions-info {
+            flex: 1;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .batch-actions-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .batch-actions-bar .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        .batch-actions-bar .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .batch-actions-bar .btn-danger {
+            background: rgba(239, 68, 68, 0.8);
+            border-color: rgba(239, 68, 68, 1);
+        }
+
+        .batch-actions-bar .btn-danger:hover {
+            background: rgba(239, 68, 68, 1);
+        }
+
+        body.theme-dark .batch-actions-bar {
+            background: #5a6fd6;
+        }
+
+        .upload-progress-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .upload-progress-overlay.show {
+            display: flex;
+        }
+
+        .upload-progress-modal {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+        }
+
+        body.theme-dark .upload-progress-modal {
+            background: #2d2d2d;
+        }
+
+        .upload-progress-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .upload-progress-title {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-progress-bar-container {
+            height: 24px;
+            background: #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .upload-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .upload-files-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 16px;
+            max-height: 400px;
+        }
+
+        .upload-file-item {
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        body.theme-dark .upload-file-item {
+            background: #3d3d3d;
+        }
+
+        .upload-file-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .upload-file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .upload-file-name {
+            font-weight: 500;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .upload-file-size {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+
+        .upload-file-status {
+            flex-shrink: 0;
+            font-size: 20px;
+        }
+
+        .upload-file-item.uploading .upload-file-icon {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .upload-file-item.success {
+            background: #d1fae5;
+            border: 1px solid #10b981;
+        }
+
+        body.theme-dark .upload-file-item.success {
+            background: #065f46;
+            border-color: #10b981;
+        }
+
+        .upload-file-item.error {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+        }
+
+        body.theme-dark .upload-file-item.error {
+            background: #7f1d1d;
+            border-color: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
         .file-name {
             flex: 1;
             font-weight: 500;
             display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .file-name-text {
+            display: flex;
             align-items: center;
             gap: 8px;
+        }
+
+        .file-metadata {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 11px;
+            color: #6b7280;
+            font-weight: 400;
+        }
+
+        .file-metadata span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        body.theme-dark .file-metadata {
+            color: #9ca3af;
         }
 
         .routed-badge {
@@ -1761,6 +2197,57 @@
         </div>
     </div>
 
+    <!-- Upload Progress Overlay -->
+    <div class="upload-progress-overlay" id="uploadProgressOverlay">
+        <div class="upload-progress-modal">
+            <div class="upload-progress-header">
+                <div class="upload-progress-title">
+                    📤 Upload en cours...
+                </div>
+            </div>
+            <div class="upload-progress-bar-container">
+                <div class="upload-progress-bar" id="uploadProgressBar" style="width: 0%">
+                    0%
+                </div>
+            </div>
+            <div class="upload-files-list" id="uploadFilesList">
+                <!-- Files will be added here dynamically -->
+            </div>
+            <div class="upload-actions">
+                <button class="btn btn-primary" id="uploadDoneBtn" style="display: none;">
+                    Terminer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de renommage de fichier -->
+    <div class="folder-modal-overlay" id="renameModal">
+        <div class="folder-modal">
+            <div class="folder-modal-header">
+                <div class="folder-modal-title">
+                    <span>✏️</span>
+                    <span>Renommer le fichier</span>
+                </div>
+                <button class="folder-modal-close" id="renameModalClose">&times;</button>
+            </div>
+            <div class="folder-modal-body">
+                <p style="margin-bottom: 8px; font-size: 13px; color: #6b7280;">
+                    Ancien nom: <strong id="renameOldName"></strong>
+                </p>
+                <input type="text" class="folder-modal-input" id="renameInput"
+                       placeholder="Nouveau nom..." />
+                <p style="margin-top: 8px; font-size: 12px; color: #9ca3af;">
+                    Le fichier doit avoir l'extension .mid ou .midi
+                </p>
+            </div>
+            <div class="folder-modal-footer">
+                <button class="btn btn-secondary" id="renameModalCancel">Annuler</button>
+                <button class="btn btn-primary" id="renameModalConfirm">Renommer</button>
+            </div>
+        </div>
+    </div>
+
     <div id="loading" class="loading">
         <div class="loading-content">
             <div class="spinner"></div>
@@ -1781,6 +2268,10 @@
 
                 <button class="btn-debug-toggle" id="debugToggle" data-i18n-title="ui.toggleLogs" title="Afficher/Masquer les logs">
                     🐞
+                </button>
+
+                <button class="btn-instruments-toggle" id="instrumentsBtn" data-i18n-title="ui.instrumentManagement" title="Gestion des instruments">
+                    🎛️
                 </button>
 
                 <div class="header-playback">
@@ -1818,23 +2309,53 @@
                         📂 Déposer ici pour remettre à la racine
                     </div>
 
-                    <ul class="file-list" id="fileList">
-                        <li class="info-text" data-i18n="ui.noFiles">Aucun fichier</li>
-                    </ul>
-                </div>
-
-                <!-- Périphériques MIDI -->
-                <div class="card">
-                    <h2>🎛️ <span data-i18n="ui.midiDevices">Périphériques MIDI</span></h2>
-
-                    <div class="btn-group">
-                        <button class="btn" id="scanDevicesBtn">🔌&nbsp;&nbsp;<span data-i18n="ui.scanUsb">Scan USB</span></button>
-                        <button class="btn" id="scanBluetoothBtn" style="background: #9b59b6 !important;">📡&nbsp;&nbsp;<span data-i18n="ui.scanBluetooth">Scan Bluetooth</span></button>
-                        <button class="btn" id="scanNetworkBtn" style="background: #3498db !important;">🌐&nbsp;&nbsp;<span data-i18n="ui.scanNetwork">Scan Réseau</span></button>
+                    <!-- Batch Actions Bar -->
+                    <div class="batch-actions-bar" id="batchActionsBar">
+                        <div class="batch-actions-info" id="batchActionsInfo">
+                            0 fichier sélectionné
+                        </div>
+                        <div class="batch-actions-buttons">
+                            <button class="btn" id="batchSelectAll">Tout sélectionner</button>
+                            <button class="btn" id="batchDeselect">Désélectionner</button>
+                            <button class="btn" id="batchMove">📁 Déplacer vers...</button>
+                            <button class="btn btn-danger" id="batchDelete">🗑️ Supprimer</button>
+                        </div>
                     </div>
 
-                    <ul class="device-list" id="deviceList">
-                        <li class="info-text" data-i18n="ui.noDevices">Aucun périphérique</li>
+                    <!-- Search and Sort Bar -->
+                    <div class="search-bar-container">
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <!-- Search -->
+                            <div class="search-bar" style="flex: 1;">
+                                <span class="search-icon">🔍</span>
+                                <input
+                                    type="text"
+                                    id="fileSearchInput"
+                                    class="search-input"
+                                    placeholder="Rechercher un fichier..."
+                                    autocomplete="off"
+                                />
+                                <button class="search-clear-btn" id="searchClearBtn">×</button>
+                            </div>
+
+                            <!-- Sort -->
+                            <div class="sort-controls">
+                                <select id="sortBy" class="sort-select" title="Trier par">
+                                    <option value="name">Nom</option>
+                                    <option value="date">Date</option>
+                                    <option value="size">Taille</option>
+                                    <option value="duration">Durée</option>
+                                </select>
+                                <button id="sortOrder" class="sort-order-btn" title="Ordre de tri">
+                                    ↓
+                                </button>
+                            </div>
+                        </div>
+                        <div class="search-stats" id="searchStats"></div>
+                    </div>
+
+                    <ul class="file-list" id="fileList">
+                        <li class="info-text" data-i18n="ui.noFiles">Aucun fichier</li>
                     </ul>
                 </div>
 
@@ -1888,6 +2409,12 @@
 
     <!-- Auto-Assign Modal Component -->
     <script src="js/views/components/AutoAssignModal.js"></script>
+
+    <!-- Instrument Capabilities Modal Component -->
+    <script src="js/views/components/InstrumentCapabilitiesModal.js"></script>
+
+    <!-- Instrument Management Page Component -->
+    <script src="js/views/components/InstrumentManagementPage.js"></script>
 
     <!-- Bluetooth Scan Modal Component -->
     <script src="js/views/components/BluetoothScanModal.js"></script>
@@ -2109,6 +2636,9 @@
 
         // 🆕 Instance du modal clavier MIDI
         let keyboardModal = null;
+
+        // 🆕 Instance de la page de gestion des instruments
+        let instrumentManagementPage = null;
 
         // 🆕 Instance du modal de réglages
         let settingsModal = null;
@@ -2683,6 +3213,10 @@
                     log('✅ Connecté au serveur', 'info');
                     loadFiles();
                     loadDevices();
+                    initFileSearch(); // Initialiser la recherche de fichiers
+                    initSortControls(); // Initialiser les contrôles de tri
+                    initKeyboardShortcuts(); // Initialiser les raccourcis clavier
+                    initBatchActions(); // Initialiser les actions par lots
                 });
 
                 api.on('disconnected', () => {
@@ -2852,10 +3386,13 @@
         // Charger les fichiers
         async function loadFiles() {
             try {
-                const files = await api.listMidiFiles('/');
+                let files = await api.listMidiFiles('/');
                 const fileList = document.getElementById('fileList');
 
                 fileList.innerHTML = '';
+
+                // Trier les fichiers selon les préférences
+                files = await sortFiles(files);
 
                 // Nettoyer les fichiers orphelins (fichiers dans la structure mais qui n'existent plus)
                 const fileIds = new Set(files.map(f => String(f.id))); // Convertir en string pour comparaison cohérente
@@ -2935,6 +3472,293 @@
             return null;
         }
 
+        // Cache pour les métadonnées des fichiers
+        const metadataCache = new Map();
+
+        // ========== SÉLECTION FICHIERS ==========
+        let selectedFileId = null;
+        let selectedFileIds = new Set(); // Sélection multiple
+
+        function selectFile(fileId) {
+            // Désélectionner l'ancien fichier
+            if (selectedFileId) {
+                const oldFile = document.querySelector(`.file-item[data-file-id="${selectedFileId}"]`);
+                if (oldFile) {
+                    oldFile.classList.remove('selected');
+                }
+            }
+
+            // Sélectionner le nouveau fichier
+            selectedFileId = fileId;
+            if (fileId) {
+                const newFile = document.querySelector(`.file-item[data-file-id="${fileId}"]`);
+                if (newFile) {
+                    newFile.classList.add('selected');
+                    // Scroll vers le fichier si nécessaire
+                    newFile.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            }
+        }
+
+        function getSelectedFile() {
+            if (!selectedFileId) return null;
+
+            const fileItem = document.querySelector(`.file-item[data-file-id="${selectedFileId}"]`);
+            if (!fileItem) return null;
+
+            return {
+                id: selectedFileId,
+                filename: fileItem.dataset.fileName
+            };
+        }
+
+        // Sélection multiple
+        function toggleFileSelection(fileId, checked) {
+            if (checked) {
+                selectedFileIds.add(fileId);
+            } else {
+                selectedFileIds.delete(fileId);
+            }
+            updateBatchActionsBar();
+        }
+
+        function updateBatchActionsBar() {
+            const bar = document.getElementById('batchActionsBar');
+            const info = document.getElementById('batchActionsInfo');
+            const count = selectedFileIds.size;
+
+            if (count > 0) {
+                bar.classList.add('show');
+                info.textContent = `${count} fichier${count > 1 ? 's' : ''} sélectionné${count > 1 ? 's' : ''}`;
+            } else {
+                bar.classList.remove('show');
+            }
+        }
+
+        function selectAllFiles() {
+            const allCheckboxes = document.querySelectorAll('.file-checkbox');
+            allCheckboxes.forEach(cb => {
+                cb.checked = true;
+                const fileId = cb.closest('.file-item').dataset.fileId;
+                selectedFileIds.add(fileId);
+            });
+            updateBatchActionsBar();
+        }
+
+        function deselectAllFiles() {
+            const allCheckboxes = document.querySelectorAll('.file-checkbox');
+            allCheckboxes.forEach(cb => {
+                cb.checked = false;
+            });
+            selectedFileIds.clear();
+            updateBatchActionsBar();
+        }
+
+        async function batchDeleteFiles() {
+            if (selectedFileIds.size === 0) return;
+
+            const count = selectedFileIds.size;
+            const confirmed = await showConfirm(
+                `Voulez-vous vraiment supprimer ${count} fichier${count > 1 ? 's' : ''} ?`,
+                {
+                    title: 'Suppression multiple',
+                    icon: '🗑️',
+                    confirmText: 'Supprimer',
+                    cancelText: 'Annuler'
+                }
+            );
+
+            if (!confirmed) return;
+
+            try {
+                // Supprimer chaque fichier
+                for (const fileId of selectedFileIds) {
+                    await api.sendCommand('file_delete', { fileId: fileId });
+                }
+
+                log(`✓ ${count} fichier${count > 1 ? 's' : ''} supprimé${count > 1 ? 's' : ''}`, 'info');
+                selectedFileIds.clear();
+                updateBatchActionsBar();
+                loadFiles();
+            } catch (error) {
+                log(`Erreur lors de la suppression: ${error.message}`, 'error');
+                await showAlert(`Erreur lors de la suppression: ${error.message}`, {
+                    title: 'Erreur',
+                    icon: '❌'
+                });
+            }
+        }
+
+        async function batchMoveFiles() {
+            if (selectedFileIds.size === 0) return;
+
+            // Afficher la liste des dossiers disponibles
+            const folders = Object.keys(folderStructure);
+            if (folders.length === 0) {
+                await showAlert('Aucun dossier disponible. Créez un dossier d\'abord.', {
+                    title: 'Pas de dossier',
+                    icon: '⚠️'
+                });
+                return;
+            }
+
+            // Utiliser showConfirm pour permettre à l'utilisateur de choisir
+            // Pour simplifier, on utilise le premier dossier comme exemple
+            // TODO: Créer un vrai modal de sélection de dossier
+            const targetFolder = folders[0];
+
+            const confirmed = await showConfirm(
+                `Déplacer ${selectedFileIds.size} fichier${selectedFileIds.size > 1 ? 's' : ''} vers "${targetFolder}" ?\n\n(Pour choisir un autre dossier, utilisez le glisser-déposer)`,
+                {
+                    title: 'Déplacer fichiers',
+                    icon: '📁',
+                    confirmText: 'Déplacer',
+                    cancelText: 'Annuler'
+                }
+            );
+
+            if (!confirmed) return;
+
+            // Déplacer les fichiers
+            for (const fileId of selectedFileIds) {
+                moveFileToFolder(fileId, targetFolder);
+            }
+
+            log(`✓ ${selectedFileIds.size} fichier${selectedFileIds.size > 1 ? 's' : ''} déplacé${selectedFileIds.size > 1 ? 's' : ''}`, 'info');
+            selectedFileIds.clear();
+            updateBatchActionsBar();
+            loadFiles();
+        }
+
+        // Initialiser les actions par lots
+        function initBatchActions() {
+            document.getElementById('batchSelectAll').addEventListener('click', selectAllFiles);
+            document.getElementById('batchDeselect').addEventListener('click', deselectAllFiles);
+            document.getElementById('batchDelete').addEventListener('click', batchDeleteFiles);
+            document.getElementById('batchMove').addEventListener('click', batchMoveFiles);
+        }
+
+        // ========== TRI DES FICHIERS ==========
+        let currentSortBy = 'name'; // 'name', 'date', 'size', 'duration'
+        let currentSortOrder = 'asc'; // 'asc' or 'desc'
+
+        // Fonction pour trier les fichiers
+        async function sortFiles(files) {
+            // Si tri par métadonnées, on doit d'abord charger toutes les métadonnées
+            if (['size', 'duration'].includes(currentSortBy)) {
+                // Charger les métadonnées pour tous les fichiers
+                await Promise.all(files.map(async (file) => {
+                    if (!metadataCache.has(file.id)) {
+                        try {
+                            const response = await api.sendCommand('file_metadata', { fileId: file.id });
+                            if (response.success && response.metadata) {
+                                metadataCache.set(file.id, response.metadata);
+                            }
+                        } catch (error) {
+                            console.error(`Erreur chargement métadonnées pour tri ${file.id}:`, error);
+                        }
+                    }
+                }));
+            }
+
+            const sorted = [...files].sort((a, b) => {
+                let compareValue = 0;
+
+                switch (currentSortBy) {
+                    case 'name':
+                        compareValue = a.filename.toLowerCase().localeCompare(b.filename.toLowerCase());
+                        break;
+
+                    case 'date':
+                        const dateA = new Date(a.uploadedAt || 0).getTime();
+                        const dateB = new Date(b.uploadedAt || 0).getTime();
+                        compareValue = dateA - dateB;
+                        break;
+
+                    case 'size':
+                        const metaA = metadataCache.get(a.id);
+                        const metaB = metadataCache.get(b.id);
+                        const sizeA = metaA ? metaA.size : 0;
+                        const sizeB = metaB ? metaB.size : 0;
+                        compareValue = sizeA - sizeB;
+                        break;
+
+                    case 'duration':
+                        const metaDurA = metadataCache.get(a.id);
+                        const metaDurB = metadataCache.get(b.id);
+                        const durA = metaDurA ? metaDurA.duration : 0;
+                        const durB = metaDurB ? metaDurB.duration : 0;
+                        compareValue = durA - durB;
+                        break;
+                }
+
+                return currentSortOrder === 'asc' ? compareValue : -compareValue;
+            });
+
+            return sorted;
+        }
+
+        // Initialiser les contrôles de tri
+        function initSortControls() {
+            const sortBySelect = document.getElementById('sortBy');
+            const sortOrderBtn = document.getElementById('sortOrder');
+
+            if (!sortBySelect || !sortOrderBtn) return;
+
+            // Changement du critère de tri
+            sortBySelect.addEventListener('change', () => {
+                currentSortBy = sortBySelect.value;
+                loadFiles();
+            });
+
+            // Changement de l'ordre de tri
+            sortOrderBtn.addEventListener('click', () => {
+                currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+                sortOrderBtn.classList.toggle('ascending', currentSortOrder === 'asc');
+                sortOrderBtn.textContent = currentSortOrder === 'asc' ? '↑' : '↓';
+                loadFiles();
+            });
+        }
+
+        // Charger les métadonnées d'un fichier
+        async function loadFileMetadata(fileId) {
+            try {
+                // Vérifier le cache
+                if (metadataCache.has(fileId)) {
+                    updateMetadataDisplay(fileId, metadataCache.get(fileId));
+                    return;
+                }
+
+                // Récupérer depuis l'API
+                const response = await api.sendCommand('file_metadata', { fileId: fileId });
+
+                if (response.success && response.metadata) {
+                    const metadata = response.metadata;
+                    metadataCache.set(fileId, metadata);
+                    updateMetadataDisplay(fileId, metadata);
+                }
+            } catch (error) {
+                console.error(`Erreur chargement métadonnées pour ${fileId}:`, error);
+                const metadataDiv = document.getElementById(`metadata-${fileId}`);
+                if (metadataDiv) {
+                    metadataDiv.innerHTML = '<span style="color: #ef4444;">⚠️ Erreur</span>';
+                }
+            }
+        }
+
+        // Mettre à jour l'affichage des métadonnées
+        function updateMetadataDisplay(fileId, metadata) {
+            const metadataDiv = document.getElementById(`metadata-${fileId}`);
+            if (!metadataDiv) return;
+
+            metadataDiv.innerHTML = `
+                <span title="Durée">⏱ ${metadata.durationFormatted}</span>
+                <span title="Taille du fichier">💾 ${metadata.sizeFormatted}</span>
+                <span title="Canaux MIDI">🎹 ${metadata.channelCount} ${metadata.channelCount > 1 ? 'canaux' : 'canal'}</span>
+                <span title="Tempo">♩ ${metadata.tempo} BPM</span>
+            `;
+        }
+
         // Créer l'élément HTML pour un fichier
         function createFileElement(file) {
             const routed = isFileRouted(file.id);
@@ -2949,9 +3773,46 @@
             li.addEventListener('dragstart', handleDragStart);
             li.addEventListener('dragend', handleDragEnd);
 
+            // Clic pour sélectionner (simple sélection pour navigation clavier)
+            li.addEventListener('click', (e) => {
+                // Ne pas sélectionner si on clique sur un bouton ou checkbox
+                if (e.target.tagName === 'BUTTON' || e.target.closest('button') ||
+                    e.target.tagName === 'INPUT') {
+                    return;
+                }
+                selectFile(file.id);
+            });
+
+            // Checkbox pour sélection multiple
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'file-checkbox';
+            checkbox.addEventListener('change', (e) => {
+                e.stopPropagation();
+                toggleFileSelection(file.id, e.target.checked);
+            });
+
             const fileNameSpan = document.createElement('span');
             fileNameSpan.className = 'file-name';
-            fileNameSpan.innerHTML = `${file.filename}${routed ? '<span class="routed-badge">✓</span>' : ''}`;
+            fileNameSpan.innerHTML = `
+                <div class="file-name-text" style="cursor: pointer;" title="Double-cliquer pour renommer (ou F2)">
+                    ${file.filename}${routed ? '<span class="routed-badge">✓</span>' : ''}
+                </div>
+                <div class="file-metadata" id="metadata-${file.id}">
+                    <span>⏳ Chargement...</span>
+                </div>
+            `;
+
+            // Double-clic pour renommer
+            const fileNameTextDiv = fileNameSpan.querySelector('.file-name-text');
+            fileNameTextDiv.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                showRenameModal(file.id, file.filename);
+            });
+
+            // Charger les métadonnées de manière asynchrone
+            loadFileMetadata(file.id);
 
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'file-actions';
@@ -3005,6 +3866,7 @@
             actionsDiv.appendChild(playBtn);
             actionsDiv.appendChild(deleteBtn);
 
+            li.appendChild(checkbox);
             li.appendChild(fileNameSpan);
             li.appendChild(actionsDiv);
 
@@ -3022,9 +3884,26 @@
             li.addEventListener('drop', handleDrop);
             li.addEventListener('dragleave', handleDragLeave);
 
+            const folderFiles = folderStructure[folderPath].files || [];
+
+            // Calculate folder statistics
+            let totalSize = 0;
+            folderFiles.forEach(fileId => {
+                const file = allFiles.find(f => String(f.id) === String(fileId));
+                if (file && file.size) {
+                    totalSize += file.size;
+                }
+            });
+
             const folderNameSpan = document.createElement('span');
             folderNameSpan.className = 'file-name';
-            folderNameSpan.textContent = `📁 ${folderPath}`;
+            folderNameSpan.innerHTML = `
+                <span>📁 ${folderPath}</span>
+                <span class="file-metadata" style="margin-left: 8px; font-size: 0.85em;">
+                    <span title="Nombre de fichiers">📄 ${folderFiles.length}</span>
+                    ${totalSize > 0 ? `<span title="Taille totale">💾 ${formatFileSize(totalSize)}</span>` : ''}
+                </span>
+            `;
 
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'file-actions';
@@ -3040,35 +3919,50 @@
                 toggleFolder(folderPath);
             };
 
-            // Bouton Supprimer (seulement si vide)
-            const folderFiles = folderStructure[folderPath].files || [];
+            // Bouton Renommer
+            const renameBtn = document.createElement('button');
+            renameBtn.className = 'btn btn-secondary btn-sm';
+            renameBtn.title = 'Renommer le dossier';
+            renameBtn.textContent = '✏️';
+            renameBtn.onclick = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                showRenameFolderModal(folderPath);
+            };
+
+            // Bouton Vider (seulement si non vide)
+            const emptyBtn = document.createElement('button');
+            emptyBtn.className = 'btn btn-warning btn-sm';
+            emptyBtn.title = folderFiles.length > 0 ? 'Vider le dossier (supprimer tous les fichiers)' : 'Dossier vide';
+            emptyBtn.textContent = '🗑️📄';
+            if (folderFiles.length === 0) {
+                emptyBtn.style.opacity = '0.5';
+                emptyBtn.style.cursor = 'not-allowed';
+            }
+            emptyBtn.onclick = async (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const currentFiles = folderStructure[folderPath].files || [];
+                if (currentFiles.length === 0) {
+                    return;
+                }
+                await emptyFolder(folderPath);
+            };
+
+            // Bouton Supprimer (avec ou sans contenu)
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'btn btn-danger btn-sm';
-            deleteBtn.title = folderFiles.length > 0 ? i18n.t('fileOperations.folderNotEmpty') : i18n.t('fileOperations.deleteFolder');
+            deleteBtn.title = folderFiles.length > 0 ? 'Supprimer le dossier et son contenu' : i18n.t('fileOperations.deleteFolder');
             deleteBtn.textContent = '🗑️';
-
-            // Utiliser une classe au lieu de disabled pour permettre le clic
-            if (folderFiles.length > 0) {
-                deleteBtn.style.opacity = '0.5';
-                deleteBtn.style.cursor = 'not-allowed';
-            }
-
             deleteBtn.onclick = async (e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                // Vérifier à nouveau au moment du clic
-                const currentFiles = folderStructure[folderPath].files || [];
-                if (currentFiles.length > 0) {
-                    await showAlert('Le dossier doit être vide pour être supprimé', {
-                        title: 'Impossible de supprimer',
-                        icon: '⚠️'
-                    });
-                    return;
-                }
                 deleteFolder(folderPath);
             };
 
             actionsDiv.appendChild(toggleBtn);
+            actionsDiv.appendChild(renameBtn);
+            actionsDiv.appendChild(emptyBtn);
             actionsDiv.appendChild(deleteBtn);
 
             li.appendChild(folderNameSpan);
@@ -3192,7 +4086,140 @@
             showFolderModal();
         }
 
-        // Supprimer un dossier (seulement si vide)
+        // ========== RENOMMAGE FICHIER ==========
+
+        let currentRenameFileId = null;
+
+        // Afficher le modal de renommage
+        function showRenameModal(fileId, currentFilename) {
+            currentRenameFileId = fileId;
+            const modal = document.getElementById('renameModal');
+            const input = document.getElementById('renameInput');
+            const oldNameSpan = document.getElementById('renameOldName');
+
+            oldNameSpan.textContent = currentFilename;
+            input.value = currentFilename;
+            modal.classList.add('show');
+
+            // Sélectionner le nom sans l'extension
+            const dotIndex = currentFilename.lastIndexOf('.');
+            if (dotIndex > 0) {
+                input.setSelectionRange(0, dotIndex);
+            } else {
+                input.select();
+            }
+
+            input.focus();
+        }
+
+        // Masquer le modal de renommage
+        function hideRenameModal() {
+            const modal = document.getElementById('renameModal');
+            modal.classList.remove('show');
+            currentRenameFileId = null;
+        }
+
+        // Valider et renommer le fichier
+        async function confirmRename() {
+            const input = document.getElementById('renameInput');
+            const newFilename = input.value.trim();
+
+            if (!newFilename) {
+                input.focus();
+                return;
+            }
+
+            // Vérifier que le nom se termine par .mid ou .midi
+            if (!newFilename.match(/\.midi?$/i)) {
+                await showAlert('Le nom du fichier doit se terminer par .mid ou .midi', {
+                    title: 'Nom invalide',
+                    icon: '⚠️'
+                });
+                input.focus();
+                return;
+            }
+
+            // Vérifier que le nom n'est pas déjà utilisé
+            const files = await api.listMidiFiles('/');
+            const existingFile = files.find(f =>
+                f.filename.toLowerCase() === newFilename.toLowerCase() &&
+                f.id !== currentRenameFileId
+            );
+
+            if (existingFile) {
+                await showAlert('Un fichier avec ce nom existe déjà', {
+                    title: 'Nom déjà utilisé',
+                    icon: '⚠️'
+                });
+                input.focus();
+                return;
+            }
+
+            try {
+                // Appeler l'API pour renommer
+                const response = await api.sendCommand('file_rename', {
+                    fileId: currentRenameFileId,
+                    newFilename: newFilename
+                });
+
+                if (response.success) {
+                    log(`✓ Fichier renommé: ${newFilename}`, 'info');
+
+                    // Invalider le cache de métadonnées pour ce fichier
+                    metadataCache.delete(currentRenameFileId);
+
+                    // Recharger la liste des fichiers
+                    loadFiles();
+                    hideRenameModal();
+                } else {
+                    throw new Error(response.error || 'Erreur de renommage');
+                }
+            } catch (error) {
+                log(`Erreur lors du renommage: ${error.message}`, 'error');
+                await showAlert(`Impossible de renommer le fichier: ${error.message}`, {
+                    title: 'Erreur de renommage',
+                    icon: '❌'
+                });
+            }
+        }
+
+        // Initialiser les event listeners du modal de renommage
+        function initRenameModal() {
+            const modal = document.getElementById('renameModal');
+            const closeBtn = document.getElementById('renameModalClose');
+            const cancelBtn = document.getElementById('renameModalCancel');
+            const confirmBtn = document.getElementById('renameModalConfirm');
+            const input = document.getElementById('renameInput');
+
+            // Fermer avec le bouton X
+            closeBtn.addEventListener('click', hideRenameModal);
+
+            // Fermer avec le bouton Annuler
+            cancelBtn.addEventListener('click', hideRenameModal);
+
+            // Renommer avec le bouton Renommer
+            confirmBtn.addEventListener('click', confirmRename);
+
+            // Renommer avec Entrée
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmRename();
+                }
+                if (e.key === 'Escape') {
+                    hideRenameModal();
+                }
+            });
+
+            // Fermer en cliquant sur l'overlay
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    hideRenameModal();
+                }
+            });
+        }
+
+        // Supprimer un dossier (avec ou sans contenu)
         async function deleteFolder(folderPath) {
             console.log('deleteFolder appelée pour:', folderPath);
 
@@ -3204,15 +4231,14 @@
             const folderFiles = folderStructure[folderPath].files || [];
             console.log('Fichiers dans le dossier:', folderFiles, 'Longueur:', folderFiles.length);
 
+            let confirmMessage;
             if (folderFiles.length > 0) {
-                await showAlert('Le dossier doit être vide pour être supprimé', {
-                    title: 'Impossible de supprimer',
-                    icon: '⚠️'
-                });
-                return;
+                confirmMessage = `Le dossier "${folderPath}" contient ${folderFiles.length} fichier${folderFiles.length > 1 ? 's' : ''}. Voulez-vous vraiment supprimer le dossier et tous ses fichiers ?`;
+            } else {
+                confirmMessage = i18n.t('fileOperations.deleteFolderConfirm', { folder: folderPath });
             }
 
-            const confirmed = await showConfirm(i18n.t('fileOperations.deleteFolderConfirm', { folder: folderPath }), {
+            const confirmed = await showConfirm(confirmMessage, {
                 title: i18n.t('fileOperations.deleteFolder'),
                 icon: '📁🗑️',
                 okText: i18n.t('fileOperations.delete'),
@@ -3223,10 +4249,167 @@
                 return;
             }
 
+            // Supprimer tous les fichiers du dossier
+            if (folderFiles.length > 0) {
+                for (const fileId of folderFiles) {
+                    try {
+                        await api.sendCommand('file_delete', { fileId: fileId });
+                    } catch (error) {
+                        console.error(`Erreur suppression fichier ${fileId}:`, error);
+                    }
+                }
+            }
+
+            // Supprimer le dossier de la structure
             delete folderStructure[folderPath];
             saveFolderStructure();
-            log(`🗑️ ${i18n.t('fileOperations.folderDeleted', { folder: folderPath })}`);
+            log(`🗑️ Dossier "${folderPath}" supprimé${folderFiles.length > 0 ? ` avec ${folderFiles.length} fichier(s)` : ''}`);
             loadFiles();
+        }
+
+        // Vider un dossier (supprimer tous ses fichiers)
+        async function emptyFolder(folderPath) {
+            if (!folderStructure[folderPath]) {
+                return;
+            }
+
+            const folderFiles = folderStructure[folderPath].files || [];
+            if (folderFiles.length === 0) {
+                return;
+            }
+
+            const confirmed = await showConfirm(
+                `Voulez-vous vraiment supprimer tous les ${folderFiles.length} fichier${folderFiles.length > 1 ? 's' : ''} du dossier "${folderPath}" ?`,
+                {
+                    title: 'Vider le dossier',
+                    icon: '🗑️📄',
+                    okText: 'Supprimer',
+                    cancelText: i18n.t('common.cancel')
+                }
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            // Supprimer tous les fichiers
+            for (const fileId of folderFiles) {
+                try {
+                    await api.sendCommand('file_delete', { fileId: fileId });
+                } catch (error) {
+                    console.error(`Erreur suppression fichier ${fileId}:`, error);
+                }
+            }
+
+            // Vider la liste des fichiers du dossier
+            folderStructure[folderPath].files = [];
+            saveFolderStructure();
+            log(`🗑️ Dossier "${folderPath}" vidé (${folderFiles.length} fichier(s) supprimé(s))`);
+            loadFiles();
+        }
+
+        // Afficher le modal de renommage de dossier
+        function showRenameFolderModal(folderPath) {
+            if (!folderStructure[folderPath]) {
+                return;
+            }
+
+            // Créer un modal similaire au modal de renommage de fichier
+            const modal = document.createElement('div');
+            modal.className = 'folder-modal-overlay show';
+            modal.id = 'renameFolderModal';
+            modal.innerHTML = `
+                <div class="folder-modal">
+                    <div class="folder-modal-header">
+                        <div class="folder-modal-title">
+                            <span>✏️</span>
+                            <span>Renommer le dossier</span>
+                        </div>
+                        <button class="folder-modal-close" id="renameFolderClose">&times;</button>
+                    </div>
+                    <div class="folder-modal-body">
+                        <p>Ancien nom : <strong>${folderPath}</strong></p>
+                        <input type="text" class="folder-modal-input" id="renameFolderInput" value="${folderPath}" />
+                    </div>
+                    <div class="folder-modal-footer">
+                        <button class="btn btn-secondary" id="renameFolderCancel">Annuler</button>
+                        <button class="btn btn-primary" id="renameFolderConfirm">Renommer</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            const input = modal.querySelector('#renameFolderInput');
+            const closeBtn = modal.querySelector('#renameFolderClose');
+            const cancelBtn = modal.querySelector('#renameFolderCancel');
+            const confirmBtn = modal.querySelector('#renameFolderConfirm');
+
+            // Focus et sélectionner le texte
+            setTimeout(() => {
+                input.focus();
+                input.select();
+            }, 100);
+
+            // Fermer le modal
+            const closeModal = () => {
+                modal.remove();
+            };
+
+            closeBtn.addEventListener('click', closeModal);
+            cancelBtn.addEventListener('click', closeModal);
+
+            // Confirmer le renommage
+            confirmBtn.addEventListener('click', async () => {
+                const newFolderName = input.value.trim();
+
+                if (!newFolderName) {
+                    await showAlert('Le nom du dossier ne peut pas être vide', {
+                        title: 'Erreur',
+                        icon: '⚠️'
+                    });
+                    return;
+                }
+
+                if (newFolderName === folderPath) {
+                    closeModal();
+                    return;
+                }
+
+                // Vérifier si le nouveau nom existe déjà
+                if (folderStructure[newFolderName]) {
+                    await showAlert(`Un dossier nommé "${newFolderName}" existe déjà`, {
+                        title: 'Erreur',
+                        icon: '⚠️'
+                    });
+                    return;
+                }
+
+                // Renommer le dossier dans la structure
+                folderStructure[newFolderName] = folderStructure[folderPath];
+                delete folderStructure[folderPath];
+                saveFolderStructure();
+
+                log(`✏️ Dossier renommé : "${folderPath}" → "${newFolderName}"`);
+                closeModal();
+                loadFiles();
+            });
+
+            // Entrée pour confirmer, Échap pour annuler
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    confirmBtn.click();
+                } else if (e.key === 'Escape') {
+                    closeModal();
+                }
+            });
+
+            // Clic sur l'overlay pour fermer
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
         }
 
         // Ouvrir/fermer un dossier
@@ -3406,7 +4589,9 @@
 
                 const deviceList = document.getElementById('deviceList');
 
-                deviceList.innerHTML = '';
+                if (deviceList) {
+                    deviceList.innerHTML = '';
+                }
 
                 // Filtrer uniquement les périphériques connectés (status === 2)
                 let connectedDevices = devices.filter(d => d.status === 2 || d.connected);
@@ -3440,80 +4625,84 @@
                 }
 
                 if (connectedDevices.length === 0) {
-                    deviceList.innerHTML = `<li class="info-text">${i18n.t('ui.noDevicesConnected')}</li>`;
+                    if (deviceList) {
+                        deviceList.innerHTML = `<li class="info-text">${i18n.t('ui.noDevicesConnected')}</li>`;
+                    }
                     // Sauvegarder tous les périphériques pour le routage
                     availableDevices = devices;
                     log(`${devices.length} périphérique(s) trouvé(s), ${connectedDevices.length} connecté(s)`);
                     return;
                 }
 
-                // Charger les réglages pour afficher les noms personnalisés
-                for (const device of connectedDevices) {
-                    const li = document.createElement('li');
-                    li.className = 'device-item';
+                // Charger les réglages pour afficher les noms personnalisés (seulement si deviceList existe)
+                if (deviceList) {
+                    for (const device of connectedDevices) {
+                        const li = document.createElement('li');
+                        li.className = 'device-item';
 
-                    // Traitement spécial pour le périphérique virtuel
-                    if (device.isVirtual) {
+                        // Traitement spécial pour le périphérique virtuel
+                        if (device.isVirtual) {
+                            const deviceInfo = document.createElement('div');
+                            deviceInfo.className = 'device-info-section';
+                            deviceInfo.innerHTML = `
+                                <div class="device-name">${device.name}</div>
+                                <div class="device-type">${i18n.t('ui.virtualInstrumentType')}</div>
+                            `;
+
+                            const deviceActions = document.createElement('div');
+                            deviceActions.className = 'device-actions';
+
+                            // Badge "Virtual"
+                            const badge = document.createElement('span');
+                            badge.style.cssText = 'background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;';
+                            badge.textContent = 'VIRTUAL';
+                            deviceActions.appendChild(badge);
+
+                            li.appendChild(deviceInfo);
+                            li.appendChild(deviceActions);
+                            deviceList.appendChild(li);
+                            continue;
+                        }
+
+                        // Charger les réglages pour obtenir le nom personnalisé
+                        let displayName = device.name;
+                        try {
+                            const response = await api.sendCommand('instrument_get_settings', {
+                                deviceId: device.id
+                            });
+                            const settings = response.settings || {};
+                            if (settings.custom_name) {
+                                displayName = settings.custom_name;
+                            }
+                        } catch (error) {
+                            // Si on ne peut pas charger les settings, on utilise le nom par défaut
+                            console.warn(`Cannot load settings for ${device.id}:`, error);
+                        }
+
                         const deviceInfo = document.createElement('div');
                         deviceInfo.className = 'device-info-section';
+                        const serialInfo = device.usbSerialNumber ? ` • 🔢 SN: ${device.usbSerialNumber.substring(0, 8)}${device.usbSerialNumber.length > 8 ? '...' : ''}` : '';
                         deviceInfo.innerHTML = `
-                            <div class="device-name">${device.name}</div>
-                            <div class="device-type">${i18n.t('ui.virtualInstrumentType')}</div>
+                            <div class="device-name">${displayName}</div>
+                            <div class="device-type">${device.type} • ${device.id}${serialInfo}</div>
                         `;
 
                         const deviceActions = document.createElement('div');
                         deviceActions.className = 'device-actions';
 
-                        // Badge "Virtual"
-                        const badge = document.createElement('span');
-                        badge.style.cssText = 'background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;';
-                        badge.textContent = 'VIRTUAL';
-                        deviceActions.appendChild(badge);
+                        // Bouton Réglages
+                        const settingsBtn = document.createElement('button');
+                        settingsBtn.className = 'btn-icon';
+                        settingsBtn.title = i18n.t('instrumentSettings.settingsButton');
+                        settingsBtn.textContent = '⚙️';
+                        settingsBtn.onclick = () => showInstrumentSettings(device);
+
+                        deviceActions.appendChild(settingsBtn);
 
                         li.appendChild(deviceInfo);
                         li.appendChild(deviceActions);
                         deviceList.appendChild(li);
-                        continue;
                     }
-
-                    // Charger les réglages pour obtenir le nom personnalisé
-                    let displayName = device.name;
-                    try {
-                        const response = await api.sendCommand('instrument_get_settings', {
-                            deviceId: device.id
-                        });
-                        const settings = response.settings || {};
-                        if (settings.custom_name) {
-                            displayName = settings.custom_name;
-                        }
-                    } catch (error) {
-                        // Si on ne peut pas charger les settings, on utilise le nom par défaut
-                        console.warn(`Cannot load settings for ${device.id}:`, error);
-                    }
-
-                    const deviceInfo = document.createElement('div');
-                    deviceInfo.className = 'device-info-section';
-                    const serialInfo = device.usbSerialNumber ? ` • 🔢 SN: ${device.usbSerialNumber.substring(0, 8)}${device.usbSerialNumber.length > 8 ? '...' : ''}` : '';
-                    deviceInfo.innerHTML = `
-                        <div class="device-name">${displayName}</div>
-                        <div class="device-type">${device.type} • ${device.id}${serialInfo}</div>
-                    `;
-
-                    const deviceActions = document.createElement('div');
-                    deviceActions.className = 'device-actions';
-
-                    // Bouton Réglages
-                    const settingsBtn = document.createElement('button');
-                    settingsBtn.className = 'btn-icon';
-                    settingsBtn.title = i18n.t('instrumentSettings.settingsButton');
-                    settingsBtn.textContent = '⚙️';
-                    settingsBtn.onclick = () => showInstrumentSettings(device);
-
-                    deviceActions.appendChild(settingsBtn);
-
-                    li.appendChild(deviceInfo);
-                    li.appendChild(deviceActions);
-                    deviceList.appendChild(li);
                 }
 
                 log(`${devices.length} périphérique(s) trouvé(s), ${connectedDevices.length} connecté(s)`);
@@ -3559,29 +4748,90 @@
             }
         }
 
-        // Upload fichier
+        // Upload fichier avec progression
         async function uploadFile() {
             const input = document.getElementById('fileInput');
-            const files = input.files;
+            const files = Array.from(input.files);
 
             if (files.length === 0) {
                 log(i18n.t('ui.noFileSelected'), 'warning');
                 return;
             }
 
-            for (const file of files) {
+            // Afficher l'overlay de progression
+            const overlay = document.getElementById('uploadProgressOverlay');
+            const progressBar = document.getElementById('uploadProgressBar');
+            const filesList = document.getElementById('uploadFilesList');
+            const doneBtn = document.getElementById('uploadDoneBtn');
+
+            overlay.classList.add('show');
+            filesList.innerHTML = '';
+            doneBtn.style.display = 'none';
+
+            // Créer les éléments pour chaque fichier
+            const fileElements = files.map(file => {
+                const div = document.createElement('div');
+                div.className = 'upload-file-item uploading';
+                div.innerHTML = `
+                    <div class="upload-file-icon">📄</div>
+                    <div class="upload-file-info">
+                        <div class="upload-file-name">${file.name}</div>
+                        <div class="upload-file-size">${formatFileSize(file.size)}</div>
+                    </div>
+                    <div class="upload-file-status">⏳</div>
+                `;
+                filesList.appendChild(div);
+                return { file, element: div };
+            });
+
+            let completed = 0;
+            let hasErrors = false;
+
+            // Upload chaque fichier séquentiellement
+            for (const { file, element } of fileElements) {
                 try {
-                    log(`📤 Envoi de ${file.name}...`);
                     await api.uploadMidiFile(file, '/');
+                    element.classList.remove('uploading');
+                    element.classList.add('success');
+                    element.querySelector('.upload-file-status').textContent = '✓';
                     log(`✅ ${file.name} envoyé`);
                 } catch (error) {
+                    element.classList.remove('uploading');
+                    element.classList.add('error');
+                    element.querySelector('.upload-file-status').textContent = '✗';
+                    element.querySelector('.upload-file-size').textContent = error.message;
                     log(`❌ Erreur envoi ${file.name}: ${error.message}`, 'error');
+                    hasErrors = true;
                 }
+
+                // Mettre à jour la progression
+                completed++;
+                const progress = Math.round((completed / files.length) * 100);
+                progressBar.style.width = progress + '%';
+                progressBar.textContent = progress + '%';
             }
 
-            input.value = '';
-            document.getElementById('fileInputLabel').textContent = i18n.t('ui.noFileSelectedShort');
-            loadFiles();
+            // Afficher le bouton Terminer
+            doneBtn.style.display = 'block';
+            doneBtn.onclick = () => {
+                overlay.classList.remove('show');
+                input.value = '';
+                document.getElementById('fileInputLabel').textContent = i18n.t('ui.noFileSelectedShort');
+                loadFiles();
+            };
+
+            // Message de fin
+            if (hasErrors) {
+                log(`⚠️ Upload terminé avec des erreurs`, 'warning');
+            } else {
+                log(`✅ ${files.length} fichier${files.length > 1 ? 's' : ''} uploadé${files.length > 1 ? 's' : ''}`, 'success');
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
         }
 
         // Supprimer fichier
@@ -5115,6 +6365,217 @@
             }
         }
 
+        // ========== RACCOURCIS CLAVIER ==========
+
+        function initKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                // Ignorer si on est dans un input/textarea ou un modal est ouvert
+                const isInputFocused = document.activeElement.tagName === 'INPUT' ||
+                                       document.activeElement.tagName === 'TEXTAREA' ||
+                                       document.activeElement.tagName === 'SELECT';
+
+                const isModalOpen = document.querySelector('.folder-modal-overlay.show') !== null ||
+                                    document.querySelector('.confirm-modal-overlay.show') !== null;
+
+                // Ctrl+F : Focus sur la recherche (toujours actif)
+                if (e.ctrlKey && e.key === 'f') {
+                    e.preventDefault();
+                    const searchInput = document.getElementById('fileSearchInput');
+                    if (searchInput) {
+                        searchInput.focus();
+                        searchInput.select();
+                    }
+                    return;
+                }
+
+                // Ctrl+A : Tout sélectionner (si pas dans input)
+                if (e.ctrlKey && e.key === 'a' && !isInputFocused) {
+                    e.preventDefault();
+                    selectAllFiles();
+                    return;
+                }
+
+                // Échap : Fermer les modals ou désélectionner
+                if (e.key === 'Escape') {
+                    if (isModalOpen) {
+                        // Les modals gèrent eux-mêmes l'Échap
+                        return;
+                    }
+                    if (selectedFileId) {
+                        selectFile(null);
+                        e.preventDefault();
+                    }
+                    return;
+                }
+
+                // Si input focalisé ou modal ouvert, ignorer les autres raccourcis
+                if (isInputFocused || isModalOpen) {
+                    return;
+                }
+
+                const selectedFile = getSelectedFile();
+
+                // F2 : Renommer le fichier sélectionné
+                if (e.key === 'F2') {
+                    e.preventDefault();
+                    if (selectedFile) {
+                        showRenameModal(selectedFile.id, selectedFile.filename);
+                    }
+                    return;
+                }
+
+                // Suppr/Delete : Supprimer le fichier sélectionné
+                if (e.key === 'Delete') {
+                    e.preventDefault();
+                    if (selectedFile) {
+                        deleteFile(selectedFile.id);
+                    }
+                    return;
+                }
+
+                // Entrée : Ouvrir l'éditeur
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (selectedFile) {
+                        editFile(selectedFile.id, selectedFile.filename);
+                    }
+                    return;
+                }
+
+                // Espace : Play/Pause
+                if (e.key === ' ' || e.code === 'Space') {
+                    e.preventDefault();
+                    if (selectedFile) {
+                        playFile(selectedFile.id, selectedFile.filename);
+                    }
+                    return;
+                }
+
+                // Flèches haut/bas : Navigation
+                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    const allFiles = Array.from(document.querySelectorAll('.file-item'));
+                    if (allFiles.length === 0) return;
+
+                    let currentIndex = selectedFile ?
+                        allFiles.findIndex(f => f.dataset.fileId === selectedFile.id) : -1;
+
+                    if (e.key === 'ArrowUp') {
+                        currentIndex = currentIndex <= 0 ? allFiles.length - 1 : currentIndex - 1;
+                    } else {
+                        currentIndex = currentIndex >= allFiles.length - 1 ? 0 : currentIndex + 1;
+                    }
+
+                    const newFile = allFiles[currentIndex];
+                    if (newFile) {
+                        selectFile(newFile.dataset.fileId);
+                    }
+                    return;
+                }
+            });
+        }
+
+        // ========== RECHERCHE FICHIERS ==========
+
+        // Fonction de recherche/filtre de fichiers
+        function initFileSearch() {
+            const searchInput = document.getElementById('fileSearchInput');
+            const clearBtn = document.getElementById('searchClearBtn');
+            const searchStats = document.getElementById('searchStats');
+            const fileList = document.getElementById('fileList');
+
+            if (!searchInput) return;
+
+            // Fonction pour filtrer les fichiers
+            function filterFiles() {
+                const query = searchInput.value.toLowerCase().trim();
+
+                // Afficher/cacher le bouton clear
+                if (query) {
+                    clearBtn.style.display = 'flex';
+                } else {
+                    clearBtn.style.display = 'none';
+                }
+
+                // Obtenir tous les fichiers (pas les dossiers)
+                const allFileItems = fileList.querySelectorAll('.file-item');
+                const allFolderItems = fileList.querySelectorAll('.folder-item');
+
+                let visibleCount = 0;
+                let totalCount = 0;
+
+                // Filtrer les fichiers
+                allFileItems.forEach(fileItem => {
+                    const fileName = (fileItem.dataset.fileName || '').toLowerCase();
+                    totalCount++;
+
+                    if (!query || fileName.includes(query)) {
+                        fileItem.style.display = 'flex';
+                        visibleCount++;
+                    } else {
+                        fileItem.style.display = 'none';
+                    }
+                });
+
+                // Gérer les dossiers : afficher seulement si au moins un fichier dedans est visible
+                allFolderItems.forEach(folderItem => {
+                    const folderChildren = folderItem.querySelector('.folder-children');
+                    if (folderChildren) {
+                        const visibleFiles = folderChildren.querySelectorAll('.file-item[style="display: flex;"]');
+                        if (query && visibleFiles.length === 0) {
+                            // Si recherche active et aucun fichier visible, cacher le dossier
+                            folderItem.style.display = 'none';
+                        } else {
+                            // Sinon afficher le dossier
+                            folderItem.style.display = 'block';
+                        }
+                    } else if (query) {
+                        // Dossier fermé pendant une recherche : le cacher
+                        folderItem.style.display = 'none';
+                    } else {
+                        // Pas de recherche : afficher normalement
+                        folderItem.style.display = 'block';
+                    }
+                });
+
+                // Afficher les statistiques
+                if (query) {
+                    searchStats.textContent = `${visibleCount} résultat${visibleCount > 1 ? 's' : ''} sur ${totalCount} fichier${totalCount > 1 ? 's' : ''}`;
+                    searchStats.style.display = 'block';
+                } else {
+                    searchStats.textContent = '';
+                    searchStats.style.display = 'none';
+                }
+
+                // Afficher message si aucun résultat
+                if (totalCount > 0 && visibleCount === 0 && query) {
+                    if (!fileList.querySelector('.no-results-msg')) {
+                        const noResultsMsg = document.createElement('li');
+                        noResultsMsg.className = 'info-text no-results-msg';
+                        noResultsMsg.textContent = 'Aucun fichier ne correspond à votre recherche';
+                        fileList.appendChild(noResultsMsg);
+                    }
+                } else {
+                    // Supprimer le message si il existe
+                    const noResultsMsg = fileList.querySelector('.no-results-msg');
+                    if (noResultsMsg) {
+                        noResultsMsg.remove();
+                    }
+                }
+            }
+
+            // Event listener sur l'input
+            searchInput.addEventListener('input', filterFiles);
+
+            // Event listener sur le bouton clear
+            clearBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                clearBtn.style.display = 'none';
+                filterFiles();
+                searchInput.focus();
+            });
+        }
+
         // ========== ÉVÉNEMENTS ==========
 
         document.getElementById('uploadBtn').addEventListener('click', uploadFile);
@@ -5130,25 +6591,7 @@
         });
         document.getElementById('createFolderBtn').addEventListener('click', createFolder);
         initFolderModal(); // Initialiser le modal de création de dossier
-        document.getElementById('scanDevicesBtn').addEventListener('click', loadDevices);
-
-        // Event listener pour le bouton de scan Bluetooth
-        document.getElementById('scanBluetoothBtn').addEventListener('click', () => {
-            if (bluetoothScanModal) {
-                bluetoothScanModal.open();
-            } else {
-                log('Bluetooth modal not initialized', 'error');
-            }
-        });
-
-        // Event listener pour le bouton de scan réseau
-        document.getElementById('scanNetworkBtn').addEventListener('click', () => {
-            if (networkScanModal) {
-                networkScanModal.open();
-            } else {
-                log('Network modal not initialized', 'error');
-            }
-        });
+        initRenameModal(); // Initialiser le modal de renommage
 
         // Event listener pour le bouton clavier MIDI
         document.getElementById('openKeyboardBtn').addEventListener('click', () => {
@@ -5156,6 +6599,15 @@
                 keyboardModal.open();
             } else {
                 log('Keyboard modal not initialized', 'error');
+            }
+        });
+
+        // Event listener pour le bouton de gestion des instruments
+        document.getElementById('instrumentsBtn').addEventListener('click', () => {
+            if (instrumentManagementPage) {
+                instrumentManagementPage.show();
+            } else {
+                log('Instrument management page not initialized', 'error');
             }
         });
 
@@ -5627,6 +7079,14 @@
                 log('✓ Modal clavier MIDI initialisée (version simplifiée)', 'info');
             } else {
                 log('⚠️ KeyboardModalNew non disponible', 'warning');
+            }
+
+            // 🆕 Initialiser la page de gestion des instruments
+            if (typeof InstrumentManagementPage !== 'undefined') {
+                instrumentManagementPage = new InstrumentManagementPage(api);
+                log('✓ Page de gestion des instruments initialisée', 'info');
+            } else {
+                log('⚠️ InstrumentManagementPage non disponible', 'warning');
             }
 
             // Charger et appliquer les paramètres sauvegardés

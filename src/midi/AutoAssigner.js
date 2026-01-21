@@ -103,7 +103,7 @@ class AutoAssigner {
       const autoSelection = this.selectBestAssignments(suggestions, channelAnalyses);
 
       // 5. Calculer score de confiance global
-      const confidenceScore = this.calculateConfidence(autoSelection);
+      const confidenceScore = this.calculateConfidence(autoSelection, channelAnalyses.length);
 
       return {
         success: true,
@@ -205,23 +205,30 @@ class AutoAssigner {
 
   /**
    * Calcule un score de confiance global (0-100)
-   * @param {Object} autoSelection
+   * Prend en compte la qualité moyenne ET le taux de réussite
+   * @param {Object} autoSelection - Canaux assignés avec leurs scores
+   * @param {number} totalChannels - Nombre total de canaux actifs
    * @returns {number}
    */
-  calculateConfidence(autoSelection) {
+  calculateConfidence(autoSelection, totalChannels) {
     const scores = Object.values(autoSelection).map(a => a.score);
 
-    if (scores.length === 0) {
+    if (scores.length === 0 || totalChannels === 0) {
       return 0;
     }
 
-    // Moyenne des scores
+    // Moyenne des scores des canaux assignés
     const avgScore = scores.reduce((sum, s) => sum + s, 0) / scores.length;
 
-    // Pénalité si peu de canaux assignés
-    // (pas une pénalité réelle ici, juste la moyenne des scores existants)
+    // Taux de réussite (combien de canaux ont été assignés)
+    const successRate = scores.length / totalChannels;
 
-    return Math.round(avgScore);
+    // Score final = qualité moyenne × taux de réussite
+    // Exemple: 8/8 canaux avec score moyen 90 → 90
+    // Exemple: 2/8 canaux avec score moyen 95 → 23.75
+    const confidenceScore = avgScore * successRate;
+
+    return Math.round(confidenceScore);
   }
 
   /**
