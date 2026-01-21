@@ -1907,6 +1907,33 @@
         </div>
     </div>
 
+    <!-- Modal de renommage de fichier -->
+    <div class="folder-modal-overlay" id="renameModal">
+        <div class="folder-modal">
+            <div class="folder-modal-header">
+                <div class="folder-modal-title">
+                    <span>✏️</span>
+                    <span>Renommer le fichier</span>
+                </div>
+                <button class="folder-modal-close" id="renameModalClose">&times;</button>
+            </div>
+            <div class="folder-modal-body">
+                <p style="margin-bottom: 8px; font-size: 13px; color: #6b7280;">
+                    Ancien nom: <strong id="renameOldName"></strong>
+                </p>
+                <input type="text" class="folder-modal-input" id="renameInput"
+                       placeholder="Nouveau nom..." />
+                <p style="margin-top: 8px; font-size: 12px; color: #9ca3af;">
+                    Le fichier doit avoir l'extension .mid ou .midi
+                </p>
+            </div>
+            <div class="folder-modal-footer">
+                <button class="btn btn-secondary" id="renameModalCancel">Annuler</button>
+                <button class="btn btn-primary" id="renameModalConfirm">Renommer</button>
+            </div>
+        </div>
+    </div>
+
     <div id="loading" class="loading">
         <div class="loading-content">
             <div class="spinner"></div>
@@ -3155,13 +3182,21 @@
             const fileNameSpan = document.createElement('span');
             fileNameSpan.className = 'file-name';
             fileNameSpan.innerHTML = `
-                <div class="file-name-text">
+                <div class="file-name-text" style="cursor: pointer;" title="Double-cliquer pour renommer (ou F2)">
                     ${file.filename}${routed ? '<span class="routed-badge">✓</span>' : ''}
                 </div>
                 <div class="file-metadata" id="metadata-${file.id}">
                     <span>⏳ Chargement...</span>
                 </div>
             `;
+
+            // Double-clic pour renommer
+            const fileNameTextDiv = fileNameSpan.querySelector('.file-name-text');
+            fileNameTextDiv.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                showRenameModal(file.id, file.filename);
+            });
 
             // Charger les métadonnées de manière asynchrone
             loadFileMetadata(file.id);
@@ -3403,6 +3438,139 @@
         // Créer un nouveau dossier (fonction publique qui affiche le modal)
         function createFolder() {
             showFolderModal();
+        }
+
+        // ========== RENOMMAGE FICHIER ==========
+
+        let currentRenameFileId = null;
+
+        // Afficher le modal de renommage
+        function showRenameModal(fileId, currentFilename) {
+            currentRenameFileId = fileId;
+            const modal = document.getElementById('renameModal');
+            const input = document.getElementById('renameInput');
+            const oldNameSpan = document.getElementById('renameOldName');
+
+            oldNameSpan.textContent = currentFilename;
+            input.value = currentFilename;
+            modal.classList.add('show');
+
+            // Sélectionner le nom sans l'extension
+            const dotIndex = currentFilename.lastIndexOf('.');
+            if (dotIndex > 0) {
+                input.setSelectionRange(0, dotIndex);
+            } else {
+                input.select();
+            }
+
+            input.focus();
+        }
+
+        // Masquer le modal de renommage
+        function hideRenameModal() {
+            const modal = document.getElementById('renameModal');
+            modal.classList.remove('show');
+            currentRenameFileId = null;
+        }
+
+        // Valider et renommer le fichier
+        async function confirmRename() {
+            const input = document.getElementById('renameInput');
+            const newFilename = input.value.trim();
+
+            if (!newFilename) {
+                input.focus();
+                return;
+            }
+
+            // Vérifier que le nom se termine par .mid ou .midi
+            if (!newFilename.match(/\.midi?$/i)) {
+                await showAlert('Le nom du fichier doit se terminer par .mid ou .midi', {
+                    title: 'Nom invalide',
+                    icon: '⚠️'
+                });
+                input.focus();
+                return;
+            }
+
+            // Vérifier que le nom n'est pas déjà utilisé
+            const files = await api.listMidiFiles('/');
+            const existingFile = files.find(f =>
+                f.filename.toLowerCase() === newFilename.toLowerCase() &&
+                f.id !== currentRenameFileId
+            );
+
+            if (existingFile) {
+                await showAlert('Un fichier avec ce nom existe déjà', {
+                    title: 'Nom déjà utilisé',
+                    icon: '⚠️'
+                });
+                input.focus();
+                return;
+            }
+
+            try {
+                // Appeler l'API pour renommer
+                const response = await api.sendCommand('file_rename', {
+                    fileId: currentRenameFileId,
+                    newFilename: newFilename
+                });
+
+                if (response.success) {
+                    log(`✓ Fichier renommé: ${newFilename}`, 'info');
+
+                    // Invalider le cache de métadonnées pour ce fichier
+                    metadataCache.delete(currentRenameFileId);
+
+                    // Recharger la liste des fichiers
+                    loadFiles();
+                    hideRenameModal();
+                } else {
+                    throw new Error(response.error || 'Erreur de renommage');
+                }
+            } catch (error) {
+                log(`Erreur lors du renommage: ${error.message}`, 'error');
+                await showAlert(`Impossible de renommer le fichier: ${error.message}`, {
+                    title: 'Erreur de renommage',
+                    icon: '❌'
+                });
+            }
+        }
+
+        // Initialiser les event listeners du modal de renommage
+        function initRenameModal() {
+            const modal = document.getElementById('renameModal');
+            const closeBtn = document.getElementById('renameModalClose');
+            const cancelBtn = document.getElementById('renameModalCancel');
+            const confirmBtn = document.getElementById('renameModalConfirm');
+            const input = document.getElementById('renameInput');
+
+            // Fermer avec le bouton X
+            closeBtn.addEventListener('click', hideRenameModal);
+
+            // Fermer avec le bouton Annuler
+            cancelBtn.addEventListener('click', hideRenameModal);
+
+            // Renommer avec le bouton Renommer
+            confirmBtn.addEventListener('click', confirmRename);
+
+            // Renommer avec Entrée
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmRename();
+                }
+                if (e.key === 'Escape') {
+                    hideRenameModal();
+                }
+            });
+
+            // Fermer en cliquant sur l'overlay
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    hideRenameModal();
+                }
+            });
         }
 
         // Supprimer un dossier (seulement si vide)
@@ -5459,6 +5627,7 @@
         });
         document.getElementById('createFolderBtn').addEventListener('click', createFolder);
         initFolderModal(); // Initialiser le modal de création de dossier
+        initRenameModal(); // Initialiser le modal de renommage
 
         // Event listener pour le bouton clavier MIDI
         document.getElementById('openKeyboardBtn').addEventListener('click', () => {
