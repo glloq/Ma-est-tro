@@ -433,6 +433,65 @@ class FileManager {
     }
   }
 
+  async saveFileAs(fileId, newFilename, midiData) {
+    try {
+      const file = this.app.database.getFile(fileId);
+      if (!file) {
+        throw new Error(`File not found: ${fileId}`);
+      }
+
+      // Check if a file with the new name already exists
+      const existingFiles = this.app.database.getFiles(file.folder);
+      const duplicateFile = existingFiles.find(f =>
+        f.filename.toLowerCase() === newFilename.toLowerCase() && f.id !== fileId
+      );
+
+      if (duplicateFile) {
+        throw new Error(`A file named "${newFilename}" already exists`);
+      }
+
+      // Encode MIDI data to buffer
+      const buffer = this.encodeMidiToBuffer(midiData);
+      const base64Data = buffer.toString('base64');
+
+      // Parse the new MIDI data to extract metadata
+      const parsed = parseMidi(buffer);
+
+      // Calculate duration
+      const duration = this.calculateDuration(parsed);
+
+      // Extract tempo
+      const tempo = this.extractTempo(parsed);
+
+      // Insert new file
+      const newFileId = this.app.database.insertFile({
+        filename: newFilename,
+        data: base64Data,
+        size: buffer.length,
+        tracks: parsed.tracks.length,
+        duration: duration,
+        tempo: tempo,
+        ppq: parsed.header.ticksPerBeat || 480,
+        uploaded_at: new Date().toISOString(),
+        folder: file.folder
+      });
+
+      this.app.logger.info(`File saved as: ${file.filename} → ${newFilename}`);
+
+      // Broadcast file list update
+      this.broadcastFileList();
+
+      return {
+        success: true,
+        newFileId: newFileId,
+        filename: newFilename
+      };
+    } catch (error) {
+      this.app.logger.error(`Save file as failed: ${error.message}`);
+      throw error;
+    }
+  }
+
   getFolders() {
     try {
       return this.app.database.getFolders();

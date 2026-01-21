@@ -1676,6 +1676,157 @@ class MidiEditorModal {
     }
 
     /**
+     * Show Save As dialog to save the file with a new name
+     */
+    showSaveAsDialog() {
+        if (!this.currentFile || !this.pianoRoll) {
+            this.log('error', 'Cannot save as: no file or piano roll');
+            this.showError(this.t('midiEditor.cannotSave'));
+            return;
+        }
+
+        // Extract current name without extension
+        const currentName = this.currentFilename || this.currentFile || '';
+        const baseName = currentName.replace(/\.(mid|midi)$/i, '');
+        const extension = currentName.match(/\.(mid|midi)$/i)?.[0] || '.mid';
+
+        // Create the Save As dialog
+        const dialog = document.createElement('div');
+        dialog.className = 'rename-dialog-overlay';
+        dialog.innerHTML = `
+            <div class="rename-dialog">
+                <div class="rename-dialog-header">
+                    <h4>💾 ${this.t('midiEditor.saveAs') || 'Save As...'}</h4>
+                </div>
+                <div class="rename-dialog-body">
+                    <p>${this.t('midiEditor.saveAsDescription') || 'Save a copy of this file with a new name'}</p>
+                    <div class="rename-input-container">
+                        <input type="text" class="rename-input" value="${this.escapeHtml(baseName)}" />
+                        <span class="rename-extension">${extension}</span>
+                    </div>
+                </div>
+                <div class="rename-dialog-footer rename-buttons">
+                    <button class="btn btn-secondary rename-cancel">${this.t('common.cancel')}</button>
+                    <button class="btn btn-primary rename-confirm">${this.t('common.save')}</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(dialog);
+
+        const input = dialog.querySelector('.rename-input');
+        const cancelBtn = dialog.querySelector('.rename-cancel');
+        const confirmBtn = dialog.querySelector('.rename-confirm');
+
+        // Select name without extension for easy editing
+        setTimeout(() => {
+            input.focus();
+            input.select();
+        }, 100);
+
+        // Cancel
+        cancelBtn.addEventListener('click', () => {
+            dialog.remove();
+        });
+
+        // Confirm - Save As
+        confirmBtn.addEventListener('click', async () => {
+            const newBaseName = input.value.trim();
+            if (!newBaseName) {
+                this.showError(this.t('midiEditor.emptyFilename') || 'Filename cannot be empty');
+                return;
+            }
+
+            const newFilename = newBaseName + extension;
+            dialog.remove();
+
+            // Call saveAsFile with the new filename
+            await this.saveAsFile(newFilename);
+        });
+
+        // Enter to confirm
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                confirmBtn.click();
+            } else if (e.key === 'Escape') {
+                cancelBtn.click();
+            }
+        });
+
+        // Click outside to cancel
+        dialog.addEventListener('click', (e) => {
+            if (e.target === dialog) {
+                dialog.remove();
+            }
+        });
+    }
+
+    /**
+     * Save the current file with a new name (export)
+     */
+    async saveAsFile(newFilename) {
+        if (!this.currentFile || !this.pianoRoll) {
+            this.log('error', 'Cannot save as: no file or piano roll');
+            this.showError(this.t('midiEditor.cannotSave'));
+            return;
+        }
+
+        try {
+            this.log('info', `Saving MIDI file as: ${newFilename}`);
+
+            // Synchronize data from piano roll
+            this.syncFullSequenceFromPianoRoll();
+            this.syncCCEventsFromEditor();
+            this.updateChannelsFromSequence();
+
+            this.log('info', `Saving ${this.fullSequence.length} notes across ${this.channels.length} channels`);
+
+            // Convert to MIDI format
+            const midiData = this.convertSequenceToMidi();
+
+            if (!midiData) {
+                throw new Error('Failed to convert to MIDI format');
+            }
+
+            this.log('debug', `MIDI data to save: ${midiData.tracks.length} tracks`);
+
+            // Send to backend with new filename
+            const response = await this.api.sendCommand('file_save_as', {
+                fileId: this.currentFileId,
+                newFilename: newFilename,
+                midiData: midiData
+            });
+
+            if (response && response.success) {
+                this.showNotification(
+                    this.t('midiEditor.saveAsSuccess') || `File saved as "${newFilename}"`,
+                    'success'
+                );
+
+                // Emit event
+                if (this.eventBus) {
+                    this.eventBus.emit('midi_editor:saved_as', {
+                        originalFile: this.currentFile,
+                        newFile: response.newFileId,
+                        newFilename: newFilename
+                    });
+                }
+
+                // Optionally reload file list in parent
+                if (window.loadFiles) {
+                    window.loadFiles();
+                }
+            } else {
+                throw new Error('Server response indicates failure');
+            }
+
+        } catch (error) {
+            this.log('error', 'Failed to save file as:', error);
+            this.showError(`${this.t('errors.saveFailed')}: ${error.message}`);
+        }
+    }
+
+    /**
      * Show auto-assignment modal
      */
     showAutoAssignModal() {
@@ -2397,6 +2548,9 @@ class MidiEditorModal {
                         </button>
                         <button class="btn btn-primary" data-action="save" id="save-btn">
                             💾 ${this.t('midiEditor.save')}
+                        </button>
+                        <button class="btn btn-secondary" data-action="save-as" id="save-as-btn" title="Save a copy with a new name">
+                            💾+ ${this.t('midiEditor.saveAs') || 'Save As...'}
                         </button>
                     </div>
                 </div>
@@ -3970,6 +4124,9 @@ class MidiEditorModal {
                     break;
                 case 'save':
                     this.saveMidiFile();
+                    break;
+                case 'save-as':
+                    this.showSaveAsDialog();
                     break;
                 case 'auto-assign':
                     this.showAutoAssignModal();

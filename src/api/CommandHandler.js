@@ -71,6 +71,7 @@ class CommandHandler {
       'file_write': (data) => this.fileWrite(data),
       'file_delete': (data) => this.fileDelete(data),
       'file_save': (data) => this.fileSave(data),
+      'file_save_as': (data) => this.fileSaveAs(data),
       'file_rename': (data) => this.fileRename(data),
       'file_move': (data) => this.fileMove(data),
       'file_duplicate': (data) => this.fileDuplicate(data),
@@ -725,6 +726,11 @@ class CommandHandler {
   async fileSave(data) {
     await this.app.fileManager.saveFile(data.fileId, data.midi);
     return { success: true };
+  }
+
+  async fileSaveAs(data) {
+    const result = await this.app.fileManager.saveFileAs(data.fileId, data.newFilename, data.midiData);
+    return result;
   }
 
   async fileRename(data) {
