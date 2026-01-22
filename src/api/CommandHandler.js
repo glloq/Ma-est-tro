@@ -62,7 +62,7 @@ class CommandHandler {
       'route_import': (data) => this.routeImport(data),
       'route_clear_all': () => this.routeClearAll(),
 
-      // ==================== FILE MANAGEMENT (13 commands) ====================
+      // ==================== FILE MANAGEMENT (14 commands) ====================
       'file_upload': (data) => this.fileUpload(data),
       'file_list': (data) => this.fileList(data),
       'file_metadata': (data) => this.fileMetadata(data),
@@ -77,6 +77,7 @@ class CommandHandler {
       'file_duplicate': (data) => this.fileDuplicate(data),
       'file_export': (data) => this.fileExport(data),
       'file_search': (data) => this.fileSearch(data),
+      'file_filter': (data) => this.fileFilter(data),
 
       // ==================== PLAYBACK (17 commands) ====================
       'playback_start': (data) => this.playbackStart(data),
@@ -756,6 +757,74 @@ class CommandHandler {
   async fileSearch(data) {
     const files = this.app.database.searchFiles(data.query);
     return { files: files };
+  }
+
+  async fileFilter(data) {
+    // Advanced filtering with multiple criteria
+    const filters = {
+      // Simple filters
+      filename: data.filename,
+      folder: data.folder,
+      includeSubfolders: data.includeSubfolders,
+      durationMin: data.durationMin,
+      durationMax: data.durationMax,
+      tempoMin: data.tempoMin,
+      tempoMax: data.tempoMax,
+      tracksMin: data.tracksMin,
+      tracksMax: data.tracksMax,
+      uploadedAfter: data.uploadedAfter,
+      uploadedBefore: data.uploadedBefore,
+
+      // Advanced filters
+      instrumentTypes: data.instrumentTypes,
+      instrumentMode: data.instrumentMode || 'ANY',
+      channelCountMin: data.channelCountMin,
+      channelCountMax: data.channelCountMax,
+      hasRouting: data.hasRouting,
+      isOriginal: data.isOriginal,
+      minCompatibilityScore: data.minCompatibilityScore,
+
+      // Quick filters
+      hasDrums: data.hasDrums,
+      hasMelody: data.hasMelody,
+      hasBass: data.hasBass,
+
+      // Sorting and pagination
+      sortBy: data.sortBy || 'uploaded_at',
+      sortOrder: data.sortOrder || 'DESC',
+      limit: data.limit,
+      offset: data.offset
+    };
+
+    // Remove undefined values
+    Object.keys(filters).forEach(key => {
+      if (filters[key] === undefined) {
+        delete filters[key];
+      }
+    });
+
+    const files = this.app.database.filterFiles(filters);
+
+    // Build filter summary for response
+    const appliedFilters = [];
+    if (data.filename) appliedFilters.push(`filename: "${data.filename}"`);
+    if (data.folder) appliedFilters.push(`folder: "${data.folder}"`);
+    if (data.durationMin !== undefined || data.durationMax !== undefined) {
+      appliedFilters.push(`duration: ${data.durationMin || 0}-${data.durationMax || '∞'}s`);
+    }
+    if (data.tempoMin !== undefined || data.tempoMax !== undefined) {
+      appliedFilters.push(`tempo: ${data.tempoMin || 0}-${data.tempoMax || '∞'} BPM`);
+    }
+    if (data.instrumentTypes && data.instrumentTypes.length > 0) {
+      appliedFilters.push(`instruments: ${data.instrumentTypes.join(', ')} (${data.instrumentMode || 'ANY'})`);
+    }
+
+    return {
+      success: true,
+      files: files,
+      total: files.length,
+      filters: appliedFilters.length > 0 ? appliedFilters.join('; ') : 'none'
+    };
   }
 
   // ==================== PLAYBACK HANDLERS ====================

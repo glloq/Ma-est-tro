@@ -1,0 +1,588 @@
+/**
+ * FilterManager - Manages MIDI file filtering state and operations
+ *
+ * Handles:
+ * - Filter state management
+ * - Client-side and server-side filtering
+ * - Filter presets (save/load from localStorage)
+ * - Debouncing for text inputs
+ * - Filter cache
+ */
+class FilterManager {
+  constructor(apiClient) {
+    this.api = apiClient;
+
+    // Current filter state
+    this.filters = this.getDefaultFilters();
+
+    // Filter cache: key -> results
+    this.cache = new Map();
+    this.cacheMaxSize = 20;
+
+    // Debounce timers
+    this.debounceTimers = {};
+
+    // Callbacks
+    this.onFilterChange = null;
+    this.onFilterApplied = null;
+
+    // Load presets from localStorage
+    this.presets = this.loadPresets();
+  }
+
+  /**
+   * Get default empty filters
+   */
+  getDefaultFilters() {
+    return {
+      // Simple filters
+      filename: '',
+      folder: null,
+      includeSubfolders: false,
+      durationMin: null,
+      durationMax: null,
+      tempoMin: null,
+      tempoMax: null,
+      tracksMin: null,
+      tracksMax: null,
+      uploadedAfter: null,
+      uploadedBefore: null,
+
+      // Advanced filters
+      instrumentTypes: [],
+      instrumentMode: 'ANY', // 'ANY' | 'ALL' | 'EXACT'
+      channelCountMin: null,
+      channelCountMax: null,
+      hasRouting: null, // null | true | false
+      isOriginal: null, // null | true | false
+      minCompatibilityScore: null,
+
+      // Quick filters (boolean)
+      hasDrums: null,
+      hasMelody: null,
+      hasBass: null,
+
+      // Sorting
+      sortBy: 'uploaded_at',
+      sortOrder: 'DESC',
+
+      // Pagination
+      limit: null,
+      offset: null
+    };
+  }
+
+  /**
+   * Update a filter value
+   * @param {string} key - Filter key
+   * @param {*} value - Filter value
+   * @param {boolean} debounce - Whether to debounce (for text inputs)
+   */
+  setFilter(key, value, debounce = false) {
+    if (debounce) {
+      // Clear existing timer
+      if (this.debounceTimers[key]) {
+        clearTimeout(this.debounceTimers[key]);
+      }
+
+      // Set new timer
+      this.debounceTimers[key] = setTimeout(() => {
+        this.filters[key] = value;
+        this.invalidateCache();
+        if (this.onFilterChange) {
+          this.onFilterChange(this.filters);
+        }
+      }, 300); // 300ms debounce
+    } else {
+      this.filters[key] = value;
+      this.invalidateCache();
+      if (this.onFilterChange) {
+        this.onFilterChange(this.filters);
+      }
+    }
+  }
+
+  /**
+   * Get current filter value
+   */
+  getFilter(key) {
+    return this.filters[key];
+  }
+
+  /**
+   * Get all filters
+   */
+  getFilters() {
+    return { ...this.filters };
+  }
+
+  /**
+   * Reset all filters to default
+   */
+  resetFilters() {
+    this.filters = this.getDefaultFilters();
+    this.invalidateCache();
+    if (this.onFilterChange) {
+      this.onFilterChange(this.filters);
+    }
+  }
+
+  /**
+   * Reset a specific filter
+   */
+  resetFilter(key) {
+    const defaults = this.getDefaultFilters();
+    this.filters[key] = defaults[key];
+    this.invalidateCache();
+    if (this.onFilterChange) {
+      this.onFilterChange(this.filters);
+    }
+  }
+
+  /**
+   * Check if any filters are active
+   */
+  hasActiveFilters() {
+    const defaults = this.getDefaultFilters();
+
+    for (const key in this.filters) {
+      const current = this.filters[key];
+      const defaultVal = defaults[key];
+
+      // Compare arrays
+      if (Array.isArray(current)) {
+        if (current.length > 0) return true;
+      }
+      // Compare values
+      else if (current !== defaultVal && current !== null && current !== '') {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Get list of active filters (for display)
+   */
+  getActiveFilters() {
+    const active = [];
+    const defaults = this.getDefaultFilters();
+
+    for (const key in this.filters) {
+      const value = this.filters[key];
+      const defaultVal = defaults[key];
+
+      if (Array.isArray(value) && value.length > 0) {
+        active.push({ key, value, label: this.getFilterLabel(key, value) });
+      } else if (value !== defaultVal && value !== null && value !== '') {
+        active.push({ key, value, label: this.getFilterLabel(key, value) });
+      }
+    }
+
+    return active;
+  }
+
+  /**
+   * Get human-readable label for a filter
+   */
+  getFilterLabel(key, value) {
+    switch (key) {
+      case 'filename':
+        return `Nom: "${value}"`;
+      case 'folder':
+        return `Dossier: "${value}"`;
+      case 'durationMin':
+      case 'durationMax':
+        const durMin = this.filters.durationMin || 0;
+        const durMax = this.filters.durationMax || '∞';
+        return `Durée: ${this.formatDuration(durMin)}-${durMax === '∞' ? '∞' : this.formatDuration(durMax)}`;
+      case 'tempoMin':
+      case 'tempoMax':
+        const tMin = this.filters.tempoMin || 0;
+        const tMax = this.filters.tempoMax || '∞';
+        return `Tempo: ${tMin}-${tMax} BPM`;
+      case 'tracksMin':
+      case 'tracksMax':
+        const trMin = this.filters.tracksMin || 0;
+        const trMax = this.filters.tracksMax || '∞';
+        return `Pistes: ${trMin}-${trMax}`;
+      case 'instrumentTypes':
+        return `Instruments: ${value.join(', ')} (${this.filters.instrumentMode})`;
+      case 'channelCountMin':
+      case 'channelCountMax':
+        const chMin = this.filters.channelCountMin || 0;
+        const chMax = this.filters.channelCountMax || '∞';
+        return `Canaux: ${chMin}-${chMax}`;
+      case 'hasRouting':
+        return value ? 'Routés' : 'Non routés';
+      case 'isOriginal':
+        return value ? 'Originaux' : 'Adaptés';
+      case 'hasDrums':
+        return 'Avec drums';
+      case 'hasMelody':
+        return 'Avec mélodie';
+      case 'hasBass':
+        return 'Avec basse';
+      case 'uploadedAfter':
+      case 'uploadedBefore':
+        return `Date: ${this.filters.uploadedAfter || ''} - ${this.filters.uploadedBefore || ''}`;
+      default:
+        return `${key}: ${value}`;
+    }
+  }
+
+  /**
+   * Format duration in MM:SS
+   */
+  formatDuration(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  /**
+   * Apply filters - determines if client or server filtering
+   * @param {Array} files - All files (for client-side filtering)
+   * @returns {Promise<Array>} - Filtered files
+   */
+  async applyFilters(files = null) {
+    // Check if we need server-side filtering
+    const needsServerFiltering = this.needsServerFiltering();
+
+    if (needsServerFiltering) {
+      return await this.applyServerFilters();
+    } else {
+      return this.applyClientFilters(files);
+    }
+  }
+
+  /**
+   * Check if we need server-side filtering
+   */
+  needsServerFiltering() {
+    // Server-side needed for:
+    // - Instrument type filters
+    // - Routing status
+    // - Compatibility score
+    // - Advanced metadata not loaded client-side
+
+    return (
+      (this.filters.instrumentTypes && this.filters.instrumentTypes.length > 0) ||
+      this.filters.hasRouting !== null ||
+      this.filters.minCompatibilityScore !== null ||
+      this.filters.hasDrums !== null ||
+      this.filters.hasMelody !== null ||
+      this.filters.hasBass !== null
+    );
+  }
+
+  /**
+   * Apply filters server-side via API
+   */
+  async applyServerFilters() {
+    // Check cache
+    const cacheKey = this.getCacheKey();
+    if (this.cache.has(cacheKey)) {
+      console.log('[FilterManager] Using cached results');
+      const cached = this.cache.get(cacheKey);
+      if (this.onFilterApplied) {
+        this.onFilterApplied(cached, true);
+      }
+      return cached;
+    }
+
+    console.log('[FilterManager] Applying server-side filters', this.filters);
+
+    try {
+      const response = await this.api.sendCommand('file_filter', this.filters);
+
+      if (response.success) {
+        const results = response.files || [];
+
+        // Cache results
+        this.addToCache(cacheKey, results);
+
+        if (this.onFilterApplied) {
+          this.onFilterApplied(results, false);
+        }
+
+        return results;
+      } else {
+        throw new Error('Filter request failed');
+      }
+    } catch (error) {
+      console.error('[FilterManager] Server filter failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Apply filters client-side (for simple filters)
+   */
+  applyClientFilters(files) {
+    if (!files || files.length === 0) {
+      return [];
+    }
+
+    console.log('[FilterManager] Applying client-side filters to', files.length, 'files');
+
+    let filtered = files.filter(file => {
+      // Filename filter
+      if (this.filters.filename) {
+        if (!file.filename.toLowerCase().includes(this.filters.filename.toLowerCase())) {
+          return false;
+        }
+      }
+
+      // Folder filter
+      if (this.filters.folder) {
+        if (this.filters.includeSubfolders) {
+          if (!file.folder.startsWith(this.filters.folder)) {
+            return false;
+          }
+        } else {
+          if (file.folder !== this.filters.folder) {
+            return false;
+          }
+        }
+      }
+
+      // Duration filter
+      if (this.filters.durationMin !== null && file.duration < this.filters.durationMin) {
+        return false;
+      }
+      if (this.filters.durationMax !== null && file.duration > this.filters.durationMax) {
+        return false;
+      }
+
+      // Tempo filter
+      if (this.filters.tempoMin !== null && file.tempo < this.filters.tempoMin) {
+        return false;
+      }
+      if (this.filters.tempoMax !== null && file.tempo > this.filters.tempoMax) {
+        return false;
+      }
+
+      // Track count filter
+      if (this.filters.tracksMin !== null && file.tracks < this.filters.tracksMin) {
+        return false;
+      }
+      if (this.filters.tracksMax !== null && file.tracks > this.filters.tracksMax) {
+        return false;
+      }
+
+      // Upload date filter
+      if (this.filters.uploadedAfter && file.uploadedAt < this.filters.uploadedAfter) {
+        return false;
+      }
+      if (this.filters.uploadedBefore && file.uploadedAt > this.filters.uploadedBefore) {
+        return false;
+      }
+
+      // Is original filter
+      if (this.filters.isOriginal !== null) {
+        if (this.filters.isOriginal && !file.is_original) {
+          return false;
+        }
+        if (!this.filters.isOriginal && file.is_original) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    // Apply sorting
+    filtered = this.sortFiles(filtered);
+
+    if (this.onFilterApplied) {
+      this.onFilterApplied(filtered, true);
+    }
+
+    return filtered;
+  }
+
+  /**
+   * Sort files based on current sort settings
+   */
+  sortFiles(files) {
+    const sortBy = this.filters.sortBy || 'uploaded_at';
+    const sortOrder = this.filters.sortOrder || 'DESC';
+
+    const sorted = [...files].sort((a, b) => {
+      let aVal = a[sortBy];
+      let bVal = b[sortBy];
+
+      // Handle undefined values
+      if (aVal === undefined) aVal = 0;
+      if (bVal === undefined) bVal = 0;
+
+      // String comparison
+      if (typeof aVal === 'string') {
+        return sortOrder === 'ASC'
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      }
+
+      // Numeric comparison
+      return sortOrder === 'ASC' ? aVal - bVal : bVal - aVal;
+    });
+
+    return sorted;
+  }
+
+  /**
+   * Generate cache key from current filters
+   */
+  getCacheKey() {
+    return JSON.stringify(this.filters);
+  }
+
+  /**
+   * Add results to cache (LRU)
+   */
+  addToCache(key, results) {
+    // Remove oldest if cache is full
+    if (this.cache.size >= this.cacheMaxSize) {
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+
+    this.cache.set(key, results);
+  }
+
+  /**
+   * Invalidate cache
+   */
+  invalidateCache() {
+    this.cache.clear();
+  }
+
+  // ==================== PRESETS ====================
+
+  /**
+   * Save current filters as a preset
+   */
+  savePreset(name) {
+    const preset = {
+      name: name,
+      filters: { ...this.filters }
+    };
+
+    this.presets.push(preset);
+    this.savePresetsToStorage();
+
+    return preset;
+  }
+
+  /**
+   * Load a preset
+   */
+  loadPreset(name) {
+    const preset = this.presets.find(p => p.name === name);
+    if (preset) {
+      this.filters = { ...preset.filters };
+      this.invalidateCache();
+      if (this.onFilterChange) {
+        this.onFilterChange(this.filters);
+      }
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Delete a preset
+   */
+  deletePreset(name) {
+    const index = this.presets.findIndex(p => p.name === name);
+    if (index >= 0) {
+      this.presets.splice(index, 1);
+      this.savePresetsToStorage();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Get all presets
+   */
+  getPresets() {
+    return [...this.presets];
+  }
+
+  /**
+   * Load presets from localStorage
+   */
+  loadPresets() {
+    try {
+      const stored = localStorage.getItem('midiFilterPresets');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (error) {
+      console.error('[FilterManager] Failed to load presets:', error);
+    }
+    return [];
+  }
+
+  /**
+   * Save presets to localStorage
+   */
+  savePresetsToStorage() {
+    try {
+      localStorage.setItem('midiFilterPresets', JSON.stringify(this.presets));
+    } catch (error) {
+      console.error('[FilterManager] Failed to save presets:', error);
+    }
+  }
+
+  // ==================== QUICK FILTERS ====================
+
+  /**
+   * Apply a quick filter (preset filters for common use cases)
+   */
+  applyQuickFilter(name) {
+    switch (name) {
+      case 'recent':
+        this.resetFilters();
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        this.setFilter('uploadedAfter', oneWeekAgo.toISOString());
+        break;
+
+      case 'short':
+        this.resetFilters();
+        this.setFilter('durationMax', 60); // < 1 minute
+        break;
+
+      case 'piano':
+        this.resetFilters();
+        this.setFilter('instrumentTypes', ['Melody', 'Harmony']);
+        this.setFilter('instrumentMode', 'ANY');
+        break;
+
+      case 'routed':
+        this.resetFilters();
+        this.setFilter('hasRouting', true);
+        break;
+
+      case 'current-folder':
+        // Set by caller with actual folder
+        break;
+
+      default:
+        console.warn('[FilterManager] Unknown quick filter:', name);
+    }
+
+    if (this.onFilterChange) {
+      this.onFilterChange(this.filters);
+    }
+  }
+}
+
+// Export for use in other modules
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = FilterManager;
+}
