@@ -3537,6 +3537,7 @@
                     initSortControls(); // Initialiser les contrôles de tri
                     initKeyboardShortcuts(); // Initialiser les raccourcis clavier
                     initBatchActions(); // Initialiser les actions par lots
+                    initAdvancedFilters(); // Initialiser les filtres avancés
                 });
 
                 api.on('disconnected', () => {
@@ -7499,6 +7500,331 @@
             } else {
                 console.warn('⚠️ PianoRollView non disponible - PianoRollView:', typeof PianoRollView, ', eventBus:', !!window.eventBus);
                 log('⚠️ PianoRollView non disponible', 'warning');
+            }
+
+            // ========== FILTRES AVANCÉS ==========
+
+            // Initialize FilterManager
+            let filterManager = null;
+            let currentFilteredFiles = null; // Store filtered files
+
+            function initAdvancedFilters() {
+                filterManager = new FilterManager(api);
+
+                const filtersPanel = document.getElementById('filtersPanel');
+                const filtersPanelOverlay = document.getElementById('filtersPanelOverlay');
+                const openFiltersBtn = document.getElementById('openFiltersBtn');
+                const closeFiltersBtn = document.getElementById('closeFiltersBtn');
+                const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+                const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+
+                // Open filters panel
+                openFiltersBtn.addEventListener('click', () => {
+                    filtersPanel.classList.add('open');
+                    filtersPanelOverlay.style.display = 'block';
+                });
+
+                // Close filters panel
+                function closeFiltersPanel() {
+                    filtersPanel.classList.remove('open');
+                    filtersPanelOverlay.style.display = 'none';
+                }
+
+                closeFiltersBtn.addEventListener('click', closeFiltersPanel);
+                filtersPanelOverlay.addEventListener('click', closeFiltersPanel);
+
+                // Duration filter
+                const durationMin = document.getElementById('filterDurationMin');
+                const durationMax = document.getElementById('filterDurationMax');
+                durationMin.addEventListener('change', () => {
+                    filterManager.setFilter('durationMin', durationMin.value ? parseFloat(durationMin.value) : null);
+                });
+                durationMax.addEventListener('change', () => {
+                    filterManager.setFilter('durationMax', durationMax.value ? parseFloat(durationMax.value) : null);
+                });
+
+                // Tempo filter
+                const tempoMin = document.getElementById('filterTempoMin');
+                const tempoMax = document.getElementById('filterTempoMax');
+                tempoMin.addEventListener('change', () => {
+                    filterManager.setFilter('tempoMin', tempoMin.value ? parseFloat(tempoMin.value) : null);
+                });
+                tempoMax.addEventListener('change', () => {
+                    filterManager.setFilter('tempoMax', tempoMax.value ? parseFloat(tempoMax.value) : null);
+                });
+
+                // Tempo presets
+                document.querySelectorAll('.preset-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const [min, max] = btn.dataset.tempo.split(',');
+                        tempoMin.value = min;
+                        tempoMax.value = max;
+                        filterManager.setFilter('tempoMin', parseFloat(min));
+                        filterManager.setFilter('tempoMax', parseFloat(max));
+                    });
+                });
+
+                // Tracks filter
+                const tracksMin = document.getElementById('filterTracksMin');
+                const tracksMax = document.getElementById('filterTracksMax');
+                tracksMin.addEventListener('change', () => {
+                    filterManager.setFilter('tracksMin', tracksMin.value ? parseInt(tracksMin.value) : null);
+                });
+                tracksMax.addEventListener('change', () => {
+                    filterManager.setFilter('tracksMax', tracksMax.value ? parseInt(tracksMax.value) : null);
+                });
+
+                // Instrument types filter
+                const instrumentCheckboxes = document.querySelectorAll('.filter-instrument');
+                const instrumentMode = document.getElementById('filterInstrumentMode');
+
+                instrumentCheckboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', () => {
+                        const selectedInstruments = Array.from(instrumentCheckboxes)
+                            .filter(cb => cb.checked)
+                            .map(cb => cb.value);
+                        filterManager.setFilter('instrumentTypes', selectedInstruments);
+                    });
+                });
+
+                instrumentMode.addEventListener('change', () => {
+                    filterManager.setFilter('instrumentMode', instrumentMode.value);
+                });
+
+                // Routing status filter
+                const routingRadios = document.querySelectorAll('input[name="hasRouting"]');
+                routingRadios.forEach(radio => {
+                    radio.addEventListener('change', () => {
+                        const value = radio.value;
+                        if (value === 'all') {
+                            filterManager.setFilter('hasRouting', null);
+                        } else {
+                            filterManager.setFilter('hasRouting', value === 'true');
+                        }
+                    });
+                });
+
+                // Is original filter
+                const originalRadios = document.querySelectorAll('input[name="isOriginal"]');
+                originalRadios.forEach(radio => {
+                    radio.addEventListener('change', () => {
+                        const value = radio.value;
+                        if (value === 'all') {
+                            filterManager.setFilter('isOriginal', null);
+                        } else {
+                            filterManager.setFilter('isOriginal', value === 'true');
+                        }
+                    });
+                });
+
+                // Quick filters
+                const hasDrumsCheckbox = document.getElementById('filterHasDrums');
+                const hasMelodyCheckbox = document.getElementById('filterHasMelody');
+                const hasBassCheckbox = document.getElementById('filterHasBass');
+
+                hasDrumsCheckbox.addEventListener('change', () => {
+                    filterManager.setFilter('hasDrums', hasDrumsCheckbox.checked ? true : null);
+                });
+                hasMelodyCheckbox.addEventListener('change', () => {
+                    filterManager.setFilter('hasMelody', hasMelodyCheckbox.checked ? true : null);
+                });
+                hasBassCheckbox.addEventListener('change', () => {
+                    filterManager.setFilter('hasBass', hasBassCheckbox.checked ? true : null);
+                });
+
+                // Reset filters button
+                resetFiltersBtn.addEventListener('click', () => {
+                    // Reset all inputs
+                    durationMin.value = '';
+                    durationMax.value = '';
+                    tempoMin.value = '';
+                    tempoMax.value = '';
+                    tracksMin.value = '';
+                    tracksMax.value = '';
+                    instrumentCheckboxes.forEach(cb => cb.checked = false);
+                    instrumentMode.value = 'ANY';
+                    document.querySelector('input[name="hasRouting"][value="all"]').checked = true;
+                    document.querySelector('input[name="isOriginal"][value="all"]').checked = true;
+                    hasDrumsCheckbox.checked = false;
+                    hasMelodyCheckbox.checked = false;
+                    hasBassCheckbox.checked = false;
+
+                    // Reset filter manager
+                    filterManager.resetFilters();
+
+                    // Update display
+                    updateFilterBadges();
+                });
+
+                // Apply filters button
+                applyFiltersBtn.addEventListener('click', async () => {
+                    closeFiltersPanel();
+                    await applyFiltersAndRefresh();
+                });
+
+                // Filter change callback
+                filterManager.onFilterChange = (filters) => {
+                    updateFilterBadges();
+                };
+
+                // Filter applied callback
+                filterManager.onFilterApplied = (files, isClientSide) => {
+                    currentFilteredFiles = files;
+                    updateSearchStats(files.length, isClientSide);
+                };
+
+                log('✓ Filtres avancés initialisés', 'info');
+            }
+
+            // Update filter badges display
+            function updateFilterBadges() {
+                const badgesContainer = document.getElementById('activeFiltersBadges');
+                const activeFilters = filterManager.getActiveFilters();
+
+                badgesContainer.innerHTML = '';
+
+                activeFilters.forEach(filter => {
+                    // Skip range filters that only have one side set
+                    if ((filter.key === 'durationMin' || filter.key === 'durationMax') &&
+                        filterManager.getFilter('durationMin') === null &&
+                        filterManager.getFilter('durationMax') === null) {
+                        return;
+                    }
+                    if ((filter.key === 'tempoMin' || filter.key === 'tempoMax') &&
+                        filterManager.getFilter('tempoMin') === null &&
+                        filterManager.getFilter('tempoMax') === null) {
+                        return;
+                    }
+                    if ((filter.key === 'tracksMin' || filter.key === 'tracksMax') &&
+                        filterManager.getFilter('tracksMin') === null &&
+                        filterManager.getFilter('tracksMax') === null) {
+                        return;
+                    }
+
+                    // Don't create duplicate badges for range filters
+                    if (filter.key.endsWith('Max') || filter.key.endsWith('After') || filter.key === 'instrumentMode') {
+                        return;
+                    }
+
+                    const badge = document.createElement('div');
+                    badge.className = 'filter-badge';
+                    badge.innerHTML = `
+                        <span>${filter.label}</span>
+                        <span class="remove-badge">×</span>
+                    `;
+
+                    badge.addEventListener('click', () => {
+                        removeFilter(filter.key);
+                    });
+
+                    badgesContainer.appendChild(badge);
+                });
+            }
+
+            // Remove a specific filter
+            function removeFilter(key) {
+                // Reset the corresponding input
+                if (key === 'durationMin' || key === 'durationMax') {
+                    document.getElementById('filterDurationMin').value = '';
+                    document.getElementById('filterDurationMax').value = '';
+                    filterManager.setFilter('durationMin', null);
+                    filterManager.setFilter('durationMax', null);
+                } else if (key === 'tempoMin' || key === 'tempoMax') {
+                    document.getElementById('filterTempoMin').value = '';
+                    document.getElementById('filterTempoMax').value = '';
+                    filterManager.setFilter('tempoMin', null);
+                    filterManager.setFilter('tempoMax', null);
+                } else if (key === 'tracksMin' || key === 'tracksMax') {
+                    document.getElementById('filterTracksMin').value = '';
+                    document.getElementById('filterTracksMax').value = '';
+                    filterManager.setFilter('tracksMin', null);
+                    filterManager.setFilter('tracksMax', null);
+                } else if (key === 'instrumentTypes') {
+                    document.querySelectorAll('.filter-instrument').forEach(cb => cb.checked = false);
+                    filterManager.setFilter('instrumentTypes', []);
+                } else if (key === 'hasRouting') {
+                    document.querySelector('input[name="hasRouting"][value="all"]').checked = true;
+                    filterManager.setFilter('hasRouting', null);
+                } else if (key === 'isOriginal') {
+                    document.querySelector('input[name="isOriginal"][value="all"]').checked = true;
+                    filterManager.setFilter('isOriginal', null);
+                } else if (key === 'hasDrums') {
+                    document.getElementById('filterHasDrums').checked = false;
+                    filterManager.setFilter('hasDrums', null);
+                } else if (key === 'hasMelody') {
+                    document.getElementById('filterHasMelody').checked = false;
+                    filterManager.setFilter('hasMelody', null);
+                } else if (key === 'hasBass') {
+                    document.getElementById('filterHasBass').checked = false;
+                    filterManager.setFilter('hasBass', null);
+                } else {
+                    filterManager.resetFilter(key);
+                }
+
+                updateFilterBadges();
+                applyFiltersAndRefresh();
+            }
+
+            // Apply filters and refresh file list
+            async function applyFiltersAndRefresh() {
+                try {
+                    const fileList = document.getElementById('fileList');
+
+                    // Show loading state
+                    const loadingMsg = document.createElement('li');
+                    loadingMsg.className = 'info-text';
+                    loadingMsg.textContent = '⏳ Application des filtres...';
+                    fileList.innerHTML = '';
+                    fileList.appendChild(loadingMsg);
+
+                    // Get all files first
+                    let allFiles = await api.listMidiFiles('/');
+
+                    // Apply filters
+                    const filteredFiles = await filterManager.applyFilters(allFiles);
+
+                    // Refresh display with filtered files
+                    await displayFilteredFiles(filteredFiles);
+
+                    log(`✓ ${filteredFiles.length} fichier(s) trouvé(s)`, 'info');
+                } catch (error) {
+                    log(`❌ Erreur application filtres: ${error.message}`, 'error');
+                }
+            }
+
+            // Display filtered files
+            async function displayFilteredFiles(files) {
+                const fileList = document.getElementById('fileList');
+                fileList.innerHTML = '';
+
+                if (files.length === 0) {
+                    fileList.innerHTML = `<li class="info-text">😕 Aucun fichier ne correspond aux filtres</li>`;
+                    return;
+                }
+
+                // Sort files
+                const sortedFiles = await sortFiles(files);
+
+                // Create file elements (without folder organization for now)
+                sortedFiles.forEach(file => {
+                    fileList.appendChild(createFileElement(file));
+                });
+
+                updateSearchStats(files.length, true);
+            }
+
+            // Update search stats
+            function updateSearchStats(count, isClientSide) {
+                const searchStats = document.getElementById('searchStats');
+                const hasFilters = filterManager && filterManager.hasActiveFilters();
+
+                if (hasFilters) {
+                    searchStats.textContent = `${count} fichier(s) trouvé(s) ${isClientSide ? '(client)' : '(serveur)'}`;
+                    searchStats.style.display = 'block';
+                } else {
+                    searchStats.textContent = '';
+                    searchStats.style.display = 'none';
+                }
             }
 
             // Afficher l'app
