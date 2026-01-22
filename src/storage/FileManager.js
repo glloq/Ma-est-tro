@@ -1,12 +1,14 @@
 // src/storage/FileManager.js
 import { parseMidi } from 'midi-file';
 import { writeMidi } from 'midi-file';
+import ChannelAnalyzer from '../midi/ChannelAnalyzer.js';
 
 class FileManager {
   constructor(app) {
     this.app = app;
     this.uploadDir = './uploads';
-    
+    this.channelAnalyzer = new ChannelAnalyzer(app.logger);
+
     this.app.logger.info('FileManager initialized');
   }
 
@@ -14,7 +16,7 @@ class FileManager {
     try {
       // Decode base64
       const buffer = Buffer.from(base64Data, 'base64');
-      
+
       // Validate MIDI file
       let midi;
       try {
@@ -26,7 +28,10 @@ class FileManager {
       // Extract metadata
       const metadata = this.extractMetadata(midi);
 
-      // Store in database
+      // Extract instrument metadata for filtering
+      const instrumentMetadata = this.extractInstrumentMetadata(midi);
+
+      // Store in database with filter metadata
       const fileId = this.app.database.insertFile({
         filename: filename,
         data: base64Data,
@@ -36,10 +41,11 @@ class FileManager {
         tempo: metadata.tempo,
         ppq: midi.header.ticksPerBeat || 480,
         uploaded_at: new Date().toISOString(),
-        folder: '/'
+        folder: '/',
+        ...instrumentMetadata
       });
 
-      this.app.logger.info(`File uploaded: ${filename} (${fileId})`);
+      this.app.logger.info(`File uploaded: ${filename} (${fileId}) - Instruments: ${instrumentMetadata.instrument_types}`);
 
       // Broadcast file list update
       this.broadcastFileList();
@@ -91,6 +97,81 @@ class FileManager {
       duration: duration,
       totalTicks: totalTicks
     };
+  }
+
+  /**
+   * Extract instrument metadata for filtering
+   * Analyzes MIDI channels to determine instrument types, note ranges, etc.
+   * @param {Object} midi - Parsed MIDI file
+   * @returns {Object} - Filter metadata
+   */
+  extractInstrumentMetadata(midi) {
+    try {
+      // Convert to format expected by ChannelAnalyzer
+      const midiData = this.convertMidiToJSON(midi);
+
+      // Analyze all channels
+      const channelAnalyses = this.channelAnalyzer.analyzeAllChannels(midiData);
+
+      // Extract instrument types
+      const instrumentTypes = new Set();
+      let hasDrums = false;
+      let hasMelody = false;
+      let hasBass = false;
+      let noteMin = 127;
+      let noteMax = 0;
+
+      for (const analysis of channelAnalyses) {
+        // Add estimated type to set
+        if (analysis.estimatedType) {
+          // Map internal types to user-friendly names
+          const typeMapping = {
+            'drums': 'Drums',
+            'percussive': 'Percussion',
+            'bass': 'Bass',
+            'melody': 'Melody',
+            'harmony': 'Harmony'
+          };
+
+          const friendlyType = typeMapping[analysis.estimatedType] || analysis.estimatedType;
+          instrumentTypes.add(friendlyType);
+
+          // Set boolean flags
+          if (analysis.estimatedType === 'drums') hasDrums = true;
+          if (analysis.estimatedType === 'melody') hasMelody = true;
+          if (analysis.estimatedType === 'bass') hasBass = true;
+        }
+
+        // Update note range
+        if (analysis.noteRange) {
+          noteMin = Math.min(noteMin, analysis.noteRange.min);
+          noteMax = Math.max(noteMax, analysis.noteRange.max);
+        }
+      }
+
+      return {
+        instrument_types: JSON.stringify(Array.from(instrumentTypes)),
+        channel_count: channelAnalyses.length,
+        note_range_min: noteMin < 127 ? noteMin : null,
+        note_range_max: noteMax > 0 ? noteMax : null,
+        has_drums: hasDrums,
+        has_melody: hasMelody,
+        has_bass: hasBass
+      };
+    } catch (error) {
+      this.app.logger.error(`Failed to extract instrument metadata: ${error.message}`);
+
+      // Return default values on error
+      return {
+        instrument_types: '[]',
+        channel_count: 0,
+        note_range_min: null,
+        note_range_max: null,
+        has_drums: false,
+        has_melody: false,
+        has_bass: false
+      };
+    }
   }
 
   convertMidiToJSON(midi) {
