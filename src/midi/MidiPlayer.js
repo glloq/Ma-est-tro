@@ -28,7 +28,7 @@ class MidiPlayer {
     this.loop = false;
     this.loadedFileId = null; // ID of currently loaded file
     this.channels = []; // MIDI channels found in file
-    this.channelRouting = new Map(); // channel -> device mapping
+    this.channelRouting = new Map(); // channel -> { device, targetChannel } mapping
     this.mutedChannels = new Set(); // Muted channels
     this.pendingTimeouts = new Set(); // Track scheduled setTimeout IDs for cleanup
     this._syncDelayCache = new Map(); // Cache sync_delay per device to avoid DB queries per event
@@ -435,19 +435,20 @@ class MidiPlayer {
     }
   }
 
-  _getSyncDelay(deviceId) {
-    if (this._syncDelayCache.has(deviceId)) {
-      return this._syncDelayCache.get(deviceId);
+  _getSyncDelay(deviceId, channel) {
+    const cacheKey = channel !== undefined ? `${deviceId}_${channel}` : deviceId;
+    if (this._syncDelayCache.has(cacheKey)) {
+      return this._syncDelayCache.get(cacheKey);
     }
 
     let syncDelay = 0;
     if (this.app.database) {
       try {
-        const settings = this.app.database.getInstrumentSettings(deviceId);
+        const settings = this.app.database.getInstrumentSettings(deviceId, channel);
         if (settings && settings.sync_delay !== undefined && settings.sync_delay !== null) {
           syncDelay = settings.sync_delay;
           if (syncDelay !== 0) {
-            this.app.logger.debug(`Cached sync_delay ${syncDelay}ms for device ${deviceId}`);
+            this.app.logger.debug(`Cached sync_delay ${syncDelay}ms for device ${deviceId} ch ${channel}`);
           }
         }
       } catch (error) {
@@ -455,7 +456,7 @@ class MidiPlayer {
       }
     }
 
-    this._syncDelayCache.set(deviceId, syncDelay);
+    this._syncDelayCache.set(cacheKey, syncDelay);
     return syncDelay;
   }
 
@@ -464,16 +465,16 @@ class MidiPlayer {
     const currentTime = this.position;
     const delay = Math.max(0, eventTime - currentTime);
 
-    // ✅ FIX: Get the target device for this channel BEFORE calculating latency
-    const targetDevice = this.getOutputForChannel(event.channel);
+    // Get the target device + channel for this source channel BEFORE calculating latency
+    const routing = this.getOutputForChannel(event.channel);
 
-    if (!targetDevice) {
+    if (!routing || !routing.device) {
       this.app.logger.warn(`No output device for channel ${event.channel + 1}, skipping event`);
       return;
     }
 
-    // Get sync_delay from cache (populated at playback start) to avoid DB query per event
-    const syncDelay = this._getSyncDelay(targetDevice);
+    // Get sync_delay from cache using device + targetChannel key
+    const syncDelay = this._getSyncDelay(routing.device, routing.targetChannel);
 
     // Apply sync_delay compensation (convert ms to seconds)
     const adjustedDelay = Math.max(0, delay - (syncDelay / 1000));
@@ -497,34 +498,37 @@ class MidiPlayer {
 
     const device = this.app.deviceManager;
     // Use channel-specific routing if available
-    const targetDevice = this.getOutputForChannel(event.channel);
+    const routing = this.getOutputForChannel(event.channel);
 
-    if (!targetDevice) {
+    if (!routing || !routing.device) {
       this.app.logger.warn(`No output device for channel ${event.channel + 1}`);
       return;
     }
 
+    // Use targetChannel from routing (remaps source channel to instrument's actual MIDI channel)
+    const outChannel = routing.targetChannel;
+
     if (event.type === 'noteOn') {
-      device.sendMessage(targetDevice, 'noteon', {
-        channel: event.channel,
+      device.sendMessage(routing.device, 'noteon', {
+        channel: outChannel,
         note: event.note,
         velocity: event.velocity
       });
     } else if (event.type === 'noteOff') {
-      device.sendMessage(targetDevice, 'noteoff', {
-        channel: event.channel,
+      device.sendMessage(routing.device, 'noteoff', {
+        channel: outChannel,
         note: event.note,
         velocity: event.velocity
       });
     } else if (event.type === 'controller') {
-      device.sendMessage(targetDevice, 'cc', {
-        channel: event.channel,
+      device.sendMessage(routing.device, 'cc', {
+        channel: outChannel,
         controller: event.controller,
         value: event.value
       });
     } else if (event.type === 'pitchBend') {
-      device.sendMessage(targetDevice, 'pitchbend', {
-        channel: event.channel,
+      device.sendMessage(routing.device, 'pitchbend', {
+        channel: outChannel,
         value: event.value
       });
     }
@@ -539,8 +543,9 @@ class MidiPlayer {
 
     // Collect all unique target devices (default + routed)
     const targetDevices = new Set([this.outputDevice]);
-    for (const routedDevice of this.channelRouting.values()) {
-      if (routedDevice) targetDevices.add(routedDevice);
+    for (const routing of this.channelRouting.values()) {
+      const deviceName = typeof routing === 'string' ? routing : routing?.device;
+      if (deviceName) targetDevices.add(deviceName);
     }
 
     // Send All Notes Off on all 16 MIDI channels to all target devices
@@ -598,9 +603,11 @@ class MidiPlayer {
 
   // ==================== CHANNEL ROUTING ====================
 
-  setChannelRouting(channel, deviceId) {
-    this.channelRouting.set(channel, deviceId);
-    this.app.logger.info(`Channel ${channel + 1} routed to ${deviceId}`);
+  setChannelRouting(channel, deviceId, targetChannel) {
+    // targetChannel defaults to source channel for backward compatibility
+    const target = (targetChannel !== undefined && targetChannel !== null) ? targetChannel : channel;
+    this.channelRouting.set(channel, { device: deviceId, targetChannel: target });
+    this.app.logger.info(`Channel ${channel + 1} routed to ${deviceId} (target ch ${target + 1})`);
 
     // Update channel info
     const channelInfo = this.channels.find(c => c.channel === channel);
@@ -625,8 +632,16 @@ class MidiPlayer {
   }
 
   getOutputForChannel(channel) {
-    // Get specific device for this channel, or default device
-    return this.channelRouting.has(channel) ? this.channelRouting.get(channel) : this.outputDevice;
+    // Get specific device + targetChannel for this channel, or default device
+    if (this.channelRouting.has(channel)) {
+      const routing = this.channelRouting.get(channel);
+      // Support both old format (string) and new format ({ device, targetChannel })
+      if (typeof routing === 'string') {
+        return { device: routing, targetChannel: channel };
+      }
+      return routing;
+    }
+    return { device: this.outputDevice, targetChannel: channel };
   }
 
   // Mute a channel
@@ -636,10 +651,10 @@ class MidiPlayer {
 
     // Send All Notes Off for this channel to stop currently playing notes
     if (this.outputDevice) {
-      const targetDevice = this.getOutputForChannel(channel);
-      if (targetDevice) {
-        this.app.deviceManager.sendMessage(targetDevice, 'cc', {
-          channel: channel,
+      const routing = this.getOutputForChannel(channel);
+      if (routing && routing.device) {
+        this.app.deviceManager.sendMessage(routing.device, 'cc', {
+          channel: routing.targetChannel,
           controller: MIDI_CC_ALL_NOTES_OFF,
           value: 0
         });

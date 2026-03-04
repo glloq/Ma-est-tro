@@ -327,13 +327,23 @@ class InstrumentDatabase {
   /**
    * Update instrument settings (custom name, sync delay, MAC address)
    * Uses instruments_latency table
+   * @param {string} deviceId - Device identifier
+   * @param {number} channel - MIDI channel (0-15), allows multiple instruments per device
+   * @param {Object} settings - Settings to update
    */
-  updateInstrumentSettings(deviceId, settings) {
+  updateInstrumentSettings(deviceId, channel, settings) {
+    // Backward compatibility: if channel is an object, it's the old signature (deviceId, settings)
+    if (typeof channel === 'object' && channel !== null) {
+      settings = channel;
+      channel = 0;
+    }
+    channel = channel || 0;
+
     try {
-      // Check if entry exists for this device
+      // Check if entry exists for this device + channel
       const existing = this.db.prepare(
-        'SELECT id FROM instruments_latency WHERE device_id = ?'
-      ).get(deviceId);
+        'SELECT id FROM instruments_latency WHERE device_id = ? AND channel = ?'
+      ).get(deviceId, channel);
 
       if (existing) {
         // Update existing entry
@@ -369,27 +379,27 @@ class InstrumentDatabase {
           return existing.id;
         }
 
-        values.push(deviceId);
+        values.push(deviceId, channel);
 
         const stmt = this.db.prepare(`
-          UPDATE instruments_latency SET ${fields.join(', ')} WHERE device_id = ?
+          UPDATE instruments_latency SET ${fields.join(', ')} WHERE device_id = ? AND channel = ?
         `);
 
         stmt.run(...values);
         return existing.id;
       } else {
-        // Insert new entry
+        // Insert new entry with correct channel
         const stmt = this.db.prepare(`
           INSERT INTO instruments_latency (
             id, device_id, channel, name, custom_name, sync_delay, mac_address, usb_serial_number, gm_program
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
-        const id = `${deviceId}_0`; // Default channel 0
+        const id = `${deviceId}_${channel}`;
         const result = stmt.run(
           id,
           deviceId,
-          0, // Default channel
+          channel,
           settings.name || 'Unnamed Instrument',
           settings.custom_name || null,
           settings.sync_delay || 0,
@@ -407,10 +417,17 @@ class InstrumentDatabase {
   }
 
   /**
-   * Get instrument settings
+   * Get instrument settings for a specific device and channel
+   * @param {string} deviceId - Device identifier
+   * @param {number} [channel] - MIDI channel (0-15). If omitted, returns first match (backward compat).
    */
-  getInstrumentSettings(deviceId) {
+  getInstrumentSettings(deviceId, channel) {
     try {
+      if (channel !== undefined && channel !== null) {
+        const stmt = this.db.prepare('SELECT * FROM instruments_latency WHERE device_id = ? AND channel = ?');
+        return stmt.get(deviceId, channel);
+      }
+      // Backward compatibility: return first match
       const stmt = this.db.prepare('SELECT * FROM instruments_latency WHERE device_id = ?');
       return stmt.get(deviceId);
     } catch (error) {
@@ -420,14 +437,39 @@ class InstrumentDatabase {
   }
 
   /**
-   * Save SysEx Identity information for an instrument
+   * Get all instruments on a device (all channels)
+   * @param {string} deviceId - Device identifier
+   * @returns {Array} All instruments for this device
    */
-  saveSysExIdentity(deviceId, identity) {
+  getInstrumentsByDevice(deviceId) {
     try {
-      // Check if entry exists
+      const stmt = this.db.prepare('SELECT * FROM instruments_latency WHERE device_id = ? ORDER BY channel');
+      return stmt.all(deviceId);
+    } catch (error) {
+      this.logger.error(`Failed to get instruments by device: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Save SysEx Identity information for an instrument
+   * @param {string} deviceId - Device identifier
+   * @param {number} channel - MIDI channel (0-15)
+   * @param {Object} identity - SysEx identity data
+   */
+  saveSysExIdentity(deviceId, channel, identity) {
+    // Backward compatibility: if channel is an object, it's the old signature (deviceId, identity)
+    if (typeof channel === 'object' && channel !== null) {
+      identity = channel;
+      channel = 0;
+    }
+    channel = channel || 0;
+
+    try {
+      // Check if entry exists for this device + channel
       const existing = this.db.prepare(
-        'SELECT id FROM instruments_latency WHERE device_id = ?'
-      ).get(deviceId);
+        'SELECT id FROM instruments_latency WHERE device_id = ? AND channel = ?'
+      ).get(deviceId, channel);
 
       const now = new Date().toISOString();
 
@@ -442,7 +484,7 @@ class InstrumentDatabase {
               sysex_device_id = ?,
               sysex_raw_response = ?,
               sysex_last_request = ?
-          WHERE device_id = ?
+          WHERE device_id = ? AND channel = ?
         `);
 
         stmt.run(
@@ -453,12 +495,13 @@ class InstrumentDatabase {
           identity.deviceId || null,
           identity.rawBytes || null,
           now,
-          deviceId
+          deviceId,
+          channel
         );
 
         return existing.id;
       } else {
-        // Insert new entry
+        // Insert new entry with correct channel
         const stmt = this.db.prepare(`
           INSERT INTO instruments_latency (
             id, device_id, channel, name,
@@ -468,11 +511,11 @@ class InstrumentDatabase {
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
-        const id = `${deviceId}_0`;
+        const id = `${deviceId}_${channel}`;
         stmt.run(
           id,
           deviceId,
-          0,
+          channel,
           'Unnamed Instrument',
           identity.manufacturerId || null,
           identity.deviceFamily || null,
@@ -522,6 +565,7 @@ class InstrumentDatabase {
   /**
    * Update instrument capabilities (note range, supported CCs, selected notes)
    * @param {string} deviceId - Device identifier
+   * @param {number} channel - MIDI channel (0-15), allows multiple instruments per device
    * @param {Object} capabilities - Capability settings
    * @param {number|null} capabilities.note_range_min - Minimum playable note (0-127)
    * @param {number|null} capabilities.note_range_max - Maximum playable note (0-127)
@@ -530,12 +574,19 @@ class InstrumentDatabase {
    * @param {number[]|null} capabilities.selected_notes - Array of individual notes (for discrete mode)
    * @param {string} capabilities.capabilities_source - Source: 'manual', 'sysex', 'auto'
    */
-  updateInstrumentCapabilities(deviceId, capabilities) {
+  updateInstrumentCapabilities(deviceId, channel, capabilities) {
+    // Backward compatibility: if channel is an object, it's the old signature (deviceId, capabilities)
+    if (typeof channel === 'object' && channel !== null) {
+      capabilities = channel;
+      channel = 0;
+    }
+    channel = channel || 0;
+
     try {
-      // Check if entry exists for this device
+      // Check if entry exists for this device + channel
       const existing = this.db.prepare(
-        'SELECT id FROM instruments_latency WHERE device_id = ?'
-      ).get(deviceId);
+        'SELECT id FROM instruments_latency WHERE device_id = ? AND channel = ?'
+      ).get(deviceId, channel);
 
       const now = new Date().toISOString();
 
@@ -635,16 +686,16 @@ class InstrumentDatabase {
           return existing.id;
         }
 
-        values.push(deviceId);
+        values.push(deviceId, channel);
 
         const stmt = this.db.prepare(`
-          UPDATE instruments_latency SET ${fields.join(', ')} WHERE device_id = ?
+          UPDATE instruments_latency SET ${fields.join(', ')} WHERE device_id = ? AND channel = ?
         `);
 
         stmt.run(...values);
         return existing.id;
       } else {
-        // Insert new entry
+        // Insert new entry with correct channel
         const stmt = this.db.prepare(`
           INSERT INTO instruments_latency (
             id, device_id, channel, name,
@@ -654,11 +705,11 @@ class InstrumentDatabase {
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
-        const id = `${deviceId}_0`; // Default channel 0
+        const id = `${deviceId}_${channel}`;
         stmt.run(
           id,
           deviceId,
-          0,
+          channel,
           'Unnamed Instrument',
           capabilities.note_range_min || null,
           capabilities.note_range_max || null,
@@ -680,19 +731,33 @@ class InstrumentDatabase {
   /**
    * Get instrument capabilities
    * @param {string} deviceId - Device identifier
+   * @param {number} [channel] - MIDI channel (0-15). If omitted, returns first match (backward compat).
    * @returns {Object|null} Capabilities object with parsed arrays
    */
-  getInstrumentCapabilities(deviceId) {
+  getInstrumentCapabilities(deviceId, channel) {
     try {
-      const stmt = this.db.prepare(`
-        SELECT
-          note_range_min, note_range_max, supported_ccs,
-          note_selection_mode, selected_notes,
-          capabilities_source, capabilities_updated_at
-        FROM instruments_latency
-        WHERE device_id = ?
-      `);
-      const result = stmt.get(deviceId);
+      let result;
+      if (channel !== undefined && channel !== null) {
+        const stmt = this.db.prepare(`
+          SELECT
+            note_range_min, note_range_max, supported_ccs,
+            note_selection_mode, selected_notes,
+            capabilities_source, capabilities_updated_at
+          FROM instruments_latency
+          WHERE device_id = ? AND channel = ?
+        `);
+        result = stmt.get(deviceId, channel);
+      } else {
+        const stmt = this.db.prepare(`
+          SELECT
+            note_range_min, note_range_max, supported_ccs,
+            note_selection_mode, selected_notes,
+            capabilities_source, capabilities_updated_at
+          FROM instruments_latency
+          WHERE device_id = ?
+        `);
+        result = stmt.get(deviceId);
+      }
 
       if (!result) {
         return null;

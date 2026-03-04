@@ -298,7 +298,9 @@ class CommandHandler {
       throw new Error('Database not available');
     }
 
-    const id = this.app.database.saveSysExIdentity(data.deviceId, data.identity);
+    // Channel defaults to 0 for backward compatibility
+    const channel = data.channel !== undefined ? data.channel : 0;
+    const id = this.app.database.saveSysExIdentity(data.deviceId, channel, data.identity);
 
     return {
       success: true,
@@ -320,7 +322,10 @@ class CommandHandler {
       }
     }
 
-    const id = this.app.database.updateInstrumentSettings(data.deviceId, {
+    // Channel defaults to 0 for backward compatibility
+    const channel = data.channel !== undefined ? data.channel : 0;
+
+    const id = this.app.database.updateInstrumentSettings(data.deviceId, channel, {
       custom_name: data.custom_name,
       sync_delay: data.sync_delay,
       mac_address: data.mac_address,
@@ -340,7 +345,9 @@ class CommandHandler {
       throw new Error('Database not available');
     }
 
-    const settings = this.app.database.getInstrumentSettings(data.deviceId);
+    // Pass channel if provided, otherwise backward compat (first match)
+    const channel = data.channel !== undefined ? data.channel : undefined;
+    const settings = this.app.database.getInstrumentSettings(data.deviceId, channel);
 
     return {
       settings: settings || null
@@ -356,7 +363,10 @@ class CommandHandler {
       throw new Error('deviceId is required');
     }
 
-    const id = this.app.database.updateInstrumentCapabilities(data.deviceId, {
+    // Channel defaults to 0 for backward compatibility
+    const channel = data.channel !== undefined ? data.channel : 0;
+
+    const id = this.app.database.updateInstrumentCapabilities(data.deviceId, channel, {
       note_range_min: data.note_range_min,
       note_range_max: data.note_range_max,
       supported_ccs: data.supported_ccs,
@@ -380,7 +390,9 @@ class CommandHandler {
       throw new Error('deviceId is required');
     }
 
-    const capabilities = this.app.database.getInstrumentCapabilities(data.deviceId);
+    // Pass channel if provided, otherwise backward compat (first match)
+    const channel = data.channel !== undefined ? data.channel : undefined;
+    const capabilities = this.app.database.getInstrumentCapabilities(data.deviceId, channel);
 
     return {
       capabilities: capabilities || null
@@ -1033,13 +1045,16 @@ class CommandHandler {
       throw new Error('deviceId is required');
     }
 
-    this.app.midiPlayer.setChannelRouting(data.channel, data.deviceId);
+    // targetChannel allows remapping source channel to instrument's actual MIDI channel
+    const targetChannel = data.targetChannel !== undefined ? data.targetChannel : data.channel;
+    this.app.midiPlayer.setChannelRouting(data.channel, data.deviceId, targetChannel);
 
     return {
       success: true,
       channel: data.channel,
       channelDisplay: data.channel + 1,
-      deviceId: data.deviceId
+      deviceId: data.deviceId,
+      targetChannel: targetChannel
     };
   }
 
@@ -1614,8 +1629,10 @@ class CommandHandler {
       routings.push(routing);
 
       // Also apply to MidiPlayer if currently loaded
+      // Use instrument's channel as targetChannel so notes are sent on the correct MIDI channel
       if (this.app.midiPlayer && this.app.midiPlayer.loadedFileId === targetFileId) {
-        this.app.midiPlayer.setChannelRouting(channelNum, assignment.deviceId);
+        const targetChannel = assignment.instrumentChannel !== undefined ? assignment.instrumentChannel : channelNum;
+        this.app.midiPlayer.setChannelRouting(channelNum, assignment.deviceId, targetChannel);
       }
 
       this.app.logger.info(
