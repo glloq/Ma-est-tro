@@ -4,13 +4,182 @@ Ce guide explique comment connecter des instruments MIDI aux broches GPIO du Ras
 
 ## Sommaire
 
-1. [Compatibilite Raspberry Pi](#compatibilite-raspberry-pi)
-2. [Circuit MIDI OUT](#circuit-midi-out)
-3. [Circuit MIDI IN](#circuit-midi-in)
-4. [Configuration du Raspberry Pi](#configuration-du-raspberry-pi)
-5. [Correspondance UARTs par modele](#correspondance-uarts-par-modele)
-6. [Liste des composants](#liste-des-composants)
-7. [Depannage](#depannage)
+1. [HATs MIDI commerciaux (Plug & Play)](#hats-midi-commerciaux-plug--play)
+2. [Compatibilite Raspberry Pi](#compatibilite-raspberry-pi)
+3. [Circuit MIDI OUT (DIY)](#circuit-midi-out-gpio-tx-vers-din-5-broches)
+4. [Circuit MIDI IN (DIY)](#circuit-midi-in-din-5-broches-vers-gpio-rx)
+5. [Configuration du Raspberry Pi](#configuration-du-raspberry-pi)
+6. [Correspondance UARTs par modele](#correspondance-uarts-par-modele)
+7. [Liste des composants (DIY)](#liste-des-composants)
+8. [Depannage](#depannage)
+
+---
+
+## HATs MIDI commerciaux (Plug & Play)
+
+Si vous ne souhaitez pas souder de composants, plusieurs HATs MIDI du commerce se branchent directement sur le connecteur GPIO 40 broches du Raspberry Pi. Ils integrent les circuits d'optoisolation et de mise en forme du signal MIDI.
+
+### Blokas Pimidi (recommande pour multi-ports)
+
+```
+┌──────────────────────────────────────┐
+│            Blokas Pimidi             │
+│                                      │
+│   MIDI IN 1  ○────┐                 │
+│   MIDI OUT 1 ○────┤  Connecteur     │
+│   MIDI IN 2  ○────┤  GPIO 40 pins   │
+│   MIDI OUT 2 ○────┘  (I2C + 2 GPIO) │
+│                                      │
+│   Empilable : jusqu'a 4 HATs        │
+│   = 8 IN + 8 OUT                    │
+└──────────────────────────────────────┘
+```
+
+| Caracteristique | Detail |
+|-----------------|--------|
+| **Ports** | 2x MIDI IN + 2x MIDI OUT (DIN-5) par HAT |
+| **Empilable** | Jusqu'a 4 HATs = 8 IN / 8 OUT |
+| **Interface** | I2C + 2 GPIO (laisse les autres GPIO libres) |
+| **Latence** | 1.28ms (loopback) |
+| **Compatibilite** | Pi 3, Pi 4, Pi 5 |
+| **Connecteurs** | DIN-5 standard |
+| **API** | Python (pimidipy) |
+| **Prix** | ~99 EUR |
+| **Site** | [blokas.io/pimidi](https://blokas.io/pimidi/) |
+
+**Avantages** : Duplicateur GPIO 40 broches integre (empilable avec d'autres HATs), latence tres faible, API Python, jusqu'a 8x8 ports.
+
+**Installation** :
+```bash
+# Installer le driver Pimidi
+curl https://blokas.io/pimidi/install.sh | sh
+
+# Les ports apparaissent comme des ports ALSA MIDI standards
+aconnect -l
+```
+
+> **Note** : Le Pimidi utilise I2C et non UART. Il n'utilise pas `/dev/ttyAMA*` mais apparait comme un peripherique MIDI ALSA. Ma-est-tro le detectera comme un port MIDI systeme standard (pas via le module Serial MIDI GPIO).
+
+---
+
+### Blokas Pisound (MIDI + Audio)
+
+```
+┌──────────────────────────────────────┐
+│           Blokas Pisound             │
+│                                      │
+│   Audio IN  (jack 6.35mm stereo)     │
+│   Audio OUT (jack 6.35mm stereo)     │
+│   MIDI IN   (DIN-5)                 │
+│   MIDI OUT  (DIN-5)                 │
+│   Bouton programmable                │
+│   Gain + Volume pots                 │
+│                                      │
+│   DAC/ADC Burr-Brown 192kHz 24-bit   │
+└──────────────────────────────────────┘
+```
+
+| Caracteristique | Detail |
+|-----------------|--------|
+| **Ports MIDI** | 1x MIDI IN + 1x MIDI OUT (DIN-5) |
+| **Audio** | Stereo IN/OUT, 192kHz 24-bit, Burr-Brown DAC/ADC |
+| **Controles** | Gain, Volume, bouton programmable |
+| **Compatibilite** | Pi 1B+, Pi 2, Pi 3, Pi 4, Pi Zero |
+| **Prix** | ~89 USD |
+| **Site** | [blokas.io/pisound](https://blokas.io/pisound/) |
+
+**Avantages** : Solution tout-en-un MIDI + Audio haute qualite, ideal si vous avez aussi besoin de sorties audio.
+
+> **Note** : Le Pisound n'est pas encore compatible Pi 5. Pour Pi 5, voir le **Pisound Micro** (~69 EUR) sur [blokas.io/pisound-micro](https://blokas.io/pisound-micro/).
+
+---
+
+### Domoshop Slim MIDI Hat
+
+```
+┌──────────────────────────────────────┐
+│        Domoshop Slim MIDI Hat        │
+│                                      │
+│   MIDI IN  (mini-jack 3.5mm TRS)     │
+│   MIDI OUT (mini-jack 3.5mm TRS)     │
+│                                      │
+│   Connecte sur UART0 (GPIO14/15)     │
+│   Buffer 5V integre                  │
+│                                      │
+│   v1.2+ : 16 I/O via MCP23017       │
+└──────────────────────────────────────┘
+```
+
+| Caracteristique | Detail |
+|-----------------|--------|
+| **Ports** | 1x MIDI IN + 1x MIDI OUT (mini-jack TRS 3.5mm, adaptateurs DIN-5 inclus) |
+| **Interface** | UART0 direct (GPIO14 TX, GPIO15 RX) |
+| **Buffer** | 5V MIDI standard (meilleure compatibilite) |
+| **I/O (v1.2+)** | 16 GPIO supplementaires via MCP23017 (boutons, encodeurs, LEDs) |
+| **Compatibilite** | Pi Zero, Pi 3, Pi 4, Pi 5 |
+| **Prix** | ~25-36 EUR |
+| **Site** | [domoshop.eu](https://domoshop.eu/collections/raspberry-pi-midi) |
+
+**Avantages** : Compact, abordable, connecteurs mini-jack (gain de place), buffer 5V pour compatibilite maximale, GPIO supplementaires sur v1.2+.
+
+> **Note** : Le Slim MIDI Hat utilise UART0 (`/dev/ttyAMA0`). Il est compatible avec le module Serial MIDI GPIO de Ma-est-tro. Activez-le dans les reglages et le port `/dev/ttyAMA0` sera detecte automatiquement.
+
+**Installation** :
+```bash
+# /boot/config.txt (ou /boot/firmware/config.txt)
+enable_uart=1
+dtoverlay=disable-bt      # Libere UART0 pour le MIDI
+
+# Permissions
+sudo usermod -aG dialout $USER
+sudo reboot
+```
+
+---
+
+### OSA Electronics MIDI Board
+
+| Caracteristique | Detail |
+|-----------------|--------|
+| **Ports** | 1x MIDI IN + 1x MIDI OUT (DIN-5) |
+| **Interface** | UART0 direct (GPIO14/15) |
+| **Compatibilite** | Pi A+, B+, Pi 2, Pi 3, Pi 4, Pi 5 |
+| **Zynthian** | Compatible |
+| **Site** | [osaelectronics.com](https://www.osaelectronics.com/product/midi-board-for-raspberry-pi/) |
+
+**Avantages** : Simple, connecteurs DIN-5 standard, documentation complete avec guide de configuration.
+
+> **Note** : Utilise UART0 comme le Domoshop. Compatible avec le module Serial MIDI de Ma-est-tro.
+
+---
+
+### Tableau comparatif
+
+| HAT | Ports MIDI | Audio | Empilable | Interface | Pi 5 | Prix |
+|-----|-----------|-------|-----------|-----------|------|------|
+| **Pimidi** | 2 IN + 2 OUT | Non | Oui (x4 = 8x8) | I2C | Oui | ~99 EUR |
+| **Pisound** | 1 IN + 1 OUT | Oui (192kHz) | Non | SPI | Non* | ~89 USD |
+| **Slim MIDI Hat** | 1 IN + 1 OUT | Non | Non | UART | Oui | ~25-36 EUR |
+| **OSA MIDI Board** | 1 IN + 1 OUT | Non | Non | UART | Oui | ~20-30 EUR |
+
+\* Pisound Micro disponible pour Pi 5 (~69 EUR)
+
+### Compatibilite avec Ma-est-tro
+
+| HAT | Detection | Module utilise |
+|-----|-----------|----------------|
+| **Pimidi** | Automatique (ALSA MIDI) | Ports MIDI systeme (comme USB) |
+| **Pisound** | Automatique (ALSA MIDI) | Ports MIDI systeme (comme USB) |
+| **Slim MIDI Hat** | Via `/dev/ttyAMA0` | **Serial MIDI GPIO** (activer dans reglages) |
+| **OSA MIDI Board** | Via `/dev/ttyAMA0` | **Serial MIDI GPIO** (activer dans reglages) |
+
+> Les HATs bases sur I2C/SPI (Pimidi, Pisound) apparaissent comme des ports MIDI standards et sont detectes automatiquement par Ma-est-tro sans activer l'option Serial MIDI GPIO. Les HATs bases sur UART (Domoshop, OSA) necessitent l'activation de l'option Serial MIDI GPIO dans les reglages.
+
+---
+
+## Fabrication DIY (Do It Yourself)
+
+Si vous preferez construire votre propre circuit MIDI, les sections suivantes detaillent le cablage composant par composant.
 
 ---
 
@@ -259,9 +428,7 @@ Combiner les deux listes ci-dessus. Les composants sont peu couteux (<2 EUR par 
 
 ### Alternatives commerciales (plug & play)
 
-- **Pisound** (blokas.io) : HAT avec MIDI IN/OUT, audio, interface web
-- **RPI-MIDI** : Shield MIDI simple pour Raspberry Pi
-- **USB-MIDI adapter** : Cable USB vers DIN-5 (ne necessite pas de GPIO)
+Voir la section [HATs MIDI commerciaux](#hats-midi-commerciaux-plug--play) en debut de document pour un comparatif complet des solutions du commerce (Pimidi, Pisound, Slim MIDI Hat, OSA MIDI Board).
 
 ---
 
