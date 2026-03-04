@@ -665,6 +665,11 @@ class CommandHandler {
     }
 
     const result = await this.app.serialMidiManager.setEnabled(data.enabled);
+
+    // Persist to config.json so the setting survives restarts
+    this.app.config.set('serial.enabled', data.enabled);
+    this.app.config.save();
+
     return { success: true, ...result };
   }
 

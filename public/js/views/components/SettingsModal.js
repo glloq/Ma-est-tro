@@ -773,19 +773,33 @@ class SettingsModal {
 
             // Attach toggle buttons
             listEl.querySelectorAll('.serial-port-toggle-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', async () => {
                     const portPath = btn.dataset.path;
                     const portName = btn.dataset.name;
                     const isOpen = btn.dataset.open === 'true';
 
-                    if (isOpen) {
-                        this.eventBus?.emit('serial:close_requested', { path: portPath });
-                    } else {
-                        this.eventBus?.emit('serial:open_requested', { path: portPath, name: portName, direction: 'both' });
-                    }
+                    // Disable button during action
+                    btn.disabled = true;
+                    btn.textContent = '...';
 
-                    // Rescan after action
-                    setTimeout(() => this.scanSerialPorts(), 500);
+                    try {
+                        if (isOpen) {
+                            this.eventBus?.emit('serial:close_requested', { path: portPath });
+                        } else {
+                            this.eventBus?.emit('serial:open_requested', { path: portPath, name: portName, direction: 'both' });
+                        }
+
+                        // Wait then rescan to show updated state
+                        await new Promise(r => setTimeout(r, 500));
+                        await this.scanSerialPorts();
+                    } catch (error) {
+                        btn.textContent = 'Error';
+                        btn.style.color = '#e53e3e';
+                        btn.style.borderColor = '#e53e3e';
+                        this.logger?.error(`Serial port ${isOpen ? 'close' : 'open'} error: ${error.message}`);
+                        // Rescan after error to show current state
+                        setTimeout(() => this.scanSerialPorts(), 1000);
+                    }
                 });
             });
 

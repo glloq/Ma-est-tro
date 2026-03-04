@@ -71,7 +71,7 @@ class SerialMidiManager extends EventEmitter {
     this.enabled = serialConfig.enabled || false;
     this.configuredPorts = serialConfig.ports || [];
 
-    this._initialize();
+    this._initPromise = this._initialize();
   }
 
   async _initialize() {
@@ -121,6 +121,9 @@ class SerialMidiManager extends EventEmitter {
    * @returns {Array} List of available serial ports
    */
   async scanPorts() {
+    // Wait for initialization to complete before scanning
+    if (this._initPromise) await this._initPromise;
+
     if (!this.SerialPort) {
       throw new Error('serialport library not available');
     }
@@ -437,7 +440,14 @@ class SerialMidiManager extends EventEmitter {
         state.buffer.push(byte);
 
         if (state.buffer.length >= state.expectedLength) {
-          this._emitChannelMessage(portPath, state.buffer);
+          const statusByte = state.buffer[0];
+          if (statusByte >= 0xF1 && statusByte <= 0xF6) {
+            // System Common message (F1 MTC, F2 Song Position, F3 Song Select)
+            this._emitSystemCommon(portPath, statusByte, state.buffer.slice(1));
+          } else {
+            // Channel message
+            this._emitChannelMessage(portPath, state.buffer);
+          }
           state.buffer = [];
         }
       }
@@ -588,7 +598,7 @@ class SerialMidiManager extends EventEmitter {
    * Convert easymidi-format message to raw MIDI bytes
    */
   _convertToMidiBytes(type, data) {
-    const channel = data.channel || 0;
+    const channel = data.channel ?? 0;
 
     switch (type) {
       case 'noteon':
@@ -687,6 +697,9 @@ class SerialMidiManager extends EventEmitter {
    * @param {boolean} enabled
    */
   async setEnabled(enabled) {
+    // Wait for any pending initialization
+    if (this._initPromise) await this._initPromise;
+
     this.enabled = enabled;
 
     if (enabled && !this.SerialPort) {
