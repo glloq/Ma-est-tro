@@ -237,7 +237,7 @@ class DeviceManager {
         output: vdev.output !== null,
         enabled: true,
         connected: true,
-        status: 2,  // 0=disconnected, 1=connecting, 2=connected
+        status: DEVICE_STATUS.CONNECTED,
         usbSerialNumber: null
       });
     });

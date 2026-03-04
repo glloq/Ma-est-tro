@@ -7,6 +7,7 @@ import InstrumentCapabilitiesValidator from '../midi/InstrumentCapabilitiesValid
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import os from 'os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -22,8 +23,9 @@ const MIDI_CC = {
 class CommandHandler {
   constructor(app) {
     this.app = app;
+    this.midiConverter = new JsonMidiConverter(app.logger);
     this.handlers = this.registerHandlers();
-    
+
     this.app.logger.info(`CommandHandler initialized with ${Object.keys(this.handlers).length} commands`);
   }
 
@@ -667,6 +669,11 @@ class CommandHandler {
     }
 
     const result = await this.app.serialMidiManager.setEnabled(data.enabled);
+
+    // Persist to config.json so the setting survives restarts
+    this.app.config.set('serial.enabled', data.enabled);
+    this.app.config.save();
+
     return { success: true, ...result };
   }
 
@@ -1233,9 +1240,9 @@ class CommandHandler {
       platform: process.platform,
       arch: process.arch,
       nodeVersion: process.version,
-      cpus: require('os').cpus().length,
-      totalMemory: require('os').totalmem(),
-      freeMemory: require('os').freemem()
+      cpus: os.cpus().length,
+      totalMemory: os.totalmem(),
+      freeMemory: os.freemem()
     };
   }
 
@@ -1425,7 +1432,7 @@ class CommandHandler {
     let midiData;
     try {
       const buffer = Buffer.from(file.data, 'base64');
-      midiData = JsonMidiConverter.midiToJson(buffer);
+      midiData = this.midiConverter.midiToJson(buffer);
     } catch (error) {
       throw new Error(`Failed to parse MIDI file: ${error.message}`);
     }
@@ -1466,7 +1473,7 @@ class CommandHandler {
     let midiData;
     try {
       const buffer = Buffer.from(file.data, 'base64');
-      midiData = JsonMidiConverter.midiToJson(buffer);
+      midiData = this.midiConverter.midiToJson(buffer);
     } catch (error) {
       throw new Error(`Failed to parse MIDI file: ${error.message}`);
     }
@@ -1519,7 +1526,7 @@ class CommandHandler {
     let midiData;
     try {
       const buffer = Buffer.from(originalFile.data, 'base64');
-      midiData = JsonMidiConverter.midiToJson(buffer);
+      midiData = this.midiConverter.midiToJson(buffer);
     } catch (error) {
       throw new Error(`Failed to parse MIDI file: ${error.message}`);
     }
@@ -1548,7 +1555,7 @@ class CommandHandler {
       // Convert back to MIDI binary
       let adaptedBuffer;
       try {
-        adaptedBuffer = JsonMidiConverter.jsonToMidi(adaptedMidiData);
+        adaptedBuffer = this.midiConverter.jsonToMidi(adaptedMidiData);
       } catch (error) {
         throw new Error(`Failed to convert adapted MIDI: ${error.message}`);
       }

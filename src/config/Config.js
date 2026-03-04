@@ -60,6 +60,12 @@ class Config {
       ble: {
         enabled: false,
         scanDuration: 10000 // ms
+      },
+      serial: {
+        enabled: false,
+        autoDetect: true,
+        baudRate: 31250,
+        ports: []
       }
     };
   }
@@ -140,6 +146,10 @@ class Config {
 
   get ble() {
     return this.config.ble;
+  }
+
+  get serial() {
+    return this.config.serial || { enabled: false, autoDetect: true, baudRate: 31250, ports: [] };
   }
 }
 
