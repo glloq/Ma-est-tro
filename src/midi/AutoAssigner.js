@@ -80,6 +80,7 @@ class AutoAssigner {
               instrument: {
                 id: instrument.id,
                 device_id: instrument.device_id,
+                channel: instrument.channel,
                 name: instrument.name || instrument.custom_name || 'Unknown',
                 custom_name: instrument.custom_name,
                 gm_program: instrument.gm_program,
@@ -162,7 +163,7 @@ class AutoAssigner {
       let selected = null;
 
       for (const option of options) {
-        const instrumentKey = option.instrument.device_id;
+        const instrumentKey = option.instrument.id;
         if (!usedInstruments.has(instrumentKey)) {
           selected = option;
           usedInstruments.add(instrumentKey);
@@ -181,6 +182,7 @@ class AutoAssigner {
         assignments[channel] = {
           deviceId: selected.instrument.device_id,
           instrumentId: selected.instrument.id,
+          instrumentChannel: selected.instrument.channel,
           instrumentName: selected.instrument.name,
           customName: selected.instrument.custom_name,
           score: selected.compatibility.score,
