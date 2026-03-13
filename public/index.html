@@ -514,7 +514,7 @@
         .btn-instruments-toggle {
             position: absolute;
             top: 20px;
-            right: 185px;
+            left: 75px;
             background: #f3f4f6;
             border: 2px solid #e5e7eb;
             border-radius: 50%;
@@ -6802,6 +6802,7 @@
         // ========== RÉGLAGES D'INSTRUMENTS ==========
 
         // Afficher la modale de réglages d'instrument
+        window.showInstrumentSettings = showInstrumentSettings;
         async function showInstrumentSettings(device) {
             log(`⚙️ Ouverture des réglages pour ${device.name}...`);
 
@@ -6823,7 +6824,8 @@
                 }
 
                 // Fusionner les réglages et les capacités
-                const settings = { ...(response.settings || {}), ...capabilities };
+                const rawSettings = response && response.settings ? response.settings : {};
+                const settings = { ...rawSettings, ...capabilities };
                 currentDeviceSettings = { device, settings };
 
                 // Créer la modale
@@ -8072,6 +8074,7 @@
             // 🆕 Initialiser la modal Bluetooth après connexion WebSocket
             if (typeof BluetoothScanModal !== 'undefined') {
                 bluetoothScanModal = new BluetoothScanModal(api);
+                window.showBluetoothScan = () => bluetoothScanModal.open();
                 log('✓ Modal Bluetooth initialisée', 'info');
 
                 // Handlers pour les requêtes de la modal vers le backend
@@ -8254,6 +8257,7 @@
             // 🆕 Initialiser la modal réseau après connexion WebSocket
             if (typeof NetworkScanModal !== 'undefined') {
                 networkScanModal = new NetworkScanModal(api);
+                window.showNetworkScan = () => networkScanModal.open();
                 log('✓ Modal réseau initialisée', 'info');
 
                 // Handlers pour les requêtes de la modal vers le backend
