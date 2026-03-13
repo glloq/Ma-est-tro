@@ -158,21 +158,33 @@ class FileManager {
         if (analysis.channel === 9) {
           // Channel 10 (0-indexed 9) is always drums in GM
           gmInstrumentName = 'Drums';
-          gmCategory = 'Drums';
+          gmCategory = 'Percussive';
           instrumentTypes.add('Drums');
-        } else if (analysis.primaryProgram !== null && analysis.primaryProgram !== undefined) {
-          gmInstrumentName = MidiUtils.getGMInstrumentName(analysis.primaryProgram);
-          gmCategory = MidiUtils.getGMCategory(analysis.primaryProgram);
-          // Add GM category to instrument_types for richer searching
+          instrumentTypes.add('Percussive');
+        } else {
+          // Use primary program if available, otherwise default to 0 (Acoustic Grand Piano)
+          // per GM standard: channels without explicit program change default to program 0
+          const program = (analysis.primaryProgram !== null && analysis.primaryProgram !== undefined)
+            ? analysis.primaryProgram
+            : 0;
+          gmInstrumentName = MidiUtils.getGMInstrumentName(program);
+          gmCategory = MidiUtils.getGMCategory(program);
           if (gmCategory) {
             instrumentTypes.add(gmCategory);
           }
         }
 
         // Build channel detail record
+        // Use resolved program (defaulting to 0 for non-drum channels without program change)
+        const resolvedProgram = (analysis.channel === 9)
+          ? analysis.primaryProgram
+          : (analysis.primaryProgram !== null && analysis.primaryProgram !== undefined)
+            ? analysis.primaryProgram
+            : 0;
+
         channelDetails.push({
           channel: analysis.channel,
-          primaryProgram: analysis.primaryProgram,
+          primaryProgram: resolvedProgram,
           gmInstrumentName,
           gmCategory,
           estimatedType: analysis.estimatedType,
@@ -455,14 +467,29 @@ class FileManager {
       // Update metadata
       const metadata = this.extractMetadata(midiData);
 
+      // Re-analyze instrument metadata (content may have changed)
+      const parsed = parseMidi(buffer);
+      const instrumentMetadata = this.extractInstrumentMetadata(parsed);
+
       this.app.database.updateFile(fileId, {
         data: base64Data,
         size: buffer.length,
         tracks: midiData.tracks.length,
         duration: metadata.duration,
         tempo: metadata.tempo,
-        ppq: midiData.header.ticksPerBeat || 480
+        ppq: midiData.header.ticksPerBeat || 480,
+        instrument_types: instrumentMetadata.fileMetadata.instrument_types
       });
+
+      // Update channel records
+      try {
+        this.app.database.deleteFileChannels(fileId);
+        if (instrumentMetadata.channelDetails.length > 0) {
+          this.app.database.insertFileChannels(fileId, instrumentMetadata.channelDetails);
+        }
+      } catch (err) {
+        this.app.logger.warn(`Failed to update channel data on save: ${err.message}`);
+      }
 
       this.app.logger.info(`File saved: ${fileId}`);
 
@@ -535,7 +562,7 @@ class FileManager {
       const baseName = nameParts.join('.');
       const newFilename = `${baseName} (copy).${ext}`;
 
-      // Insert duplicate
+      // Insert duplicate with instrument metadata
       const newFileId = this.app.database.insertFile({
         filename: newFilename,
         data: file.data,
@@ -545,8 +572,40 @@ class FileManager {
         tempo: file.tempo,
         ppq: file.ppq,
         uploaded_at: new Date().toISOString(),
-        folder: file.folder
+        folder: file.folder,
+        instrument_types: file.instrument_types || '[]',
+        channel_count: file.channel_count || 0,
+        note_range_min: file.note_range_min,
+        note_range_max: file.note_range_max,
+        has_drums: file.has_drums || false,
+        has_melody: file.has_melody || false,
+        has_bass: file.has_bass || false
       });
+
+      // Copy channel records from original file
+      try {
+        const channels = this.app.database.getFileChannels(file.id);
+        if (channels.length > 0) {
+          const channelDetails = channels.map(ch => ({
+            channel: ch.channel,
+            primaryProgram: ch.primary_program,
+            gmInstrumentName: ch.gm_instrument_name,
+            gmCategory: ch.gm_category,
+            estimatedType: ch.estimated_type,
+            typeConfidence: ch.type_confidence || 0,
+            noteRangeMin: ch.note_range_min,
+            noteRangeMax: ch.note_range_max,
+            totalNotes: ch.total_notes || 0,
+            polyphonyMax: ch.polyphony_max || 0,
+            polyphonyAvg: ch.polyphony_avg || 0,
+            density: ch.density || 0,
+            trackNames: ch.track_names ? JSON.parse(ch.track_names) : []
+          }));
+          this.app.database.insertFileChannels(newFileId, channelDetails);
+        }
+      } catch (err) {
+        this.app.logger.warn(`Failed to copy channel data for duplicate: ${err.message}`);
+      }
 
       this.app.logger.info(`File duplicated: ${file.filename} → ${newFilename}`);
 
@@ -591,7 +650,10 @@ class FileManager {
       const duration = metadata.duration;
       const tempo = metadata.tempo;
 
-      // Insert new file
+      // Extract instrument metadata for the new file
+      const instrumentMetadata = this.extractInstrumentMetadata(parsed);
+
+      // Insert new file with instrument metadata
       const newFileId = this.app.database.insertFile({
         filename: newFilename,
         data: base64Data,
@@ -601,8 +663,18 @@ class FileManager {
         tempo: tempo,
         ppq: parsed.header.ticksPerBeat || 480,
         uploaded_at: new Date().toISOString(),
-        folder: file.folder
+        folder: file.folder,
+        ...instrumentMetadata.fileMetadata
       });
+
+      // Store per-channel detail
+      if (instrumentMetadata.channelDetails && instrumentMetadata.channelDetails.length > 0) {
+        try {
+          this.app.database.insertFileChannels(newFileId, instrumentMetadata.channelDetails);
+        } catch (err) {
+          this.app.logger.warn(`Failed to insert channel details for saveAs: ${err.message}`);
+        }
+      }
 
       this.app.logger.info(`File saved as: ${file.filename} → ${newFilename}`);
 

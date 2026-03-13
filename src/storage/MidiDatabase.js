@@ -385,9 +385,17 @@ class MidiDatabase {
 
       // GM program number filter
       if (filters.gmPrograms && filters.gmPrograms.length > 0) {
-        const placeholders = filters.gmPrograms.map(() => '?').join(', ');
-        wheres.push(`mf.id IN (SELECT midi_file_id FROM midi_file_channels WHERE primary_program IN (${placeholders}))`);
-        filters.gmPrograms.forEach(prog => params.push(prog));
+        const gmMode = filters.gmMode || 'ANY';
+        if (gmMode === 'ALL') {
+          filters.gmPrograms.forEach(prog => {
+            wheres.push('mf.id IN (SELECT midi_file_id FROM midi_file_channels WHERE primary_program = ?)');
+            params.push(prog);
+          });
+        } else {
+          const placeholders = filters.gmPrograms.map(() => '?').join(', ');
+          wheres.push(`mf.id IN (SELECT midi_file_id FROM midi_file_channels WHERE primary_program IN (${placeholders}))`);
+          filters.gmPrograms.forEach(prog => params.push(prog));
+        }
       }
 
       // Routing status filter
