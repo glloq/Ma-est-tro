@@ -48,7 +48,8 @@
         body.theme-dark .btn-keyboard-toggle,
         body.theme-dark .btn-settings-toggle,
         body.theme-dark .btn-debug-toggle,
-        body.theme-dark .btn-instruments-toggle {
+        body.theme-dark .btn-instruments-toggle,
+        body.theme-dark .btn-calibration-toggle {
             background: #3d3d3d;
             border-color: #4d4d4d;
             color: #ffffff;
@@ -72,6 +73,11 @@
         body.theme-dark .btn-instruments-toggle:hover {
             background: #8b5cf6;
             border-color: #8b5cf6;
+        }
+
+        body.theme-dark .btn-calibration-toggle:hover {
+            background: #e74c3c;
+            border-color: #e74c3c;
         }
 
         body.theme-dark input,
@@ -508,7 +514,7 @@
         .btn-instruments-toggle {
             position: absolute;
             top: 20px;
-            right: 130px;
+            right: 185px;
             background: #f3f4f6;
             border: 2px solid #e5e7eb;
             border-radius: 50%;
@@ -529,6 +535,32 @@
             border-color: #8b5cf6;
             transform: scale(1.1) rotate(10deg);
             box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn-calibration-toggle {
+            position: absolute;
+            top: 20px;
+            right: 130px;
+            background: #f3f4f6;
+            border: 2px solid #e5e7eb;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            font-size: 22px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            z-index: 10;
+        }
+
+        .btn-calibration-toggle:hover {
+            background: #e74c3c;
+            border-color: #e74c3c;
+            transform: scale(1.1) rotate(-10deg);
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
         }
 
         .status-bar {
@@ -2925,7 +2957,7 @@
                     🎛️
                 </button>
 
-                <button class="btn-instruments-toggle" id="calibrationBtn" title="Calibration des délais (Microphone)">
+                <button class="btn-calibration-toggle" id="calibrationBtn" title="Calibration des délais (Microphone)">
                     🎤
                 </button>
 

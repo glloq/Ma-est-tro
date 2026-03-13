@@ -43,6 +43,7 @@ class SettingsModal {
             virtualInstrument: false,
             showPianoRoll: false, // Afficher le piano roll des notes à venir
             showDebugButton: true, // Afficher le bouton de debug
+            showCalibrationButton: false, // Afficher le bouton de calibration micro
             serialMidiEnabled: false // Ports série MIDI GPIO (désactivé par défaut)
         };
 
@@ -399,6 +400,32 @@ class SettingsModal {
                     </div>
                     <label class="toggle-switch" style="position: relative; display: inline-block; width: 60px; height: 30px;">
                         <input type="checkbox" id="showDebugButtonToggle" ${this.settings.showDebugButton ? 'checked' : ''}
+                               style="opacity: 0; width: 0; height: 0;">
+                        <span class="toggle-slider" style="
+                            position: absolute;
+                            cursor: pointer;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            background-color: #ccc;
+                            transition: 0.4s;
+                            border-radius: 30px;
+                        "></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Bouton Calibration Micro -->
+            <div class="settings-section" style="margin-top: 24px;">
+                <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #333;">🎤 ${i18n.t('settings.calibrationButton.title') || 'Bouton Calibration Micro'}</h3>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+                    <div style="flex: 1;">
+                        <p style="margin: 0 0 4px 0; font-size: 14px; color: #333;">${i18n.t('settings.calibrationButton.enable') || 'Afficher le bouton de calibration'}</p>
+                        <p style="margin: 0; font-size: 12px; color: #666;">${i18n.t('settings.calibrationButton.description') || 'Affiche le bouton microphone pour calibrer les délais audio des instruments'}</p>
+                    </div>
+                    <label class="toggle-switch" style="position: relative; display: inline-block; width: 60px; height: 30px;">
+                        <input type="checkbox" id="showCalibrationButtonToggle" ${this.settings.showCalibrationButton ? 'checked' : ''}
                                style="opacity: 0; width: 0; height: 0;">
                         <span class="toggle-slider" style="
                             position: absolute;
@@ -854,6 +881,9 @@ class SettingsModal {
         const debugButtonToggle = this.modal.querySelector('#showDebugButtonToggle');
         if (debugButtonToggle) debugButtonToggle.checked = this.settings.showDebugButton;
 
+        const calibrationButtonToggle = this.modal.querySelector('#showCalibrationButtonToggle');
+        if (calibrationButtonToggle) calibrationButtonToggle.checked = this.settings.showCalibrationButton;
+
         const serialMidiToggle = this.modal.querySelector('#serialMidiToggle');
         if (serialMidiToggle) serialMidiToggle.checked = this.settings.serialMidiEnabled;
         const serialPortsSection = this.modal.querySelector('#serialMidiPortsSection');
@@ -881,6 +911,7 @@ class SettingsModal {
         const virtualToggle = this.modal.querySelector('#virtualInstrumentToggle');
         const pianoRollToggle = this.modal.querySelector('#showPianoRollToggle');
         const debugButtonToggle = this.modal.querySelector('#showDebugButtonToggle');
+        const calibrationButtonToggle = this.modal.querySelector('#showCalibrationButtonToggle');
 
         const serialMidiToggle = this.modal.querySelector('#serialMidiToggle');
 
@@ -891,6 +922,7 @@ class SettingsModal {
             virtualInstrument: virtualToggle ? virtualToggle.checked : this.settings.virtualInstrument,
             showPianoRoll: pianoRollToggle ? pianoRollToggle.checked : this.settings.showPianoRoll,
             showDebugButton: debugButtonToggle ? debugButtonToggle.checked : this.settings.showDebugButton,
+            showCalibrationButton: calibrationButtonToggle ? calibrationButtonToggle.checked : this.settings.showCalibrationButton,
             serialMidiEnabled: serialMidiToggle ? serialMidiToggle.checked : this.settings.serialMidiEnabled
         };
 
@@ -901,6 +933,7 @@ class SettingsModal {
         const virtualInstrumentChanged = newSettings.virtualInstrument !== this.settings.virtualInstrument;
         const pianoRollChanged = newSettings.showPianoRoll !== this.settings.showPianoRoll;
         const debugButtonChanged = newSettings.showDebugButton !== this.settings.showDebugButton;
+        const calibrationButtonChanged = newSettings.showCalibrationButton !== this.settings.showCalibrationButton;
         const serialMidiChanged = newSettings.serialMidiEnabled !== this.settings.serialMidiEnabled;
 
         // Mettre à jour les paramètres
@@ -940,6 +973,10 @@ class SettingsModal {
             this.eventBus?.emit('settings:debug_button_changed', { enabled: newSettings.showDebugButton });
             this.applyDebugButton(newSettings.showDebugButton);
         }
+        if (calibrationButtonChanged) {
+            this.eventBus?.emit('settings:calibration_button_changed', { enabled: newSettings.showCalibrationButton });
+            this.applyCalibrationButton(newSettings.showCalibrationButton);
+        }
         if (serialMidiChanged) {
             this.eventBus?.emit('settings:serial_midi_changed', { enabled: newSettings.serialMidiEnabled });
         }
@@ -954,6 +991,7 @@ class SettingsModal {
     applySettings() {
         this.applyTheme(this.settings.theme);
         this.applyDebugButton(this.settings.showDebugButton);
+        this.applyCalibrationButton(this.settings.showCalibrationButton);
 
         // Les autres paramètres seront appliqués par les composants concernés
         // via les événements de l'EventBus
@@ -973,6 +1011,16 @@ class SettingsModal {
         // Déplacer le bouton réglages à droite quand debug est caché
         if (settingsToggle) {
             settingsToggle.style.right = show ? '75px' : '20px';
+        }
+    }
+
+    /**
+     * Appliquer la visibilité du bouton calibration micro
+     */
+    applyCalibrationButton(show) {
+        const calibrationBtn = document.getElementById('calibrationBtn');
+        if (calibrationBtn) {
+            calibrationBtn.style.display = show ? 'flex' : 'none';
         }
     }
 

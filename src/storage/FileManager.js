@@ -211,9 +211,9 @@ class FileManager {
           channel_count: channelAnalyses.length,
           note_range_min: noteMin < 127 ? noteMin : null,
           note_range_max: noteMax > 0 ? noteMax : null,
-          has_drums: hasDrums,
-          has_melody: hasMelody,
-          has_bass: hasBass
+          has_drums: hasDrums ? 1 : 0,
+          has_melody: hasMelody ? 1 : 0,
+          has_bass: hasBass ? 1 : 0
         },
         channelDetails
       };
@@ -226,9 +226,9 @@ class FileManager {
           channel_count: 0,
           note_range_min: null,
           note_range_max: null,
-          has_drums: false,
-          has_melody: false,
-          has_bass: false
+          has_drums: 0,
+          has_melody: 0,
+          has_bass: 0
         },
         channelDetails: []
       };
@@ -577,9 +577,9 @@ class FileManager {
         channel_count: file.channel_count || 0,
         note_range_min: file.note_range_min,
         note_range_max: file.note_range_max,
-        has_drums: file.has_drums || false,
-        has_melody: file.has_melody || false,
-        has_bass: file.has_bass || false
+        has_drums: file.has_drums ? 1 : 0,
+        has_melody: file.has_melody ? 1 : 0,
+        has_bass: file.has_bass ? 1 : 0
       });
 
       // Copy channel records from original file
