@@ -45,9 +45,9 @@ class InstrumentManagementPage {
           <div class="modal-header" style="padding: 24px; border-bottom: 2px solid #e5e7eb; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; flex-shrink: 0;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <div>
-                <h2 style="margin: 0 0 8px 0; font-size: 28px;">🎹 Instrument Management</h2>
+                <h2 style="margin: 0 0 8px 0; font-size: 28px;">🎹 ${i18n.t('instrumentManagement.title') || 'Gestion des instruments'}</h2>
                 <p style="margin: 0; opacity: 0.9; font-size: 14px;">
-                  Configure, organize, and manage all your MIDI instruments
+                  ${i18n.t('instrumentManagement.subtitle') || 'Configurez, organisez et gérez vos instruments MIDI'}
                 </p>
               </div>
               <button class="modal-close" onclick="instrumentManagementPageInstance.close()" style="background: rgba(255,255,255,0.2); border: none; color: white; font-size: 32px; cursor: pointer; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">
@@ -62,7 +62,7 @@ class InstrumentManagementPage {
               <!-- Search -->
               <input type="text"
                      id="instrumentSearch"
-                     placeholder="🔍 Search instruments..."
+                     placeholder="🔍 ${i18n.t('instrumentManagement.searchPlaceholder') || 'Rechercher un instrument...'}"
                      onkeyup="instrumentManagementPageInstance.handleSearch(this.value)"
                      style="flex: 1; min-width: 200px; padding: 10px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
 
@@ -70,24 +70,24 @@ class InstrumentManagementPage {
               <select id="instrumentFilter"
                       onchange="instrumentManagementPageInstance.handleFilter(this.value)"
                       style="padding: 10px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white;">
-                <option value="all">All Instruments</option>
-                <option value="complete">✓ Complete Only</option>
-                <option value="incomplete">⚠ Incomplete Only</option>
-                <option value="connected">🔌 Connected Only</option>
+                <option value="all">${i18n.t('instrumentManagement.filterAll') || 'Tous les instruments'}</option>
+                <option value="complete">✓ ${i18n.t('instrumentManagement.filterComplete') || 'Complets uniquement'}</option>
+                <option value="incomplete">⚠ ${i18n.t('instrumentManagement.filterIncomplete') || 'Incomplets uniquement'}</option>
+                <option value="connected">🔌 ${i18n.t('instrumentManagement.filterConnected') || 'Connectés uniquement'}</option>
               </select>
 
               <!-- Actions -->
               <button class="button button-secondary" onclick="instrumentManagementPageInstance.scanDevices()" style="padding: 10px 16px; white-space: nowrap;">
-                🔌 Scan USB
+                🔌 ${i18n.t('ui.scanUsb') || 'Scan USB'}
               </button>
               <button class="button button-secondary" onclick="instrumentManagementPageInstance.scanBluetooth()" style="padding: 10px 16px; background: #9b59b6; white-space: nowrap;">
-                📡 Scan Bluetooth
+                📡 ${i18n.t('ui.scanBluetooth') || 'Scan Bluetooth'}
               </button>
               <button class="button button-secondary" onclick="instrumentManagementPageInstance.scanNetwork()" style="padding: 10px 16px; background: #3498db; white-space: nowrap;">
-                🌐 Scan Network
+                🌐 ${i18n.t('ui.scanNetwork') || 'Scan Réseau'}
               </button>
               <button class="button button-primary" onclick="instrumentManagementPageInstance.refresh()" style="padding: 10px 16px; white-space: nowrap;">
-                🔄 Refresh
+                🔄 ${i18n.t('instrumentManagement.refresh') || 'Rafraîchir'}
               </button>
             </div>
           </div>
@@ -102,9 +102,9 @@ class InstrumentManagementPage {
           <!-- Footer Stats -->
           <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; background: #f9fafb; flex-shrink: 0;">
             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #666;">
-              <span id="instrumentStats">Loading...</span>
+              <span id="instrumentStats">${i18n.t('common.loading') || 'Chargement...'}</span>
               <button class="button button-secondary" onclick="instrumentManagementPageInstance.close()">
-                Close
+                ${i18n.t('common.close') || 'Fermer'}
               </button>
             </div>
           </div>
@@ -188,11 +188,11 @@ class InstrumentManagementPage {
       content.innerHTML = `
         <div style="text-align: center; padding: 60px 20px; color: #999;">
           <div style="font-size: 64px; margin-bottom: 16px;">🎹</div>
-          <h3 style="margin: 0 0 8px 0; color: #666;">No instruments found</h3>
+          <h3 style="margin: 0 0 8px 0; color: #666;">${i18n.t('instrumentManagement.noInstruments') || 'Aucun instrument trouvé'}</h3>
           <p style="margin: 0; font-size: 14px;">
             ${this.searchQuery || this.filterStatus !== 'all'
-              ? 'Try adjusting your search or filter'
-              : 'Scan for devices to get started'}
+              ? (i18n.t('instrumentManagement.adjustFilter') || 'Essayez de modifier votre recherche ou filtre')
+              : (i18n.t('instrumentManagement.scanToStart') || 'Scannez vos périphériques pour commencer')}
           </p>
         </div>
       `;
@@ -210,7 +210,7 @@ class InstrumentManagementPage {
       html += `
         <div style="margin-bottom: 32px;">
           <h3 style="margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #10b981; color: #10b981; font-size: 16px;">
-            🔌 Connected Instruments (${connected.length})
+            🔌 ${i18n.t('instrumentManagement.connectedInstruments') || 'Instruments connectés'} (${connected.length})
           </h3>
           <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 16px;">
             ${connected.map(inst => this.renderInstrumentCard(inst)).join('')}
@@ -224,7 +224,7 @@ class InstrumentManagementPage {
       html += `
         <div>
           <h3 style="margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #94a3b8; color: #64748b; font-size: 16px;">
-            ⚫ Disconnected Instruments (${disconnected.length})
+            ⚫ ${i18n.t('instrumentManagement.disconnectedInstruments') || 'Instruments déconnectés'} (${disconnected.length})
           </h3>
           <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 16px;">
             ${disconnected.map(inst => this.renderInstrumentCard(inst)).join('')}
@@ -261,8 +261,8 @@ class InstrumentManagementPage {
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
               <h4 style="margin: 0; font-size: 18px; color: #1f2937;">${displayName}</h4>
               ${isComplete
-                ? '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: #10b981; color: white; border-radius: 12px; font-size: 11px; font-weight: 600;">✓ COMPLETE</span>'
-                : '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: #f59e0b; color: white; border-radius: 12px; font-size: 11px; font-weight: 600;">⚠ INCOMPLETE</span>'
+                ? `<span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: #10b981; color: white; border-radius: 12px; font-size: 11px; font-weight: 600;">✓ ${i18n.t('instrumentManagement.complete') || 'COMPLET'}</span>`
+                : `<span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: #f59e0b; color: white; border-radius: 12px; font-size: 11px; font-weight: 600;">⚠ ${i18n.t('instrumentManagement.incomplete') || 'INCOMPLET'}</span>`
               }
             </div>
             ${instrument.name !== displayName ? `<div style="font-size: 13px; color: #6b7280;">${instrument.name}</div>` : ''}
@@ -276,14 +276,14 @@ class InstrumentManagementPage {
         <div style="margin-bottom: 16px; font-size: 13px; color: #6b7280;">
           ${instrument.manufacturer ? `<div>🏭 ${instrument.manufacturer}</div>` : ''}
           ${instrument.gm_program !== null && instrument.gm_program !== undefined
-            ? `<div>🎵 GM Program: ${instrument.gm_program}</div>`
-            : '<div style="color: #f59e0b;">⚠ GM Program not set</div>'}
-          ${instrument.note_range_min !== null && instrument.note_range_max !== null
-            ? `<div>🎹 Range: ${this.getNoteName(instrument.note_range_min)} - ${this.getNoteName(instrument.note_range_max)}</div>`
-            : '<div style="color: #f59e0b;">⚠ Note range not set</div>'}
+            ? `<div>🎵 ${i18n.t('instrumentManagement.gmProgram') || 'Programme GM'}: ${instrument.gm_program}</div>`
+            : `<div style="color: #f59e0b;">⚠ ${i18n.t('instrumentManagement.gmProgramNotSet') || 'Programme GM non défini'}</div>`}
+          ${instrument.note_range_min != null && instrument.note_range_max != null
+            ? `<div>🎹 ${i18n.t('instrumentManagement.range') || 'Plage'}: ${this.getNoteName(instrument.note_range_min)} - ${this.getNoteName(instrument.note_range_max)}</div>`
+            : `<div style="color: #f59e0b;">⚠ ${i18n.t('instrumentManagement.rangeNotSet') || 'Plage de notes non définie'}</div>`}
           ${instrument.polyphony
-            ? `<div>🎼 Polyphony: ${instrument.polyphony}</div>`
-            : '<div style="color: #f59e0b;">⚠ Polyphony not set</div>'}
+            ? `<div>🎼 ${i18n.t('instrumentManagement.polyphony') || 'Polyphonie'}: ${instrument.polyphony}</div>`
+            : `<div style="color: #f59e0b;">⚠ ${i18n.t('instrumentManagement.polyphonyNotSet') || 'Polyphonie non définie'}</div>`}
         </div>
 
         <!-- Actions -->
@@ -291,20 +291,20 @@ class InstrumentManagementPage {
           <button class="button button-primary"
                   onclick="event.stopPropagation(); instrumentManagementPageInstance.editInstrument('${instrument.id}')"
                   style="flex: 1; min-width: 100px; font-size: 13px; padding: 8px 12px;">
-            ✏️ Edit
+            ✏️ ${i18n.t('instrumentManagement.edit') || 'Modifier'}
           </button>
           ${isConnected ? `
             <button class="button button-secondary"
                     onclick="event.stopPropagation(); instrumentManagementPageInstance.testInstrument('${instrument.id}')"
                     style="font-size: 13px; padding: 8px 12px;">
-              🎵 Test
+              🎵 ${i18n.t('instrumentManagement.test') || 'Tester'}
             </button>
           ` : ''}
           ${!isComplete ? `
             <button class="button button-info"
                     onclick="event.stopPropagation(); instrumentManagementPageInstance.completeInstrument('${instrument.id}')"
                     style="font-size: 13px; padding: 8px 12px;">
-              ✓ Complete
+              ✓ ${i18n.t('instrumentManagement.completeBtn') || 'Compléter'}
             </button>
           ` : ''}
           <button class="button button-danger"
@@ -351,14 +351,14 @@ class InstrumentManagementPage {
     const incomplete = total - complete;
 
     statsElement.innerHTML = `
-      <span><strong>${total}</strong> instruments total</span>
+      <span><strong>${total}</strong> ${i18n.t('instrumentManagement.instrumentsTotal') || 'instruments au total'}</span>
       <span>•</span>
-      <span style="color: #10b981;"><strong>${connected}</strong> connected</span>
+      <span style="color: #10b981;"><strong>${connected}</strong> ${i18n.t('instrumentManagement.connectedCount') || 'connectés'}</span>
       <span>•</span>
-      <span style="color: #10b981;"><strong>${complete}</strong> complete</span>
+      <span style="color: #10b981;"><strong>${complete}</strong> ${i18n.t('instrumentManagement.completeCount') || 'complets'}</span>
       ${incomplete > 0 ? `
         <span>•</span>
-        <span style="color: #f59e0b;"><strong>${incomplete}</strong> incomplete</span>
+        <span style="color: #f59e0b;"><strong>${incomplete}</strong> ${i18n.t('instrumentManagement.incompleteCount') || 'incomplets'}</span>
       ` : ''}
     `;
   }
@@ -388,7 +388,7 @@ class InstrumentManagementPage {
     if (instrument && window.showInstrumentSettings) {
       window.showInstrumentSettings(instrument);
     } else {
-      alert('Instrument settings not available. Please ensure the instrument settings module is loaded.');
+      alert(i18n.t('instrumentManagement.settingsNotAvailable') || 'Réglages non disponibles. Vérifiez que le module est chargé.');
     }
   }
 
@@ -424,7 +424,7 @@ class InstrumentManagementPage {
   async testInstrument(deviceId) {
     try {
       // Envoyer une note de test
-      await this.apiClient.sendCommand('send_note', {
+      await this.apiClient.sendCommand('midi_send_note', {
         deviceId: deviceId,
         channel: 0,
         note: 60, // C4
@@ -432,9 +432,9 @@ class InstrumentManagementPage {
         duration: 500
       });
 
-      alert('Test note sent! (C4 - Middle C)');
+      alert(i18n.t('instrumentManagement.testNoteSent') || 'Note de test envoyée ! (C4 - Do central)');
     } catch (error) {
-      alert('Failed to send test note: ' + error.message);
+      alert((i18n.t('instrumentManagement.testNoteFailed') || 'Échec de l\'envoi de la note de test') + ': ' + error.message);
     }
   }
 
@@ -442,7 +442,7 @@ class InstrumentManagementPage {
    * Supprime un instrument
    */
   async deleteInstrument(deviceId) {
-    if (!confirm('Are you sure you want to remove this instrument from the database?\n\nNote: The physical device will not be affected.')) {
+    if (!confirm(i18n.t('instrumentManagement.deleteConfirm') || 'Êtes-vous sûr de vouloir supprimer cet instrument de la base de données ?\n\nNote : Le périphérique physique ne sera pas affecté.')) {
       return;
     }
 
@@ -450,7 +450,7 @@ class InstrumentManagementPage {
       await this.apiClient.sendCommand('instrument_delete', { deviceId });
       await this.refresh();
     } catch (error) {
-      alert('Failed to delete instrument: ' + error.message);
+      alert((i18n.t('instrumentManagement.deleteFailed') || 'Échec de la suppression') + ': ' + error.message);
     }
   }
 
@@ -462,7 +462,7 @@ class InstrumentManagementPage {
       await this.apiClient.sendCommand('device_refresh', {});
       setTimeout(() => this.refresh(), 1000);
     } catch (error) {
-      alert('Scan failed: ' + error.message);
+      alert((i18n.t('instrumentManagement.scanFailed') || 'Échec du scan') + ': ' + error.message);
     }
   }
 
@@ -474,7 +474,7 @@ class InstrumentManagementPage {
     if (window.showBluetoothScan) {
       window.showBluetoothScan();
     } else {
-      alert('Bluetooth scan feature not available');
+      alert(i18n.t('instrumentManagement.bluetoothNotAvailable') || 'Scan Bluetooth non disponible');
     }
   }
 
@@ -486,7 +486,7 @@ class InstrumentManagementPage {
     if (window.showNetworkScan) {
       window.showNetworkScan();
     } else {
-      alert('Network scan feature not available');
+      alert(i18n.t('instrumentManagement.networkNotAvailable') || 'Scan réseau non disponible');
     }
   }
 
@@ -506,10 +506,10 @@ class InstrumentManagementPage {
       content.innerHTML = `
         <div style="text-align: center; padding: 60px 20px; color: #ef4444;">
           <div style="font-size: 64px; margin-bottom: 16px;">⚠️</div>
-          <h3 style="margin: 0 0 8px 0;">Error</h3>
+          <h3 style="margin: 0 0 8px 0;">${i18n.t('common.error') || 'Erreur'}</h3>
           <p style="margin: 0; font-size: 14px;">${message}</p>
           <button class="button button-primary" onclick="instrumentManagementPageInstance.refresh()" style="margin-top: 16px;">
-            Retry
+            ${i18n.t('instrumentManagement.retry') || 'Réessayer'}
           </button>
         </div>
       `;

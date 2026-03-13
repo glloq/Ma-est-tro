@@ -6824,7 +6824,8 @@
                 }
 
                 // Fusionner les réglages et les capacités
-                const settings = { ...(response.settings || {}), ...capabilities };
+                const rawSettings = response && response.settings ? response.settings : {};
+                const settings = { ...rawSettings, ...capabilities };
                 currentDeviceSettings = { device, settings };
 
                 // Créer la modale
