@@ -333,7 +333,7 @@
     "customName": "Egyéni név",
     "customNameHelp": "Egyéni megjelenítendő név (opcionális)",
     "customNamePlaceholder": "Szintetizátorom",
-    "syncDelay": "Szinkronizációs késleltetés (μs)",
+    "syncDelay": "Szinkronizációs késleltetés (ms)",
     "syncDelayHelp": "Pozitív = késleltetés, negatív = előre (több hangszer szinkronizálásához)",
     "macAddress": "MAC cím (Bluetooth)",
     "macAddressHelp": "Beállítások társítása Bluetooth eszközökhöz",

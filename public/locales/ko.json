@@ -333,7 +333,7 @@
     "customName": "사용자 지정 이름",
     "customNameHelp": "사용자 지정 표시 이름 (선택사항)",
     "customNamePlaceholder": "내 신디사이저",
-    "syncDelay": "동기화 지연 (μs)",
+    "syncDelay": "동기화 지연 (ms)",
     "syncDelayHelp": "양수 = 지연, 음수 = 앞당김 (다중 악기 동기화용)",
     "macAddress": "MAC 주소 (블루투스)",
     "macAddressHelp": "블루투스 장치와 설정 연결용",

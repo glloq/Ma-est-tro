@@ -333,7 +333,7 @@
     "customName": "Tên tùy chỉnh",
     "customNameHelp": "Tên hiển thị tùy chỉnh (tùy chọn)",
     "customNamePlaceholder": "Synthesizer của tôi",
-    "syncDelay": "Độ trễ đồng bộ (μs)",
+    "syncDelay": "Độ trễ đồng bộ (ms)",
     "syncDelayHelp": "Dương = trễ, âm = sớm (để đồng bộ đa nhạc cụ)",
     "macAddress": "Địa chỉ MAC (Bluetooth)",
     "macAddressHelp": "Để liên kết cài đặt với thiết bị Bluetooth",

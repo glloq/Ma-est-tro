@@ -235,8 +235,8 @@ class InstrumentCapabilitiesModal {
                     style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
                     ${required ? 'required' : ''}>
               <option value="">-- Select --</option>
-              <option value="continuous" ${currentValue === 'continuous' ? 'selected' : ''}>
-                Continuous (melodic instruments)
+              <option value="range" ${currentValue === 'range' ? 'selected' : ''}>
+                Range (melodic instruments)
               </option>
               <option value="discrete" ${currentValue === 'discrete' ? 'selected' : ''}>
                 Discrete (drums, pads)

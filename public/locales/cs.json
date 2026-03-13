@@ -333,7 +333,7 @@
     "customName": "Vlastní název",
     "customNameHelp": "Vlastní zobrazovaný název (volitelné)",
     "customNamePlaceholder": "Můj syntezátor",
-    "syncDelay": "Synchronizační zpoždění (μs)",
+    "syncDelay": "Synchronizační zpoždění (ms)",
     "syncDelayHelp": "Kladné = zpoždění, záporné = předstih (pro synchronizaci více nástrojů)",
     "macAddress": "MAC adresa (Bluetooth)",
     "macAddressHelp": "Pro přiřazení nastavení k Bluetooth zařízením",

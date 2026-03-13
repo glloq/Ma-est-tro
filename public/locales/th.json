@@ -333,7 +333,7 @@
     "customName": "ชื่อที่กำหนดเอง",
     "customNameHelp": "ชื่อที่แสดงที่กำหนดเอง (ไม่บังคับ)",
     "customNamePlaceholder": "ซินธิไซเซอร์ของฉัน",
-    "syncDelay": "ความล่าช้าในการซิงค์ (μs)",
+    "syncDelay": "ความล่าช้าในการซิงค์ (ms)",
     "syncDelayHelp": "บวก = ล่าช้า, ลบ = ล่วงหน้า (สำหรับการซิงค์หลายเครื่องดนตรี)",
     "macAddress": "ที่อยู่ MAC (Bluetooth)",
     "macAddressHelp": "เพื่อเชื่อมโยงการตั้งค่ากับอุปกรณ์ Bluetooth",

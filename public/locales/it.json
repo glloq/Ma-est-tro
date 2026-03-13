@@ -333,7 +333,7 @@
     "customName": "Nome personalizzato",
     "customNameHelp": "Nome visualizzato personalizzato (opzionale)",
     "customNamePlaceholder": "Il mio Sintetizzatore",
-    "syncDelay": "Ritardo di sincronizzazione (μs)",
+    "syncDelay": "Ritardo di sincronizzazione (ms)",
     "syncDelayHelp": "Positivo = ritardare, negativo = anticipare (per sincronizzazione multi-strumento)",
     "macAddress": "Indirizzo MAC (Bluetooth)",
     "macAddressHelp": "Per associare le impostazioni ai dispositivi Bluetooth",

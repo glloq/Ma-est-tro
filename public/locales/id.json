@@ -333,7 +333,7 @@
     "customName": "Nama kustom",
     "customNameHelp": "Nama tampilan kustom (opsional)",
     "customNamePlaceholder": "Synthesizer saya",
-    "syncDelay": "Delay sinkronisasi (μs)",
+    "syncDelay": "Delay sinkronisasi (ms)",
     "syncDelayHelp": "Positif = delay, negatif = maju (untuk sinkronisasi multi-instrumen)",
     "macAddress": "Alamat MAC (Bluetooth)",
     "macAddressHelp": "Untuk mengasosiasikan pengaturan dengan perangkat Bluetooth",
