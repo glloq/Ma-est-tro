@@ -700,9 +700,9 @@ class InstrumentDatabase {
           INSERT INTO instruments_latency (
             id, device_id, channel, name,
             note_range_min, note_range_max, supported_ccs,
-            note_selection_mode, selected_notes,
+            note_selection_mode, selected_notes, polyphony,
             capabilities_source, capabilities_updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
         const id = `${deviceId}_${channel}`;
@@ -716,6 +716,7 @@ class InstrumentDatabase {
           supportedCcsJson,
           capabilities.note_selection_mode || 'range',
           selectedNotesJson,
+          capabilities.polyphony !== undefined && capabilities.polyphony !== null ? parseInt(capabilities.polyphony) : null,
           capabilities.capabilities_source || 'manual',
           now
         );
@@ -809,7 +810,7 @@ class InstrumentDatabase {
         SELECT
           device_id, name, custom_name,
           note_range_min, note_range_max, supported_ccs,
-          note_selection_mode, selected_notes,
+          note_selection_mode, selected_notes, polyphony,
           capabilities_source, capabilities_updated_at
         FROM instruments_latency
         ORDER BY device_id

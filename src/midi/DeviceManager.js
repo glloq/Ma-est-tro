@@ -487,6 +487,16 @@ class DeviceManager {
       if (identityInfo) {
         this.app.logger.info(`Identity Reply received from ${deviceName}:`, identityInfo);
 
+        // Persist identity to database
+        if (this.app.database) {
+          try {
+            this.app.database.saveSysExIdentity(deviceName, 0, identityInfo);
+            this.app.logger.info(`SysEx identity saved for ${deviceName}`);
+          } catch (e) {
+            this.app.logger.warn(`Failed to save SysEx identity for ${deviceName}: ${e.message}`);
+          }
+        }
+
         // Broadcast parsed identity info to WebSocket clients
         if (this.app.wsServer) {
           this.app.wsServer.broadcast('device_identity', {

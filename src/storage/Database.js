@@ -450,7 +450,7 @@ class DatabaseManager {
   // Instrument Settings
   updateInstrumentSettings(...args) { return this.instrumentDB.updateInstrumentSettings(...args); }
   getInstrumentSettings(...args) { return this.instrumentDB.getInstrumentSettings(...args); }
-  saveSysExIdentity(deviceId, identity) { return this.instrumentDB.saveSysExIdentity(deviceId, identity); }
+  saveSysExIdentity(...args) { return this.instrumentDB.saveSysExIdentity(...args); }
   findInstrumentByMac(macAddress) { return this.instrumentDB.findInstrumentByMac(macAddress); }
   findInstrumentByUsbSerial(usbSerialNumber) { return this.instrumentDB.findInstrumentByUsbSerial(usbSerialNumber); }
 
