@@ -550,7 +550,7 @@ class CommandHandler {
     }
 
     const timeout = data.timeout || 5;
-    const fullScan = data.fullScan || false;
+    const fullScan = data.fullScan !== undefined ? data.fullScan : true;
 
     const devices = await this.app.networkManager.startScan(timeout, fullScan);
 
