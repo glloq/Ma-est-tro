@@ -362,19 +362,24 @@ class MidiPlayer {
   seek(position) {
     const wasPlaying = this.playing;
     const seekPosition = Math.max(0, Math.min(position, this.duration));
+    const savedOutputDevice = this.outputDevice;
 
     if (this.playing) {
-      this.stop();
+      // Stop scheduler and notes without broadcasting position=0
+      this.stopScheduler();
+      this.sendAllNotesOff();
+      this.playing = false;
+      this.paused = false;
     }
 
     this.position = seekPosition;
     this.currentEventIndex = this.findEventIndexAtTime(seekPosition);
 
     if (wasPlaying) {
-      this.start(this.outputDevice, seekPosition);
+      this.start(savedOutputDevice, seekPosition);
+    } else {
+      this.broadcastPosition();
     }
-
-    this.broadcastPosition();
   }
 
   findEventIndexAtTime(time) {
@@ -570,11 +575,15 @@ class MidiPlayer {
     // Send All Notes Off on all 16 MIDI channels to all target devices
     for (const targetDevice of targetDevices) {
       for (let channel = 0; channel < 16; channel++) {
-        device.sendMessage(targetDevice, 'cc', {
-          channel: channel,
-          controller: MIDI_CC_ALL_NOTES_OFF,
-          value: 0
-        });
+        try {
+          device.sendMessage(targetDevice, 'cc', {
+            channel: channel,
+            controller: MIDI_CC_ALL_NOTES_OFF,
+            value: 0
+          });
+        } catch (err) {
+          // Device may be disconnected; continue cleanup for other devices
+        }
       }
     }
   }

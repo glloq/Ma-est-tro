@@ -15,6 +15,13 @@ class FileManager {
 
   async handleUpload(filename, base64Data) {
     try {
+      // Validate size before decoding (base64 is ~4/3 of original size)
+      const MAX_MIDI_SIZE = 50 * 1024 * 1024; // 50MB max
+      const estimatedSize = Math.ceil(base64Data.length * 3 / 4);
+      if (estimatedSize > MAX_MIDI_SIZE) {
+        throw new Error(`File too large: ${(estimatedSize / (1024 * 1024)).toFixed(1)}MB exceeds ${MAX_MIDI_SIZE / (1024 * 1024)}MB limit`);
+      }
+
       // Decode base64
       const buffer = Buffer.from(base64Data, 'base64');
 
@@ -557,10 +564,15 @@ class FileManager {
       }
 
       // Generate new filename
-      const nameParts = file.filename.split('.');
-      const ext = nameParts.pop();
-      const baseName = nameParts.join('.');
-      const newFilename = `${baseName} (copy).${ext}`;
+      const dotIndex = file.filename.lastIndexOf('.');
+      let newFilename;
+      if (dotIndex > 0) {
+        const baseName = file.filename.substring(0, dotIndex);
+        const ext = file.filename.substring(dotIndex);
+        newFilename = `${baseName} (copy)${ext}`;
+      } else {
+        newFilename = `${file.filename} (copy)`;
+      }
 
       // Insert duplicate with instrument metadata
       const newFileId = this.app.database.insertFile({

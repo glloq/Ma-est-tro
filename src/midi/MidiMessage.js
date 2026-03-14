@@ -25,23 +25,25 @@ class MidiMessage {
   }
 
   parseBytes(bytes) {
-    if (bytes.length < 1) {
+    if (!bytes || bytes.length < 1) {
       throw new Error('Empty MIDI message');
     }
 
     const status = bytes[0];
     const parsed = MidiUtils.parseStatus(status);
-    
+
     this.type = this.getTypeString(parsed.type);
     this.channel = parsed.channel;
 
     switch (parsed.type) {
       case MidiUtils.MessageTypes.NOTE_OFF:
+        if (bytes.length < 3) throw new Error('Note Off message requires 3 bytes');
         this.note = bytes[1];
         this.velocity = bytes[2];
         break;
 
       case MidiUtils.MessageTypes.NOTE_ON:
+        if (bytes.length < 3) throw new Error('Note On message requires 3 bytes');
         this.note = bytes[1];
         this.velocity = bytes[2];
         // Treat velocity 0 as note off
@@ -51,24 +53,29 @@ class MidiMessage {
         break;
 
       case MidiUtils.MessageTypes.POLY_AFTERTOUCH:
+        if (bytes.length < 3) throw new Error('Poly Aftertouch message requires 3 bytes');
         this.note = bytes[1];
         this.pressure = bytes[2];
         break;
 
       case MidiUtils.MessageTypes.CONTROL_CHANGE:
+        if (bytes.length < 3) throw new Error('Control Change message requires 3 bytes');
         this.controller = bytes[1];
         this.value = bytes[2];
         break;
 
       case MidiUtils.MessageTypes.PROGRAM_CHANGE:
+        if (bytes.length < 2) throw new Error('Program Change message requires 2 bytes');
         this.program = bytes[1];
         break;
 
       case MidiUtils.MessageTypes.CHANNEL_AFTERTOUCH:
+        if (bytes.length < 2) throw new Error('Channel Aftertouch message requires 2 bytes');
         this.pressure = bytes[1];
         break;
 
       case MidiUtils.MessageTypes.PITCH_BEND:
+        if (bytes.length < 3) throw new Error('Pitch Bend message requires 3 bytes');
         const lsb = bytes[1];
         const msb = bytes[2];
         this.value = MidiUtils.decode14bit(msb, lsb) - 8192; // Center at 0
@@ -250,6 +257,14 @@ class MidiMessage {
         break;
 
       case 'poly aftertouch':
+        if (!MidiUtils.isValidNote(this.note)) {
+          errors.push(`Invalid note: ${this.note}`);
+        }
+        if (!MidiUtils.isValidDataByte(this.pressure)) {
+          errors.push(`Invalid pressure: ${this.pressure}`);
+        }
+        break;
+
       case 'channel aftertouch':
         if (!MidiUtils.isValidDataByte(this.pressure)) {
           errors.push(`Invalid pressure: ${this.pressure}`);

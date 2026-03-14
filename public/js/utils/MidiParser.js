@@ -157,7 +157,8 @@ class MidiParser {
             }
             trackOffset += event.bytesRead;
 
-            if (event.type !== 'running') {
+            // Running status is only updated by channel messages, not meta-events or SysEx
+            if (event.type !== 'running' && event.type !== 'meta' && event.type !== 'sysex') {
                 runningStatus = event.status;
             }
 

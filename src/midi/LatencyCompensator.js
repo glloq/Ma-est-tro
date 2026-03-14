@@ -116,12 +116,14 @@ class LatencyCompensator {
       let timeoutHandle;
       let messageHandler;
 
-      // Setup message handler
+      // Setup message handler - filter strictly on device, note, channel and velocity
+      // to avoid false positives from other devices or unrelated MIDI events
       messageHandler = (event) => {
-        if (event.device === deviceId && 
-            event.type === 'noteon' && 
+        if (event.device === deviceId &&
+            event.type === 'noteon' &&
             event.data.note === testNote &&
-            event.data.channel === testChannel) {
+            event.data.channel === testChannel &&
+            event.data.velocity === testVelocity) {
           
           const endTime = process.hrtime.bigint();
           const latency = Number(endTime - startTime) / 1000000; // ns → ms
