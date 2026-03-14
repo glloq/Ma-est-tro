@@ -427,7 +427,18 @@ class CommandHandler {
     }
 
     // Delete instrument settings/capabilities from instruments_latency by device_id
-    this.app.database.db.prepare('DELETE FROM instruments_latency WHERE device_id = ?').run(data.deviceId);
+    try {
+      this.app.database.db.prepare('DELETE FROM instruments_latency WHERE device_id = ?').run(data.deviceId);
+    } catch (e) {
+      // May not have latency settings
+    }
+
+    // Delete from instruments table if exists
+    try {
+      this.app.database.deleteInstrument(data.deviceId);
+    } catch (e) {
+      // May not have an instruments entry
+    }
 
     // Also delete latency profile if exists
     try {

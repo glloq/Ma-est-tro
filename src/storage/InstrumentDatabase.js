@@ -741,7 +741,7 @@ class InstrumentDatabase {
         const stmt = this.db.prepare(`
           SELECT
             note_range_min, note_range_max, supported_ccs,
-            note_selection_mode, selected_notes,
+            note_selection_mode, selected_notes, polyphony,
             capabilities_source, capabilities_updated_at
           FROM instruments_latency
           WHERE device_id = ? AND channel = ?
@@ -751,7 +751,7 @@ class InstrumentDatabase {
         const stmt = this.db.prepare(`
           SELECT
             note_range_min, note_range_max, supported_ccs,
-            note_selection_mode, selected_notes,
+            note_selection_mode, selected_notes, polyphony,
             capabilities_source, capabilities_updated_at
           FROM instruments_latency
           WHERE device_id = ?
@@ -789,6 +789,7 @@ class InstrumentDatabase {
         supported_ccs: supportedCcs,
         note_selection_mode: result.note_selection_mode || 'range',
         selected_notes: selectedNotes,
+        polyphony: result.polyphony || null,
         capabilities_source: result.capabilities_source,
         capabilities_updated_at: result.capabilities_updated_at
       };

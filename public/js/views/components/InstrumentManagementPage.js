@@ -446,6 +446,7 @@ class InstrumentManagementPage {
 
     try {
       await this.apiClient.sendCommand('instrument_delete', { deviceId });
+      this.showToast(i18n.t('instrumentManagement.deleteSuccess') || 'Instrument supprimé avec succès', 'success');
       await this.refresh();
     } catch (error) {
       this.showToast((i18n.t('instrumentManagement.deleteFailed') || 'Échec de la suppression') + ': ' + error.message, 'error');

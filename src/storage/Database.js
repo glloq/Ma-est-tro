@@ -448,15 +448,15 @@ class DatabaseManager {
   deletePreset(presetId) { return this.instrumentDB.deletePreset(presetId); }
 
   // Instrument Settings
-  updateInstrumentSettings(deviceId, settings) { return this.instrumentDB.updateInstrumentSettings(deviceId, settings); }
-  getInstrumentSettings(deviceId) { return this.instrumentDB.getInstrumentSettings(deviceId); }
+  updateInstrumentSettings(...args) { return this.instrumentDB.updateInstrumentSettings(...args); }
+  getInstrumentSettings(...args) { return this.instrumentDB.getInstrumentSettings(...args); }
   saveSysExIdentity(deviceId, identity) { return this.instrumentDB.saveSysExIdentity(deviceId, identity); }
   findInstrumentByMac(macAddress) { return this.instrumentDB.findInstrumentByMac(macAddress); }
   findInstrumentByUsbSerial(usbSerialNumber) { return this.instrumentDB.findInstrumentByUsbSerial(usbSerialNumber); }
 
   // Instrument Capabilities
-  updateInstrumentCapabilities(deviceId, capabilities) { return this.instrumentDB.updateInstrumentCapabilities(deviceId, capabilities); }
-  getInstrumentCapabilities(deviceId) { return this.instrumentDB.getInstrumentCapabilities(deviceId); }
+  updateInstrumentCapabilities(...args) { return this.instrumentDB.updateInstrumentCapabilities(...args); }
+  getInstrumentCapabilities(...args) { return this.instrumentDB.getInstrumentCapabilities(...args); }
   getAllInstrumentCapabilities() { return this.instrumentDB.getAllInstrumentCapabilities(); }
   getInstrumentsWithCapabilities() { return this.instrumentDB.getInstrumentsWithCapabilities(); }
 
