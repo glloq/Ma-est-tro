@@ -376,34 +376,44 @@ class InstrumentManagementPage {
     if (instrument && window.showInstrumentSettings) {
       window.showInstrumentSettings(instrument);
     } else {
-      alert(i18n.t('instrumentManagement.settingsNotAvailable') || 'Réglages non disponibles. Vérifiez que le module est chargé.');
+      this.showToast(i18n.t('instrumentManagement.settingsNotAvailable') || 'Réglages non disponibles. Vérifiez que le module est chargé.', 'error');
     }
   }
 
   /**
-   * Complète un instrument via InstrumentCapabilitiesModal
+   * Complète un instrument via InstrumentCapabilitiesModal ou settings
    */
   async completeInstrument(deviceId) {
     const instrument = this.instruments.find(inst => inst.id === deviceId);
     if (!instrument) return;
 
-    // Valider les capacités
-    const response = await this.apiClient.sendCommand('validate_instrument_capabilities', {});
+    try {
+      // Valider les capacités
+      const response = await this.apiClient.sendCommand('validate_instrument_capabilities', {});
 
-    if (response && response.incompleteInstruments) {
-      const incomplete = response.incompleteInstruments.find(
-        item => item.instrument.id === instrument.instrumentId || item.instrument.device_id === deviceId
-      );
+      if (response && response.incompleteInstruments) {
+        const incomplete = response.incompleteInstruments.find(
+          item => item.instrument.device_id === deviceId ||
+                  item.instrument.id === deviceId ||
+                  item.instrument.id === instrument.instrumentId
+        );
 
-      if (incomplete && window.InstrumentCapabilitiesModal) {
-        const capabilitiesModal = new window.InstrumentCapabilitiesModal(this.apiClient);
+        if (incomplete && window.InstrumentCapabilitiesModal) {
+          const capabilitiesModal = new window.InstrumentCapabilitiesModal(this.apiClient);
 
-        capabilitiesModal.show([incomplete], async (updates) => {
-          console.log('Capabilities updated:', updates);
-          await this.refresh();
-        });
+          capabilitiesModal.show([incomplete], async (updates) => {
+            console.log('Capabilities updated:', updates);
+            await this.refresh();
+          });
+          return;
+        }
       }
+    } catch (error) {
+      console.warn('Validation failed, falling back to settings:', error);
     }
+
+    // Fallback: ouvrir les réglages complets
+    this.editInstrument(deviceId);
   }
 
   /**
@@ -420,9 +430,9 @@ class InstrumentManagementPage {
         duration: 500
       });
 
-      alert(i18n.t('instrumentManagement.testNoteSent') || 'Note de test envoyée ! (C4 - Do central)');
+      this.showToast(i18n.t('instrumentManagement.testNoteSent') || 'Note de test envoyée ! (C4 - Do central)', 'success');
     } catch (error) {
-      alert((i18n.t('instrumentManagement.testNoteFailed') || 'Échec de l\'envoi de la note de test') + ': ' + error.message);
+      this.showToast((i18n.t('instrumentManagement.testNoteFailed') || 'Échec de l\'envoi de la note de test') + ': ' + error.message, 'error');
     }
   }
 
@@ -438,7 +448,7 @@ class InstrumentManagementPage {
       await this.apiClient.sendCommand('instrument_delete', { deviceId });
       await this.refresh();
     } catch (error) {
-      alert((i18n.t('instrumentManagement.deleteFailed') || 'Échec de la suppression') + ': ' + error.message);
+      this.showToast((i18n.t('instrumentManagement.deleteFailed') || 'Échec de la suppression') + ': ' + error.message, 'error');
     }
   }
 
@@ -450,7 +460,7 @@ class InstrumentManagementPage {
       await this.apiClient.sendCommand('device_refresh', {});
       setTimeout(() => this.refresh(), 1000);
     } catch (error) {
-      alert((i18n.t('instrumentManagement.scanFailed') || 'Échec du scan') + ': ' + error.message);
+      this.showToast((i18n.t('instrumentManagement.scanFailed') || 'Échec du scan') + ': ' + error.message, 'error');
     }
   }
 
@@ -462,7 +472,7 @@ class InstrumentManagementPage {
     if (window.showBluetoothScan) {
       window.showBluetoothScan();
     } else {
-      alert(i18n.t('instrumentManagement.bluetoothNotAvailable') || 'Scan Bluetooth non disponible');
+      this.showToast(i18n.t('instrumentManagement.bluetoothNotAvailable') || 'Scan Bluetooth non disponible', 'error');
     }
   }
 
@@ -474,7 +484,7 @@ class InstrumentManagementPage {
     if (window.showNetworkScan) {
       window.showNetworkScan();
     } else {
-      alert(i18n.t('instrumentManagement.networkNotAvailable') || 'Scan réseau non disponible');
+      this.showToast(i18n.t('instrumentManagement.networkNotAvailable') || 'Scan réseau non disponible', 'error');
     }
   }
 
@@ -486,7 +496,33 @@ class InstrumentManagementPage {
   }
 
   /**
-   * Affiche une erreur
+   * Affiche une notification toast dans le modal
+   * @param {string} message
+   * @param {'success'|'error'|'info'} type
+   */
+  showToast(message, type = 'info') {
+    const icons = { success: '✓', error: '✗', info: 'ℹ' };
+    const colors = {
+      success: { bg: '#10b981', text: 'white' },
+      error: { bg: '#ef4444', text: 'white' },
+      info: { bg: '#3b82f6', text: 'white' }
+    };
+    const style = colors[type] || colors.info;
+
+    const toast = document.createElement('div');
+    toast.style.cssText = `position: fixed; top: 24px; right: 24px; z-index: 10010; padding: 12px 20px; border-radius: 8px; background: ${style.bg}; color: ${style.text}; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px; animation: fadeIn 0.2s ease;`;
+    toast.innerHTML = `<span style="font-weight: bold; font-size: 16px;">${icons[type]}</span> ${message}`;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.3s ease';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+
+  /**
+   * Affiche une erreur dans la zone de contenu
    */
   showError(message) {
     const content = document.getElementById('instrumentListContent');
