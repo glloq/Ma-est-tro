@@ -2103,7 +2103,7 @@ class MidiEditorModal {
             if (channelInfo) {
                 // Mettre à jour le label pour indiquer quel canal sera modifié
                 if (instrumentLabel) {
-                    instrumentLabel.textContent = `Instrument canal ${activeChannel + 1}:`;
+                    instrumentLabel.textContent = `${this.t('midiEditor.instrument')} ${this.t('midiEditor.channelTip', { channel: activeChannel + 1 })}`;
                     instrumentLabel.title = '';
                 }
 
@@ -5217,7 +5217,8 @@ class MidiEditorModal {
         this.showErrorModal(message);
     }
 
-    showErrorModal(message, title = 'Erreur') {
+    showErrorModal(message, title = null) {
+        title = title || this.t('common.error');
         this.log('error', message);
         this.showConfirmModal({
             title: title,
