@@ -10,18 +10,7 @@
 /* ============================================================================
    VARIABLES
    ============================================================================ */
-:root {
-    --instrument-primary: #667eea;
-    --instrument-success: #2ecc71;
-    --instrument-warning: #f39c12;
-    --instrument-error: #e74c3c;
-    --instrument-usb: #3498db;
-    --instrument-wifi: #2ecc71;
-    --instrument-bluetooth: #9b59b6;
-    --instrument-bg: #ffffff;
-    --instrument-border: #e0e0e0;
-    --instrument-shadow: rgba(0, 0, 0, 0.1);
-}
+/* Variables centralisées dans variables.css */
 
 /* ============================================================================
    PHASE 1 - ÉTAT VIDE
@@ -492,7 +481,7 @@
     transition: border-color 0.2s;
 }
 
-.config-input:focus {
+.config-input:focus:not(:focus-visible) {
     outline: none;
     border-color: var(--instrument-primary);
 }
@@ -1224,7 +1213,7 @@
     box-sizing: border-box;
 }
 
-.form-control:focus {
+.form-control:focus:not(:focus-visible) {
     outline: none;
     border-color: var(--instrument-primary);
 }

@@ -41,7 +41,7 @@
     transition: border-color 0.2s;
 }
 
-.playlist-editor .form-control:focus {
+.playlist-editor .form-control:focus:not(:focus-visible) {
     outline: none;
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
@@ -96,7 +96,7 @@
     font-size: 0.9rem;
 }
 
-.file-search-input:focus {
+.file-search-input:focus:not(:focus-visible) {
     outline: none;
     border-color: #667eea;
 }

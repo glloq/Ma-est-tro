@@ -563,13 +563,4 @@
    DARK MODE (optionnel)
    ============================================================================ */
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --card-bg: #2a2a2a;
-        --border-color: #444;
-        --text-primary: #fff;
-        --text-secondary: #aaa;
-        --hover-bg: #333;
-        --highlight-bg: #333;
-    }
-}
+/* Dark mode variables centralisées dans variables.css */

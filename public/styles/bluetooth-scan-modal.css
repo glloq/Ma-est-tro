@@ -9,13 +9,7 @@
 /* ============================================================================
    VARIABLES
    ============================================================================ */
-:root {
-    --bluetooth-primary: #9b59b6;
-    --bluetooth-success: #2ecc71;
-    --bluetooth-danger: #e74c3c;
-    --bluetooth-border: #e0e0e0;
-    --bluetooth-shadow: rgba(0, 0, 0, 0.1);
-}
+/* Variables centralisées dans variables.css */
 
 /* ============================================================================
    MODAL OVERLAY

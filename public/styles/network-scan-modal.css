@@ -9,14 +9,7 @@
 /* ============================================================================
    VARIABLES
    ============================================================================ */
-:root {
-    --network-primary: #3498db;
-    --network-secondary: #2980b9;
-    --network-success: #2ecc71;
-    --network-danger: #e74c3c;
-    --network-border: #e0e0e0;
-    --network-shadow: rgba(0, 0, 0, 0.1);
-}
+/* Variables centralisées dans variables.css */
 
 /* ============================================================================
    MODAL OVERLAY
@@ -223,7 +216,7 @@
     background: white;
 }
 
-.form-group input:focus {
+.form-group input:focus:not(:focus-visible) {
     outline: none;
     border-color: var(--network-primary);
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);

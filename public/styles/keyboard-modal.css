@@ -301,8 +301,8 @@
     border-color: #10b981;
 }
 
-.device-select:focus,
-.layout-select:focus {
+.device-select:focus:not(:focus-visible),
+.layout-select:focus:not(:focus-visible) {
     outline: none;
     border-color: #10b981;
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);

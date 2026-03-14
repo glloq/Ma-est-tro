@@ -114,7 +114,7 @@
     background: white;
 }
 
-.form-control:focus {
+.form-control:focus:not(:focus-visible) {
     border-color: #667eea;
     outline: none;
     box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
@@ -1052,7 +1052,7 @@
     border-color: #667eea;
 }
 
-.midi-editor-modal .snap-select:focus {
+.midi-editor-modal .snap-select:focus:not(:focus-visible) {
     outline: none;
     border-color: #667eea;
 }
