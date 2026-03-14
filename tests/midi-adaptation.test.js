@@ -351,16 +351,17 @@ describe('InstrumentMatcher', () => {
     expect(result.score).toBeGreaterThan(0);
   });
 
-  test('discrete note with no selected notes falls back to range scoring', () => {
-    // When selectedNotes is null but channelRange has min/max, falls back to range-based scoring
+  test('discrete note with no selected notes returns low score (unconfigured)', () => {
+    // When selectedNotes is null, instrument is unconfigured - should not get free points
     const result = matcher.scoreDiscreteNotes(
       { min: 36, max: 49 },
       null,
       null
     );
-    // Falls back to range scoring, which is compatible if range fits
-    expect(result.compatible).toBe(true);
-    expect(result.score).toBeGreaterThanOrEqual(0);
+    // Unconfigured discrete instrument gets low neutral score, not full range-based score
+    expect(result.compatible).toBe(false);
+    expect(result.score).toBeLessThanOrEqual(Math.round(25 * 0.2)); // 20% of noteRange weight
+    expect(result.issue.type).toBe('warning');
   });
 
   test('discrete note with no selected notes and no range returns incompatible', () => {

@@ -445,19 +445,13 @@ class InstrumentMatcher {
    */
   scoreDiscreteNotes(channelRange, selectedNotes, channelAnalysis = null) {
     if (!selectedNotes || selectedNotes.length === 0) {
-      // Fall back to range-based scoring when discrete instrument has no selected_notes
-      if (channelRange.min !== undefined && channelRange.max !== undefined) {
-        return this.scoreNoteCompatibility(channelRange, {
-          min: channelRange.min,
-          max: channelRange.max,
-          mode: 'range' // Explicit to prevent accidental recursion
-        }, channelAnalysis);
-      }
+      // Discrete mode with no selected notes = unconfigured instrument
+      // Return low neutral score instead of falling back to range-based (which gives free points)
       return {
         compatible: false,
-        score: 0,
+        score: Math.round(this.config.getWeight('noteRange') * 0.2),
         issue: {
-          type: 'error',
+          type: 'warning',
           message: 'Discrete mode but no selected notes defined'
         }
       };

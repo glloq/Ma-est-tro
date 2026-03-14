@@ -267,7 +267,7 @@ class MidiPlayer {
     }
   }
 
-  start(outputDevice) {
+  start(outputDevice, resumePosition = null) {
     if (this.playing) {
       this.app.logger.warn('Player already playing');
       return;
@@ -280,15 +280,24 @@ class MidiPlayer {
     this.outputDevice = outputDevice;
     this.playing = true;
     this.paused = false;
-    this.position = 0;
-    this.currentEventIndex = 0;
-    this.startTime = Date.now();
+
+    // When resuming from seek, preserve the seeked position
+    if (resumePosition !== null) {
+      this.position = resumePosition;
+      this.currentEventIndex = this.findEventIndexAtTime(resumePosition);
+      this.startTime = Date.now() - (resumePosition * 1000);
+    } else {
+      this.position = 0;
+      this.currentEventIndex = 0;
+      this.startTime = Date.now();
+    }
+
     this._syncDelayCache.clear(); // Refresh sync_delay cache on each playback start
 
     this.startScheduler();
     this.broadcastStatus();
-    
-    this.app.logger.info(`Playback started on ${outputDevice}`);
+
+    this.app.logger.info(`Playback started on ${outputDevice} at position ${this.position.toFixed(2)}s`);
   }
 
   pause() {
@@ -352,16 +361,17 @@ class MidiPlayer {
 
   seek(position) {
     const wasPlaying = this.playing;
-    
+    const seekPosition = Math.max(0, Math.min(position, this.duration));
+
     if (this.playing) {
       this.stop();
     }
 
-    this.position = Math.max(0, Math.min(position, this.duration));
-    this.currentEventIndex = this.findEventIndexAtTime(this.position);
+    this.position = seekPosition;
+    this.currentEventIndex = this.findEventIndexAtTime(seekPosition);
 
     if (wasPlaying) {
-      this.start(this.outputDevice);
+      this.start(this.outputDevice, seekPosition);
     }
 
     this.broadcastPosition();
@@ -509,6 +519,15 @@ class MidiPlayer {
     const outChannel = routing.targetChannel;
 
     if (event.type === 'noteOn') {
+      // noteOn with velocity 0 is equivalent to noteOff per MIDI spec
+      if (event.velocity === 0) {
+        device.sendMessage(routing.device, 'noteoff', {
+          channel: outChannel,
+          note: event.note,
+          velocity: 0
+        });
+        return;
+      }
       device.sendMessage(routing.device, 'noteon', {
         channel: outChannel,
         note: event.note,

@@ -159,10 +159,41 @@ const ScoringConfig = {
   },
 
   /**
+   * Store default values for reset capability
+   */
+  _defaults: null,
+
+  /**
+   * Save current state as defaults (called once at init)
+   */
+  _saveDefaults() {
+    if (!this._defaults) {
+      this._defaults = this.serialize();
+    }
+  },
+
+  /**
+   * Reset to default configuration
+   */
+  reset() {
+    if (this._defaults) {
+      Object.assign(this.weights, this._defaults.weights);
+      Object.assign(this.typeDetection, this._defaults.typeDetection);
+      Object.assign(this.typeThresholds, this._defaults.typeThresholds);
+      Object.assign(this.penalties, this._defaults.penalties);
+      Object.assign(this.bonuses, this._defaults.bonuses);
+      Object.assign(this.scoreThresholds, this._defaults.scoreThresholds);
+    }
+  },
+
+  /**
    * Charger une configuration personnalisée
    * @param {Object} customConfig
    */
   load(customConfig) {
+    // Save defaults on first load so we can reset later
+    this._saveDefaults();
+
     if (customConfig.weights) {
       Object.assign(this.weights, customConfig.weights);
     }

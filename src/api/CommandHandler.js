@@ -1414,7 +1414,22 @@ class CommandHandler {
   }
 
   async systemBackup(data) {
-    const backupPath = data.path || `./backups/backup_${Date.now()}.db`;
+    const { resolve, basename } = await import('path');
+    const backupsDir = resolve('./backups');
+
+    // Sanitize: only allow filename, force it into backups directory
+    let filename;
+    if (data.path) {
+      filename = basename(data.path);
+      // Reject suspicious filenames
+      if (filename.includes('..') || filename.startsWith('.')) {
+        throw new Error('Invalid backup filename');
+      }
+    } else {
+      filename = `backup_${Date.now()}.db`;
+    }
+
+    const backupPath = resolve(backupsDir, filename);
     this.app.database.backup(backupPath);
     return { path: backupPath };
   }

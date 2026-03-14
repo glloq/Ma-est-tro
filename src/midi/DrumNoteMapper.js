@@ -182,8 +182,10 @@ class DrumNoteMapper {
   classifyDrumNotes(noteEvents) {
     const usage = {};
 
-    // Count note occurrences
+    // Count only noteOn occurrences (exclude noteOff to avoid double-counting)
     for (const event of noteEvents) {
+      if (event.type && event.type !== 'noteOn') continue;
+      if (event.velocity === 0) continue; // noteOn with vel=0 is noteOff
       if (event.note >= 27 && event.note <= 87) { // Valid drum range
         usage[event.note] = (usage[event.note] || 0) + 1;
       }
@@ -281,7 +283,7 @@ class DrumNoteMapper {
         // Fallback: low tom
         targetKick = instrNotes.find(n => [41, 43, 45].includes(n));
         if (targetKick) {
-          substitutions.push({ from: categories.kicks, to: targetKick, reason: 'No kick available, using low tom' });
+          substitutions.push({ from: categories.kicks[0], to: targetKick, reason: 'No kick available, using low tom' });
         }
       }
 
@@ -500,9 +502,10 @@ class DrumNoteMapper {
         if (!mapping[miscNote]) {
           // Hand clap → snare rim or snare
           if (miscNote === 39) {
-            mapping[39] = mapping[37] || mapping[38] || mapping[40];
-            if (mapping[39]) {
-              substitutions.push({ from: 39, to: mapping[39], type: 'clap → snare' });
+            const clapTarget = mapping[37] || mapping[38] || mapping[40];
+            if (clapTarget) {
+              mapping[39] = clapTarget;
+              substitutions.push({ from: 39, to: clapTarget, type: 'clap → snare' });
             }
           }
           // Tambourine, Maracas → HH or available

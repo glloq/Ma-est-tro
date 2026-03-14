@@ -429,10 +429,12 @@ class MidiDatabase {
       const sortBy = filters.sortBy || 'uploaded_at';
       const sortOrder = filters.sortOrder || 'DESC';
 
-      // Validate sortBy to prevent SQL injection
+      // Validate sortBy and sortOrder to prevent SQL injection
       const validSortFields = ['filename', 'uploaded_at', 'duration', 'tempo', 'tracks', 'size', 'channel_count'];
+      const validSortOrders = ['ASC', 'DESC'];
+      const safeSortOrder = validSortOrders.includes(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'DESC';
       if (validSortFields.includes(sortBy)) {
-        query += ` ORDER BY mf.${sortBy} ${sortOrder.toUpperCase()}`;
+        query += ` ORDER BY mf.${sortBy} ${safeSortOrder}`;
       } else {
         query += ' ORDER BY mf.uploaded_at DESC';
       }
