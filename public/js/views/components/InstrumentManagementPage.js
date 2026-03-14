@@ -288,13 +288,6 @@ class InstrumentManagementPage {
               🎵 ${i18n.t('instrumentManagement.test') || 'Tester'}
             </button>
           ` : ''}
-          ${!isComplete ? `
-            <button class="button button-info"
-                    onclick="event.stopPropagation(); instrumentManagementPageInstance.completeInstrument('${instrument.id}')"
-                    style="font-size: 13px; padding: 8px 12px;">
-              ✓ ${i18n.t('instrumentManagement.completeBtn') || 'Compléter'}
-            </button>
-          ` : ''}
           <button class="button button-danger"
                   onclick="event.stopPropagation(); instrumentManagementPageInstance.deleteInstrument('${instrument.id}')"
                   style="font-size: 13px; padding: 8px 12px;">
