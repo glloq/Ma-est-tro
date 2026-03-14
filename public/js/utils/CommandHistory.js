@@ -78,14 +78,19 @@ class DeleteNotesCommand extends Command {
     execute() {
         if (!this.pianoRoll.sequence) return false;
 
-        // Supprimer les notes
+        // Collect indices to remove, then splice in reverse order to avoid index shifting
+        const indicesToRemove = [];
         this.notes.forEach(note => {
             const index = this.pianoRoll.sequence.findIndex(n =>
                 n.t === note.t && n.n === note.n && n.c === note.c
             );
             if (index >= 0) {
-                this.pianoRoll.sequence.splice(index, 1);
+                indicesToRemove.push(index);
             }
+        });
+        indicesToRemove.sort((a, b) => b - a);
+        indicesToRemove.forEach(index => {
+            this.pianoRoll.sequence.splice(index, 1);
         });
 
         if (typeof this.pianoRoll.redraw === 'function') {
@@ -122,27 +127,34 @@ class MoveNotesCommand extends Command {
     constructor(pianoRoll, notes, deltaT, deltaN) {
         super();
         this.pianoRoll = pianoRoll;
-        this.notes = notes.map(n => ({ ...n })); // Référence aux notes
+        // Store immutable original coordinates for reliable undo
+        this.originalCoords = notes.map(n => ({ t: n.t, n: n.n, c: n.c }));
         this.deltaT = deltaT;
         this.deltaN = deltaN;
+        this.applied = false;
     }
 
     execute() {
         if (!this.pianoRoll.sequence) return false;
 
-        this.notes.forEach(note => {
+        // Search using the coordinates BEFORE this move
+        const searchCoords = this.applied
+            ? this.originalCoords.map(c => ({ t: c.t, n: c.n, c: c.c }))
+            : this.originalCoords;
+
+        searchCoords.forEach(coord => {
+            const searchT = this.applied ? coord.t : coord.t;
+            const searchN = this.applied ? coord.n : coord.n;
             const seqNote = this.pianoRoll.sequence.find(n =>
-                n.t === note.t && n.n === note.n && n.c === note.c
+                n.t === searchT && n.n === searchN && n.c === coord.c
             );
             if (seqNote) {
-                seqNote.t += this.deltaT;
-                seqNote.n += this.deltaN;
-                // Mettre à jour la référence
-                note.t = seqNote.t;
-                note.n = seqNote.n;
+                seqNote.t = coord.t + this.deltaT;
+                seqNote.n = coord.n + this.deltaN;
             }
         });
 
+        this.applied = true;
         if (typeof this.pianoRoll.redraw === 'function') {
             this.pianoRoll.redraw();
         }
@@ -152,16 +164,16 @@ class MoveNotesCommand extends Command {
     undo() {
         if (!this.pianoRoll.sequence) return false;
 
-        this.notes.forEach(note => {
+        // After execute, notes are at original + delta; search for those
+        this.originalCoords.forEach(coord => {
+            const movedT = coord.t + this.deltaT;
+            const movedN = coord.n + this.deltaN;
             const seqNote = this.pianoRoll.sequence.find(n =>
-                n.t === note.t && n.n === note.n && n.c === note.c
+                n.t === movedT && n.n === movedN && n.c === coord.c
             );
             if (seqNote) {
-                seqNote.t -= this.deltaT;
-                seqNote.n -= this.deltaN;
-                // Mettre à jour la référence
-                note.t = seqNote.t;
-                note.n = seqNote.n;
+                seqNote.t = coord.t;
+                seqNote.n = coord.n;
             }
         });
 

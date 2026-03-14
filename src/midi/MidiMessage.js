@@ -86,10 +86,14 @@ class MidiMessage {
   parseObject(obj) {
     this.type = obj.type;
     this.channel = obj.channel;
-    
-    // Copy all properties
+
+    // Copy only known MIDI properties (whitelist to prevent prototype pollution)
+    const allowedKeys = [
+      'note', 'velocity', 'pressure', 'controller', 'value',
+      'program', 'data', 'song', 'timestamp', 'raw'
+    ];
     Object.keys(obj).forEach(key => {
-      if (key !== 'type' && key !== 'channel') {
+      if (key !== 'type' && key !== 'channel' && allowedKeys.includes(key)) {
         this[key] = obj[key];
       }
     });
@@ -315,7 +319,7 @@ class MidiMessage {
   }
 
   toString() {
-    const parts = [`[${this.type.toUpperCase()}]`];
+    const parts = [`[${(this.type || 'UNKNOWN').toUpperCase()}]`];
     
     if (this.channel !== undefined) {
       parts.push(`ch:${this.channel + 1}`);

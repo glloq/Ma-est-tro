@@ -90,7 +90,10 @@ class DelayCalibrator {
       }
 
       delays.sort((a, b) => a - b);
-      const median = delays[Math.floor(delays.length / 2)];
+      const mid = Math.floor(delays.length / 2);
+      const median = delays.length % 2 !== 0
+        ? delays[mid]
+        : (delays[mid - 1] + delays[mid]) / 2;
 
       // Calculer la confiance (basée sur l'écart-type)
       const mean = delays.reduce((sum, d) => sum + d, 0) / delays.length;
@@ -283,14 +286,16 @@ class DelayCalibrator {
    * @returns {number} - Valeur RMS (0.0 - 1.0)
    */
   calculateRMS(buffer) {
-    if (!buffer || buffer.length === 0) {
+    if (!buffer || buffer.length < 2) {
       return 0;
     }
 
+    // Ensure even byte count for 16-bit samples
+    const byteLength = buffer.length - (buffer.length % 2);
     let sum = 0;
-    const sampleCount = buffer.length / 2; // 2 bytes par sample (16-bit)
+    const sampleCount = byteLength / 2; // 2 bytes par sample (16-bit)
 
-    for (let i = 0; i < buffer.length; i += 2) {
+    for (let i = 0; i < byteLength; i += 2) {
       // Lire sample 16-bit signed little-endian
       const sample = buffer.readInt16LE(i);
 
@@ -329,8 +334,9 @@ class DelayCalibrator {
         const lines = output.split('\n');
 
         for (const line of lines) {
-          // Format: "carte 1: Device [USB Audio Device], périphérique 0: USB Audio [USB Audio]"
-          const match = line.match(/carte (\d+):.*périphérique (\d+):/);
+          // Format FR: "carte 1: ... périphérique 0: ..."
+          // Format EN: "card 1: ... device 0: ..."
+          const match = line.match(/(?:card|carte) (\d+):.*(?:device|périphérique) (\d+):/i);
           if (match) {
             const card = match[1];
             const device = match[2];

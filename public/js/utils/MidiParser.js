@@ -149,15 +149,18 @@ class MidiParser {
             const deltaTime = this.readVariableLength(view, trackOffset);
             trackOffset += deltaTime.bytesRead;
             currentTime += deltaTime.value;
-            
+
             // Lire l'événement
             const event = this.parseEvent(view, trackOffset, currentTime, runningStatus);
+            if (event.bytesRead <= 0) {
+                throw new Error(`Zero-length event at offset ${trackOffset} (corrupted MIDI data)`);
+            }
             trackOffset += event.bytesRead;
-            
+
             if (event.type !== 'running') {
                 runningStatus = event.status;
             }
-            
+
             events.push(event);
         }
         
@@ -288,13 +291,16 @@ class MidiParser {
         let value = 0;
         let bytesRead = 0;
         let byte;
-        
+
         do {
+            if (bytesRead >= 4) {
+                throw new Error(`Variable-length value exceeds 4 bytes at offset ${offset} (corrupted MIDI data)`);
+            }
             byte = view.getUint8(offset + bytesRead);
             value = (value << 7) | (byte & 0x7F);
             bytesRead++;
         } while (byte & 0x80);
-        
+
         return { value, bytesRead };
     }
 

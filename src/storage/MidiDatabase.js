@@ -346,10 +346,15 @@ class MidiDatabase {
             params.push(`%"${type}"%`);
           });
         } else if (mode === 'EXACT') {
+          // File must contain ALL specified types AND no other types
           filters.instrumentTypes.forEach(type => {
             wheres.push('mf.instrument_types LIKE ?');
             params.push(`%"${type}"%`);
           });
+          // Verify the file has exactly the right number of instrument types
+          // by checking the JSON array length matches the filter count
+          wheres.push(`json_array_length(mf.instrument_types) = ?`);
+          params.push(filters.instrumentTypes.length);
         }
       }
 

@@ -86,6 +86,28 @@ class Config {
   }
 
   set(key, value) {
+    // Validate known keys with type/range constraints
+    const validators = {
+      'server.port': (v) => Number.isInteger(v) && v >= 1 && v <= 65535,
+      'server.wsPort': (v) => Number.isInteger(v) && v >= 1 && v <= 65535,
+      'midi.bufferSize': (v) => Number.isInteger(v) && v > 0,
+      'midi.sampleRate': (v) => Number.isInteger(v) && v > 0,
+      'midi.defaultLatency': (v) => typeof v === 'number' && v >= 0,
+      'database.path': (v) => typeof v === 'string' && v.length > 0 && !v.includes('..'),
+      'logging.level': (v) => ['error', 'warn', 'info', 'debug'].includes(v),
+      'logging.file': (v) => typeof v === 'string' && v.length > 0 && !v.includes('..'),
+      'playback.defaultTempo': (v) => typeof v === 'number' && v > 0 && v <= 999,
+      'playback.defaultVolume': (v) => Number.isInteger(v) && v >= 0 && v <= 127,
+      'latency.defaultIterations': (v) => Number.isInteger(v) && v >= 1 && v <= 100,
+      'latency.recalibrationDays': (v) => Number.isInteger(v) && v >= 1,
+      'ble.scanDuration': (v) => Number.isInteger(v) && v > 0,
+      'serial.baudRate': (v) => Number.isInteger(v) && v > 0,
+    };
+
+    if (validators[key] && !validators[key](value)) {
+      throw new Error(`Invalid value for config key '${key}': ${JSON.stringify(value)}`);
+    }
+
     const keys = key.split('.');
     let obj = this.config;
 

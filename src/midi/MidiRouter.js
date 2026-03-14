@@ -49,14 +49,20 @@ class MidiRouter {
 
     // Save to database if new route
     if (!route.id) {
-      this.app.database.insertRoute({
-        id: routeId,
-        source_device: route.source,
-        destination_device: route.destination,
-        channel_mapping: JSON.stringify(route.channelMap || {}),
-        filter: JSON.stringify(route.filter || {}),
-        enabled: route.enabled !== false ? 1 : 0
-      });
+      try {
+        this.app.database.insertRoute({
+          id: routeId,
+          source_device: route.source,
+          destination_device: route.destination,
+          channel_mapping: JSON.stringify(route.channelMap || {}),
+          filter: JSON.stringify(route.filter || {}),
+          enabled: route.enabled !== false ? 1 : 0
+        });
+      } catch (dbError) {
+        // Rollback in-memory route if DB insert fails
+        this.routes.delete(routeId);
+        throw dbError;
+      }
     }
 
     this.app.logger.info(`Route added: ${routeId} (${route.source} → ${route.destination})`);
@@ -68,8 +74,9 @@ class MidiRouter {
       throw new Error(`Route not found: ${routeId}`);
     }
 
-    this.routes.delete(routeId);
+    // Delete from DB first; if DB fails, in-memory state stays consistent
     this.app.database.deleteRoute(routeId);
+    this.routes.delete(routeId);
     this.app.logger.info(`Route deleted: ${routeId}`);
   }
 
@@ -243,7 +250,7 @@ class MidiRouter {
   }
 
   generateRouteId() {
-    return `route_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `route_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 }
 

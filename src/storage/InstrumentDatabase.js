@@ -666,7 +666,7 @@ class InstrumentDatabase {
           fields.push('note_range_max = ?');
           values.push(capabilities.note_range_max);
         }
-        if (supportedCcsJson !== undefined) {
+        if (capabilities.supported_ccs !== undefined) {
           fields.push('supported_ccs = ?');
           values.push(supportedCcsJson);
         }
@@ -674,7 +674,7 @@ class InstrumentDatabase {
           fields.push('note_selection_mode = ?');
           values.push(capabilities.note_selection_mode);
         }
-        if (selectedNotesJson !== undefined) {
+        if (capabilities.selected_notes !== undefined) {
           fields.push('selected_notes = ?');
           values.push(selectedNotesJson);
         }
