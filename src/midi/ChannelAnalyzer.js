@@ -1,5 +1,7 @@
 // src/midi/ChannelAnalyzer.js
 
+import ScoringConfig from './ScoringConfig.js';
+
 /**
  * ChannelAnalyzer - Analyse les caractéristiques d'un canal MIDI
  *
@@ -12,8 +14,9 @@
  * - Type d'instrument estimé
  */
 class ChannelAnalyzer {
-  constructor(logger) {
+  constructor(logger, config = null) {
     this.logger = logger;
+    this.config = config || ScoringConfig;
   }
 
   /**
@@ -344,6 +347,10 @@ class ChannelAnalyzer {
   estimateInstrumentType(analysis) {
     const { channel, noteRange, noteDistribution, polyphony, primaryProgram, density, trackNames } = analysis;
 
+    // Use ScoringConfig thresholds and weights
+    const thresholds = this.config.typeThresholds;
+    const weights = this.config.typeDetection;
+
     // Scores pour chaque type (0-100)
     const scores = {
       drums: 0,
@@ -362,116 +369,117 @@ class ChannelAnalyzer {
       };
     }
 
-    // 1. Analyse du programme MIDI (fort indicateur)
+    // 1. Analyse du programme MIDI (fort indicateur, weight: programWeight)
     if (primaryProgram !== null) {
       if (primaryProgram >= 112 && primaryProgram <= 119) {
-        scores.percussive += 40;
-        scores.drums += 30;
+        scores.percussive += weights.programWeight;
+        scores.drums += weights.programWeight * 0.75;
       } else if (primaryProgram >= 32 && primaryProgram <= 39) {
-        scores.bass += 40;
+        scores.bass += weights.programWeight;
       } else if (primaryProgram >= 0 && primaryProgram <= 7) {
-        scores.harmony += 35;
-        scores.melody += 15;
+        scores.harmony += weights.programWeight * 0.875;
+        scores.melody += weights.programWeight * 0.375;
       } else if (primaryProgram >= 40 && primaryProgram <= 55) {
-        scores.harmony += 40;
+        scores.harmony += weights.programWeight;
       } else if (primaryProgram >= 56 && primaryProgram <= 79) {
-        scores.melody += 30;
-        scores.harmony += 20;
+        scores.melody += weights.programWeight * 0.75;
+        scores.harmony += weights.programWeight * 0.5;
       } else if (primaryProgram >= 80 && primaryProgram <= 103) {
-        scores.melody += 35;
-        scores.harmony += 15;
+        scores.melody += weights.programWeight * 0.875;
+        scores.harmony += weights.programWeight * 0.375;
       }
     }
 
-    // 2. Analyse de la plage de notes
+    // 2. Analyse de la plage de notes (weight: rangeWeight)
     const avgNote = this.getAverageNote(noteDistribution);
     const span = noteRange.max - noteRange.min;
 
     // Notes très basses = bass
-    if (avgNote < 48) {
-      scores.bass += 25;
-    } else if (avgNote >= 48 && avgNote < 72) {
-      scores.melody += 15;
-      scores.harmony += 10;
+    if (avgNote < thresholds.lowNote) {
+      scores.bass += weights.rangeWeight;
+    } else if (avgNote >= thresholds.lowNote && avgNote < 72) {
+      scores.melody += weights.rangeWeight * 0.6;
+      scores.harmony += weights.rangeWeight * 0.4;
     } else {
-      scores.melody += 20;
+      scores.melody += weights.rangeWeight * 0.8;
     }
 
     // Plage restreinte en notes basses = drums
-    if (noteRange.min >= 35 && noteRange.max <= 60 && span < 25) {
-      scores.drums += 20;
-      scores.percussive += 15;
+    const drumRange = thresholds.drumNoteRange;
+    if (noteRange.min >= drumRange.min && noteRange.max <= drumRange.max && span < drumRange.span) {
+      scores.drums += weights.rangeWeight * 0.8;
+      scores.percussive += weights.rangeWeight * 0.6;
     }
 
     // Large plage = harmony/piano
-    if (span >= 36) {
-      scores.harmony += 20;
-    } else if (span <= 12) {
-      scores.drums += 10;
-      scores.percussive += 10;
+    if (span >= thresholds.wideSpan) {
+      scores.harmony += weights.rangeWeight * 0.8;
+    } else if (span <= thresholds.narrowSpan) {
+      scores.drums += weights.rangeWeight * 0.4;
+      scores.percussive += weights.rangeWeight * 0.4;
     }
 
-    // 3. Analyse de la polyphonie
+    // 3. Analyse de la polyphonie (weight: polyphonyWeight)
     if (polyphony.max === 1) {
-      scores.melody += 25;
-      scores.bass += 20;
-      scores.drums -= 10;
-      scores.harmony -= 10;
+      scores.melody += weights.polyphonyWeight * 1.25;
+      scores.bass += weights.polyphonyWeight;
+      scores.drums -= weights.polyphonyWeight * 0.5;
+      scores.harmony -= weights.polyphonyWeight * 0.5;
     } else if (polyphony.max >= 2 && polyphony.max <= 4) {
-      scores.melody += 15;
-      scores.harmony += 10;
-    } else if (polyphony.max >= 5) {
-      scores.harmony += 30;
-      scores.melody -= 10;
+      scores.melody += weights.polyphonyWeight * 0.75;
+      scores.harmony += weights.polyphonyWeight * 0.5;
+    } else if (polyphony.max >= thresholds.highPolyphony) {
+      scores.harmony += weights.polyphonyWeight * 1.5;
+      scores.melody -= weights.polyphonyWeight * 0.5;
     }
 
     // Polyphonie moyenne basse avec max haute = drums (notes qui se chevauchent)
     if (polyphony.max >= 3 && polyphony.avg < 1.5) {
-      scores.drums += 15;
-      scores.percussive += 10;
+      scores.drums += weights.polyphonyWeight * 0.75;
+      scores.percussive += weights.polyphonyWeight * 0.5;
     }
 
-    // 4. Analyse de la densité rythmique
-    if (density > 6) {
-      scores.drums += 20;
-      scores.percussive += 15;
-      scores.melody -= 5;
-    } else if (density > 3 && density <= 6) {
-      scores.melody += 10;
+    // 4. Analyse de la densité rythmique (weight: densityWeight)
+    if (density > thresholds.highDensity) {
+      scores.drums += weights.densityWeight * 1.33;
+      scores.percussive += weights.densityWeight;
+      scores.melody -= weights.densityWeight * 0.33;
+    } else if (density > 3 && density <= thresholds.highDensity) {
+      scores.melody += weights.densityWeight * 0.67;
     } else if (density <= 1) {
-      scores.harmony += 10;
-      scores.melody += 5;
+      scores.harmony += weights.densityWeight * 0.67;
+      scores.melody += weights.densityWeight * 0.33;
     }
 
-    // 5. Analyse des noms de tracks (keywords)
+    // 5. Analyse des noms de tracks (weight: trackNameWeight)
     const trackNameLower = trackNames.join(' ').toLowerCase();
 
     if (trackNameLower.includes('drum') || trackNameLower.includes('kick') ||
         trackNameLower.includes('snare') || trackNameLower.includes('hat')) {
-      scores.drums += 30;
-      scores.percussive += 20;
+      scores.drums += weights.trackNameWeight;
+      scores.percussive += weights.trackNameWeight * 0.67;
     }
 
     if (trackNameLower.includes('bass')) {
-      scores.bass += 30;
+      scores.bass += weights.trackNameWeight;
     }
 
     if (trackNameLower.includes('piano') || trackNameLower.includes('keys')) {
-      scores.harmony += 25;
+      scores.harmony += weights.trackNameWeight * 0.83;
     }
 
     if (trackNameLower.includes('lead') || trackNameLower.includes('solo')) {
-      scores.melody += 25;
+      scores.melody += weights.trackNameWeight * 0.83;
     }
 
     if (trackNameLower.includes('pad') || trackNameLower.includes('strings') ||
         trackNameLower.includes('choir')) {
-      scores.harmony += 25;
+      scores.harmony += weights.trackNameWeight * 0.83;
     }
 
     if (trackNameLower.includes('perc')) {
-      scores.percussive += 25;
-      scores.drums += 15;
+      scores.percussive += weights.trackNameWeight * 0.83;
+      scores.drums += weights.trackNameWeight * 0.5;
     }
 
     // 6. Normaliser les scores négatifs

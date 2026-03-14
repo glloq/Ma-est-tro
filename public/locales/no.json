@@ -333,7 +333,7 @@
     "customName": "Egendefinert navn",
     "customNameHelp": "Egendefinert visningsnavn (valgfritt)",
     "customNamePlaceholder": "Min synthesizer",
-    "syncDelay": "Synkroniseringsforsinkelse (μs)",
+    "syncDelay": "Synkroniseringsforsinkelse (ms)",
     "syncDelayHelp": "Positiv = forsinkelse, negativ = forsprang (for multi-instrument synk)",
     "macAddress": "MAC-adresse (Bluetooth)",
     "macAddressHelp": "For å knytte innstillinger til Bluetooth-enheter",

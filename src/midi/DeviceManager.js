@@ -120,7 +120,8 @@ class DeviceManager {
     const deviceList = this.getDeviceList();
     this.app.logger.info(`Scan complete: ${deviceList.length} device(s) found`);
 
-    // Start hot-plug monitoring
+    // Restart hot-plug monitoring with fresh device lists
+    this.stopHotPlugMonitoring();
     this.startHotPlugMonitoring();
 
     return deviceList;
@@ -357,10 +358,12 @@ class DeviceManager {
     }
 
     // Sinon, vérifier si c'est un périphérique Bluetooth
+    // Note: getDeviceList() uses device.address as the ID for Bluetooth devices,
+    // so we must match by address (primary) as well as name (fallback)
     if (this.app.bluetoothManager) {
       const pairedDevices = this.app.bluetoothManager.getPairedDevices();
       const bleDevice = pairedDevices.find(d =>
-        d.name === deviceName || d.address === deviceName
+        d.address === deviceName || d.name === deviceName
       );
 
       if (bleDevice && bleDevice.connected) {
@@ -376,10 +379,12 @@ class DeviceManager {
     }
 
     // Sinon, vérifier si c'est un périphérique réseau
+    // Note: getDeviceList() uses device.ip as the ID for network devices,
+    // so we must match by ip (primary) as well as name/address (fallback)
     if (this.app.networkManager) {
       const networkDevices = this.app.networkManager.getConnectedDevices();
       const networkDevice = networkDevices.find(d =>
-        d.name === deviceName || d.ip === deviceName || d.address === deviceName
+        d.ip === deviceName || d.name === deviceName || d.address === deviceName
       );
 
       if (networkDevice && networkDevice.connected) {

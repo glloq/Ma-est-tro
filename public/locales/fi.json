@@ -333,7 +333,7 @@
     "customName": "Mukautettu nimi",
     "customNameHelp": "Mukautettu näyttönimi (valinnainen)",
     "customNamePlaceholder": "Oma syntetisaattori",
-    "syncDelay": "Synkronointiviive (μs)",
+    "syncDelay": "Synkronointiviive (ms)",
     "syncDelayHelp": "Positiivinen = viive, negatiivinen = ennakko (usean soittimen synkronointiin)",
     "macAddress": "MAC-osoite (Bluetooth)",
     "macAddressHelp": "Asetusten liittämiseksi Bluetooth-laitteisiin",

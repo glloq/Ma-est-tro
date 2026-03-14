@@ -333,7 +333,7 @@
     "customName": "Propra nomo",
     "customNameHelp": "Propra montronomo (nedeviga)",
     "customNamePlaceholder": "Mia Sintezilo",
-    "syncDelay": "Sinkroniga prokrasto (μs)",
+    "syncDelay": "Sinkroniga prokrasto (ms)",
     "syncDelayHelp": "Pozitiva = prokrasti, negativa = antaŭenigi (por plurinstrumenta sinkronigo)",
     "macAddress": "MAC-adreso (Bluetooth)",
     "macAddressHelp": "Por asocii agordojn kun Bluetooth-aparatoj",

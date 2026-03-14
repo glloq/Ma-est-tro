@@ -253,15 +253,17 @@ class InstrumentMatcher {
       };
     }
 
-    // Score basé sur la transposition
-    let score = 25;
+    // Score basé sur la transposition (use config bonuses/penalties)
+    const perfectNoteScore = this.config.getBonus('perfectNoteRange');
+    const transpositionPenalty = this.config.getPenalty('transpositionPerOctave');
+    let score = perfectNoteScore;
     let info = null;
 
     if (transposition.octaves === 0) {
-      score = 25;
+      score = perfectNoteScore;
       info = 'Perfect note range fit (no transposition)';
     } else {
-      score = Math.max(0, 20 - Math.abs(transposition.octaves) * 3);
+      score = Math.max(0, (perfectNoteScore - 5) - Math.abs(transposition.octaves) * transpositionPenalty);
       const direction = transposition.octaves > 0 ? 'up' : 'down';
       info = `Transposition: ${Math.abs(transposition.octaves)} octave(s) ${direction}`;
     }
@@ -404,6 +406,13 @@ class InstrumentMatcher {
    */
   scoreDiscreteNotes(channelRange, selectedNotes, channelAnalysis = null) {
     if (!selectedNotes || selectedNotes.length === 0) {
+      // Fall back to range-based scoring when discrete instrument has no selected_notes
+      if (channelRange.min !== undefined && channelRange.max !== undefined) {
+        return this.scoreNoteCompatibility(channelRange, {
+          min: channelRange.min,
+          max: channelRange.max
+        }, channelAnalysis);
+      }
       return {
         compatible: false,
         score: 0,

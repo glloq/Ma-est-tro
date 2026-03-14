@@ -333,7 +333,7 @@
     "customName": "カスタム名",
     "customNameHelp": "カスタム表示名（オプション）",
     "customNamePlaceholder": "マイシンセサイザー",
-    "syncDelay": "同期遅延（μs）",
+    "syncDelay": "同期遅延（ms）",
     "syncDelayHelp": "正 = 遅延、負 = 前進（マルチ楽器同期用）",
     "macAddress": "MACアドレス（Bluetooth）",
     "macAddressHelp": "Bluetoothデバイスに設定を関連付けるため",

@@ -333,7 +333,7 @@
     "customName": "Özel ad",
     "customNameHelp": "Özel görüntü adı (isteğe bağlı)",
     "customNamePlaceholder": "Sentezleyicim",
-    "syncDelay": "Senkronizasyon gecikmesi (μs)",
+    "syncDelay": "Senkronizasyon gecikmesi (ms)",
     "syncDelayHelp": "Pozitif = gecikme, negatif = ilerleme (çoklu enstrüman senkronizasyonu için)",
     "macAddress": "MAC Adresi (Bluetooth)",
     "macAddressHelp": "Ayarları Bluetooth cihazlarıyla ilişkilendirmek için",

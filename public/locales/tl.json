@@ -333,7 +333,7 @@
     "customName": "Custom na pangalan",
     "customNameHelp": "Custom na display name (opsyonal)",
     "customNamePlaceholder": "Aking Synthesizer",
-    "syncDelay": "Synchronization delay (μs)",
+    "syncDelay": "Synchronization delay (ms)",
     "syncDelayHelp": "Positibo = delay, negatibo = advance (para sa multi-instrument sync)",
     "macAddress": "MAC Address (Bluetooth)",
     "macAddressHelp": "Para i-associate ang mga setting sa mga Bluetooth device",

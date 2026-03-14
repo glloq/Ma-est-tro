@@ -333,7 +333,7 @@
     "customName": "自定义名称",
     "customNameHelp": "自定义显示名称（可选）",
     "customNamePlaceholder": "我的合成器",
-    "syncDelay": "同步延迟（μs）",
+    "syncDelay": "同步延迟（ms）",
     "syncDelayHelp": "正值 = 延迟，负值 = 提前（用于多乐器同步）",
     "macAddress": "MAC地址（蓝牙）",
     "macAddressHelp": "用于将设置与蓝牙设备关联",
