@@ -139,9 +139,12 @@ class InstrumentMatcher {
       info.push('MIDI channel 10 (drums) match');
     }
 
+    // Compatibilite = notes ET polyphonie doivent etre compatibles
+    const isCompatible = noteScore.compatible !== false && polyScore.compatible !== false;
+
     return {
       score: Math.min(100, Math.max(0, Math.round(score))),
-      compatible: noteScore.compatible,
+      compatible: isCompatible,
       transposition: noteScore.transposition || null,
       noteRemapping: noteScore.noteRemapping || null,
       issues,
@@ -248,6 +251,15 @@ class InstrumentMatcher {
    * @returns {Object}
    */
   scoreNoteCompatibility(channelRange, instrumentCaps, channelAnalysis = null) {
+    // Canal sans notes (plage null) = score neutre, compatible par defaut
+    if (channelRange.min === null || channelRange.max === null) {
+      return {
+        compatible: true,
+        score: Math.round(this.config.getWeight('noteRange') * 0.5),
+        info: 'No notes in MIDI channel (empty channel)'
+      };
+    }
+
     const span = channelRange.max - channelRange.min;
 
     // Mode discrete (drums/pads)
@@ -255,12 +267,12 @@ class InstrumentMatcher {
       return this.scoreDiscreteNotes(channelRange, instrumentCaps.selected, channelAnalysis);
     }
 
-    // Si l'instrument n'a pas de plage définie (accepte tout)
+    // Si l'instrument n'a pas de plage définie (non configuré, score neutre)
     if (instrumentCaps.min === null || instrumentCaps.max === null) {
       return {
         compatible: true,
-        score: 25,
-        info: 'Instrument accepts all note ranges'
+        score: Math.round(this.config.getWeight('noteRange') * 0.5),
+        info: 'Instrument note range not configured (accepts all)'
       };
     }
 
@@ -463,9 +475,15 @@ class InstrumentMatcher {
     }
 
     // Fallback: simple closest-note mapping for non-drums discrete instruments
-    const channelNotes = [];
-    for (let note = channelRange.min; note <= channelRange.max; note++) {
-      channelNotes.push(note);
+    // Utiliser les notes reellement presentes si disponibles, sinon la plage
+    let channelNotes;
+    if (channelAnalysis && channelAnalysis.noteDistribution && Object.keys(channelAnalysis.noteDistribution).length > 0) {
+      channelNotes = Object.keys(channelAnalysis.noteDistribution).map(Number).sort((a, b) => a - b);
+    } else {
+      channelNotes = [];
+      for (let note = channelRange.min; note <= channelRange.max; note++) {
+        channelNotes.push(note);
+      }
     }
 
     const supportedCount = channelNotes.filter(n => selectedNotes.includes(n)).length;
@@ -571,8 +589,12 @@ class InstrumentMatcher {
       };
     } catch (error) {
       this.logger.error(`[DrumMapping] Error: ${error.message}`);
-      // Fallback to simple mapping
-      return this.scoreDiscreteNotes(channelAnalysis.noteRange, selectedNotes, null);
+      // Fallback securise: valider noteRange avant de passer au scoring simple
+      const fallbackRange = channelAnalysis && channelAnalysis.noteRange &&
+        channelAnalysis.noteRange.min !== null && channelAnalysis.noteRange.max !== null
+        ? channelAnalysis.noteRange
+        : { min: 0, max: 127 };
+      return this.scoreDiscreteNotes(fallbackRange, selectedNotes, null);
     }
   }
 
@@ -623,12 +645,23 @@ class InstrumentMatcher {
         score: 5,
         info: `Sufficient polyphony (${instrumentPoly} available, ${channelMaxPoly} needed)`
       };
-    } else {
+    } else if (margin >= -4) {
+      // Legèrement insuffisant: warning mais pas incompatible
       return {
         score: 0,
         issue: {
           type: 'warning',
           message: `Insufficient polyphony (${instrumentPoly} available, ${channelMaxPoly} needed)`
+        }
+      };
+    } else {
+      // Sévèrement insuffisant: incompatible
+      return {
+        score: 0,
+        compatible: false,
+        issue: {
+          type: 'error',
+          message: `Severely insufficient polyphony (${instrumentPoly} available, ${channelMaxPoly} needed)`
         }
       };
     }

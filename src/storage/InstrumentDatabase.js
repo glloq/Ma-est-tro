@@ -602,6 +602,15 @@ class InstrumentDatabase {
         }
       }
 
+      // Validate cross-field: min <= max
+      const effectiveMin = capabilities.note_range_min !== undefined ? capabilities.note_range_min : null;
+      const effectiveMax = capabilities.note_range_max !== undefined ? capabilities.note_range_max : null;
+      if (effectiveMin !== null && effectiveMin !== undefined &&
+          effectiveMax !== null && effectiveMax !== undefined &&
+          effectiveMin > effectiveMax) {
+        throw new Error(`note_range_min (${effectiveMin}) must be <= note_range_max (${effectiveMax})`);
+      }
+
       // Validate polyphony
       if (capabilities.polyphony !== undefined && capabilities.polyphony !== null) {
         const poly = parseInt(capabilities.polyphony);
@@ -716,7 +725,7 @@ class InstrumentDatabase {
           supportedCcsJson,
           capabilities.note_selection_mode || 'range',
           selectedNotesJson,
-          capabilities.polyphony !== undefined && capabilities.polyphony !== null ? parseInt(capabilities.polyphony) : null,
+          capabilities.polyphony !== undefined && capabilities.polyphony !== null ? parseInt(capabilities.polyphony) : 16,
           capabilities.capabilities_source || 'manual',
           now
         );

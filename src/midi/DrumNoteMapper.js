@@ -184,7 +184,7 @@ class DrumNoteMapper {
 
     // Count only noteOn occurrences (exclude noteOff to avoid double-counting)
     for (const event of noteEvents) {
-      if (event.type && event.type !== 'noteOn') continue;
+      if (event.type !== 'noteOn') continue;
       if (event.velocity === 0) continue; // noteOn with vel=0 is noteOff
       if (event.note >= 27 && event.note <= 87) { // Valid drum range
         usage[event.note] = (usage[event.note] || 0) + 1;

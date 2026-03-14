@@ -3,6 +3,7 @@
 import ChannelAnalyzer from './ChannelAnalyzer.js';
 import InstrumentMatcher from './InstrumentMatcher.js';
 import AnalysisCache from './AnalysisCache.js';
+import ScoringConfig from './ScoringConfig.js';
 
 /**
  * AutoAssigner - Génère des suggestions d'assignation automatique
@@ -16,7 +17,7 @@ class AutoAssigner {
     this.logger = logger;
     this.analyzer = new ChannelAnalyzer(logger);
     this.matcher = new InstrumentMatcher(logger);
-    this.cache = new AnalysisCache(100, 600000); // 100 entrées, 10 min TTL
+    this.cache = new AnalysisCache(ScoringConfig.cache.maxSize, ScoringConfig.cache.ttl);
 
     // Cleanup périodique du cache (toutes les 5 minutes)
     this.cleanupInterval = setInterval(() => {

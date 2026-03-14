@@ -213,14 +213,25 @@ describe('ChannelAnalyzer', () => {
     expect(histogram[60]).not.toBe(3); // noteOff not counted
   });
 
-  test('extractNoteRange handles empty events', () => {
+  test('extractNoteRange returns null for empty events', () => {
     const range = analyzer.extractNoteRange([]);
-    expect(range.min).toBe(60); // Default
-    expect(range.max).toBe(60);
+    expect(range.min).toBe(null);
+    expect(range.max).toBe(null);
   });
 
   test('calculateNoteDensity returns 0 for zero duration', () => {
     expect(analyzer.calculateNoteDensity([], 0)).toBe(0);
+  });
+
+  test('analyzeChannel handles channel with no noteOn velocity > 0', () => {
+    // Canal avec uniquement des noteOff
+    const midiData = createMidiData([[
+      noteOff(0, 60, 0),
+      noteOff(0, 64, 100)
+    ]]);
+    const analysis = analyzer.analyzeChannel(midiData, 0);
+    expect(analysis.noteRange.min).toBe(null);
+    expect(analysis.noteRange.max).toBe(null);
   });
 });
 
@@ -385,6 +396,55 @@ describe('InstrumentMatcher', () => {
     expect(matcher.isDrumsInstrument({ gm_program: 115 })).toBe(true);
     expect(matcher.isDrumsInstrument({ gm_program: 0, note_selection_mode: 'discrete' })).toBe(true);
     expect(matcher.isDrumsInstrument({ gm_program: 0, note_selection_mode: 'range' })).toBe(false);
+  });
+
+  test('scoreNoteCompatibility handles null channel range (empty channel)', () => {
+    const result = matcher.scoreNoteCompatibility(
+      { min: null, max: null },
+      { min: 21, max: 108, mode: 'range', selected: null }
+    );
+    expect(result.compatible).toBe(true);
+    expect(result.score).toBe(Math.round(25 * 0.5)); // Neutral score
+    expect(result.info).toContain('empty channel');
+  });
+
+  test('unconfigured instrument note range gives neutral score (not max)', () => {
+    const result = matcher.scoreNoteCompatibility(
+      { min: 48, max: 72 },
+      { min: null, max: null, mode: 'range', selected: null }
+    );
+    expect(result.compatible).toBe(true);
+    expect(result.score).toBe(Math.round(25 * 0.5)); // Neutral, not 25
+    expect(result.info).toContain('not configured');
+  });
+
+  test('severely insufficient polyphony marks incompatible', () => {
+    const result = matcher.scorePolyphony(16, 4); // margin = -12
+    expect(result.score).toBe(0);
+    expect(result.compatible).toBe(false);
+    expect(result.issue.type).toBe('error');
+  });
+
+  test('slightly insufficient polyphony stays compatible', () => {
+    const result = matcher.scorePolyphony(8, 6); // margin = -2
+    expect(result.score).toBe(0);
+    expect(result.compatible).toBeUndefined(); // No compatible field = default compatible
+    expect(result.issue.type).toBe('warning');
+  });
+
+  test('polyphony incompatibility propagates to calculateCompatibility', () => {
+    const analysis = {
+      channel: 0,
+      noteRange: { min: 48, max: 72 },
+      polyphony: { max: 32, avg: 16 },
+      usedCCs: [],
+      primaryProgram: 0,
+      estimatedType: 'harmony',
+      noteEvents: []
+    };
+    const instrument = createInstrument({ polyphony: 2 }); // Severely insufficient
+    const result = matcher.calculateCompatibility(analysis, instrument);
+    expect(result.compatible).toBe(false);
   });
 
   test('drum issues are captured from scoreDiscreteDrumsIntelligent', () => {
