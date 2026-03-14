@@ -243,13 +243,31 @@ class CommandHandler {
   async deviceList() {
     const devices = this.app.deviceManager.getDeviceList();
 
-    // Enrichir les appareils avec les noms personnalisés depuis la base de données
+    // Enrichir les appareils avec les données depuis la base de données
     if (this.app.database) {
       for (const device of devices) {
         try {
           const settings = this.app.database.getInstrumentSettings(device.id);
-          if (settings && settings.custom_name) {
-            device.displayName = settings.custom_name;
+          if (settings) {
+            if (settings.custom_name) {
+              device.displayName = settings.custom_name;
+            }
+            // Inclure les champs de configuration instrument
+            if (settings.gm_program !== null && settings.gm_program !== undefined) {
+              device.gm_program = settings.gm_program;
+            }
+            if (settings.polyphony !== null && settings.polyphony !== undefined) {
+              device.polyphony = settings.polyphony;
+            }
+            if (settings.note_range_min !== null && settings.note_range_min !== undefined) {
+              device.note_range_min = settings.note_range_min;
+            }
+            if (settings.note_range_max !== null && settings.note_range_max !== undefined) {
+              device.note_range_max = settings.note_range_max;
+            }
+            if (settings.note_selection_mode) {
+              device.note_selection_mode = settings.note_selection_mode;
+            }
           }
         } catch (error) {
           // Ignorer les erreurs - l'appareil n'a peut-être pas de settings

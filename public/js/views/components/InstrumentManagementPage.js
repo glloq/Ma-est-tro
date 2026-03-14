@@ -55,10 +55,10 @@ class InstrumentManagementPage {
               <select id="instrumentFilter"
                       onchange="instrumentManagementPageInstance.handleFilter(this.value)"
                       style="padding: 8px 12px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; font-size: 13px; background: rgba(255,255,255,0.15); color: white; cursor: pointer;">
-                <option value="all">${i18n.t('instrumentManagement.filterAll') || 'Tous'}</option>
-                <option value="complete">✓ ${i18n.t('instrumentManagement.filterComplete') || 'Complets'}</option>
-                <option value="incomplete">⚠ ${i18n.t('instrumentManagement.filterIncomplete') || 'Incomplets'}</option>
-                <option value="connected">🔌 ${i18n.t('instrumentManagement.filterConnected') || 'Connectés'}</option>
+                <option value="all" style="background: #2d2d2d; color: #e0e0e0;">${i18n.t('instrumentManagement.filterAll') || 'Tous'}</option>
+                <option value="complete" style="background: #2d2d2d; color: #e0e0e0;">✓ ${i18n.t('instrumentManagement.filterComplete') || 'Complets'}</option>
+                <option value="incomplete" style="background: #2d2d2d; color: #e0e0e0;">⚠ ${i18n.t('instrumentManagement.filterIncomplete') || 'Incomplets'}</option>
+                <option value="connected" style="background: #2d2d2d; color: #e0e0e0;">🔌 ${i18n.t('instrumentManagement.filterConnected') || 'Connectés'}</option>
               </select>
               <div style="display: flex; gap: 6px; align-items: center;">
                 <button class="button button-secondary" onclick="instrumentManagementPageInstance.scanDevices()" style="padding: 6px 10px; white-space: nowrap; font-size: 12px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 6px; cursor: pointer;">
@@ -288,13 +288,6 @@ class InstrumentManagementPage {
               🎵 ${i18n.t('instrumentManagement.test') || 'Tester'}
             </button>
           ` : ''}
-          ${!isComplete ? `
-            <button class="button button-info"
-                    onclick="event.stopPropagation(); instrumentManagementPageInstance.completeInstrument('${instrument.id}')"
-                    style="font-size: 13px; padding: 8px 12px;">
-              ✓ ${i18n.t('instrumentManagement.completeBtn') || 'Compléter'}
-            </button>
-          ` : ''}
           <button class="button button-danger"
                   onclick="event.stopPropagation(); instrumentManagementPageInstance.deleteInstrument('${instrument.id}')"
                   style="font-size: 13px; padding: 8px 12px;">
@@ -460,7 +453,16 @@ class InstrumentManagementPage {
    * Supprime un instrument
    */
   async deleteInstrument(deviceId) {
-    if (!confirm(i18n.t('instrumentManagement.deleteConfirm') || 'Êtes-vous sûr de vouloir supprimer cet instrument de la base de données ?\n\nNote : Le périphérique physique ne sera pas affecté.')) {
+    const confirmed = await window.showConfirm(
+      i18n.t('instrumentManagement.deleteConfirm') || 'Êtes-vous sûr de vouloir supprimer cet instrument de la base de données ?\n\nNote : Le périphérique physique ne sera pas affecté.',
+      {
+        title: i18n.t('instrumentManagement.deleteTitle') || 'Supprimer l\'instrument',
+        icon: '🗑️',
+        okText: i18n.t('common.delete') || 'Supprimer',
+        danger: true
+      }
+    );
+    if (!confirmed) {
       return;
     }
 
