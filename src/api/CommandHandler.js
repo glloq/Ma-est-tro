@@ -328,7 +328,10 @@ class CommandHandler {
     }
 
     // Channel defaults to 0 for backward compatibility
-    const channel = data.channel !== undefined ? data.channel : 0;
+    const channel = data.channel !== undefined ? parseInt(data.channel) : 0;
+    if (channel < 0 || channel > 15) {
+      throw new Error('channel must be between 0 and 15');
+    }
 
     const id = this.app.database.updateInstrumentSettings(data.deviceId, channel, {
       custom_name: data.custom_name,
@@ -369,7 +372,10 @@ class CommandHandler {
     }
 
     // Channel defaults to 0 for backward compatibility
-    const channel = data.channel !== undefined ? data.channel : 0;
+    const channel = data.channel !== undefined ? parseInt(data.channel) : 0;
+    if (channel < 0 || channel > 15) {
+      throw new Error('channel must be between 0 and 15');
+    }
 
     const id = this.app.database.updateInstrumentCapabilities(data.deviceId, channel, {
       note_range_min: data.note_range_min,
@@ -427,7 +433,18 @@ class CommandHandler {
     }
 
     // Delete instrument settings/capabilities from instruments_latency by device_id
-    this.app.database.db.prepare('DELETE FROM instruments_latency WHERE device_id = ?').run(data.deviceId);
+    try {
+      this.app.database.db.prepare('DELETE FROM instruments_latency WHERE device_id = ?').run(data.deviceId);
+    } catch (e) {
+      // May not have latency settings
+    }
+
+    // Delete from instruments table if exists
+    try {
+      this.app.database.deleteInstrument(data.deviceId);
+    } catch (e) {
+      // May not have an instruments entry
+    }
 
     // Also delete latency profile if exists
     try {
@@ -1262,6 +1279,17 @@ class CommandHandler {
       note: data.note,
       velocity: data.velocity
     });
+
+    // Send noteOff after duration (default 500ms)
+    const duration = data.duration || 500;
+    setTimeout(() => {
+      this.app.deviceManager.sendMessage(data.deviceId, 'noteoff', {
+        channel: data.channel,
+        note: data.note,
+        velocity: 0
+      });
+    }, duration);
+
     return { success: true };
   }
 

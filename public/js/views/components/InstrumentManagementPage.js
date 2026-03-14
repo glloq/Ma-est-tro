@@ -421,11 +421,31 @@ class InstrumentManagementPage {
    */
   async testInstrument(deviceId) {
     try {
-      // Envoyer une note de test
+      const instrument = this.instruments.find(inst => inst.id === deviceId);
+
+      // Use instrument's channel if available, default to 0
+      const channel = instrument && instrument.channel !== undefined ? instrument.channel : 0;
+
+      // Pick a test note within the instrument's capabilities
+      let testNote = 60; // Default C4
+      if (instrument) {
+        if (instrument.note_selection_mode === 'discrete' && instrument.selected_notes && instrument.selected_notes.length > 0) {
+          // For discrete mode, pick the first available note
+          testNote = instrument.selected_notes[0];
+        } else if (instrument.note_range_min !== undefined && instrument.note_range_min !== null) {
+          // For range mode, ensure C4 is within range, otherwise pick middle of range
+          const min = instrument.note_range_min;
+          const max = instrument.note_range_max !== undefined && instrument.note_range_max !== null ? instrument.note_range_max : 127;
+          if (testNote < min || testNote > max) {
+            testNote = Math.round((min + max) / 2);
+          }
+        }
+      }
+
       await this.apiClient.sendCommand('midi_send_note', {
         deviceId: deviceId,
-        channel: 0,
-        note: 60, // C4
+        channel: channel,
+        note: testNote,
         velocity: 100,
         duration: 500
       });
@@ -446,6 +466,7 @@ class InstrumentManagementPage {
 
     try {
       await this.apiClient.sendCommand('instrument_delete', { deviceId });
+      this.showToast(i18n.t('instrumentManagement.deleteSuccess') || 'Instrument supprimé avec succès', 'success');
       await this.refresh();
     } catch (error) {
       this.showToast((i18n.t('instrumentManagement.deleteFailed') || 'Échec de la suppression') + ': ' + error.message, 'error');
@@ -458,6 +479,7 @@ class InstrumentManagementPage {
   async scanDevices() {
     try {
       await this.apiClient.sendCommand('device_refresh', {});
+      this.showToast(i18n.t('instrumentManagement.scanStarted') || 'Scan USB lancé...', 'success');
       setTimeout(() => this.refresh(), 1000);
     } catch (error) {
       this.showToast((i18n.t('instrumentManagement.scanFailed') || 'Échec du scan') + ': ' + error.message, 'error');
