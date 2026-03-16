@@ -4573,6 +4573,9 @@ class MidiEditorModal {
             };
 
             resizeBar.addEventListener('mousedown', startResize);
+            // Stocker les refs pour cleanup dans doClose()
+            this._resizeDoResize = doResize;
+            this._resizeStopResize = stopResize;
             document.addEventListener('mousemove', doResize);
             document.addEventListener('mouseup', stopResize);
         }
@@ -5131,6 +5134,14 @@ class MidiEditorModal {
 
         // Nettoyer le synthétiseur
         this.disposeSynthesizer();
+
+        // Retirer les listeners de resize drag
+        if (this._resizeDoResize) {
+            document.removeEventListener('mousemove', this._resizeDoResize);
+            document.removeEventListener('mouseup', this._resizeStopResize);
+            this._resizeDoResize = null;
+            this._resizeStopResize = null;
+        }
 
         // Retirer l'événement escape
         if (this.escapeHandler) {

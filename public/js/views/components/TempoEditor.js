@@ -90,17 +90,31 @@ class TempoEditor {
     }
 
     setupEventListeners() {
-        // Événements souris
-        this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-        this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
-        this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
-        this.canvas.addEventListener('mouseleave', this.handleMouseLeave.bind(this));
+        // Stocker les références bindées pour pouvoir les retirer dans destroy()
+        this._boundMouseDown = this.handleMouseDown.bind(this);
+        this._boundMouseMove = (e) => {
+            if (this._mouseMoveRAF) return;
+            this._mouseMoveRAF = requestAnimationFrame(() => {
+                this._mouseMoveRAF = null;
+                this.handleMouseMove(e);
+            });
+        };
+        this._boundMouseUp = this.handleMouseUp.bind(this);
+        this._boundMouseLeave = this.handleMouseLeave.bind(this);
+        this._boundKeyDown = this.handleKeyDown.bind(this);
+        this._boundResize = this.resize.bind(this);
+
+        // Événements souris (mousemove throttlé via rAF)
+        this.canvas.addEventListener('mousedown', this._boundMouseDown);
+        this.canvas.addEventListener('mousemove', this._boundMouseMove);
+        this.canvas.addEventListener('mouseup', this._boundMouseUp);
+        this.canvas.addEventListener('mouseleave', this._boundMouseLeave);
 
         // Événements clavier
-        document.addEventListener('keydown', this.handleKeyDown.bind(this));
+        document.addEventListener('keydown', this._boundKeyDown);
 
         // Redimensionnement
-        window.addEventListener('resize', this.resize.bind(this));
+        window.addEventListener('resize', this._boundResize);
     }
 
     resize() {
@@ -139,7 +153,14 @@ class TempoEditor {
     // === Gestion de l'état ===
 
     saveState() {
-        // Sauvegarder l'état actuel pour undo/redo
+        // Debounce: max 1 sauvegarde par 100ms pour éviter le lag en dessin continu
+        if (this._saveStateTimer) clearTimeout(this._saveStateTimer);
+        this._saveStateTimer = setTimeout(() => {
+            this._doSaveState();
+        }, 100);
+    }
+
+    _doSaveState() {
         const state = JSON.stringify(this.events);
 
         // Supprimer les états futurs si on est au milieu de l'historique
@@ -632,13 +653,16 @@ class TempoEditor {
     // === Nettoyage ===
 
     destroy() {
+        if (this._mouseMoveRAF) cancelAnimationFrame(this._mouseMoveRAF);
+        if (this._saveStateTimer) clearTimeout(this._saveStateTimer);
         if (this.canvas) {
-            this.canvas.removeEventListener('mousedown', this.handleMouseDown);
-            this.canvas.removeEventListener('mousemove', this.handleMouseMove);
-            this.canvas.removeEventListener('mouseup', this.handleMouseUp);
-            this.canvas.removeEventListener('mouseleave', this.handleMouseLeave);
+            this.canvas.removeEventListener('mousedown', this._boundMouseDown);
+            this.canvas.removeEventListener('mousemove', this._boundMouseMove);
+            this.canvas.removeEventListener('mouseup', this._boundMouseUp);
+            this.canvas.removeEventListener('mouseleave', this._boundMouseLeave);
         }
-
+        document.removeEventListener('keydown', this._boundKeyDown);
+        window.removeEventListener('resize', this._boundResize);
         if (this.element && this.element.parentNode) {
             this.element.parentNode.removeChild(this.element);
         }

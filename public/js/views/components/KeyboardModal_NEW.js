@@ -507,26 +507,65 @@ class KeyboardModalNew {
         // Régénérer tout le clavier avec le nouvel octaveOffset
         this.generatePianoKeys();
 
-        // Ré-attacher les events sur les nouvelles touches
-        const pianoKeys = document.querySelectorAll('.piano-key');
-        pianoKeys.forEach(key => {
-            key.addEventListener('mousedown', (e) => this.handlePianoKeyDown(e));
-            key.addEventListener('mouseup', (e) => this.handlePianoKeyUp(e));
-            key.addEventListener('mouseleave', (e) => this.handlePianoKeyUp(e));
-            key.addEventListener('mouseenter', (e) => this.handlePianoKeyEnter(e));
-
-            // Touch support
-            key.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                this.handlePianoKeyDown(e);
-            });
-            key.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                this.handlePianoKeyUp(e);
-            });
-        });
+        // Délégation d'événements: un seul listener sur le conteneur au lieu de 6 par touche
+        this._setupPianoDelegation();
 
         this.updatePianoDisplay();
+    }
+
+    /**
+     * Délégation d'événements sur le conteneur piano
+     * Remplace les listeners individuels par touche (évite les fuites mémoire)
+     */
+    _setupPianoDelegation() {
+        const container = document.getElementById('piano-container');
+        if (!container) return;
+
+        // Retirer les anciens listeners délégués s'ils existent
+        if (this._pianoMouseDown) {
+            container.removeEventListener('mousedown', this._pianoMouseDown);
+            container.removeEventListener('mouseup', this._pianoMouseUp);
+            container.removeEventListener('mouseleave', this._pianoMouseLeave, true);
+            container.removeEventListener('mouseenter', this._pianoMouseEnter, true);
+            container.removeEventListener('touchstart', this._pianoTouchStart);
+            container.removeEventListener('touchend', this._pianoTouchEnd);
+        }
+
+        const getKey = (e) => e.target.closest('.piano-key');
+
+        this._pianoMouseDown = (e) => {
+            const key = getKey(e);
+            if (key) { e.currentTarget = key; this.handlePianoKeyDown({ currentTarget: key, preventDefault: () => {} }); }
+        };
+        this._pianoMouseUp = (e) => {
+            const key = getKey(e);
+            if (key) { this.handlePianoKeyUp({ currentTarget: key }); }
+        };
+        this._pianoMouseLeave = (e) => {
+            if (e.target.classList?.contains('piano-key')) {
+                this.handlePianoKeyUp({ currentTarget: e.target });
+            }
+        };
+        this._pianoMouseEnter = (e) => {
+            if (e.target.classList?.contains('piano-key')) {
+                this.handlePianoKeyEnter({ currentTarget: e.target });
+            }
+        };
+        this._pianoTouchStart = (e) => {
+            const key = getKey(e);
+            if (key) { e.preventDefault(); this.handlePianoKeyDown({ currentTarget: key, preventDefault: () => {} }); }
+        };
+        this._pianoTouchEnd = (e) => {
+            const key = getKey(e);
+            if (key) { e.preventDefault(); this.handlePianoKeyUp({ currentTarget: key }); }
+        };
+
+        container.addEventListener('mousedown', this._pianoMouseDown);
+        container.addEventListener('mouseup', this._pianoMouseUp);
+        container.addEventListener('mouseleave', this._pianoMouseLeave, true);
+        container.addEventListener('mouseenter', this._pianoMouseEnter, true);
+        container.addEventListener('touchstart', this._pianoTouchStart, { passive: false });
+        container.addEventListener('touchend', this._pianoTouchEnd, { passive: false });
     }
 
     /**
