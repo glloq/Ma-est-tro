@@ -280,19 +280,30 @@ class MidiEditorModal {
         const ticksPerBeat = this.midiData.header?.ticksPerBeat || 480;
         this.ticksPerBeat = ticksPerBeat; // Sauvegarder pour utilisation ultérieure
 
-        // Extraire le tempo du fichier MIDI (généralement dans la première piste)
+        // Extraire le tempo et la tempo map du fichier MIDI
         let tempo = 120; // Tempo par défaut
+        this.tempoEvents = []; // Reset tempo events
         if (this.midiData.tracks && this.midiData.tracks.length > 0) {
             for (const track of this.midiData.tracks) {
-                if (track.events) {
-                    const tempoEvent = track.events.find(e => e.type === 'setTempo');
-                    if (tempoEvent && tempoEvent.microsecondsPerBeat) {
-                        // Convertir microsecondes par beat en BPM
-                        tempo = Math.round(60000000 / tempoEvent.microsecondsPerBeat);
-                        this.log('info', `Tempo found: ${tempo} BPM`);
-                        break;
+                if (!track.events) continue;
+                let currentTick = 0;
+                for (const event of track.events) {
+                    currentTick += event.deltaTime || 0;
+                    if (event.type === 'setTempo' && event.microsecondsPerBeat) {
+                        const bpm = Math.round(60000000 / event.microsecondsPerBeat);
+                        if (this.tempoEvents.length === 0) {
+                            tempo = bpm; // Premier tempo = tempo global
+                        }
+                        this.tempoEvents.push({
+                            ticks: currentTick,
+                            tempo: bpm,
+                            id: Date.now() + Math.random() + this.tempoEvents.length
+                        });
                     }
                 }
+            }
+            if (this.tempoEvents.length > 0) {
+                this.log('info', `Extracted ${this.tempoEvents.length} tempo events (first: ${tempo} BPM)`);
             }
         }
         this.tempo = tempo; // Sauvegarder pour utilisation ultérieure
@@ -464,6 +475,12 @@ class MidiEditorModal {
     updateEditorChannelSelector() {
         const channelSelector = document.getElementById('editor-channel-selector');
         if (!channelSelector) return;
+
+        // Le tempo n'utilise pas de canaux - masquer le sélecteur
+        if (this.currentCCType === 'tempo') {
+            channelSelector.innerHTML = '';
+            return;
+        }
 
         let channelsToShow = [];
         let activeChannel = 0;
@@ -854,6 +871,8 @@ class MidiEditorModal {
             if (!this.tempoEditor) {
                 this.initTempoEditor();
             } else {
+                // Synchroniser avec le piano roll actuel
+                this.syncTempoEditor();
                 // Attendre que le layout soit recalculé avant de resize
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
@@ -1124,6 +1143,36 @@ class MidiEditorModal {
         }
     }
 
+    /**
+     * Synchroniser les événements de tempo depuis l'éditeur de tempo
+     */
+    syncTempoEventsFromEditor() {
+        if (!this.tempoEditor) {
+            this.log('info', `syncTempoEventsFromEditor: Tempo editor not initialized, keeping ${this.tempoEvents.length} original events`);
+            return;
+        }
+
+        const editorEvents = this.tempoEditor.getEvents();
+
+        if (!editorEvents || editorEvents.length === 0) {
+            this.log('info', 'syncTempoEventsFromEditor: No tempo events in editor');
+            this.tempoEvents = [];
+            return;
+        }
+
+        this.tempoEvents = editorEvents.map(e => ({
+            ticks: e.ticks,
+            tempo: e.tempo,
+            id: e.id
+        }));
+
+        // Mettre à jour le tempo global avec le premier événement
+        if (this.tempoEvents.length > 0) {
+            this.tempo = this.tempoEvents[0].tempo;
+        }
+
+        this.log('info', `Synchronized ${this.tempoEvents.length} tempo events from editor`);
+    }
 
     /**
      * Initialiser l'éditeur de vélocité
@@ -1293,7 +1342,7 @@ class MidiEditorModal {
      * Afficher les boutons de courbes
      */
     showCurveButtons() {
-        // Créer les boutons s'ils n'existent pas
+        // Créer les boutons s'ils n'existent pas (une seule fois)
         let curveSection = this.container.querySelector('.curve-section');
         if (!curveSection) {
             // Trouver la toolbar
@@ -1476,15 +1525,28 @@ class MidiEditorModal {
         // Convertir la sequence en événements MIDI
         const events = [];
 
-        // Ajouter l'événement de tempo au début (tick 0)
-        const tempo = this.tempo || 120;
-        const microsecondsPerBeat = Math.round(60000000 / tempo);
-        events.push({
-            absoluteTime: 0,
-            type: 'setTempo',
-            microsecondsPerBeat: microsecondsPerBeat
-        });
-        this.log('debug', `Added tempo event: ${tempo} BPM (${microsecondsPerBeat} μs/beat)`);
+        // Ajouter les événements de tempo (tempo map complète ou tempo global)
+        if (this.tempoEvents && this.tempoEvents.length > 0) {
+            this.tempoEvents.forEach(tempoEvent => {
+                const usPerBeat = Math.round(60000000 / tempoEvent.tempo);
+                events.push({
+                    absoluteTime: tempoEvent.ticks,
+                    type: 'setTempo',
+                    microsecondsPerBeat: usPerBeat
+                });
+            });
+            this.log('debug', `Added ${this.tempoEvents.length} tempo events from tempo map`);
+        } else {
+            // Fallback: tempo global unique
+            const tempo = this.tempo || 120;
+            const microsecondsPerBeat = Math.round(60000000 / tempo);
+            events.push({
+                absoluteTime: 0,
+                type: 'setTempo',
+                microsecondsPerBeat: microsecondsPerBeat
+            });
+            this.log('debug', `Added single tempo event: ${tempo} BPM (${microsecondsPerBeat} μs/beat)`);
+        }
 
         // Déterminer quels canaux sont utilisés et leurs instruments
         const usedChannels = new Map(); // canal -> program
@@ -1642,6 +1704,9 @@ class MidiEditorModal {
 
             // Synchroniser les événements CC/Pitchbend depuis l'éditeur
             this.syncCCEventsFromEditor();
+
+            // Synchroniser les événements de tempo depuis l'éditeur
+            this.syncTempoEventsFromEditor();
 
             // Mettre à jour la liste des canaux pour refléter la séquence actuelle
             this.updateChannelsFromSequence();
@@ -5146,6 +5211,13 @@ class MidiEditorModal {
             this.velocityEditor.destroy();
             this.velocityEditor = null;
         }
+
+        // Nettoyer l'éditeur de tempo
+        if (this.tempoEditor) {
+            this.tempoEditor.destroy();
+            this.tempoEditor = null;
+        }
+        this.tempoEvents = [];
 
         // Nettoyer le synthétiseur
         this.disposeSynthesizer();
