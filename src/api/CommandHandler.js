@@ -1223,9 +1223,8 @@ class CommandHandler {
         this.app.midiPlayer.clearChannelRouting();
         for (const routing of savedRoutings) {
           if (routing.channel !== null && routing.channel !== undefined && routing.device_id) {
-            // Use instrument's channel from instruments_latency as targetChannel
-            const instrumentSettings = this.app.database.getInstrumentSettings(routing.device_id, routing.channel);
-            const targetChannel = instrumentSettings?.channel !== undefined ? instrumentSettings.channel : routing.channel;
+            // Use persisted target_channel (instrument's actual MIDI channel) from routing record
+            const targetChannel = routing.target_channel !== undefined ? routing.target_channel : routing.channel;
             this.app.midiPlayer.setChannelRouting(routing.channel, routing.device_id, targetChannel);
             loadedRoutings++;
           }
@@ -1919,9 +1918,15 @@ class CommandHandler {
     for (const [channel, assignment] of Object.entries(data.assignments)) {
       const channelNum = parseInt(channel);
 
+      // Resolve targetChannel (instrument's actual MIDI channel on device)
+      let instrumentTargetChannel = assignment.instrumentChannel !== undefined
+        ? Math.max(0, Math.min(15, parseInt(assignment.instrumentChannel) || 0))
+        : channelNum;
+
       const routing = {
         midi_file_id: targetFileId,
         channel: channelNum,
+        target_channel: instrumentTargetChannel, // Persist instrument's MIDI channel for reload
         device_id: assignment.deviceId,
         instrument_name: assignment.instrumentName,
         compatibility_score: assignment.score,
@@ -1944,12 +1949,8 @@ class CommandHandler {
       routings.push(routing);
 
       // Also apply to MidiPlayer if currently loaded
-      // Use instrument's channel as targetChannel so notes are sent on the correct MIDI channel
       if (this.app.midiPlayer && this.app.midiPlayer.loadedFileId === targetFileId) {
-        let targetChannel = assignment.instrumentChannel !== undefined ? assignment.instrumentChannel : channelNum;
-        // Clamp targetChannel to valid MIDI range
-        targetChannel = Math.max(0, Math.min(15, parseInt(targetChannel) || 0));
-        this.app.midiPlayer.setChannelRouting(channelNum, assignment.deviceId, targetChannel);
+        this.app.midiPlayer.setChannelRouting(channelNum, assignment.deviceId, instrumentTargetChannel);
       }
 
       this.app.logger.info(

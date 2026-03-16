@@ -951,6 +951,7 @@ class InstrumentDatabase {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(midi_file_id, channel) WHERE channel IS NOT NULL
         DO UPDATE SET
+          track_id = excluded.track_id,
           device_id = excluded.device_id,
           instrument_name = excluded.instrument_name,
           compatibility_score = excluded.compatibility_score,
@@ -964,7 +965,7 @@ class InstrumentDatabase {
 
       const result = stmt.run(
         routing.midi_file_id,
-        routing.channel, // Use channel as track_id for backward compat
+        routing.target_channel !== undefined ? routing.target_channel : routing.channel, // Store instrument's target channel
         routing.channel,
         routing.device_id,
         routing.instrument_name,
@@ -1001,6 +1002,7 @@ class InstrumentDatabase {
 
     return rows.map(row => ({
       ...row,
+      target_channel: row.track_id !== undefined ? row.track_id : row.channel, // Expose instrument's target channel
       note_remapping: row.note_remapping ? JSON.parse(row.note_remapping) : null,
       auto_assigned: !!row.auto_assigned,
       enabled: !!row.enabled
