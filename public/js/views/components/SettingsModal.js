@@ -820,7 +820,7 @@ class SettingsModal {
                         await new Promise(r => setTimeout(r, 500));
                         await this.scanSerialPorts();
                     } catch (error) {
-                        btn.textContent = 'Error';
+                        btn.textContent = i18n.t('common.error');
                         btn.style.color = '#e53e3e';
                         btn.style.borderColor = '#e53e3e';
                         this.logger?.error(`Serial port ${isOpen ? 'close' : 'open'} error: ${error.message}`);

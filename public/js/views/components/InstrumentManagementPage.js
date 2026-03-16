@@ -12,6 +12,13 @@
 class InstrumentManagementPage {
   constructor(apiClient) {
     this.apiClient = apiClient;
+    // Bind escapeHtml for XSS prevention
+    this._escapeHtml = window.escapeHtml || ((text) => {
+      if (text == null) return '';
+      const div = document.createElement('div');
+      div.textContent = String(text);
+      return div.innerHTML;
+    });
     this.modal = null;
     this.instruments = [];
     this.selectedInstrument = null;
@@ -236,6 +243,8 @@ class InstrumentManagementPage {
     const isComplete = this.isInstrumentComplete(instrument);
     const isConnected = instrument.status === 2 || instrument.connected;
     const displayName = instrument.custom_name || instrument.name || 'Unknown Device';
+    const esc = this._escapeHtml;
+    const safeId = esc(instrument.id);
 
     return `
       <div class="instrument-card" style="
@@ -252,13 +261,13 @@ class InstrumentManagementPage {
         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
           <div style="flex: 1;">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-              <h4 style="margin: 0; font-size: 18px; color: #1f2937;">${displayName}</h4>
+              <h4 style="margin: 0; font-size: 18px; color: #1f2937;">${esc(displayName)}</h4>
               ${isComplete
                 ? `<span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: #10b981; color: white; border-radius: 12px; font-size: 11px; font-weight: 600;">✓ ${i18n.t('instrumentManagement.complete') || 'COMPLET'}</span>`
                 : `<span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: #f59e0b; color: white; border-radius: 12px; font-size: 11px; font-weight: 600;">⚠ ${i18n.t('instrumentManagement.incomplete') || 'INCOMPLET'}</span>`
               }
             </div>
-            ${instrument.name !== displayName ? `<div style="font-size: 13px; color: #6b7280;">${instrument.name}</div>` : ''}
+            ${instrument.name !== displayName ? `<div style="font-size: 13px; color: #6b7280;">${esc(instrument.name)}</div>` : ''}
           </div>
           <div style="font-size: 24px;">
             ${isConnected ? '🟢' : '⚫'}
@@ -267,7 +276,7 @@ class InstrumentManagementPage {
 
         <!-- Info -->
         <div style="margin-bottom: 16px; font-size: 13px; color: #6b7280;">
-          ${instrument.manufacturer ? `<div>🏭 ${instrument.manufacturer}</div>` : ''}
+          ${instrument.manufacturer ? `<div>🏭 ${esc(instrument.manufacturer)}</div>` : ''}
           ${instrument.gm_program !== null && instrument.gm_program !== undefined
             ? `<div>🎵 ${i18n.t('instrumentManagement.gmProgram') || 'Programme GM'}: ${instrument.gm_program}</div>`
             : `<div style="color: #f59e0b;">⚠ ${i18n.t('instrumentManagement.gmProgramNotSet') || 'Programme GM non défini'}</div>`}
@@ -282,19 +291,19 @@ class InstrumentManagementPage {
         <!-- Actions -->
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <button class="button button-primary"
-                  onclick="event.stopPropagation(); instrumentManagementPageInstance.editInstrument('${instrument.id}')"
+                  onclick="event.stopPropagation(); instrumentManagementPageInstance.editInstrument('${safeId}')"
                   style="flex: 1; min-width: 100px; font-size: 13px; padding: 8px 12px;">
             ✏️ ${i18n.t('instrumentManagement.edit') || 'Modifier'}
           </button>
           ${isConnected ? `
             <button class="button button-secondary"
-                    onclick="event.stopPropagation(); instrumentManagementPageInstance.testInstrument('${instrument.id}')"
+                    onclick="event.stopPropagation(); instrumentManagementPageInstance.testInstrument('${safeId}')"
                     style="font-size: 13px; padding: 8px 12px;">
               🎵 ${i18n.t('instrumentManagement.test') || 'Tester'}
             </button>
           ` : ''}
           <button class="button button-danger"
-                  onclick="event.stopPropagation(); instrumentManagementPageInstance.deleteInstrument('${instrument.id}')"
+                  onclick="event.stopPropagation(); instrumentManagementPageInstance.deleteInstrument('${safeId}')"
                   style="font-size: 13px; padding: 8px 12px;">
             🗑️
           </button>
@@ -540,7 +549,7 @@ class InstrumentManagementPage {
 
     const toast = document.createElement('div');
     toast.style.cssText = `position: fixed; top: 24px; right: 24px; z-index: 10010; padding: 12px 20px; border-radius: 8px; background: ${style.bg}; color: ${style.text}; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px; animation: fadeIn 0.2s ease;`;
-    toast.innerHTML = `<span style="font-weight: bold; font-size: 16px;">${icons[type]}</span> ${message}`;
+    toast.innerHTML = `<span style="font-weight: bold; font-size: 16px;">${icons[type]}</span> ${this._escapeHtml(message)}`;
     document.body.appendChild(toast);
 
     setTimeout(() => {
@@ -560,7 +569,7 @@ class InstrumentManagementPage {
         <div style="text-align: center; padding: 60px 20px; color: #ef4444;">
           <div style="font-size: 64px; margin-bottom: 16px;">⚠️</div>
           <h3 style="margin: 0 0 8px 0;">${i18n.t('common.error') || 'Erreur'}</h3>
-          <p style="margin: 0; font-size: 14px;">${message}</p>
+          <p style="margin: 0; font-size: 14px;">${this._escapeHtml(message)}</p>
           <button class="button button-primary" onclick="instrumentManagementPageInstance.refresh()" style="margin-top: 16px;">
             ${i18n.t('instrumentManagement.retry') || 'Réessayer'}
           </button>

@@ -51,43 +51,7 @@ body.performance-mode .notification-exit {
     box-sizing: border-box;
 }
 
-:root {
-    /* Couleurs principales */
-    --color-primary: #4ECDC4;
-    --color-secondary: #FF6B6B;
-    --color-accent: #FFD93D;
-    
-    /* Backgrounds */
-    --bg-dark: #1a1a1a;
-    --bg-medium: #2c3e50;
-    --bg-light: #34495e;
-    
-    /* Textes */
-    --text-primary: #ecf0f1;
-    --text-secondary: #95a5a6;
-    --text-muted: #7f8c8d;
-    
-    /* Borders */
-    --border-color: #34495e;
-    --border-radius: 4px;
-    
-    /* Spacing */
-    --spacing-xs: 4px;
-    --spacing-sm: 8px;
-    --spacing-md: 16px;
-    --spacing-lg: 24px;
-    --spacing-xl: 32px;
-    
-    /* Transitions (désactivées en mode performance) */
-    --transition-fast: 0.15s ease;
-    --transition-normal: 0.3s ease;
-    --transition-slow: 0.5s ease;
-    
-    /* Shadows */
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.16);
-    --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.20);
-}
+/* Variables centralisées dans variables.css */
 
 /* ============================================================================
    HTML & BODY - CRITICAL FOR LAYOUT
@@ -384,9 +348,9 @@ body.performance-mode textarea {
     transition: none;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible) {
     outline: none;
     border-color: var(--color-primary);
 }

@@ -1,0 +1,174 @@
+/* ======================================================================================
+   VARIABLES CSS CENTRALISÉES - MidiMind v5.0
+   ======================================================================================
+   Ce fichier DOIT être chargé en premier. Il définit toutes les variables CSS utilisées
+   par l'application. Aucun autre fichier ne doit redéfinir de variables :root.
+
+   Thème clair par défaut, thème sombre via body.dark-mode.
+   ====================================================================================== */
+
+:root {
+    /* ===== LAYOUT ===== */
+    --border-radius: 4px;
+    --border-radius-lg: 8px;
+    --border-radius-xl: 12px;
+
+    /* ===== SPACING ===== */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+
+    /* ===== TRANSITIONS ===== */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
+
+    /* ===== THÈME CLAIR (défaut) ===== */
+
+    /* Backgrounds */
+    --bg-primary: #f8f9fa;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #e9ecef;
+
+    /* Textes */
+    --text-primary: #2c3e50;
+    --text-secondary: #6c757d;
+    --text-muted: #adb5bd;
+    --text-disabled: #ced4da;
+
+    /* Borders */
+    --border-color: #e9ecef;
+    --border-light: #f1f3f4;
+
+    /* Accents */
+    --accent-primary: #667eea;
+    --accent-secondary: #764ba2;
+    --accent-gradient: linear-gradient(135deg, #667eea, #764ba2);
+    --color-primary: #4ECDC4;
+    --color-secondary: #FF6B6B;
+    --color-accent: #FFD93D;
+
+    /* Status */
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #17a2b8;
+
+    /* Shadows */
+    --shadow-light: 0 2px 4px rgba(0,0,0,0.05);
+    --shadow-medium: 0 4px 20px rgba(0,0,0,0.08);
+    --shadow-heavy: 0 8px 30px rgba(0,0,0,0.12);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.16);
+    --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.20);
+
+    /* Cards */
+    --card-bg: #ffffff;
+    --header-bg: #ffffff;
+
+    /* ===== MODULE-SPECIFIC VARIABLES ===== */
+
+    /* Editor */
+    --primary-color: #4ECDC4;
+    --primary-hover: #45B7D1;
+    --primary-active: #3AAFA9;
+    --secondary-color: #333;
+    --accent-warning: #FF9800;
+    --accent-danger: #F44336;
+    --accent-success: #4CAF50;
+
+    /* Instruments */
+    --instrument-primary: #667eea;
+    --instrument-success: #2ecc71;
+    --instrument-warning: #f39c12;
+    --instrument-error: #e74c3c;
+    --instrument-usb: #3498db;
+    --instrument-wifi: #2ecc71;
+    --instrument-bluetooth: #9b59b6;
+    --instrument-bg: #ffffff;
+    --instrument-border: #e0e0e0;
+    --instrument-shadow: rgba(0, 0, 0, 0.1);
+
+    /* Bluetooth */
+    --bluetooth-primary: #9b59b6;
+    --bluetooth-success: #2ecc71;
+    --bluetooth-danger: #e74c3c;
+    --bluetooth-border: #e0e0e0;
+    --bluetooth-shadow: rgba(0, 0, 0, 0.1);
+
+    /* Network */
+    --network-primary: #3498db;
+    --network-secondary: #2980b9;
+    --network-success: #2ecc71;
+    --network-danger: #e74c3c;
+    --network-border: #e0e0e0;
+    --network-shadow: rgba(0, 0, 0, 0.1);
+
+    /* Focus (accessibility) */
+    --focus-ring: 0 0 0 3px rgba(102, 126, 234, 0.4);
+}
+
+/* ===== THÈME SOMBRE ===== */
+body.dark-mode {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d3748;
+    --bg-tertiary: #4a5568;
+
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0aec0;
+    --text-muted: #718096;
+    --text-disabled: #555;
+
+    --border-color: #4a5568;
+    --border-light: #2d3748;
+
+    --shadow-light: 0 2px 4px rgba(0,0,0,0.3);
+    --shadow-medium: 0 4px 20px rgba(0,0,0,0.4);
+    --shadow-heavy: 0 8px 30px rgba(0,0,0,0.5);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.5);
+
+    --card-bg: #2d3748;
+    --header-bg: #2d3748;
+
+    --secondary-color: #ccc;
+    --instrument-bg: #2d3748;
+    --instrument-border: #4a5568;
+    --instrument-shadow: rgba(0, 0, 0, 0.3);
+
+    --bluetooth-border: #4a5568;
+    --bluetooth-shadow: rgba(0, 0, 0, 0.3);
+    --network-border: #4a5568;
+    --network-shadow: rgba(0, 0, 0, 0.3);
+
+    --focus-ring: 0 0 0 3px rgba(102, 126, 234, 0.6);
+
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+/* ===== AUTO-DÉTECTION DU THÈME SYSTÈME ===== */
+@media (prefers-color-scheme: dark) {
+    body:not(.light-mode):not(.dark-mode) {
+        --bg-primary: #1a1a1a;
+        --bg-secondary: #2d3748;
+        --bg-tertiary: #4a5568;
+        --text-primary: #e0e0e0;
+        --text-secondary: #a0aec0;
+        --text-muted: #718096;
+        --border-color: #4a5568;
+        --border-light: #2d3748;
+        --card-bg: #2d3748;
+        --header-bg: #2d3748;
+    }
+}
+
+/* ===== FOCUS STATES ACCESSIBLES (WCAG 2.4.7) ===== */
+:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+    box-shadow: var(--focus-ring);
+}

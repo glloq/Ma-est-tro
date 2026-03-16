@@ -4,56 +4,9 @@
    Thèmes clair et sombre pour l'application
    ====================================================================================== */
 
-/* ===== VARIABLES CSS POUR LES THÈMES ===== */
-:root {
-    /* Thème clair (par défaut) */
-    --bg-primary: #f8f9fa;
-    --bg-secondary: #ffffff;
-    --bg-tertiary: #e9ecef;
-    
-    --text-primary: #2c3e50;
-    --text-secondary: #6c757d;
-    --text-muted: #adb5bd;
-    
-    --border-color: #e9ecef;
-    --border-light: #f1f3f4;
-    
-    --accent-primary: #667eea;
-    --accent-secondary: #764ba2;
-    --accent-gradient: linear-gradient(135deg, #667eea, #764ba2);
-    
-    --success-color: #28a745;
-    --warning-color: #ffc107;
-    --danger-color: #dc3545;
-    --info-color: #17a2b8;
-    
-    --shadow-light: 0 2px 4px rgba(0,0,0,0.05);
-    --shadow-medium: 0 4px 20px rgba(0,0,0,0.08);
-    --shadow-heavy: 0 8px 30px rgba(0,0,0,0.12);
-}
-
-/* ===== THÈME SOMBRE ===== */
-body.dark-mode {
-    /* Variables pour le thème sombre */
-    --bg-primary: #1a1a1a;
-    --bg-secondary: #2d3748;
-    --bg-tertiary: #4a5568;
-    
-    --text-primary: #e0e0e0;
-    --text-secondary: #a0aec0;
-    --text-muted: #718096;
-    
-    --border-color: #4a5568;
-    --border-light: #2d3748;
-    
-    --shadow-light: 0 2px 4px rgba(0,0,0,0.3);
-    --shadow-medium: 0 4px 20px rgba(0,0,0,0.4);
-    --shadow-heavy: 0 8px 30px rgba(0,0,0,0.5);
-    
-    /* Application du thème sombre */
-    background: var(--bg-primary);
-    color: var(--text-primary);
-}
+/* ===== VARIABLES DE THÈMES ===== */
+/* NOTE: Les variables :root et body.dark-mode sont définies dans variables.css */
+/* Ce fichier ne contient que les overrides de composants pour le dark mode */
 
 /* ===== OVERRIDE COMPLET POUR LE THÈME SOMBRE ===== */
 
@@ -507,29 +460,22 @@ body.dark-mode .modal-overlay #instrumentListContent h3[style*="color: #666"] {
 }
 
 /* ===== TRANSITION SMOOTH ENTRE THÈMES ===== */
-* {
-    transition: background-color 0.3s ease, 
-                border-color 0.3s ease, 
-                color 0.3s ease,
-                box-shadow 0.3s ease;
+/* NOTE: Global * transition removed for performance (was causing layout thrashing).
+   Only theme-relevant elements get transitions via targeted selectors. */
+body,
+.card, .btn, .nav-link, .modal-overlay,
+.header, .file-browser, .file-details-panel,
+.instruments-config, .system-section, input, select, textarea {
+    transition: background-color 0.3s ease,
+                border-color 0.3s ease,
+                color 0.3s ease;
 }
 
 /* Désactiver les transitions lors du changement de thème */
+body.theme-changing,
 body.theme-changing * {
     transition: none !important;
 }
 
 /* ===== MEDIA QUERIES POUR LES PRÉFÉRENCES SYSTÈME ===== */
-@media (prefers-color-scheme: dark) {
-    /* Auto-détection du thème sombre si pas de préférence définie */
-    body:not([data-theme]) {
-        --bg-primary: #1a1a1a;
-        --bg-secondary: #2d3748;
-        --bg-tertiary: #4a5568;
-        --text-primary: #e0e0e0;
-        --text-secondary: #a0aec0;
-        --text-muted: #718096;
-        --border-color: #4a5568;
-        --border-light: #2d3748;
-    }
-}
+/* NOTE: Auto-detection is handled in variables.css */

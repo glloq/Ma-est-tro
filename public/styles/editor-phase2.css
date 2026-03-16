@@ -134,7 +134,7 @@
     border-color: #555;
 }
 
-.cc-select:focus {
+.cc-select:focus:not(:focus-visible) {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.2);
@@ -353,7 +353,7 @@
     border-color: #555;
 }
 
-.form-input:focus {
+.form-input:focus:not(:focus-visible) {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.2);

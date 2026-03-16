@@ -469,9 +469,9 @@ class DatabaseManager {
     }
   }
 
-  backup(backupPath) {
+  async backup(backupPath) {
     try {
-      this.db.backup(backupPath);
+      await this.db.backup(backupPath);
       this.app.logger.info(`Database backed up to: ${backupPath}`);
     } catch (error) {
       this.app.logger.error(`Backup failed: ${error.message}`);
@@ -491,13 +491,21 @@ class DatabaseManager {
 
   getStats() {
     try {
+      const safeCount = (table) => {
+        try {
+          return this.db.prepare(`SELECT COUNT(*) as count FROM ${table}`).get().count;
+        } catch {
+          return 0;
+        }
+      };
+
       const stats = {
         size: fs.statSync(this.dbPath).size,
-        files: this.db.prepare('SELECT COUNT(*) as count FROM midi_files').get().count,
-        routes: this.db.prepare('SELECT COUNT(*) as count FROM routes').get().count,
-        instruments: this.db.prepare('SELECT COUNT(*) as count FROM instruments').get().count,
-        sessions: this.db.prepare('SELECT COUNT(*) as count FROM sessions').get().count,
-        playlists: this.db.prepare('SELECT COUNT(*) as count FROM playlists').get().count
+        files: safeCount('midi_files'),
+        routes: safeCount('routes'),
+        instruments: safeCount('instruments'),
+        sessions: safeCount('sessions'),
+        playlists: safeCount('playlists')
       };
       return stats;
     } catch (error) {

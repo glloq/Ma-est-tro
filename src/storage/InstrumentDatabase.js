@@ -602,6 +602,15 @@ class InstrumentDatabase {
         }
       }
 
+      // Validate cross-field: min <= max
+      const effectiveMin = capabilities.note_range_min !== undefined ? capabilities.note_range_min : null;
+      const effectiveMax = capabilities.note_range_max !== undefined ? capabilities.note_range_max : null;
+      if (effectiveMin !== null && effectiveMin !== undefined &&
+          effectiveMax !== null && effectiveMax !== undefined &&
+          effectiveMin > effectiveMax) {
+        throw new Error(`note_range_min (${effectiveMin}) must be <= note_range_max (${effectiveMax})`);
+      }
+
       // Validate polyphony
       if (capabilities.polyphony !== undefined && capabilities.polyphony !== null) {
         const poly = parseInt(capabilities.polyphony);
@@ -657,7 +666,7 @@ class InstrumentDatabase {
           fields.push('note_range_max = ?');
           values.push(capabilities.note_range_max);
         }
-        if (supportedCcsJson !== undefined) {
+        if (capabilities.supported_ccs !== undefined) {
           fields.push('supported_ccs = ?');
           values.push(supportedCcsJson);
         }
@@ -665,7 +674,7 @@ class InstrumentDatabase {
           fields.push('note_selection_mode = ?');
           values.push(capabilities.note_selection_mode);
         }
-        if (selectedNotesJson !== undefined) {
+        if (capabilities.selected_notes !== undefined) {
           fields.push('selected_notes = ?');
           values.push(selectedNotesJson);
         }
@@ -711,12 +720,12 @@ class InstrumentDatabase {
           deviceId,
           channel,
           'Unnamed Instrument',
-          capabilities.note_range_min || null,
-          capabilities.note_range_max || null,
+          capabilities.note_range_min !== undefined && capabilities.note_range_min !== null ? capabilities.note_range_min : null,
+          capabilities.note_range_max !== undefined && capabilities.note_range_max !== null ? capabilities.note_range_max : null,
           supportedCcsJson,
           capabilities.note_selection_mode || 'range',
           selectedNotesJson,
-          capabilities.polyphony !== undefined && capabilities.polyphony !== null ? parseInt(capabilities.polyphony) : null,
+          capabilities.polyphony !== undefined && capabilities.polyphony !== null ? parseInt(capabilities.polyphony) : 16,
           capabilities.capabilities_source || 'manual',
           now
         );

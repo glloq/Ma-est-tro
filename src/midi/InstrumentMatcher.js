@@ -139,9 +139,12 @@ class InstrumentMatcher {
       info.push('MIDI channel 10 (drums) match');
     }
 
+    // Compatibilite = notes ET polyphonie doivent etre compatibles
+    const isCompatible = noteScore.compatible !== false && polyScore.compatible !== false;
+
     return {
       score: Math.min(100, Math.max(0, Math.round(score))),
-      compatible: noteScore.compatible,
+      compatible: isCompatible,
       transposition: noteScore.transposition || null,
       noteRemapping: noteScore.noteRemapping || null,
       issues,
@@ -248,6 +251,15 @@ class InstrumentMatcher {
    * @returns {Object}
    */
   scoreNoteCompatibility(channelRange, instrumentCaps, channelAnalysis = null) {
+    // Canal sans notes (plage null) = score neutre, compatible par defaut
+    if (channelRange.min === null || channelRange.max === null) {
+      return {
+        compatible: true,
+        score: Math.round(this.config.getWeight('noteRange') * 0.5),
+        info: 'No notes in MIDI channel (empty channel)'
+      };
+    }
+
     const span = channelRange.max - channelRange.min;
 
     // Mode discrete (drums/pads)
@@ -255,12 +267,12 @@ class InstrumentMatcher {
       return this.scoreDiscreteNotes(channelRange, instrumentCaps.selected, channelAnalysis);
     }
 
-    // Si l'instrument n'a pas de plage définie (accepte tout)
+    // Si l'instrument n'a pas de plage définie (non configuré, score neutre)
     if (instrumentCaps.min === null || instrumentCaps.max === null) {
       return {
         compatible: true,
-        score: 25,
-        info: 'Instrument accepts all note ranges'
+        score: Math.round(this.config.getWeight('noteRange') * 0.5),
+        info: 'Instrument note range not configured (accepts all)'
       };
     }
 
@@ -385,53 +397,41 @@ class InstrumentMatcher {
    */
   calculateOctaveWrapping(channelRange, instrumentCaps, baseSemitones) {
     const mapping = {};
-    let notesBelow = 0;
-    let notesAbove = 0;
+    let wrappedUp = 0;
+    let wrappedDown = 0;
 
-    // Vérifier chaque note après transposition de base
     for (let note = channelRange.min; note <= channelRange.max; note++) {
       const transposedNote = note + baseSemitones;
 
-      // Note en dessous de la plage → monter d'une octave
       if (transposedNote < instrumentCaps.min) {
         const wrappedNote = transposedNote + 12;
-        // Vérifier que la note wrappée est dans la plage
         if (wrappedNote >= instrumentCaps.min && wrappedNote <= instrumentCaps.max) {
           mapping[transposedNote] = wrappedNote;
-          notesBelow++;
+          wrappedUp++;
         }
-      }
-      // Note au dessus de la plage → descendre d'une octave
-      else if (transposedNote > instrumentCaps.max) {
+      } else if (transposedNote > instrumentCaps.max) {
         const wrappedNote = transposedNote - 12;
-        // Vérifier que la note wrappée est dans la plage
         if (wrappedNote >= instrumentCaps.min && wrappedNote <= instrumentCaps.max) {
           mapping[transposedNote] = wrappedNote;
-          notesAbove++;
+          wrappedDown++;
         }
       }
     }
 
-    const hasWrapping = notesBelow > 0 || notesAbove > 0;
+    const hasWrapping = wrappedUp > 0 || wrappedDown > 0;
     let info = '';
 
     if (hasWrapping) {
       const parts = [];
-      if (notesBelow > 0) {
-        parts.push(`${notesBelow} note(s) wrapped up`);
-      }
-      if (notesAbove > 0) {
-        parts.push(`${notesAbove} note(s) wrapped down`);
-      }
+      if (wrappedUp > 0) parts.push(`${wrappedUp} note(s) wrapped up`);
+      if (wrappedDown > 0) parts.push(`${wrappedDown} note(s) wrapped down`);
       info = `Octave wrapping available: ${parts.join(', ')}`;
     }
 
     return {
       hasWrapping,
       mapping: Object.keys(mapping).length > 0 ? mapping : null,
-      info,
-      notesBelow,
-      notesAbove
+      info
     };
   }
 
@@ -445,19 +445,13 @@ class InstrumentMatcher {
    */
   scoreDiscreteNotes(channelRange, selectedNotes, channelAnalysis = null) {
     if (!selectedNotes || selectedNotes.length === 0) {
-      // Fall back to range-based scoring when discrete instrument has no selected_notes
-      if (channelRange.min !== undefined && channelRange.max !== undefined) {
-        return this.scoreNoteCompatibility(channelRange, {
-          min: channelRange.min,
-          max: channelRange.max,
-          mode: 'range' // Explicit to prevent accidental recursion
-        }, channelAnalysis);
-      }
+      // Discrete mode with no selected notes = unconfigured instrument
+      // Return low neutral score instead of falling back to range-based (which gives free points)
       return {
         compatible: false,
-        score: 0,
+        score: Math.round(this.config.getWeight('noteRange') * 0.2),
         issue: {
-          type: 'error',
+          type: 'warning',
           message: 'Discrete mode but no selected notes defined'
         }
       };
@@ -469,9 +463,15 @@ class InstrumentMatcher {
     }
 
     // Fallback: simple closest-note mapping for non-drums discrete instruments
-    const channelNotes = [];
-    for (let note = channelRange.min; note <= channelRange.max; note++) {
-      channelNotes.push(note);
+    // Utiliser les notes reellement presentes si disponibles, sinon la plage
+    let channelNotes;
+    if (channelAnalysis && channelAnalysis.noteDistribution && Object.keys(channelAnalysis.noteDistribution).length > 0) {
+      channelNotes = Object.keys(channelAnalysis.noteDistribution).map(Number).sort((a, b) => a - b);
+    } else {
+      channelNotes = [];
+      for (let note = channelRange.min; note <= channelRange.max; note++) {
+        channelNotes.push(note);
+      }
     }
 
     const supportedCount = channelNotes.filter(n => selectedNotes.includes(n)).length;
@@ -577,8 +577,12 @@ class InstrumentMatcher {
       };
     } catch (error) {
       this.logger.error(`[DrumMapping] Error: ${error.message}`);
-      // Fallback to simple mapping
-      return this.scoreDiscreteNotes(channelAnalysis.noteRange, selectedNotes, null);
+      // Fallback securise: valider noteRange avant de passer au scoring simple
+      const fallbackRange = channelAnalysis && channelAnalysis.noteRange &&
+        channelAnalysis.noteRange.min !== null && channelAnalysis.noteRange.max !== null
+        ? channelAnalysis.noteRange
+        : { min: 0, max: 127 };
+      return this.scoreDiscreteNotes(fallbackRange, selectedNotes, null);
     }
   }
 
@@ -629,12 +633,23 @@ class InstrumentMatcher {
         score: 5,
         info: `Sufficient polyphony (${instrumentPoly} available, ${channelMaxPoly} needed)`
       };
-    } else {
+    } else if (margin >= -4) {
+      // Legèrement insuffisant: warning mais pas incompatible
       return {
         score: 0,
         issue: {
           type: 'warning',
           message: `Insufficient polyphony (${instrumentPoly} available, ${channelMaxPoly} needed)`
+        }
+      };
+    } else {
+      // Sévèrement insuffisant: incompatible
+      return {
+        score: 0,
+        compatible: false,
+        issue: {
+          type: 'error',
+          message: `Severely insufficient polyphony (${instrumentPoly} available, ${channelMaxPoly} needed)`
         }
       };
     }

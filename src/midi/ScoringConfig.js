@@ -121,69 +121,6 @@ const ScoringConfig = {
     return this.bonuses[bonus] || 0;
   },
 
-  /**
-   * Obtenir la classification d'un score
-   * @param {number} score
-   * @returns {string}
-   */
-  getScoreClassification(score) {
-    if (score >= this.scoreThresholds.excellent) return 'excellent';
-    if (score >= this.scoreThresholds.good) return 'good';
-    if (score >= this.scoreThresholds.acceptable) return 'acceptable';
-    if (score >= this.scoreThresholds.poor) return 'poor';
-    return 'insufficient';
-  },
-
-  /**
-   * Valider que la somme des poids = 100
-   * @returns {boolean}
-   */
-  validateWeights() {
-    const sum = Object.values(this.weights).reduce((a, b) => a + b, 0);
-    return sum === 100;
-  },
-
-  /**
-   * Serialize current configuration for storage
-   * @returns {Object}
-   */
-  serialize() {
-    return {
-      weights: { ...this.weights },
-      typeDetection: { ...this.typeDetection },
-      typeThresholds: { ...this.typeThresholds },
-      penalties: { ...this.penalties },
-      bonuses: { ...this.bonuses },
-      scoreThresholds: { ...this.scoreThresholds }
-    };
-  },
-
-  /**
-   * Charger une configuration personnalisée
-   * @param {Object} customConfig
-   */
-  load(customConfig) {
-    if (customConfig.weights) {
-      Object.assign(this.weights, customConfig.weights);
-    }
-    if (customConfig.typeDetection) {
-      Object.assign(this.typeDetection, customConfig.typeDetection);
-    }
-    if (customConfig.typeThresholds) {
-      Object.assign(this.typeThresholds, customConfig.typeThresholds);
-    }
-    if (customConfig.penalties) {
-      Object.assign(this.penalties, customConfig.penalties);
-    }
-    if (customConfig.bonuses) {
-      Object.assign(this.bonuses, customConfig.bonuses);
-    }
-
-    if (!this.validateWeights()) {
-      const sum = Object.values(this.weights).reduce((a, b) => a + b, 0);
-      console.warn(`ScoringConfig: weights sum to ${sum} instead of 100, scores may be inconsistent`);
-    }
-  }
 };
 
 export default ScoringConfig;

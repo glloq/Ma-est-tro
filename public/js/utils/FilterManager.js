@@ -352,12 +352,13 @@ class FilterManager {
 
       // Folder filter
       if (this.filters.folder) {
+        const fileFolder = file.folder || '/';
         if (this.filters.includeSubfolders) {
-          if (!file.folder.startsWith(this.filters.folder)) {
+          if (!fileFolder.startsWith(this.filters.folder)) {
             return false;
           }
         } else {
-          if (file.folder !== this.filters.folder) {
+          if (fileFolder !== this.filters.folder) {
             return false;
           }
         }
@@ -482,7 +483,7 @@ class FilterManager {
   savePreset(name) {
     const preset = {
       name: name,
-      filters: { ...this.filters }
+      filters: JSON.parse(JSON.stringify(this.filters))
     };
 
     this.presets.push(preset);
@@ -497,7 +498,7 @@ class FilterManager {
   loadPreset(name) {
     const preset = this.presets.find(p => p.name === name);
     if (preset) {
-      this.filters = { ...preset.filters };
+      this.filters = JSON.parse(JSON.stringify(preset.filters));
       this.invalidateCache();
       if (this.onFilterChange) {
         this.onFilterChange(this.filters);
@@ -559,58 +560,54 @@ class FilterManager {
    * Apply a quick filter (preset filters for common use cases)
    */
   applyQuickFilter(name) {
+    // Reset to defaults without triggering notifications
+    this.filters = this.getDefaultFilters();
+    this.invalidateCache();
+
+    // Apply quick filter values silently
     switch (name) {
       case 'recent':
-        this.resetFilters();
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        this.setFilter('uploadedAfter', oneWeekAgo.toISOString());
+        this.filters.uploadedAfter = oneWeekAgo.toISOString();
         break;
 
       case 'short':
-        this.resetFilters();
-        this.setFilter('durationMax', 60); // < 1 minute
+        this.filters.durationMax = 60;
         break;
 
       case 'piano':
-        this.resetFilters();
-        this.setFilter('gmCategories', ['Piano']);
-        this.setFilter('gmMode', 'ANY');
+        this.filters.gmCategories = ['Piano'];
+        this.filters.gmMode = 'ANY';
         break;
 
       case 'guitar':
-        this.resetFilters();
-        this.setFilter('gmCategories', ['Guitar']);
-        this.setFilter('gmMode', 'ANY');
+        this.filters.gmCategories = ['Guitar'];
+        this.filters.gmMode = 'ANY';
         break;
 
       case 'strings':
-        this.resetFilters();
-        this.setFilter('gmCategories', ['Strings', 'Ensemble']);
-        this.setFilter('gmMode', 'ANY');
+        this.filters.gmCategories = ['Strings', 'Ensemble'];
+        this.filters.gmMode = 'ANY';
         break;
 
       case 'brass':
-        this.resetFilters();
-        this.setFilter('gmCategories', ['Brass']);
-        this.setFilter('gmMode', 'ANY');
+        this.filters.gmCategories = ['Brass'];
+        this.filters.gmMode = 'ANY';
         break;
 
       case 'woodwinds':
-        this.resetFilters();
-        this.setFilter('gmCategories', ['Reed', 'Pipe']);
-        this.setFilter('gmMode', 'ANY');
+        this.filters.gmCategories = ['Reed', 'Pipe'];
+        this.filters.gmMode = 'ANY';
         break;
 
       case 'synth':
-        this.resetFilters();
-        this.setFilter('gmCategories', ['Synth Lead', 'Synth Pad', 'Synth Effects']);
-        this.setFilter('gmMode', 'ANY');
+        this.filters.gmCategories = ['Synth Lead', 'Synth Pad', 'Synth Effects'];
+        this.filters.gmMode = 'ANY';
         break;
 
       case 'routed':
-        this.resetFilters();
-        this.setFilter('hasRouting', true);
+        this.filters.hasRouting = true;
         break;
 
       case 'current-folder':
@@ -621,9 +618,24 @@ class FilterManager {
         console.warn('[FilterManager] Unknown quick filter:', name);
     }
 
+    // Single notification after all changes
     if (this.onFilterChange) {
       this.onFilterChange(this.filters);
     }
+  }
+
+  /**
+   * Cleanup timers and references
+   */
+  destroy() {
+    // Clear all debounce timers
+    for (const key in this.debounceTimers) {
+      clearTimeout(this.debounceTimers[key]);
+    }
+    this.debounceTimers = {};
+    this.cache.clear();
+    this.onFilterChange = null;
+    this.onFilterApplied = null;
   }
 }
 

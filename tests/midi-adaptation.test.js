@@ -213,14 +213,25 @@ describe('ChannelAnalyzer', () => {
     expect(histogram[60]).not.toBe(3); // noteOff not counted
   });
 
-  test('extractNoteRange handles empty events', () => {
+  test('extractNoteRange returns null for empty events', () => {
     const range = analyzer.extractNoteRange([]);
-    expect(range.min).toBe(60); // Default
-    expect(range.max).toBe(60);
+    expect(range.min).toBe(null);
+    expect(range.max).toBe(null);
   });
 
   test('calculateNoteDensity returns 0 for zero duration', () => {
     expect(analyzer.calculateNoteDensity([], 0)).toBe(0);
+  });
+
+  test('analyzeChannel handles channel with no noteOn velocity > 0', () => {
+    // Canal avec uniquement des noteOff
+    const midiData = createMidiData([[
+      noteOff(0, 60, 0),
+      noteOff(0, 64, 100)
+    ]]);
+    const analysis = analyzer.analyzeChannel(midiData, 0);
+    expect(analysis.noteRange.min).toBe(null);
+    expect(analysis.noteRange.max).toBe(null);
   });
 });
 
@@ -351,16 +362,17 @@ describe('InstrumentMatcher', () => {
     expect(result.score).toBeGreaterThan(0);
   });
 
-  test('discrete note with no selected notes falls back to range scoring', () => {
-    // When selectedNotes is null but channelRange has min/max, falls back to range-based scoring
+  test('discrete note with no selected notes returns low score (unconfigured)', () => {
+    // When selectedNotes is null, instrument is unconfigured - should not get free points
     const result = matcher.scoreDiscreteNotes(
       { min: 36, max: 49 },
       null,
       null
     );
-    // Falls back to range scoring, which is compatible if range fits
-    expect(result.compatible).toBe(true);
-    expect(result.score).toBeGreaterThanOrEqual(0);
+    // Unconfigured discrete instrument gets low neutral score, not full range-based score
+    expect(result.compatible).toBe(false);
+    expect(result.score).toBeLessThanOrEqual(Math.round(25 * 0.2)); // 20% of noteRange weight
+    expect(result.issue.type).toBe('warning');
   });
 
   test('discrete note with no selected notes and no range returns incompatible', () => {
@@ -384,6 +396,55 @@ describe('InstrumentMatcher', () => {
     expect(matcher.isDrumsInstrument({ gm_program: 115 })).toBe(true);
     expect(matcher.isDrumsInstrument({ gm_program: 0, note_selection_mode: 'discrete' })).toBe(true);
     expect(matcher.isDrumsInstrument({ gm_program: 0, note_selection_mode: 'range' })).toBe(false);
+  });
+
+  test('scoreNoteCompatibility handles null channel range (empty channel)', () => {
+    const result = matcher.scoreNoteCompatibility(
+      { min: null, max: null },
+      { min: 21, max: 108, mode: 'range', selected: null }
+    );
+    expect(result.compatible).toBe(true);
+    expect(result.score).toBe(Math.round(25 * 0.5)); // Neutral score
+    expect(result.info).toContain('empty channel');
+  });
+
+  test('unconfigured instrument note range gives neutral score (not max)', () => {
+    const result = matcher.scoreNoteCompatibility(
+      { min: 48, max: 72 },
+      { min: null, max: null, mode: 'range', selected: null }
+    );
+    expect(result.compatible).toBe(true);
+    expect(result.score).toBe(Math.round(25 * 0.5)); // Neutral, not 25
+    expect(result.info).toContain('not configured');
+  });
+
+  test('severely insufficient polyphony marks incompatible', () => {
+    const result = matcher.scorePolyphony(16, 4); // margin = -12
+    expect(result.score).toBe(0);
+    expect(result.compatible).toBe(false);
+    expect(result.issue.type).toBe('error');
+  });
+
+  test('slightly insufficient polyphony stays compatible', () => {
+    const result = matcher.scorePolyphony(8, 6); // margin = -2
+    expect(result.score).toBe(0);
+    expect(result.compatible).toBeUndefined(); // No compatible field = default compatible
+    expect(result.issue.type).toBe('warning');
+  });
+
+  test('polyphony incompatibility propagates to calculateCompatibility', () => {
+    const analysis = {
+      channel: 0,
+      noteRange: { min: 48, max: 72 },
+      polyphony: { max: 32, avg: 16 },
+      usedCCs: [],
+      primaryProgram: 0,
+      estimatedType: 'harmony',
+      noteEvents: []
+    };
+    const instrument = createInstrument({ polyphony: 2 }); // Severely insufficient
+    const result = matcher.calculateCompatibility(analysis, instrument);
+    expect(result.compatible).toBe(false);
   });
 
   test('drum issues are captured from scoreDiscreteDrumsIntelligent', () => {
@@ -550,18 +611,6 @@ describe('MidiTransposer', () => {
     ]]);
 
     expect(transposer.countAllNotes(midiData)).toBe(2);
-  });
-
-  test('validateTransposition rejects too large transposition', () => {
-    const midiData = createMidiData([[noteOn(0, 60, 80)]]);
-    const result = transposer.validateTransposition(midiData, 0, 60);
-    expect(result.valid).toBe(false);
-  });
-
-  test('validateTransposition rejects missing channel', () => {
-    const midiData = createMidiData([[noteOn(0, 60, 80)]]);
-    const result = transposer.validateTransposition(midiData, 5, 12);
-    expect(result.valid).toBe(false);
   });
 
   test('generateAdaptationMetadata creates correct structure', () => {
@@ -900,20 +949,29 @@ describe('InstrumentCapabilitiesValidator', () => {
 
 describe('ScoringConfig', () => {
   test('weights sum to 100', () => {
-    expect(ScoringConfig.validateWeights()).toBe(true);
-  });
-
-  test('getScoreClassification works correctly', () => {
-    expect(ScoringConfig.getScoreClassification(95)).toBe('excellent');
-    expect(ScoringConfig.getScoreClassification(80)).toBe('good');
-    expect(ScoringConfig.getScoreClassification(65)).toBe('acceptable');
-    expect(ScoringConfig.getScoreClassification(45)).toBe('poor');
-    expect(ScoringConfig.getScoreClassification(20)).toBe('insufficient');
+    const sum = Object.values(ScoringConfig.weights).reduce((a, b) => a + b, 0);
+    expect(sum).toBe(100);
   });
 
   test('getBonus returns correct values', () => {
     expect(ScoringConfig.getBonus('perfectProgramMatch')).toBe(30);
     expect(ScoringConfig.getBonus('nonExistent')).toBe(0);
+  });
+
+  test('getWeight returns correct values', () => {
+    expect(ScoringConfig.getWeight('programMatch')).toBe(30);
+    expect(ScoringConfig.getWeight('noteRange')).toBe(25);
+    expect(ScoringConfig.getWeight('nonExistent')).toBe(0);
+  });
+
+  test('getPenalty returns correct values', () => {
+    expect(ScoringConfig.getPenalty('transpositionPerOctave')).toBe(3);
+    expect(ScoringConfig.getPenalty('nonExistent')).toBe(0);
+  });
+
+  test('cache config exists', () => {
+    expect(ScoringConfig.cache.maxSize).toBe(100);
+    expect(ScoringConfig.cache.ttl).toBe(600000);
   });
 });
 

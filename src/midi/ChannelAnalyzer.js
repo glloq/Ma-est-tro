@@ -155,9 +155,9 @@ class ChannelAnalyzer {
       }
     }
 
-    // Si aucune note trouvée
+    // Si aucune note trouvée, retourner null pour signaler un canal vide
     if (min > max) {
-      return { min: 60, max: 60 };
+      return { min: null, max: null };
     }
 
     return { min, max };

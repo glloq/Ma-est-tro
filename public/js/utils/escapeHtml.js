@@ -3,7 +3,7 @@
  * Used by all modal components.
  */
 function escapeHtml(text) {
-  if (!text) return '';
+  if (text == null || text === '') return '';
   const div = document.createElement('div');
   div.textContent = String(text);
   return div.innerHTML;

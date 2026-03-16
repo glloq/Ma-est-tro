@@ -36,6 +36,7 @@ class WebSocketServer {
       this.app.logger.error(`WebSocket server error: ${error.message}`);
     });
 
+    this.startHeartbeat();
     this.app.logger.info(`WebSocket server attached to HTTP server`);
   }
 

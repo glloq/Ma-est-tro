@@ -346,10 +346,15 @@ class MidiDatabase {
             params.push(`%"${type}"%`);
           });
         } else if (mode === 'EXACT') {
+          // File must contain ALL specified types AND no other types
           filters.instrumentTypes.forEach(type => {
             wheres.push('mf.instrument_types LIKE ?');
             params.push(`%"${type}"%`);
           });
+          // Verify the file has exactly the right number of instrument types
+          // by checking the JSON array length matches the filter count
+          wheres.push(`json_array_length(mf.instrument_types) = ?`);
+          params.push(filters.instrumentTypes.length);
         }
       }
 
@@ -429,10 +434,12 @@ class MidiDatabase {
       const sortBy = filters.sortBy || 'uploaded_at';
       const sortOrder = filters.sortOrder || 'DESC';
 
-      // Validate sortBy to prevent SQL injection
+      // Validate sortBy and sortOrder to prevent SQL injection
       const validSortFields = ['filename', 'uploaded_at', 'duration', 'tempo', 'tracks', 'size', 'channel_count'];
+      const validSortOrders = ['ASC', 'DESC'];
+      const safeSortOrder = validSortOrders.includes(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'DESC';
       if (validSortFields.includes(sortBy)) {
-        query += ` ORDER BY mf.${sortBy} ${sortOrder.toUpperCase()}`;
+        query += ` ORDER BY mf.${sortBy} ${safeSortOrder}`;
       } else {
         query += ' ORDER BY mf.uploaded_at DESC';
       }

@@ -11,16 +11,7 @@
             box-sizing: border-box;
         }
 
-        :root {
-            /* Variables CSS par défaut (thème light) */
-            --bg-primary: #f9fafb;
-            --bg-secondary: #ffffff;
-            --text-primary: #333333;
-            --text-secondary: #666666;
-            --border-color: #e5e7eb;
-            --card-bg: #ffffff;
-            --header-bg: #ffffff;
-        }
+        /* Variables centralisées dans styles/variables.css */
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -2834,6 +2825,7 @@
     </style>
 
     <!-- Fichier CSS externe pour les composants (Modal MIDI Editor, etc.) -->
+    <link rel="stylesheet" href="styles/variables.css">
     <link rel="stylesheet" href="styles/components.css">
     <link rel="stylesheet" href="styles/editor.css">
     <link rel="stylesheet" href="styles/bluetooth-scan-modal.css">

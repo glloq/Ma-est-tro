@@ -355,7 +355,7 @@ class PianoRollView {
         if (!c) return;
 
         if (this.channels.length === 0) {
-            c.innerHTML = '<span style="color:#666">Aucun canal</span>';
+            c.innerHTML = `<span style="color:#666">${typeof i18n !== 'undefined' ? i18n.t('pianoRoll.noChannels') : 'No channels'}</span>`;
             return;
         }
 
