@@ -664,7 +664,12 @@
     "scanFailed": "스캔 실패",
     "bluetoothNotAvailable": "블루투스 스캔 기능 사용 불가",
     "networkNotAvailable": "네트워크 스캔 기능 사용 불가",
-    "retry": "재시도"
+    "retry": "재시도",
+    "scanLabel": "Scan:",
+    "scanStarted": "USB scan...",
+    "deleteTitle": "Delete",
+    "deleteSuccess": "OK",
+    "unknownDevice": "Unknown Device"
   },
   "instrumentCapabilities": {
     "title": "악기 기능 완성",

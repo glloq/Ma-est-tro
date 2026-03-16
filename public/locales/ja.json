@@ -664,7 +664,12 @@
     "scanFailed": "スキャンに失敗しました",
     "bluetoothNotAvailable": "Bluetoothスキャン機能が利用できません",
     "networkNotAvailable": "ネットワークスキャン機能が利用できません",
-    "retry": "再試行"
+    "retry": "再試行",
+    "scanLabel": "Scan:",
+    "scanStarted": "USB scan...",
+    "deleteTitle": "Delete",
+    "deleteSuccess": "OK",
+    "unknownDevice": "Unknown Device"
   },
   "instrumentCapabilities": {
     "title": "楽器機能の完了",

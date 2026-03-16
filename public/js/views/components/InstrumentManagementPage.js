@@ -242,7 +242,7 @@ class InstrumentManagementPage {
   renderInstrumentCard(instrument) {
     const isComplete = this.isInstrumentComplete(instrument);
     const isConnected = instrument.status === 2 || instrument.connected;
-    const displayName = instrument.custom_name || instrument.name || 'Unknown Device';
+    const displayName = instrument.custom_name || instrument.name || i18n.t('instrumentManagement.unknownDevice');
     const esc = this._escapeHtml;
     const safeId = esc(instrument.id);
 

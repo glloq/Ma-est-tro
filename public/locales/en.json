@@ -431,7 +431,12 @@
     "scanFailed": "Scan failed",
     "bluetoothNotAvailable": "Bluetooth scan feature not available",
     "networkNotAvailable": "Network scan feature not available",
-    "retry": "Retry"
+    "retry": "Retry",
+    "scanLabel": "Scan:",
+    "scanStarted": "USB scan started...",
+    "deleteTitle": "Delete instrument",
+    "deleteSuccess": "Instrument deleted successfully",
+    "unknownDevice": "Unknown Device"
   },
   "channelRouter": {
     "title": "MIDI Routing Configuration",

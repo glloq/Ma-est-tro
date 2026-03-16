@@ -664,7 +664,12 @@
     "scanFailed": "Scan fehlgeschlagen",
     "bluetoothNotAvailable": "Bluetooth-Scan nicht verfügbar",
     "networkNotAvailable": "Netzwerk-Scan nicht verfügbar",
-    "retry": "Erneut versuchen"
+    "retry": "Erneut versuchen",
+    "scanLabel": "Scan:",
+    "scanStarted": "USB scan...",
+    "deleteTitle": "Delete",
+    "deleteSuccess": "OK",
+    "unknownDevice": "Unknown Device"
   },
   "instrumentCapabilities": {
     "title": "Instrumentenfähigkeiten vervollständigen",

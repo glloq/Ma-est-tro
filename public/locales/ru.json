@@ -664,7 +664,12 @@
     "scanFailed": "Сканирование не удалось",
     "bluetoothNotAvailable": "Bluetooth-сканирование недоступно",
     "networkNotAvailable": "Сетевое сканирование недоступно",
-    "retry": "Повторить"
+    "retry": "Повторить",
+    "scanLabel": "Scan:",
+    "scanStarted": "USB scan...",
+    "deleteTitle": "Delete",
+    "deleteSuccess": "OK",
+    "unknownDevice": "Unknown Device"
   },
   "instrumentCapabilities": {
     "title": "Заполнение возможностей инструмента",

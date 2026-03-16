@@ -9,7 +9,7 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.7);
-  z-index: 10005;
+  z-index: 10005 !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -237,4 +237,70 @@ body.dark-mode .auto-assign-modal .channel-info {
 /* Preview channel border */
 body.dark-mode .auto-assign-modal div[style*="border-top: 1px solid #ddd"] {
   border-top-color: #4a5568 !important;
+}
+
+/* ==========================================================================
+   Robust Dark Mode Overrides
+   Override ALL inline text/background colors in modal body
+   ========================================================================== */
+
+/* Force all text inside modal-body to be light in dark mode */
+body.dark-mode .auto-assign-modal .modal-body div,
+body.dark-mode .auto-assign-modal .modal-body span,
+body.dark-mode .auto-assign-modal .modal-body label,
+body.dark-mode .auto-assign-modal .modal-body strong {
+  color: #d0d8e0 !important;
+}
+
+/* Preserve colored elements (scores, success, warning, error) */
+body.dark-mode .auto-assign-modal div[style*="color: #4CAF50"],
+body.dark-mode .auto-assign-modal div[style*="color: #ff9800"],
+body.dark-mode .auto-assign-modal div[style*="color: #ff4444"],
+body.dark-mode .auto-assign-modal span[style*="color: #cc0000"],
+body.dark-mode .auto-assign-modal span[style*="color: #2e7d32"] {
+  color: inherit !important;
+}
+
+/* Skip toggle: preserve green/red text */
+body.dark-mode .auto-assign-modal span[style*="color: #2e7d32"] {
+  color: #6bc96b !important;
+}
+
+body.dark-mode .auto-assign-modal span[style*="color: #cc0000"] {
+  color: #ff6b6b !important;
+}
+
+/* Summary header background */
+body.dark-mode .auto-assign-modal .modal-body > div:first-child {
+  background: #2d2d3f !important;
+  border-bottom-color: #4a5568 !important;
+}
+
+/* All white/light background cards inside modal */
+body.dark-mode .auto-assign-modal div[style*="background: #fff"],
+body.dark-mode .auto-assign-modal div[style*="background: white"],
+body.dark-mode .auto-assign-modal div[style*="background:#fff"] {
+  background: #252538 !important;
+}
+
+/* Channel suggestion card borders */
+body.dark-mode .auto-assign-modal div[style*="border: 1px solid #ddd"],
+body.dark-mode .auto-assign-modal div[style*="border: 2px solid #ddd"] {
+  border-color: #4a5568 !important;
+}
+
+/* Footer border */
+body.dark-mode .auto-assign-modal div[style*="border-top: 1px solid #ddd"] {
+  border-top-color: #4a5568 !important;
+}
+
+/* Score stars text - keep subtle */
+body.dark-mode .auto-assign-modal div[style*="font-size: 10px"][style*="color: #666"] {
+  color: #8899aa !important;
+}
+
+/* Instrument name bold text */
+body.dark-mode .auto-assign-modal div[style*="font-weight: bold"][style*="font-size: 14px"],
+body.dark-mode .auto-assign-modal h3 {
+  color: #f0f0f0 !important;
 }
