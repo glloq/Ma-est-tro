@@ -459,6 +459,7 @@ class DatabaseManager {
   getInstrumentCapabilities(...args) { return this.instrumentDB.getInstrumentCapabilities(...args); }
   getAllInstrumentCapabilities() { return this.instrumentDB.getAllInstrumentCapabilities(); }
   getInstrumentsWithCapabilities() { return this.instrumentDB.getInstrumentsWithCapabilities(); }
+  getRegisteredInstrumentIds() { return this.instrumentDB.getRegisteredInstrumentIds(); }
 
   // Routing persistence
   insertRouting(routing) { return this.instrumentDB.insertRouting(routing); }

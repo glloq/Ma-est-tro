@@ -43,6 +43,8 @@ class CommandHandler {
       'instrument_update_capabilities': (data) => this.instrumentUpdateCapabilities(data),
       'instrument_get_capabilities': (data) => this.instrumentGetCapabilities(data),
       'instrument_list_capabilities': () => this.instrumentListCapabilities(),
+      'instrument_list_registered': () => this.instrumentListRegistered(),
+      'instrument_list_connected': () => this.instrumentListConnected(),
       'instrument_delete': (data) => this.instrumentDelete(data),
       'instrument_create_virtual': (data) => this.instrumentCreateVirtual(data),
       'ble_scan_start': (data) => this.bleScanStart(data),
@@ -454,6 +456,41 @@ class CommandHandler {
 
     return {
       instruments: instruments
+    };
+  }
+
+  async instrumentListRegistered() {
+    if (!this.app.database) {
+      throw new Error('Database not available');
+    }
+
+    const instruments = this.app.database.getInstrumentsWithCapabilities();
+
+    return {
+      success: true,
+      instruments: instruments,
+      total: instruments.length
+    };
+  }
+
+  async instrumentListConnected() {
+    if (!this.app.database) {
+      throw new Error('Database not available');
+    }
+
+    const allInstruments = this.app.database.getInstrumentsWithCapabilities();
+    const connectedDevices = this.app.deviceManager.getDeviceList();
+    const connectedDeviceIds = new Set(connectedDevices.map(d => d.id));
+
+    const connectedInstruments = allInstruments.filter(
+      inst => connectedDeviceIds.has(inst.device_id)
+    );
+
+    return {
+      success: true,
+      instruments: connectedInstruments,
+      total: connectedInstruments.length,
+      connectedDevices: connectedDevices.length
     };
   }
 
@@ -1130,6 +1167,14 @@ class CommandHandler {
       gmPrograms: data.gmPrograms,
       gmMode: data.gmMode || 'ANY',
 
+      // Routing status filter
+      routingStatus: data.routingStatus,
+      validatedThreshold: data.validatedThreshold,
+
+      // Playable on instruments filter
+      playableOnInstruments: data.playableOnInstruments,
+      playableMode: data.playableMode || 'routed',
+
       // Quick filters
       hasDrums: data.hasDrums,
       hasMelody: data.hasMelody,
@@ -1169,6 +1214,12 @@ class CommandHandler {
     }
     if (data.gmCategories && data.gmCategories.length > 0) {
       appliedFilters.push(`GM categories: ${data.gmCategories.join(', ')} (${data.gmMode || 'ANY'})`);
+    }
+    if (data.routingStatus) {
+      appliedFilters.push(`routing status: ${data.routingStatus}`);
+    }
+    if (data.playableOnInstruments && data.playableOnInstruments.length > 0) {
+      appliedFilters.push(`playable on: ${data.playableOnInstruments.join(', ')} (${data.playableMode || 'routed'})`);
     }
 
     return {

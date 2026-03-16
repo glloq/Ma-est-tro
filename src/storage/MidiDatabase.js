@@ -245,6 +245,7 @@ class MidiDatabase {
       const joins = [];
       const wheres = [];
       const params = [];
+      let useCTE = false;
 
       // JOIN with routings if needed
       if (filters.hasRouting !== undefined || filters.minCompatibilityScore !== undefined) {
@@ -411,11 +412,84 @@ class MidiDatabase {
         }
       }
 
-      // Routing status filter
+      // Routing status filter (detailed: unrouted, partial, full, validated, playable)
+      if (filters.routingStatus) {
+        const validStatuses = ['unrouted', 'partial', 'full', 'validated', 'playable'];
+        if (!validStatuses.includes(filters.routingStatus)) {
+          throw new Error(`Invalid routingStatus: ${filters.routingStatus}. Must be one of: ${validStatuses.join(', ')}`);
+        }
+        useCTE = true;
+        joins.push('INNER JOIN routing_stats rs ON mf.id = rs.file_id');
+
+        switch (filters.routingStatus) {
+          case 'unrouted':
+            wheres.push('rs.routed_count = 0');
+            break;
+          case 'partial':
+            wheres.push('rs.routed_count > 0 AND rs.routed_count < rs.channel_count');
+            break;
+          case 'full':
+            wheres.push('rs.routed_count >= rs.channel_count AND rs.channel_count > 0');
+            break;
+          case 'validated': {
+            const threshold = filters.validatedThreshold || 70;
+            wheres.push('rs.routed_count >= rs.channel_count AND rs.channel_count > 0 AND rs.min_score >= ?');
+            params.push(threshold);
+            break;
+          }
+          case 'playable':
+            wheres.push('rs.routed_count >= rs.channel_count AND rs.channel_count > 0 AND rs.min_score = 100');
+            break;
+        }
+      }
+
+      // Playable on specific instruments filter
+      if (filters.playableOnInstruments && filters.playableOnInstruments.length > 0) {
+        const mode = filters.playableMode || 'routed';
+        const placeholders = filters.playableOnInstruments.map(() => '?').join(', ');
+
+        if (mode === 'compatible') {
+          wheres.push(`mf.id IN (
+            SELECT DISTINCT mfc2.midi_file_id
+            FROM midi_file_channels mfc2
+            INNER JOIN instruments_latency il ON (
+              (il.note_range_min IS NULL OR mfc2.note_range_max >= il.note_range_min)
+              AND (il.note_range_max IS NULL OR mfc2.note_range_min <= il.note_range_max)
+            )
+            WHERE il.id IN (${placeholders})
+          )`);
+        } else {
+          wheres.push(`mf.id IN (
+            SELECT DISTINCT mir3.midi_file_id
+            FROM midi_instrument_routings mir3
+            INNER JOIN instruments_latency il ON mir3.device_id = il.device_id
+            WHERE il.id IN (${placeholders})
+              AND mir3.enabled = 1
+          )`);
+        }
+        filters.playableOnInstruments.forEach(id => params.push(id));
+      }
+
+      // Simple routing existence filter (legacy)
       if (filters.hasRouting === true) {
         wheres.push('mir.id IS NOT NULL');
       } else if (filters.hasRouting === false) {
         wheres.push('mir.id IS NULL');
+      }
+
+      // Prepend CTE if routing status filter is active
+      if (useCTE) {
+        query = `WITH routing_stats AS (
+          SELECT
+            mf2.id AS file_id,
+            mf2.channel_count,
+            COUNT(mir2.id) AS routed_count,
+            MIN(COALESCE(mir2.compatibility_score, 0)) AS min_score
+          FROM midi_files mf2
+          LEFT JOIN midi_instrument_routings mir2
+            ON mf2.id = mir2.midi_file_id AND mir2.enabled = 1
+          GROUP BY mf2.id
+        ) ` + query;
       }
 
       // Assemble query
