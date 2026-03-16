@@ -863,6 +863,24 @@ class InstrumentDatabase {
   }
 
   /**
+   * Get lightweight list of registered instrument IDs (for UI dropdowns)
+   * @returns {Array} List of instruments with basic identification data
+   */
+  getRegisteredInstrumentIds() {
+    try {
+      const stmt = this.db.prepare(`
+        SELECT id, device_id, channel, name, custom_name, gm_program
+        FROM instruments_latency
+        ORDER BY name, custom_name
+      `);
+      return stmt.all();
+    } catch (error) {
+      this.logger.error(`Failed to get registered instrument IDs: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
    * Get all instruments with full capabilities for auto-assignment
    * @returns {Array} List of instruments with complete data
    */
