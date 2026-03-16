@@ -1851,7 +1851,7 @@ class MidiEditorModal {
             return;
         }
 
-        const modal = new window.AutoAssignModal(this.api);
+        const modal = new window.AutoAssignModal(this.api, this);
         modal.show(this.currentFile);
     }
 

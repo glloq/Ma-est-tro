@@ -519,7 +519,15 @@
     "notesTransposed": "note(s) transposée(s)",
     "channelsSkipped": "canal(aux) ignoré(s)",
     "channelsWillBeAssigned": "{active} sur {total} canaux seront assignés",
-    "componentNotLoaded": "Le module d'auto-assignation n'a pas pu se charger. Veuillez rafraîchir la page."
+    "componentNotLoaded": "Le module d'auto-assignation n'a pas pu se charger. Veuillez rafraîchir la page.",
+    "adaptationTitle": "Adaptation du canal",
+    "transposition": "Transposition",
+    "reset": "Réinitialiser",
+    "noteOffset": "Décalage de notes",
+    "noteOffsetHint": "Décaler toutes les notes de batterie (utile pour mapper vers un kit différent)",
+    "validateAndOpen": "Valider et ouvrir",
+    "previewChannel": "Aperçu canal {num}",
+    "previewChannelTip": "Aperçu de ce canal avec les réglages actuels"
   },
   "instrumentCapabilities": {
     "title": "Compléter les capacités des instruments",
