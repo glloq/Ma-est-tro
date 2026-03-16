@@ -4403,7 +4403,9 @@ class MidiEditorModal {
                     btn.classList.add('active');
 
                     // Changer l'outil sur l'éditeur approprié
-                    if (this.currentCCType === 'velocity' && this.velocityEditor) {
+                    if (this.currentCCType === 'tempo' && this.tempoEditor) {
+                        this.tempoEditor.setTool(tool);
+                    } else if (this.currentCCType === 'velocity' && this.velocityEditor) {
                         this.velocityEditor.setTool(tool);
                     } else if (this.ccEditor) {
                         this.ccEditor.setTool(tool);
