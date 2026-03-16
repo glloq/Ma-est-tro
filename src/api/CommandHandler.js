@@ -1321,9 +1321,18 @@ class CommandHandler {
       throw new Error('deviceId is required');
     }
 
+    const channel = parseInt(data.channel);
+    if (isNaN(channel) || channel < 0 || channel > 15) {
+      throw new Error('channel must be between 0 and 15');
+    }
+
     // targetChannel allows remapping source channel to instrument's actual MIDI channel
-    const targetChannel = data.targetChannel !== undefined ? data.targetChannel : data.channel;
-    this.app.midiPlayer.setChannelRouting(data.channel, data.deviceId, targetChannel);
+    const targetChannel = data.targetChannel !== undefined ? parseInt(data.targetChannel) : channel;
+    if (isNaN(targetChannel) || targetChannel < 0 || targetChannel > 15) {
+      throw new Error('targetChannel must be between 0 and 15');
+    }
+
+    this.app.midiPlayer.setChannelRouting(channel, data.deviceId, targetChannel);
 
     return {
       success: true,
@@ -1937,7 +1946,9 @@ class CommandHandler {
       // Also apply to MidiPlayer if currently loaded
       // Use instrument's channel as targetChannel so notes are sent on the correct MIDI channel
       if (this.app.midiPlayer && this.app.midiPlayer.loadedFileId === targetFileId) {
-        const targetChannel = assignment.instrumentChannel !== undefined ? assignment.instrumentChannel : channelNum;
+        let targetChannel = assignment.instrumentChannel !== undefined ? assignment.instrumentChannel : channelNum;
+        // Clamp targetChannel to valid MIDI range
+        targetChannel = Math.max(0, Math.min(15, parseInt(targetChannel) || 0));
         this.app.midiPlayer.setChannelRouting(channelNum, assignment.deviceId, targetChannel);
       }
 

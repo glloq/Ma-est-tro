@@ -6,7 +6,8 @@ class MidiRouter {
     this.routes = new Map();
     this.routesBySource = new Map(); // Secondary index: source -> Set of routeIds
     this.monitors = new Set();
-    
+    this.pendingTimeouts = new Set(); // Track scheduled setTimeout IDs for cleanup
+
     this.loadRoutesFromDB();
     this.app.logger.info('MidiRouter initialized');
   }
@@ -155,12 +156,15 @@ class MidiRouter {
         // Apply channel mapping
         const mapped = this.applyChannelMap(msg, route.channelMap);
 
-        // Apply latency compensation for destination device (sync_delay + hardware latency)
+        // Apply latency compensation for destination device (sync_delay in ms + hardware latency)
         const compensation = this._getRouteCompensation(route.destination, mapped.channel);
         if (compensation > 0) {
-          // Schedule message with delay compensation (send earlier is not possible in real-time,
-          // so we apply a small delay to slower-responding devices to align with the slowest)
-          setTimeout(() => {
+          const timeoutId = setTimeout(() => {
+            this.pendingTimeouts.delete(timeoutId);
+            // Skip if route was deleted/disabled while waiting
+            const currentRoute = this.routes.get(route.id);
+            if (!currentRoute || !currentRoute.enabled) return;
+
             const success = this.app.deviceManager.sendMessage(
               route.destination,
               type,
@@ -176,6 +180,7 @@ class MidiRouter {
               });
             }
           }, compensation);
+          this.pendingTimeouts.add(timeoutId);
           continue;
         }
 
@@ -261,9 +266,10 @@ class MidiRouter {
 
     const mapped = { ...msg };
 
-    // Map channel if specified
+    // Map channel if specified, clamping to valid MIDI range (0-15)
     if (msg.channel !== undefined && mapping[msg.channel] !== undefined) {
-      mapped.channel = mapping[msg.channel];
+      const targetCh = parseInt(mapping[msg.channel]);
+      mapped.channel = (isNaN(targetCh) || targetCh < 0 || targetCh > 15) ? msg.channel : targetCh;
     }
 
     return mapped;
@@ -354,6 +360,28 @@ class MidiRouter {
 
   generateRouteId() {
     return `route_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+  }
+
+  destroy() {
+    // Clear all pending message timeouts
+    for (const timeoutId of this.pendingTimeouts) {
+      clearTimeout(timeoutId);
+    }
+    this.pendingTimeouts.clear();
+
+    // Clear compensation cache timer
+    if (this._compensationCacheTimer) {
+      clearInterval(this._compensationCacheTimer);
+      this._compensationCacheTimer = null;
+    }
+    if (this._compensationCache) {
+      this._compensationCache.clear();
+    }
+
+    this.routes.clear();
+    this.routesBySource.clear();
+    this.monitors.clear();
+    this.app.logger.info('MidiRouter destroyed');
   }
 }
 
