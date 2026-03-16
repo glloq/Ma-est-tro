@@ -431,7 +431,12 @@
     "scanFailed": "Scan failed",
     "bluetoothNotAvailable": "Bluetooth scan feature not available",
     "networkNotAvailable": "Network scan feature not available",
-    "retry": "Retry"
+    "retry": "Retry",
+    "scanLabel": "Scan:",
+    "scanStarted": "USB scan started...",
+    "deleteTitle": "Delete instrument",
+    "deleteSuccess": "Instrument deleted successfully",
+    "unknownDevice": "Unknown Device"
   },
   "channelRouter": {
     "title": "MIDI Routing Configuration",
@@ -514,7 +519,15 @@
     "notesTransposed": "note(s) transposed",
     "channelsSkipped": "channel(s) skipped",
     "channelsWillBeAssigned": "{active} of {total} channels will be assigned",
-    "componentNotLoaded": "Auto-assign module failed to load. Please refresh the page."
+    "componentNotLoaded": "Auto-assign module failed to load. Please refresh the page.",
+    "adaptationTitle": "Channel Adaptation",
+    "transposition": "Transposition",
+    "reset": "Reset",
+    "noteOffset": "Note Offset",
+    "noteOffsetHint": "Shift all drum notes (useful for mapping to a different kit)",
+    "validateAndOpen": "Validate & Open",
+    "previewChannel": "Preview Ch. {num}",
+    "previewChannelTip": "Preview this channel with current settings"
   },
   "instrumentCapabilities": {
     "title": "Complete Instrument Capabilities",

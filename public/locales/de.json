@@ -437,6 +437,14 @@
   },
   "autoAssign": {
     "componentNotLoaded": "Das Auto-Zuordnungsmodul konnte nicht geladen werden. Bitte aktualisieren Sie die Seite.",
+    "adaptationTitle": "Channel Adaptation",
+    "transposition": "Transposition",
+    "reset": "Reset",
+    "noteOffset": "Note Offset",
+    "noteOffsetHint": "Shift all drum notes (useful for mapping to a different kit)",
+    "validateAndOpen": "Validate & Open",
+    "previewChannel": "Preview Ch. {num}",
+    "previewChannelTip": "Preview this channel with current settings",
     "title": "Kanäle automatisch zuordnen",
     "analyzing": "MIDI-Datei wird analysiert und Instrumente werden zugeordnet...",
     "error": "Auto-Zuordnungsfehler",
@@ -664,7 +672,12 @@
     "scanFailed": "Scan fehlgeschlagen",
     "bluetoothNotAvailable": "Bluetooth-Scan nicht verfügbar",
     "networkNotAvailable": "Netzwerk-Scan nicht verfügbar",
-    "retry": "Erneut versuchen"
+    "retry": "Erneut versuchen",
+    "scanLabel": "Scan:",
+    "scanStarted": "USB scan...",
+    "deleteTitle": "Delete",
+    "deleteSuccess": "OK",
+    "unknownDevice": "Unknown Device"
   },
   "instrumentCapabilities": {
     "title": "Instrumentenfähigkeiten vervollständigen",

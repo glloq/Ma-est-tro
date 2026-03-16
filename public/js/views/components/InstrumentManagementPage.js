@@ -126,29 +126,51 @@ class InstrumentManagementPage {
    */
   async loadInstruments() {
     try {
+      // 1. Charger les devices connectés
       const response = await this.apiClient.sendCommand('device_list', {});
+      const connectedDevices = (response && response.devices) ? response.devices : [];
+      const connectedIds = new Set(connectedDevices.map(d => d.id));
 
-      if (response && response.devices) {
-        this.instruments = response.devices;
-
-        // Enrichir avec les capacités
-        for (const instrument of this.instruments) {
-          try {
-            const capsResponse = await this.apiClient.sendCommand('instrument_get_capabilities', {
-              deviceId: instrument.id
-            });
-
-            if (capsResponse && capsResponse.capabilities) {
-              Object.assign(instrument, capsResponse.capabilities);
-            }
-          } catch (error) {
-            console.warn(`Failed to load capabilities for ${instrument.id}:`, error);
-          }
+      // 2. Charger les instruments enregistrés en DB (même déconnectés)
+      let registeredInstruments = [];
+      try {
+        const capsResponse = await this.apiClient.sendCommand('instrument_list_capabilities');
+        if (capsResponse && capsResponse.instruments) {
+          registeredInstruments = capsResponse.instruments;
         }
-
-        this.renderInstruments();
-        this.updateStats();
+      } catch (e) {
+        console.warn('Failed to load registered instruments from DB:', e);
       }
+
+      // 3. Fusionner : connectés (enrichis) + enregistrés non connectés
+      this.instruments = [];
+
+      // Ajouter les devices connectés enrichis avec leurs capacités DB
+      for (const device of connectedDevices) {
+        device.connected = true;
+        device.status = 2; // connected
+        // Enrichir avec les capacités DB
+        const dbInstrument = registeredInstruments.find(r => r.device_id === device.id);
+        if (dbInstrument) {
+          Object.assign(device, dbInstrument);
+          device.connected = true;
+          device.status = 2;
+        }
+        this.instruments.push(device);
+      }
+
+      // Ajouter les instruments enregistrés qui ne sont PAS connectés
+      for (const registered of registeredInstruments) {
+        if (!connectedIds.has(registered.device_id)) {
+          registered.id = registered.device_id;
+          registered.connected = false;
+          registered.status = 0; // disconnected
+          this.instruments.push(registered);
+        }
+      }
+
+      this.renderInstruments();
+      this.updateStats();
     } catch (error) {
       console.error('Failed to load instruments:', error);
       this.showError('Failed to load instruments: ' + error.message);
@@ -242,7 +264,7 @@ class InstrumentManagementPage {
   renderInstrumentCard(instrument) {
     const isComplete = this.isInstrumentComplete(instrument);
     const isConnected = instrument.status === 2 || instrument.connected;
-    const displayName = instrument.custom_name || instrument.name || 'Unknown Device';
+    const displayName = instrument.custom_name || instrument.name || i18n.t('instrumentManagement.unknownDevice');
     const esc = this._escapeHtml;
     const safeId = esc(instrument.id);
 

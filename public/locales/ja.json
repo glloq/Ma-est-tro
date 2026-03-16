@@ -437,6 +437,14 @@
   },
   "autoAssign": {
     "componentNotLoaded": "自動割り当てモジュールの読み込みに失敗しました。ページを更新してください。",
+    "adaptationTitle": "Channel Adaptation",
+    "transposition": "Transposition",
+    "reset": "Reset",
+    "noteOffset": "Note Offset",
+    "noteOffsetHint": "Shift all drum notes (useful for mapping to a different kit)",
+    "validateAndOpen": "Validate & Open",
+    "previewChannel": "Preview Ch. {num}",
+    "previewChannelTip": "Preview this channel with current settings",
     "title": "チャンネル自動割り当て",
     "analyzing": "MIDIファイルを分析し、楽器を割り当て中...",
     "error": "自動割り当てエラー",
@@ -664,7 +672,12 @@
     "scanFailed": "スキャンに失敗しました",
     "bluetoothNotAvailable": "Bluetoothスキャン機能が利用できません",
     "networkNotAvailable": "ネットワークスキャン機能が利用できません",
-    "retry": "再試行"
+    "retry": "再試行",
+    "scanLabel": "Scan:",
+    "scanStarted": "USB scan...",
+    "deleteTitle": "Delete",
+    "deleteSuccess": "OK",
+    "unknownDevice": "Unknown Device"
   },
   "instrumentCapabilities": {
     "title": "楽器機能の完了",

@@ -437,6 +437,14 @@
   },
   "autoAssign": {
     "componentNotLoaded": "De auto-toewijzingsmodule kon niet worden geladen. Vernieuw de pagina.",
+    "adaptationTitle": "Channel Adaptation",
+    "transposition": "Transposition",
+    "reset": "Reset",
+    "noteOffset": "Note Offset",
+    "noteOffsetHint": "Shift all drum notes (useful for mapping to a different kit)",
+    "validateAndOpen": "Validate & Open",
+    "previewChannel": "Preview Ch. {num}",
+    "previewChannelTip": "Preview this channel with current settings",
     "title": "Kanalen automatisch toewijzen",
     "analyzing": "MIDI-bestand analyseren en instrumenten toewijzen...",
     "error": "Auto-toewijzingsfout",
@@ -664,7 +672,12 @@
     "scanFailed": "Scan mislukt",
     "bluetoothNotAvailable": "Bluetooth-scan niet beschikbaar",
     "networkNotAvailable": "Netwerkscan niet beschikbaar",
-    "retry": "Opnieuw proberen"
+    "retry": "Opnieuw proberen",
+    "scanLabel": "Scan:",
+    "scanStarted": "USB scan...",
+    "deleteTitle": "Delete",
+    "deleteSuccess": "OK",
+    "unknownDevice": "Unknown Device"
   },
   "instrumentCapabilities": {
     "title": "Instrumentmogelijkheden voltooien",

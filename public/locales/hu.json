@@ -437,6 +437,14 @@
   },
   "autoAssign": {
     "componentNotLoaded": "Az automatikus hozzárendelés modul nem töltődött be. Frissítse az oldalt.",
+    "adaptationTitle": "Channel Adaptation",
+    "transposition": "Transposition",
+    "reset": "Reset",
+    "noteOffset": "Note Offset",
+    "noteOffsetHint": "Shift all drum notes (useful for mapping to a different kit)",
+    "validateAndOpen": "Validate & Open",
+    "previewChannel": "Preview Ch. {num}",
+    "previewChannelTip": "Preview this channel with current settings",
     "title": "Auto-Assign Channels",
     "analyzing": "Analyzing MIDI file and matching instruments...",
     "error": "Auto-Assignment Error",
@@ -664,7 +672,12 @@
     "scanFailed": "Scan failed",
     "bluetoothNotAvailable": "Bluetooth scan feature not available",
     "networkNotAvailable": "Network scan feature not available",
-    "retry": "Retry"
+    "retry": "Retry",
+    "scanLabel": "Scan:",
+    "scanStarted": "USB scan...",
+    "deleteTitle": "Delete",
+    "deleteSuccess": "OK",
+    "unknownDevice": "Unknown Device"
   },
   "instrumentCapabilities": {
     "title": "Complete Instrument Capabilities",

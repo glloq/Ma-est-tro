@@ -437,6 +437,14 @@
   },
   "autoAssign": {
     "componentNotLoaded": "Модуль авто-назначения не загрузился. Обновите страницу.",
+    "adaptationTitle": "Channel Adaptation",
+    "transposition": "Transposition",
+    "reset": "Reset",
+    "noteOffset": "Note Offset",
+    "noteOffsetHint": "Shift all drum notes (useful for mapping to a different kit)",
+    "validateAndOpen": "Validate & Open",
+    "previewChannel": "Preview Ch. {num}",
+    "previewChannelTip": "Preview this channel with current settings",
     "title": "Автоназначение каналов",
     "analyzing": "Анализ MIDI-файла и подбор инструментов...",
     "error": "Ошибка автоназначения",
@@ -664,7 +672,12 @@
     "scanFailed": "Сканирование не удалось",
     "bluetoothNotAvailable": "Bluetooth-сканирование недоступно",
     "networkNotAvailable": "Сетевое сканирование недоступно",
-    "retry": "Повторить"
+    "retry": "Повторить",
+    "scanLabel": "Scan:",
+    "scanStarted": "USB scan...",
+    "deleteTitle": "Delete",
+    "deleteSuccess": "OK",
+    "unknownDevice": "Unknown Device"
   },
   "instrumentCapabilities": {
     "title": "Заполнение возможностей инструмента",

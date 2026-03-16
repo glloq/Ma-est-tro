@@ -63,12 +63,12 @@ class EventBus {
     }
     
     init() {
-        // Démarrer le traitement des queues
-        this.startProcessing();
-        
+        // Mode event-driven : traitement déclenché par emit() au lieu d'un timer à 10ms
+        this._processingScheduled = false;
+
         // Nettoyer les caches périodiquement
-        setInterval(() => this.cleanCaches(), 60000);
-        
+        this._cacheCleanupTimer = setInterval(() => this.cleanCaches(), 60000);
+
         console.log('✓ EventBus initialized');
     }
     
@@ -133,9 +133,9 @@ class EventBus {
             console.error('EventBus.emit: Event name required');
             return;
         }
-        
+
         this.metrics.eventsEmitted++;
-        
+
         const eventData = {
             event,
             data,
@@ -143,21 +143,56 @@ class EventBus {
             timestamp: Date.now(),
             id: `evt_${Date.now()}_${Math.random()}`
         };
-        
+
         if (this.config.enablePriorities && priority === EventPriority.HIGH) {
             // Traiter immédiatement les événements HIGH priority
             this.processEvent(eventData);
         } else {
             // Ajouter à la queue appropriée
             const queue = this.queues[priority] || this.queues[EventPriority.NORMAL];
-            
+
             if (queue.length >= this.config.maxQueueSize) {
                 this.metrics.eventsDropped++;
                 console.warn(`EventBus: Queue full for priority ${priority}, event dropped`);
                 return;
             }
-            
+
             queue.push(eventData);
+
+            // Déclencher le traitement via microtask (remplace le timer 10ms)
+            this._scheduleProcessing();
+        }
+    }
+
+    /**
+     * Planifier le traitement des queues via microtask (event-driven)
+     * Remplace le setInterval à 10ms qui consommait du CPU en permanence
+     */
+    _scheduleProcessing() {
+        if (this._processingScheduled) return;
+        this._processingScheduled = true;
+
+        Promise.resolve().then(() => {
+            this._processingScheduled = false;
+            this._drainQueues();
+        });
+    }
+
+    /**
+     * Vider les queues par priorité
+     */
+    _drainQueues() {
+        // HIGH: traiter tout
+        while (this.queues[EventPriority.HIGH].length > 0) {
+            this.processEvent(this.queues[EventPriority.HIGH].shift());
+        }
+        // NORMAL: traiter tout (batché dans la même microtask)
+        while (this.queues[EventPriority.NORMAL].length > 0) {
+            this.processEvent(this.queues[EventPriority.NORMAL].shift());
+        }
+        // LOW: traiter tout
+        while (this.queues[EventPriority.LOW].length > 0) {
+            this.processEvent(this.queues[EventPriority.LOW].shift());
         }
     }
     
@@ -252,27 +287,8 @@ class EventBus {
     }
     
     startProcessing() {
-        if (this.processingTimer) return;
-        
-        this.processingTimer = setInterval(() => {
-            // Traiter HIGH priority en premier
-            while (this.queues[EventPriority.HIGH].length > 0) {
-                const eventData = this.queues[EventPriority.HIGH].shift();
-                this.processEvent(eventData);
-            }
-            
-            // Puis NORMAL
-            if (this.queues[EventPriority.NORMAL].length > 0) {
-                const eventData = this.queues[EventPriority.NORMAL].shift();
-                this.processEvent(eventData);
-            }
-            
-            // Puis LOW
-            if (this.queues[EventPriority.LOW].length > 0) {
-                const eventData = this.queues[EventPriority.LOW].shift();
-                this.processEvent(eventData);
-            }
-        }, this.config.processingInterval);
+        // Mode event-driven: plus besoin de timer, traitement déclenché par emit()
+        // Méthode conservée pour rétrocompatibilité
     }
     
     stopProcessing() {

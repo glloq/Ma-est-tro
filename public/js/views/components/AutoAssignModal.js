@@ -5,24 +5,31 @@
 const _t = (key, params) => typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
 
 /**
- * AutoAssignModal - Modal for auto-assigning MIDI channels to instruments
+ * AutoAssignModal - Tab-based modal for auto-assigning MIDI channels to instruments
  *
- * Displays suggestions for each channel with compatibility scores
- * and allows the user to select, modify, or skip the instrument for each channel.
+ * Each MIDI channel gets its own tab with:
+ * - Channel statistics (note range, polyphony, type)
+ * - Scored instrument suggestions
+ * - Adaptation controls (transposition, octave wrapping, note offset)
+ * After validation, creates an adapted file and opens it in the editor.
  */
 class AutoAssignModal {
-  constructor(apiClient) {
+  constructor(apiClient, editorRef) {
     this.apiClient = apiClient;
+    this.editorRef = editorRef; // Reference to MidiEditorModal for close/open flow
     this.fileId = null;
-    this.midiData = null; // Store MIDI data for preview
+    this.midiData = null;
     this.suggestions = {};
     this.autoSelection = {};
-    this.channelAnalyses = {}; // Store analyses indexed by channel
-    this.selectedAssignments = {}; // User's selections
-    this.skippedChannels = new Set(); // Channels user chose to skip
+    this.channelAnalyses = {};
+    this.selectedAssignments = {};
+    this.skippedChannels = new Set();
     this.modal = null;
-    this.audioPreview = null; // Audio preview instance
+    this.audioPreview = null;
     this._escHandler = null;
+    this.activeTab = null; // Currently active channel tab
+    this.channels = []; // Sorted channel list
+    this.adaptationSettings = {}; // Per-channel adaptation overrides
   }
 
   /**
@@ -36,32 +43,26 @@ class AutoAssignModal {
 
   /**
    * Show the modal with auto-assignment suggestions
-   * @param {number} fileId - MIDI file ID
    */
   async show(fileId) {
     this.fileId = fileId;
-
-    // Show loading modal
     this.showLoading();
 
     try {
-      // Step 1: Get MIDI file data for preview
+      // Get MIDI file data for preview
       const fileResponse = await this.apiClient.sendCommand('file_read', { fileId: fileId });
       if (fileResponse && fileResponse.midiData) {
-        // file_read returns { midiData: { midi: {header, tracks}, tempo, ... } }
-        // AudioPreview expects { header, tracks, tempo }
         const raw = fileResponse.midiData;
         if (raw.midi && raw.midi.tracks) {
           this.midiData = { ...raw.midi, tempo: raw.tempo || raw.midi.tempo };
         } else if (Array.isArray(raw.tracks)) {
           this.midiData = raw;
         } else {
-          console.warn('AutoAssignModal: unexpected midiData format, preview may not work');
           this.midiData = raw;
         }
       }
 
-      // Step 3: Generate suggestions
+      // Generate suggestions
       const response = await this.apiClient.sendCommand('generate_assignment_suggestions', {
         fileId: fileId,
         topN: 5,
@@ -77,7 +78,6 @@ class AutoAssignModal {
       this.autoSelection = response.autoSelection;
       this.confidenceScore = response.confidenceScore;
 
-      // Store channel analyses indexed by channel number for easy lookup
       if (response.channelAnalyses) {
         for (const analysis of response.channelAnalyses) {
           this.channelAnalyses[analysis.channel] = analysis;
@@ -88,13 +88,29 @@ class AutoAssignModal {
       this.selectedAssignments = JSON.parse(JSON.stringify(this.autoSelection));
       this.skippedChannels = new Set();
 
+      // Initialize adaptation settings per channel
+      this.channels = Object.keys(this.suggestions).sort((a, b) => parseInt(a) - parseInt(b));
+      for (const ch of this.channels) {
+        const assignment = this.selectedAssignments[ch];
+        this.adaptationSettings[ch] = {
+          transpositionSemitones: assignment?.transposition?.semitones || 0,
+          octaveWrappingEnabled: assignment?.octaveWrappingEnabled || false,
+          noteOffset: 0
+        };
+      }
+
       // Initialize audio preview
       if (!this.audioPreview && window.AudioPreview) {
         this.audioPreview = new window.AudioPreview(this.apiClient);
       }
 
-      // Show suggestions modal
-      this.showSuggestions();
+      if (this.channels.length === 0) {
+        this.showError(_t('autoAssign.noActiveChannels'));
+        return;
+      }
+
+      this.activeTab = parseInt(this.channels[0]);
+      this.showTabbedUI();
     } catch (error) {
       this.showError(error.message || _t('autoAssign.generateFailed'));
     }
@@ -117,7 +133,6 @@ class AutoAssignModal {
         </div>
       </div>
     `;
-
     document.body.insertAdjacentHTML('beforeend', html);
     this.modal = document.getElementById('autoAssignModal');
   }
@@ -126,10 +141,7 @@ class AutoAssignModal {
    * Show error message
    */
   showError(message) {
-    if (this.modal) {
-      this.modal.remove();
-    }
-
+    if (this.modal) this.modal.remove();
     const html = `
       <div class="modal-overlay auto-assign-modal" id="autoAssignModal">
         <div class="modal-container" style="max-width: 600px;">
@@ -146,88 +158,92 @@ class AutoAssignModal {
         </div>
       </div>
     `;
-
     document.body.insertAdjacentHTML('beforeend', html);
     this.modal = document.getElementById('autoAssignModal');
   }
 
+  // ========================================================================
+  // TAB-BASED UI
+  // ========================================================================
+
   /**
-   * Show suggestions interface
+   * Main UI: tabs for each channel + content area
    */
-  showSuggestions() {
-    if (this.modal) {
-      this.modal.remove();
-    }
-    // Clean up previous ESC handler
+  showTabbedUI() {
+    if (this.modal) this.modal.remove();
     if (this._escHandler) {
       document.removeEventListener('keydown', this._escHandler);
     }
 
-    const channels = Object.keys(this.suggestions).sort((a, b) => parseInt(a) - parseInt(b));
+    const tabsHTML = this.channels.map(ch => {
+      const channel = parseInt(ch);
+      const isActive = channel === this.activeTab;
+      const isSkipped = this.skippedChannels.has(channel);
+      const assignment = this.selectedAssignments[ch];
+      const score = assignment?.score || 0;
 
-    if (channels.length === 0) {
-      this.showError(_t('autoAssign.noActiveChannels'));
-      return;
-    }
+      return `
+        <button class="aa-tab ${isActive ? 'active' : ''} ${isSkipped ? 'skipped' : ''}"
+                data-channel="${channel}"
+                onclick="autoAssignModalInstance.switchTab(${channel})">
+          <span class="aa-tab-label">${_t('autoAssign.channel')} ${channel + 1}</span>
+          ${channel === 9 ? '<span class="aa-tab-drum">DR</span>' : ''}
+          ${isSkipped
+            ? '<span class="aa-tab-status skipped">—</span>'
+            : `<span class="aa-tab-status" style="color: ${this.getScoreColor(score)}">${score}</span>`
+          }
+        </button>
+      `;
+    }).join('');
 
-    const channelsHTML = channels.map(channel => this.renderChannelSuggestions(parseInt(channel))).join('');
-
-    const activeCount = channels.length - this.skippedChannels.size;
+    const activeCount = this.channels.length - this.skippedChannels.size;
 
     const html = `
       <div class="modal-overlay auto-assign-modal" id="autoAssignModal">
-        <div class="modal-container" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-container aa-container">
           <div class="modal-header">
-            <h2>${_t('autoAssign.title')}</h2>
+            <div class="aa-header-content">
+              <h2>${_t('autoAssign.title')}</h2>
+              <div class="aa-header-stats">
+                <span class="aa-confidence" style="color: ${this.getScoreColor(this.confidenceScore)}">
+                  ${this.getScoreStars(this.confidenceScore)} ${this.confidenceScore}/100
+                </span>
+                <span class="aa-channel-count">
+                  ${_t('autoAssign.channelsWillBeAssigned', {active: activeCount, total: this.channels.length})}
+                </span>
+              </div>
+            </div>
             <button class="modal-close" onclick="autoAssignModalInstance.close()">x</button>
           </div>
-          <div class="modal-body" style="padding: 0;">
-            <div style="padding: 16px; background: #f5f5f5; border-bottom: 1px solid #ddd;">
-              <div style="display: flex; align-items: center; justify-content: space-between;">
-                <div>
-                  <strong>${_t('autoAssign.confidenceScore')}:</strong>
-                  <span style="font-size: 18px; font-weight: bold; color: ${this.getScoreColor(this.confidenceScore)};">
-                    ${this.confidenceScore}/100
-                  </span>
-                  ${this.getScoreStars(this.confidenceScore)}
-                </div>
-                <div style="color: #666; font-size: 13px;">
-                  ${_t('autoAssign.channelsWillBeAssigned', {active: activeCount, total: channels.length})}
-                  ${this.skippedChannels.size > 0 ? ` (${_t('autoAssign.skippedCount', {count: this.skippedChannels.size})})` : ''}
-                </div>
-              </div>
-              <div style="margin-top: 8px; font-size: 12px; color: #888;">
-                ${_t('autoAssign.instructions')}
-              </div>
-            </div>
 
-            <div style="padding: 16px;">
-              ${channelsHTML}
-            </div>
+          <div class="aa-tabs-bar">
+            ${tabsHTML}
           </div>
-          <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; border-top: 1px solid #ddd;">
+
+          <div class="modal-body aa-body" id="aaTabContent">
+            ${this.renderTabContent(this.activeTab)}
+          </div>
+
+          <div class="modal-footer aa-footer">
             <button class="button button-secondary" onclick="autoAssignModalInstance.close()">
               ${_t('common.cancel')}
             </button>
-            <div id="previewControls" style="display: flex; gap: 8px; align-items: center;">
+            <div class="aa-footer-center">
               ${this.midiData ? `
-                <button class="button button-secondary" onclick="autoAssignModalInstance.previewOriginal()" title="${_t('autoAssign.previewOriginalTip')}">
-                  ${_t('autoAssign.previewOriginal')}
-                </button>
-                <button class="button button-secondary" onclick="autoAssignModalInstance.previewAdapted()" title="${_t('autoAssign.previewAdaptedTip')}">
-                  ${_t('autoAssign.previewAdapted')}
+                <button class="button button-secondary" onclick="autoAssignModalInstance.previewChannel(${this.activeTab})" title="${_t('autoAssign.previewChannelTip')}">
+                  ${_t('autoAssign.previewChannel', {num: this.activeTab + 1})}
                 </button>
                 <button class="button button-secondary" id="stopPreviewBtn" onclick="autoAssignModalInstance.stopPreview()" style="display: none;">
                   ${_t('autoAssign.stop')}
                 </button>
               ` : ''}
             </div>
-            <div style="display: flex; gap: 8px;">
+            <div class="aa-footer-right">
               <button class="button button-info" onclick="autoAssignModalInstance.quickAssign()" title="${_t('autoAssign.quickAssignTip')}">
                 ${_t('autoAssign.quickAssign')}
               </button>
-              <button class="button button-primary" onclick="autoAssignModalInstance.apply()">
-                ${_t('autoAssign.apply')}
+              <button class="button button-primary" onclick="autoAssignModalInstance.validateAndApply()">
+                ${_t('autoAssign.validateAndOpen')}
               </button>
             </div>
           </div>
@@ -237,105 +253,93 @@ class AutoAssignModal {
 
     document.body.insertAdjacentHTML('beforeend', html);
     this.modal = document.getElementById('autoAssignModal');
-
-    // Make instance globally accessible for event handlers
     window.autoAssignModalInstance = this;
 
-    // ESC key handler
     this._escHandler = (e) => { if (e.key === 'Escape') this.close(); };
     document.addEventListener('keydown', this._escHandler);
 
-    // Click overlay to close
     this.modal.addEventListener('click', (e) => {
       if (e.target === this.modal) this.close();
     });
   }
 
   /**
-   * Render channel statistics - uses stored channelAnalyses as fallback
+   * Switch to a different channel tab
    */
-  renderChannelStats(channel) {
-    // Try to get analysis from selectedAssignments first, fallback to stored analyses
-    const analysis = this.selectedAssignments[channel]?.channelAnalysis || this.channelAnalyses[channel];
-    if (!analysis) return '';
-
-    const noteRange = analysis.noteRange || {};
-    const polyphony = analysis.polyphony || {};
-
-    return `
-      <div style="background: #f0f8ff; padding: 8px 10px; border-radius: 4px; margin-bottom: 8px; font-size: 12px;">
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
-          <div>
-            <strong>${_t('autoAssign.noteRange')}:</strong><br>
-            ${noteRange.min != null ? `${noteRange.min} - ${noteRange.max} (${noteRange.max - noteRange.min} st)` : 'N/A'}
-          </div>
-          <div>
-            <strong>${_t('autoAssign.polyphony')}:</strong><br>
-            ${polyphony.max != null ? `Max: ${polyphony.max}${polyphony.avg !== undefined ? ` | Avg: ${polyphony.avg.toFixed(1)}` : ''}` : 'N/A'}
-          </div>
-          <div>
-            <strong>${_t('autoAssign.type')}:</strong><br>
-            ${escapeHtml(analysis.estimatedType)} ${analysis.typeConfidence ? `(${analysis.typeConfidence}%)` : ''}
-          </div>
-        </div>
-        ${noteRange.min != null ? this.renderMiniPiano(noteRange) : ''}
-      </div>
-    `;
-  }
-
-  /**
-   * Render mini piano visualization
-   */
-  renderMiniPiano(noteRange) {
-    return `
-      <div style="margin-top: 6px;">
-        <div style="display: flex; align-items: center; gap: 4px; font-size: 10px;">
-          <span>${_t('autoAssign.range')}:</span>
-          <div style="flex: 1; height: 16px; background: linear-gradient(to right, #ddd, #4CAF50, #ddd); border-radius: 3px; position: relative;">
-            <div style="position: absolute; left: 10%; width: 80%; height: 100%; background: #4CAF50; opacity: 0.5; border-radius: 3px;"></div>
-          </div>
-          <span>${noteRange.min} - ${noteRange.max}</span>
-        </div>
-      </div>
-    `;
-  }
-
-  /**
-   * Render suggestions for a single channel
-   */
-  renderChannelSuggestions(channel) {
-    const options = this.suggestions[channel] || [];
-    const isSkipped = this.skippedChannels.has(channel);
-    const selectedDeviceId = this.selectedAssignments[channel]?.deviceId;
-
-    if (options.length === 0) {
-      return `
-        <div class="channel-suggestions" style="margin-bottom: 20px; padding: 16px; background: #fff; border: 1px solid #ddd; border-radius: 8px;">
-          <h3 style="margin: 0 0 10px 0; color: #333; font-size: 15px;">
-            ${_t('autoAssign.channel', {num: channel + 1})}
-            ${channel === 9 ? `<span style="color: #888; font-size: 13px;">(${_t('autoAssign.drums')})</span>` : ''}
-          </h3>
-          ${this.renderChannelStats(channel)}
-          <p style="color: #999; font-size: 13px;">${_t('autoAssign.noCompatible')}</p>
-        </div>
-      `;
+  switchTab(channel) {
+    this.activeTab = channel;
+    // Update tab active states
+    const tabs = this.modal.querySelectorAll('.aa-tab');
+    tabs.forEach(tab => {
+      const ch = parseInt(tab.dataset.channel);
+      tab.classList.toggle('active', ch === channel);
+    });
+    // Update content
+    const content = document.getElementById('aaTabContent');
+    if (content) {
+      content.innerHTML = this.renderTabContent(channel);
     }
+    // Update preview button
+    this.updatePreviewButton(channel);
+  }
 
-    // Skip/enable toggle for this channel
-    const skipToggle = `
-      <div style="margin-bottom: 10px; padding: 8px 10px; background: ${isSkipped ? '#fff3f3' : '#f0fff0'}; border: 1px solid ${isSkipped ? '#ffcccc' : '#c8e6c9'}; border-radius: 6px;">
-        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+  /**
+   * Update preview button for current channel
+   */
+  updatePreviewButton(channel) {
+    const footer = this.modal.querySelector('.aa-footer-center');
+    if (!footer || !this.midiData) return;
+    footer.innerHTML = `
+      <button class="button button-secondary" onclick="autoAssignModalInstance.previewChannel(${channel})" title="${_t('autoAssign.previewChannelTip')}">
+        ${_t('autoAssign.previewChannel', {num: channel + 1})}
+      </button>
+      <button class="button button-secondary" id="stopPreviewBtn" onclick="autoAssignModalInstance.stopPreview()" style="display: none;">
+        ${_t('autoAssign.stop')}
+      </button>
+    `;
+  }
+
+  /**
+   * Render content for a single channel tab
+   */
+  renderTabContent(channel) {
+    const ch = String(channel);
+    const options = this.suggestions[ch] || [];
+    const isSkipped = this.skippedChannels.has(channel);
+    const selectedDeviceId = this.selectedAssignments[ch]?.deviceId;
+    const analysis = this.selectedAssignments[ch]?.channelAnalysis || this.channelAnalyses[ch];
+    const adaptation = this.adaptationSettings[ch] || {};
+
+    // Channel stats section
+    const statsHTML = this.renderChannelStats(channel, analysis);
+
+    // Skip toggle
+    const skipHTML = `
+      <div class="aa-skip-toggle ${isSkipped ? 'skipped' : 'active'}">
+        <label>
           <input type="checkbox"
                  ${isSkipped ? '' : 'checked'}
-                 onchange="autoAssignModalInstance.toggleChannel(${channel}, this.checked)"
-                 style="cursor: pointer; width: 16px; height: 16px;">
-          <span style="font-size: 13px; font-weight: 600; color: ${isSkipped ? '#cc0000' : '#2e7d32'};">
-            ${isSkipped ? _t('autoAssign.channelSkipped') : _t('autoAssign.assignChannel')}
-          </span>
+                 onchange="autoAssignModalInstance.toggleChannel(${channel}, this.checked)">
+          <span>${isSkipped ? _t('autoAssign.channelSkipped') : _t('autoAssign.assignChannel')}</span>
         </label>
       </div>
     `;
 
+    if (options.length === 0) {
+      return `
+        <div class="aa-tab-content">
+          <div class="aa-channel-header">
+            <h3>${_t('autoAssign.channel')} ${channel + 1}
+              ${channel === 9 ? `<span class="aa-drum-badge">(MIDI 10 - ${_t('autoAssign.drums')})</span>` : ''}
+            </h3>
+          </div>
+          ${statsHTML}
+          <p class="aa-no-compatible">${_t('autoAssign.noCompatible')}</p>
+        </div>
+      `;
+    }
+
+    // Instrument options
     const optionsHTML = isSkipped ? '' : options.map((option, index) => {
       const instrument = option.instrument;
       const compat = option.compatibility;
@@ -344,168 +348,180 @@ class AutoAssignModal {
       const escapedDeviceId = escapeHtml(instrument.device_id);
 
       return `
-        <div class="instrument-option ${isSelected ? 'selected' : ''}"
+        <div class="aa-instrument-option ${isSelected ? 'selected' : ''}"
              data-channel="${channel}"
              data-device-id="${escapedDeviceId}"
-             onclick="autoAssignModalInstance.selectInstrument(${channel}, this.dataset.deviceId)"
-             style="padding: 10px 12px; margin-bottom: 6px; border: 2px solid ${isSelected ? '#4CAF50' : '#ddd'};
-                    border-radius: 6px; cursor: pointer; background: ${isSelected ? '#f0fff0' : '#fff'};
-                    transition: all 0.2s;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="flex: 1;">
-              <div style="font-weight: bold; font-size: 14px; margin-bottom: 3px;">
+             onclick="autoAssignModalInstance.selectInstrument(${channel}, '${escapedDeviceId.replace(/'/g, "\\'")}')">
+          <div class="aa-instrument-main">
+            <div class="aa-instrument-info">
+              <div class="aa-instrument-name">
                 ${escapedName}
+                ${index === 0 ? `<span class="aa-recommended">${_t('autoAssign.recommended')}</span>` : ''}
               </div>
-              <div style="color: #666; font-size: 12px; margin-bottom: 4px;">
+              <div class="aa-instrument-details">
                 ${this.formatInstrumentInfo(instrument, compat)}
               </div>
-              ${compat.info ? `
-                <div style="color: #4CAF50; font-size: 11px;">
-                  ${this.formatInfo(compat.info)}
-                </div>
-              ` : ''}
+              ${compat.info ? `<div class="aa-instrument-compat-info">${this.formatInfo(compat.info)}</div>` : ''}
               ${compat.issues && compat.issues.length > 0 ? `
-                <div style="color: #ff9800; font-size: 11px; margin-top: 2px;">
+                <div class="aa-instrument-issues">
                   ${compat.issues.map(i => escapeHtml(i.message)).join(' &bull; ')}
                 </div>
               ` : ''}
             </div>
-            <div style="text-align: right; margin-left: 12px;">
-              <div style="font-size: 20px; font-weight: bold; color: ${this.getScoreColor(compat.score)};">
-                ${compat.score}
-              </div>
-              <div style="font-size: 10px; color: #666;">
-                ${this.getScoreStars(compat.score)}
-              </div>
-              ${index === 0 ? `<div style="font-size: 10px; color: #4CAF50; margin-top: 2px;">${_t('autoAssign.recommended')}</div>` : ''}
+            <div class="aa-instrument-score">
+              <span class="aa-score-value" style="color: ${this.getScoreColor(compat.score)}">${compat.score}</span>
+              <span class="aa-score-stars">${this.getScoreStars(compat.score)}</span>
             </div>
           </div>
         </div>
       `;
     }).join('');
 
-    // Add octave wrapping toggle if available and channel is not skipped
-    const assignment = this.selectedAssignments[channel];
-    const octaveWrappingToggle = !isSkipped && assignment && assignment.octaveWrappingInfo ? `
-      <div style="margin-top: 10px; padding: 8px; background: #fff9e6; border: 1px solid #ffd700; border-radius: 4px;">
-        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-          <input type="checkbox"
-                 id="octaveWrapping_${channel}"
-                 ${assignment.octaveWrappingEnabled ? 'checked' : ''}
-                 onchange="autoAssignModalInstance.toggleOctaveWrapping(${channel}, this.checked)"
-                 style="cursor: pointer;">
-          <span style="font-size: 12px;">
-            <strong>${_t('autoAssign.enableOctaveWrapping')}</strong><br>
-            <span style="color: #666; font-size: 11px;">${escapeHtml(assignment.octaveWrappingInfo)}</span>
-          </span>
-        </label>
-      </div>
-    ` : '';
-
-    // Add preview button for this channel (only if not skipped)
-    const previewButton = !isSkipped && this.midiData ? `
-      <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd;">
-        <button class="button button-secondary"
-                onclick="autoAssignModalInstance.previewChannel(${channel})"
-                style="font-size: 12px; padding: 6px 10px;">
-          ${_t('autoAssign.previewChannel', {num: channel + 1})}
-        </button>
-      </div>
-    ` : '';
+    // Adaptation controls (only if not skipped and instrument selected)
+    const adaptationHTML = (!isSkipped && selectedDeviceId) ? this.renderAdaptationControls(channel, adaptation) : '';
 
     return `
-      <div class="channel-suggestions" style="margin-bottom: 20px; padding: 16px; background: #fafafa; border: 1px solid ${isSkipped ? '#e0e0e0' : '#ddd'}; border-radius: 8px; ${isSkipped ? 'opacity: 0.7;' : ''}">
-        <h3 style="margin: 0 0 10px 0; color: #333; font-size: 15px;">
-          ${_t('autoAssign.channel', {num: channel + 1})}
-          ${channel === 9 ? `<span style="color: #888; font-size: 13px;">(MIDI 10 - ${_t('autoAssign.drums')})</span>` : ''}
-          ${isSkipped ? `<span style="color: #cc0000; font-size: 13px; margin-left: 8px;">[${_t('autoAssign.skippedLabel')}]</span>` : ''}
-        </h3>
-        ${this.renderChannelStats(channel)}
-        ${skipToggle}
-        ${optionsHTML}
-        ${octaveWrappingToggle}
-        ${previewButton}
+      <div class="aa-tab-content">
+        <div class="aa-channel-header">
+          <h3>${_t('autoAssign.channel')} ${channel + 1}
+            ${channel === 9 ? `<span class="aa-drum-badge">(MIDI 10 - ${_t('autoAssign.drums')})</span>` : ''}
+            ${isSkipped ? `<span class="aa-skipped-badge">[${_t('autoAssign.skippedLabel')}]</span>` : ''}
+          </h3>
+        </div>
+        ${statsHTML}
+        ${skipHTML}
+        <div class="aa-instruments-list">
+          ${optionsHTML}
+        </div>
+        ${adaptationHTML}
       </div>
     `;
   }
 
   /**
-   * Format instrument info line
+   * Render channel statistics
    */
-  formatInstrumentInfo(instrument, compat) {
-    const parts = [];
+  renderChannelStats(channel, analysis) {
+    if (!analysis) return '';
 
-    if (instrument.gm_program !== null && instrument.gm_program !== undefined) {
-      parts.push(`GM ${instrument.gm_program}`);
-    }
+    const noteRange = analysis.noteRange || {};
+    const polyphony = analysis.polyphony || {};
 
-    if (compat.transposition && compat.transposition.octaves !== 0) {
-      const direction = compat.transposition.octaves > 0 ? 'up' : 'down';
-      parts.push(`${Math.abs(compat.transposition.octaves)} ${_t('common.octave')}(s) ${direction}`);
-    } else {
-      parts.push(_t('autoAssign.noTransposition'));
-    }
-
-    if (instrument.note_range_min !== null && instrument.note_range_max !== null) {
-      parts.push(`${_t('autoAssign.range')}: ${instrument.note_range_min}-${instrument.note_range_max}`);
-    }
-
-    return parts.join(' &bull; ');
+    return `
+      <div class="aa-channel-stats">
+        <div class="aa-stat">
+          <strong>${_t('autoAssign.noteRange')}:</strong>
+          ${noteRange.min != null ? `${noteRange.min} - ${noteRange.max} (${noteRange.max - noteRange.min} st)` : 'N/A'}
+        </div>
+        <div class="aa-stat">
+          <strong>${_t('autoAssign.polyphony')}:</strong>
+          ${polyphony.max != null ? `Max: ${polyphony.max}${polyphony.avg !== undefined ? ` | Avg: ${polyphony.avg.toFixed(1)}` : ''}` : 'N/A'}
+        </div>
+        <div class="aa-stat">
+          <strong>${_t('autoAssign.type')}:</strong>
+          ${escapeHtml(analysis.estimatedType || 'N/A')} ${analysis.typeConfidence ? `(${analysis.typeConfidence}%)` : ''}
+        </div>
+      </div>
+    `;
   }
 
   /**
-   * Get color based on score
+   * Render adaptation controls for a channel
    */
-  getScoreColor(score) {
-    if (score >= 80) return '#4CAF50'; // Green
-    if (score >= 60) return '#8BC34A'; // Light green
-    if (score >= 40) return '#FF9800'; // Orange
-    return '#F44336'; // Red
+  renderAdaptationControls(channel, adaptation) {
+    const ch = String(channel);
+    const assignment = this.selectedAssignments[ch];
+    const semitones = adaptation.transpositionSemitones || 0;
+    const hasOctaveWrapping = assignment && assignment.octaveWrappingInfo;
+
+    return `
+      <div class="aa-adaptation-section">
+        <h4>${_t('autoAssign.adaptationTitle')}</h4>
+
+        <div class="aa-adaptation-controls">
+          <div class="aa-control-group">
+            <label>${_t('autoAssign.transposition')}</label>
+            <div class="aa-transposition-control">
+              <button class="aa-btn-sm" onclick="autoAssignModalInstance.adjustTransposition(${channel}, -12)">-Oct</button>
+              <button class="aa-btn-sm" onclick="autoAssignModalInstance.adjustTransposition(${channel}, -1)">-1</button>
+              <span class="aa-transposition-value" id="transpo_${channel}">
+                ${semitones > 0 ? '+' : ''}${semitones} st
+              </span>
+              <button class="aa-btn-sm" onclick="autoAssignModalInstance.adjustTransposition(${channel}, +1)">+1</button>
+              <button class="aa-btn-sm" onclick="autoAssignModalInstance.adjustTransposition(${channel}, +12)">+Oct</button>
+              <button class="aa-btn-sm aa-btn-reset" onclick="autoAssignModalInstance.resetTransposition(${channel})">
+                ${_t('autoAssign.reset')}
+              </button>
+            </div>
+          </div>
+
+          ${hasOctaveWrapping ? `
+            <div class="aa-control-group">
+              <label>
+                <input type="checkbox"
+                       id="octaveWrapping_${channel}"
+                       ${adaptation.octaveWrappingEnabled ? 'checked' : ''}
+                       onchange="autoAssignModalInstance.toggleOctaveWrapping(${channel}, this.checked)">
+                ${_t('autoAssign.enableOctaveWrapping')}
+              </label>
+              <div class="aa-control-hint">${escapeHtml(assignment.octaveWrappingInfo)}</div>
+            </div>
+          ` : ''}
+
+          ${channel === 9 ? `
+            <div class="aa-control-group">
+              <label>${_t('autoAssign.noteOffset')}</label>
+              <div class="aa-transposition-control">
+                <button class="aa-btn-sm" onclick="autoAssignModalInstance.adjustNoteOffset(${channel}, -1)">-1</button>
+                <span class="aa-transposition-value" id="noteOffset_${channel}">
+                  ${(adaptation.noteOffset || 0) > 0 ? '+' : ''}${adaptation.noteOffset || 0}
+                </span>
+                <button class="aa-btn-sm" onclick="autoAssignModalInstance.adjustNoteOffset(${channel}, +1)">+1</button>
+                <button class="aa-btn-sm aa-btn-reset" onclick="autoAssignModalInstance.resetNoteOffset(${channel})">
+                  ${_t('autoAssign.reset')}
+                </button>
+              </div>
+              <div class="aa-control-hint">${_t('autoAssign.noteOffsetHint')}</div>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
   }
 
-  /**
-   * Get star rating based on score
-   */
-  getScoreStars(score) {
-    const filled = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
-    return '<span style="letter-spacing: 2px;">' + '&#9733;'.repeat(filled) + '&#9734;'.repeat(5 - filled) + '</span>';
-  }
+  // ========================================================================
+  // ACTIONS
+  // ========================================================================
 
   /**
-   * Toggle a channel on/off (skip or enable assignment)
+   * Toggle channel on/off
    */
   toggleChannel(channel, enabled) {
     if (enabled) {
       this.skippedChannels.delete(channel);
-      // Restore the auto-selection if no manual selection exists
       if (!this.selectedAssignments[channel] && this.autoSelection[channel]) {
         this.selectedAssignments[channel] = JSON.parse(JSON.stringify(this.autoSelection[channel]));
       }
     } else {
       this.skippedChannels.add(channel);
     }
-    // Re-render
-    this.showSuggestions();
+    this.refreshCurrentTab();
+    this.refreshTabBar();
   }
 
   /**
    * Select an instrument for a channel
    */
   selectInstrument(channel, deviceId) {
-    // Find the selected option
-    const options = this.suggestions[channel] || [];
+    const ch = String(channel);
+    const options = this.suggestions[ch] || [];
     const selectedOption = options.find(opt => opt.instrument.device_id === deviceId);
 
-    if (!selectedOption) {
-      console.error(`Instrument not found: ${deviceId}`);
-      return;
-    }
+    if (!selectedOption) return;
 
-    // Preserve channelAnalysis from existing assignment or from stored analyses
-    const existingAnalysis = this.selectedAssignments[channel]?.channelAnalysis || this.channelAnalyses[channel] || null;
+    const existingAnalysis = this.selectedAssignments[ch]?.channelAnalysis || this.channelAnalyses[ch] || null;
 
-    // Update selected assignments
-    this.selectedAssignments[channel] = {
+    this.selectedAssignments[ch] = {
       deviceId: deviceId,
       instrumentId: selectedOption.instrument.id,
       instrumentName: selectedOption.instrument.name,
@@ -521,27 +537,142 @@ class AutoAssignModal {
       channelAnalysis: existingAnalysis
     };
 
-    // Ensure channel is not skipped when user selects an instrument
-    this.skippedChannels.delete(channel);
+    // Update adaptation settings with new transposition
+    this.adaptationSettings[ch] = {
+      ...this.adaptationSettings[ch],
+      transpositionSemitones: selectedOption.compatibility.transposition?.semitones || 0,
+      octaveWrappingEnabled: selectedOption.compatibility.octaveWrappingEnabled || false
+    };
 
-    // Re-render suggestions to update selection
-    this.showSuggestions();
+    this.skippedChannels.delete(channel);
+    this.refreshCurrentTab();
+    this.refreshTabBar();
+  }
+
+  /**
+   * Adjust transposition for a channel
+   */
+  adjustTransposition(channel, delta) {
+    const ch = String(channel);
+    if (!this.adaptationSettings[ch]) return;
+    this.adaptationSettings[ch].transpositionSemitones = (this.adaptationSettings[ch].transpositionSemitones || 0) + delta;
+
+    // Clamp to reasonable range
+    this.adaptationSettings[ch].transpositionSemitones = Math.max(-48, Math.min(48, this.adaptationSettings[ch].transpositionSemitones));
+
+    const el = document.getElementById(`transpo_${channel}`);
+    if (el) {
+      const val = this.adaptationSettings[ch].transpositionSemitones;
+      el.textContent = `${val > 0 ? '+' : ''}${val} st`;
+    }
+  }
+
+  /**
+   * Reset transposition to suggested value
+   */
+  resetTransposition(channel) {
+    const ch = String(channel);
+    const assignment = this.selectedAssignments[ch];
+    this.adaptationSettings[ch].transpositionSemitones = assignment?.transposition?.semitones || 0;
+    const el = document.getElementById(`transpo_${channel}`);
+    if (el) {
+      const val = this.adaptationSettings[ch].transpositionSemitones;
+      el.textContent = `${val > 0 ? '+' : ''}${val} st`;
+    }
+  }
+
+  /**
+   * Adjust note offset for drums
+   */
+  adjustNoteOffset(channel, delta) {
+    const ch = String(channel);
+    if (!this.adaptationSettings[ch]) return;
+    this.adaptationSettings[ch].noteOffset = (this.adaptationSettings[ch].noteOffset || 0) + delta;
+    this.adaptationSettings[ch].noteOffset = Math.max(-24, Math.min(24, this.adaptationSettings[ch].noteOffset));
+
+    const el = document.getElementById(`noteOffset_${channel}`);
+    if (el) {
+      const val = this.adaptationSettings[ch].noteOffset;
+      el.textContent = `${val > 0 ? '+' : ''}${val}`;
+    }
+  }
+
+  /**
+   * Reset note offset
+   */
+  resetNoteOffset(channel) {
+    const ch = String(channel);
+    this.adaptationSettings[ch].noteOffset = 0;
+    const el = document.getElementById(`noteOffset_${channel}`);
+    if (el) el.textContent = '0';
   }
 
   /**
    * Toggle octave wrapping for a channel
    */
   toggleOctaveWrapping(channel, enabled) {
-    if (this.selectedAssignments[channel]) {
-      this.selectedAssignments[channel].octaveWrappingEnabled = enabled;
-      console.log(`Octave wrapping for channel ${channel}: ${enabled ? 'enabled' : 'disabled'}`);
+    const ch = String(channel);
+    if (this.selectedAssignments[ch]) {
+      this.selectedAssignments[ch].octaveWrappingEnabled = enabled;
+    }
+    if (this.adaptationSettings[ch]) {
+      this.adaptationSettings[ch].octaveWrappingEnabled = enabled;
     }
   }
 
   /**
-   * Apply the selected assignments (only non-skipped channels)
+   * Refresh current tab content without full re-render
    */
-  async apply() {
+  refreshCurrentTab() {
+    const content = document.getElementById('aaTabContent');
+    if (content) {
+      content.innerHTML = this.renderTabContent(this.activeTab);
+    }
+  }
+
+  /**
+   * Refresh tab bar (scores, skip states)
+   */
+  refreshTabBar() {
+    const tabs = this.modal.querySelectorAll('.aa-tab');
+    tabs.forEach(tab => {
+      const ch = parseInt(tab.dataset.channel);
+      const isSkipped = this.skippedChannels.has(ch);
+      const assignment = this.selectedAssignments[String(ch)];
+      const score = assignment?.score || 0;
+
+      tab.classList.toggle('skipped', isSkipped);
+
+      const statusEl = tab.querySelector('.aa-tab-status');
+      if (statusEl) {
+        if (isSkipped) {
+          statusEl.textContent = '—';
+          statusEl.className = 'aa-tab-status skipped';
+          statusEl.style.color = '';
+        } else {
+          statusEl.textContent = score;
+          statusEl.className = 'aa-tab-status';
+          statusEl.style.color = this.getScoreColor(score);
+        }
+      }
+    });
+
+    // Update channel count in header
+    const activeCount = this.channels.length - this.skippedChannels.size;
+    const countEl = this.modal.querySelector('.aa-channel-count');
+    if (countEl) {
+      countEl.textContent = _t('autoAssign.channelsWillBeAssigned', {active: activeCount, total: this.channels.length});
+    }
+  }
+
+  // ========================================================================
+  // APPLY & VALIDATE
+  // ========================================================================
+
+  /**
+   * Validate all channels and apply: create adapted file, close modals, open editor
+   */
+  async validateAndApply() {
     // Filter out skipped channels
     const activeAssignments = {};
     for (const [channel, assignment] of Object.entries(this.selectedAssignments)) {
@@ -558,22 +689,41 @@ class AutoAssignModal {
     // Show applying state
     if (this.modal) {
       const footer = this.modal.querySelector('.modal-footer');
-      footer.innerHTML = `
-        <div style="width: 100%; text-align: center;">
-          <div class="spinner" style="display: inline-block;"></div>
-          <p style="margin-top: 10px;">${_t('autoAssign.applying')}</p>
-        </div>
-      `;
+      if (footer) {
+        footer.innerHTML = `
+          <div style="width: 100%; text-align: center;">
+            <div class="spinner" style="display: inline-block;"></div>
+            <p style="margin-top: 10px;">${_t('autoAssign.applying')}</p>
+          </div>
+        `;
+      }
     }
 
     try {
-      // Prepare assignments with octave wrapping if enabled
+      // Prepare assignments with user overrides
       const preparedAssignments = {};
       for (const [channel, assignment] of Object.entries(activeAssignments)) {
         preparedAssignments[channel] = { ...assignment };
 
+        const adaptation = this.adaptationSettings[channel] || {};
+
+        // Override transposition with user's value
+        if (adaptation.transpositionSemitones !== undefined) {
+          preparedAssignments[channel].transposition = {
+            ...(assignment.transposition || {}),
+            semitones: adaptation.transpositionSemitones
+          };
+        }
+
+        // Add note offset for drums
+        if (adaptation.noteOffset && adaptation.noteOffset !== 0) {
+          const baseRemapping = preparedAssignments[channel].noteRemapping || {};
+          // Apply offset to all notes
+          preparedAssignments[channel].noteOffset = adaptation.noteOffset;
+        }
+
         // Combine noteRemapping with octaveWrapping if enabled
-        if (assignment.octaveWrappingEnabled && assignment.octaveWrapping) {
+        if (adaptation.octaveWrappingEnabled && assignment.octaveWrapping) {
           const baseRemapping = assignment.noteRemapping || {};
           preparedAssignments[channel].noteRemapping = {
             ...baseRemapping,
@@ -582,7 +732,7 @@ class AutoAssignModal {
         }
       }
 
-      // Apply assignments
+      // Apply assignments and create adapted file
       const response = await this.apiClient.sendCommand('apply_assignments', {
         originalFileId: this.fileId,
         assignments: preparedAssignments,
@@ -591,47 +741,53 @@ class AutoAssignModal {
 
       if (!response.success) {
         alert(_t('autoAssign.applyFailed') + ': ' + (response.error || ''));
-        this.close();
+        this.showTabbedUI(); // Re-show the UI
         return;
       }
 
-      // Success!
-      const skippedMsg = this.skippedChannels.size > 0
-        ? `\n${this.skippedChannels.size} ${_t('autoAssign.channelsSkipped')}`
-        : '';
-      const notesChanged = response.stats?.notesChanged || 0;
-      alert(`${_t('autoAssign.applySuccess')}\n\n${response.filename}\n${notesChanged} ${_t('autoAssign.notesTransposed')}${skippedMsg}`);
-
+      // Close this auto-assign modal
       this.close();
 
-      // Reload file list or notify parent
-      if (window.midiFileManager) {
-        window.midiFileManager.refreshFileList();
+      // Close the current editor modal if it exists
+      if (this.editorRef && typeof this.editorRef.doClose === 'function') {
+        this.editorRef.doClose();
+      }
+
+      // Open the adapted file in a new editor
+      if (response.adaptedFileId && window.MidiEditorModal) {
+        const newEditor = new window.MidiEditorModal(this.apiClient);
+        newEditor.open(response.adaptedFileId);
+      } else if (response.filename) {
+        // Fallback: refresh file list so user can open it
+        if (window.midiFileManager) {
+          window.midiFileManager.refreshFileList();
+        }
+        const skippedMsg = this.skippedChannels.size > 0
+          ? `\n${this.skippedChannels.size} ${_t('autoAssign.channelsSkipped')}`
+          : '';
+        const notesChanged = response.stats?.notesChanged || 0;
+        alert(`${_t('autoAssign.applySuccess')}\n\n${response.filename}\n${notesChanged} ${_t('autoAssign.notesTransposed')}${skippedMsg}`);
       }
 
     } catch (error) {
       alert(_t('autoAssign.applyFailed') + ': ' + error.message);
-      this.close();
+      this.showTabbedUI(); // Re-show the UI
     }
   }
 
   /**
-   * Quick assign: apply auto-selection immediately without manual review
+   * Quick assign: apply auto-selection immediately
    */
   async quickAssign() {
-    if (!confirm(_t('autoAssign.quickAssignConfirm'))) {
-      return;
-    }
-
-    // Reset skipped channels for quick assign
+    if (!confirm(_t('autoAssign.quickAssignConfirm'))) return;
     this.skippedChannels.clear();
-    // Use auto-selection (already set in this.selectedAssignments)
-    await this.apply();
+    await this.validateAndApply();
   }
 
-  /**
-   * Preview a specific channel with selected transposition
-   */
+  // ========================================================================
+  // PREVIEW
+  // ========================================================================
+
   async previewChannel(channel) {
     if (!this.audioPreview || !this.midiData) {
       alert(_t('autoAssign.previewNotAvailable'));
@@ -639,31 +795,25 @@ class AutoAssignModal {
     }
 
     try {
-      // Stop any existing playback
       this.stopPreview();
-
-      // Get transposition for this channel
-      const assignment = this.selectedAssignments[channel];
+      const ch = String(channel);
+      const assignment = this.selectedAssignments[ch];
+      const adaptation = this.adaptationSettings[ch] || {};
       const transpositions = {};
 
-      if (assignment && assignment.transposition) {
-        // Combine noteRemapping with octaveWrapping if enabled
+      if (assignment) {
         let noteRemapping = assignment.noteRemapping || {};
-
-        if (assignment.octaveWrappingEnabled && assignment.octaveWrapping) {
+        if (adaptation.octaveWrappingEnabled && assignment.octaveWrapping) {
           noteRemapping = { ...noteRemapping, ...assignment.octaveWrapping };
         }
 
         transpositions[channel] = {
-          semitones: assignment.transposition.semitones || 0,
+          semitones: adaptation.transpositionSemitones || 0,
           noteRemapping: Object.keys(noteRemapping).length > 0 ? noteRemapping : null
         };
       }
 
-      // Preview 15 seconds starting from beginning
       await this.audioPreview.previewAdapted(this.midiData, transpositions, 0, 15);
-
-      // Show stop button
       this.showStopButton();
     } catch (error) {
       console.error('Preview error:', error);
@@ -671,114 +821,60 @@ class AutoAssignModal {
     }
   }
 
-  /**
-   * Preview original MIDI file (no transpositions)
-   */
-  async previewOriginal() {
-    if (!this.audioPreview || !this.midiData) {
-      alert(_t('autoAssign.previewNotAvailable'));
-      return;
-    }
-
-    try {
-      // Stop any existing playback
-      this.stopPreview();
-
-      // Preview 15 seconds of original
-      await this.audioPreview.previewOriginal(this.midiData, 0, 15);
-
-      // Show stop button
-      this.showStopButton();
-    } catch (error) {
-      console.error('Preview error:', error);
-      alert(_t('autoAssign.previewFailed') + ': ' + error.message);
-    }
-  }
-
-  /**
-   * Preview adapted MIDI with all transpositions
-   */
-  async previewAdapted() {
-    if (!this.audioPreview || !this.midiData) {
-      alert(_t('autoAssign.previewNotAvailable'));
-      return;
-    }
-
-    try {
-      // Stop any existing playback
-      this.stopPreview();
-
-      // Build transpositions object from all selected assignments (excluding skipped)
-      const transpositions = {};
-
-      for (const [channel, assignment] of Object.entries(this.selectedAssignments)) {
-        const channelNum = parseInt(channel);
-        if (this.skippedChannels.has(channelNum)) continue;
-
-        if (assignment && assignment.transposition) {
-          // Combine noteRemapping with octaveWrapping if enabled
-          let noteRemapping = assignment.noteRemapping || {};
-
-          if (assignment.octaveWrappingEnabled && assignment.octaveWrapping) {
-            noteRemapping = { ...noteRemapping, ...assignment.octaveWrapping };
-          }
-
-          transpositions[channelNum] = {
-            semitones: assignment.transposition.semitones || 0,
-            noteRemapping: Object.keys(noteRemapping).length > 0 ? noteRemapping : null
-          };
-        }
-      }
-
-      // Preview 15 seconds with all transpositions
-      await this.audioPreview.previewAdapted(this.midiData, transpositions, 0, 15);
-
-      // Show stop button
-      this.showStopButton();
-    } catch (error) {
-      console.error('Preview error:', error);
-      alert(_t('autoAssign.previewFailed') + ': ' + error.message);
-    }
-  }
-
-  /**
-   * Stop audio preview
-   */
   stopPreview() {
-    if (this.audioPreview) {
-      this.audioPreview.stop();
-    }
+    if (this.audioPreview) this.audioPreview.stop();
     this.hideStopButton();
   }
 
-  /**
-   * Show stop button in preview controls
-   */
   showStopButton() {
-    const stopBtn = document.getElementById('stopPreviewBtn');
-    if (stopBtn) {
-      stopBtn.style.display = 'inline-block';
-    }
+    const btn = document.getElementById('stopPreviewBtn');
+    if (btn) btn.style.display = 'inline-block';
   }
 
-  /**
-   * Hide stop button in preview controls
-   */
   hideStopButton() {
-    const stopBtn = document.getElementById('stopPreviewBtn');
-    if (stopBtn) {
-      stopBtn.style.display = 'none';
+    const btn = document.getElementById('stopPreviewBtn');
+    if (btn) btn.style.display = 'none';
+  }
+
+  // ========================================================================
+  // UTILITIES
+  // ========================================================================
+
+  formatInstrumentInfo(instrument, compat) {
+    const parts = [];
+    if (instrument.gm_program !== null && instrument.gm_program !== undefined) {
+      parts.push(`GM ${instrument.gm_program}`);
     }
+    if (compat.transposition && compat.transposition.octaves !== 0) {
+      const direction = compat.transposition.octaves > 0 ? 'up' : 'down';
+      parts.push(`${Math.abs(compat.transposition.octaves)} ${_t('common.octave')}(s) ${direction}`);
+    } else {
+      parts.push(_t('autoAssign.noTransposition'));
+    }
+    if (instrument.note_range_min !== null && instrument.note_range_max !== null) {
+      parts.push(`${_t('autoAssign.range')}: ${instrument.note_range_min}-${instrument.note_range_max}`);
+    }
+    return parts.join(' &bull; ');
+  }
+
+  getScoreColor(score) {
+    if (score >= 80) return '#4CAF50';
+    if (score >= 60) return '#8BC34A';
+    if (score >= 40) return '#FF9800';
+    return '#F44336';
+  }
+
+  getScoreStars(score) {
+    const filled = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
+    return '<span class="aa-stars">' + '&#9733;'.repeat(filled) + '&#9734;'.repeat(5 - filled) + '</span>';
   }
 
   /**
    * Close the modal
    */
   close() {
-    // Stop any audio preview
     this.stopPreview();
 
-    // Clean up ESC handler
     if (this._escHandler) {
       document.removeEventListener('keydown', this._escHandler);
       this._escHandler = null;
@@ -789,13 +885,11 @@ class AutoAssignModal {
       this.modal = null;
     }
 
-    // Clean up audio preview
     if (this.audioPreview) {
       this.audioPreview.destroy();
       this.audioPreview = null;
     }
 
-    // Clean up global reference
     if (window.autoAssignModalInstance === this) {
       delete window.autoAssignModalInstance;
     }
