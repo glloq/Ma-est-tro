@@ -460,6 +460,12 @@ class DatabaseManager {
   getAllInstrumentCapabilities() { return this.instrumentDB.getAllInstrumentCapabilities(); }
   getInstrumentsWithCapabilities() { return this.instrumentDB.getInstrumentsWithCapabilities(); }
 
+  // Routing persistence
+  insertRouting(routing) { return this.instrumentDB.insertRouting(routing); }
+  getRoutingsByFile(fileId, includeDisabled) { return this.instrumentDB.getRoutingsByFile(fileId, includeDisabled); }
+  deleteRoutingsByFile(fileId) { return this.instrumentDB.deleteRoutingsByFile(fileId); }
+  getInstrumentsByDevice(deviceId) { return this.instrumentDB.getInstrumentsByDevice(deviceId); }
+
   // ==================== UTILITIES ====================
 
   close() {

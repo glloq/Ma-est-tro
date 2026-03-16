@@ -31,7 +31,7 @@ ALTER TABLE instruments_latency ADD COLUMN mac_address TEXT;
 -- Custom name set by user (independent from device name)
 ALTER TABLE instruments_latency ADD COLUMN custom_name TEXT;
 
--- Synchronization delay in microseconds (for multi-instrument sync)
+-- Synchronization delay in milliseconds (for multi-instrument sync)
 -- Positive values delay the instrument, negative values advance it
 ALTER TABLE instruments_latency ADD COLUMN sync_delay INTEGER DEFAULT 0
     CHECK(sync_delay BETWEEN -2147483648 AND 2147483647);

@@ -33,6 +33,7 @@ class MidiPlayer {
     this.mutedChannels = new Set(); // Muted channels
     this.pendingTimeouts = new Set(); // Track scheduled setTimeout IDs for cleanup
     this._syncDelayCache = new Map(); // Cache sync_delay per device to avoid DB queries per event
+    this._failedDevices = new Set(); // Track devices that failed to send (notify once per playback)
 
     this.app.logger.info('MidiPlayer initialized');
   }
@@ -181,6 +182,21 @@ class MidiPlayer {
             channel: event.channel !== undefined ? event.channel : 0,
             program: event.programNumber !== undefined ? event.programNumber : event.value
           });
+        } else if (event.type === 'channelAftertouch') {
+          this.events.push({
+            time: timeInSeconds,
+            type: event.type,
+            channel: event.channel !== undefined ? event.channel : 0,
+            value: event.value
+          });
+        } else if (event.type === 'noteAftertouch') {
+          this.events.push({
+            time: timeInSeconds,
+            type: event.type,
+            channel: event.channel !== undefined ? event.channel : 0,
+            note: event.noteNumber,
+            value: event.value
+          });
         }
       });
     });
@@ -301,6 +317,7 @@ class MidiPlayer {
     }
 
     this._syncDelayCache.clear(); // Refresh sync_delay cache on each playback start
+    this._failedDevices.clear(); // Reset failed device tracking
 
     this.startScheduler();
     this.broadcastStatus();
@@ -548,44 +565,69 @@ class MidiPlayer {
 
     // Use targetChannel from routing (remaps source channel to instrument's actual MIDI channel)
     const outChannel = routing.targetChannel;
+    let sendResult = true;
 
     if (event.type === 'noteOn') {
       // noteOn with velocity 0 is equivalent to noteOff per MIDI spec
       if (event.velocity === 0) {
-        device.sendMessage(routing.device, 'noteoff', {
+        sendResult = device.sendMessage(routing.device, 'noteoff', {
           channel: outChannel,
           note: event.note,
           velocity: 0
         });
-        return;
+      } else {
+        sendResult = device.sendMessage(routing.device, 'noteon', {
+          channel: outChannel,
+          note: event.note,
+          velocity: event.velocity
+        });
       }
-      device.sendMessage(routing.device, 'noteon', {
-        channel: outChannel,
-        note: event.note,
-        velocity: event.velocity
-      });
     } else if (event.type === 'noteOff') {
-      device.sendMessage(routing.device, 'noteoff', {
+      sendResult = device.sendMessage(routing.device, 'noteoff', {
         channel: outChannel,
         note: event.note,
         velocity: event.velocity
       });
     } else if (event.type === 'controller') {
-      device.sendMessage(routing.device, 'cc', {
+      sendResult = device.sendMessage(routing.device, 'cc', {
         channel: outChannel,
         controller: event.controller,
         value: event.value
       });
     } else if (event.type === 'pitchBend') {
-      device.sendMessage(routing.device, 'pitchbend', {
+      sendResult = device.sendMessage(routing.device, 'pitchbend', {
         channel: outChannel,
         value: event.value
       });
     } else if (event.type === 'programChange') {
-      device.sendMessage(routing.device, 'program', {
+      sendResult = device.sendMessage(routing.device, 'program', {
         channel: outChannel,
         program: event.program
       });
+    } else if (event.type === 'channelAftertouch') {
+      sendResult = device.sendMessage(routing.device, 'channel aftertouch', {
+        channel: outChannel,
+        pressure: event.value
+      });
+    } else if (event.type === 'noteAftertouch') {
+      sendResult = device.sendMessage(routing.device, 'poly aftertouch', {
+        channel: outChannel,
+        note: event.note,
+        pressure: event.value
+      });
+    }
+
+    // Notify once per device if send fails (device likely disconnected)
+    if (!sendResult && !this._failedDevices.has(routing.device)) {
+      this._failedDevices.add(routing.device);
+      this.app.logger.warn(`Device unreachable during playback: ${routing.device}`);
+      if (this.app.wsServer) {
+        this.app.wsServer.broadcast('playback_device_error', {
+          deviceId: routing.device,
+          channel: event.channel,
+          message: `Device ${routing.device} is unreachable`
+        });
+      }
     }
   }
 
