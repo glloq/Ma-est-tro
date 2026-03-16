@@ -831,11 +831,31 @@ class MidiEditorModal {
                 ccHeader.classList.remove('expanded');
                 ccHeader.classList.add('collapsed');
 
+                // Nettoyer les styles inline posés par le drag resize
+                // pour que les classes CSS (flex, min-height) reprennent le contrôle
+                ccSection.style.removeProperty('height');
+                ccSection.style.removeProperty('flex');
+                ccSection.style.removeProperty('min-height');
+
+                const notesSection = this.container?.querySelector('.notes-section');
+                if (notesSection) {
+                    notesSection.style.removeProperty('height');
+                    notesSection.style.removeProperty('flex');
+                    notesSection.style.removeProperty('min-height');
+                }
+
                 // Cacher la barre de resize
                 if (resizeBar) {
                     resizeBar.classList.remove('visible');
                     this.log('debug', 'Resize bar hidden');
                 }
+
+                // Redimensionner le piano roll pour occuper tout l'espace
+                requestAnimationFrame(() => {
+                    if (this.pianoRoll && typeof this.pianoRoll.redraw === 'function') {
+                        this.pianoRoll.redraw();
+                    }
+                });
             }
         }
 
