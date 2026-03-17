@@ -3,7 +3,7 @@
 
 **Date**: 2026-03-17
 **Auditor**: Claude Code (Automated Audit)
-**Status**: COMPLETED (4 rounds)
+**Status**: COMPLETED (5 rounds)
 
 ---
 
@@ -233,10 +233,10 @@ The `passesFilter()` method in MidiRouter handles:
 #### Overall
 | Status | Count |
 |--------|-------|
-| FIXED | 33 |
+| FIXED | 38 |
 | By Design | 1 |
 | Noted (non-critical, deferred) | 6 |
-| **Total issues found** | **40** |
+| **Total issues found** | **45** |
 
 ### Files Modified
 1. `src/midi/MidiRouter.js` - EventBus listener leak fix
@@ -277,6 +277,11 @@ The `passesFilter()` method in MidiRouter handles:
 | R9 | Medium | MidiUtils: createProgramChange uses 'number' key but transports expect 'program' | FIXED |
 | R10 | Medium | JsonValidator: duplicate case 'latency_set' makes latency validation dead code | FIXED |
 | R11 | Minor | CustomMidiParser: null.toString(16) crash on unknown events with null running status | FIXED |
+| R12 | High | Application: Double startHeartbeat() causes duplicate ping intervals, premature disconnects | FIXED |
+| R13 | Medium | WebSocketServer: handleMessage() double-parses JSON in error handler | FIXED |
+| R14 | Medium | WebSocketServer: getStats() references undefined this.port | FIXED |
+| R15 | Medium | BaseView: destroy() doesn't pass options to removeEventListener (capture leak) | FIXED |
+| R16 | Medium | EventBus (client): destroy() doesn't clear _cacheCleanupTimer interval | FIXED |
 
 ### Fixes Applied
 - **R1**: Added `Number.isInteger()` validation for limit/offset in fileFilter()
@@ -316,7 +321,7 @@ The `passesFilter()` method in MidiRouter handles:
 - [x] Frontend memory leaks addressed (i18n listeners, escape handlers, global refs)
 - [x] EventBus listener cleanup verified (MidiRouter, MidiPlayer)
 - [x] Code improvement pass (debug logging gated, canvas cleanup, input validation)
-- [x] Final clean audit (4 rounds completed, no remaining critical/high issues)
+- [x] Final clean audit (5 rounds completed, no remaining critical/high issues)
 - [x] All fixes verified by re-reading modified files
 
 ### Files Modified (Total: 18)
@@ -350,8 +355,18 @@ Database (1):
 Utilities (1 additional):
 20. `src/utils/JsonValidator.js`
 
+Core/Infrastructure (3 additional):
+21. `src/core/Application.js`
+22. `src/api/WebSocketServer.js`
+23. `public/js/core/BaseView.js`
+24. `public/js/core/EventBus.js`
+
 ### Remaining Low-Priority Items (Not Blocking)
 - FilterManager.getFilterLabel() has hardcoded French labels (cosmetic, i18n system works elsewhere)
-- PianoRollView VelocityEditor gridCanvas cleanup (FIXED)
 - Logger uses console.error for file write failures (minor inconsistency)
 - CommandHandler filter summary interpolates user input (API-only, not HTML rendered)
+- I18n data-i18n-html injects unsanitized translations (trusted source only)
+- No WebSocket authentication/rate limiting (local network deployment)
+- MidiSynthesizer loads external CDN scripts without integrity checks
+- No log rotation in Logger (Raspberry Pi disk space concern)
+- Server-side EventBus.once() handlers cannot be canceled via off()
