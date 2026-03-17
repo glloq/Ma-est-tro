@@ -136,6 +136,30 @@ class MidiDatabase {
         fields.push('instrument_types = ?');
         values.push(updates.instrument_types);
       }
+      if (updates.channel_count !== undefined) {
+        fields.push('channel_count = ?');
+        values.push(updates.channel_count);
+      }
+      if (updates.note_range_min !== undefined) {
+        fields.push('note_range_min = ?');
+        values.push(updates.note_range_min);
+      }
+      if (updates.note_range_max !== undefined) {
+        fields.push('note_range_max = ?');
+        values.push(updates.note_range_max);
+      }
+      if (updates.has_drums !== undefined) {
+        fields.push('has_drums = ?');
+        values.push(updates.has_drums);
+      }
+      if (updates.has_melody !== undefined) {
+        fields.push('has_melody = ?');
+        values.push(updates.has_melody);
+      }
+      if (updates.has_bass !== undefined) {
+        fields.push('has_bass = ?');
+        values.push(updates.has_bass);
+      }
 
       if (fields.length === 0) {
         return;
@@ -327,17 +351,17 @@ class MidiDatabase {
         params.push(filters.isOriginal ? 1 : 0);
       }
 
-      // Boolean quick filters
+      // Boolean quick filters (use COALESCE to handle NULL as 0 for pre-migration files)
       if (filters.hasDrums !== undefined) {
-        wheres.push('mf.has_drums = ?');
+        wheres.push('COALESCE(mf.has_drums, 0) = ?');
         params.push(filters.hasDrums ? 1 : 0);
       }
       if (filters.hasMelody !== undefined) {
-        wheres.push('mf.has_melody = ?');
+        wheres.push('COALESCE(mf.has_melody, 0) = ?');
         params.push(filters.hasMelody ? 1 : 0);
       }
       if (filters.hasBass !== undefined) {
-        wheres.push('mf.has_bass = ?');
+        wheres.push('COALESCE(mf.has_bass, 0) = ?');
         params.push(filters.hasBass ? 1 : 0);
       }
 

@@ -4632,8 +4632,8 @@
                         break;
 
                     case 'date':
-                        const dateA = new Date(a.uploadedAt || 0).getTime();
-                        const dateB = new Date(b.uploadedAt || 0).getTime();
+                        const dateA = new Date(a.uploaded_at || a.uploadedAt || 0).getTime();
+                        const dateB = new Date(b.uploaded_at || b.uploadedAt || 0).getTime();
                         compareValue = dateA - dateB;
                         break;
 

@@ -311,6 +311,8 @@ class FilterManager {
       this.filters.routingStatus !== null ||
       (this.filters.playableOnInstruments && this.filters.playableOnInstruments.length > 0) ||
       this.filters.minCompatibilityScore !== null ||
+      this.filters.channelCountMin !== null ||
+      this.filters.channelCountMax !== null ||
       this.filters.hasDrums !== null ||
       this.filters.hasMelody !== null ||
       this.filters.hasBass !== null
