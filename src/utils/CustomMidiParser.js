@@ -208,7 +208,7 @@ class CustomMidiParser {
     }
 
     // Unknown event
-    this.logger.warn(`Unknown MIDI event: 0x${actualStatus.toString(16)}`);
+    this.logger.warn(`Unknown MIDI event: 0x${actualStatus != null ? actualStatus.toString(16) : 'null'}`);
     return {
       bytesRead: 1,
       status: null,

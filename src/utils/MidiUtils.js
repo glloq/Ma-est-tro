@@ -177,6 +177,15 @@ class MidiUtils {
   }
 
   /**
+   * Clamp value to MIDI channel range (0-15)
+   * @param {number} channel - Channel to clamp
+   * @returns {number} Clamped channel
+   */
+  static clampChannel(channel) {
+    return Math.max(0, Math.min(15, Math.round(channel)));
+  }
+
+  /**
    * Scale value from 0-127 to custom range
    * @param {number} value - MIDI value (0-127)
    * @param {number} min - Minimum output value
@@ -311,7 +320,7 @@ class MidiUtils {
   static createNoteOn(channel, note, velocity) {
     return {
       type: 'noteon',
-      channel: this.clampDataByte(channel),
+      channel: this.clampChannel(channel),
       note: this.clampDataByte(note),
       velocity: this.clampDataByte(velocity)
     };
@@ -327,7 +336,7 @@ class MidiUtils {
   static createNoteOff(channel, note, velocity = 0) {
     return {
       type: 'noteoff',
-      channel: this.clampDataByte(channel),
+      channel: this.clampChannel(channel),
       note: this.clampDataByte(note),
       velocity: this.clampDataByte(velocity)
     };
@@ -343,7 +352,7 @@ class MidiUtils {
   static createCC(channel, controller, value) {
     return {
       type: 'cc',
-      channel: this.clampDataByte(channel),
+      channel: this.clampChannel(channel),
       controller: this.clampDataByte(controller),
       value: this.clampDataByte(value)
     };
@@ -358,8 +367,9 @@ class MidiUtils {
   static createProgramChange(channel, program) {
     return {
       type: 'program',
-      channel: this.clampDataByte(channel),
-      number: this.clampDataByte(program)
+      channel: this.clampChannel(channel),
+      program: this.clampDataByte(program),
+      number: this.clampDataByte(program) // backward compat alias
     };
   }
 
