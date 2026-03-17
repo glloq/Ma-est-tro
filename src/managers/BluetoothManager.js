@@ -37,6 +37,15 @@ class BluetoothManager extends EventEmitter {
 
   async initializeBluetooth() {
     try {
+      // Check if D-Bus system bus socket exists before trying to connect
+      const fs = await import('fs');
+      const dbusSocket = '/var/run/dbus/system_bus_socket';
+      if (!fs.existsSync(dbusSocket)) {
+        this.app.logger.warn(`Bluetooth unavailable: D-Bus system bus not found (${dbusSocket})`);
+        this.emit('bluetooth:powered_off', { error: 'D-Bus not available' });
+        return;
+      }
+
       const { bluetooth, destroy } = createBluetooth();
       this.bluetooth = bluetooth;
       this.destroy = destroy;

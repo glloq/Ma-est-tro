@@ -1,5 +1,20 @@
 // src/midi/DeviceManager.js
-import easymidi from 'easymidi';
+let easymidi;
+let midiAvailable = false;
+try {
+  easymidi = (await import('easymidi')).default;
+  midiAvailable = true;
+} catch (e) {
+  // Native MIDI library not available (missing ALSA headers or build tools)
+  // Server will still start but without hardware MIDI support
+  console.warn(`[DeviceManager] MIDI library not available: ${e.message}`);
+  easymidi = {
+    getInputs: () => [],
+    getOutputs: () => [],
+    Input: class { constructor() { throw new Error('MIDI not available'); } },
+    Output: class { constructor() { throw new Error('MIDI not available'); } }
+  };
+}
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -28,10 +43,20 @@ class DeviceManager {
     this.knownInputs = new Set();
     this.knownOutputs = new Set();
 
-    this.app.logger.info('DeviceManager initialized');
+    this.midiAvailable = midiAvailable;
+    if (!midiAvailable) {
+      this.app.logger.warn('DeviceManager initialized WITHOUT hardware MIDI support (native library not available)');
+    } else {
+      this.app.logger.info('DeviceManager initialized');
+    }
   }
 
   async scanDevices() {
+    if (!this.midiAvailable) {
+      this.app.logger.warn('MIDI scan skipped: native MIDI library not available');
+      return [];
+    }
+
     // Close all existing connections first to ensure clean state
     this.app.logger.info('Closing existing MIDI connections...');
 
