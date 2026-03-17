@@ -8106,12 +8106,33 @@
             // 🆕 Charger la configuration de routage
             loadRoutingConfig();
 
-            // Attacher les handlers open/close du panneau filtres immédiatement
-            initFiltersUI();
+            // Afficher l'app et attacher open/close filtres AVANT la connexion WebSocket
+            // (connectWebSocket peut bloquer indéfiniment si le serveur est absent)
+            {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
 
-            // Afficher l'app avant la connexion WebSocket (qui peut bloquer)
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('app').classList.remove('hidden');
+                const filtersPanel = document.getElementById('filtersPanel');
+                const filtersPanelOverlay = document.getElementById('filtersPanelOverlay');
+                const openFiltersBtn = document.getElementById('openFiltersBtn');
+                const closeFiltersBtn = document.getElementById('closeFiltersBtn');
+
+                if (filtersPanel && openFiltersBtn) {
+                    openFiltersBtn.addEventListener('click', () => {
+                        filtersPanel.classList.add('open');
+                        if (filtersPanelOverlay) filtersPanelOverlay.style.display = 'block';
+                    });
+
+                    const closeFiltersPanel = () => {
+                        filtersPanel.classList.remove('open');
+                        if (filtersPanelOverlay) filtersPanelOverlay.style.display = 'none';
+                    };
+
+                    if (closeFiltersBtn) closeFiltersBtn.addEventListener('click', closeFiltersPanel);
+                    if (filtersPanelOverlay) filtersPanelOverlay.addEventListener('click', closeFiltersPanel);
+                    log('✓ Filtres UI initialisés', 'info');
+                }
+            }
 
             await connectWebSocket();
 
@@ -8527,38 +8548,6 @@
             let filterManager = null;
             let currentFilteredFiles = null; // Store filtered files
 
-            // Init filter panel open/close — independent of WebSocket connection
-            let filtersUIInitialized = false;
-            function initFiltersUI() {
-                if (filtersUIInitialized) return;
-                filtersUIInitialized = true;
-
-                const filtersPanel = document.getElementById('filtersPanel');
-                const filtersPanelOverlay = document.getElementById('filtersPanelOverlay');
-                const openFiltersBtn = document.getElementById('openFiltersBtn');
-                const closeFiltersBtn = document.getElementById('closeFiltersBtn');
-
-                if (!filtersPanel || !openFiltersBtn) {
-                    console.error('[Filters] Required DOM elements not found');
-                    return;
-                }
-
-                openFiltersBtn.addEventListener('click', () => {
-                    filtersPanel.classList.add('open');
-                    if (filtersPanelOverlay) filtersPanelOverlay.style.display = 'block';
-                });
-
-                function closeFiltersPanel() {
-                    filtersPanel.classList.remove('open');
-                    if (filtersPanelOverlay) filtersPanelOverlay.style.display = 'none';
-                }
-
-                if (closeFiltersBtn) closeFiltersBtn.addEventListener('click', closeFiltersPanel);
-                if (filtersPanelOverlay) filtersPanelOverlay.addEventListener('click', closeFiltersPanel);
-
-                log('✓ Filtres UI initialisés', 'info');
-            }
-
             let filtersInitialized = false;
             function initAdvancedFilters() {
               try {
@@ -8572,7 +8561,7 @@
                 const applyFiltersBtn = document.getElementById('applyFiltersBtn');
                 const resetFiltersBtn = document.getElementById('resetFiltersBtn');
 
-                // Close helper for apply button
+                // Close helper (open/close handlers already attached in window.load)
                 function closeFiltersPanel() {
                     if (filtersPanel) filtersPanel.classList.remove('open');
                     if (filtersPanelOverlay) filtersPanelOverlay.style.display = 'none';
