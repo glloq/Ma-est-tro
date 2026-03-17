@@ -46,10 +46,10 @@ class InstrumentManagementPage {
   createModal() {
     const modalHTML = `
       <div class="modal-overlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center;">
-        <div class="modal-container" style="background: white; border-radius: 12px; width: 95%; max-width: 1400px; height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+        <div class="modal-container" style="background: white; border-radius: 12px; width: 95%; max-width: 1400px; height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden;">
 
           <!-- Header -->
-          <div class="modal-header" style="padding: 16px 24px; border-bottom: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; flex-shrink: 0; border-radius: 12px 12px 0 0;">
+          <div class="modal-header" style="padding: 16px 24px; border-bottom: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; flex-shrink: 0;">
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
               <h2 style="margin: 0; font-size: 22px; white-space: nowrap;">🎹 ${i18n.t('instrumentManagement.title') || 'Gestion des instruments'}</h2>
               <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
