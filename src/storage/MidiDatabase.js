@@ -351,17 +351,17 @@ class MidiDatabase {
         params.push(filters.isOriginal ? 1 : 0);
       }
 
-      // Boolean quick filters
+      // Boolean quick filters (use COALESCE to handle NULL as 0 for pre-migration files)
       if (filters.hasDrums !== undefined) {
-        wheres.push('mf.has_drums = ?');
+        wheres.push('COALESCE(mf.has_drums, 0) = ?');
         params.push(filters.hasDrums ? 1 : 0);
       }
       if (filters.hasMelody !== undefined) {
-        wheres.push('mf.has_melody = ?');
+        wheres.push('COALESCE(mf.has_melody, 0) = ?');
         params.push(filters.hasMelody ? 1 : 0);
       }
       if (filters.hasBass !== undefined) {
-        wheres.push('mf.has_bass = ?');
+        wheres.push('COALESCE(mf.has_bass, 0) = ?');
         params.push(filters.hasBass ? 1 : 0);
       }
 

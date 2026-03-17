@@ -544,7 +544,7 @@ class FileManager {
         duration: metadata.duration,
         tempo: metadata.tempo,
         ppq: midiData.header.ticksPerBeat || 480,
-        instrument_types: instrumentMetadata.fileMetadata.instrument_types
+        ...instrumentMetadata.fileMetadata
       });
 
       // Update channel records
