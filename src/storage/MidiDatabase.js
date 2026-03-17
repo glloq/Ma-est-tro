@@ -136,6 +136,30 @@ class MidiDatabase {
         fields.push('instrument_types = ?');
         values.push(updates.instrument_types);
       }
+      if (updates.channel_count !== undefined) {
+        fields.push('channel_count = ?');
+        values.push(updates.channel_count);
+      }
+      if (updates.note_range_min !== undefined) {
+        fields.push('note_range_min = ?');
+        values.push(updates.note_range_min);
+      }
+      if (updates.note_range_max !== undefined) {
+        fields.push('note_range_max = ?');
+        values.push(updates.note_range_max);
+      }
+      if (updates.has_drums !== undefined) {
+        fields.push('has_drums = ?');
+        values.push(updates.has_drums);
+      }
+      if (updates.has_melody !== undefined) {
+        fields.push('has_melody = ?');
+        values.push(updates.has_melody);
+      }
+      if (updates.has_bass !== undefined) {
+        fields.push('has_bass = ?');
+        values.push(updates.has_bass);
+      }
 
       if (fields.length === 0) {
         return;

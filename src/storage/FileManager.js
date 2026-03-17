@@ -837,10 +837,8 @@ class FileManager {
           const midi = parseMidi(buffer);
           const instrumentMetadata = this.extractInstrumentMetadata(midi);
 
-          // Update file metadata
-          this.app.database.updateFile(file.id, {
-            instrument_types: instrumentMetadata.fileMetadata.instrument_types
-          });
+          // Update all file metadata (instrument_types, has_drums, has_melody, has_bass, etc.)
+          this.app.database.updateFile(file.id, instrumentMetadata.fileMetadata);
 
           // Delete old channel data and insert new
           this.app.database.deleteFileChannels(file.id);
