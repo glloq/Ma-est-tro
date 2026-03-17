@@ -86,6 +86,19 @@
       "title": "Calibration Microphone Button",
       "enable": "Show calibration button",
       "description": "Shows the microphone button to calibrate audio delays for instruments"
+    },
+    "update": {
+      "title": "System Update",
+      "description": "Download and install the latest version",
+      "warning": "Fetches latest changes, updates dependencies and restarts the server",
+      "button": "Install update",
+      "confirmTitle": "Install update",
+      "confirmMessage": "The system will download the latest version, update dependencies and restart the server.\n\nThe application will be temporarily unavailable during the update.",
+      "confirmOk": "Start update",
+      "inProgress": "Updating...",
+      "running": "Update in progress, please wait...",
+      "success": "Update complete! The server is restarting...",
+      "failed": "Update failed"
     }
   },
   "bluetooth": {

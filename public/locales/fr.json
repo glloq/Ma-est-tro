@@ -86,6 +86,19 @@
     "language": {
       "title": "Langue",
       "select": "Sélectionner la langue"
+    },
+    "update": {
+      "title": "Mise à jour du système",
+      "description": "Télécharger et installer la dernière version",
+      "warning": "Récupère les dernières modifications, met à jour les dépendances et redémarre le serveur",
+      "button": "Installer la mise à jour",
+      "confirmTitle": "Installer la mise à jour",
+      "confirmMessage": "Le système va télécharger la dernière version, mettre à jour les dépendances et redémarrer le serveur.\n\nL'application sera temporairement indisponible pendant la mise à jour.",
+      "confirmOk": "Lancer la mise à jour",
+      "inProgress": "Mise à jour en cours...",
+      "running": "Mise à jour en cours, veuillez patienter...",
+      "success": "Mise à jour terminée ! Le serveur redémarre...",
+      "failed": "Échec de la mise à jour"
     }
   },
   "bluetooth": {
