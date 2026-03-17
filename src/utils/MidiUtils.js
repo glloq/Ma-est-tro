@@ -136,6 +136,7 @@ class MidiUtils {
    * @returns {number} MIDI note number
    */
   static frequencyToNote(frequency) {
+    if (!frequency || frequency <= 0) return 0;
     return Math.round(69 + 12 * Math.log2(frequency / 440));
   }
 
@@ -360,6 +361,44 @@ class MidiUtils {
       channel: this.clampDataByte(channel),
       number: this.clampDataByte(program)
     };
+  }
+
+  /**
+   * Convert easymidi-format message to raw MIDI bytes
+   * Shared utility used by all transport managers (Bluetooth, Network, Serial)
+   * @param {string} type - Message type (noteon, noteoff, cc, program, etc.)
+   * @param {object} data - Message data with channel, note, velocity, etc.
+   * @returns {Array<number>|null} Raw MIDI bytes or null for unknown types
+   */
+  static convertToMidiBytes(type, data) {
+    const channel = data.channel ?? 0;
+
+    switch (type.toLowerCase()) {
+      case 'noteon':
+        return [0x90 | channel, data.note & 0x7F, (data.velocity ?? 127) & 0x7F];
+      case 'noteoff':
+        return [0x80 | channel, data.note & 0x7F, (data.velocity ?? 0) & 0x7F];
+      case 'cc':
+      case 'controlchange':
+        return [0xB0 | channel, data.controller & 0x7F, data.value & 0x7F];
+      case 'program':
+      case 'programchange':
+        return [0xC0 | channel, (data.program ?? data.number ?? 0) & 0x7F];
+      case 'channel aftertouch':
+      case 'channelaftertouch':
+        return [0xD0 | channel, data.pressure & 0x7F];
+      case 'poly aftertouch':
+      case 'polyaftertouch':
+        return [0xA0 | channel, data.note & 0x7F, data.pressure & 0x7F];
+      case 'pitchbend': {
+        const value = data.value ?? 8192;
+        return [0xE0 | channel, value & 0x7F, (value >> 7) & 0x7F];
+      }
+      case 'sysex':
+        return Array.isArray(data) ? data : (data.bytes || []);
+      default:
+        return null;
+    }
   }
 
   /**

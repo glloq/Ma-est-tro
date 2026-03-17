@@ -15,9 +15,10 @@ class MidiRouter {
     }, 30000);
 
     // Invalidate cache immediately when instrument settings change
-    this.app.eventBus?.on('instrument_settings_changed', () => {
+    this._onSettingsChanged = () => {
       this._compensationCache.clear();
-    });
+    };
+    this.app.eventBus?.on('instrument_settings_changed', this._onSettingsChanged);
 
     this.loadRoutesFromDB();
     this.app.logger.info('MidiRouter initialized');
@@ -415,8 +416,10 @@ class MidiRouter {
       this._compensationCache.clear();
     }
 
-    // Remove event listeners
-    this.app.eventBus?.off('instrument_settings_changed');
+    // Remove event listeners (use stored reference for proper cleanup)
+    if (this._onSettingsChanged) {
+      this.app.eventBus?.off('instrument_settings_changed', this._onSettingsChanged);
+    }
 
     this.routes.clear();
     this.routesBySource.clear();
