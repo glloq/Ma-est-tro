@@ -3,7 +3,7 @@
 
 **Date**: 2026-03-17
 **Auditor**: Claude Code (Automated Audit)
-**Status**: Round 2 In Progress
+**Status**: COMPLETED (3 rounds)
 
 ---
 
@@ -233,10 +233,10 @@ The `passesFilter()` method in MidiRouter handles:
 #### Overall
 | Status | Count |
 |--------|-------|
-| FIXED | 26 |
+| FIXED | 27 |
 | By Design | 1 |
 | Noted (non-critical, deferred) | 6 |
-| **Total issues found** | **33** |
+| **Total issues found** | **34** |
 
 ### Files Modified
 1. `src/midi/MidiRouter.js` - EventBus listener leak fix
@@ -270,10 +270,12 @@ The `passesFilter()` method in MidiRouter handles:
 | R2 | Medium | SerialMidiManager: hot-plug _checkPortChanges() race condition with concurrent close | FIXED |
 | R3 | Low | DeviceManager: fire-and-forget async MIDI sends to BLE/Network | By Design |
 | R4 | Low | CommandHandler: filter summary interpolates user input unsanitized | Noted |
+| R5 | Medium | MidiDatabase: note_range_min/max stored as null when value is 0 (valid MIDI note) | FIXED |
 
 ### Fixes Applied
 - **R1**: Added `Number.isInteger()` validation for limit/offset in fileFilter()
 - **R2**: Refactored _checkPortChanges() to collect removed ports first, delete from maps before closing, and batch broadcast
+- **R5**: Changed `file.note_range_min || null` to `file.note_range_min ?? null` to preserve MIDI note 0
 
 ---
 
@@ -333,6 +335,9 @@ Frontend (6):
 
 API (1):
 18. `src/api/CommandHandler.js`
+
+Database (1):
+19. `src/storage/MidiDatabase.js`
 
 ### Remaining Low-Priority Items (Not Blocking)
 - FilterManager.getFilterLabel() has hardcoded French labels (cosmetic, i18n system works elsewhere)
