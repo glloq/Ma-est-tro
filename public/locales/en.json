@@ -514,7 +514,15 @@
     "testDevice": "Test LEDs",
     "testRule": "Test Rule",
     "allOff": "All Lights Off",
-    "presets": "Lighting Presets"
+    "presets": "Lighting Presets",
+    "savePreset": "Save Preset",
+    "loadPreset": "Load",
+    "presetName": "Preset Name",
+    "noPresets": "No presets saved",
+    "confirmDeletePreset": "Delete this preset?",
+    "confirmLoadPreset": "Load this preset? Current rules will be replaced.",
+    "reconnect": "Reconnect",
+    "reconnecting": "Reconnecting..."
   },
   "instrumentManagement": {
     "title": "Instrument Management",

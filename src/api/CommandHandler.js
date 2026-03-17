@@ -2337,6 +2337,19 @@ class CommandHandler {
   lightingRuleAdd(data) {
     if (!data.device_id) throw new Error('device_id is required');
 
+    // Validate condition ranges
+    const cond = data.condition_config || {};
+    if (cond.velocity_min !== undefined && (cond.velocity_min < 0 || cond.velocity_min > 127)) throw new Error('velocity_min must be 0-127');
+    if (cond.velocity_max !== undefined && (cond.velocity_max < 0 || cond.velocity_max > 127)) throw new Error('velocity_max must be 0-127');
+    if (cond.note_min !== undefined && (cond.note_min < 0 || cond.note_min > 127)) throw new Error('note_min must be 0-127');
+    if (cond.note_max !== undefined && (cond.note_max < 0 || cond.note_max > 127)) throw new Error('note_max must be 0-127');
+    if (cond.cc_value_min !== undefined && (cond.cc_value_min < 0 || cond.cc_value_min > 127)) throw new Error('cc_value_min must be 0-127');
+    if (cond.cc_value_max !== undefined && (cond.cc_value_max < 0 || cond.cc_value_max > 127)) throw new Error('cc_value_max must be 0-127');
+
+    // Validate device exists
+    const device = this.app.database.getLightingDevice(data.device_id);
+    if (!device) throw new Error(`Device ${data.device_id} not found`);
+
     const id = this.app.database.insertLightingRule({
       name: data.name || '',
       device_id: data.device_id,

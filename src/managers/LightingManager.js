@@ -16,6 +16,8 @@ class LightingManager extends EventEmitter {
     this.rulesByInstrument = new Map(); // instrumentId -> Rule[], '*' for wildcards
     this.allRules = [];
     this.activeNotes = new Map();     // deviceId -> Map<note, count> for polyphonic note-off tracking
+    this._healthCheckInterval = null;
+    this._reloading = false;
 
     this.initialize();
   }
@@ -25,10 +27,24 @@ class LightingManager extends EventEmitter {
       this.loadRules();
       this.loadDevices();
       this._setupEventListeners();
+      this._startHealthCheck();
       this.logger.info(`LightingManager initialized: ${this.drivers.size} device(s), ${this.allRules.length} rule(s)`);
     } catch (error) {
       this.logger.warn(`LightingManager init partial: ${error.message}`);
     }
+  }
+
+  _startHealthCheck() {
+    // Periodic cleanup of stale activeNotes and check driver health
+    this._healthCheckInterval = setInterval(() => {
+      // Cap activeNotes per device to prevent memory leak from lost note-offs
+      for (const [deviceId, notes] of this.activeNotes) {
+        if (notes.size > 128) {
+          notes.clear();
+          this.logger.warn(`Cleared stale activeNotes for device ${deviceId}`);
+        }
+      }
+    }, 30000);
   }
 
   // ==================== DATA LOADING ====================
@@ -224,16 +240,26 @@ class LightingManager extends EventEmitter {
     if (!driver || !driver.isConnected()) return;
 
     const action = rule.action_config;
-    const { r, g, b } = this._resolveColor(action, midiData);
-    const brightness = this._resolveBrightness(action, midiData);
-    const startLed = action.led_start || 0;
-    const endLed = action.led_end !== undefined ? action.led_end : -1;
+    let r, g, b;
+    try {
+      ({ r, g, b } = this._resolveColor(action, midiData));
+    } catch {
+      r = 255; g = 255; b = 255;
+    }
+    const brightness = Math.max(0, Math.min(255, this._resolveBrightness(action, midiData)));
+    // Boundary check LED indices
+    const ledCount = driver.device?.led_count || 1;
+    const startLed = Math.max(0, Math.min(action.led_start || 0, ledCount - 1));
+    const rawEnd = action.led_end !== undefined ? action.led_end : -1;
+    const endLed = rawEnd === -1 ? -1 : Math.max(startLed, Math.min(rawEnd, ledCount - 1));
 
     // Handle note-off: turn off LEDs
     if (midiData.type === 'noteoff' || (midiData.type === 'noteon' && midiData.velocity === 0)) {
-      if (action.off_action === 'instant' || action.off_action === 'fade') {
-        this._handleNoteOff(rule.device_id, midiData.note, driver, startLed, endLed);
+      if (action.off_action === 'hold') {
+        // "hold" = keep LED on, do nothing
+        return;
       }
+      this._handleNoteOff(rule.device_id, midiData.note, driver, startLed, endLed);
       return;
     }
 
@@ -408,18 +434,34 @@ class LightingManager extends EventEmitter {
   }
 
   reloadRules() {
-    this.loadRules();
+    if (this._reloading) return;
+    this._reloading = true;
+    try {
+      this.loadRules();
+    } finally {
+      this._reloading = false;
+    }
   }
 
   async reloadDevices() {
-    // Disconnect all existing
-    for (const [id] of this.drivers) {
-      await this.disconnectDevice(id);
+    if (this._reloading) return;
+    this._reloading = true;
+    try {
+      // Disconnect all existing
+      for (const [id] of this.drivers) {
+        await this.disconnectDevice(id);
+      }
+      this.loadDevices();
+    } finally {
+      this._reloading = false;
     }
-    this.loadDevices();
   }
 
   async shutdown() {
+    if (this._healthCheckInterval) {
+      clearInterval(this._healthCheckInterval);
+      this._healthCheckInterval = null;
+    }
     this.allOff();
     for (const [id] of this.drivers) {
       await this.disconnectDevice(id);

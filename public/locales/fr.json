@@ -514,7 +514,15 @@
     "testDevice": "Tester les LEDs",
     "testRule": "Tester la règle",
     "allOff": "Tout éteindre",
-    "presets": "Presets lumière"
+    "presets": "Presets lumière",
+    "savePreset": "Sauvegarder le preset",
+    "loadPreset": "Charger",
+    "presetName": "Nom du preset",
+    "noPresets": "Aucun preset sauvegardé",
+    "confirmDeletePreset": "Supprimer ce preset ?",
+    "confirmLoadPreset": "Charger ce preset ? Les règles actuelles seront remplacées.",
+    "reconnect": "Reconnecter",
+    "reconnecting": "Reconnexion..."
   },
   "instrumentManagement": {
     "title": "Gestion des instruments",
