@@ -233,10 +233,10 @@ The `passesFilter()` method in MidiRouter handles:
 #### Overall
 | Status | Count |
 |--------|-------|
-| FIXED | 27 |
+| FIXED | 29 |
 | By Design | 1 |
 | Noted (non-critical, deferred) | 6 |
-| **Total issues found** | **34** |
+| **Total issues found** | **36** |
 
 ### Files Modified
 1. `src/midi/MidiRouter.js` - EventBus listener leak fix
@@ -271,11 +271,15 @@ The `passesFilter()` method in MidiRouter handles:
 | R3 | Low | DeviceManager: fire-and-forget async MIDI sends to BLE/Network | By Design |
 | R4 | Low | CommandHandler: filter summary interpolates user input unsanitized | Noted |
 | R5 | Medium | MidiDatabase: note_range_min/max stored as null when value is 0 (valid MIDI note) | FIXED |
+| R6 | Medium | MidiRouter: addRoute() doesn't clean routesBySource on DB failure rollback | FIXED |
+| R7 | Medium | DeviceManager: getDeviceList() deduplication priority inverted (USB wins over Network) | FIXED |
 
 ### Fixes Applied
 - **R1**: Added `Number.isInteger()` validation for limit/offset in fileFilter()
 - **R2**: Refactored _checkPortChanges() to collect removed ports first, delete from maps before closing, and batch broadcast
 - **R5**: Changed `file.note_range_min || null` to `file.note_range_min ?? null` to preserve MIDI note 0
+- **R6**: Added routesBySource cleanup in addRoute() catch block during DB failure rollback
+- **R7**: Added type-priority sort before deduplication so Network > Bluetooth > Serial > USB
 
 ---
 
