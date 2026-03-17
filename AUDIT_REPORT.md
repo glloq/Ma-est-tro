@@ -233,10 +233,10 @@ The `passesFilter()` method in MidiRouter handles:
 #### Overall
 | Status | Count |
 |--------|-------|
-| FIXED | 38 |
+| FIXED | 40 |
 | By Design | 1 |
 | Noted (non-critical, deferred) | 6 |
-| **Total issues found** | **45** |
+| **Total issues found** | **47** |
 
 ### Files Modified
 1. `src/midi/MidiRouter.js` - EventBus listener leak fix
@@ -282,6 +282,8 @@ The `passesFilter()` method in MidiRouter handles:
 | R14 | Medium | WebSocketServer: getStats() references undefined this.port | FIXED |
 | R15 | Medium | BaseView: destroy() doesn't pass options to removeEventListener (capture leak) | FIXED |
 | R16 | Medium | EventBus (client): destroy() doesn't clear _cacheCleanupTimer interval | FIXED |
+| R17 | High | SettingsModal: ESC keydown listener on document never removed on close | FIXED |
+| R18 | High | KeyboardModal_NEW: Duplicate individual + delegated listeners cause double note firing | FIXED |
 
 ### Fixes Applied
 - **R1**: Added `Number.isInteger()` validation for limit/offset in fileFilter()
@@ -360,6 +362,8 @@ Core/Infrastructure (3 additional):
 22. `src/api/WebSocketServer.js`
 23. `public/js/core/BaseView.js`
 24. `public/js/core/EventBus.js`
+25. `public/js/views/components/SettingsModal.js`
+26. `public/js/views/components/KeyboardModal_NEW.js`
 
 ### Remaining Low-Priority Items (Not Blocking)
 - FilterManager.getFilterLabel() has hardcoded French labels (cosmetic, i18n system works elsewhere)
