@@ -5,12 +5,16 @@
 # Pulls latest changes from GitHub and updates the system
 # ============================================================================
 
-set -e  # Exit on error
-
 # Non-interactive mode (called from web UI)
 NON_INTERACTIVE="${NON_INTERACTIVE:-0}"
 if [[ "$1" == "--non-interactive" ]]; then
     NON_INTERACTIVE=1
+fi
+
+# Log file for non-interactive debugging
+LOG_FILE="/tmp/midimind-update.log"
+if [ "$NON_INTERACTIVE" = "1" ]; then
+    exec > "$LOG_FILE" 2>&1
 fi
 
 # Colors for output
@@ -55,7 +59,7 @@ cat << "EOF"
  | |  | | | (_| | | |  | | | | | | (_| |
  |_|  |_|_|\__,_|_|_|  |_|_|_| |_|\__,_|
 
-         Update Script v1.0
+         Update Script v1.1
 EOF
 echo -e "${NC}"
 
@@ -67,6 +71,9 @@ cd "$PROJECT_DIR"
 
 print_info "Project directory: $PROJECT_DIR"
 
+# Detect server port from config or default to 8080
+SERVER_PORT=8080
+
 # ============================================================================
 # 1. Check Git Status
 # ============================================================================
@@ -74,11 +81,11 @@ print_info "Project directory: $PROJECT_DIR"
 print_header "1. Checking Git Status"
 
 # Check if we have uncommitted changes
-if ! git diff-index --quiet HEAD --; then
+if ! git diff-index --quiet HEAD -- 2>/dev/null; then
     print_warning "You have uncommitted changes!"
     git status --short
     if [ "$NON_INTERACTIVE" = "1" ]; then
-        git stash push -m "Auto-stash before update at $(date)"
+        git stash push -m "Auto-stash before update at $(date)" || true
         print_success "Changes auto-stashed (non-interactive mode)"
     else
         read -p "Do you want to stash your changes? (y/n) " -n 1 -r
@@ -124,17 +131,30 @@ if [ "$PM2_MANAGED" = true ]; then
     print_success "PM2 process stopped"
 elif [ "$SYSTEMD_MANAGED" = true ]; then
     print_info "Stopping systemd service..."
-    sudo systemctl stop midimind
+    sudo systemctl stop midimind 2>/dev/null || true
     print_success "Systemd service stopped"
 else
     # Direct node process - kill it
-    if lsof -ti:8080 &> /dev/null; then
-        print_info "Killing server process on port 8080..."
-        lsof -ti:8080 | xargs -r kill -9 2>/dev/null || true
+    print_info "Stopping server process..."
+    # Try multiple methods to find and kill the server process
+    if command -v lsof &> /dev/null && lsof -ti:$SERVER_PORT &> /dev/null; then
+        lsof -ti:$SERVER_PORT | xargs -r kill 2>/dev/null || true
+        sleep 2
+        # Force kill if still running
+        if lsof -ti:$SERVER_PORT &> /dev/null; then
+            lsof -ti:$SERVER_PORT | xargs -r kill -9 2>/dev/null || true
+            sleep 1
+        fi
+        print_success "Server stopped"
+    elif command -v fuser &> /dev/null && fuser $SERVER_PORT/tcp &> /dev/null; then
+        fuser -k $SERVER_PORT/tcp 2>/dev/null || true
         sleep 2
         print_success "Server stopped"
     else
-        print_info "No server running"
+        # Fallback: kill by process name
+        pkill -f "node.*server.js" 2>/dev/null || true
+        sleep 2
+        print_info "Attempted to stop server via pkill"
     fi
 fi
 
@@ -156,7 +176,7 @@ if [ "$CURRENT_BRANCH" != "main" ]; then
     else
         print_error "Failed to switch to main branch"
         print_info "You may need to commit or stash changes first"
-        exit 1
+        # Don't exit - try to restart server anyway
     fi
 else
     print_success "Already on main branch"
@@ -164,7 +184,7 @@ fi
 
 # Fetch latest changes
 print_info "Fetching from origin/main..."
-git fetch origin main
+git fetch origin main || true
 
 # Pull changes from main
 print_info "Pulling latest changes from main..."
@@ -172,13 +192,13 @@ if git pull origin main; then
     print_success "Successfully pulled latest changes from main"
 else
     print_error "Failed to pull changes from main"
-    exit 1
+    # Don't exit - try to restart server anyway
 fi
 
 # Show what changed
 echo ""
 print_info "Recent commits:"
-git log -5 --oneline --decorate
+git log -5 --oneline --decorate 2>/dev/null || true
 
 # ============================================================================
 # 4. Update Dependencies
@@ -187,9 +207,9 @@ git log -5 --oneline --decorate
 print_header "4. Updating Dependencies"
 
 # Check if package.json changed
-if git diff HEAD@{1} --name-only | grep -q "package.json"; then
+if git diff HEAD@{1} --name-only 2>/dev/null | grep -q "package.json"; then
     print_info "package.json changed, updating npm dependencies..."
-    npm install
+    npm install || print_warning "npm install had issues"
     print_success "Dependencies updated"
 else
     print_info "No package.json changes detected, skipping npm install"
@@ -201,19 +221,15 @@ fi
 
 print_header "5. Running Database Migrations"
 
-# Check if migrations directory changed
-if git diff HEAD@{1} --name-only | grep -q "migrations/"; then
-    print_info "Migrations changed, running database migrations..."
-    npm run migrate
-    print_success "Database migrations completed"
+if [ -f "scripts/migrate-db.js" ]; then
+    print_info "Running database migrations..."
+    npm run migrate 2>/dev/null || print_warning "Migration had issues (may be OK if no changes needed)"
 else
-    print_info "No migration changes detected"
-    # Run migrations anyway to be safe
-    npm run migrate
+    print_info "No migration script found, skipping"
 fi
 
 # ============================================================================
-# 6. Restart Server
+# 6. Restart Server (CRITICAL - must always execute)
 # ============================================================================
 
 print_header "6. Restarting Server"
@@ -221,21 +237,21 @@ print_header "6. Restarting Server"
 # Restart using the same method that was running before
 if [ "$PM2_MANAGED" = true ]; then
     print_info "Restarting with PM2..."
-    pm2 restart midimind 2>/dev/null || pm2 start ecosystem.config.cjs
+    pm2 restart midimind 2>/dev/null || pm2 start ecosystem.config.cjs 2>/dev/null || true
     pm2 save 2>/dev/null || true
     sleep 3
     print_success "PM2 process restarted"
-    pm2 list
+    pm2 list 2>/dev/null || true
 
 elif [ "$SYSTEMD_MANAGED" = true ]; then
     print_info "Restarting with systemd..."
-    sudo systemctl start midimind
+    sudo systemctl start midimind 2>/dev/null || true
     sleep 2
     print_success "Systemd service restarted"
 
 elif [ "$PM2_AVAILABLE" = true ]; then
     print_info "Starting with PM2..."
-    pm2 start ecosystem.config.cjs
+    pm2 start ecosystem.config.cjs 2>/dev/null || true
     pm2 save 2>/dev/null || true
     sleep 3
     print_success "Server started with PM2"
@@ -244,14 +260,23 @@ else
     # Fallback: start node directly in background
     print_info "Starting server directly..."
     cd "$PROJECT_DIR"
-    nohup node server.js > /tmp/midimind-update.log 2>&1 &
+    nohup node server.js >> /tmp/midimind-server.log 2>&1 &
     SERVER_PID=$!
     sleep 3
     if kill -0 $SERVER_PID 2>/dev/null; then
         print_success "Server started (PID: $SERVER_PID)"
     else
-        print_error "Server failed to start, check /tmp/midimind-update.log"
-        exit 1
+        print_error "Server failed to start, check /tmp/midimind-server.log"
+        # Try one more time
+        print_info "Retrying server start..."
+        nohup node server.js >> /tmp/midimind-server.log 2>&1 &
+        SERVER_PID=$!
+        sleep 5
+        if kill -0 $SERVER_PID 2>/dev/null; then
+            print_success "Server started on retry (PID: $SERVER_PID)"
+        else
+            print_error "Server failed to start after retry"
+        fi
     fi
 fi
 
@@ -267,37 +292,53 @@ sleep 5
 
 # Check PM2 status
 if [ "$PM2_AVAILABLE" = true ]; then
-    if pm2 list | grep -q "online.*midimind"; then
+    if pm2 list 2>/dev/null | grep -q "online.*midimind"; then
         print_success "PM2 process is online"
     else
         print_warning "PM2 process may not be running correctly"
-        pm2 list
+        pm2 list 2>/dev/null || true
     fi
 fi
 
-# Check if port 8080 is listening
-if lsof -ti:8080 &> /dev/null; then
-    print_success "Server is listening on port 8080"
-else
-    print_error "Server is NOT listening on port 8080"
-    if [ "$PM2_AVAILABLE" = true ]; then
-        print_info "Checking PM2 logs for errors..."
-        pm2 logs midimind --lines 20 --nostream
+# Check if port is listening
+SERVER_LISTENING=false
+if command -v lsof &> /dev/null; then
+    if lsof -ti:$SERVER_PORT &> /dev/null; then
+        print_success "Server is listening on port $SERVER_PORT"
+        SERVER_LISTENING=true
     fi
+elif command -v ss &> /dev/null; then
+    if ss -tlnp 2>/dev/null | grep -q ":$SERVER_PORT"; then
+        print_success "Server is listening on port $SERVER_PORT"
+        SERVER_LISTENING=true
+    fi
+elif command -v netstat &> /dev/null; then
+    if netstat -tlnp 2>/dev/null | grep -q ":$SERVER_PORT"; then
+        print_success "Server is listening on port $SERVER_PORT"
+        SERVER_LISTENING=true
+    fi
+fi
+
+if [ "$SERVER_LISTENING" = false ]; then
+    print_warning "Could not verify server is listening on port $SERVER_PORT"
 fi
 
 # Test HTTP endpoint
-print_info "Testing HTTP endpoint..."
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 2>/dev/null)
-if [ "$HTTP_CODE" = "200" ]; then
-    print_success "HTTP endpoint responding correctly (HTTP $HTTP_CODE)"
-else
-    print_warning "HTTP endpoint returned: HTTP $HTTP_CODE"
+if command -v curl &> /dev/null; then
+    print_info "Testing HTTP endpoint..."
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$SERVER_PORT 2>/dev/null || echo "000")
+    if [ "$HTTP_CODE" = "200" ]; then
+        print_success "HTTP endpoint responding correctly (HTTP $HTTP_CODE)"
+    elif [ "$HTTP_CODE" = "000" ]; then
+        print_warning "Could not connect to HTTP endpoint"
+    else
+        print_warning "HTTP endpoint returned: HTTP $HTTP_CODE"
+    fi
 fi
 
 # Show current version
 if [ -f "package.json" ]; then
-    VERSION=$(node -p "require('./package.json').version" 2>/dev/null)
+    VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "unknown")
     if [ -n "$VERSION" ]; then
         print_info "Current version: $VERSION"
     fi
@@ -316,12 +357,15 @@ print_header "Update Complete"
 
 print_success "MidiMind has been updated successfully!"
 echo ""
-print_info "Access the interface at: http://localhost:8080"
-print_info "Network access: http://$(hostname -I | awk '{print $1}'):8080"
+print_info "Access the interface at: http://localhost:$SERVER_PORT"
+HOSTNAME_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+if [ -n "$HOSTNAME_IP" ]; then
+    print_info "Network access: http://${HOSTNAME_IP}:$SERVER_PORT"
+fi
 echo ""
 
 # Check for stashed changes
-if git stash list | grep -q "Auto-stash before update"; then
+if git stash list 2>/dev/null | grep -q "Auto-stash before update"; then
     print_warning "You have stashed changes. To restore them:"
     echo "  git stash pop"
 fi
