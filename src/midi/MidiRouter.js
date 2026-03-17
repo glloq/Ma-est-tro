@@ -82,6 +82,11 @@ class MidiRouter {
       } catch (dbError) {
         // Rollback in-memory route if DB insert fails
         this.routes.delete(routeId);
+        const sourceRoutes = this.routesBySource.get(routeObj.source);
+        if (sourceRoutes) {
+          sourceRoutes.delete(routeId);
+          if (sourceRoutes.size === 0) this.routesBySource.delete(routeObj.source);
+        }
         throw dbError;
       }
     }

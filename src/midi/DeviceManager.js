@@ -311,7 +311,9 @@ class DeviceManager {
     }
 
     // Dédupliquer par nom (évite doublons USB input/output et USB/Bluetooth/Network)
-    // Priorité: Network > Bluetooth > USB
+    // Priorité: Network > Bluetooth > Serial > USB (first seen wins, so sort by priority)
+    const typePriority = { network: 0, bluetooth: 1, serial: 2, usb: 3, virtual: 4 };
+    allDevices.sort((a, b) => (typePriority[a.type] ?? 99) - (typePriority[b.type] ?? 99));
     const uniqueDevices = [];
     const seenNames = new Set();
 
