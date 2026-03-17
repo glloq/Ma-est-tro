@@ -206,13 +206,16 @@ git log -5 --oneline --decorate 2>/dev/null || true
 
 print_header "4. Updating Dependencies"
 
-# Check if package.json changed
-if git diff HEAD@{1} --name-only 2>/dev/null | grep -q "package.json"; then
-    print_info "package.json changed, updating npm dependencies..."
-    npm install || print_warning "npm install had issues"
+# Always run npm install to ensure node_modules are present and up to date
+print_info "Installing/updating npm dependencies..."
+if npm install 2>&1; then
     print_success "Dependencies updated"
 else
-    print_info "No package.json changes detected, skipping npm install"
+    print_warning "npm install had issues (native modules may have failed to build)"
+    print_info "Trying npm install --ignore-scripts as fallback..."
+    npm install --ignore-scripts 2>&1 || print_warning "Fallback install also had issues"
+    # Try to rebuild just the critical native modules
+    npm rebuild better-sqlite3 2>/dev/null || true
 fi
 
 # ============================================================================

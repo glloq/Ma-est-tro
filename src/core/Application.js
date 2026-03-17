@@ -212,8 +212,8 @@ class Application {
       }
 
       // Close Bluetooth
-      if (this.bluetoothManager) {
-        await this.bluetoothManager.shutdown();
+      if (this.bluetoothManager && typeof this.bluetoothManager.cleanup === 'function') {
+        await this.bluetoothManager.cleanup();
       }
 
       // Close Network
