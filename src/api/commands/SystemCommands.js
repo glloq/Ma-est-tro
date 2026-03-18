@@ -51,18 +51,33 @@ async function systemCheckUpdate(app) {
   const cwd = resolve('.');
 
   try {
-    // Fetch latest from remote
-    execSync('git fetch origin main', { cwd, timeout: 15000, stdio: 'pipe' });
-
+    // Get local commit info
     const localHash = execSync('git rev-parse HEAD', { cwd, encoding: 'utf8', timeout: 5000 }).trim();
-    const remoteHash = execSync('git rev-parse origin/main', { cwd, encoding: 'utf8', timeout: 5000 }).trim();
     const localDate = execSync('git log -1 --format=%ci HEAD', { cwd, encoding: 'utf8', timeout: 5000 }).trim();
-    const remoteDate = execSync('git log -1 --format=%ci origin/main', { cwd, encoding: 'utf8', timeout: 5000 }).trim();
+
+    // Query remote without writing to .git/ (avoids permission issues)
+    const lsRemote = execSync('git ls-remote origin refs/heads/main', { cwd, encoding: 'utf8', timeout: 15000 }).trim();
+    const remoteHash = lsRemote.split(/\s/)[0] || '';
+
+    if (!remoteHash) {
+      return { upToDate: null, error: 'Impossible de lire le hash distant', version: APP_VERSION };
+    }
 
     let behindCount = 0;
-    if (localHash !== remoteHash) {
-      const behind = execSync(`git rev-list --count HEAD..origin/main`, { cwd, encoding: 'utf8', timeout: 5000 }).trim();
-      behindCount = parseInt(behind) || 0;
+    let remoteDate = '';
+
+    // Try to get remote date and behind count using local refs (may be stale but no write needed)
+    try {
+      // Fetch to update refs if we have write access
+      execSync('git fetch origin main', { cwd, timeout: 15000, stdio: 'pipe' });
+      remoteDate = execSync('git log -1 --format=%ci origin/main', { cwd, encoding: 'utf8', timeout: 5000 }).trim();
+      if (localHash !== remoteHash) {
+        const behind = execSync('git rev-list --count HEAD..origin/main', { cwd, encoding: 'utf8', timeout: 5000 }).trim();
+        behindCount = parseInt(behind) || 0;
+      }
+    } catch {
+      // No write access to .git/, use ls-remote result only
+      // remoteDate stays empty, behindCount stays 0
     }
 
     return {
