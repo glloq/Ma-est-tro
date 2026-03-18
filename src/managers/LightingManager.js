@@ -24,6 +24,8 @@ class LightingManager extends EventEmitter {
     this.allRules = [];
     this.activeNotes = new Map();     // deviceId -> Map<note, count> for polyphonic note-off tracking
     this.activeFades = new Map();     // fadeKey -> { interval, driver }
+    this.masterDimmer = 255;          // Global master dimmer (0-255)
+    this.deviceGroups = new Map();    // groupName -> Set<deviceId>
     this._healthCheckInterval = null;
     this._reloading = false;
 
@@ -334,17 +336,31 @@ class LightingManager extends EventEmitter {
       return this._interpolateColorMap(action.color_map, midiData.velocity || midiData.value || 0);
     }
 
+    // Note-to-color: map MIDI note to chromatic hue
+    if (action.type === 'note_color' && midiData.note !== null) {
+      return this._noteToColor(midiData.note);
+    }
+
+    // Color temperature mode: map value (CC or velocity) to warm-cool
+    if (action.type === 'color_temp') {
+      const val = midiData.value !== null ? midiData.value : (midiData.velocity || 64);
+      return this._colorTemperature(val, action.temp_warm || 2700, action.temp_cool || 6500);
+    }
+
     // Static color from hex
     const color = action.color || '#FFFFFF';
     return this._hexToRgb(color);
   }
 
   _resolveBrightness(action, midiData) {
+    let bri;
     if (action.brightness_from_velocity && midiData.velocity !== null) {
-      // Map velocity 0-127 to 0-255
-      return Math.round((midiData.velocity / 127) * 255);
+      bri = Math.round((midiData.velocity / 127) * 255);
+    } else {
+      bri = action.brightness !== undefined ? action.brightness : 255;
     }
-    return action.brightness !== undefined ? action.brightness : 255;
+    // Apply master dimmer
+    return Math.round((bri * this.masterDimmer) / 255);
   }
 
   _interpolateColorMap(colorMap, value) {
@@ -383,6 +399,71 @@ class LightingManager extends EventEmitter {
       g: parseInt(result[2], 16),
       b: parseInt(result[3], 16)
     } : { r: 255, g: 255, b: 255 };
+  }
+
+  /**
+   * Map MIDI note to chromatic color (C=red, C#=orange, D=yellow, etc.)
+   */
+  _noteToColor(note) {
+    const hue = (note % 12) * 30; // 12 semitones * 30° = 360°
+    return this._hsvToRgb(hue, 1.0, 1.0);
+  }
+
+  /**
+   * Map a value (0-127) to a color temperature (warm to cool white)
+   * warm = amber/warm white, cool = blue-white/daylight
+   */
+  _colorTemperature(value, warmK, coolK) {
+    const ratio = value / 127;
+    const kelvin = warmK + (coolK - warmK) * ratio;
+    return this._kelvinToRgb(kelvin);
+  }
+
+  /**
+   * Convert color temperature in Kelvin to RGB (Tanner Helland algorithm)
+   */
+  _kelvinToRgb(kelvin) {
+    const temp = kelvin / 100;
+    let r, g, b;
+
+    if (temp <= 66) {
+      r = 255;
+      g = Math.min(255, Math.max(0, 99.4708025861 * Math.log(temp) - 161.1195681661));
+    } else {
+      r = Math.min(255, Math.max(0, 329.698727446 * Math.pow(temp - 60, -0.1332047592)));
+      g = Math.min(255, Math.max(0, 288.1221695283 * Math.pow(temp - 60, -0.0755148492)));
+    }
+
+    if (temp >= 66) {
+      b = 255;
+    } else if (temp <= 19) {
+      b = 0;
+    } else {
+      b = Math.min(255, Math.max(0, 138.5177312231 * Math.log(temp - 10) - 305.0447927307));
+    }
+
+    return { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
+  }
+
+  _hsvToRgb(h, s, v) {
+    h = h % 360;
+    const c = v * s;
+    const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+    const m = v - c;
+    let r, g, b;
+
+    if (h < 60) { r = c; g = x; b = 0; }
+    else if (h < 120) { r = x; g = c; b = 0; }
+    else if (h < 180) { r = 0; g = c; b = x; }
+    else if (h < 240) { r = 0; g = x; b = c; }
+    else if (h < 300) { r = x; g = 0; b = c; }
+    else { r = c; g = 0; b = x; }
+
+    return {
+      r: Math.round((r + m) * 255),
+      g: Math.round((g + m) * 255),
+      b: Math.round((b + m) * 255)
+    };
   }
 
   // ==================== NOTE TRACKING ====================
@@ -575,6 +656,78 @@ class LightingManager extends EventEmitter {
 
   getActiveEffects() {
     return this.effectsEngine.getActiveEffects();
+  }
+
+  // ==================== MASTER DIMMER ====================
+
+  setMasterDimmer(value) {
+    this.masterDimmer = Math.max(0, Math.min(255, value));
+    return { success: true, masterDimmer: this.masterDimmer };
+  }
+
+  getMasterDimmer() {
+    return this.masterDimmer;
+  }
+
+  // ==================== DEVICE GROUPS ====================
+
+  createGroup(name, deviceIds) {
+    this.deviceGroups.set(name, new Set(deviceIds));
+    return { success: true };
+  }
+
+  deleteGroup(name) {
+    this.deviceGroups.delete(name);
+    return { success: true };
+  }
+
+  getGroups() {
+    const result = {};
+    for (const [name, ids] of this.deviceGroups) {
+      result[name] = [...ids];
+    }
+    return result;
+  }
+
+  setGroupColor(groupName, r, g, b, brightness = 255) {
+    const group = this.deviceGroups.get(groupName);
+    if (!group) throw new Error(`Group "${groupName}" not found`);
+
+    const bri = Math.round((brightness * this.masterDimmer) / 255);
+    for (const deviceId of group) {
+      const driver = this.drivers.get(deviceId);
+      if (driver && driver.isConnected()) {
+        driver.setRange(0, -1, r, g, b, bri);
+      }
+    }
+    return { success: true };
+  }
+
+  groupAllOff(groupName) {
+    const group = this.deviceGroups.get(groupName);
+    if (!group) throw new Error(`Group "${groupName}" not found`);
+
+    for (const deviceId of group) {
+      const driver = this.drivers.get(deviceId);
+      if (driver && driver.isConnected()) {
+        driver.allOff();
+      }
+    }
+    return { success: true };
+  }
+
+  // ==================== BLACKOUT ====================
+
+  blackout() {
+    this.effectsEngine.stopAllEffects();
+    for (const [key, fade] of this.activeFades) {
+      clearInterval(fade.interval);
+    }
+    this.activeFades.clear();
+    for (const [, driver] of this.drivers) {
+      if (driver.isConnected()) driver.allOff();
+    }
+    return { success: true };
   }
 
   allOff() {

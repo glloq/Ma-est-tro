@@ -95,6 +95,7 @@ class LightingControlPage {
               <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
                 <button onclick="lightingControlPageInstance.showEffectsPanel()" style="padding:5px 12px;border:2px solid rgba(255,255,255,0.4);border-radius:8px;background:rgba(255,255,255,0.15);color:white;cursor:pointer;font-size:12px;">⚡ ${i18n.t('lighting.effects') || 'Effets'}</button>
                 <button onclick="lightingControlPageInstance.showPresetsPanel()" style="padding:5px 12px;border:2px solid rgba(255,255,255,0.4);border-radius:8px;background:rgba(255,255,255,0.15);color:white;cursor:pointer;font-size:12px;">📦 ${i18n.t('lighting.presets') || 'Presets'}</button>
+                <button onclick="lightingControlPageInstance.blackout()" style="padding:5px 12px;border:2px solid rgba(255,100,100,0.6);border-radius:8px;background:rgba(255,50,50,0.3);color:white;cursor:pointer;font-size:12px;font-weight:700;">🚫 Blackout</button>
                 <button onclick="lightingControlPageInstance.allOff()" style="padding:5px 12px;border:2px solid rgba(255,255,255,0.4);border-radius:8px;background:rgba(255,255,255,0.15);color:white;cursor:pointer;font-size:12px;">⏹ ${i18n.t('lighting.allOff') || 'Tout éteindre'}</button>
                 <button onclick="lightingControlPageInstance.close()" style="background:rgba(255,255,255,0.2);border:none;color:white;font-size:22px;cursor:pointer;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;">×</button>
               </div>
@@ -104,6 +105,13 @@ class LightingControlPage {
               <button id="lightingTabDevices" onclick="lightingControlPageInstance.showMobilePanel('devices')" style="flex:1;padding:6px;border:none;border-radius:6px;background:rgba(255,255,255,0.3);color:white;cursor:pointer;font-size:12px;font-weight:600;">📋 Dispositifs</button>
               <button id="lightingTabRules" onclick="lightingControlPageInstance.showMobilePanel('rules')" style="flex:1;padding:6px;border:none;border-radius:6px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);cursor:pointer;font-size:12px;">📐 Règles</button>
             </div>
+          </div>
+
+          <!-- Master Dimmer Bar -->
+          <div style="padding:6px 20px;background:${t.bgAlt};border-bottom:1px solid ${t.border};display:flex;align-items:center;gap:10px;flex-shrink:0;">
+            <span style="font-size:11px;font-weight:600;color:${t.textSec};white-space:nowrap;">🔆 Master</span>
+            <input id="lightingMasterDimmer" type="range" min="0" max="255" value="255" style="flex:1;height:6px;" oninput="lightingControlPageInstance._onMasterDimmerChange(this.value)">
+            <span id="lightingMasterDimmerVal" style="font-size:11px;color:${t.textSec};min-width:35px;text-align:right;">100%</span>
           </div>
 
           <!-- Body: two-panel layout -->
@@ -990,6 +998,8 @@ class LightingControlPage {
               <optgroup label="Couleurs">
                 <option value="static" ${action.type === 'static' || !action.type ? 'selected' : ''}>Couleur fixe</option>
                 <option value="velocity_mapped" ${action.type === 'velocity_mapped' ? 'selected' : ''}>Gradient vélocité</option>
+                <option value="note_color" ${action.type === 'note_color' ? 'selected' : ''}>🎹 Note → Couleur</option>
+                <option value="color_temp" ${action.type === 'color_temp' ? 'selected' : ''}>🌡️ Température couleur</option>
                 <option value="pulse" ${action.type === 'pulse' ? 'selected' : ''}>Pulse (flash)</option>
                 <option value="fade" ${action.type === 'fade' ? 'selected' : ''}>Fade (fondu)</option>
               </optgroup>
@@ -1025,6 +1035,28 @@ class LightingControlPage {
               <input id="lrFormColorHigh" type="color" value="${this._getColorMapValue(action.color_map, 127) || '#FF0000'}" style="width:36px;height:28px;border:1px solid ${t.inputBorder};border-radius:6px;cursor:pointer;">
             </div>
             <div id="lrFormGradientPreview" style="margin-top:6px;height:12px;border-radius:6px;background:linear-gradient(to right,${this._getColorMapValue(action.color_map, 0) || '#0000FF'},${this._getColorMapValue(action.color_map, 64) || '#FFFF00'},${this._getColorMapValue(action.color_map, 127) || '#FF0000'});"></div>
+          </div>
+
+          <!-- Color temperature fields -->
+          <div id="lrFormColorTempSection" style="display:${action.type === 'color_temp' ? 'block' : 'none'};">
+            <div style="padding:8px 10px;background:${t.bgAlt};border:1px solid ${t.borderLight};border-radius:8px;margin-bottom:10px;">
+              <div style="font-size:11px;font-weight:600;color:${t.textSec};margin-bottom:6px;">🌡️ Température de couleur</div>
+              <div style="display:flex;gap:8px;">
+                <div style="flex:1;"><label style="font-size:10px;color:${t.textMuted};display:block;margin-bottom:2px;">Chaud (K)</label><input id="lrFormTempWarm" type="number" min="1000" max="10000" value="${action.temp_warm || 2700}" style="width:100%;padding:5px;border:1px solid ${t.inputBorder};border-radius:6px;font-size:12px;box-sizing:border-box;background:${t.inputBg};color:${t.inputText};"></div>
+                <div style="flex:1;"><label style="font-size:10px;color:${t.textMuted};display:block;margin-bottom:2px;">Froid (K)</label><input id="lrFormTempCool" type="number" min="1000" max="10000" value="${action.temp_cool || 6500}" style="width:100%;padding:5px;border:1px solid ${t.inputBorder};border-radius:6px;font-size:12px;box-sizing:border-box;background:${t.inputBg};color:${t.inputText};"></div>
+              </div>
+              <div style="margin-top:4px;height:10px;border-radius:4px;background:linear-gradient(to right,#FF9329,#FFD4A3,#FFF4E5,#F5F3FF,#CAE2FF);"></div>
+              <div style="display:flex;justify-content:space-between;font-size:9px;color:${t.textMuted};"><span>Chaud (bougie)</span><span>Froid (ciel)</span></div>
+            </div>
+          </div>
+
+          <!-- Note-to-color info -->
+          <div id="lrFormNoteColorSection" style="display:${action.type === 'note_color' ? 'block' : 'none'};">
+            <div style="padding:8px 10px;background:${t.bgAlt};border:1px solid ${t.borderLight};border-radius:8px;margin-bottom:10px;">
+              <div style="font-size:11px;font-weight:600;color:${t.textSec};margin-bottom:4px;">🎹 Note → Couleur chromatique</div>
+              <div style="height:14px;border-radius:4px;background:linear-gradient(to right,#FF0000,#FF8000,#FFFF00,#80FF00,#00FF00,#00FF80,#00FFFF,#0080FF,#0000FF,#8000FF,#FF00FF,#FF0080,#FF0000);margin-bottom:2px;"></div>
+              <div style="display:flex;justify-content:space-between;font-size:8px;color:${t.textMuted};"><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>A</span><span>B</span><span>C</span></div>
+            </div>
           </div>
 
           <!-- Effect-specific fields -->
@@ -1153,17 +1185,16 @@ class LightingControlPage {
     const s = document.getElementById('lrFormStaticColor');
     const g = document.getElementById('lrFormGradientSection');
     const e = document.getElementById('lrFormEffectSection');
+    const ct = document.getElementById('lrFormColorTempSection');
+    const nc = document.getElementById('lrFormNoteColorSection');
     const isEffect = this._isEffectType(type);
 
-    if (type === 'velocity_mapped') {
-      if (s) s.style.display = 'none';
-      if (g) g.style.display = 'block';
-    } else {
-      if (s) s.style.display = isEffect ? 'block' : 'block'; // effects also use color
-      if (g) g.style.display = 'none';
-    }
-
+    // Color picker: show for most types, hide for gradient/note_color/color_temp
+    if (s) s.style.display = (type === 'velocity_mapped' || type === 'note_color' || type === 'color_temp') ? 'none' : 'block';
+    if (g) g.style.display = type === 'velocity_mapped' ? 'block' : 'none';
     if (e) e.style.display = isEffect ? 'block' : 'none';
+    if (ct) ct.style.display = type === 'color_temp' ? 'block' : 'none';
+    if (nc) nc.style.display = type === 'note_color' ? 'block' : 'none';
   }
 
   _isEffectType(type) {
@@ -1223,6 +1254,12 @@ class LightingControlPage {
         '64': document.getElementById('lrFormColorMid').value,
         '127': document.getElementById('lrFormColorHigh').value
       };
+    }
+
+    // Color temperature config
+    if (actionType === 'color_temp') {
+      actionConfig.temp_warm = parseInt(document.getElementById('lrFormTempWarm')?.value) || 2700;
+      actionConfig.temp_cool = parseInt(document.getElementById('lrFormTempCool')?.value) || 6500;
     }
 
     // Effect-specific config
@@ -1298,6 +1335,19 @@ class LightingControlPage {
     catch (error) { alert('Erreur: ' + error.message); }
   }
 
+  async blackout() {
+    try { await this.apiClient.send('lighting_blackout'); }
+    catch (error) { alert('Erreur: ' + error.message); }
+  }
+
+  async _onMasterDimmerChange(value) {
+    const val = parseInt(value);
+    const label = document.getElementById('lightingMasterDimmerVal');
+    if (label) label.textContent = Math.round(val / 2.55) + '%';
+    try { await this.apiClient.send('lighting_master_dimmer', { value: val }); }
+    catch (error) { /* ignore - too many events */ }
+  }
+
   // ==================== HELPERS ====================
 
   _getTypeIcon(type) {
@@ -1312,6 +1362,7 @@ class LightingControlPage {
     return {
       static: i18n.t('lighting.colorStatic') || 'Couleur fixe',
       velocity_mapped: i18n.t('lighting.colorVelocity') || 'Gradient',
+      note_color: '🎹 Note→Couleur', color_temp: '🌡️ Temp. couleur',
       pulse: 'Pulse', fade: 'Fade',
       strobe: '⚡ Stroboscope', rainbow: '🌈 Arc-en-ciel', chase: '🏃 Chenillard',
       fire: '🔥 Feu', breathe: '💨 Respiration', sparkle: '✨ Étincelles',

@@ -193,6 +193,63 @@ function lightingEffectList(app) {
   return { success: true, effects: app.lightingManager.getActiveEffects() };
 }
 
+// ==================== MASTER DIMMER API ====================
+
+function lightingMasterDimmer(app, data) {
+  if (!app.lightingManager) throw new Error('Lighting manager not available');
+  if (data?.value !== undefined) {
+    return app.lightingManager.setMasterDimmer(data.value);
+  }
+  return { success: true, masterDimmer: app.lightingManager.getMasterDimmer() };
+}
+
+function lightingBlackout(app) {
+  if (!app.lightingManager) throw new Error('Lighting manager not available');
+  return app.lightingManager.blackout();
+}
+
+// ==================== DEVICE GROUPS API ====================
+
+function lightingGroupCreate(app, data) {
+  if (!data.name) throw new Error('name is required');
+  if (!data.device_ids || !Array.isArray(data.device_ids)) throw new Error('device_ids array is required');
+  if (!app.lightingManager) throw new Error('Lighting manager not available');
+  return app.lightingManager.createGroup(data.name, data.device_ids);
+}
+
+function lightingGroupDelete(app, data) {
+  if (!data.name) throw new Error('name is required');
+  if (!app.lightingManager) throw new Error('Lighting manager not available');
+  return app.lightingManager.deleteGroup(data.name);
+}
+
+function lightingGroupList(app) {
+  if (!app.lightingManager) return { success: true, groups: {} };
+  return { success: true, groups: app.lightingManager.getGroups() };
+}
+
+function lightingGroupColor(app, data) {
+  if (!data.name) throw new Error('name is required');
+  if (!app.lightingManager) throw new Error('Lighting manager not available');
+  const color = data.color ? hexToRgb(data.color) : { r: data.r || 0, g: data.g || 0, b: data.b || 0 };
+  return app.lightingManager.setGroupColor(data.name, color.r, color.g, color.b, data.brightness || 255);
+}
+
+function lightingGroupOff(app, data) {
+  if (!data.name) throw new Error('name is required');
+  if (!app.lightingManager) throw new Error('Lighting manager not available');
+  return app.lightingManager.groupAllOff(data.name);
+}
+
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : { r: 255, g: 255, b: 255 };
+}
+
 export function register(registry, app) {
   registry.register('lighting_device_list', () => lightingDeviceList(app));
   registry.register('lighting_device_add', (data) => lightingDeviceAdd(app, data));
@@ -212,4 +269,11 @@ export function register(registry, app) {
   registry.register('lighting_effect_start', (data) => lightingEffectStart(app, data));
   registry.register('lighting_effect_stop', (data) => lightingEffectStop(app, data));
   registry.register('lighting_effect_list', () => lightingEffectList(app));
+  registry.register('lighting_master_dimmer', (data) => lightingMasterDimmer(app, data));
+  registry.register('lighting_blackout', () => lightingBlackout(app));
+  registry.register('lighting_group_create', (data) => lightingGroupCreate(app, data));
+  registry.register('lighting_group_delete', (data) => lightingGroupDelete(app, data));
+  registry.register('lighting_group_list', () => lightingGroupList(app));
+  registry.register('lighting_group_color', (data) => lightingGroupColor(app, data));
+  registry.register('lighting_group_off', (data) => lightingGroupOff(app, data));
 }
