@@ -530,6 +530,14 @@ export function register(registry, app) {
     const bpm = app.lightingManager.effectsEngine.tapTempo();
     return { success: true, bpm };
   });
+  registry.register('lighting_led_broadcast', (data) => {
+    if (!app.lightingManager) throw new Error('Lighting manager not available');
+    return app.lightingManager.enableLedBroadcast(data?.enabled !== false);
+  });
+  registry.register('lighting_dmx_profiles', async () => {
+    const { listProfiles } = await import('../../lighting/DmxFixtureProfiles.js');
+    return { success: true, profiles: listProfiles() };
+  });
   registry.register('lighting_bpm_get', () => {
     if (!app.lightingManager) return { success: true, bpm: 120 };
     return { success: true, bpm: app.lightingManager.effectsEngine.getBpm() };

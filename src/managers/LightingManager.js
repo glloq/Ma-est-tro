@@ -745,6 +745,27 @@ class LightingManager extends EventEmitter {
     }
   }
 
+  _broadcastLedState(deviceId, ledIndex, r, g, b) {
+    if (this.app.wsServer && this._ledBroadcastEnabled) {
+      // Throttle: only send max 30 times per second per device
+      const now = Date.now();
+      const key = `led_${deviceId}`;
+      if (!this._lastLedBroadcast) this._lastLedBroadcast = new Map();
+      const last = this._lastLedBroadcast.get(key) || 0;
+      if (now - last < 33) return; // 33ms = ~30fps
+      this._lastLedBroadcast.set(key, now);
+
+      this.app.wsServer.broadcast('lighting_led_state', {
+        deviceId, ledIndex, r, g, b
+      });
+    }
+  }
+
+  enableLedBroadcast(enabled) {
+    this._ledBroadcastEnabled = !!enabled;
+    return { success: true, enabled: this._ledBroadcastEnabled };
+  }
+
   _broadcastEffectChange(effectKey, action) {
     if (this.app.wsServer) {
       this.app.wsServer.broadcast('lighting_effect_change', {
