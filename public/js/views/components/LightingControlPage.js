@@ -34,6 +34,50 @@ class LightingControlPage {
     return document.body.classList.contains('theme-dark');
   }
 
+  // ==================== TOAST & CONFIRM ====================
+
+  showToast(message, type = 'info') {
+    const icons = { success: '✓', error: '✗', info: 'ℹ', warning: '⚠' };
+    const colors = {
+      success: { bg: '#10b981', text: 'white' },
+      error: { bg: '#ef4444', text: 'white' },
+      info: { bg: '#3b82f6', text: 'white' },
+      warning: { bg: '#f59e0b', text: 'white' }
+    };
+    const style = colors[type] || colors.info;
+    const toast = document.createElement('div');
+    toast.style.cssText = `position:fixed;top:24px;right:24px;z-index:10020;padding:12px 20px;border-radius:10px;background:${style.bg};color:${style.text};font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,0.25);display:flex;align-items:center;gap:8px;max-width:400px;opacity:0;transform:translateY(-10px);transition:all 0.25s ease;`;
+    toast.innerHTML = `<span style="font-weight:bold;font-size:16px;">${icons[type] || 'ℹ'}</span> ${this._escapeHtml(message)}`;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; });
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(-10px)';
+      setTimeout(() => toast.remove(), 300);
+    }, 3500);
+  }
+
+  _confirm(message) {
+    const t = this._t();
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10020;display:flex;align-items:center;justify-content:center;`;
+      overlay.innerHTML = `
+        <div style="background:${t.bg};border-radius:12px;padding:24px;width:380px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center;">
+          <div style="font-size:32px;margin-bottom:12px;">⚠️</div>
+          <p style="margin:0 0 20px;font-size:14px;color:${t.text};line-height:1.5;">${this._escapeHtml(message)}</p>
+          <div style="display:flex;gap:10px;justify-content:center;">
+            <button id="_lcpConfirmNo" style="padding:8px 20px;border:1px solid ${t.btnBorder};border-radius:8px;background:${t.btnBg};color:${t.text};cursor:pointer;font-size:13px;min-width:80px;">Annuler</button>
+            <button id="_lcpConfirmYes" style="padding:8px 20px;border:none;border-radius:8px;background:#ef4444;color:white;cursor:pointer;font-size:13px;font-weight:600;min-width:80px;">Confirmer</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+      overlay.querySelector('#_lcpConfirmYes').onclick = () => { overlay.remove(); resolve(true); };
+      overlay.querySelector('#_lcpConfirmNo').onclick = () => { overlay.remove(); resolve(false); };
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+    });
+  }
+
   _t(vars) {
     const d = this._isDark();
     return {
@@ -239,9 +283,9 @@ class LightingControlPage {
   async loadData() {
     try {
       const [devicesRes, instrumentsRes, presetsRes] = await Promise.all([
-        this.apiClient.send('lighting_device_list'),
-        this.apiClient.send('instrument_list_registered'),
-        this.apiClient.send('lighting_preset_list')
+        this.apiClient.sendCommand('lighting_device_list'),
+        this.apiClient.sendCommand('instrument_list_registered'),
+        this.apiClient.sendCommand('lighting_preset_list')
       ]);
 
       this.devices = devicesRes.devices || [];
@@ -259,7 +303,7 @@ class LightingControlPage {
 
   async loadRulesForDevice(deviceId) {
     try {
-      const res = await this.apiClient.send('lighting_rule_list', { device_id: deviceId });
+      const res = await this.apiClient.sendCommand('lighting_rule_list', { device_id: deviceId });
       this.rules = res.rules || [];
       this.renderRulesList();
     } catch (error) {
@@ -407,7 +451,7 @@ class LightingControlPage {
     const t = this._t();
     let groups = {};
     try {
-      const res = await this.apiClient.send('lighting_group_list');
+      const res = await this.apiClient.sendCommand('lighting_group_list');
       groups = res.groups || {};
     } catch (e) { /* ignore */ }
 
@@ -476,25 +520,25 @@ class LightingControlPage {
 
   async _createGroup() {
     const name = document.getElementById('lgFormName')?.value.trim();
-    if (!name) return alert('Nom requis');
+    if (!name) { this.showToast('Nom requis', 'warning'); return; }
     const checkboxes = document.querySelectorAll('#lightingGroupsPanel .lgDeviceCb:checked');
     const deviceIds = [...checkboxes].map(cb => parseInt(cb.value));
-    if (deviceIds.length === 0) return alert('Sélectionnez au moins un dispositif');
+    if (deviceIds.length === 0) { this.showToast('Sélectionnez au moins un dispositif', 'warning'); return; }
 
     try {
-      await this.apiClient.send('lighting_group_create', { name, device_ids: deviceIds });
+      await this.apiClient.sendCommand('lighting_group_create', { name, device_ids: deviceIds });
       this.showGroupsPanel();
-    } catch (error) { alert('Erreur: ' + error.message); }
+    } catch (error) { this.showToast(error.message, 'error'); }
   }
 
   async _deleteGroupByIdx(idx) {
     const name = this._groupNames?.[idx];
     if (!name) return;
-    if (!confirm(`Supprimer le groupe "${name}" ?`)) return;
+    if (!await this._confirm(`Supprimer le groupe "${name}" ?`)) return;
     try {
-      await this.apiClient.send('lighting_group_delete', { name });
+      await this.apiClient.sendCommand('lighting_group_delete', { name });
       this.showGroupsPanel();
-    } catch (error) { alert('Erreur: ' + error.message); }
+    } catch (error) { this.showToast(error.message, 'error'); }
   }
 
   async _setGroupColorByIdx(idx) {
@@ -503,16 +547,16 @@ class LightingControlPage {
     const colorInput = document.querySelector(`.lg-color-input[data-group-idx="${idx}"]`);
     const color = colorInput?.value || '#FF0000';
     try {
-      await this.apiClient.send('lighting_group_color', { name, color, brightness: 255 });
-    } catch (error) { alert('Erreur: ' + error.message); }
+      await this.apiClient.sendCommand('lighting_group_color', { name, color, brightness: 255 });
+    } catch (error) { this.showToast(error.message, 'error'); }
   }
 
   async _groupOffByIdx(idx) {
     const name = this._groupNames?.[idx];
     if (!name) return;
     try {
-      await this.apiClient.send('lighting_group_off', { name });
-    } catch (error) { alert('Erreur: ' + error.message); }
+      await this.apiClient.sendCommand('lighting_group_off', { name });
+    } catch (error) { this.showToast(error.message, 'error'); }
   }
 
   // ==================== DEVICE SCAN ====================
@@ -538,7 +582,7 @@ class LightingControlPage {
     document.body.appendChild(div.firstElementChild);
 
     try {
-      const res = await this.apiClient.send('lighting_device_scan', { type: 'all' });
+      const res = await this.apiClient.sendCommand('lighting_device_scan', { type: 'all' });
       const results = document.getElementById('scanResults');
       if (!results) return;
 
@@ -577,7 +621,7 @@ class LightingControlPage {
         connectionConfig = { base_url: `http://${deviceInfo.host}`, firmware: 'hue' };
       }
 
-      await this.apiClient.send('lighting_device_add', {
+      await this.apiClient.sendCommand('lighting_device_add', {
         name: deviceInfo.name,
         type,
         led_count: deviceInfo.led_count || 1,
@@ -586,7 +630,7 @@ class LightingControlPage {
 
       document.getElementById('lightingScanPanel')?.remove();
       await this.loadData();
-    } catch (error) { alert('Erreur: ' + error.message); }
+    } catch (error) { this.showToast(error.message, 'error'); }
   }
 
   // ==================== DEVICE CLONE ====================
@@ -596,7 +640,7 @@ class LightingControlPage {
     if (!device) return;
 
     try {
-      await this.apiClient.send('lighting_device_add', {
+      await this.apiClient.sendCommand('lighting_device_add', {
         name: device.name + ' (copie)',
         type: device.type,
         led_count: device.led_count,
@@ -604,7 +648,7 @@ class LightingControlPage {
         enabled: false // Start disabled to avoid conflicts
       });
       await this.loadData();
-    } catch (error) { alert('Erreur: ' + error.message); }
+    } catch (error) { this.showToast(error.message, 'error'); }
   }
 
   // ==================== LIVE EFFECTS PANEL ====================
@@ -612,7 +656,7 @@ class LightingControlPage {
   async showEffectsPanel() {
     const t = this._t();
     if (!this.selectedDeviceId) {
-      alert(i18n.t('lighting.selectDeviceFirst') || 'Sélectionnez un dispositif d\'abord');
+      this.showToast(i18n.t('lighting.selectDeviceFirst') || 'Sélectionnez un dispositif d\'abord', 'warning');
       return;
     }
 
@@ -621,7 +665,7 @@ class LightingControlPage {
 
     let activeEffects = [];
     try {
-      const res = await this.apiClient.send('lighting_effect_list');
+      const res = await this.apiClient.sendCommand('lighting_effect_list');
       activeEffects = res.effects || [];
     } catch (e) { /* ignore */ }
 
@@ -709,7 +753,7 @@ class LightingControlPage {
     const brightness = parseInt(document.getElementById('leFormBri')?.value) || 255;
 
     try {
-      await this.apiClient.send('lighting_effect_start', {
+      await this.apiClient.sendCommand('lighting_effect_start', {
         device_id: this.selectedDeviceId,
         effect_type: effectType,
         color, speed, brightness
@@ -717,13 +761,13 @@ class LightingControlPage {
       // Refresh the panel
       this.showEffectsPanel();
     } catch (error) {
-      alert('Erreur: ' + error.message);
+      this.showToast(error.message, 'error');
     }
   }
 
   async _tapTempo() {
     try {
-      const res = await this.apiClient.send('lighting_bpm_tap');
+      const res = await this.apiClient.sendCommand('lighting_bpm_tap');
       const bpmEl = document.getElementById('leEffectBpm');
       const inputEl = document.getElementById('leEffectBpmInput');
       if (bpmEl) bpmEl.textContent = res.bpm;
@@ -733,7 +777,7 @@ class LightingControlPage {
 
   async _setBpm(value) {
     try {
-      const res = await this.apiClient.send('lighting_bpm_set', { bpm: parseInt(value) });
+      const res = await this.apiClient.sendCommand('lighting_bpm_set', { bpm: parseInt(value) });
       const bpmEl = document.getElementById('leEffectBpm');
       if (bpmEl) bpmEl.textContent = res.bpm;
     } catch (e) { /* ignore */ }
@@ -741,10 +785,10 @@ class LightingControlPage {
 
   async _stopLiveEffect(effectKey) {
     try {
-      await this.apiClient.send('lighting_effect_stop', { effect_key: effectKey });
+      await this.apiClient.sendCommand('lighting_effect_stop', { effect_key: effectKey });
       this.showEffectsPanel();
     } catch (error) {
-      alert('Erreur: ' + error.message);
+      this.showToast(error.message, 'error');
     }
   }
 
@@ -797,7 +841,7 @@ class LightingControlPage {
 
   async exportRules() {
     try {
-      const res = await this.apiClient.send('lighting_rules_export', {
+      const res = await this.apiClient.sendCommand('lighting_rules_export', {
         device_id: this.selectedDeviceId || undefined
       });
       const json = JSON.stringify(res.export_data, null, 2);
@@ -808,7 +852,7 @@ class LightingControlPage {
       a.download = `lighting-rules-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch (error) { alert('Erreur: ' + error.message); }
+    } catch (error) { this.showToast(error.message, 'error'); }
   }
 
   async importRules() {
@@ -821,53 +865,53 @@ class LightingControlPage {
       try {
         const text = await file.text();
         const importData = JSON.parse(text);
-        const res = await this.apiClient.send('lighting_rules_import', {
+        const res = await this.apiClient.sendCommand('lighting_rules_import', {
           import_data: importData,
           default_device_id: this.selectedDeviceId || undefined
         });
-        alert(`Import terminé: ${res.imported} règle(s) importée(s), ${res.skipped} ignorée(s)`);
+        this.showToast(`Import: ${res.imported} règle(s) importée(s), ${res.skipped} ignorée(s)`, 'success');
         document.getElementById('lightingPresetsPanel')?.remove();
         await this.loadData();
-      } catch (error) { alert('Erreur import: ' + error.message); }
+      } catch (error) { this.showToast('Erreur import: ' + error.message, 'error'); }
     };
     input.click();
   }
 
   async savePreset() {
     const name = document.getElementById('lpFormName')?.value.trim();
-    if (!name) return alert(i18n.t('lighting.presetName') || 'Nom requis');
+    if (!name) { this.showToast(i18n.t('lighting.presetName') || 'Nom requis', 'warning'); return; }
     try {
-      await this.apiClient.send('lighting_preset_save', { name });
+      await this.apiClient.sendCommand('lighting_preset_save', { name });
       document.getElementById('lightingPresetsPanel')?.remove();
-      const res = await this.apiClient.send('lighting_preset_list');
+      const res = await this.apiClient.sendCommand('lighting_preset_list');
       this.presets = res.presets || [];
       this.showPresetsPanel();
     } catch (error) {
-      alert('Erreur: ' + error.message);
+      this.showToast(error.message, 'error');
     }
   }
 
   async loadPreset(id) {
-    if (!confirm(i18n.t('lighting.confirmLoadPreset') || 'Charger ce preset ? Les règles actuelles seront remplacées.')) return;
+    if (!await this._confirm(i18n.t('lighting.confirmLoadPreset') || 'Charger ce preset ? Les règles actuelles seront remplacées.')) return;
     try {
-      await this.apiClient.send('lighting_preset_load', { id });
+      await this.apiClient.sendCommand('lighting_preset_load', { id });
       document.getElementById('lightingPresetsPanel')?.remove();
       await this.loadData();
     } catch (error) {
-      alert('Erreur: ' + error.message);
+      this.showToast(error.message, 'error');
     }
   }
 
   async deletePreset(id) {
-    if (!confirm(i18n.t('lighting.confirmDeletePreset') || 'Supprimer ce preset ?')) return;
+    if (!await this._confirm(i18n.t('lighting.confirmDeletePreset') || 'Supprimer ce preset ?')) return;
     try {
-      await this.apiClient.send('lighting_preset_delete', { id });
+      await this.apiClient.sendCommand('lighting_preset_delete', { id });
       document.getElementById('lightingPresetsPanel')?.remove();
-      const res = await this.apiClient.send('lighting_preset_list');
+      const res = await this.apiClient.sendCommand('lighting_preset_list');
       this.presets = res.presets || [];
       this.showPresetsPanel();
     } catch (error) {
-      alert('Erreur: ' + error.message);
+      this.showToast(error.message, 'error');
     }
   }
 
@@ -1207,22 +1251,22 @@ class LightingControlPage {
     }
 
     try {
-      await this.apiClient.send('lighting_device_add', { name, type, led_count: ledCount, connection_config: connectionConfig });
+      await this.apiClient.sendCommand('lighting_device_add', { name, type, led_count: ledCount, connection_config: connectionConfig });
       document.getElementById('lightingDeviceForm')?.remove();
       await this.loadData();
     } catch (error) {
-      alert('Erreur: ' + error.message);
+      this.showToast(error.message, 'error');
     }
   }
 
   async deleteDevice(id) {
-    if (!confirm(i18n.t('lighting.confirmDeleteDevice') || 'Supprimer ce dispositif et toutes ses règles ?')) return;
+    if (!await this._confirm(i18n.t('lighting.confirmDeleteDevice') || 'Supprimer ce dispositif et toutes ses règles ?')) return;
     try {
-      await this.apiClient.send('lighting_device_delete', { id });
+      await this.apiClient.sendCommand('lighting_device_delete', { id });
       if (this.selectedDeviceId === id) { this.selectedDeviceId = null; this.rules = []; }
       await this.loadData();
     } catch (error) {
-      alert('Erreur: ' + error.message);
+      this.showToast(error.message, 'error');
     }
   }
 
@@ -1291,18 +1335,18 @@ class LightingControlPage {
     try {
       connectionConfig = JSON.parse(document.getElementById('leditConfig')?.value || '{}');
     } catch (e) {
-      return alert('JSON invalide: ' + e.message);
+      this.showToast('JSON invalide: ' + e.message, 'error'); return;
     }
 
     try {
-      await this.apiClient.send('lighting_device_update', {
+      await this.apiClient.sendCommand('lighting_device_update', {
         id: this.selectedDeviceId,
         name, led_count: ledCount, enabled,
         connection_config: connectionConfig
       });
       document.getElementById('lightingEditDeviceForm')?.remove();
       await this.loadData();
-    } catch (error) { alert('Erreur: ' + error.message); }
+    } catch (error) { this.showToast(error.message, 'error'); }
   }
 
   async reconnectDevice() {
@@ -1310,10 +1354,10 @@ class LightingControlPage {
     const btn = document.getElementById('lightingReconnectBtn');
     if (btn) { btn.textContent = `⏳ ${i18n.t('lighting.reconnecting') || 'Reconnexion...'}`; btn.disabled = true; }
     try {
-      await this.apiClient.send('lighting_device_update', { id: this.selectedDeviceId, enabled: true });
+      await this.apiClient.sendCommand('lighting_device_update', { id: this.selectedDeviceId, enabled: true });
       await this.loadData();
     } catch (error) {
-      alert('Erreur: ' + error.message);
+      this.showToast(error.message, 'error');
     } finally {
       if (btn) { btn.textContent = `🔄 ${i18n.t('lighting.reconnect') || 'Reconnecter'}`; btn.disabled = false; }
     }
@@ -1694,20 +1738,20 @@ class LightingControlPage {
 
     // Validation
     if (conditionConfig.velocity_min > conditionConfig.velocity_max) {
-      return alert('Vélocité min doit être ≤ vélocité max');
+      this.showToast('Vélocité min doit être ≤ vélocité max', 'warning'); return;
     }
     if (conditionConfig.note_min > conditionConfig.note_max) {
-      return alert('Note min doit être ≤ note max');
+      this.showToast('Note min doit être ≤ note max', 'warning'); return;
     }
 
     try {
       if (existingId) {
-        await this.apiClient.send('lighting_rule_update', {
+        await this.apiClient.sendCommand('lighting_rule_update', {
           id: existingId, name, instrument_id: instrumentId,
           condition_config: conditionConfig, action_config: actionConfig
         });
       } else {
-        await this.apiClient.send('lighting_rule_add', {
+        await this.apiClient.sendCommand('lighting_rule_add', {
           device_id: this.selectedDeviceId, name, instrument_id: instrumentId,
           condition_config: conditionConfig, action_config: actionConfig
         });
@@ -1715,7 +1759,7 @@ class LightingControlPage {
       document.getElementById('lightingRuleForm')?.remove();
       await this.loadRulesForDevice(this.selectedDeviceId);
     } catch (error) {
-      alert('Erreur: ' + error.message);
+      this.showToast(error.message, 'error');
     }
   }
 
@@ -1728,7 +1772,7 @@ class LightingControlPage {
     const rule = this.rules.find(r => r.id === ruleId);
     if (!rule) return;
     try {
-      await this.apiClient.send('lighting_rule_add', {
+      await this.apiClient.sendCommand('lighting_rule_add', {
         device_id: this.selectedDeviceId,
         name: (rule.name || 'Rule') + ' (copie)',
         instrument_id: rule.instrument_id,
@@ -1738,33 +1782,33 @@ class LightingControlPage {
         action_config: rule.action_config
       });
       await this.loadRulesForDevice(this.selectedDeviceId);
-    } catch (error) { alert('Erreur: ' + error.message); }
+    } catch (error) { this.showToast(error.message, 'error'); }
   }
 
   async deleteRule(id) {
-    if (!confirm(i18n.t('lighting.confirmDeleteRule') || 'Supprimer cette règle ?')) return;
+    if (!await this._confirm(i18n.t('lighting.confirmDeleteRule') || 'Supprimer cette règle ?')) return;
     try {
-      await this.apiClient.send('lighting_rule_delete', { id });
+      await this.apiClient.sendCommand('lighting_rule_delete', { id });
       await this.loadRulesForDevice(this.selectedDeviceId);
-    } catch (error) { alert('Erreur: ' + error.message); }
+    } catch (error) { this.showToast(error.message, 'error'); }
   }
 
   async toggleRule(id, enabled) {
     try {
-      await this.apiClient.send('lighting_rule_update', { id, enabled });
+      await this.apiClient.sendCommand('lighting_rule_update', { id, enabled });
       await this.loadRulesForDevice(this.selectedDeviceId);
-    } catch (error) { alert('Erreur: ' + error.message); }
+    } catch (error) { this.showToast(error.message, 'error'); }
   }
 
   async batchToggleRules(enabled) {
     try {
       for (const rule of this.rules) {
         if (rule.enabled !== enabled) {
-          await this.apiClient.send('lighting_rule_update', { id: rule.id, enabled });
+          await this.apiClient.sendCommand('lighting_rule_update', { id: rule.id, enabled });
         }
       }
       await this.loadRulesForDevice(this.selectedDeviceId);
-    } catch (error) { alert('Erreur: ' + error.message); }
+    } catch (error) { this.showToast(error.message, 'error'); }
   }
 
   async moveRulePriority(id, delta) {
@@ -1772,39 +1816,39 @@ class LightingControlPage {
     if (!rule) return;
     const newPriority = (rule.priority || 0) + delta;
     try {
-      await this.apiClient.send('lighting_rule_update', { id, priority: newPriority });
+      await this.apiClient.sendCommand('lighting_rule_update', { id, priority: newPriority });
       await this.loadRulesForDevice(this.selectedDeviceId);
-    } catch (error) { alert('Erreur: ' + error.message); }
+    } catch (error) { this.showToast(error.message, 'error'); }
   }
 
   // ==================== ACTIONS ====================
 
   async testDevice() {
     if (!this.selectedDeviceId) return;
-    try { await this.apiClient.send('lighting_device_test', { id: this.selectedDeviceId }); }
-    catch (error) { alert('Erreur: ' + error.message); }
+    try { await this.apiClient.sendCommand('lighting_device_test', { id: this.selectedDeviceId }); }
+    catch (error) { this.showToast(error.message, 'error'); }
   }
 
   async testRule(ruleId) {
-    try { await this.apiClient.send('lighting_rule_test', { id: ruleId }); }
-    catch (error) { alert('Erreur: ' + error.message); }
+    try { await this.apiClient.sendCommand('lighting_rule_test', { id: ruleId }); }
+    catch (error) { this.showToast(error.message, 'error'); }
   }
 
   async allOff() {
-    try { await this.apiClient.send('lighting_all_off'); }
-    catch (error) { alert('Erreur: ' + error.message); }
+    try { await this.apiClient.sendCommand('lighting_all_off'); }
+    catch (error) { this.showToast(error.message, 'error'); }
   }
 
   async blackout() {
-    try { await this.apiClient.send('lighting_blackout'); }
-    catch (error) { alert('Erreur: ' + error.message); }
+    try { await this.apiClient.sendCommand('lighting_blackout'); }
+    catch (error) { this.showToast(error.message, 'error'); }
   }
 
   async _onMasterDimmerChange(value) {
     const val = parseInt(value);
     const label = document.getElementById('lightingMasterDimmerVal');
     if (label) label.textContent = Math.round(val / 2.55) + '%';
-    try { await this.apiClient.send('lighting_master_dimmer', { value: val }); }
+    try { await this.apiClient.sendCommand('lighting_master_dimmer', { value: val }); }
     catch (error) { /* ignore - too many events */ }
   }
 
@@ -1909,7 +1953,7 @@ class LightingControlPage {
     btn.disabled = true;
 
     try {
-      const res = await this.apiClient.send('lighting_midi_learn');
+      const res = await this.apiClient.sendCommand('lighting_midi_learn');
 
       if (res.success && res.learned) {
         const l = res.learned;
