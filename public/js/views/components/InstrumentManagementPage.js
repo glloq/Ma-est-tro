@@ -181,6 +181,17 @@ class InstrumentManagementPage {
           dbInstrument = registeredInstruments.find(r => r.mac_address === device.address);
         }
 
+        // Fallback: chercher par nom normalisé (sans numéros de port ALSA)
+        if (!dbInstrument && device.id) {
+          const normalizedDeviceName = InstrumentManagementPage.normalizeDeviceName(device.id);
+          if (normalizedDeviceName && normalizedDeviceName !== 'virtual') {
+            dbInstrument = registeredInstruments.find(r => {
+              const normalizedDbName = InstrumentManagementPage.normalizeDeviceName(r.device_id);
+              return normalizedDbName === normalizedDeviceName && !r.device_id.startsWith('virtual_');
+            });
+          }
+        }
+
         if (dbInstrument) {
           matchedDbIds.add(dbInstrument.id);
           Object.assign(device, dbInstrument);
@@ -191,11 +202,15 @@ class InstrumentManagementPage {
       }
 
       // Ajouter les instruments enregistrés qui ne sont PAS connectés
-      // Dédupliquer par usb_serial_number pour éviter les doublons
+      // Dédupliquer par usb_serial_number et nom normalisé pour éviter les doublons
       const seenSerials = new Set();
+      const seenNormalizedNames = new Set();
       for (const device of connectedDevices) {
         const serial = device.usb_serial_number || device.usbSerialNumber;
         if (serial) seenSerials.add(serial);
+        // Ajouter le nom normalisé des devices connectés pour déduplication
+        const normalizedName = InstrumentManagementPage.normalizeDeviceName(device.id);
+        if (normalizedName) seenNormalizedNames.add(normalizedName);
       }
 
       for (const registered of registeredInstruments) {
@@ -211,11 +226,16 @@ class InstrumentManagementPage {
         // Dédupliquer: si un instrument avec le même MAC est déjà affiché
         if (registered.mac_address && connectedDevices.some(d => d.address === registered.mac_address)) continue;
 
+        // Dédupliquer: si un device connecté a le même nom normalisé
+        const normalizedRegName = InstrumentManagementPage.normalizeDeviceName(registered.device_id);
+        if (normalizedRegName && !registered.device_id.startsWith('virtual_') && seenNormalizedNames.has(normalizedRegName)) continue;
+
         registered.id = registered.device_id;
         registered.connected = false;
         registered.status = 0; // disconnected
 
         if (registered.usb_serial_number) seenSerials.add(registered.usb_serial_number);
+        if (normalizedRegName) seenNormalizedNames.add(normalizedRegName);
         this.instruments.push(registered);
       }
 
@@ -234,6 +254,17 @@ class InstrumentManagementPage {
       console.error('Failed to load instruments:', error);
       this.showError('Failed to load instruments: ' + error.message);
     }
+  }
+
+  /**
+   * Normalise un nom de device ALSA en retirant les numéros de port.
+   * Ex: "Arduino MIDI:Arduino MIDI MIDI 1 20:0" -> "arduino midi"
+   */
+  static normalizeDeviceName(deviceId) {
+    if (!deviceId) return '';
+    let normalized = deviceId.split(':')[0].trim().toLowerCase();
+    normalized = normalized.replace(/\s+\d+$/, '').trim();
+    return normalized;
   }
 
   /**

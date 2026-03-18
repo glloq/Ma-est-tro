@@ -564,6 +564,51 @@ class InstrumentDatabase {
   }
 
   /**
+   * Normalize an ALSA MIDI device name by removing port numbers.
+   * e.g., "Arduino MIDI:Arduino MIDI MIDI 1 20:0" -> "arduino midi"
+   * This allows matching across reboots when ALSA reassigns port numbers.
+   * @param {string} deviceId - ALSA device name or device_id
+   * @returns {string} Normalized lowercase name
+   */
+  static normalizeDeviceName(deviceId) {
+    if (!deviceId) return '';
+    // Take part before first colon (removes ALSA port info)
+    let normalized = deviceId.split(':')[0].trim().toLowerCase();
+    // Remove trailing numbers that might be card numbers (e.g., "Arduino MIDI 1" -> "Arduino MIDI")
+    normalized = normalized.replace(/\s+\d+$/, '').trim();
+    return normalized;
+  }
+
+  /**
+   * Find instrument by normalized device name.
+   * Matches even when ALSA port numbers change between reboots.
+   * @param {string} deviceId - Current device name to match
+   * @returns {Object|null} First matching instrument entry
+   */
+  findInstrumentByNormalizedName(deviceId) {
+    try {
+      const normalizedTarget = InstrumentDatabase.normalizeDeviceName(deviceId);
+      if (!normalizedTarget || normalizedTarget === 'virtual') return null;
+
+      // Get all non-virtual entries
+      const entries = this.db.prepare(
+        "SELECT * FROM instruments_latency WHERE device_id NOT LIKE 'virtual_%' ORDER BY capabilities_updated_at DESC"
+      ).all();
+
+      for (const entry of entries) {
+        const normalizedEntry = InstrumentDatabase.normalizeDeviceName(entry.device_id);
+        if (normalizedEntry === normalizedTarget) {
+          return entry;
+        }
+      }
+      return null;
+    } catch (error) {
+      this.logger.error(`Failed to find instrument by normalized name: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
    * Reconcile device_id: update all DB entries for an old device_id to a new one.
    * Used when ALSA renames a USB device (e.g., port number changes between reboots).
    * Also merges duplicate entries if the new device_id already exists.
