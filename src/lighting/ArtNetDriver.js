@@ -111,6 +111,29 @@ class ArtNetDriver extends BaseLightingDriver {
     this._scheduleRender();
   }
 
+  /**
+   * Set raw DMX channel values for a fixture profile
+   * @param {number} startChannel - DMX start channel (0-based)
+   * @param {Array<number>} values - Channel values array
+   */
+  setFixture(startChannel, values) {
+    if (!this.dmxData) return;
+    for (let i = 0; i < values.length; i++) {
+      const ch = startChannel + i;
+      if (ch < this.dmxData.length) {
+        this.dmxData[ch] = Math.max(0, Math.min(255, values[i]));
+      }
+    }
+    this._scheduleRender();
+  }
+
+  /**
+   * Get current DMX channel values for monitoring
+   */
+  getDmxValues() {
+    return this.dmxData ? [...this.dmxData] : [];
+  }
+
   allOff() {
     if (this.dmxData) {
       this.dmxData.fill(0);

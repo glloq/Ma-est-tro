@@ -122,6 +122,7 @@ class LightingControlPage {
             <div id="lightingDevicePanel" style="width:300px;min-width:260px;border-right:2px solid ${t.border};display:flex;flex-direction:column;background:${t.bgAlt};">
               <div style="padding:10px 14px;border-bottom:1px solid ${t.border};display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-weight:600;font-size:13px;color:${t.text};">📋 ${i18n.t('lighting.devices') || 'Dispositifs'}</span>
+                <button onclick="lightingControlPageInstance.scanDevices()" style="padding:4px 8px;border:1px solid #3b82f6;border-radius:6px;background:${t.btnBg};color:#2563eb;cursor:pointer;font-size:11px;" title="Scanner le réseau">🔍</button>
                 <button onclick="lightingControlPageInstance.showAddDeviceForm()" style="padding:4px 10px;border:1px solid #eab308;border-radius:6px;background:${t.btnBg};color:#b45309;cursor:pointer;font-size:12px;">+ ${i18n.t('lighting.addDevice') || 'Ajouter'}</button>
               </div>
               <div id="lightingDeviceList" style="flex:1;overflow-y:auto;padding:6px;">
@@ -467,6 +468,78 @@ class LightingControlPage {
     } catch (error) { alert('Erreur: ' + error.message); }
   }
 
+  // ==================== DEVICE SCAN ====================
+
+  async scanDevices() {
+    const t = this._t();
+    const scanHTML = `
+      <div id="lightingScanPanel" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center;">
+        <div style="background:${t.bg};border-radius:12px;padding:20px;width:420px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+          <h3 style="margin:0 0 12px;font-size:16px;color:${t.text};">🔍 Scan réseau en cours...</h3>
+          <div id="scanResults" style="padding:16px;text-align:center;color:${t.textMuted};">
+            <div style="font-size:24px;margin-bottom:8px;">⏳</div>
+            <p style="font-size:12px;">Recherche de WLED et Philips Hue sur le réseau...</p>
+          </div>
+          <div style="text-align:right;margin-top:12px;">
+            <button onclick="document.getElementById('lightingScanPanel').remove()" style="padding:7px 14px;border:1px solid ${t.btnBorder};border-radius:8px;background:${t.btnBg};color:${t.text};cursor:pointer;font-size:12px;">Fermer</button>
+          </div>
+        </div>
+      </div>`;
+
+    const div = document.createElement('div');
+    div.innerHTML = scanHTML;
+    document.body.appendChild(div.firstElementChild);
+
+    try {
+      const res = await this.apiClient.send('lighting_device_scan', { type: 'all' });
+      const results = document.getElementById('scanResults');
+      if (!results) return;
+
+      if (!res.discovered || res.discovered.length === 0) {
+        results.innerHTML = `<div style="font-size:24px;margin-bottom:8px;">🤷</div><p style="font-size:12px;color:${t.textMuted};">Aucun dispositif trouvé. Vérifiez que vos appareils sont allumés et sur le même réseau.</p>`;
+        return;
+      }
+
+      results.innerHTML = res.discovered.map(d => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid ${t.border};border-radius:8px;margin-bottom:6px;background:${t.cardBg};text-align:left;">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:${t.text};">${this._escapeHtml(d.name)}</div>
+            <div style="font-size:11px;color:${t.textMuted};">${d.type.toUpperCase()} · ${this._escapeHtml(d.host)} · ${d.led_count || '?'} LEDs</div>
+          </div>
+          <button onclick="lightingControlPageInstance._addScannedDevice(${JSON.stringify(d).replace(/"/g, '&quot;')})" style="padding:4px 10px;border:1px solid #10b981;border-radius:6px;background:none;color:#10b981;cursor:pointer;font-size:11px;">+ Ajouter</button>
+        </div>
+      `).join('');
+    } catch (error) {
+      const results = document.getElementById('scanResults');
+      if (results) results.innerHTML = `<p style="color:#ef4444;font-size:12px;">Erreur: ${this._escapeHtml(error.message)}</p>`;
+    }
+  }
+
+  async _addScannedDevice(deviceInfo) {
+    try {
+      let connectionConfig = {};
+      let type = 'http';
+
+      if (deviceInfo.type === 'wled') {
+        type = 'http';
+        connectionConfig = { base_url: `http://${deviceInfo.host}`, firmware: 'wled' };
+      } else if (deviceInfo.type === 'hue') {
+        type = 'http';
+        connectionConfig = { base_url: `http://${deviceInfo.host}`, firmware: 'hue' };
+      }
+
+      await this.apiClient.send('lighting_device_add', {
+        name: deviceInfo.name,
+        type,
+        led_count: deviceInfo.led_count || 1,
+        connection_config: connectionConfig
+      });
+
+      document.getElementById('lightingScanPanel')?.remove();
+      await this.loadData();
+    } catch (error) { alert('Erreur: ' + error.message); }
+  }
+
   // ==================== DEVICE CLONE ====================
 
   async cloneDevice(deviceId) {
@@ -626,6 +699,13 @@ class LightingControlPage {
           <hr style="border:none;border-top:1px solid ${t.border};margin:0 0 12px;">
           ${presetsHTML}
 
+          <hr style="border:none;border-top:1px solid ${t.border};margin:12px 0;">
+          <div style="font-size:12px;font-weight:600;color:${t.textSec};margin-bottom:8px;">📤 Import / Export</div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <button onclick="lightingControlPageInstance.exportRules()" style="flex:1;padding:7px;border:1px solid #3b82f6;border-radius:8px;background:${t.btnBg};color:#3b82f6;cursor:pointer;font-size:12px;">📤 Exporter les règles</button>
+            <button onclick="lightingControlPageInstance.importRules()" style="flex:1;padding:7px;border:1px solid #10b981;border-radius:8px;background:${t.btnBg};color:#10b981;cursor:pointer;font-size:12px;">📥 Importer des règles</button>
+          </div>
+
           <div style="text-align:right;margin-top:12px;">
             <button onclick="document.getElementById('lightingPresetsPanel').remove()" style="padding:7px 14px;border:1px solid ${t.btnBorder};border-radius:8px;background:${t.btnBg};color:${t.text};cursor:pointer;font-size:12px;">Fermer</button>
           </div>
@@ -635,6 +715,44 @@ class LightingControlPage {
     const div = document.createElement('div');
     div.innerHTML = formHTML;
     document.body.appendChild(div.firstElementChild);
+  }
+
+  async exportRules() {
+    try {
+      const res = await this.apiClient.send('lighting_rules_export', {
+        device_id: this.selectedDeviceId || undefined
+      });
+      const json = JSON.stringify(res.export_data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `lighting-rules-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) { alert('Erreur: ' + error.message); }
+  }
+
+  async importRules() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const importData = JSON.parse(text);
+        const res = await this.apiClient.send('lighting_rules_import', {
+          import_data: importData,
+          default_device_id: this.selectedDeviceId || undefined
+        });
+        alert(`Import terminé: ${res.imported} règle(s) importée(s), ${res.skipped} ignorée(s)`);
+        document.getElementById('lightingPresetsPanel')?.remove();
+        await this.loadData();
+      } catch (error) { alert('Erreur import: ' + error.message); }
+    };
+    input.click();
   }
 
   async savePreset() {
@@ -1146,6 +1264,7 @@ class LightingControlPage {
             <div style="display:flex;align-items:center;gap:10px;">
               <input id="lrFormColor" type="color" value="${action.color || '#FF0000'}" style="width:50px;height:36px;border:1px solid ${t.inputBorder};border-radius:8px;cursor:pointer;padding:2px;">
               <span id="lrFormColorHex" style="font-size:12px;color:${t.textSec};font-family:monospace;">${action.color || '#FF0000'}</span>
+              <button type="button" onclick="lightingControlPageInstance.showColorWheel('lrFormColor')" style="padding:4px 8px;border:1px solid ${t.inputBorder};border-radius:6px;background:${t.btnBg};color:${t.textSec};cursor:pointer;font-size:11px;">🎨 Roue</button>
             </div>
           </div>
 
@@ -1509,5 +1628,91 @@ class LightingControlPage {
   _noteName(midi) {
     const n = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     return n[midi % 12] + (Math.floor(midi / 12) - 1);
+  }
+
+  // ==================== COLOR WHEEL ====================
+
+  showColorWheel(targetInputId) {
+    const t = this._t();
+    const existing = document.getElementById('lightingColorWheel');
+    if (existing) existing.remove();
+
+    const div = document.createElement('div');
+    div.id = 'lightingColorWheel';
+    div.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10002;display:flex;align-items:center;justify-content:center;`;
+    div.innerHTML = `
+      <div style="background:${t.bg};border-radius:12px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center;">
+        <h3 style="margin:0 0 12px;font-size:14px;color:${t.text};">🎨 Sélecteur de couleur</h3>
+        <canvas id="colorWheelCanvas" width="220" height="220" style="cursor:crosshair;border-radius:50%;"></canvas>
+        <div style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <div id="colorWheelPreview" style="width:36px;height:36px;border-radius:50%;border:3px solid ${t.border};background:#FF0000;"></div>
+          <span id="colorWheelHex" style="font-size:14px;color:${t.text};font-family:monospace;">#FF0000</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;justify-content:center;">
+          <button id="colorWheelApply" style="padding:7px 18px;border:none;border-radius:8px;background:#10b981;color:white;cursor:pointer;font-weight:600;font-size:13px;">Appliquer</button>
+          <button onclick="document.getElementById('lightingColorWheel').remove()" style="padding:7px 18px;border:1px solid ${t.btnBorder};border-radius:8px;background:${t.btnBg};color:${t.text};cursor:pointer;font-size:13px;">Annuler</button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(div);
+    div.addEventListener('click', (e) => { if (e.target === div) div.remove(); });
+
+    const canvas = document.getElementById('colorWheelCanvas');
+    const ctx = canvas.getContext('2d');
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const radius = Math.min(cx, cy) - 4;
+
+    // Draw color wheel
+    for (let angle = 0; angle < 360; angle++) {
+      const startAngle = (angle - 1) * Math.PI / 180;
+      const endAngle = (angle + 1) * Math.PI / 180;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, radius, startAngle, endAngle);
+      ctx.closePath();
+
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+      gradient.addColorStop(0, '#FFFFFF');
+      gradient.addColorStop(1, `hsl(${angle}, 100%, 50%)`);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+    }
+
+    let selectedColor = '#FF0000';
+
+    const pickColor = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const pixel = ctx.getImageData(x * scaleX, y * scaleY, 1, 1).data;
+      selectedColor = `#${pixel[0].toString(16).padStart(2, '0')}${pixel[1].toString(16).padStart(2, '0')}${pixel[2].toString(16).padStart(2, '0')}`;
+
+      const preview = document.getElementById('colorWheelPreview');
+      const hex = document.getElementById('colorWheelHex');
+      if (preview) preview.style.background = selectedColor;
+      if (hex) hex.textContent = selectedColor.toUpperCase();
+    };
+
+    let dragging = false;
+    canvas.addEventListener('mousedown', (e) => { dragging = true; pickColor(e); });
+    canvas.addEventListener('mousemove', (e) => { if (dragging) pickColor(e); });
+    canvas.addEventListener('mouseup', () => { dragging = false; });
+    canvas.addEventListener('click', pickColor);
+
+    // Touch support
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); pickColor(e.touches[0]); });
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); pickColor(e.touches[0]); });
+
+    document.getElementById('colorWheelApply').addEventListener('click', () => {
+      const target = document.getElementById(targetInputId);
+      if (target) {
+        target.value = selectedColor;
+        target.dispatchEvent(new Event('input'));
+      }
+      div.remove();
+    });
   }
 }

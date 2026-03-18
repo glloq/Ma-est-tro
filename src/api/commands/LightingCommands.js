@@ -241,6 +241,138 @@ function lightingGroupOff(app, data) {
   return app.lightingManager.groupAllOff(data.name);
 }
 
+// ==================== RULE IMPORT/EXPORT API ====================
+
+function lightingRulesExport(app, data) {
+  let rules;
+  if (data?.device_id) {
+    rules = app.database.getLightingRulesForDevice(data.device_id);
+  } else {
+    rules = app.database.getAllLightingRules();
+  }
+  const devices = app.database.getLightingDevices();
+
+  return {
+    success: true,
+    export_data: {
+      version: 1,
+      exported_at: new Date().toISOString(),
+      devices: devices.map(d => ({ name: d.name, type: d.type, led_count: d.led_count, connection_config: d.connection_config })),
+      rules: rules.map(r => ({
+        name: r.name,
+        device_name: devices.find(d => d.id === r.device_id)?.name || null,
+        instrument_id: r.instrument_id,
+        priority: r.priority,
+        enabled: r.enabled,
+        condition_config: r.condition_config,
+        action_config: r.action_config
+      }))
+    }
+  };
+}
+
+function lightingRulesImport(app, data) {
+  if (!data.import_data) throw new Error('import_data is required');
+  const importData = typeof data.import_data === 'string' ? JSON.parse(data.import_data) : data.import_data;
+
+  if (!importData.rules || !Array.isArray(importData.rules)) throw new Error('Invalid import data: missing rules array');
+
+  const devices = app.database.getLightingDevices();
+  let imported = 0;
+  let skipped = 0;
+
+  for (const rule of importData.rules) {
+    // Try to match device by name
+    let deviceId = null;
+    if (rule.device_name) {
+      const device = devices.find(d => d.name === rule.device_name);
+      if (device) deviceId = device.id;
+    }
+    if (!deviceId && data.default_device_id) {
+      deviceId = data.default_device_id;
+    }
+    if (!deviceId) {
+      skipped++;
+      continue;
+    }
+
+    app.database.insertLightingRule({
+      name: rule.name || '',
+      device_id: deviceId,
+      instrument_id: rule.instrument_id || null,
+      priority: rule.priority || 0,
+      enabled: rule.enabled !== false,
+      condition_config: rule.condition_config || {},
+      action_config: rule.action_config || {}
+    });
+    imported++;
+  }
+
+  app.lightingManager?.reloadRules();
+  return { success: true, imported, skipped };
+}
+
+// ==================== DEVICE SCAN/DISCOVER API ====================
+
+async function lightingDeviceScan(app, data) {
+  const scanType = data?.type || 'all';
+  const discovered = [];
+
+  // Scan for WLED devices via mDNS-like HTTP probe on common ranges
+  if (scanType === 'all' || scanType === 'wled') {
+    const subnet = data?.subnet || '192.168.1';
+    const scanPromises = [];
+
+    // Probe common addresses
+    for (let i = 1; i <= 254; i++) {
+      const ip = `${subnet}.${i}`;
+      scanPromises.push(
+        fetch(`http://${ip}/json/info`, { signal: AbortSignal.timeout(800) })
+          .then(async res => {
+            if (res.ok) {
+              const info = await res.json();
+              discovered.push({
+                type: 'wled',
+                name: info.name || `WLED ${ip}`,
+                host: ip,
+                led_count: info.leds?.count || 30,
+                version: info.ver || 'unknown',
+                mac: info.mac || null
+              });
+            }
+          })
+          .catch(() => {}) // ignore unreachable
+      );
+    }
+
+    // Process in batches to avoid overwhelming the network
+    const batchSize = 30;
+    for (let i = 0; i < scanPromises.length; i += batchSize) {
+      await Promise.all(scanPromises.slice(i, i + batchSize));
+    }
+  }
+
+  // Scan for Philips Hue bridges
+  if (scanType === 'all' || scanType === 'hue') {
+    try {
+      const res = await fetch('https://discovery.meethue.com/', { signal: AbortSignal.timeout(5000) });
+      if (res.ok) {
+        const bridges = await res.json();
+        for (const bridge of bridges) {
+          discovered.push({
+            type: 'hue',
+            name: `Philips Hue Bridge`,
+            host: bridge.internalipaddress,
+            id: bridge.id
+          });
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  return { success: true, discovered };
+}
+
 function hexToRgb(hex) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result ? {
@@ -276,4 +408,7 @@ export function register(registry, app) {
   registry.register('lighting_group_list', () => lightingGroupList(app));
   registry.register('lighting_group_color', (data) => lightingGroupColor(app, data));
   registry.register('lighting_group_off', (data) => lightingGroupOff(app, data));
+  registry.register('lighting_rules_export', (data) => lightingRulesExport(app, data));
+  registry.register('lighting_rules_import', (data) => lightingRulesImport(app, data));
+  registry.register('lighting_device_scan', (data) => lightingDeviceScan(app, data));
 }
