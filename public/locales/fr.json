@@ -466,6 +466,7 @@
     "gmInstrumentHelp": "Sélectionnez le type d'instrument pour le routage MIDI",
     "selectInstrumentType": "Sélectionner un type",
     "drumKit": "Kit batterie GM",
+    "drumKitNotice": "Les kits de batterie utilisent le canal MIDI 10 et le mode notes individuelles. Ces réglages seront appliqués automatiquement à la sauvegarde.",
     "whiteKeys": "Touches blanches",
     "blackKeys": "Touches noires"
   },
@@ -630,7 +631,9 @@
     "virtualCreated": "Instrument virtuel créé",
     "virtualCreateFailed": "Erreur de création",
     "virtualInstruments": "Instruments virtuels",
-    "filterVirtual": "Virtuels"
+    "filterVirtual": "Virtuels",
+    "discreteNotes": "Notes individuelles",
+    "notesCount": "notes"
   },
   "channelRouter": {
     "title": "Configuration du routage MIDI",
@@ -870,7 +873,30 @@
       "synthEffects": "Effets synthé",
       "ethnic": "Ethnique",
       "percussive": "Percussions",
-      "soundEffects": "Effets sonores"
+      "soundEffects": "Effets sonores",
+      "drumKits": "Kits de batterie (Canal 10)"
+    },
+    "drumKits": {
+      "0": "Kit Standard",
+      "8": "Kit Room",
+      "16": "Kit Power",
+      "24": "Kit Électronique",
+      "25": "Kit TR-808",
+      "32": "Kit Jazz",
+      "40": "Kit Balais",
+      "48": "Kit Orchestre",
+      "56": "Kit Effets"
+    },
+    "drumKitsDesc": {
+      "0": "Kit polyvalent, idéal pour pop/rock/variété",
+      "8": "Son ambiant avec réverbération de pièce, plus naturel",
+      "16": "Frappes puissantes, grosse caisse/caisse claire renforcées, rock/metal",
+      "24": "Sons synthétiques, dance/electro/EDM",
+      "25": "Classique Roland TR-808, hip-hop/trap/R&B",
+      "32": "Sons doux et feutrés, cymbales légères, jazz/bossa",
+      "40": "Balais sur caisse claire, jazz acoustique/ballades",
+      "48": "Timbales, grosse caisse orchestrale, cymbales, classique/cinéma",
+      "56": "Effets sonores et bruitages, pas un vrai kit de batterie"
     },
     "list": [
       "Piano acoustique à queue",

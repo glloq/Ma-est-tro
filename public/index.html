@@ -6903,7 +6903,8 @@
                     synthEffects: 'Synth Effects',
                     ethnic: 'Ethnic',
                     percussive: 'Percussive',
-                    soundEffects: 'Sound Effects'
+                    soundEffects: 'Sound Effects',
+                    drumKits: 'Drum Kits (Channel 10)'
                 };
                 return fallbacks[key] || key;
             }
@@ -6969,14 +6970,18 @@
             let options = '<option value="">-- ' + (i18n.t('instrumentSettings.selectInstrumentType') || 'Sélectionner un type') + ' --</option>';
 
             // Ajouter les drum kits en premier (indiqués comme canal 10)
-            const drumCategoryName = i18n.t('instruments.categories.drumKits') || 'Drum Kits (Canal 10)';
+            const drumCategoryName = getGMCategoryName('drumKits');
             options += `<optgroup label="${drumCategoryName}">`;
             for (const kit of GM_DRUM_KITS) {
                 const encodedValue = kit.program + GM_DRUM_KIT_OFFSET;
                 const selected = encodedValue === selectValue ? 'selected' : '';
-                const kitName = i18n.t(`instruments.drumKits.${kit.program}`);
-                const displayName = (kitName && kitName !== `instruments.drumKits.${kit.program}`) ? kitName : kit.name;
-                options += `<option value="${encodedValue}" data-drum-kit="true" data-desc="${kit.desc}" ${selected}>${kit.program}: ${displayName}</option>`;
+                const nameKey = `instruments.drumKits.${kit.program}`;
+                const descKey = `instruments.drumKitsDesc.${kit.program}`;
+                const kitName = i18n.t(nameKey);
+                const kitDesc = i18n.t(descKey);
+                const displayName = (kitName && kitName !== nameKey) ? kitName : kit.name;
+                const displayDesc = (kitDesc && kitDesc !== descKey) ? kitDesc : kit.desc;
+                options += `<option value="${encodedValue}" data-drum-kit="true" data-desc="${displayDesc}" ${selected}>${kit.program}: ${displayName}</option>`;
             }
             options += '</optgroup>';
 
