@@ -861,15 +861,17 @@ class SettingsModal {
         try {
             const api = window.api || window.apiClient;
             if (!api || !api.sendCommand) {
+                this.logger?.error('checkForUpdates: API not available', { api: !!api, sendCommand: !!(api && api.sendCommand) });
                 statusEl.style.background = '#fefce8';
                 statusEl.style.color = '#a16207';
-                statusEl.innerHTML = `<span>⚠️</span><span>${i18n.t('settings.update.checkFailed') || 'Impossible de vérifier les mises à jour'}</span>`;
+                statusEl.innerHTML = `<span>⚠️</span><span>${i18n.t('settings.update.checkFailed') || 'Impossible de vérifier les mises à jour'} (API non disponible)</span>`;
                 return;
             }
 
             const result = await api.sendCommand('system_check_update', {}, 20000);
 
             if (result.error) {
+                this.logger?.error('checkForUpdates: backend error', result.error);
                 statusEl.style.background = '#fefce8';
                 statusEl.style.color = '#a16207';
                 statusEl.innerHTML = `<span>⚠️</span><span>${i18n.t('settings.update.checkFailed') || 'Impossible de vérifier les mises à jour'}</span>`;
@@ -888,9 +890,10 @@ class SettingsModal {
                 statusEl.innerHTML = `<span>🔶</span><span><strong>${i18n.t('settings.update.updateAvailable') || 'Mise à jour disponible'}</strong> — ${count} commit${plural} en retard (${result.localHash} → ${result.remoteHash})</span>`;
             }
         } catch (error) {
-            statusEl.style.background = '#f3f4f6';
-            statusEl.style.color = '#999';
-            statusEl.innerHTML = `<span>⚠️</span><span>${i18n.t('settings.update.checkFailed') || 'Impossible de vérifier les mises à jour'}</span>`;
+            this.logger?.error('checkForUpdates: exception', error.message);
+            statusEl.style.background = '#fefce8';
+            statusEl.style.color = '#a16207';
+            statusEl.innerHTML = `<span>⚠️</span><span>${i18n.t('settings.update.checkFailed') || 'Impossible de vérifier les mises à jour'} (${error.message})</span>`;
         }
     }
 
