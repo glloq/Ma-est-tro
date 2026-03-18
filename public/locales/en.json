@@ -23,7 +23,8 @@
     "keys": "keys",
     "clear": "Clear",
     "unknown": "Unknown",
-    "unknownError": "Unknown error"
+    "unknownError": "Unknown error",
+    "delete": "Delete"
   },
   "app": {
     "title": "MidiMind 5.0 - MIDI Orchestration System",
