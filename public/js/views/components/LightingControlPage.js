@@ -141,6 +141,15 @@ class LightingControlPage {
                   <button onclick="lightingControlPageInstance.showAddRuleForm()" style="padding:4px 8px;border:1px solid #10b981;border-radius:6px;background:${t.btnBg};color:#059669;cursor:pointer;font-size:11px;">+ ${i18n.t('lighting.addRule') || 'Règle'}</button>
                 </div>
               </div>
+              <!-- LED Preview Strip -->
+              <div id="lightingLedPreview" style="display:none;padding:6px 14px;border-bottom:1px solid ${t.borderLight};background:${t.bgAlt};">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                  <span style="font-size:10px;font-weight:600;color:${t.textMuted};">LED Preview</span>
+                  <button onclick="lightingControlPageInstance._testPreviewRainbow()" style="padding:1px 6px;border:1px solid ${t.borderLight};border-radius:4px;background:none;color:${t.textMuted};cursor:pointer;font-size:9px;">🌈 Test</button>
+                  <button onclick="lightingControlPageInstance._clearPreview()" style="padding:1px 6px;border:1px solid ${t.borderLight};border-radius:4px;background:none;color:${t.textMuted};cursor:pointer;font-size:9px;">⬛ Clear</button>
+                </div>
+                <div id="lightingLedStripViz" style="display:flex;gap:1px;flex-wrap:wrap;min-height:10px;"></div>
+              </div>
               <div id="lightingRulesList" style="flex:1;overflow-y:auto;padding:10px;">
                 <div style="padding:40px;text-align:center;color:${t.textMuted};font-size:13px;">
                   ← ${i18n.t('lighting.selectDeviceHint') || 'Sélectionnez un dispositif pour voir ses règles'}
@@ -305,6 +314,9 @@ class LightingControlPage {
 
     title.textContent = `📐 ${i18n.t('lighting.rulesFor') || 'Règles pour'} "${device.name}"`;
     actions.style.display = 'flex';
+
+    // Show LED preview strip
+    this._renderLedPreview(device);
 
     // Show reconnect button if device is disconnected
     if (reconnectBtn) {
@@ -1362,6 +1374,7 @@ class LightingControlPage {
                 <option value="color_temp" ${action.type === 'color_temp' ? 'selected' : ''}>🌡️ Température couleur</option>
                 <option value="random_color" ${action.type === 'random_color' ? 'selected' : ''}>🎲 Couleur aléatoire</option>
                 <option value="note_led" ${action.type === 'note_led' ? 'selected' : ''}>🎹 Note → LED (piano)</option>
+                <option value="vu_meter" ${action.type === 'vu_meter' ? 'selected' : ''}>📊 VU-mètre (vélocité)</option>
                 <option value="pulse" ${action.type === 'pulse' ? 'selected' : ''}>Pulse (flash)</option>
                 <option value="fade" ${action.type === 'fade' ? 'selected' : ''}>Fade (fondu)</option>
               </optgroup>
@@ -1776,7 +1789,8 @@ class LightingControlPage {
     return {
       static: i18n.t('lighting.colorStatic') || 'Couleur fixe',
       velocity_mapped: i18n.t('lighting.colorVelocity') || 'Gradient',
-      note_color: '🎹 Note→Couleur', color_temp: '🌡️ Temp. couleur', random_color: '🎲 Aléatoire', note_led: '🎹 Note→LED',
+      note_color: '🎹 Note→Couleur', color_temp: '🌡️ Temp. couleur', random_color: '🎲 Aléatoire',
+      note_led: '🎹 Note→LED', vu_meter: '📊 VU-mètre',
       pulse: 'Pulse', fade: 'Fade',
       strobe: '⚡ Stroboscope', rainbow: '🌈 Arc-en-ciel', chase: '🏃 Chenillard',
       fire: '🔥 Feu', breathe: '💨 Respiration', sparkle: '✨ Étincelles',
@@ -1798,6 +1812,56 @@ class LightingControlPage {
   _noteName(midi) {
     const n = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     return n[midi % 12] + (Math.floor(midi / 12) - 1);
+  }
+
+  // ==================== LED PREVIEW ====================
+
+  _renderLedPreview(device) {
+    const previewContainer = document.getElementById('lightingLedPreview');
+    const stripViz = document.getElementById('lightingLedStripViz');
+    if (!previewContainer || !stripViz) return;
+
+    const ledCount = Math.min(device.led_count || 1, 200); // Cap visual at 200
+
+    if (ledCount <= 0) {
+      previewContainer.style.display = 'none';
+      return;
+    }
+
+    previewContainer.style.display = 'block';
+
+    // Calculate LED size based on count
+    const ledSize = ledCount <= 30 ? 12 : ledCount <= 60 ? 8 : ledCount <= 120 ? 5 : 3;
+
+    stripViz.innerHTML = '';
+    for (let i = 0; i < ledCount; i++) {
+      const led = document.createElement('div');
+      led.className = 'led-preview-pixel';
+      led.dataset.index = i;
+      led.style.cssText = `width:${ledSize}px;height:${ledSize}px;border-radius:${ledSize <= 5 ? '1px' : '2px'};background:#333;transition:background 0.1s;`;
+      led.title = `LED ${i}`;
+      stripViz.appendChild(led);
+    }
+  }
+
+  _setPreviewLed(index, color) {
+    const led = document.querySelector(`.led-preview-pixel[data-index="${index}"]`);
+    if (led) led.style.background = color;
+  }
+
+  _testPreviewRainbow() {
+    const pixels = document.querySelectorAll('.led-preview-pixel');
+    pixels.forEach((pixel, i) => {
+      const hue = (i * 360 / pixels.length) % 360;
+      pixel.style.background = `hsl(${hue}, 100%, 50%)`;
+    });
+    // Auto-clear after 2 seconds
+    setTimeout(() => this._clearPreview(), 2000);
+  }
+
+  _clearPreview() {
+    const pixels = document.querySelectorAll('.led-preview-pixel');
+    pixels.forEach(pixel => { pixel.style.background = '#333'; });
   }
 
   // ==================== MIDI LEARN ====================

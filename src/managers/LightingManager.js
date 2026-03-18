@@ -317,6 +317,36 @@ class LightingManager extends EventEmitter {
       this._trackNoteOn(rule.device_id, midiData.note);
     }
 
+    // VU meter: velocity determines how many LEDs light up (like a level meter)
+    if (action.type === 'vu_meter') {
+      const lc = driver.device?.led_count || 1;
+      const totalLeds = (endLed === -1 ? lc - 1 : endLed) - startLed + 1;
+      const vel = midiData.velocity || midiData.value || 0;
+      const activeLeds = Math.round((vel / 127) * totalLeds);
+
+      // Color gradient: green→yellow→red or custom
+      for (let i = 0; i < totalLeds; i++) {
+        const led = startLed + i;
+        if (i < activeLeds) {
+          if (action.color) {
+            const c = this._hexToRgb(action.color);
+            driver.setColor(led, c.r, c.g, c.b, brightness);
+          } else {
+            // Default VU: green→yellow→red
+            const ratio = i / Math.max(1, totalLeds - 1);
+            let vr, vg, vb;
+            if (ratio < 0.6) { vr = Math.round(ratio * 255 / 0.6); vg = 255; vb = 0; }
+            else if (ratio < 0.8) { vr = 255; vg = Math.round(255 * (1 - (ratio - 0.6) / 0.2)); vb = 0; }
+            else { vr = 255; vg = 0; vb = 0; }
+            driver.setColor(led, vr, vg, vb, brightness);
+          }
+        } else {
+          driver.setColor(led, 0, 0, 0, 0);
+        }
+      }
+      return;
+    }
+
     // Note-to-LED mapping: each note lights a specific LED
     if (action.type === 'note_led' && midiData.note !== null) {
       const noteRange = (action.note_led_max || 127) - (action.note_led_min || 0);
