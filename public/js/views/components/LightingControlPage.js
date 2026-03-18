@@ -136,6 +136,7 @@ class LightingControlPage {
                 <span style="font-weight:600;font-size:13px;color:${t.text};" id="lightingRulesTitle">📐 ${i18n.t('lighting.selectDevice') || 'Sélectionnez un dispositif'}</span>
                 <div id="lightingRulesActions" style="display:none;gap:6px;flex-wrap:wrap;">
                   <button onclick="lightingControlPageInstance.reconnectDevice()" id="lightingReconnectBtn" style="display:none;padding:4px 8px;border:1px solid #f59e0b;border-radius:6px;background:${t.btnBg};color:#d97706;cursor:pointer;font-size:11px;">🔄 ${i18n.t('lighting.reconnect') || 'Reconnecter'}</button>
+                  <button onclick="lightingControlPageInstance.showEditDeviceForm()" style="padding:4px 8px;border:1px solid #8b5cf6;border-radius:6px;background:${t.btnBg};color:#7c3aed;cursor:pointer;font-size:11px;">✏️ Modifier</button>
                   <button onclick="lightingControlPageInstance.testDevice()" style="padding:4px 8px;border:1px solid #3b82f6;border-radius:6px;background:${t.btnBg};color:#2563eb;cursor:pointer;font-size:11px;">🔦 ${i18n.t('lighting.testDevice') || 'Tester'}</button>
                   <button onclick="lightingControlPageInstance.showAddRuleForm()" style="padding:4px 8px;border:1px solid #10b981;border-radius:6px;background:${t.btnBg};color:#059669;cursor:pointer;font-size:11px;">+ ${i18n.t('lighting.addRule') || 'Règle'}</button>
                 </div>
@@ -334,6 +335,7 @@ class LightingControlPage {
             <button onclick="lightingControlPageInstance.testRule(${rule.id})" style="background:none;border:1px solid #3b82f6;border-radius:4px;color:#3b82f6;cursor:pointer;font-size:10px;padding:2px 6px;">Test</button>
             <button onclick="lightingControlPageInstance.toggleRule(${rule.id},${!rule.enabled})" style="background:none;border:none;cursor:pointer;font-size:13px;">${rule.enabled ? '✅' : '⬜'}</button>
             <button onclick="lightingControlPageInstance.editRule(${rule.id})" style="background:none;border:none;cursor:pointer;font-size:13px;">✏️</button>
+            <button onclick="lightingControlPageInstance.cloneRule(${rule.id})" style="background:none;border:none;cursor:pointer;font-size:11px;color:${t.textMuted};" title="Dupliquer">📋</button>
             <button onclick="lightingControlPageInstance.deleteRule(${rule.id})" style="background:none;border:none;cursor:pointer;font-size:13px;">🗑</button>
           </div>
         </div>
@@ -631,6 +633,17 @@ class LightingControlPage {
             <button onclick="lightingControlPageInstance.allOff();lightingControlPageInstance.showEffectsPanel();" style="flex:1;padding:8px;border:none;border-radius:8px;background:#ef4444;color:white;cursor:pointer;font-weight:600;font-size:13px;">⏹ Tout arrêter</button>
           </div>
 
+          <hr style="border:none;border-top:1px solid ${t.border};margin:8px 0;">
+          <div style="font-size:12px;font-weight:600;color:${t.textSec};margin-bottom:6px;">🥁 BPM / Tap Tempo</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+            <button onclick="lightingControlPageInstance._tapTempo()" style="flex:1;padding:10px;border:2px solid #8b5cf6;border-radius:8px;background:${t.bgAlt};color:#8b5cf6;cursor:pointer;font-size:14px;font-weight:700;">🥁 TAP</button>
+            <div style="text-align:center;">
+              <span id="leEffectBpm" style="font-size:20px;font-weight:700;color:${t.text};">120</span>
+              <div style="font-size:10px;color:${t.textMuted};">BPM</div>
+            </div>
+            <input id="leEffectBpmInput" type="number" min="20" max="300" value="120" style="width:70px;padding:6px;border:1px solid ${t.inputBorder};border-radius:6px;font-size:13px;text-align:center;background:${t.inputBg};color:${t.inputText};" onchange="lightingControlPageInstance._setBpm(this.value)">
+          </div>
+
           <div style="text-align:right;">
             <button onclick="document.getElementById('lightingEffectsPanel').remove()" style="padding:7px 14px;border:1px solid ${t.btnBorder};border-radius:8px;background:${t.btnBg};color:${t.text};cursor:pointer;font-size:12px;">Fermer</button>
           </div>
@@ -662,6 +675,24 @@ class LightingControlPage {
     } catch (error) {
       alert('Erreur: ' + error.message);
     }
+  }
+
+  async _tapTempo() {
+    try {
+      const res = await this.apiClient.send('lighting_bpm_tap');
+      const bpmEl = document.getElementById('leEffectBpm');
+      const inputEl = document.getElementById('leEffectBpmInput');
+      if (bpmEl) bpmEl.textContent = res.bpm;
+      if (inputEl) inputEl.value = res.bpm;
+    } catch (e) { /* ignore */ }
+  }
+
+  async _setBpm(value) {
+    try {
+      const res = await this.apiClient.send('lighting_bpm_set', { bpm: parseInt(value) });
+      const bpmEl = document.getElementById('leEffectBpm');
+      if (bpmEl) bpmEl.textContent = res.bpm;
+    } catch (e) { /* ignore */ }
   }
 
   async _stopLiveEffect(effectKey) {
@@ -1161,6 +1192,75 @@ class LightingControlPage {
     }
   }
 
+  async showEditDeviceForm() {
+    if (!this.selectedDeviceId) return;
+    const device = this.devices.find(d => d.id === this.selectedDeviceId);
+    if (!device) return;
+    const t = this._t();
+    const is = `style="width:100%;padding:7px 10px;border:1px solid ${t.inputBorder};border-radius:8px;font-size:13px;box-sizing:border-box;background:${t.inputBg};color:${t.inputText};"`;
+
+    const formHTML = `
+      <div id="lightingEditDeviceForm" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center;">
+        <div style="background:${t.bg};border-radius:12px;padding:20px;width:420px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+          <h3 style="margin:0 0 16px;font-size:16px;color:${t.text};">✏️ Modifier "${this._escapeHtml(device.name)}"</h3>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:12px;font-weight:600;color:${t.text};display:block;margin-bottom:3px;">Nom</label>
+            <input id="leditName" type="text" value="${this._escapeHtml(device.name)}" ${is}>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:12px;font-weight:600;color:${t.text};display:block;margin-bottom:3px;">Nombre de LEDs</label>
+            <input id="leditLedCount" type="number" min="1" max="10000" value="${device.led_count}" ${is}>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+              <input id="leditEnabled" type="checkbox" ${device.enabled ? 'checked' : ''}>
+              <span style="font-size:12px;color:${t.text};">Activé</span>
+            </label>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:12px;font-weight:600;color:${t.text};display:block;margin-bottom:3px;">Configuration (JSON)</label>
+            <textarea id="leditConfig" rows="4" style="width:100%;padding:7px 10px;border:1px solid ${t.inputBorder};border-radius:8px;font-size:11px;box-sizing:border-box;background:${t.inputBg};color:${t.inputText};font-family:monospace;resize:vertical;">${this._escapeHtml(JSON.stringify(device.connection_config, null, 2))}</textarea>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button onclick="document.getElementById('lightingEditDeviceForm').remove()" style="padding:7px 14px;border:1px solid ${t.btnBorder};border-radius:8px;background:${t.btnBg};color:${t.text};cursor:pointer;font-size:12px;">Annuler</button>
+            <button onclick="lightingControlPageInstance.submitEditDevice()" style="padding:7px 14px;border:none;border-radius:8px;background:#8b5cf6;color:white;cursor:pointer;font-weight:600;font-size:12px;">Enregistrer</button>
+          </div>
+        </div>
+      </div>`;
+
+    const div = document.createElement('div');
+    div.innerHTML = formHTML;
+    document.body.appendChild(div.firstElementChild);
+  }
+
+  async submitEditDevice() {
+    if (!this.selectedDeviceId) return;
+    const name = document.getElementById('leditName')?.value.trim();
+    const ledCount = parseInt(document.getElementById('leditLedCount')?.value) || 1;
+    const enabled = document.getElementById('leditEnabled')?.checked;
+    let connectionConfig;
+    try {
+      connectionConfig = JSON.parse(document.getElementById('leditConfig')?.value || '{}');
+    } catch (e) {
+      return alert('JSON invalide: ' + e.message);
+    }
+
+    try {
+      await this.apiClient.send('lighting_device_update', {
+        id: this.selectedDeviceId,
+        name, led_count: ledCount, enabled,
+        connection_config: connectionConfig
+      });
+      document.getElementById('lightingEditDeviceForm')?.remove();
+      await this.loadData();
+    } catch (error) { alert('Erreur: ' + error.message); }
+  }
+
   async reconnectDevice() {
     if (!this.selectedDeviceId) return;
     const btn = document.getElementById('lightingReconnectBtn');
@@ -1250,6 +1350,7 @@ class LightingControlPage {
                 <option value="velocity_mapped" ${action.type === 'velocity_mapped' ? 'selected' : ''}>Gradient vélocité</option>
                 <option value="note_color" ${action.type === 'note_color' ? 'selected' : ''}>🎹 Note → Couleur</option>
                 <option value="color_temp" ${action.type === 'color_temp' ? 'selected' : ''}>🌡️ Température couleur</option>
+                <option value="random_color" ${action.type === 'random_color' ? 'selected' : ''}>🎲 Couleur aléatoire</option>
                 <option value="pulse" ${action.type === 'pulse' ? 'selected' : ''}>Pulse (flash)</option>
                 <option value="fade" ${action.type === 'fade' ? 'selected' : ''}>Fade (fondu)</option>
               </optgroup>
@@ -1441,8 +1542,8 @@ class LightingControlPage {
     const nc = document.getElementById('lrFormNoteColorSection');
     const isEffect = this._isEffectType(type);
 
-    // Color picker: show for most types, hide for gradient/note_color/color_temp
-    if (s) s.style.display = (type === 'velocity_mapped' || type === 'note_color' || type === 'color_temp') ? 'none' : 'block';
+    // Color picker: show for most types, hide for gradient/note_color/color_temp/random
+    if (s) s.style.display = (type === 'velocity_mapped' || type === 'note_color' || type === 'color_temp' || type === 'random_color') ? 'none' : 'block';
     if (g) g.style.display = type === 'velocity_mapped' ? 'block' : 'none';
     if (e) e.style.display = isEffect ? 'block' : 'none';
     if (ct) ct.style.display = type === 'color_temp' ? 'block' : 'none';
@@ -1554,6 +1655,23 @@ class LightingControlPage {
     if (rule) this.showAddRuleForm(rule);
   }
 
+  async cloneRule(ruleId) {
+    const rule = this.rules.find(r => r.id === ruleId);
+    if (!rule) return;
+    try {
+      await this.apiClient.send('lighting_rule_add', {
+        device_id: this.selectedDeviceId,
+        name: (rule.name || 'Rule') + ' (copie)',
+        instrument_id: rule.instrument_id,
+        priority: rule.priority,
+        enabled: false,
+        condition_config: rule.condition_config,
+        action_config: rule.action_config
+      });
+      await this.loadRulesForDevice(this.selectedDeviceId);
+    } catch (error) { alert('Erreur: ' + error.message); }
+  }
+
   async deleteRule(id) {
     if (!confirm(i18n.t('lighting.confirmDeleteRule') || 'Supprimer cette règle ?')) return;
     try {
@@ -1624,7 +1742,7 @@ class LightingControlPage {
     return {
       static: i18n.t('lighting.colorStatic') || 'Couleur fixe',
       velocity_mapped: i18n.t('lighting.colorVelocity') || 'Gradient',
-      note_color: '🎹 Note→Couleur', color_temp: '🌡️ Temp. couleur',
+      note_color: '🎹 Note→Couleur', color_temp: '🌡️ Temp. couleur', random_color: '🎲 Aléatoire',
       pulse: 'Pulse', fade: 'Fade',
       strobe: '⚡ Stroboscope', rainbow: '🌈 Arc-en-ciel', chase: '🏃 Chenillard',
       fire: '🔥 Feu', breathe: '💨 Respiration', sparkle: '✨ Étincelles',

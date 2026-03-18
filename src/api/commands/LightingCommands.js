@@ -520,4 +520,18 @@ export function register(registry, app) {
   registry.register('lighting_scene_save', (data) => lightingSceneSave(app, data));
   registry.register('lighting_scene_apply', (data) => lightingSceneApply(app, data));
   registry.register('lighting_midi_learn', (data) => lightingMidiLearnStart(app, data));
+  registry.register('lighting_bpm_set', (data) => {
+    if (!app.lightingManager) throw new Error('Lighting manager not available');
+    app.lightingManager.effectsEngine.setBpm(data.bpm);
+    return { success: true, bpm: app.lightingManager.effectsEngine.getBpm() };
+  });
+  registry.register('lighting_bpm_tap', () => {
+    if (!app.lightingManager) throw new Error('Lighting manager not available');
+    const bpm = app.lightingManager.effectsEngine.tapTempo();
+    return { success: true, bpm };
+  });
+  registry.register('lighting_bpm_get', () => {
+    if (!app.lightingManager) return { success: true, bpm: 120 };
+    return { success: true, bpm: app.lightingManager.effectsEngine.getBpm() };
+  });
 }

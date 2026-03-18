@@ -6,6 +6,56 @@ class LightingEffectsEngine {
   constructor(logger) {
     this.logger = logger;
     this.activeEffects = new Map(); // effectKey -> { interval, driver, config }
+    this.bpm = 120;
+    this._tapTimes = [];
+  }
+
+  /**
+   * Set BPM for tempo-synced effects
+   */
+  setBpm(bpm) {
+    this.bpm = Math.max(20, Math.min(300, bpm));
+  }
+
+  getBpm() {
+    return this.bpm;
+  }
+
+  /**
+   * Tap tempo: record tap times and calculate BPM
+   */
+  tapTempo() {
+    const now = Date.now();
+    this._tapTimes.push(now);
+
+    // Keep only last 8 taps
+    if (this._tapTimes.length > 8) this._tapTimes.shift();
+
+    if (this._tapTimes.length >= 2) {
+      const intervals = [];
+      for (let i = 1; i < this._tapTimes.length; i++) {
+        intervals.push(this._tapTimes[i] - this._tapTimes[i - 1]);
+      }
+      const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+      this.bpm = Math.round(60000 / avgInterval);
+      this.bpm = Math.max(20, Math.min(300, this.bpm));
+    }
+
+    // Reset after 3 seconds of no taps
+    setTimeout(() => {
+      if (this._tapTimes.length > 0 && Date.now() - this._tapTimes[this._tapTimes.length - 1] > 3000) {
+        this._tapTimes = [];
+      }
+    }, 3500);
+
+    return this.bpm;
+  }
+
+  /**
+   * Convert BPM to milliseconds per beat
+   */
+  getBeatMs() {
+    return Math.round(60000 / this.bpm);
   }
 
   /**

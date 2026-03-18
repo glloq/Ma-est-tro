@@ -110,8 +110,15 @@ class LightingManager extends EventEmitter {
       const driver = new DriverClass(device, this.logger);
       await driver.connect();
       this.drivers.set(device.id, driver);
+      this._broadcastDeviceStatus(device.id, true);
+
+      // Listen for disconnect events
+      driver.on('disconnected', () => {
+        this._broadcastDeviceStatus(device.id, false);
+      });
     } catch (error) {
       this.logger.warn(`Failed to connect lighting device "${device.name}": ${error.message}`);
+      this._broadcastDeviceStatus(device.id, false);
     }
   }
 
@@ -341,6 +348,11 @@ class LightingManager extends EventEmitter {
       return this._noteToColor(midiData.note);
     }
 
+    // Random color: generate a random vibrant color each time
+    if (action.type === 'random_color') {
+      return this._randomVibrantColor();
+    }
+
     // Color temperature mode: map value (CC or velocity) to warm-cool
     if (action.type === 'color_temp') {
       const val = midiData.value !== null ? midiData.value : (midiData.velocity || 64);
@@ -443,6 +455,11 @@ class LightingManager extends EventEmitter {
     }
 
     return { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
+  }
+
+  _randomVibrantColor() {
+    const hue = Math.random() * 360;
+    return this._hsvToRgb(hue, 0.8 + Math.random() * 0.2, 0.8 + Math.random() * 0.2);
   }
 
   _hsvToRgb(h, s, v) {
@@ -656,6 +673,28 @@ class LightingManager extends EventEmitter {
 
   getActiveEffects() {
     return this.effectsEngine.getActiveEffects();
+  }
+
+  // ==================== WEBSOCKET BROADCAST ====================
+
+  _broadcastDeviceStatus(deviceId, connected) {
+    if (this.app.wsServer) {
+      this.app.wsServer.broadcast('lighting_device_status', {
+        deviceId,
+        connected,
+        timestamp: Date.now()
+      });
+    }
+  }
+
+  _broadcastEffectChange(effectKey, action) {
+    if (this.app.wsServer) {
+      this.app.wsServer.broadcast('lighting_effect_change', {
+        effectKey,
+        action,
+        timestamp: Date.now()
+      });
+    }
   }
 
   // ==================== MASTER DIMMER ====================
