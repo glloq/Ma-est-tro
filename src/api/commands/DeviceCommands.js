@@ -114,6 +114,21 @@ async function deviceList(app) {
           }
         }
 
+        // Fallback: chercher par nom normalisé (sans les numéros de port ALSA)
+        // Couvre le cas courant où le numéro de port ALSA change entre reboots
+        if (!settings && device.type === 'usb') {
+          const byName = app.database.findInstrumentByNormalizedName(device.id);
+          if (byName && byName.device_id !== device.id) {
+            app.logger.info(`[deviceList] USB device "${device.id}" matched by normalized name to DB entry "${byName.device_id}" - reconciling`);
+            try {
+              app.database.reconcileDeviceId(byName.device_id, device.id);
+            } catch (e) {
+              app.logger.warn(`[deviceList] Failed to reconcile device_id: ${e.message}`);
+            }
+            settings = app.database.getInstrumentSettings(device.id);
+          }
+        }
+
         if (settings) {
           if (settings.custom_name) {
             device.displayName = settings.custom_name;
