@@ -94,6 +94,23 @@ class AutoAssignModal {
       this.selectedAssignments = JSON.parse(JSON.stringify(this.autoSelection));
       this.skippedChannels = new Set();
 
+      // Enrich auto-selected assignments with instrument capabilities (gmProgram, note range, etc.)
+      // The backend autoSelection doesn't include these, so we look them up from suggestions
+      for (const [ch, assignment] of Object.entries(this.selectedAssignments)) {
+        if (!assignment || !assignment.deviceId) continue;
+        const options = this.suggestions[ch] || [];
+        const lowOptions = this.lowScoreSuggestions[ch] || [];
+        const matchedOption = options.find(opt => opt.instrument.device_id === assignment.deviceId)
+          || lowOptions.find(opt => opt.instrument.device_id === assignment.deviceId);
+        if (matchedOption) {
+          assignment.gmProgram = matchedOption.instrument.gm_program;
+          assignment.noteRangeMin = matchedOption.instrument.note_range_min;
+          assignment.noteRangeMax = matchedOption.instrument.note_range_max;
+          assignment.noteSelectionMode = matchedOption.instrument.note_selection_mode;
+          assignment.selectedNotes = matchedOption.instrument.selected_notes;
+        }
+      }
+
       // Initialize adaptation settings per channel
       this.channels = Object.keys(this.suggestions).sort((a, b) => parseInt(a) - parseInt(b));
       for (const ch of this.channels) {
