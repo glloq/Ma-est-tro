@@ -108,6 +108,15 @@ class LightingControlPage {
             </div>
           </div>
 
+          <!-- Keyboard Shortcuts Bar -->
+          <div style="padding:3px 20px;background:${t.bgAlt};border-bottom:1px solid ${t.border};display:flex;align-items:center;gap:16px;flex-shrink:0;font-size:10px;color:${t.textMuted};">
+            <span>⌨️ Raccourcis:</span>
+            <span><kbd style="padding:1px 4px;border:1px solid ${t.borderLight};border-radius:3px;background:${t.cardBg};font-size:10px;">Espace</kbd> Blackout</span>
+            <span><kbd style="padding:1px 4px;border:1px solid ${t.borderLight};border-radius:3px;background:${t.cardBg};font-size:10px;">O</kbd> All Off</span>
+            <span><kbd style="padding:1px 4px;border:1px solid ${t.borderLight};border-radius:3px;background:${t.cardBg};font-size:10px;">T</kbd> Test</span>
+            <span><kbd style="padding:1px 4px;border:1px solid ${t.borderLight};border-radius:3px;background:${t.cardBg};font-size:10px;">Esc</kbd> Fermer</span>
+          </div>
+
           <!-- Master Dimmer Bar -->
           <div style="padding:6px 20px;background:${t.bgAlt};border-bottom:1px solid ${t.border};display:flex;align-items:center;gap:10px;flex-shrink:0;">
             <span style="font-size:11px;font-weight:600;color:${t.textSec};white-space:nowrap;">🔆 Master</span>
@@ -138,6 +147,8 @@ class LightingControlPage {
                   <button onclick="lightingControlPageInstance.reconnectDevice()" id="lightingReconnectBtn" style="display:none;padding:4px 8px;border:1px solid #f59e0b;border-radius:6px;background:${t.btnBg};color:#d97706;cursor:pointer;font-size:11px;">🔄 ${i18n.t('lighting.reconnect') || 'Reconnecter'}</button>
                   <button onclick="lightingControlPageInstance.showEditDeviceForm()" style="padding:4px 8px;border:1px solid #8b5cf6;border-radius:6px;background:${t.btnBg};color:#7c3aed;cursor:pointer;font-size:11px;">✏️ Modifier</button>
                   <button onclick="lightingControlPageInstance.testDevice()" style="padding:4px 8px;border:1px solid #3b82f6;border-radius:6px;background:${t.btnBg};color:#2563eb;cursor:pointer;font-size:11px;">🔦 ${i18n.t('lighting.testDevice') || 'Tester'}</button>
+                  <button onclick="lightingControlPageInstance.batchToggleRules(true)" style="padding:4px 6px;border:1px solid ${t.borderLight};border-radius:4px;background:none;color:${t.textMuted};cursor:pointer;font-size:9px;" title="${i18n.t('lighting.enableAll') || 'Tout activer'}">✅All</button>
+                  <button onclick="lightingControlPageInstance.batchToggleRules(false)" style="padding:4px 6px;border:1px solid ${t.borderLight};border-radius:4px;background:none;color:${t.textMuted};cursor:pointer;font-size:9px;" title="${i18n.t('lighting.disableAll') || 'Tout désactiver'}">⬜All</button>
                   <button onclick="lightingControlPageInstance.showAddRuleForm()" style="padding:4px 8px;border:1px solid #10b981;border-radius:6px;background:${t.btnBg};color:#059669;cursor:pointer;font-size:11px;">+ ${i18n.t('lighting.addRule') || 'Règle'}</button>
                 </div>
               </div>
@@ -1730,6 +1741,17 @@ class LightingControlPage {
   async toggleRule(id, enabled) {
     try {
       await this.apiClient.send('lighting_rule_update', { id, enabled });
+      await this.loadRulesForDevice(this.selectedDeviceId);
+    } catch (error) { alert('Erreur: ' + error.message); }
+  }
+
+  async batchToggleRules(enabled) {
+    try {
+      for (const rule of this.rules) {
+        if (rule.enabled !== enabled) {
+          await this.apiClient.send('lighting_rule_update', { id: rule.id, enabled });
+        }
+      }
       await this.loadRulesForDevice(this.selectedDeviceId);
     } catch (error) { alert('Erreur: ' + error.message); }
   }
