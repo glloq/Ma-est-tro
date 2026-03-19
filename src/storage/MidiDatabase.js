@@ -510,7 +510,14 @@ class MidiDatabase {
         query = `WITH routing_stats AS (
           SELECT
             mf2.id AS file_id,
-            mf2.channel_count,
+            CASE
+              WHEN mf2.channel_count > 0 THEN mf2.channel_count
+              ELSE COALESCE(
+                NULLIF((SELECT COUNT(*) FROM midi_file_channels WHERE midi_file_id = mf2.id), 0),
+                mf2.tracks,
+                0
+              )
+            END AS channel_count,
             COUNT(mir2.id) AS routed_count,
             MIN(mir2.compatibility_score) AS min_score
           FROM midi_files mf2
