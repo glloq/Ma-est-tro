@@ -1881,6 +1881,60 @@
         }
 
         /* ========================================================================
+         * BLOCKS MODE - MULTI-COLUMN ON WIDE SCREENS
+         * ======================================================================== */
+
+        /* Default blocks mode: use CSS columns for wide screens */
+        @media (min-width: 1200px) {
+            .file-list:not(.view-compact):not(.view-grid) {
+                column-count: 2;
+                column-gap: 12px;
+            }
+
+            .file-list:not(.view-compact):not(.view-grid) .file-item,
+            .file-list:not(.view-compact):not(.view-grid) .folder-item {
+                break-inside: avoid;
+            }
+
+            .file-list:not(.view-compact):not(.view-grid) .folder-item {
+                column-span: all;
+            }
+
+            .file-list:not(.view-compact):not(.view-grid) .folder-children {
+                column-count: 2;
+                column-gap: 12px;
+            }
+
+            .file-list:not(.view-compact):not(.view-grid) .folder-children .file-item {
+                break-inside: avoid;
+            }
+        }
+
+        @media (min-width: 1800px) {
+            .file-list:not(.view-compact):not(.view-grid) {
+                column-count: 3;
+                column-gap: 14px;
+            }
+
+            .file-list:not(.view-compact):not(.view-grid) .folder-children {
+                column-count: 3;
+                column-gap: 14px;
+            }
+        }
+
+        @media (min-width: 2400px) {
+            .file-list:not(.view-compact):not(.view-grid) {
+                column-count: 4;
+                column-gap: 16px;
+            }
+
+            .file-list:not(.view-compact):not(.view-grid) .folder-children {
+                column-count: 4;
+                column-gap: 16px;
+            }
+        }
+
+        /* ========================================================================
          * RESPONSIVE ADJUSTMENTS FOR DISPLAY MODES
          * ======================================================================== */
 
