@@ -1711,9 +1711,84 @@
             color: #93c5fd;
         }
 
-        /* Grid: folders span full width */
+        /* Grid: folders adapted for grid layout */
         .file-list.view-grid .folder-item {
             grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 12px 16px;
+            margin-bottom: 0;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #f59e0b;
+            border-left: 4px solid #f59e0b;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.12);
+            transition: all 0.2s;
+        }
+
+        .file-list.view-grid .folder-item:hover {
+            background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .file-list.view-grid .folder-item.open {
+            background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+            border-color: #d97706;
+            border-left-color: #d97706;
+        }
+
+        .file-list.view-grid .folder-item .file-name {
+            flex: 1;
+            min-width: 200px;
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-list.view-grid .folder-item .file-name > span:first-child {
+            font-size: 15px;
+            font-weight: 700;
+            color: #92400e;
+        }
+
+        .file-list.view-grid .folder-item .file-metadata {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: #b45309;
+            font-weight: 500;
+        }
+
+        .file-list.view-grid .folder-item .file-actions {
+            gap: 6px;
+        }
+
+        .file-list.view-grid .folder-item .file-actions .btn-sm {
+            padding: 6px 10px;
+            font-size: 13px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(217, 119, 6, 0.3);
+            color: #92400e;
+        }
+
+        .file-list.view-grid .folder-item .file-actions .btn-sm:hover {
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .file-list.view-grid .folder-item .file-actions .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #dc2626;
+        }
+
+        .file-list.view-grid .folder-item .file-actions .btn-warning {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: rgba(245, 158, 11, 0.5);
+            color: #b45309;
+            animation: none;
         }
 
         .file-list.view-grid .folder-children {
@@ -1722,8 +1797,87 @@
             grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
             gap: 10px;
             margin-left: 0;
-            padding-left: 0;
-            border-left: none;
+            padding: 12px;
+            padding-left: 16px;
+            border-left: 3px solid #fbbf24;
+            border-radius: 0 0 0 8px;
+            background: rgba(254, 243, 199, 0.15);
+        }
+
+        /* Dark mode grid folders */
+        body.theme-dark .file-list.view-grid .folder-item {
+            background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+            border-color: #d97706;
+            border-left-color: #d97706;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        body.theme-dark .file-list.view-grid .folder-item:hover {
+            background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
+        }
+
+        body.theme-dark .file-list.view-grid .folder-item .file-name > span:first-child {
+            color: #fde68a;
+        }
+
+        body.theme-dark .file-list.view-grid .folder-item .file-metadata {
+            color: #fcd34d;
+        }
+
+        body.theme-dark .file-list.view-grid .folder-item .file-actions .btn-sm {
+            background: rgba(0, 0, 0, 0.2);
+            border-color: rgba(251, 191, 36, 0.3);
+            color: #fde68a;
+        }
+
+        body.theme-dark .file-list.view-grid .folder-children {
+            border-left-color: #b45309;
+            background: rgba(120, 53, 15, 0.1);
+        }
+
+        /* Compact view: folders */
+        .file-list.view-compact .folder-item {
+            padding: 4px 8px;
+            margin-bottom: 0;
+            border-radius: 3px;
+            min-height: 28px;
+            background: #fef9e7;
+            border-left: 3px solid #f59e0b;
+        }
+
+        .file-list.view-compact .folder-item:hover {
+            background: #fef3c7;
+        }
+
+        .file-list.view-compact .folder-item .file-name {
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .file-list.view-compact .folder-item .file-metadata {
+            font-size: 11px;
+        }
+
+        .file-list.view-compact .folder-item .file-actions .btn-sm {
+            padding: 2px 6px;
+            font-size: 11px;
+        }
+
+        .file-list.view-compact .folder-children {
+            margin-left: 12px;
+            padding-left: 8px;
+            border-left-width: 1px;
+        }
+
+        body.theme-dark .file-list.view-compact .folder-item {
+            background: #451a03;
+            border-left-color: #d97706;
+        }
+
+        body.theme-dark .file-list.view-compact .folder-item:hover {
+            background: #78350f;
         }
 
         /* ========================================================================
