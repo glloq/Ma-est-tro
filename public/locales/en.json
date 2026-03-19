@@ -747,7 +747,9 @@
     "labelGmInstruments": "GM Instruments: {value} ({mode})",
     "labelGmCategories": "GM Categories: {value} ({mode})",
     "labelGmPrograms": "GM Programs: {value}",
-    "labelDate": "Date: {from} - {to}"
+    "labelDate": "Date: {from} - {to}",
+    "noInstrumentsFound": "No instruments found",
+    "loadError": "Loading error"
   },
   "pianoRoll": {
     "title": "Upcoming Notes",
