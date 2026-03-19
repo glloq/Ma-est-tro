@@ -2791,6 +2791,50 @@
             background: rgba(0, 123, 255, 0.3);
         }
 
+        /* Visible resize grip indicator centered on the left edge */
+        .filters-panel-resize-grip {
+            position: absolute;
+            top: 50%;
+            left: -14px;
+            transform: translateY(-50%);
+            width: 14px;
+            height: 48px;
+            background: #007bff;
+            border-radius: 6px 0 0 6px;
+            cursor: ew-resize;
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: -2px 0 6px rgba(0,0,0,0.15);
+            transition: background 0.2s, width 0.2s;
+        }
+
+        .filters-panel-resize-grip:hover,
+        .filters-panel-resize-grip.active {
+            background: #0056b3;
+            width: 16px;
+            left: -16px;
+        }
+
+        .filters-panel-resize-grip::before {
+            content: '⋮';
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        body.theme-dark .filters-panel-resize-grip {
+            background: #4a9eff;
+            box-shadow: -2px 0 6px rgba(0,0,0,0.3);
+        }
+
+        body.theme-dark .filters-panel-resize-grip:hover,
+        body.theme-dark .filters-panel-resize-grip.active {
+            background: #007bff;
+        }
+
         .filters-panel-content {
             display: flex;
             flex-direction: column;
@@ -2822,6 +2866,22 @@
             overflow-x: hidden;
         }
 
+        /* Force all filter children to stay within bounds */
+        .filters-panel-body *,
+        .filters-panel-body *::before,
+        .filters-panel-body *::after {
+            box-sizing: border-box;
+        }
+
+        .filter-group {
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        .filter-group > div {
+            max-width: 100%;
+        }
+
         .filters-panel-footer {
             display: flex;
             gap: 8px;
@@ -2837,6 +2897,8 @@
 
         .filter-group {
             margin-bottom: 14px;
+            max-width: 100%;
+            overflow: hidden;
         }
 
         .filter-label {
@@ -2854,6 +2916,8 @@
         .filter-input {
             flex: 1;
             min-width: 0;
+            max-width: 100%;
+            width: 100%;
             padding: 6px;
             border: 1px solid #ddd;
             border-radius: 4px;
@@ -2869,12 +2933,13 @@
 
         .filter-select {
             width: 100%;
+            max-width: 100%;
             padding: 6px;
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 13px;
             box-sizing: border-box;
-            max-width: 100%;
+            min-width: 0;
         }
 
         body.theme-dark .filter-select {
@@ -2885,8 +2950,10 @@
 
         .checkbox-group {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 4px 8px;
+            max-width: 100%;
+            overflow: hidden;
         }
 
         .checkbox-group label {
@@ -2899,16 +2966,26 @@
             overflow: hidden;
             text-overflow: ellipsis;
             padding: 2px 0;
+            min-width: 0;
+            max-width: 100%;
+        }
+
+        .checkbox-group label input[type="checkbox"],
+        .checkbox-group label input[type="radio"] {
+            flex-shrink: 0;
         }
 
         .checkbox-group label span {
             overflow: hidden;
             text-overflow: ellipsis;
+            min-width: 0;
         }
 
         .filter-presets {
             display: flex;
             gap: 6px;
+            flex-wrap: wrap;
+            max-width: 100%;
         }
 
         .preset-btn {
@@ -3181,7 +3258,7 @@
 
                     <!-- Search and Sort Bar -->
                     <div class="search-bar-container">
-                        <div style="display: flex; gap: 8px; align-items: center;">
+                        <div style="display: flex; gap: 8px; align-items: center; max-width: 100%;">
                             <!-- Search -->
                             <div class="search-bar" style="flex: 1;">
                                 <span class="search-icon">🔍</span>
@@ -3239,6 +3316,7 @@
     <!-- Advanced Filters Panel -->
     <div id="filtersPanel" class="filters-panel" role="dialog" aria-modal="false" aria-labelledby="filtersPanelTitle">
         <div id="filtersPanelResizeHandle" class="filters-panel-resize-handle" title="Glisser pour redimensionner"></div>
+        <div id="filtersPanelResizeGrip" class="filters-panel-resize-grip" title="Glisser pour redimensionner"></div>
         <div class="filters-panel-content">
             <div class="filters-panel-header">
                 <h3 id="filtersPanelTitle">🔍 <span data-i18n="filters.title">Filtres avancés</span></h3>
@@ -3249,7 +3327,7 @@
                 <!-- Duration Filter -->
                 <div class="filter-group">
                     <label class="filter-label">⏱ <span data-i18n="filters.duration">Durée</span></label>
-                    <div style="display: flex; gap: 8px; align-items: center;">
+                    <div style="display: flex; gap: 8px; align-items: center; max-width: 100%;">
                         <input type="number" id="filterDurationMin" class="filter-input" data-i18n-placeholder="filters.durationMinSec" placeholder="Min (sec)" min="0" step="1">
                         <span>-</span>
                         <input type="number" id="filterDurationMax" class="filter-input" data-i18n-placeholder="filters.durationMaxSec" placeholder="Max (sec)" min="0" step="1">
@@ -3259,7 +3337,7 @@
                 <!-- Tempo Filter -->
                 <div class="filter-group">
                     <label class="filter-label">🎵 <span data-i18n="filters.tempo">Tempo (BPM)</span></label>
-                    <div style="display: flex; gap: 8px; align-items: center;">
+                    <div style="display: flex; gap: 8px; align-items: center; max-width: 100%;">
                         <input type="number" id="filterTempoMin" class="filter-input" placeholder="Min" min="0" step="1">
                         <span>-</span>
                         <input type="number" id="filterTempoMax" class="filter-input" placeholder="Max" min="0" step="1">
@@ -3274,7 +3352,7 @@
                 <!-- Track Count Filter -->
                 <div class="filter-group">
                     <label class="filter-label">🎚 <span data-i18n="filters.trackCount">Nombre de pistes</span></label>
-                    <div style="display: flex; gap: 8px; align-items: center;">
+                    <div style="display: flex; gap: 8px; align-items: center; max-width: 100%;">
                         <input type="number" id="filterTracksMin" class="filter-input" placeholder="Min" min="1" step="1">
                         <span>-</span>
                         <input type="number" id="filterTracksMax" class="filter-input" placeholder="Max" min="1" step="1">
@@ -3347,18 +3425,18 @@
                 <!-- Playable on Instruments Filter -->
                 <div class="filter-group">
                     <label class="filter-label">🎸 <span data-i18n="filters.playableOnInstruments">Jouable sur instruments</span></label>
-                    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
-                        <select id="filterInstrumentSource" class="filter-select" style="flex: 1;">
+                    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; max-width: 100%;">
+                        <select id="filterInstrumentSource" class="filter-select" style="flex: 1; min-width: 0;">
                             <option value="connected" data-i18n="filters.connectedOnly">Connectés uniquement</option>
                             <option value="registered" data-i18n="filters.allRegistered">Tous enregistrés</option>
                         </select>
                         <button id="refreshInstrumentsBtn" class="btn btn-sm" data-i18n-title="filters.refreshList" title="Rafraîchir la liste">🔄</button>
                     </div>
-                    <select id="filterPlayableInstruments" class="filter-select" multiple size="5" style="width: 100%;">
+                    <select id="filterPlayableInstruments" class="filter-select" multiple size="5" style="width: 100%; max-width: 100%; box-sizing: border-box;">
                     </select>
-                    <div style="margin-top: 6px; display: flex; gap: 8px; align-items: center;">
+                    <div style="margin-top: 6px; display: flex; gap: 8px; align-items: center; max-width: 100%;">
                         <label class="filter-label" style="font-size: 0.9em;" data-i18n="filters.mode">Mode :</label>
-                        <select id="filterPlayableMode" class="filter-select" style="flex: 1;">
+                        <select id="filterPlayableMode" class="filter-select" style="flex: 1; min-width: 0;">
                             <option value="routed" data-i18n="filters.playableModeRouted">Routé vers</option>
                             <option value="compatible" data-i18n="filters.playableModeCompatible">Compatible avec</option>
                         </select>
@@ -9044,21 +9122,34 @@
                     if (closeFiltersBtn) closeFiltersBtn.addEventListener('click', closeFiltersPanel);
                     if (filtersPanelOverlay) filtersPanelOverlay.addEventListener('click', closeFiltersPanel);
 
-                    // --- Resize handle logic ---
+                    // Close panel on click outside
+                    document.addEventListener('mousedown', (e) => {
+                        if (!filtersPanel.classList.contains('open')) return;
+                        if (filtersPanel.contains(e.target)) return;
+                        if (e.target === openFiltersBtn || openFiltersBtn.contains(e.target)) return;
+                        closeFiltersPanel();
+                    });
+
+                    // --- Resize handle + grip logic ---
                     const resizeHandle = document.getElementById('filtersPanelResizeHandle');
+                    const resizeGrip = document.getElementById('filtersPanelResizeGrip');
                     if (resizeHandle) {
                         let isResizing = false;
                         let startX = 0;
                         let startWidth = 0;
 
-                        resizeHandle.addEventListener('mousedown', (e) => {
+                        const startResize = (e) => {
                             isResizing = true;
                             startX = e.clientX;
                             startWidth = filtersPanel.offsetWidth;
                             filtersPanel.classList.add('resizing');
                             resizeHandle.classList.add('active');
+                            if (resizeGrip) resizeGrip.classList.add('active');
                             e.preventDefault();
-                        });
+                        };
+
+                        resizeHandle.addEventListener('mousedown', startResize);
+                        if (resizeGrip) resizeGrip.addEventListener('mousedown', startResize);
 
                         document.addEventListener('mousemove', (e) => {
                             if (!isResizing) return;
@@ -9072,6 +9163,7 @@
                             isResizing = false;
                             filtersPanel.classList.remove('resizing');
                             resizeHandle.classList.remove('active');
+                            if (resizeGrip) resizeGrip.classList.remove('active');
                             localStorage.setItem('filtersPanelWidth', filtersPanel.style.width);
                         });
 
