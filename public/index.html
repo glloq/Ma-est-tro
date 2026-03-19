@@ -1090,14 +1090,6 @@
             padding: 12px;
         }
 
-        /* Compact mode: folder files as list */
-        .view-compact .folder-open-files {
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-            padding: 4px 8px;
-        }
-
         body.theme-dark .folder-open-wrapper {
             border-color: #d97706;
             background: rgba(120, 53, 15, 0.12);
@@ -1639,6 +1631,46 @@
         .file-list.view-compact .file-actions .btn-sm {
             padding: 2px 6px;
             font-size: 11px;
+        }
+
+        /* Compact mode: open folder wrapper */
+        .file-list.view-compact .folder-open-wrapper {
+            border: none;
+            border-left: 3px solid #f59e0b;
+            border-radius: 0;
+            margin-bottom: 0;
+            background: transparent;
+            overflow: visible;
+        }
+
+        .file-list.view-compact .folder-open-header {
+            padding: 4px 8px;
+            background: #fef9e7;
+            border-bottom: none;
+            font-size: 12px;
+            font-weight: 600;
+            min-height: 28px;
+        }
+
+        .file-list.view-compact .folder-open-header .btn-sm {
+            padding: 2px 6px;
+            font-size: 11px;
+        }
+
+        .file-list.view-compact .folder-open-files {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            padding: 0;
+            padding-left: 8px;
+        }
+
+        body.theme-dark .file-list.view-compact .folder-open-wrapper {
+            border-left-color: #d97706;
+        }
+
+        body.theme-dark .file-list.view-compact .folder-open-header {
+            background: #451a03;
         }
 
         .file-list.view-compact .routed-badge {
