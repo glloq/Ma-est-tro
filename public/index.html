@@ -2804,6 +2804,22 @@
             overflow-x: hidden;
         }
 
+        /* Force all filter children to stay within bounds */
+        .filters-panel-body *,
+        .filters-panel-body *::before,
+        .filters-panel-body *::after {
+            box-sizing: border-box;
+        }
+
+        .filter-group {
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        .filter-group > div {
+            max-width: 100%;
+        }
+
         .filters-panel-footer {
             display: flex;
             gap: 8px;
@@ -2819,6 +2835,8 @@
 
         .filter-group {
             margin-bottom: 14px;
+            max-width: 100%;
+            overflow: hidden;
         }
 
         .filter-label {
@@ -2836,6 +2854,8 @@
         .filter-input {
             flex: 1;
             min-width: 0;
+            max-width: 100%;
+            width: 100%;
             padding: 6px;
             border: 1px solid #ddd;
             border-radius: 4px;
@@ -2851,12 +2871,13 @@
 
         .filter-select {
             width: 100%;
+            max-width: 100%;
             padding: 6px;
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 13px;
             box-sizing: border-box;
-            max-width: 100%;
+            min-width: 0;
         }
 
         body.theme-dark .filter-select {
@@ -2867,8 +2888,10 @@
 
         .checkbox-group {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 4px 8px;
+            max-width: 100%;
+            overflow: hidden;
         }
 
         .checkbox-group label {
@@ -2881,16 +2904,26 @@
             overflow: hidden;
             text-overflow: ellipsis;
             padding: 2px 0;
+            min-width: 0;
+            max-width: 100%;
+        }
+
+        .checkbox-group label input[type="checkbox"],
+        .checkbox-group label input[type="radio"] {
+            flex-shrink: 0;
         }
 
         .checkbox-group label span {
             overflow: hidden;
             text-overflow: ellipsis;
+            min-width: 0;
         }
 
         .filter-presets {
             display: flex;
             gap: 6px;
+            flex-wrap: wrap;
+            max-width: 100%;
         }
 
         .preset-btn {
@@ -3162,7 +3195,7 @@
 
                     <!-- Search and Sort Bar -->
                     <div class="search-bar-container">
-                        <div style="display: flex; gap: 8px; align-items: center;">
+                        <div style="display: flex; gap: 8px; align-items: center; max-width: 100%;">
                             <!-- Search -->
                             <div class="search-bar" style="flex: 1;">
                                 <span class="search-icon">🔍</span>
@@ -3231,7 +3264,7 @@
                 <!-- Duration Filter -->
                 <div class="filter-group">
                     <label class="filter-label">⏱ <span data-i18n="filters.duration">Durée</span></label>
-                    <div style="display: flex; gap: 8px; align-items: center;">
+                    <div style="display: flex; gap: 8px; align-items: center; max-width: 100%;">
                         <input type="number" id="filterDurationMin" class="filter-input" data-i18n-placeholder="filters.durationMinSec" placeholder="Min (sec)" min="0" step="1">
                         <span>-</span>
                         <input type="number" id="filterDurationMax" class="filter-input" data-i18n-placeholder="filters.durationMaxSec" placeholder="Max (sec)" min="0" step="1">
@@ -3241,7 +3274,7 @@
                 <!-- Tempo Filter -->
                 <div class="filter-group">
                     <label class="filter-label">🎵 <span data-i18n="filters.tempo">Tempo (BPM)</span></label>
-                    <div style="display: flex; gap: 8px; align-items: center;">
+                    <div style="display: flex; gap: 8px; align-items: center; max-width: 100%;">
                         <input type="number" id="filterTempoMin" class="filter-input" placeholder="Min" min="0" step="1">
                         <span>-</span>
                         <input type="number" id="filterTempoMax" class="filter-input" placeholder="Max" min="0" step="1">
@@ -3256,7 +3289,7 @@
                 <!-- Track Count Filter -->
                 <div class="filter-group">
                     <label class="filter-label">🎚 <span data-i18n="filters.trackCount">Nombre de pistes</span></label>
-                    <div style="display: flex; gap: 8px; align-items: center;">
+                    <div style="display: flex; gap: 8px; align-items: center; max-width: 100%;">
                         <input type="number" id="filterTracksMin" class="filter-input" placeholder="Min" min="1" step="1">
                         <span>-</span>
                         <input type="number" id="filterTracksMax" class="filter-input" placeholder="Max" min="1" step="1">
@@ -3329,18 +3362,18 @@
                 <!-- Playable on Instruments Filter -->
                 <div class="filter-group">
                     <label class="filter-label">🎸 <span data-i18n="filters.playableOnInstruments">Jouable sur instruments</span></label>
-                    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
-                        <select id="filterInstrumentSource" class="filter-select" style="flex: 1;">
+                    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; max-width: 100%;">
+                        <select id="filterInstrumentSource" class="filter-select" style="flex: 1; min-width: 0;">
                             <option value="connected" data-i18n="filters.connectedOnly">Connectés uniquement</option>
                             <option value="registered" data-i18n="filters.allRegistered">Tous enregistrés</option>
                         </select>
                         <button id="refreshInstrumentsBtn" class="btn btn-sm" data-i18n-title="filters.refreshList" title="Rafraîchir la liste">🔄</button>
                     </div>
-                    <select id="filterPlayableInstruments" class="filter-select" multiple size="5" style="width: 100%;">
+                    <select id="filterPlayableInstruments" class="filter-select" multiple size="5" style="width: 100%; max-width: 100%; box-sizing: border-box;">
                     </select>
-                    <div style="margin-top: 6px; display: flex; gap: 8px; align-items: center;">
+                    <div style="margin-top: 6px; display: flex; gap: 8px; align-items: center; max-width: 100%;">
                         <label class="filter-label" style="font-size: 0.9em;" data-i18n="filters.mode">Mode :</label>
-                        <select id="filterPlayableMode" class="filter-select" style="flex: 1;">
+                        <select id="filterPlayableMode" class="filter-select" style="flex: 1; min-width: 0;">
                             <option value="routed" data-i18n="filters.playableModeRouted">Routé vers</option>
                             <option value="compatible" data-i18n="filters.playableModeCompatible">Compatible avec</option>
                         </select>
