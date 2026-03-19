@@ -8775,12 +8775,13 @@
                     } else {
                         const option = document.createElement('option');
                         option.disabled = true;
-                        option.textContent = 'Aucun instrument trouvé';
+                        option.textContent = window.i18n ? window.i18n.t('filters.noInstrumentsFound') : 'No instruments found';
                         playableInstrumentsSelect.appendChild(option);
                     }
                 } catch (error) {
                     console.error('Failed to load instruments:', error);
-                    playableInstrumentsSelect.innerHTML = '<option disabled>Erreur de chargement</option>';
+                    const errMsg = window.i18n ? window.i18n.t('filters.loadError') : 'Loading error';
+                    playableInstrumentsSelect.innerHTML = `<option disabled>${errMsg}</option>`;
                 }
             }
 
@@ -8917,7 +8918,7 @@
                 }
 
                 // Don't create duplicate badges for range filters and mode selectors
-                if (filter.key.endsWith('Max') || filter.key.endsWith('After') || filter.key === 'instrumentMode' || filter.key === 'playableMode' || filter.key === 'validatedThreshold' || filter.key === 'gmMode') {
+                if (filter.key.endsWith('Max') || filter.key.endsWith('Before') || filter.key === 'instrumentMode' || filter.key === 'playableMode' || filter.key === 'validatedThreshold' || filter.key === 'gmMode') {
                     return;
                 }
 
@@ -8969,6 +8970,18 @@
             } else if (key === 'playableOnInstruments') {
                 document.getElementById('filterPlayableInstruments').selectedIndex = -1;
                 filterManager.setFilter('playableOnInstruments', []);
+            } else if (key === 'uploadedAfter' || key === 'uploadedBefore') {
+                filterManager.setFilter('uploadedAfter', null);
+                filterManager.setFilter('uploadedBefore', null);
+            } else if (key === 'channelCountMin' || key === 'channelCountMax') {
+                filterManager.setFilter('channelCountMin', null);
+                filterManager.setFilter('channelCountMax', null);
+            } else if (key === 'gmInstruments') {
+                filterManager.setFilter('gmInstruments', []);
+            } else if (key === 'gmPrograms') {
+                filterManager.setFilter('gmPrograms', []);
+            } else if (key === 'minCompatibilityScore') {
+                filterManager.setFilter('minCompatibilityScore', null);
             } else if (key === 'isOriginal') {
                 document.querySelector('input[name="isOriginal"][value="all"]').checked = true;
                 filterManager.setFilter('isOriginal', null);
