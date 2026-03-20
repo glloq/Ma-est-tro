@@ -1,5 +1,7 @@
 // src/api/commands/StringInstrumentCommands.js
 
+import TablatureConverter from '../../midi/TablatureConverter.js';
+
 /**
  * WebSocket commands for string instrument configuration and tablature management.
  * Handles CRUD for string instruments, tuning presets, and tablature data.
@@ -129,6 +131,45 @@ async function tablatureDelete(app, data) {
   return { success: true };
 }
 
+// ==================== CONVERSION ====================
+
+async function tablatureConvertFromMidi(app, data) {
+  if (!data.notes || !Array.isArray(data.notes)) throw new Error('notes array is required');
+  if (!data.instrument_config && !data.string_instrument_id) {
+    throw new Error('instrument_config or string_instrument_id is required');
+  }
+
+  let config = data.instrument_config;
+  if (!config && data.string_instrument_id) {
+    config = app.database.stringInstrumentDB.getStringInstrumentById(data.string_instrument_id);
+    if (!config) throw new Error(`String instrument ${data.string_instrument_id} not found`);
+  }
+
+  const converter = new TablatureConverter(config);
+  const tabEvents = converter.convertMidiToTablature(data.notes);
+  const range = converter.getPlayableRange();
+
+  return { tablature: tabEvents, playable_range: range };
+}
+
+async function tablatureConvertToMidi(app, data) {
+  if (!data.tab_events || !Array.isArray(data.tab_events)) throw new Error('tab_events array is required');
+  if (!data.instrument_config && !data.string_instrument_id) {
+    throw new Error('instrument_config or string_instrument_id is required');
+  }
+
+  let config = data.instrument_config;
+  if (!config && data.string_instrument_id) {
+    config = app.database.stringInstrumentDB.getStringInstrumentById(data.string_instrument_id);
+    if (!config) throw new Error(`String instrument ${data.string_instrument_id} not found`);
+  }
+
+  const converter = new TablatureConverter(config);
+  const { notes, ccEvents } = converter.convertTablatureToMidi(data.tab_events);
+
+  return { notes, cc_events: ccEvents };
+}
+
 // ==================== REGISTER ====================
 
 export function register(registry, app) {
@@ -148,4 +189,8 @@ export function register(registry, app) {
   registry.register('tablature_get', (data) => tablatureGet(app, data));
   registry.register('tablature_get_by_file', (data) => tablatureGetByFile(app, data));
   registry.register('tablature_delete', (data) => tablatureDelete(app, data));
+
+  // Conversion (MIDI ↔ Tablature)
+  registry.register('tablature_convert_from_midi', (data) => tablatureConvertFromMidi(app, data));
+  registry.register('tablature_convert_to_midi', (data) => tablatureConvertToMidi(app, data));
 }
