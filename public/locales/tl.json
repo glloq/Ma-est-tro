@@ -1041,7 +1041,11 @@
     "selectDeviceFirst": "Pumili muna ng nakakonektang device",
     "singleChannelRequired": "Pumili ng isang channel para magamit ang tablature",
     "converting": "Kino-convert ang MIDI sa tablature...",
-    "conversionFailed": "Nabigo ang pag-convert ng tablature"
+    "conversionFailed": "Nabigo ang pag-convert ng tablature",
+    "configureStringInstrument": "Configure string instrument",
+    "gmDetected": "{{instrument}} detected — configure as string instrument?",
+    "autoConfig": "Auto-configure",
+    "tabOnlyMode": "Toggle tablature-only view"
   },
   "stringInstrument": {
     "title": "Konfigurasyon ng String Instrument",
@@ -1068,7 +1072,12 @@
       "violin": "Biyolin (GDAE)",
       "viola": "Viola (CGDA)",
       "cello": "Cello (CGDA)",
-      "contrabass": "Contrabass (EADG)"
+      "contrabass": "Contrabass (EADG)",
+      "guitar_open_e": "Guitar Open E (EBEG#BE)",
+      "guitar_half_down": "Guitar Half Step Down",
+      "guitar_full_down": "Guitar Full Step Down",
+      "bass_4_drop_d": "Bass 4-String Drop D (DADG)",
+      "ukulele_baritone": "Ukulele Baritone (DGBE)"
     },
     "configCreated": "Nagawa ang konfigurasyon ng string instrument gamit ang default na preset.",
     "configExists": "May umiiral nang konfigurasyon ng string instrument para sa device na ito."

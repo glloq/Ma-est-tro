@@ -1041,7 +1041,11 @@
     "selectDeviceFirst": "প্রথমে একটি সংযুক্ত ডিভাইস নির্বাচন করুন",
     "singleChannelRequired": "ট্যাবলেচার ব্যবহার করতে একটি একক চ্যানেল নির্বাচন করুন",
     "converting": "MIDI ট্যাবলেচারে রূপান্তর করা হচ্ছে...",
-    "conversionFailed": "ট্যাবলেচার রূপান্তর ব্যর্থ"
+    "conversionFailed": "ট্যাবলেচার রূপান্তর ব্যর্থ",
+    "configureStringInstrument": "Configure string instrument",
+    "gmDetected": "{{instrument}} detected — configure as string instrument?",
+    "autoConfig": "Auto-configure",
+    "tabOnlyMode": "Toggle tablature-only view"
   },
   "stringInstrument": {
     "title": "তারযন্ত্র কনফিগারেশন",
@@ -1068,7 +1072,12 @@
       "violin": "বেহালা (GDAE)",
       "viola": "ভায়োলা (CGDA)",
       "cello": "চেলো (CGDA)",
-      "contrabass": "কন্ট্রাবেস (EADG)"
+      "contrabass": "কন্ট্রাবেস (EADG)",
+      "guitar_open_e": "Guitar Open E (EBEG#BE)",
+      "guitar_half_down": "Guitar Half Step Down",
+      "guitar_full_down": "Guitar Full Step Down",
+      "bass_4_drop_d": "Bass 4-String Drop D (DADG)",
+      "ukulele_baritone": "Ukulele Baritone (DGBE)"
     },
     "configCreated": "ডিফল্ট প্রিসেট সহ তারযন্ত্র কনফিগারেশন তৈরি হয়েছে।",
     "configExists": "এই ডিভাইসের জন্য একটি তারযন্ত্র কনফিগারেশন ইতিমধ্যে বিদ্যমান।"

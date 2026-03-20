@@ -1041,7 +1041,11 @@
     "selectDeviceFirst": "Pilih perangkat yang terhubung terlebih dahulu",
     "singleChannelRequired": "Pilih satu saluran untuk menggunakan tablatur",
     "converting": "Mengonversi MIDI ke tablatur...",
-    "conversionFailed": "Konversi tablatur gagal"
+    "conversionFailed": "Konversi tablatur gagal",
+    "configureStringInstrument": "Configure string instrument",
+    "gmDetected": "{{instrument}} detected — configure as string instrument?",
+    "autoConfig": "Auto-configure",
+    "tabOnlyMode": "Toggle tablature-only view"
   },
   "stringInstrument": {
     "title": "Konfigurasi Instrumen Senar",
@@ -1068,7 +1072,12 @@
       "violin": "Biola (GDAE)",
       "viola": "Viola (CGDA)",
       "cello": "Cello (CGDA)",
-      "contrabass": "Kontrabas (EADG)"
+      "contrabass": "Kontrabas (EADG)",
+      "guitar_open_e": "Guitar Open E (EBEG#BE)",
+      "guitar_half_down": "Guitar Half Step Down",
+      "guitar_full_down": "Guitar Full Step Down",
+      "bass_4_drop_d": "Bass 4-String Drop D (DADG)",
+      "ukulele_baritone": "Ukulele Baritone (DGBE)"
     },
     "configCreated": "Konfigurasi instrumen senar dibuat dengan preset bawaan.",
     "configExists": "Konfigurasi instrumen senar sudah ada untuk perangkat ini."

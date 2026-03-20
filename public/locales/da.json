@@ -1041,7 +1041,11 @@
     "selectDeviceFirst": "Vælg først en tilsluttet enhed",
     "singleChannelRequired": "Vælg en enkelt kanal for at bruge tabulatur",
     "converting": "Konverterer MIDI til tabulatur...",
-    "conversionFailed": "Tabulaturkonvertering mislykkedes"
+    "conversionFailed": "Tabulaturkonvertering mislykkedes",
+    "configureStringInstrument": "Configure string instrument",
+    "gmDetected": "{{instrument}} detected — configure as string instrument?",
+    "autoConfig": "Auto-configure",
+    "tabOnlyMode": "Toggle tablature-only view"
   },
   "stringInstrument": {
     "title": "Strengeinstrumentkonfiguration",
@@ -1068,7 +1072,12 @@
       "violin": "Violin (GDAE)",
       "viola": "Bratsch (CGDA)",
       "cello": "Cello (CGDA)",
-      "contrabass": "Kontrabas (EADG)"
+      "contrabass": "Kontrabas (EADG)",
+      "guitar_open_e": "Guitar Open E (EBEG#BE)",
+      "guitar_half_down": "Guitar Half Step Down",
+      "guitar_full_down": "Guitar Full Step Down",
+      "bass_4_drop_d": "Bass 4-String Drop D (DADG)",
+      "ukulele_baritone": "Ukulele Baritone (DGBE)"
     },
     "configCreated": "Strengeinstrumentkonfiguration oprettet med standardforindstilling.",
     "configExists": "En strengeinstrumentkonfiguration findes allerede for denne enhed."

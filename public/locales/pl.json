@@ -1041,7 +1041,11 @@
     "selectDeviceFirst": "Najpierw wybierz podłączone urządzenie",
     "singleChannelRequired": "Wybierz pojedynczy kanał, aby użyć tabulatury",
     "converting": "Konwersja MIDI na tabulaturę...",
-    "conversionFailed": "Konwersja tabulatury nie powiodła się"
+    "conversionFailed": "Konwersja tabulatury nie powiodła się",
+    "configureStringInstrument": "Configure string instrument",
+    "gmDetected": "{{instrument}} detected — configure as string instrument?",
+    "autoConfig": "Auto-configure",
+    "tabOnlyMode": "Toggle tablature-only view"
   },
   "stringInstrument": {
     "title": "Konfiguracja instrumentu strunowego",
@@ -1068,7 +1072,12 @@
       "violin": "Skrzypce (GDAE)",
       "viola": "Altówka (CGDA)",
       "cello": "Wiolonczela (CGDA)",
-      "contrabass": "Kontrabas (EADG)"
+      "contrabass": "Kontrabas (EADG)",
+      "guitar_open_e": "Guitar Open E (EBEG#BE)",
+      "guitar_half_down": "Guitar Half Step Down",
+      "guitar_full_down": "Guitar Full Step Down",
+      "bass_4_drop_d": "Bass 4-String Drop D (DADG)",
+      "ukulele_baritone": "Ukulele Baritone (DGBE)"
     },
     "configCreated": "Konfiguracja instrumentu strunowego utworzona z domyślnym presetem.",
     "configExists": "Konfiguracja instrumentu strunowego już istnieje dla tego urządzenia."

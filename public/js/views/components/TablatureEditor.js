@@ -14,6 +14,7 @@ class TablatureEditor {
 
         // State
         this.isVisible = false;
+        this.tabOnlyMode = false;     // Toggle piano roll visibility
         this.stringInstrument = null;  // Current string instrument config from DB
         this.tabEvents = [];            // Current tablature data
         this.isSyncing = false;         // Guard against sync loops
@@ -31,6 +32,8 @@ class TablatureEditor {
         this._onTabAdd = this._handleTabAdd.bind(this);
         this._onTabEdit = this._handleTabEdit.bind(this);
         this._onTabSelection = this._handleTabSelection.bind(this);
+        this._onTabMove = this._handleTabMove.bind(this);
+        this._onKeyDown = this._handleKeyDown.bind(this);
     }
 
     // ========================================================================
@@ -71,11 +74,18 @@ class TablatureEditor {
         // Convert MIDI notes to tablature
         await this.convertFromMidi(midiNotes);
 
-        // Attach canvas events
+        // Detach first to prevent duplicate listeners on repeated show() calls
+        this._detachCanvasEvents();
         this._attachCanvasEvents();
     }
 
     hide() {
+        // Restore piano roll if in tab-only mode
+        if (this.tabOnlyMode) {
+            this.tabOnlyMode = false;
+            const editorContainer = this.modal.container?.querySelector('.midi-editor-container');
+            if (editorContainer) editorContainer.classList.remove('tab-only-mode');
+        }
         if (this.containerEl) {
             this.containerEl.style.display = 'none';
         }
@@ -84,6 +94,7 @@ class TablatureEditor {
     }
 
     destroy() {
+        document.removeEventListener('keydown', this._onKeyDown);
         this._detachCanvasEvents();
         if (this.renderer) {
             this.renderer.destroy();
@@ -114,6 +125,11 @@ class TablatureEditor {
                     <span class="tablature-tuning" id="tab-tuning-display"></span>
                 </div>
                 <div class="tablature-toolbar">
+                    <button class="tab-tool-btn" data-action="tab-view-mode" title="${this.t('tablature.tabOnlyMode')}">&#9634;</button>
+                    <button class="tab-tool-btn" data-action="tab-undo" title="${this.t('midiEditor.undo')} (Ctrl+Z)">&#8630;</button>
+                    <button class="tab-tool-btn" data-action="tab-redo" title="${this.t('midiEditor.redo')} (Ctrl+Y)">&#8631;</button>
+                    <button class="tab-tool-btn" data-action="tab-copy" title="Copy (Ctrl+C)">CPY</button>
+                    <button class="tab-tool-btn" data-action="tab-paste" title="Paste (Ctrl+V)">PST</button>
                     <button class="tab-tool-btn" data-action="tab-zoom-in" title="${this.t('tablature.zoomIn')}">+</button>
                     <button class="tab-tool-btn" data-action="tab-zoom-out" title="${this.t('tablature.zoomOut')}">-</button>
                     <button class="tab-tool-btn" data-action="tab-delete" title="${this.t('tablature.deleteSelected')}">DEL</button>
@@ -419,6 +435,8 @@ class TablatureEditor {
         this.tabCanvasEl.addEventListener('tab:addevent', this._onTabAdd);
         this.tabCanvasEl.addEventListener('tab:editevent', this._onTabEdit);
         this.tabCanvasEl.addEventListener('tab:selectionchange', this._onTabSelection);
+        this.tabCanvasEl.addEventListener('tab:moveevents', this._onTabMove);
+        document.addEventListener('keydown', this._onKeyDown);
     }
 
     _detachCanvasEvents() {
@@ -426,6 +444,8 @@ class TablatureEditor {
         this.tabCanvasEl.removeEventListener('tab:addevent', this._onTabAdd);
         this.tabCanvasEl.removeEventListener('tab:editevent', this._onTabEdit);
         this.tabCanvasEl.removeEventListener('tab:selectionchange', this._onTabSelection);
+        this.tabCanvasEl.removeEventListener('tab:moveevents', this._onTabMove);
+        document.removeEventListener('keydown', this._onKeyDown);
     }
 
     _handleTabAdd(e) {
@@ -445,6 +465,77 @@ class TablatureEditor {
                 .map(evt => ({ string: evt.string, fret: evt.fret, velocity: evt.velocity }));
             this.fretboard.setActivePositions(positions);
         }
+    }
+
+    _handleTabMove(e) {
+        // Notes were moved by drag — sync back to MIDI
+        this.tabEvents = this.renderer.tabEvents;
+        this.syncToMidi();
+    }
+
+    _handleKeyDown(e) {
+        if (!this.isVisible) return;
+
+        // Only intercept when tablature panel is focused/visible
+        const isCtrl = e.ctrlKey || e.metaKey;
+
+        if (isCtrl && e.key === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            this._performUndo();
+        } else if (isCtrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+            e.preventDefault();
+            this._performRedo();
+        } else if (isCtrl && e.key === 'c') {
+            if (this.renderer && this.renderer.selectedEvents.size > 0) {
+                e.preventDefault();
+                this.renderer.copySelected();
+            }
+        } else if (isCtrl && e.key === 'v') {
+            if (this.renderer && this.renderer.hasClipboard()) {
+                e.preventDefault();
+                const pasteTick = this.renderer.playheadTick || 0;
+                const count = this.renderer.paste(pasteTick);
+                if (count > 0) {
+                    this.tabEvents = this.renderer.tabEvents;
+                    this.syncToMidi();
+                }
+            }
+        }
+    }
+
+    _performUndo() {
+        if (!this.renderer || !this.renderer.canUndo()) return;
+        if (this.renderer.undo()) {
+            this.tabEvents = this.renderer.tabEvents;
+            this.syncToMidi();
+        }
+    }
+
+    _performRedo() {
+        if (!this.renderer || !this.renderer.canRedo()) return;
+        if (this.renderer.redo()) {
+            this.tabEvents = this.renderer.tabEvents;
+            this.syncToMidi();
+        }
+    }
+
+    _toggleTabOnlyMode() {
+        this.tabOnlyMode = !this.tabOnlyMode;
+        const editorContainer = this.modal.container?.querySelector('.midi-editor-container');
+        const viewBtn = this.containerEl?.querySelector('[data-action="tab-view-mode"]');
+
+        if (editorContainer) {
+            if (this.tabOnlyMode) {
+                editorContainer.classList.add('tab-only-mode');
+                if (viewBtn) viewBtn.classList.add('active');
+            } else {
+                editorContainer.classList.remove('tab-only-mode');
+                if (viewBtn) viewBtn.classList.remove('active');
+            }
+        }
+
+        // Resize tablature to fill available space
+        this.handleResize();
     }
 
     /**
@@ -479,9 +570,13 @@ class TablatureEditor {
             input.style.top = `${canvasRect.top + y - 12}px`;
         }
 
+        let committed = false;
         const commit = () => {
+            if (committed) return;
+            committed = true;
             const fretVal = parseInt(input.value);
             if (!isNaN(fretVal) && fretVal >= 0 && fretVal <= maxFret) {
+                if (this.renderer) this.renderer.saveSnapshot();
                 if (editIndex !== null) {
                     // Update existing
                     this.tabEvents[editIndex].fret = fretVal;
@@ -499,7 +594,7 @@ class TablatureEditor {
                         channel: this.channel
                     });
                     // Sort by tick
-                    this.tabEvents.sort((a, b) => a.t - b.t || a.tick - b.tick);
+                    this.tabEvents.sort((a, b) => a.tick - b.tick);
                 }
 
                 if (this.renderer) this.renderer.setTabEvents(this.tabEvents);
@@ -510,7 +605,7 @@ class TablatureEditor {
 
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') commit();
-            if (e.key === 'Escape') input.remove();
+            if (e.key === 'Escape') { committed = true; input.remove(); }
         });
         input.addEventListener('blur', commit);
 
@@ -531,6 +626,28 @@ class TablatureEditor {
             if (!action) return;
 
             switch (action) {
+                case 'tab-view-mode':
+                    this._toggleTabOnlyMode();
+                    break;
+                case 'tab-undo':
+                    this._performUndo();
+                    break;
+                case 'tab-redo':
+                    this._performRedo();
+                    break;
+                case 'tab-copy':
+                    if (this.renderer) this.renderer.copySelected();
+                    break;
+                case 'tab-paste':
+                    if (this.renderer && this.renderer.hasClipboard()) {
+                        const pasteTick = this.renderer.playheadTick || 0;
+                        const count = this.renderer.paste(pasteTick);
+                        if (count > 0) {
+                            this.tabEvents = this.renderer.tabEvents;
+                            this.syncToMidi();
+                        }
+                    }
+                    break;
                 case 'tab-zoom-in':
                     if (this.renderer) {
                         this.renderer.setZoom(this.renderer.ticksPerPixel * 0.75);

@@ -1041,7 +1041,11 @@
     "selectDeviceFirst": "เลือกอุปกรณ์ที่เชื่อมต่อก่อน",
     "singleChannelRequired": "เลือกช่องเดียวเพื่อใช้แท็บเลเจอร์",
     "converting": "กำลังแปลง MIDI เป็นแท็บเลเจอร์...",
-    "conversionFailed": "การแปลงแท็บเลเจอร์ล้มเหลว"
+    "conversionFailed": "การแปลงแท็บเลเจอร์ล้มเหลว",
+    "configureStringInstrument": "Configure string instrument",
+    "gmDetected": "{{instrument}} detected — configure as string instrument?",
+    "autoConfig": "Auto-configure",
+    "tabOnlyMode": "Toggle tablature-only view"
   },
   "stringInstrument": {
     "title": "การกำหนดค่าเครื่องสาย",
@@ -1068,7 +1072,12 @@
       "violin": "ไวโอลิน (GDAE)",
       "viola": "วิโอลา (CGDA)",
       "cello": "เชลโล (CGDA)",
-      "contrabass": "คอนทราเบส (EADG)"
+      "contrabass": "คอนทราเบส (EADG)",
+      "guitar_open_e": "Guitar Open E (EBEG#BE)",
+      "guitar_half_down": "Guitar Half Step Down",
+      "guitar_full_down": "Guitar Full Step Down",
+      "bass_4_drop_d": "Bass 4-String Drop D (DADG)",
+      "ukulele_baritone": "Ukulele Baritone (DGBE)"
     },
     "configCreated": "สร้างการกำหนดค่าเครื่องสายด้วยพรีเซ็ตเริ่มต้นแล้ว",
     "configExists": "มีการกำหนดค่าเครื่องสายสำหรับอุปกรณ์นี้อยู่แล้ว"

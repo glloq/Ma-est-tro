@@ -1041,7 +1041,11 @@
     "selectDeviceFirst": "Selecteer eerst een aangesloten apparaat",
     "singleChannelRequired": "Selecteer een enkel kanaal om tabulatuur te gebruiken",
     "converting": "MIDI converteren naar tabulatuur...",
-    "conversionFailed": "Tabulatuurconversie mislukt"
+    "conversionFailed": "Tabulatuurconversie mislukt",
+    "configureStringInstrument": "Configure string instrument",
+    "gmDetected": "{{instrument}} detected — configure as string instrument?",
+    "autoConfig": "Auto-configure",
+    "tabOnlyMode": "Toggle tablature-only view"
   },
   "stringInstrument": {
     "title": "Snaarinstrument configuratie",
@@ -1068,7 +1072,12 @@
       "violin": "Viool (GDAE)",
       "viola": "Altviool (CGDA)",
       "cello": "Cello (CGDA)",
-      "contrabass": "Contrabas (EADG)"
+      "contrabass": "Contrabas (EADG)",
+      "guitar_open_e": "Guitar Open E (EBEG#BE)",
+      "guitar_half_down": "Guitar Half Step Down",
+      "guitar_full_down": "Guitar Full Step Down",
+      "bass_4_drop_d": "Bass 4-String Drop D (DADG)",
+      "ukulele_baritone": "Ukulele Baritone (DGBE)"
     },
     "configCreated": "Snaarinstrument configuratie aangemaakt met standaard voorinstelling.",
     "configExists": "Er bestaat al een snaarinstrument configuratie voor dit apparaat."

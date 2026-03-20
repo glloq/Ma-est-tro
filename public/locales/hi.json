@@ -1041,7 +1041,11 @@
     "selectDeviceFirst": "पहले एक कनेक्टेड डिवाइस चुनें",
     "singleChannelRequired": "टैब्लेचर का उपयोग करने के लिए एक ही चैनल चुनें",
     "converting": "MIDI को टैब्लेचर में परिवर्तित किया जा रहा है...",
-    "conversionFailed": "टैब्लेचर रूपांतरण विफल हुआ"
+    "conversionFailed": "टैब्लेचर रूपांतरण विफल हुआ",
+    "configureStringInstrument": "Configure string instrument",
+    "gmDetected": "{{instrument}} detected — configure as string instrument?",
+    "autoConfig": "Auto-configure",
+    "tabOnlyMode": "Toggle tablature-only view"
   },
   "stringInstrument": {
     "title": "तार वाद्य यंत्र कॉन्फ़िगरेशन",
@@ -1068,7 +1072,12 @@
       "violin": "वायलिन (GDAE)",
       "viola": "वियोला (CGDA)",
       "cello": "चेलो (CGDA)",
-      "contrabass": "कॉन्ट्राबेस (EADG)"
+      "contrabass": "कॉन्ट्राबेस (EADG)",
+      "guitar_open_e": "Guitar Open E (EBEG#BE)",
+      "guitar_half_down": "Guitar Half Step Down",
+      "guitar_full_down": "Guitar Full Step Down",
+      "bass_4_drop_d": "Bass 4-String Drop D (DADG)",
+      "ukulele_baritone": "Ukulele Baritone (DGBE)"
     },
     "configCreated": "डिफ़ॉल्ट प्रीसेट के साथ तार वाद्य यंत्र कॉन्फ़िगरेशन बनाया गया।",
     "configExists": "इस डिवाइस के लिए तार वाद्य यंत्र कॉन्फ़िगरेशन पहले से मौजूद है।"

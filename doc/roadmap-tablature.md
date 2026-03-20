@@ -61,11 +61,11 @@ violon, etc.).
 
 ---
 
-## Phase 3 : Editeur de Tablature (Frontend) [PARTIELLEMENT TERMINEE]
+## Phase 3 : Editeur de Tablature (Frontend) [TERMINEE]
 
 **Commit** : `8419fd8`
 
-### 3.1 — TablatureEditor.js (orchestrateur)
+### 3.1 — TablatureEditor.js (orchestrateur) [TERMINEE]
 - [x] Creation DOM (panel header + toolbar + canvas)
 - [x] Conversion MIDI -> tab via API backend (+ fallback client-side)
 - [x] Saisie inline des numeros de frettes (double-clic -> input)
@@ -73,11 +73,11 @@ violon, etc.).
 - [x] Selection All
 - [x] Zoom in/out
 - [x] Bouton close
-- [ ] **Deplacement de notes (drag)** — pas implemente
-- [ ] **Copier/coller** — pas implemente
-- [ ] **Undo/redo** — pas implemente (pas d'integration CommandHistory)
+- [x] Deplacement de notes (drag-to-move sur events selectionnes)
+- [x] Copier/coller (Ctrl+C/V + boutons CPY/PST, colle au playhead)
+- [x] Undo/redo snapshot-based (Ctrl+Z/Y + boutons toolbar, sync auto vers MIDI)
 
-### 3.2 — TablatureRenderer.js (moteur de rendu Canvas)
+### 3.2 — TablatureRenderer.js (moteur de rendu Canvas) [TERMINEE]
 - [x] Rendu des 1-6 lignes de cordes avec labels (note + octave)
 - [x] Numeros de frettes sur les lignes (+ duree en trait)
 - [x] Barres de mesure / beat lines
@@ -86,8 +86,8 @@ violon, etc.).
 - [x] Selection (click, Ctrl+click, box select)
 - [x] Hit testing (detection de clic sur un event)
 - [x] Zoom (ticksPerPixel) et scroll horizontal
-- [ ] **Hover highlighting** — declare dans les couleurs mais pas utilise dans le rendu
-- [ ] **Drag to pan** — mousedown sur espace vide commence une selection, pas un pan
+- [x] Hover highlighting (couleur hoverHighlight derriere l'event survole)
+- [x] Drag-to-pan (Alt+drag ou clic molette sur espace vide)
 
 ### 3.3 — FretboardDiagram.js (preview temps reel)
 - [x] Diagramme vertical : cordes verticales, frettes horizontales
@@ -96,7 +96,7 @@ violon, etc.).
 - [x] Corde a vide (O au-dessus du sillet)
 - [x] Auto-scroll fenetre de frettes
 - [x] Epaisseur de corde variable (graves plus epaisses)
-- [ ] **Corde muted (X)** — couleur definie mais pas de rendu
+- [x] Corde muted (X) — rendu en rouge (#dc3545) au-dessus du sillet quand `pos.muted === true`
 
 ### 3.4 — CSS (tablature.css)
 - [x] Panel, header, toolbar, canvas wrappers
@@ -124,7 +124,7 @@ violon, etc.).
 - [x] Guard `isSyncing` pour eviter les boucles infinies tab <-> piano roll
 
 ### 4.4 — Manques identifies
-- [ ] **Warning visuel si note non jouable** — `isNotePlayable()` existe dans le converter mais non utilise cote frontend
+- [x] Warning visuel si note non jouable — fond rouge (unplayable color) sur les frettes > numFrets dans TablatureRenderer
 - [ ] **EventBus dedie** — la sync passe par des appels directs, pas par un bus d'evenements (tablature:note-changed, etc.)
 
 ---
@@ -142,7 +142,7 @@ violon, etc.).
 - [x] `hasStringInstrument()` — verifie si un instrument a cordes existe pour le device/channel courant
 - [x] Sync scroll piano roll -> tablature
 - [x] `destroy()` nettoie le tablature editor
-- [ ] **Toggle piano-roll / tablature / les deux** — actuellement le panel tablature s'affiche SOUS le piano roll, pas en remplacement. Pas de mode "tablature seule"
+- [x] Mode "tablature seule" — bouton toggle (&#9634;) masque le piano roll via `.tab-only-mode` CSS class, restaure a la fermeture
 
 ### 5.3 — Modal de configuration instrument a cordes [TERMINEE]
 - [x] `StringInstrumentConfigModal.js` (extends BaseModal) — modal dedie
@@ -156,8 +156,14 @@ violon, etc.).
 - [x] Callback onSave rafraichit le bouton TAB et l'editeur tablature
 - [x] Cles i18n ajoutees pour les 5 presets manquants (en.json + fr.json)
 
-### 5.4 — Auto-detection a la creation d'instrument
-- [ ] **PAS IMPLEMENTE** — Les programmes GM guitare(24-31), basse(32-39), cordes(40-47) sont documentes en commentaires dans MidiEditorModal.js mais aucun code ne propose la config tablature automatiquement
+### 5.4 — Auto-detection a la creation d'instrument [TERMINEE]
+- [x] `GM_STRING_INSTRUMENTS` — mapping GM program -> preset (guitar, bass, violin, viola, cello, contrabass, banjo)
+- [x] `getStringInstrumentCategory()` — detecte si un programme GM est un instrument a cordes
+- [x] `_suggestStringInstrumentConfig()` — banniere de suggestion avec bouton "Auto-configurer"
+- [x] `string_instrument_create_from_preset` — commande backend pour creer depuis un preset
+- [x] Highlight vert pulsant sur le bouton config quand GM string detecte
+- [x] CSS: banner `.tab-suggest-banner`, animation `gm-pulse`
+- [x] i18n EN/FR: `tablature.gmDetected`, `tablature.autoConfig`, `tablature.configureStringInstrument`
 
 ---
 
@@ -167,9 +173,13 @@ violon, etc.).
 - [x] Genere CC20 + CC21 avant chaque note-on dans `convertTablatureToMidi()`
 - [x] CC stockes dans `modal._tablatureCCEvents[channel]` cote frontend
 
-### 6.2 — MidiPlayer.js
-- [ ] **NE LIT PAS LES CC TABLATURE** — Le player route tous les CC generiquement mais ne consulte PAS `_tablatureCCEvents` pour injecter CC20/CC21 avant les note-on pendant le playback
-- [ ] Il faut : avant chaque note-on sur un canal avec instrument a cordes, envoyer CC20 puis CC21 depuis les donnees tablature sauvegardees
+### 6.2 — MidiPlayer.js [TERMINEE]
+- [x] `_loadTablatureData(fileId)` — charge les tablatures depuis la DB apres buildEventList()
+- [x] Construction d'une map channel -> (timeKey_note -> {string, fret}) avec conversion tick->seconds
+- [x] `_injectTablatureCCEvents()` — injecte CC20/CC21 dans la liste d'events avant chaque note-on
+- [x] CC20 a time-1ms, CC21 a time-0.5ms pour garantir l'ordre CC20 -> CC21 -> note-on
+- [x] Matching fuzzy (+/- 5ms) pour tolerance de timing entre tablature et MIDI
+- [x] Log du nombre de canaux avec tablature injectee
 
 ### 6.3 — MidiRouter.js
 - [x] CC20/CC21 passent a travers le routing comme tout autre CC (pas de filtrage special)
@@ -179,10 +189,10 @@ violon, etc.).
 
 ## Phase 7 : Internationalisation [TERMINEE]
 
-### 7.1 — Cles de traduction
-- [x] en.json : 11 cles `tablature.*` + 14 cles `stringInstrument.*` (dont presets)
+### 7.1 — Cles de traduction [TERMINEE]
+- [x] en.json : 15 cles `tablature.*` + 11 cles `stringInstrument.*` (dont presets)
 - [x] fr.json : traductions completes
-- [ ] **Autres langues** — non verifie (le projet supporte 28 langues)
+- [x] 26 autres langues : sections `tablature` + `stringInstrument` ajoutees (fallback EN)
 
 ---
 
@@ -192,30 +202,19 @@ violon, etc.).
 |-------|-------------|--------|----------|
 | 1 | Modele de donnees & Backend | TERMINEE | - |
 | 2 | Algorithme MIDI <-> Tablature | TERMINEE | - |
-| 3 | Editeur frontend | ~80% | Manque drag, copy/paste, undo/redo |
+| 3 | Editeur frontend | TERMINEE | - |
 | 4 | Sync bidirectionnelle | ~90% | Manque warning note non jouable |
-| 5 | Integration UI | ~85% | Manque auto-detection GM, mode tablature seule |
-| 6 | CC20/CC21 hardware | ~30% | **MidiPlayer ne lit pas les CC tablature** |
-| 7 | i18n | ~95% | Verifier les 26 autres langues |
+| 5 | Integration UI | TERMINEE | - |
+| 6 | CC20/CC21 hardware | TERMINEE | - |
+| 7 | i18n | TERMINEE | EN fallback pour 26 langues |
 
 ## Prochaines priorites
 
-### Priorite HAUTE (bloquant pour l'utilisateur)
-
-2. **Phase 6.2** — Injection CC20/CC21 dans MidiPlayer.js
-   - Sans ca, le hardware ne recoit jamais l'info corde/frette pendant le playback
-
 ### Priorite MOYENNE (qualite d'edition)
 
-3. **Phase 3** — Completer l'editeur : drag & drop, undo/redo, copier/coller
-4. **Phase 5.4** — Auto-detection programmes GM pour proposer la config tablature
-5. **Phase 4.4** — Warning visuel si une note du piano roll n'est pas jouable
+### Priorite BASSE (polish, differe)
 
-### Priorite BASSE (polish)
-
-6. **Phase 5.2** — Mode "tablature seule" (sans piano roll)
-7. **Phase 3.3** — Rendu "muted string" (X) sur le fretboard diagram
-8. **Phase 7** — Verifier i18n sur les 26 autres langues
+3. **Phase 4.4b** — EventBus dedie pour la sync tab/MIDI (refactoring interne)
 
 ---
 

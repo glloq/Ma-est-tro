@@ -1041,7 +1041,11 @@
     "selectDeviceFirst": "最初に接続されたデバイスを選択してください",
     "singleChannelRequired": "タブ譜を使用するには単一チャンネルを選択してください",
     "converting": "MIDIをタブ譜に変換中...",
-    "conversionFailed": "タブ譜の変換に失敗しました"
+    "conversionFailed": "タブ譜の変換に失敗しました",
+    "configureStringInstrument": "Configure string instrument",
+    "gmDetected": "{{instrument}} detected — configure as string instrument?",
+    "autoConfig": "Auto-configure",
+    "tabOnlyMode": "Toggle tablature-only view"
   },
   "stringInstrument": {
     "title": "弦楽器の設定",
@@ -1068,7 +1072,12 @@
       "violin": "バイオリン (GDAE)",
       "viola": "ビオラ (CGDA)",
       "cello": "チェロ (CGDA)",
-      "contrabass": "コントラバス (EADG)"
+      "contrabass": "コントラバス (EADG)",
+      "guitar_open_e": "Guitar Open E (EBEG#BE)",
+      "guitar_half_down": "Guitar Half Step Down",
+      "guitar_full_down": "Guitar Full Step Down",
+      "bass_4_drop_d": "Bass 4-String Drop D (DADG)",
+      "ukulele_baritone": "Ukulele Baritone (DGBE)"
     },
     "configCreated": "デフォルトプリセットで弦楽器の設定が作成されました。",
     "configExists": "このデバイスには既に弦楽器の設定が存在します。"

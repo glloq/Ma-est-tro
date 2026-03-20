@@ -1041,7 +1041,11 @@
     "selectDeviceFirst": "Először válasszon egy csatlakoztatott eszközt",
     "singleChannelRequired": "Válasszon egyetlen csatornát a tabulatúra használatához",
     "converting": "MIDI konvertálása tabulatúrává...",
-    "conversionFailed": "A tabulatúra konvertálás sikertelen"
+    "conversionFailed": "A tabulatúra konvertálás sikertelen",
+    "configureStringInstrument": "Configure string instrument",
+    "gmDetected": "{{instrument}} detected — configure as string instrument?",
+    "autoConfig": "Auto-configure",
+    "tabOnlyMode": "Toggle tablature-only view"
   },
   "stringInstrument": {
     "title": "Húros hangszer konfiguráció",
@@ -1068,7 +1072,12 @@
       "violin": "Hegedű (GDAE)",
       "viola": "Mélyhegedű (CGDA)",
       "cello": "Cselló (CGDA)",
-      "contrabass": "Nagybőgő (EADG)"
+      "contrabass": "Nagybőgő (EADG)",
+      "guitar_open_e": "Guitar Open E (EBEG#BE)",
+      "guitar_half_down": "Guitar Half Step Down",
+      "guitar_full_down": "Guitar Full Step Down",
+      "bass_4_drop_d": "Bass 4-String Drop D (DADG)",
+      "ukulele_baritone": "Ukulele Baritone (DGBE)"
     },
     "configCreated": "Húros hangszer konfiguráció létrehozva alapértelmezett előbeállítással.",
     "configExists": "Ehhez az eszközhöz már létezik húros hangszer konfiguráció."

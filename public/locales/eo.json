@@ -1041,7 +1041,11 @@
     "selectDeviceFirst": "Unue elektu konektitan aparaton",
     "singleChannelRequired": "Elektu unu kanalon por uzi tabulaturon",
     "converting": "Konvertas MIDI al tabulaturo...",
-    "conversionFailed": "Tabulaturkonverto malsukcesis"
+    "conversionFailed": "Tabulaturkonverto malsukcesis",
+    "configureStringInstrument": "Configure string instrument",
+    "gmDetected": "{{instrument}} detected — configure as string instrument?",
+    "autoConfig": "Auto-configure",
+    "tabOnlyMode": "Toggle tablature-only view"
   },
   "stringInstrument": {
     "title": "Agordado de kordinstrumento",
@@ -1068,7 +1072,12 @@
       "violin": "Violono (GDAE)",
       "viola": "Aldviolono (CGDA)",
       "cello": "Violonĉelo (CGDA)",
-      "contrabass": "Kontrabaso (EADG)"
+      "contrabass": "Kontrabaso (EADG)",
+      "guitar_open_e": "Guitar Open E (EBEG#BE)",
+      "guitar_half_down": "Guitar Half Step Down",
+      "guitar_full_down": "Guitar Full Step Down",
+      "bass_4_drop_d": "Bass 4-String Drop D (DADG)",
+      "ukulele_baritone": "Ukulele Baritone (DGBE)"
     },
     "configCreated": "Kordinstrumento-agordado kreita kun defaŭlta antaŭagordo.",
     "configExists": "Kordinstrumento-agordado jam ekzistas por ĉi tiu aparato."

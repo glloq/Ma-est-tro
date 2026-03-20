@@ -249,6 +249,7 @@ class MidiPlayer {
     const tabByChannel = new Map();
 
     for (const tab of tablatures) {
+      if (!Array.isArray(tab.tablature_data) || tab.tablature_data.length === 0) continue;
       const channel = tab.channel || 0;
       const events = [];
 
@@ -295,14 +296,14 @@ class MidiPlayer {
           type: 'controller',
           channel: event.channel,
           controller: CC_STRING_SELECT,
-          value: bestMatch.string
+          value: Math.min(127, Math.max(0, bestMatch.string))
         });
         ccEvents.push({
           time: event.time - EPSILON,
           type: 'controller',
           channel: event.channel,
           controller: CC_FRET_SELECT,
-          value: bestMatch.fret
+          value: Math.min(127, Math.max(0, Math.round(bestMatch.fret)))
         });
       }
     }

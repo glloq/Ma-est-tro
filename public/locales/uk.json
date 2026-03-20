@@ -1041,7 +1041,11 @@
     "selectDeviceFirst": "Спочатку виберіть підключений пристрій",
     "singleChannelRequired": "Виберіть один канал для використання табулатури",
     "converting": "Перетворення MIDI на табулатуру...",
-    "conversionFailed": "Помилка перетворення табулатури"
+    "conversionFailed": "Помилка перетворення табулатури",
+    "configureStringInstrument": "Configure string instrument",
+    "gmDetected": "{{instrument}} detected — configure as string instrument?",
+    "autoConfig": "Auto-configure",
+    "tabOnlyMode": "Toggle tablature-only view"
   },
   "stringInstrument": {
     "title": "Налаштування струнного інструмента",
@@ -1068,7 +1072,12 @@
       "violin": "Скрипка (GDAE)",
       "viola": "Альт (CGDA)",
       "cello": "Віолончель (CGDA)",
-      "contrabass": "Контрабас (EADG)"
+      "contrabass": "Контрабас (EADG)",
+      "guitar_open_e": "Guitar Open E (EBEG#BE)",
+      "guitar_half_down": "Guitar Half Step Down",
+      "guitar_full_down": "Guitar Full Step Down",
+      "bass_4_drop_d": "Bass 4-String Drop D (DADG)",
+      "ukulele_baritone": "Ukulele Baritone (DGBE)"
     },
     "configCreated": "Налаштування струнного інструмента створено з пресетом за замовчуванням.",
     "configExists": "Налаштування струнного інструмента для цього пристрою вже існує."

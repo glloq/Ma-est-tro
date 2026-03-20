@@ -1041,7 +1041,11 @@
     "selectDeviceFirst": "Seleziona prima un dispositivo connesso",
     "singleChannelRequired": "Seleziona un singolo canale per usare la tablatura",
     "converting": "Conversione MIDI in tablatura...",
-    "conversionFailed": "Conversione tablatura fallita"
+    "conversionFailed": "Conversione tablatura fallita",
+    "configureStringInstrument": "Configure string instrument",
+    "gmDetected": "{{instrument}} detected — configure as string instrument?",
+    "autoConfig": "Auto-configure",
+    "tabOnlyMode": "Toggle tablature-only view"
   },
   "stringInstrument": {
     "title": "Configurazione strumento a corde",
@@ -1068,7 +1072,12 @@
       "violin": "Violino (GDAE)",
       "viola": "Viola (CGDA)",
       "cello": "Violoncello (CGDA)",
-      "contrabass": "Contrabbasso (EADG)"
+      "contrabass": "Contrabbasso (EADG)",
+      "guitar_open_e": "Guitar Open E (EBEG#BE)",
+      "guitar_half_down": "Guitar Half Step Down",
+      "guitar_full_down": "Guitar Full Step Down",
+      "bass_4_drop_d": "Bass 4-String Drop D (DADG)",
+      "ukulele_baritone": "Ukulele Baritone (DGBE)"
     },
     "configCreated": "Configurazione strumento a corde creata con preset predefinito.",
     "configExists": "Esiste già una configurazione strumento a corde per questo dispositivo."

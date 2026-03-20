@@ -1041,7 +1041,11 @@
     "selectDeviceFirst": "Nejprve vyberte připojené zařízení",
     "singleChannelRequired": "Pro použití tabulatury vyberte jeden kanál",
     "converting": "Převod MIDI na tabulaturu...",
-    "conversionFailed": "Převod tabulatury selhal"
+    "conversionFailed": "Převod tabulatury selhal",
+    "configureStringInstrument": "Configure string instrument",
+    "gmDetected": "{{instrument}} detected — configure as string instrument?",
+    "autoConfig": "Auto-configure",
+    "tabOnlyMode": "Toggle tablature-only view"
   },
   "stringInstrument": {
     "title": "Konfigurace strunného nástroje",
@@ -1068,7 +1072,12 @@
       "violin": "Housle (GDAE)",
       "viola": "Viola (CGDA)",
       "cello": "Violoncello (CGDA)",
-      "contrabass": "Kontrabas (EADG)"
+      "contrabass": "Kontrabas (EADG)",
+      "guitar_open_e": "Guitar Open E (EBEG#BE)",
+      "guitar_half_down": "Guitar Half Step Down",
+      "guitar_full_down": "Guitar Full Step Down",
+      "bass_4_drop_d": "Bass 4-String Drop D (DADG)",
+      "ukulele_baritone": "Ukulele Baritone (DGBE)"
     },
     "configCreated": "Konfigurace strunného nástroje vytvořena s výchozí předvolbou.",
     "configExists": "Konfigurace strunného nástroje pro toto zařízení již existuje."
