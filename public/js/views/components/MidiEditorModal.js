@@ -5161,6 +5161,16 @@ class MidiEditorModal {
     // ========================================================================
 
     /**
+     * Get the effective device ID for string instrument operations.
+     * Returns the selected connected device, or '_editor' as fallback
+     * to allow tablature editing without a physical device.
+     * @returns {string}
+     */
+    getEffectiveDeviceId() {
+        return this.selectedConnectedDevice || '_editor';
+    }
+
+    /**
      * Toggle tablature editor for the active channel's string instrument
      */
     async toggleTablature() {
@@ -5177,24 +5187,38 @@ class MidiEditorModal {
         }
 
         const activeChannel = Array.from(this.activeChannels)[0];
+        const deviceId = this.getEffectiveDeviceId();
 
-        // Check if this channel has a string instrument configured
         try {
-            // Try to get connected device for this channel
-            const deviceId = this.selectedConnectedDevice;
-            if (!deviceId) {
-                this.log('warn', 'No connected device selected for tablature');
-                return;
-            }
-
-            const response = await this.api.sendCommand('string_instrument_get', {
+            let response = await this.api.sendCommand('string_instrument_get', {
                 device_id: deviceId,
                 channel: activeChannel
             });
 
+            // If no config exists, try auto-configuring from GM program
             if (!response || !response.instrument) {
-                this.log('info', 'No string instrument configured for this device/channel');
-                return;
+                const channelInfo = this.channels.find(ch => ch.channel === activeChannel);
+                const gmMatch = channelInfo ? MidiEditorChannelPanel.getStringInstrumentCategory(channelInfo.program) : null;
+
+                if (gmMatch) {
+                    await this.api.sendCommand('string_instrument_create_from_preset', {
+                        device_id: deviceId,
+                        channel: activeChannel,
+                        preset: gmMatch.preset
+                    });
+                    this.log('info', `Auto-configured ${gmMatch.category} for channel ${activeChannel + 1}`);
+
+                    response = await this.api.sendCommand('string_instrument_get', {
+                        device_id: deviceId,
+                        channel: activeChannel
+                    });
+                }
+
+                if (!response || !response.instrument) {
+                    this.log('info', 'No string instrument configured for this channel');
+                    this.showStringInstrumentConfig();
+                    return;
+                }
             }
 
             const stringInstrument = response.instrument;
@@ -5218,11 +5242,12 @@ class MidiEditorModal {
      * Open the string instrument configuration modal
      */
     async showStringInstrumentConfig() {
-        if (this.activeChannels.size !== 1 || !this.selectedConnectedDevice) return;
+        if (this.activeChannels.size !== 1) return;
 
         const activeChannel = Array.from(this.activeChannels)[0];
+        const deviceId = this.getEffectiveDeviceId();
         const modal = new StringInstrumentConfigModal(this.api, {
-            deviceId: this.selectedConnectedDevice,
+            deviceId: deviceId,
             channel: activeChannel,
             onSave: () => {
                 // Refresh tablature button visibility
@@ -5236,7 +5261,7 @@ class MidiEditorModal {
                 }
             }
         });
-        await modal.showForDevice(this.selectedConnectedDevice, activeChannel);
+        await modal.showForDevice(deviceId, activeChannel);
     }
 
     /**
@@ -5244,14 +5269,14 @@ class MidiEditorModal {
      * @returns {Promise<boolean>}
      */
     async hasStringInstrument() {
-        if (this.activeChannels.size !== 1 || !this.selectedConnectedDevice) {
+        if (this.activeChannels.size !== 1) {
             return false;
         }
 
         try {
             const activeChannel = Array.from(this.activeChannels)[0];
             const response = await this.api.sendCommand('string_instrument_get', {
-                device_id: this.selectedConnectedDevice,
+                device_id: this.getEffectiveDeviceId(),
                 channel: activeChannel
             });
             return !!(response && response.instrument);

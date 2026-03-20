@@ -238,6 +238,7 @@ class MidiEditorChannelPanel {
 
     /**
      * Update tablature button visibility based on active channel.
+     * Works with or without a connected device (uses '_editor' as fallback).
      * Auto-suggests string instrument configuration when a GM string program is detected.
      */
     async updateTablatureButton() {
@@ -248,9 +249,8 @@ class MidiEditorChannelPanel {
         const configBtn = m.container?.querySelector('[data-action="configure-string-instrument"]');
         const tabBtn = m.container?.querySelector('[data-action="toggle-tablature"]');
 
-        // Show config button when 1 channel active + device selected
-        // Show TAB button only if a string instrument is already configured
-        if (m.activeChannels.size === 1 && m.selectedConnectedDevice) {
+        // Show config/TAB buttons when exactly 1 channel is active
+        if (m.activeChannels.size === 1) {
             if (configBtn) configBtn.style.display = 'inline-flex';
 
             // Auto-detect string instrument from GM program
@@ -265,11 +265,14 @@ class MidiEditorChannelPanel {
                 configBtn.classList.remove('gm-string-detected');
             }
 
+            const deviceId = m.getEffectiveDeviceId();
             const instrLabel = m.container?.querySelector('#tab-instrument-label');
 
             try {
                 const hasTab = await m.hasStringInstrument();
-                if (tabBtn) tabBtn.style.display = hasTab ? 'inline-flex' : 'none';
+                // Show TAB button if configured, or if GM string instrument detected (will auto-config on click)
+                const showTab = hasTab || !!gmMatch;
+                if (tabBtn) tabBtn.style.display = showTab ? 'inline-flex' : 'none';
                 if (tabBtn && m.tablatureEditor && m.tablatureEditor.isVisible) {
                     tabBtn.classList.add('active');
                 } else if (tabBtn) {
@@ -280,7 +283,7 @@ class MidiEditorChannelPanel {
                 if (hasTab && instrLabel) {
                     try {
                         const resp = await m.api.sendCommand('string_instrument_get', {
-                            device_id: m.selectedConnectedDevice,
+                            device_id: deviceId,
                             channel: activeChannel
                         });
                         if (resp?.instrument) {
@@ -336,7 +339,7 @@ class MidiEditorChannelPanel {
             banner.remove();
             try {
                 await m.api.sendCommand('string_instrument_create_from_preset', {
-                    device_id: m.selectedConnectedDevice,
+                    device_id: m.getEffectiveDeviceId(),
                     channel: channel,
                     preset: gmMatch.preset
                 });
@@ -458,6 +461,7 @@ class MidiEditorChannelPanel {
             m.selectedDeviceCapabilities = null;
             m.playableNotes = null;
             this.updatePianoRollPlayableNotes();
+            this.updateTablatureButton();
             m.log('info', 'No device selected - showing all notes as playable');
             return;
         }
