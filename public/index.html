@@ -8158,6 +8158,174 @@
 
         // ========== RÉGLAGES D'INSTRUMENTS ==========
 
+        // String instrument GM program ranges (matching MidiEditorChannelPanel)
+        const GM_STRING_PROGRAM_RANGES = {
+            guitar:     { start: 24, end: 31, preset: 'guitar_standard' },
+            bass:       { start: 32, end: 39, preset: 'bass_4_standard' },
+            violin:     { start: 40, end: 40, preset: 'violin' },
+            viola:      { start: 41, end: 41, preset: 'viola' },
+            cello:      { start: 42, end: 42, preset: 'cello' },
+            contrabass: { start: 43, end: 43, preset: 'contrabass' },
+            banjo:      { start: 105, end: 105, preset: 'banjo_standard' },
+        };
+
+        function isGmStringInstrument(program) {
+            if (program === null || program === undefined) return false;
+            for (const range of Object.values(GM_STRING_PROGRAM_RANGES)) {
+                if (program >= range.start && program <= range.end) return true;
+            }
+            return false;
+        }
+
+        function getGmStringPreset(program) {
+            for (const range of Object.values(GM_STRING_PROGRAM_RANGES)) {
+                if (program >= range.start && program <= range.end) return range.preset;
+            }
+            return 'guitar_standard';
+        }
+
+        const SI_NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+        function siNoteName(midi) {
+            return SI_NOTE_NAMES[midi % 12] + (Math.floor(midi / 12) - 1);
+        }
+
+        function renderSiPresetOptions(presets, config) {
+            let options = `<option value="">${i18n.t('stringInstrument.customTuning')}</option>`;
+            // Find matching preset
+            let matchKey = '';
+            if (config) {
+                for (const [key, preset] of Object.entries(presets)) {
+                    if (preset.strings === config.num_strings &&
+                        preset.tuning.length === config.tuning.length &&
+                        preset.tuning.every((n, i) => n === config.tuning[i])) {
+                        matchKey = key;
+                        break;
+                    }
+                }
+            }
+            for (const [key, preset] of Object.entries(presets)) {
+                const tKey = `stringInstrument.presets.${key}`;
+                const label = i18n.t(tKey) !== tKey ? i18n.t(tKey) : preset.name;
+                const selected = key === matchKey ? 'selected' : '';
+                options += `<option value="${key}" ${selected}>${label}</option>`;
+            }
+            return options;
+        }
+
+        function renderSiTuningRows(config) {
+            const tuning = config ? config.tuning : [40, 45, 50, 55, 59, 64];
+            const numStrings = config ? config.num_strings : 6;
+            let html = '';
+            for (let i = 0; i < numStrings; i++) {
+                const note = tuning[i] || 40;
+                const noteName = siNoteName(note);
+                html += `<div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-primary, #667eea); color: #fff; font-size: 11px; font-weight: 700;">${i + 1}</span>
+                    <span class="si-tuning-badge" id="siBadge${i}" style="font-weight: 700; font-family: monospace; color: var(--accent-primary, #667eea); min-width: 30px;">${noteName}</span>
+                    <button type="button" class="si-tuning-btn" onclick="siTuneString(${i}, -12)" style="padding: 2px 6px; font-size: 10px; border: 1px solid #ddd; border-radius: 3px; background: #f5f5f5; cursor: pointer;">-8ve</button>
+                    <button type="button" class="si-tuning-btn" onclick="siTuneString(${i}, -1)" style="padding: 2px 6px; font-size: 10px; border: 1px solid #ddd; border-radius: 3px; background: #f5f5f5; cursor: pointer;">-</button>
+                    <input type="number" class="si-tuning-val" id="siTuning${i}" data-string="${i}" value="${note}" min="0" max="127" style="width: 50px; text-align: center; font-size: 12px; font-family: monospace; padding: 4px; border: 1px solid #ddd; border-radius: 4px;" onchange="onSiTuningChanged(${i}, this)">
+                    <button type="button" class="si-tuning-btn" onclick="siTuneString(${i}, 1)" style="padding: 2px 6px; font-size: 10px; border: 1px solid #ddd; border-radius: 3px; background: #f5f5f5; cursor: pointer;">+</button>
+                    <button type="button" class="si-tuning-btn" onclick="siTuneString(${i}, 12)" style="padding: 2px 6px; font-size: 10px; border: 1px solid #ddd; border-radius: 3px; background: #f5f5f5; cursor: pointer;">+8ve</button>
+                </div>`;
+            }
+            return html;
+        }
+
+        // String instrument tuning helpers
+        function siTuneString(strIdx, delta) {
+            const input = document.getElementById(`siTuning${strIdx}`);
+            if (!input) return;
+            const newVal = Math.max(0, Math.min(127, parseInt(input.value) + delta));
+            input.value = newVal;
+            const badge = document.getElementById(`siBadge${strIdx}`);
+            if (badge) badge.textContent = siNoteName(newVal);
+        }
+
+        function onSiTuningChanged(strIdx, input) {
+            const val = parseInt(input.value);
+            if (isNaN(val) || val < 0 || val > 127) return;
+            const badge = document.getElementById(`siBadge${strIdx}`);
+            if (badge) badge.textContent = siNoteName(val);
+        }
+
+        function onSiPresetChanged(select) {
+            if (!currentDeviceSettings || !select.value) return;
+            const preset = currentDeviceSettings.tuningPresets[select.value];
+            if (!preset) return;
+
+            // Update strings count
+            const stringsInput = document.getElementById('siNumStrings');
+            if (stringsInput) stringsInput.value = preset.strings;
+
+            // Update frets
+            const fretsInput = document.getElementById('siNumFrets');
+            if (fretsInput) {
+                fretsInput.value = preset.frets;
+                fretsInput.disabled = !!preset.fretless;
+            }
+
+            // Update fretless
+            const fretlessCheck = document.getElementById('siFretless');
+            if (fretlessCheck) fretlessCheck.checked = !!preset.fretless;
+
+            // Update polyphony
+            const polyInput = document.getElementById('polyphonyInput');
+            if (polyInput) polyInput.value = preset.strings;
+
+            // Re-render tuning rows
+            const grid = document.getElementById('siTuningGrid');
+            if (grid) {
+                grid.innerHTML = renderSiTuningRows({
+                    num_strings: preset.strings,
+                    tuning: preset.tuning
+                });
+            }
+        }
+
+        function onSiStringsChanged(input) {
+            const num = parseInt(input.value);
+            if (isNaN(num) || num < 1 || num > 6) return;
+
+            // Update polyphony
+            const polyInput = document.getElementById('polyphonyInput');
+            if (polyInput) polyInput.value = num;
+
+            // Re-render tuning rows with current or default values
+            const currentTuning = [];
+            for (let i = 0; i < 6; i++) {
+                const el = document.getElementById(`siTuning${i}`);
+                if (el) currentTuning.push(parseInt(el.value) || 40);
+            }
+            // Extend if needed
+            while (currentTuning.length < num) {
+                const last = currentTuning[currentTuning.length - 1] || 40;
+                currentTuning.push(Math.min(127, last + 5));
+            }
+
+            const grid = document.getElementById('siTuningGrid');
+            if (grid) {
+                grid.innerHTML = renderSiTuningRows({
+                    num_strings: num,
+                    tuning: currentTuning.slice(0, num)
+                });
+            }
+        }
+
+        function onSiFretlessChanged(checkbox) {
+            const fretsInput = document.getElementById('siNumFrets');
+            if (fretsInput) {
+                if (checkbox.checked) {
+                    fretsInput.value = 0;
+                    fretsInput.disabled = true;
+                } else {
+                    if (parseInt(fretsInput.value) === 0) fretsInput.value = 24;
+                    fretsInput.disabled = false;
+                }
+            }
+        }
+
         // Afficher la modale de réglages d'instrument
         window.showInstrumentSettings = showInstrumentSettings;
         window.showConfirm = showConfirm;
@@ -8195,6 +8363,40 @@
                 const modal = document.createElement('div');
                 modal.className = 'modal-overlay';
 
+                // Detect if device is BLE (bluetooth)
+                const isBleDevice = !!(device.type && device.type.toLowerCase().includes('ble')) ||
+                                    !!(device.type && device.type.toLowerCase().includes('bluetooth')) ||
+                                    !!(settings.mac_address);
+
+                // Detect if current GM program is a string instrument
+                const currentGmProgram = settings.gm_program;
+                const isStringInstrument = isGmStringInstrument(currentGmProgram);
+
+                // Load existing string instrument config
+                let stringInstrumentConfig = null;
+                try {
+                    const siResp = await api.sendCommand('string_instrument_get', {
+                        device_id: device.id,
+                        channel: instrumentChannel
+                    });
+                    if (siResp && siResp.instrument) {
+                        stringInstrumentConfig = siResp.instrument;
+                    }
+                } catch (e) { /* no config yet */ }
+
+                // Load tuning presets
+                let tuningPresets = {};
+                try {
+                    const presetsResp = await api.sendCommand('string_instrument_get_presets', {});
+                    if (presetsResp && presetsResp.presets) {
+                        tuningPresets = presetsResp.presets;
+                    }
+                } catch (e) { /* no presets */ }
+
+                // Store in currentDeviceSettings for save
+                currentDeviceSettings.stringInstrumentConfig = stringInstrumentConfig;
+                currentDeviceSettings.tuningPresets = tuningPresets;
+
                 modal.innerHTML = `
                     <div class="modal-content">
                         <div class="modal-header">
@@ -8202,26 +8404,7 @@
                             <button class="modal-close" onclick="closeInstrumentSettings()">×</button>
                         </div>
 
-                        <div class="form-group">
-                            <label>${i18n.t('instrumentSettings.deviceName')}</label>
-                            <input type="text" id="deviceNameDisplay" value="${device.name}" disabled>
-                            <small class="form-text">${i18n.t('instrumentSettings.deviceNameAuto')}</small>
-                        </div>
-
-                        ${device.usbSerialNumber ? `
-                        <div class="form-group">
-                            <label>${i18n.t('instrumentSettings.serialNumber')}</label>
-                            <input type="text" id="usbSerialNumber" value="${device.usbSerialNumber}" disabled>
-                            <small class="form-text">${i18n.t('instrumentSettings.serialNumberHelp')}</small>
-                        </div>
-                        ` : ''}
-
-                        <div class="form-group">
-                            <label>${i18n.t('instrumentSettings.customName')}</label>
-                            <input type="text" id="customName" value="${settings.custom_name || ''}" placeholder="${i18n.t('instrumentSettings.customNamePlaceholder')}">
-                            <small class="form-text">${i18n.t('instrumentSettings.customNameHelp')}</small>
-                        </div>
-
+                        <!-- 1. GM Instrument Type (first!) -->
                         <div class="form-group">
                             <label>${i18n.t('instrumentSettings.gmInstrument') || 'Type d\'instrument (General MIDI)'}</label>
                             <select id="gmProgramSelect" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;" onchange="onGmProgramChanged(this)">
@@ -8235,34 +8418,86 @@
                             </div>
                         </div>
 
+                        <!-- 2. Custom Name -->
                         <div class="form-group">
-                            <label>${i18n.t('instrumentSettings.polyphony') || 'Polyphonie'}</label>
-                            <input type="number" id="polyphonyInput" value="${settings.polyphony || ''}" min="1" max="128" placeholder="16">
-                            <small class="form-text">${i18n.t('instrumentSettings.polyphonyHelp') || 'Nombre maximum de notes simultanées (1-128). Défaut: 16'}</small>
+                            <label>${i18n.t('instrumentSettings.customName')}</label>
+                            <input type="text" id="customName" value="${settings.custom_name || ''}" placeholder="${i18n.t('instrumentSettings.customNamePlaceholder')}">
+                            <small class="form-text">${i18n.t('instrumentSettings.customNameHelp')}</small>
                         </div>
 
+                        <!-- 3. Device Info (read-only) -->
+                        <div class="form-group">
+                            <label>${i18n.t('instrumentSettings.deviceName')}</label>
+                            <input type="text" id="deviceNameDisplay" value="${device.name}" disabled>
+                            ${device.usbSerialNumber ? `<small class="form-text">SN: ${device.usbSerialNumber}</small>` : ''}
+                        </div>
+
+                        <!-- 4. String Instrument Section (conditional) -->
+                        <div id="stringInstrumentSection" style="display: ${isStringInstrument ? 'block' : 'none'}; margin-top: 16px; padding: 16px; border: 2px solid var(--accent-primary, #667eea); border-radius: 8px; background: rgba(102, 126, 234, 0.05);">
+                            <h3 style="margin: 0 0 12px 0; font-size: 15px; color: var(--accent-primary, #667eea);">🎸 ${i18n.t('stringInstrument.title')}</h3>
+
+                            <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                                <div class="form-group" style="flex: 1; margin: 0;">
+                                    <label>${i18n.t('stringInstrument.tuningPreset')}</label>
+                                    <select id="siPresetSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;" onchange="onSiPresetChanged(this)">
+                                        ${renderSiPresetOptions(tuningPresets, stringInstrumentConfig)}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
+                                <div class="form-group" style="margin: 0; min-width: 80px;">
+                                    <label>${i18n.t('stringInstrument.numStrings')}</label>
+                                    <input type="number" id="siNumStrings" value="${stringInstrumentConfig ? stringInstrumentConfig.num_strings : 6}" min="1" max="6" style="width: 70px;" onchange="onSiStringsChanged(this)">
+                                </div>
+                                <div class="form-group" style="margin: 0; min-width: 80px;">
+                                    <label>${i18n.t('stringInstrument.numFrets')}</label>
+                                    <input type="number" id="siNumFrets" value="${stringInstrumentConfig ? stringInstrumentConfig.num_frets : 24}" min="0" max="36" style="width: 70px;">
+                                </div>
+                                <div class="form-group" style="margin: 0; display: flex; align-items: flex-end;">
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                        <input type="checkbox" id="siFretless" ${stringInstrumentConfig && stringInstrumentConfig.is_fretless ? 'checked' : ''} onchange="onSiFretlessChanged(this)">
+                                        ${i18n.t('stringInstrument.isFretless')}
+                                    </label>
+                                </div>
+                                <div class="form-group" style="margin: 0; min-width: 80px;">
+                                    <label>${i18n.t('stringInstrument.capoFret')}</label>
+                                    <input type="number" id="siCapoFret" value="${stringInstrumentConfig ? stringInstrumentConfig.capo_fret : 0}" min="0" max="36" style="width: 70px;">
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin: 0;">
+                                <label>${i18n.t('stringInstrument.tuning')}</label>
+                                <div id="siTuningGrid" style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px;">
+                                    ${renderSiTuningRows(stringInstrumentConfig)}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 5. Polyphony -->
+                        <div class="form-group">
+                            <label>${i18n.t('instrumentSettings.polyphony') || 'Polyphonie'}</label>
+                            <input type="number" id="polyphonyInput" value="${stringInstrumentConfig ? stringInstrumentConfig.num_strings : (settings.polyphony || '')}" min="1" max="128" placeholder="16">
+                            <small class="form-text">${i18n.t('instrumentSettings.polyphonyHelp') || 'Nombre maximum de notes simultanées (1-128). Défaut: 16'}${isStringInstrument ? ` (${i18n.t('instrumentSettings.polyphonyAutoString') || 'auto-défini par le nombre de cordes'})` : ''}</small>
+                        </div>
+
+                        <!-- 6. Sync Delay -->
                         <div class="form-group">
                             <label>${i18n.t('instrumentSettings.syncDelay')}</label>
                             <input type="number" id="syncDelay" value="${settings.sync_delay || 0}" min="-2147483648" max="2147483647">
                             <small class="form-text">${i18n.t('instrumentSettings.syncDelayHelp')}</small>
                         </div>
 
-                        <div class="form-group">
+                        <!-- 7. Bluetooth MAC (only for BLE devices) -->
+                        ${isBleDevice ? `
+                        <div class="form-group" id="macAddressGroup">
                             <label>${i18n.t('instrumentSettings.macAddress')}</label>
                             <input type="text" id="macAddress" value="${settings.mac_address || ''}" placeholder="AA:BB:CC:DD:EE:FF">
                             <small class="form-text">${i18n.t('instrumentSettings.macAddressHelp')}</small>
                         </div>
+                        ` : '<input type="hidden" id="macAddress" value="">'}
 
-                        <div class="identity-section">
-                            <h3>🔍 ${i18n.t('instrumentSettings.identity')}</h3>
-                            <button class="btn" id="requestIdentityBtn" onclick="requestIdentity('${device.id.replace(/'/g, "\\'")}')">
-                                📡 ${i18n.t('instrumentSettings.sendIdentityRequest')}
-                            </button>
-                            <div id="identityInfo" style="margin-top: 12px;">
-                                ${settings.sysex_manufacturer_id ? renderIdentityInfo(settings) : `<p class="info-text">${i18n.t('instrumentSettings.noIdentity')}</p>`}
-                            </div>
-                        </div>
-
+                        <!-- 8. Capabilities -->
                         <div class="capabilities-section" style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
                             <h3>🎹 ${i18n.t('instrumentSettings.capabilities') || 'Capacités de l\'instrument'}</h3>
                             <small class="form-text" style="display: block; margin-bottom: 16px;">
@@ -8398,6 +8633,8 @@
         function onGmProgramChanged(selectEl) {
             const selectedOption = selectEl.options[selectEl.selectedIndex];
             const isDrumKit = selectedOption && selectedOption.hasAttribute('data-drum-kit');
+            const rawValue = parseInt(selectEl.value);
+            const gmProgram = rawValue >= GM_DRUM_KIT_OFFSET ? null : rawValue;
 
             // Afficher/masquer la description du drum kit
             const descDiv = document.getElementById('drumKitDesc');
@@ -8420,11 +8657,36 @@
             // Auto-switch to discrete mode if drum kit selected
             if (isDrumKit) {
                 setNoteSelectionMode('discrete');
-                // Update radio buttons visually
                 const discreteRadio = document.querySelector('input[name="noteSelectionMode"][value="discrete"]');
                 if (discreteRadio) {
                     discreteRadio.checked = true;
                     discreteRadio.dispatchEvent(new Event('change'));
+                }
+            }
+
+            // Show/hide string instrument section
+            const siSection = document.getElementById('stringInstrumentSection');
+            if (siSection) {
+                const isString = isGmStringInstrument(gmProgram);
+                siSection.style.display = isString ? 'block' : 'none';
+
+                // Auto-apply preset if switching to a string instrument and no config yet
+                if (isString && currentDeviceSettings && !currentDeviceSettings.stringInstrumentConfig) {
+                    const presetKey = getGmStringPreset(gmProgram);
+                    const presetSelect = document.getElementById('siPresetSelect');
+                    if (presetSelect && presetKey) {
+                        presetSelect.value = presetKey;
+                        onSiPresetChanged(presetSelect);
+                    }
+                }
+
+                // Update polyphony help text
+                const polyHelp = document.querySelector('#polyphonyInput + small');
+                if (polyHelp) {
+                    const baseHelp = i18n.t('instrumentSettings.polyphonyHelp') || 'Nombre maximum de notes simultanées (1-128). Défaut: 16';
+                    polyHelp.textContent = isString
+                        ? baseHelp + ` (${i18n.t('instrumentSettings.polyphonyAutoString') || 'auto-défini par le nombre de cordes'})`
+                        : baseHelp;
                 }
             }
         }
@@ -9043,6 +9305,47 @@
                     polyphony: polyphony,
                     capabilities_source: 'manual'
                 });
+
+                // Sauvegarder la config instrument à cordes si la section est visible
+                const siSection = document.getElementById('stringInstrumentSection');
+                if (siSection && siSection.style.display !== 'none') {
+                    const numStrings = parseInt(document.getElementById('siNumStrings').value) || 6;
+                    const numFrets = parseInt(document.getElementById('siNumFrets').value) || 24;
+                    const isFretless = document.getElementById('siFretless').checked;
+                    const capoFret = parseInt(document.getElementById('siCapoFret').value) || 0;
+
+                    // Collect tuning from inputs
+                    const tuning = [];
+                    for (let i = 0; i < numStrings; i++) {
+                        const tuningInput = document.getElementById(`siTuning${i}`);
+                        tuning.push(tuningInput ? parseInt(tuningInput.value) || 40 : 40);
+                    }
+
+                    // Get GM instrument name for instrument_name
+                    const gmProgramForName = gmProgram !== null ? gmProgram : 0;
+                    const instrumentName = getGMInstrumentName(gmProgramForName) || 'Guitar';
+
+                    const siData = {
+                        device_id: currentDeviceSettings.device.id,
+                        channel: saveChannel,
+                        instrument_name: instrumentName,
+                        num_strings: numStrings,
+                        num_frets: isFretless ? 0 : numFrets,
+                        tuning: tuning,
+                        is_fretless: isFretless ? 1 : 0,
+                        capo_fret: capoFret
+                    };
+
+                    if (currentDeviceSettings.stringInstrumentConfig && currentDeviceSettings.stringInstrumentConfig.id) {
+                        // Update existing
+                        siData.id = currentDeviceSettings.stringInstrumentConfig.id;
+                        await api.sendCommand('string_instrument_update', siData);
+                    } else {
+                        // Create new
+                        await api.sendCommand('string_instrument_create', siData);
+                    }
+                    log('✓ Configuration instrument à cordes sauvegardée', 'info');
+                }
 
                 log('✓ Réglages et capacités sauvegardés', 'info');
                 closeInstrumentSettings();
