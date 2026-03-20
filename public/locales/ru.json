@@ -1029,5 +1029,48 @@
     "labelGmCategories": "GM Categories: {value} ({mode})",
     "labelGmPrograms": "GM Programs: {value}",
     "labelDate": "Date: {from} - {to}"
+  },
+  "tablature": {
+    "toggleEditor": "Переключить редактор табулатуры",
+    "zoomIn": "Увеличить",
+    "zoomOut": "Уменьшить",
+    "deleteSelected": "Удалить выбранное",
+    "selectAll": "Выбрать всё",
+    "enterFret": "Введите номер лада",
+    "noStringInstrument": "Для этого канала не настроен струнный инструмент",
+    "selectDeviceFirst": "Сначала выберите подключённое устройство",
+    "singleChannelRequired": "Выберите один канал для использования табулатуры",
+    "converting": "Преобразование MIDI в табулатуру...",
+    "conversionFailed": "Ошибка преобразования табулатуры"
+  },
+  "stringInstrument": {
+    "title": "Настройка струнного инструмента",
+    "name": "Название инструмента",
+    "numStrings": "Количество струн",
+    "numFrets": "Количество ладов",
+    "tuning": "Настройка",
+    "tuningPreset": "Пресет настройки",
+    "customTuning": "Пользовательская настройка",
+    "isFretless": "Безладовый",
+    "capoFret": "Позиция каподастра",
+    "noCapo": "Без каподастра",
+    "presets": {
+      "guitar_standard": "Гитара стандартная (EADGBE)",
+      "guitar_drop_d": "Гитара Drop D (DADGBE)",
+      "guitar_open_g": "Гитара открытый G (DGDGBD)",
+      "guitar_open_d": "Гитара открытый D (DADF#AD)",
+      "guitar_dadgad": "Гитара DADGAD (DADGAD)",
+      "bass_4_standard": "Бас-гитара 4-струнная стандартная (EADG)",
+      "bass_5_standard": "Бас-гитара 5-струнная стандартная (BEADG)",
+      "bass_6_standard": "Бас-гитара 6-струнная стандартная (BEADGC)",
+      "ukulele_standard": "Укулеле стандартное (GCEA)",
+      "banjo_standard": "Банджо стандартное (gDGBD)",
+      "violin": "Скрипка (GDAE)",
+      "viola": "Альт (CGDA)",
+      "cello": "Виолончель (CGDA)",
+      "contrabass": "Контрабас (EADG)"
+    },
+    "configCreated": "Настройка струнного инструмента создана с пресетом по умолчанию.",
+    "configExists": "Настройка струнного инструмента для этого устройства уже существует."
   }
 }

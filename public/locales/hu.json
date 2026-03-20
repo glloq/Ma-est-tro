@@ -1029,5 +1029,48 @@
     "labelGmCategories": "GM Categories: {value} ({mode})",
     "labelGmPrograms": "GM Programs: {value}",
     "labelDate": "Date: {from} - {to}"
+  },
+  "tablature": {
+    "toggleEditor": "Tabulatúra szerkesztő váltása",
+    "zoomIn": "Nagyítás",
+    "zoomOut": "Kicsinyítés",
+    "deleteSelected": "Kijelöltek törlése",
+    "selectAll": "Összes kijelölése",
+    "enterFret": "Adja meg a bundszámot",
+    "noStringInstrument": "Nincs húros hangszer konfigurálva ehhez a csatornához",
+    "selectDeviceFirst": "Először válasszon egy csatlakoztatott eszközt",
+    "singleChannelRequired": "Válasszon egyetlen csatornát a tabulatúra használatához",
+    "converting": "MIDI konvertálása tabulatúrává...",
+    "conversionFailed": "A tabulatúra konvertálás sikertelen"
+  },
+  "stringInstrument": {
+    "title": "Húros hangszer konfiguráció",
+    "name": "Hangszer neve",
+    "numStrings": "Húrok száma",
+    "numFrets": "Bundok száma",
+    "tuning": "Hangolás",
+    "tuningPreset": "Hangolási előbeállítás",
+    "customTuning": "Egyéni hangolás",
+    "isFretless": "Bundnélküli",
+    "capoFret": "Kapó pozíció",
+    "noCapo": "Nincs kapó",
+    "presets": {
+      "guitar_standard": "Gitár standard (EADGBE)",
+      "guitar_drop_d": "Gitár Drop D (DADGBE)",
+      "guitar_open_g": "Gitár nyitott G (DGDGBD)",
+      "guitar_open_d": "Gitár nyitott D (DADF#AD)",
+      "guitar_dadgad": "Gitár DADGAD (DADGAD)",
+      "bass_4_standard": "Basszusgitár 4 húros standard (EADG)",
+      "bass_5_standard": "Basszusgitár 5 húros standard (BEADG)",
+      "bass_6_standard": "Basszusgitár 6 húros standard (BEADGC)",
+      "ukulele_standard": "Ukulele standard (GCEA)",
+      "banjo_standard": "Bendzsó standard (gDGBD)",
+      "violin": "Hegedű (GDAE)",
+      "viola": "Mélyhegedű (CGDA)",
+      "cello": "Cselló (CGDA)",
+      "contrabass": "Nagybőgő (EADG)"
+    },
+    "configCreated": "Húros hangszer konfiguráció létrehozva alapértelmezett előbeállítással.",
+    "configExists": "Ehhez az eszközhöz már létezik húros hangszer konfiguráció."
   }
 }

@@ -1029,5 +1029,48 @@
     "labelGmCategories": "GM Categories: {value} ({mode})",
     "labelGmPrograms": "GM Programs: {value}",
     "labelDate": "Date: {from} - {to}"
+  },
+  "tablature": {
+    "toggleEditor": "Bật/tắt trình soạn tablature",
+    "zoomIn": "Phóng to",
+    "zoomOut": "Thu nhỏ",
+    "deleteSelected": "Xóa mục đã chọn",
+    "selectAll": "Chọn tất cả",
+    "enterFret": "Nhập số phím đàn",
+    "noStringInstrument": "Không có nhạc cụ dây nào được cấu hình cho kênh này",
+    "selectDeviceFirst": "Chọn thiết bị đã kết nối trước",
+    "singleChannelRequired": "Chọn một kênh duy nhất để sử dụng tablature",
+    "converting": "Đang chuyển đổi MIDI sang tablature...",
+    "conversionFailed": "Chuyển đổi tablature thất bại"
+  },
+  "stringInstrument": {
+    "title": "Cấu hình nhạc cụ dây",
+    "name": "Tên nhạc cụ",
+    "numStrings": "Số dây",
+    "numFrets": "Số phím đàn",
+    "tuning": "Lên dây",
+    "tuningPreset": "Cài đặt sẵn lên dây",
+    "customTuning": "Lên dây tùy chỉnh",
+    "isFretless": "Không phím",
+    "capoFret": "Vị trí capo",
+    "noCapo": "Không capo",
+    "presets": {
+      "guitar_standard": "Guitar tiêu chuẩn (EADGBE)",
+      "guitar_drop_d": "Guitar Drop D (DADGBE)",
+      "guitar_open_g": "Guitar mở G (DGDGBD)",
+      "guitar_open_d": "Guitar mở D (DADF#AD)",
+      "guitar_dadgad": "Guitar DADGAD (DADGAD)",
+      "bass_4_standard": "Bass 4 dây tiêu chuẩn (EADG)",
+      "bass_5_standard": "Bass 5 dây tiêu chuẩn (BEADG)",
+      "bass_6_standard": "Bass 6 dây tiêu chuẩn (BEADGC)",
+      "ukulele_standard": "Ukulele tiêu chuẩn (GCEA)",
+      "banjo_standard": "Banjo tiêu chuẩn (gDGBD)",
+      "violin": "Vĩ cầm (GDAE)",
+      "viola": "Viola (CGDA)",
+      "cello": "Cello (CGDA)",
+      "contrabass": "Contrabass (EADG)"
+    },
+    "configCreated": "Đã tạo cấu hình nhạc cụ dây với cài đặt sẵn mặc định.",
+    "configExists": "Cấu hình nhạc cụ dây đã tồn tại cho thiết bị này."
   }
 }

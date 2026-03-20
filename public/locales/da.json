@@ -1029,5 +1029,48 @@
     "labelGmCategories": "GM Categories: {value} ({mode})",
     "labelGmPrograms": "GM Programs: {value}",
     "labelDate": "Date: {from} - {to}"
+  },
+  "tablature": {
+    "toggleEditor": "Skift tabulatureditor",
+    "zoomIn": "Zoom ind",
+    "zoomOut": "Zoom ud",
+    "deleteSelected": "Slet valgte",
+    "selectAll": "Vælg alle",
+    "enterFret": "Indtast båndnummer",
+    "noStringInstrument": "Intet strengeinstrument konfigureret for denne kanal",
+    "selectDeviceFirst": "Vælg først en tilsluttet enhed",
+    "singleChannelRequired": "Vælg en enkelt kanal for at bruge tabulatur",
+    "converting": "Konverterer MIDI til tabulatur...",
+    "conversionFailed": "Tabulaturkonvertering mislykkedes"
+  },
+  "stringInstrument": {
+    "title": "Strengeinstrumentkonfiguration",
+    "name": "Instrumentnavn",
+    "numStrings": "Antal strenge",
+    "numFrets": "Antal bånd",
+    "tuning": "Stemning",
+    "tuningPreset": "Stemningsforindstilling",
+    "customTuning": "Brugerdefineret stemning",
+    "isFretless": "Båndløs",
+    "capoFret": "Capoposition",
+    "noCapo": "Ingen capo",
+    "presets": {
+      "guitar_standard": "Guitar standard (EADGBE)",
+      "guitar_drop_d": "Guitar Drop D (DADGBE)",
+      "guitar_open_g": "Guitar åben G (DGDGBD)",
+      "guitar_open_d": "Guitar åben D (DADF#AD)",
+      "guitar_dadgad": "Guitar DADGAD (DADGAD)",
+      "bass_4_standard": "Bas 4-strenget standard (EADG)",
+      "bass_5_standard": "Bas 5-strenget standard (BEADG)",
+      "bass_6_standard": "Bas 6-strenget standard (BEADGC)",
+      "ukulele_standard": "Ukulele standard (GCEA)",
+      "banjo_standard": "Banjo standard (gDGBD)",
+      "violin": "Violin (GDAE)",
+      "viola": "Bratsch (CGDA)",
+      "cello": "Cello (CGDA)",
+      "contrabass": "Kontrabas (EADG)"
+    },
+    "configCreated": "Strengeinstrumentkonfiguration oprettet med standardforindstilling.",
+    "configExists": "En strengeinstrumentkonfiguration findes allerede for denne enhed."
   }
 }

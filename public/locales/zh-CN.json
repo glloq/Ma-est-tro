@@ -1029,5 +1029,48 @@
     "labelGmCategories": "GM Categories: {value} ({mode})",
     "labelGmPrograms": "GM Programs: {value}",
     "labelDate": "Date: {from} - {to}"
+  },
+  "tablature": {
+    "toggleEditor": "切换指法谱编辑器",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "deleteSelected": "删除所选",
+    "selectAll": "全选",
+    "enterFret": "输入品位号",
+    "noStringInstrument": "此通道未配置弦乐器",
+    "selectDeviceFirst": "请先选择已连接的设备",
+    "singleChannelRequired": "选择单个通道以使用指法谱",
+    "converting": "正在将MIDI转换为指法谱...",
+    "conversionFailed": "指法谱转换失败"
+  },
+  "stringInstrument": {
+    "title": "弦乐器配置",
+    "name": "乐器名称",
+    "numStrings": "弦数",
+    "numFrets": "品位数",
+    "tuning": "调弦",
+    "tuningPreset": "调弦预设",
+    "customTuning": "自定义调弦",
+    "isFretless": "无品",
+    "capoFret": "变调夹位置",
+    "noCapo": "无变调夹",
+    "presets": {
+      "guitar_standard": "吉他标准 (EADGBE)",
+      "guitar_drop_d": "吉他 Drop D (DADGBE)",
+      "guitar_open_g": "吉他开放 G (DGDGBD)",
+      "guitar_open_d": "吉他开放 D (DADF#AD)",
+      "guitar_dadgad": "吉他 DADGAD (DADGAD)",
+      "bass_4_standard": "贝斯4弦标准 (EADG)",
+      "bass_5_standard": "贝斯5弦标准 (BEADG)",
+      "bass_6_standard": "贝斯6弦标准 (BEADGC)",
+      "ukulele_standard": "尤克里里标准 (GCEA)",
+      "banjo_standard": "班卓琴标准 (gDGBD)",
+      "violin": "小提琴 (GDAE)",
+      "viola": "中提琴 (CGDA)",
+      "cello": "大提琴 (CGDA)",
+      "contrabass": "低音提琴 (EADG)"
+    },
+    "configCreated": "已使用默认预设创建弦乐器配置。",
+    "configExists": "此设备已存在弦乐器配置。"
   }
 }

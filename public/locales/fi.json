@@ -1029,5 +1029,48 @@
     "labelGmCategories": "GM Categories: {value} ({mode})",
     "labelGmPrograms": "GM Programs: {value}",
     "labelDate": "Date: {from} - {to}"
+  },
+  "tablature": {
+    "toggleEditor": "Vaihda tabulatuurieditori",
+    "zoomIn": "Lähennä",
+    "zoomOut": "Loitonna",
+    "deleteSelected": "Poista valitut",
+    "selectAll": "Valitse kaikki",
+    "enterFret": "Syötä nauhan numero",
+    "noStringInstrument": "Tälle kanavalle ei ole määritetty kielisoitinta",
+    "selectDeviceFirst": "Valitse ensin yhdistetty laite",
+    "singleChannelRequired": "Valitse yksi kanava käyttääksesi tabulatuuria",
+    "converting": "Muunnetaan MIDI tabulatuuriksi...",
+    "conversionFailed": "Tabulatuurin muunnos epäonnistui"
+  },
+  "stringInstrument": {
+    "title": "Kielisoittimen asetukset",
+    "name": "Soittimen nimi",
+    "numStrings": "Kielten määrä",
+    "numFrets": "Nauhojen määrä",
+    "tuning": "Viritys",
+    "tuningPreset": "Viritysesivalinta",
+    "customTuning": "Mukautettu viritys",
+    "isFretless": "Nauhaton",
+    "capoFret": "Capon sijainti",
+    "noCapo": "Ei capoa",
+    "presets": {
+      "guitar_standard": "Kitara standardi (EADGBE)",
+      "guitar_drop_d": "Kitara Drop D (DADGBE)",
+      "guitar_open_g": "Kitara avoin G (DGDGBD)",
+      "guitar_open_d": "Kitara avoin D (DADF#AD)",
+      "guitar_dadgad": "Kitara DADGAD (DADGAD)",
+      "bass_4_standard": "Basso 4-kielinen standardi (EADG)",
+      "bass_5_standard": "Basso 5-kielinen standardi (BEADG)",
+      "bass_6_standard": "Basso 6-kielinen standardi (BEADGC)",
+      "ukulele_standard": "Ukulele standardi (GCEA)",
+      "banjo_standard": "Banjo standardi (gDGBD)",
+      "violin": "Viulu (GDAE)",
+      "viola": "Alttoviulu (CGDA)",
+      "cello": "Sello (CGDA)",
+      "contrabass": "Kontrabasso (EADG)"
+    },
+    "configCreated": "Kielisoittimen asetukset luotu oletusesivalinnalla.",
+    "configExists": "Kielisoittimen asetukset ovat jo olemassa tälle laitteelle."
   }
 }

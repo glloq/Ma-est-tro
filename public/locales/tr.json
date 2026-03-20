@@ -1029,5 +1029,48 @@
     "labelGmCategories": "GM Categories: {value} ({mode})",
     "labelGmPrograms": "GM Programs: {value}",
     "labelDate": "Date: {from} - {to}"
+  },
+  "tablature": {
+    "toggleEditor": "Tabulatür düzenleyiciyi aç/kapat",
+    "zoomIn": "Yakınlaştır",
+    "zoomOut": "Uzaklaştır",
+    "deleteSelected": "Seçilenleri sil",
+    "selectAll": "Tümünü seç",
+    "enterFret": "Perde numarasını girin",
+    "noStringInstrument": "Bu kanal için yapılandırılmış telli çalgı yok",
+    "selectDeviceFirst": "Önce bağlı bir cihaz seçin",
+    "singleChannelRequired": "Tabulatür kullanmak için tek bir kanal seçin",
+    "converting": "MIDI tabulatüre dönüştürülüyor...",
+    "conversionFailed": "Tabulatür dönüştürme başarısız oldu"
+  },
+  "stringInstrument": {
+    "title": "Telli Çalgı Yapılandırması",
+    "name": "Çalgı Adı",
+    "numStrings": "Tel Sayısı",
+    "numFrets": "Perde Sayısı",
+    "tuning": "Akort",
+    "tuningPreset": "Akort Ön Ayarı",
+    "customTuning": "Özel Akort",
+    "isFretless": "Perdesiz",
+    "capoFret": "Kapo Konumu",
+    "noCapo": "Kapo Yok",
+    "presets": {
+      "guitar_standard": "Gitar standart (EADGBE)",
+      "guitar_drop_d": "Gitar Drop D (DADGBE)",
+      "guitar_open_g": "Gitar açık G (DGDGBD)",
+      "guitar_open_d": "Gitar açık D (DADF#AD)",
+      "guitar_dadgad": "Gitar DADGAD (DADGAD)",
+      "bass_4_standard": "Bas 4 telli standart (EADG)",
+      "bass_5_standard": "Bas 5 telli standart (BEADG)",
+      "bass_6_standard": "Bas 6 telli standart (BEADGC)",
+      "ukulele_standard": "Ukulele standart (GCEA)",
+      "banjo_standard": "Banjo standart (gDGBD)",
+      "violin": "Keman (GDAE)",
+      "viola": "Viyola (CGDA)",
+      "cello": "Çello (CGDA)",
+      "contrabass": "Kontrbas (EADG)"
+    },
+    "configCreated": "Varsayılan ön ayarla telli çalgı yapılandırması oluşturuldu.",
+    "configExists": "Bu cihaz için zaten bir telli çalgı yapılandırması mevcut."
   }
 }

@@ -1029,5 +1029,48 @@
     "labelGmCategories": "GM Categories: {value} ({mode})",
     "labelGmPrograms": "GM Programs: {value}",
     "labelDate": "Date: {from} - {to}"
+  },
+  "tablature": {
+    "toggleEditor": "ট্যাবলেচার সম্পাদক টগল করুন",
+    "zoomIn": "জুম ইন",
+    "zoomOut": "জুম আউট",
+    "deleteSelected": "নির্বাচিত মুছুন",
+    "selectAll": "সব নির্বাচন করুন",
+    "enterFret": "ফ্রেট নম্বর লিখুন",
+    "noStringInstrument": "এই চ্যানেলের জন্য কোনো তারযন্ত্র কনফিগার করা নেই",
+    "selectDeviceFirst": "প্রথমে একটি সংযুক্ত ডিভাইস নির্বাচন করুন",
+    "singleChannelRequired": "ট্যাবলেচার ব্যবহার করতে একটি একক চ্যানেল নির্বাচন করুন",
+    "converting": "MIDI ট্যাবলেচারে রূপান্তর করা হচ্ছে...",
+    "conversionFailed": "ট্যাবলেচার রূপান্তর ব্যর্থ"
+  },
+  "stringInstrument": {
+    "title": "তারযন্ত্র কনফিগারেশন",
+    "name": "যন্ত্রের নাম",
+    "numStrings": "তারের সংখ্যা",
+    "numFrets": "ফ্রেটের সংখ্যা",
+    "tuning": "টিউনিং",
+    "tuningPreset": "টিউনিং প্রিসেট",
+    "customTuning": "কাস্টম টিউনিং",
+    "isFretless": "ফ্রেটবিহীন",
+    "capoFret": "ক্যাপো অবস্থান",
+    "noCapo": "ক্যাপো নেই",
+    "presets": {
+      "guitar_standard": "গিটার স্ট্যান্ডার্ড (EADGBE)",
+      "guitar_drop_d": "গিটার ড্রপ D (DADGBE)",
+      "guitar_open_g": "গিটার ওপেন G (DGDGBD)",
+      "guitar_open_d": "গিটার ওপেন D (DADF#AD)",
+      "guitar_dadgad": "গিটার DADGAD (DADGAD)",
+      "bass_4_standard": "৪-তার বেস স্ট্যান্ডার্ড (EADG)",
+      "bass_5_standard": "৫-তার বেস স্ট্যান্ডার্ড (BEADG)",
+      "bass_6_standard": "৬-তার বেস স্ট্যান্ডার্ড (BEADGC)",
+      "ukulele_standard": "ইউকুলেলে স্ট্যান্ডার্ড (GCEA)",
+      "banjo_standard": "ব্যাঞ্জো স্ট্যান্ডার্ড (gDGBD)",
+      "violin": "বেহালা (GDAE)",
+      "viola": "ভায়োলা (CGDA)",
+      "cello": "চেলো (CGDA)",
+      "contrabass": "কন্ট্রাবেস (EADG)"
+    },
+    "configCreated": "ডিফল্ট প্রিসেট সহ তারযন্ত্র কনফিগারেশন তৈরি হয়েছে।",
+    "configExists": "এই ডিভাইসের জন্য একটি তারযন্ত্র কনফিগারেশন ইতিমধ্যে বিদ্যমান।"
   }
 }
