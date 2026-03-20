@@ -144,12 +144,17 @@ violon, etc.).
 - [x] `destroy()` nettoie le tablature editor
 - [ ] **Toggle piano-roll / tablature / les deux** — actuellement le panel tablature s'affiche SOUS le piano roll, pas en remplacement. Pas de mode "tablature seule"
 
-### 5.3 — Modal de configuration instrument a cordes
-- [ ] **PAS DE MODAL DEDIE** — L'InstrumentCapabilitiesModal a un champ `type` (guitar, bass, strings) mais ne gere PAS la config specifique cordes (tuning, nb frettes, capo, presets). Il faut creer un panel/modal dedie accessible depuis l'editeur MIDI ou depuis InstrumentCapabilities
-- [ ] Formulaire : nb cordes, nb frettes, fretless toggle, accordage (preset ou custom)
-- [ ] Selecteur de presets (les 18 presets existants)
-- [ ] Capo position
-- [ ] Sauvegarde via commande `string_instrument_create`
+### 5.3 — Modal de configuration instrument a cordes [TERMINEE]
+- [x] `StringInstrumentConfigModal.js` (extends BaseModal) — modal dedie
+- [x] Formulaire : nom, nb cordes, nb frettes, fretless toggle, accordage (preset ou custom par note MIDI)
+- [x] Selecteur de presets (18 presets avec i18n)
+- [x] Capo position
+- [x] Sauvegarde via commande `string_instrument_create` / `_update`
+- [x] Suppression d'instrument existant
+- [x] Bouton engrenage a cote du bouton TAB dans la toolbar
+- [x] Bouton visible des qu'un device est selectionne + 1 canal actif
+- [x] Callback onSave rafraichit le bouton TAB et l'editeur tablature
+- [x] Cles i18n ajoutees pour les 5 presets manquants (en.json + fr.json)
 
 ### 5.4 — Auto-detection a la creation d'instrument
 - [ ] **PAS IMPLEMENTE** — Les programmes GM guitare(24-31), basse(32-39), cordes(40-47) sont documentes en commentaires dans MidiEditorModal.js mais aucun code ne propose la config tablature automatiquement
@@ -189,17 +194,13 @@ violon, etc.).
 | 2 | Algorithme MIDI <-> Tablature | TERMINEE | - |
 | 3 | Editeur frontend | ~80% | Manque drag, copy/paste, undo/redo |
 | 4 | Sync bidirectionnelle | ~90% | Manque warning note non jouable |
-| 5 | Integration UI | ~60% | **Manque modal config string instrument** |
+| 5 | Integration UI | ~85% | Manque auto-detection GM, mode tablature seule |
 | 6 | CC20/CC21 hardware | ~30% | **MidiPlayer ne lit pas les CC tablature** |
 | 7 | i18n | ~95% | Verifier les 26 autres langues |
 
 ## Prochaines priorites
 
 ### Priorite HAUTE (bloquant pour l'utilisateur)
-
-1. **Phase 5.3** — Modal de configuration des instruments a cordes
-   - Sans ca, impossible de configurer un instrument a cordes depuis l'UI
-   - L'API backend est prete, il faut juste le frontend
 
 2. **Phase 6.2** — Injection CC20/CC21 dans MidiPlayer.js
    - Sans ca, le hardware ne recoit jamais l'info corde/frette pendant le playback
@@ -228,7 +229,8 @@ violon, etc.).
 | Editor | `public/js/views/components/TablatureEditor.js` | 662 |
 | Renderer | `public/js/views/components/TablatureRenderer.js` | 588 |
 | Fretboard | `public/js/views/components/FretboardDiagram.js` | 357 |
-| Styles | `public/styles/tablature.css` | 216 |
+| Config Modal | `public/js/views/components/StringInstrumentConfigModal.js` | ~300 |
+| Styles | `public/styles/tablature.css` | ~350 |
 | Migration | `migrations/024_string_instruments.sql` | 65 |
 | Constants | `src/constants.js` | CC20, CC21 |
 | i18n EN | `public/locales/en.json` | tablature.* + stringInstrument.* |
