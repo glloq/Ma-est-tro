@@ -1,4 +1,7 @@
-# Roadmap - Tablature pour instruments a cordes
+# Roadmap — Systeme de Tablature pour Instruments a Cordes
+
+> Derniere mise a jour : 2026-03-20
+> Alignee sur la roadmap originale en 7 phases
 
 ## Vue d'ensemble
 
@@ -9,138 +12,236 @@ violon, etc.).
 
 ---
 
-## Phase 1 - Modele de donnees et backend [TERMINEE]
+## Phase 1 : Modele de donnees & Backend [TERMINEE]
 
-**Commit**: `77f761a`
+**Commit** : `77f761a`
 
-- [x] Migration SQL `024_string_instruments.sql` (tables `string_instruments` + `string_instrument_tablatures`)
-- [x] `StringInstrumentDatabase.js` - CRUD + 12 presets de tuning
-- [x] `StringInstrumentCommands.js` - 10 commandes WebSocket
-- [x] Constantes CC20 (STRING_SELECT) et CC21 (FRET_SELECT) dans `constants.js`
-- [x] Cles i18n (en.json) pour tablature et string instruments
+### 1.1 — Migration SQL `024_string_instruments.sql`
+- [x] Table `string_instruments` (id, device_id, channel, instrument_name, num_strings, num_frets, tuning JSON, is_fretless, capo_fret)
+- [x] Contrainte UNIQUE(device_id, channel), index, trigger updated_at
+- [x] Table `string_instrument_tablatures` (id, midi_file_id, channel, string_instrument_id, tablature_data JSON)
+- [x] FK vers string_instruments avec CASCADE delete
 
-## Phase 2 - Moteur de conversion MIDI <-> Tablature [TERMINEE]
+### 1.2 — StringInstrumentDatabase.js
+- [x] CRUD complet (create, get, getById, getAll, getByDevice, update, delete, deleteByDeviceChannel)
+- [x] 18 presets d'accordage (guitare x8, basse x4, ukulele x2, banjo, violon, alto, violoncelle, contrebasse)
+- [x] Validation (nb cordes 1-6, tuning.length === num_strings, notes 0-127, capo 0-36)
+- [x] CRUD tablatures (save, get, getByFile, delete, deleteByFile)
 
-**Commit**: `747e0e5`
+### 1.3 — Commandes WebSocket (StringInstrumentCommands.js)
+- [x] string_instrument_create / _update / _delete / _get / _list
+- [x] string_instrument_get_presets / _apply_preset
+- [x] tablature_save / _get / _get_by_file / _delete
+- [x] tablature_convert_from_midi / _convert_to_midi
 
-- [x] `TablatureConverter.js` - conversion bidirectionnelle
-- [x] Algorithme backtracking pour assignation des accords
-- [x] Optimisation de position de main (minimiser les deplacements)
-- [x] Validation de jouabilite (ecart max de frettes)
-- [x] Support instruments sans frettes (fretless)
+### 1.4 — Constantes & i18n
+- [x] CC20 (STRING_SELECT) et CC21 (FRET_SELECT) dans `constants.js`
+- [x] Cles i18n en.json + fr.json (tablature.* + stringInstrument.*)
+- [x] StringInstrumentDatabase initialise dans Database.js
+
+---
+
+## Phase 2 : Algorithme Note MIDI -> Tablature [TERMINEE]
+
+**Commit** : `747e0e5`
+
+### 2.1 — TablatureConverter.js — MIDI -> Tab
+- [x] Calcul de toutes les positions possibles (corde, frette) par note
+- [x] Contrainte 1 note/corde max pour les accords
+- [x] Optimisation deplacement main (fenetre glissante, cost function)
+- [x] Backtracking avec elagage (most constrained first)
 - [x] Fallback greedy quand le backtracking echoue
-- [x] Generation CC20/CC21 lors de la conversion tab -> MIDI
+- [x] Support fretless (positions continues)
+- [x] Validation jouabilite (isChordPlayable, maxSpan=4)
 
-## Phase 3 - Editeur frontend et diagramme de manche [TERMINEE]
-
-**Commit**: `8419fd8`
-
-- [x] `TablatureEditor.js` - orchestrateur principal
-- [x] `TablatureRenderer.js` - rendu canvas de la tablature classique
-- [x] `FretboardDiagram.js` - diagramme de manche vertical temps-reel
-- [x] `tablature.css` - styles avec support theme clair/sombre
-- [x] Synchronisation bidirectionnelle avec le piano roll
-- [x] Saisie inline des numeros de frettes
-- [x] Playhead synchronise pendant la lecture
-- [x] Zoom (ticksPerPixel) et scroll
-- [x] Selection (click + box select)
-- [x] Integration dans MidiEditorModal et MidiEditorChannelPanel (bouton toggle)
+### 2.2 — TablatureConverter.js — Tab -> MIDI
+- [x] Conversion {string, fret} + tuning -> note MIDI
+- [x] Generation CC20 (corde) + CC21 (frette) avant chaque note-on
+- [x] Helpers statiques : midiNoteToName(), describeTuning()
 
 ---
 
-## Phase 4 - UI de configuration des instruments a cordes [A FAIRE]
+## Phase 3 : Editeur de Tablature (Frontend) [PARTIELLEMENT TERMINEE]
 
-L'API backend existe deja (Phase 1), mais il n'y a pas d'interface utilisateur
-pour gerer les instruments a cordes.
+**Commit** : `8419fd8`
 
-- [ ] Panel/modal de configuration accessible depuis l'editeur MIDI
-- [ ] Formulaire creation/edition d'instrument (nom, nb cordes, nb frettes, tuning)
-- [ ] Liste des instruments configures avec suppression
-- [ ] Selecteur de presets (les 12 presets existants)
-- [ ] Indication du capo (position + transposition)
-- [ ] Association automatique instrument <-> device/channel
+### 3.1 — TablatureEditor.js (orchestrateur)
+- [x] Creation DOM (panel header + toolbar + canvas)
+- [x] Conversion MIDI -> tab via API backend (+ fallback client-side)
+- [x] Saisie inline des numeros de frettes (double-clic -> input)
+- [x] Suppression de notes selectionnees (bouton DEL)
+- [x] Selection All
+- [x] Zoom in/out
+- [x] Bouton close
+- [ ] **Deplacement de notes (drag)** — pas implemente
+- [ ] **Copier/coller** — pas implemente
+- [ ] **Undo/redo** — pas implemente (pas d'integration CommandHistory)
 
-## Phase 5 - Drag & drop et manipulation avancee des events [A FAIRE]
+### 3.2 — TablatureRenderer.js (moteur de rendu Canvas)
+- [x] Rendu des 1-6 lignes de cordes avec labels (note + octave)
+- [x] Numeros de frettes sur les lignes (+ duree en trait)
+- [x] Barres de mesure / beat lines
+- [x] Playhead
+- [x] Theme dark/light
+- [x] Selection (click, Ctrl+click, box select)
+- [x] Hit testing (detection de clic sur un event)
+- [x] Zoom (ticksPerPixel) et scroll horizontal
+- [ ] **Hover highlighting** — declare dans les couleurs mais pas utilise dans le rendu
+- [ ] **Drag to pan** — mousedown sur espace vide commence une selection, pas un pan
 
-Le renderer gere la selection mais pas le deplacement des notes.
+### 3.3 — FretboardDiagram.js (preview temps reel)
+- [x] Diagramme vertical : cordes verticales, frettes horizontales
+- [x] Marqueurs de frettes (3,5,7,9,12,15,17,19,21,24) + doubles (12,24)
+- [x] Doigts actifs avec opacite selon velocity
+- [x] Corde a vide (O au-dessus du sillet)
+- [x] Auto-scroll fenetre de frettes
+- [x] Epaisseur de corde variable (graves plus epaisses)
+- [ ] **Corde muted (X)** — couleur definie mais pas de rendu
 
-- [ ] Drag horizontal pour deplacer un event dans le temps (tick)
-- [ ] Drag vertical pour changer de corde
-- [ ] Resize (drag bord droit) pour modifier la duree
-- [ ] Deplacement par groupe (selection multiple)
-- [ ] Snap to grid (quantification au beat/sub-beat)
-- [ ] Feedback visuel pendant le drag (ghost/preview)
-
-## Phase 6 - Undo / Redo [A FAIRE]
-
-Aucun systeme d'historique n'existe dans l'editeur tablature.
-
-- [ ] Pile d'actions undo/redo pour l'editeur tablature
-- [ ] Actions: ajout, suppression, deplacement, edition de frette
-- [ ] Raccourcis clavier Ctrl+Z / Ctrl+Shift+Z
-- [ ] Synchronisation de l'historique avec le piano roll (si partage)
-
-## Phase 7 - Copier / Coller [A FAIRE]
-
-- [ ] Copier la selection (Ctrl+C)
-- [ ] Coller a la position du curseur (Ctrl+V)
-- [ ] Couper (Ctrl+X)
-- [ ] Dupliquer la selection (Ctrl+D)
-- [ ] Gestion intelligente du decalage temporel au collage
-
-## Phase 8 - Techniques de jeu guitaristiques [A FAIRE]
-
-Representer les articulations specifiques aux instruments a cordes,
-au-dela des simples notes.
-
-- [ ] Hammer-on / Pull-off (liaison ascendante/descendante)
-- [ ] Slide (glisse entre frettes)
-- [ ] Bend (tire de corde) avec indication du demi-ton
-- [ ] Vibrato
-- [ ] Palm mute / Harmoniques
-- [ ] Representation visuelle de chaque technique sur la tablature
-- [ ] Mapping vers les CC MIDI correspondants
-- [ ] Raccourcis clavier pour appliquer une technique a la selection
-
-## Phase 9 - Export et impression [A FAIRE]
-
-- [ ] Export tablature en texte ASCII (format standard guitare)
-- [ ] Export PDF de la tablature
-- [ ] Option d'impression directe
-- [ ] Choix du format : tablature seule, ou tablature + portee standard
-
-## Phase 10 - Tests et robustesse [A FAIRE]
-
-- [ ] Tests unitaires TablatureConverter (conversion MIDI -> tab, tab -> MIDI)
-- [ ] Tests unitaires StringInstrumentDatabase (CRUD, presets, validation)
-- [ ] Tests d'integration commandes WebSocket tablature
-- [ ] Tests frontend (renderer, editor, interactions)
-- [ ] Gestion des cas limites (fichier vide, instrument sans cordes, etc.)
-- [ ] Performance : grands fichiers MIDI (milliers de notes)
+### 3.4 — CSS (tablature.css)
+- [x] Panel, header, toolbar, canvas wrappers
+- [x] Theme dark/light via CSS variables
+- [x] Responsive (fretboard cache <= 768px)
+- [x] Style du fret input inline
+- [x] Style du bouton toggle TAB
 
 ---
 
-## Notes techniques
+## Phase 4 : Edition bidirectionnelle & Synchronisation [TERMINEE]
 
-### Fichiers existants
+### 4.1 — Sync Tab -> MIDI
+- [x] `syncToMidi()` — convertit tab events -> MIDI + CC via API
+- [x] `_updateModalSequence()` — remplace les notes du canal dans fullSequence
+- [x] Stocke les CC events tablature dans `modal._tablatureCCEvents[channel]`
+- [x] Refresh du piano roll apres mise a jour
+- [x] Flag `isDirty` pour sauvegarder
 
-| Composant | Chemin |
-|-----------|--------|
-| Converter | `src/midi/TablatureConverter.js` |
-| Database | `src/storage/StringInstrumentDatabase.js` |
-| Commands | `src/api/commands/StringInstrumentCommands.js` |
-| Editor | `public/js/views/components/TablatureEditor.js` |
-| Renderer | `public/js/views/components/TablatureRenderer.js` |
-| Fretboard | `public/js/views/components/FretboardDiagram.js` |
-| Styles | `public/styles/tablature.css` |
-| Migration | `migrations/024_string_instruments.sql` |
-| Constants | `src/constants.js` (CC20, CC21) |
-| i18n | `public/locales/en.json` |
+### 4.2 — Sync MIDI -> Tab
+- [x] `onMidiNotesChanged()` — recalcule la tablature depuis les notes MIDI
+- [x] Conversion via API backend (+ fallback client-side)
 
-### Architecture
+### 4.3 — Protection contre les boucles
+- [x] Guard `isSyncing` pour eviter les boucles infinies tab <-> piano roll
 
-- Backend: Node.js (Express) + SQLite
-- Frontend: Vanilla JS + Canvas 2D
-- Communication: WebSocket (commandes JSON)
-- Rendu tablature: Canvas maison (pas de lib externe type VexTab)
-- Sync tab <-> piano roll via events custom (`tab:addevent`, `tab:editevent`, `tab:selectionchange`)
+### 4.4 — Manques identifies
+- [ ] **Warning visuel si note non jouable** — `isNotePlayable()` existe dans le converter mais non utilise cote frontend
+- [ ] **EventBus dedie** — la sync passe par des appels directs, pas par un bus d'evenements (tablature:note-changed, etc.)
+
+---
+
+## Phase 5 : Integration dans l'UI existante [PARTIELLEMENT TERMINEE]
+
+### 5.1 — MidiEditorChannelPanel.js
+- [x] `updateTablatureButton()` — affiche le bouton TAB quand 1 canal actif + device + string instrument configure
+- [x] Appele depuis `toggleChannel()` et `selectConnectedDevice()`
+
+### 5.2 — MidiEditorModal.js
+- [x] `tablatureEditor = new TablatureEditor(this)` instancie
+- [x] Bouton TAB inline (initialement `display:none`)
+- [x] `toggleTablature()` — show/hide le panel
+- [x] `hasStringInstrument()` — verifie si un instrument a cordes existe pour le device/channel courant
+- [x] Sync scroll piano roll -> tablature
+- [x] `destroy()` nettoie le tablature editor
+- [ ] **Toggle piano-roll / tablature / les deux** — actuellement le panel tablature s'affiche SOUS le piano roll, pas en remplacement. Pas de mode "tablature seule"
+
+### 5.3 — Modal de configuration instrument a cordes
+- [ ] **PAS DE MODAL DEDIE** — L'InstrumentCapabilitiesModal a un champ `type` (guitar, bass, strings) mais ne gere PAS la config specifique cordes (tuning, nb frettes, capo, presets). Il faut creer un panel/modal dedie accessible depuis l'editeur MIDI ou depuis InstrumentCapabilities
+- [ ] Formulaire : nb cordes, nb frettes, fretless toggle, accordage (preset ou custom)
+- [ ] Selecteur de presets (les 18 presets existants)
+- [ ] Capo position
+- [ ] Sauvegarde via commande `string_instrument_create`
+
+### 5.4 — Auto-detection a la creation d'instrument
+- [ ] **PAS IMPLEMENTE** — Les programmes GM guitare(24-31), basse(32-39), cordes(40-47) sont documentes en commentaires dans MidiEditorModal.js mais aucun code ne propose la config tablature automatiquement
+
+---
+
+## Phase 6 : Generation CC20/CC21 pour le hardware [PARTIELLEMENT TERMINEE]
+
+### 6.1 — TablatureConverter (backend)
+- [x] Genere CC20 + CC21 avant chaque note-on dans `convertTablatureToMidi()`
+- [x] CC stockes dans `modal._tablatureCCEvents[channel]` cote frontend
+
+### 6.2 — MidiPlayer.js
+- [ ] **NE LIT PAS LES CC TABLATURE** — Le player route tous les CC generiquement mais ne consulte PAS `_tablatureCCEvents` pour injecter CC20/CC21 avant les note-on pendant le playback
+- [ ] Il faut : avant chaque note-on sur un canal avec instrument a cordes, envoyer CC20 puis CC21 depuis les donnees tablature sauvegardees
+
+### 6.3 — MidiRouter.js
+- [x] CC20/CC21 passent a travers le routing comme tout autre CC (pas de filtrage special)
+- [x] Pas de modification necessaire
+
+---
+
+## Phase 7 : Internationalisation [TERMINEE]
+
+### 7.1 — Cles de traduction
+- [x] en.json : 11 cles `tablature.*` + 14 cles `stringInstrument.*` (dont presets)
+- [x] fr.json : traductions completes
+- [ ] **Autres langues** — non verifie (le projet supporte 28 langues)
+
+---
+
+## Resume de l'etat actuel
+
+| Phase | Description | Statut | Bloquant |
+|-------|-------------|--------|----------|
+| 1 | Modele de donnees & Backend | TERMINEE | - |
+| 2 | Algorithme MIDI <-> Tablature | TERMINEE | - |
+| 3 | Editeur frontend | ~80% | Manque drag, copy/paste, undo/redo |
+| 4 | Sync bidirectionnelle | ~90% | Manque warning note non jouable |
+| 5 | Integration UI | ~60% | **Manque modal config string instrument** |
+| 6 | CC20/CC21 hardware | ~30% | **MidiPlayer ne lit pas les CC tablature** |
+| 7 | i18n | ~95% | Verifier les 26 autres langues |
+
+## Prochaines priorites
+
+### Priorite HAUTE (bloquant pour l'utilisateur)
+
+1. **Phase 5.3** — Modal de configuration des instruments a cordes
+   - Sans ca, impossible de configurer un instrument a cordes depuis l'UI
+   - L'API backend est prete, il faut juste le frontend
+
+2. **Phase 6.2** — Injection CC20/CC21 dans MidiPlayer.js
+   - Sans ca, le hardware ne recoit jamais l'info corde/frette pendant le playback
+
+### Priorite MOYENNE (qualite d'edition)
+
+3. **Phase 3** — Completer l'editeur : drag & drop, undo/redo, copier/coller
+4. **Phase 5.4** — Auto-detection programmes GM pour proposer la config tablature
+5. **Phase 4.4** — Warning visuel si une note du piano roll n'est pas jouable
+
+### Priorite BASSE (polish)
+
+6. **Phase 5.2** — Mode "tablature seule" (sans piano roll)
+7. **Phase 3.3** — Rendu "muted string" (X) sur le fretboard diagram
+8. **Phase 7** — Verifier i18n sur les 26 autres langues
+
+---
+
+## Fichiers concernes
+
+| Composant | Chemin | Lignes |
+|-----------|--------|--------|
+| Converter | `src/midi/TablatureConverter.js` | 503 |
+| Database | `src/storage/StringInstrumentDatabase.js` | 476 |
+| Commands | `src/api/commands/StringInstrumentCommands.js` | 197 |
+| Editor | `public/js/views/components/TablatureEditor.js` | 662 |
+| Renderer | `public/js/views/components/TablatureRenderer.js` | 588 |
+| Fretboard | `public/js/views/components/FretboardDiagram.js` | 357 |
+| Styles | `public/styles/tablature.css` | 216 |
+| Migration | `migrations/024_string_instruments.sql` | 65 |
+| Constants | `src/constants.js` | CC20, CC21 |
+| i18n EN | `public/locales/en.json` | tablature.* + stringInstrument.* |
+| i18n FR | `public/locales/fr.json` | idem |
+| DB Init | `src/storage/Database.js` | ligne 36 |
+| Modal | `public/js/views/components/MidiEditorModal.js` | ~5400 |
+| Channel | `public/js/views/components/midi-editor/MidiEditorChannelPanel.js` | ~360 |
+| Player | `src/midi/MidiPlayer.js` | a modifier (Phase 6) |
+| HTML | `public/index.html` | lignes 4412-4414 (scripts) |
+
+## Architecture
+
+- Backend : Node.js (Express) + SQLite
+- Frontend : Vanilla JS + Canvas 2D (pas de lib externe type VexTab)
+- Communication : WebSocket (commandes JSON)
+- Sync tab <-> piano roll : events custom (`tab:addevent`, `tab:editevent`, `tab:selectionchange`) + appels directs
