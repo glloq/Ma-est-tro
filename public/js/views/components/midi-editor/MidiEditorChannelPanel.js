@@ -255,10 +255,14 @@ class MidiEditorChannelPanel {
             const activeChannel = Array.from(m.activeChannels)[0];
             const channelInfo = m.channels.find(ch => ch.channel === activeChannel);
             const gmMatch = channelInfo ? MidiEditorChannelPanel.getStringInstrumentCategory(channelInfo.program) : null;
-            const deviceId = m.getEffectiveDeviceId();
 
             try {
-                const hasTab = await m.hasStringInstrument();
+                // Use findStringInstrument for cross-device search
+                const existingConfig = m.findStringInstrument
+                    ? await m.findStringInstrument(activeChannel)
+                    : null;
+                const hasTab = !!existingConfig;
+
                 // Show section if GM string instrument detected OR config exists
                 const showSection = hasTab || !!gmMatch;
 
@@ -282,18 +286,8 @@ class MidiEditorChannelPanel {
 
                     // Show instrument name label when configured
                     if (hasTab && instrLabel) {
-                        try {
-                            const resp = await m.api.sendCommand('string_instrument_get', {
-                                device_id: deviceId,
-                                channel: activeChannel
-                            });
-                            if (resp?.instrument) {
-                                instrLabel.textContent = resp.instrument.instrument_name || '';
-                                instrLabel.style.display = 'inline';
-                            }
-                        } catch {
-                            instrLabel.style.display = 'none';
-                        }
+                        instrLabel.textContent = existingConfig.instrument_name || '';
+                        instrLabel.style.display = 'inline';
                     } else if (instrLabel) {
                         instrLabel.style.display = 'none';
                     }

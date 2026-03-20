@@ -5211,41 +5211,33 @@ class MidiEditorModal {
         }
 
         const activeChannel = Array.from(this.activeChannels)[0];
-        const deviceId = this.getEffectiveDeviceId();
 
         try {
-            let response = await this.api.sendCommand('string_instrument_get', {
-                device_id: deviceId,
-                channel: activeChannel
-            });
+            // Search for existing config across all device IDs
+            let stringInstrument = await this.findStringInstrument(activeChannel);
 
             // If no config exists, try auto-configuring from GM program
-            if (!response || !response.instrument) {
+            if (!stringInstrument) {
                 const channelInfo = this.channels.find(ch => ch.channel === activeChannel);
                 const gmMatch = channelInfo ? MidiEditorChannelPanel.getStringInstrumentCategory(channelInfo.program) : null;
 
                 if (gmMatch) {
                     await this.api.sendCommand('string_instrument_create_from_preset', {
-                        device_id: deviceId,
+                        device_id: this.getEffectiveDeviceId(),
                         channel: activeChannel,
                         preset: gmMatch.preset
                     });
                     this.log('info', `Auto-configured ${gmMatch.category} for channel ${activeChannel + 1}`);
 
-                    response = await this.api.sendCommand('string_instrument_get', {
-                        device_id: deviceId,
-                        channel: activeChannel
-                    });
+                    stringInstrument = await this.findStringInstrument(activeChannel);
                 }
 
-                if (!response || !response.instrument) {
+                if (!stringInstrument) {
                     this.log('info', 'No string instrument configured for this channel');
                     this.showStringInstrumentConfig();
                     return;
                 }
             }
-
-            const stringInstrument = response.instrument;
 
             // Get notes for this channel
             const channelNotes = (this.fullSequence || []).filter(n => n.c === activeChannel);
@@ -5311,14 +5303,51 @@ class MidiEditorModal {
 
         try {
             const activeChannel = Array.from(this.activeChannels)[0];
-            const response = await this.api.sendCommand('string_instrument_get', {
-                device_id: this.getEffectiveDeviceId(),
-                channel: activeChannel
-            });
-            return !!(response && response.instrument);
+            const result = await this.findStringInstrument(activeChannel);
+            return !!result;
         } catch {
             return false;
         }
+    }
+
+    /**
+     * Find a string instrument config for a channel, searching multiple device IDs.
+     * Priority: selected device > '_editor' > any device with matching channel.
+     * @param {number} channel - MIDI channel
+     * @returns {Promise<Object|null>} The instrument config, or null
+     */
+    async findStringInstrument(channel) {
+        // 1. Try with the effective device ID (selected device or '_editor')
+        const primaryDeviceId = this.getEffectiveDeviceId();
+        try {
+            const resp = await this.api.sendCommand('string_instrument_get', {
+                device_id: primaryDeviceId,
+                channel: channel
+            });
+            if (resp?.instrument) return resp.instrument;
+        } catch { /* continue */ }
+
+        // 2. If effective was a real device, also try '_editor'
+        if (primaryDeviceId !== '_editor') {
+            try {
+                const resp = await this.api.sendCommand('string_instrument_get', {
+                    device_id: '_editor',
+                    channel: channel
+                });
+                if (resp?.instrument) return resp.instrument;
+            } catch { /* continue */ }
+        }
+
+        // 3. Search across all configured string instruments for this channel
+        try {
+            const resp = await this.api.sendCommand('string_instrument_list', {});
+            if (resp?.instruments) {
+                const match = resp.instruments.find(si => si.channel === channel);
+                if (match) return match;
+            }
+        } catch { /* continue */ }
+
+        return null;
     }
 
     // ========================================================================
