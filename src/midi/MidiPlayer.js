@@ -69,8 +69,9 @@ class MidiPlayer {
       this.extractTempo(midi);
       this.extractChannels(midi);
       this.buildEventList();
-      this.calculateDuration();
       this.loadedFileId = fileId;
+      this._injectTablatureCCEvents();
+      this.calculateDuration();
 
       this.app.logger.info(`File loaded: ${file.filename} (${this.events.length} events, ${this.duration.toFixed(2)}s)`);
 
@@ -219,6 +220,98 @@ class MidiPlayer {
 
     // Sort events by time
     this.events.sort((a, b) => a.time - b.time);
+  }
+
+  /**
+   * Inject CC20 (string select) and CC21 (fret select) events from tablature data.
+   * Called after buildEventList() and loadedFileId is set.
+   * For each noteOn on a channel with tablature, inserts CC events just before the note.
+   */
+  _injectTablatureCCEvents() {
+    if (!this.loadedFileId || !this.app.database) return;
+
+    const CC_STRING_SELECT = 20;
+    const CC_FRET_SELECT = 21;
+
+    let tablatures;
+    try {
+      tablatures = this.app.database.getTablaturesByFile(this.loadedFileId);
+    } catch (error) {
+      this.app.logger.debug(`No tablature data for file ${this.loadedFileId}: ${error.message}`);
+      return;
+    }
+
+    if (!tablatures || tablatures.length === 0) return;
+
+    const tempoMap = this._buildTempoMap();
+
+    // Build lookup: channel -> array of {time, string, fret, midiNote}
+    const tabByChannel = new Map();
+
+    for (const tab of tablatures) {
+      const channel = tab.channel || 0;
+      const events = [];
+
+      for (const ev of tab.tablature_data) {
+        const timeInSeconds = this._ticksToSecondsWithTempoMap(ev.tick, tempoMap);
+        events.push({
+          time: timeInSeconds,
+          string: ev.string,
+          fret: ev.fret,
+          midiNote: ev.midiNote
+        });
+      }
+
+      tabByChannel.set(channel, events);
+    }
+
+    // For each noteOn, find matching tab event and inject CC20+CC21 just before it
+    const ccEvents = [];
+    const EPSILON = 0.0001; // CC events 0.1ms before noteOn
+
+    for (const event of this.events) {
+      if (event.type !== 'noteOn' || event.velocity === 0) continue;
+
+      const tabEvents = tabByChannel.get(event.channel);
+      if (!tabEvents) continue;
+
+      // Find matching tab event (closest time + same MIDI note)
+      let bestMatch = null;
+      let bestTimeDiff = Infinity;
+
+      for (const te of tabEvents) {
+        if (te.midiNote !== event.note) continue;
+        const timeDiff = Math.abs(te.time - event.time);
+        if (timeDiff < bestTimeDiff) {
+          bestTimeDiff = timeDiff;
+          bestMatch = te;
+        }
+      }
+
+      // Match within 50ms tolerance
+      if (bestMatch && bestTimeDiff < 0.05) {
+        ccEvents.push({
+          time: event.time - EPSILON,
+          type: 'controller',
+          channel: event.channel,
+          controller: CC_STRING_SELECT,
+          value: bestMatch.string
+        });
+        ccEvents.push({
+          time: event.time - EPSILON,
+          type: 'controller',
+          channel: event.channel,
+          controller: CC_FRET_SELECT,
+          value: bestMatch.fret
+        });
+      }
+    }
+
+    if (ccEvents.length > 0) {
+      this.events.push(...ccEvents);
+      this.events.sort((a, b) => a.time - b.time);
+      this.app.logger.info(`Injected ${ccEvents.length} tablature CC events (CC20/CC21) for ${tabByChannel.size} channel(s)`);
+    }
   }
 
   _buildTempoMap() {

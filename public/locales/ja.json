@@ -1029,5 +1029,48 @@
     "labelGmCategories": "GM Categories: {value} ({mode})",
     "labelGmPrograms": "GM Programs: {value}",
     "labelDate": "Date: {from} - {to}"
+  },
+  "tablature": {
+    "toggleEditor": "タブ譜エディタの切り替え",
+    "zoomIn": "拡大",
+    "zoomOut": "縮小",
+    "deleteSelected": "選択項目を削除",
+    "selectAll": "すべて選択",
+    "enterFret": "フレット番号を入力",
+    "noStringInstrument": "このチャンネルに弦楽器が設定されていません",
+    "selectDeviceFirst": "最初に接続されたデバイスを選択してください",
+    "singleChannelRequired": "タブ譜を使用するには単一チャンネルを選択してください",
+    "converting": "MIDIをタブ譜に変換中...",
+    "conversionFailed": "タブ譜の変換に失敗しました"
+  },
+  "stringInstrument": {
+    "title": "弦楽器の設定",
+    "name": "楽器名",
+    "numStrings": "弦の数",
+    "numFrets": "フレットの数",
+    "tuning": "チューニング",
+    "tuningPreset": "チューニングプリセット",
+    "customTuning": "カスタムチューニング",
+    "isFretless": "フレットレス",
+    "capoFret": "カポの位置",
+    "noCapo": "カポなし",
+    "presets": {
+      "guitar_standard": "ギター スタンダード (EADGBE)",
+      "guitar_drop_d": "ギター ドロップD (DADGBE)",
+      "guitar_open_g": "ギター オープンG (DGDGBD)",
+      "guitar_open_d": "ギター オープンD (DADF#AD)",
+      "guitar_dadgad": "ギター DADGAD (DADGAD)",
+      "bass_4_standard": "ベース 4弦 スタンダード (EADG)",
+      "bass_5_standard": "ベース 5弦 スタンダード (BEADG)",
+      "bass_6_standard": "ベース 6弦 スタンダード (BEADGC)",
+      "ukulele_standard": "ウクレレ スタンダード (GCEA)",
+      "banjo_standard": "バンジョー スタンダード (gDGBD)",
+      "violin": "バイオリン (GDAE)",
+      "viola": "ビオラ (CGDA)",
+      "cello": "チェロ (CGDA)",
+      "contrabass": "コントラバス (EADG)"
+    },
+    "configCreated": "デフォルトプリセットで弦楽器の設定が作成されました。",
+    "configExists": "このデバイスには既に弦楽器の設定が存在します。"
   }
 }

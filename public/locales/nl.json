@@ -1029,5 +1029,48 @@
     "labelGmCategories": "GM Categories: {value} ({mode})",
     "labelGmPrograms": "GM Programs: {value}",
     "labelDate": "Date: {from} - {to}"
+  },
+  "tablature": {
+    "toggleEditor": "Tabulatuureditor wisselen",
+    "zoomIn": "Inzoomen",
+    "zoomOut": "Uitzoomen",
+    "deleteSelected": "Geselecteerde verwijderen",
+    "selectAll": "Alles selecteren",
+    "enterFret": "Voer fretnummer in",
+    "noStringInstrument": "Geen snaarinstrument geconfigureerd voor dit kanaal",
+    "selectDeviceFirst": "Selecteer eerst een aangesloten apparaat",
+    "singleChannelRequired": "Selecteer een enkel kanaal om tabulatuur te gebruiken",
+    "converting": "MIDI converteren naar tabulatuur...",
+    "conversionFailed": "Tabulatuurconversie mislukt"
+  },
+  "stringInstrument": {
+    "title": "Snaarinstrument configuratie",
+    "name": "Instrumentnaam",
+    "numStrings": "Aantal snaren",
+    "numFrets": "Aantal frets",
+    "tuning": "Stemming",
+    "tuningPreset": "Stemmingsvoorinstelling",
+    "customTuning": "Aangepaste stemming",
+    "isFretless": "Fretloos",
+    "capoFret": "Capopositie",
+    "noCapo": "Geen capo",
+    "presets": {
+      "guitar_standard": "Gitaar standaard (EADGBE)",
+      "guitar_drop_d": "Gitaar Drop D (DADGBE)",
+      "guitar_open_g": "Gitaar open G (DGDGBD)",
+      "guitar_open_d": "Gitaar open D (DADF#AD)",
+      "guitar_dadgad": "Gitaar DADGAD (DADGAD)",
+      "bass_4_standard": "Bas 4-snarig standaard (EADG)",
+      "bass_5_standard": "Bas 5-snarig standaard (BEADG)",
+      "bass_6_standard": "Bas 6-snarig standaard (BEADGC)",
+      "ukulele_standard": "Ukelele standaard (GCEA)",
+      "banjo_standard": "Banjo standaard (gDGBD)",
+      "violin": "Viool (GDAE)",
+      "viola": "Altviool (CGDA)",
+      "cello": "Cello (CGDA)",
+      "contrabass": "Contrabas (EADG)"
+    },
+    "configCreated": "Snaarinstrument configuratie aangemaakt met standaard voorinstelling.",
+    "configExists": "Er bestaat al een snaarinstrument configuratie voor dit apparaat."
   }
 }

@@ -1029,5 +1029,48 @@
     "labelGmCategories": "GM Categories: {value} ({mode})",
     "labelGmPrograms": "GM Programs: {value}",
     "labelDate": "Date: {from} - {to}"
+  },
+  "tablature": {
+    "toggleEditor": "I-toggle ang tablature editor",
+    "zoomIn": "Palakihin",
+    "zoomOut": "Paliitin",
+    "deleteSelected": "Burahin ang napili",
+    "selectAll": "Piliin lahat",
+    "enterFret": "Ilagay ang numero ng fret",
+    "noStringInstrument": "Walang string instrument na naka-configure para sa channel na ito",
+    "selectDeviceFirst": "Pumili muna ng nakakonektang device",
+    "singleChannelRequired": "Pumili ng isang channel para magamit ang tablature",
+    "converting": "Kino-convert ang MIDI sa tablature...",
+    "conversionFailed": "Nabigo ang pag-convert ng tablature"
+  },
+  "stringInstrument": {
+    "title": "Konfigurasyon ng String Instrument",
+    "name": "Pangalan ng Instrumento",
+    "numStrings": "Bilang ng mga Kuwerdas",
+    "numFrets": "Bilang ng mga Fret",
+    "tuning": "Tuning",
+    "tuningPreset": "Tuning Preset",
+    "customTuning": "Custom na Tuning",
+    "isFretless": "Walang Fret",
+    "capoFret": "Posisyon ng Capo",
+    "noCapo": "Walang Capo",
+    "presets": {
+      "guitar_standard": "Gitara standard (EADGBE)",
+      "guitar_drop_d": "Gitara Drop D (DADGBE)",
+      "guitar_open_g": "Gitara open G (DGDGBD)",
+      "guitar_open_d": "Gitara open D (DADF#AD)",
+      "guitar_dadgad": "Gitara DADGAD (DADGAD)",
+      "bass_4_standard": "Bass 4 na kuwerdas standard (EADG)",
+      "bass_5_standard": "Bass 5 na kuwerdas standard (BEADG)",
+      "bass_6_standard": "Bass 6 na kuwerdas standard (BEADGC)",
+      "ukulele_standard": "Ukulele standard (GCEA)",
+      "banjo_standard": "Banjo standard (gDGBD)",
+      "violin": "Biyolin (GDAE)",
+      "viola": "Viola (CGDA)",
+      "cello": "Cello (CGDA)",
+      "contrabass": "Contrabass (EADG)"
+    },
+    "configCreated": "Nagawa ang konfigurasyon ng string instrument gamit ang default na preset.",
+    "configExists": "May umiiral nang konfigurasyon ng string instrument para sa device na ito."
   }
 }
