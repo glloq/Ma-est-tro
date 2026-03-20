@@ -738,6 +738,11 @@ class MidiEditorModal {
         this.updateChannelButtons();
         this.updateInstrumentSelector();
 
+        // Update tablature/string instrument buttons
+        if (this.channelPanel) {
+            this.channelPanel.updateTablatureButton();
+        }
+
         // Mettre à jour le canal pour l'édition CC
         this.updateCCEditorChannel();
 
@@ -3528,6 +3533,11 @@ class MidiEditorModal {
         this.refreshChannelButtons();
         this.isDirty = true;
         this.updateSaveButton();
+
+        // Update tablature buttons (string instrument detection may change)
+        if (this.channelPanel) {
+            this.channelPanel.updateTablatureButton();
+        }
     }
 
     /**
@@ -4459,6 +4469,10 @@ class MidiEditorModal {
             connectedDeviceSelector.addEventListener('change', async (e) => {
                 const deviceId = e.target.value;
                 await this.selectConnectedDevice(deviceId);
+                // Update tablature buttons after device selection changes
+                if (this.channelPanel) {
+                    this.channelPanel.updateTablatureButton();
+                }
             });
         }
 
