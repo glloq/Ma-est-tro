@@ -61,11 +61,11 @@ violon, etc.).
 
 ---
 
-## Phase 3 : Editeur de Tablature (Frontend) [PARTIELLEMENT TERMINEE]
+## Phase 3 : Editeur de Tablature (Frontend) [TERMINEE]
 
 **Commit** : `8419fd8`
 
-### 3.1 — TablatureEditor.js (orchestrateur)
+### 3.1 — TablatureEditor.js (orchestrateur) [TERMINEE]
 - [x] Creation DOM (panel header + toolbar + canvas)
 - [x] Conversion MIDI -> tab via API backend (+ fallback client-side)
 - [x] Saisie inline des numeros de frettes (double-clic -> input)
@@ -73,11 +73,11 @@ violon, etc.).
 - [x] Selection All
 - [x] Zoom in/out
 - [x] Bouton close
-- [ ] **Deplacement de notes (drag)** — pas implemente
-- [ ] **Copier/coller** — pas implemente
-- [ ] **Undo/redo** — pas implemente (pas d'integration CommandHistory)
+- [x] Deplacement de notes (drag-to-move sur events selectionnes)
+- [x] Copier/coller (Ctrl+C/V + boutons CPY/PST, colle au playhead)
+- [x] Undo/redo snapshot-based (Ctrl+Z/Y + boutons toolbar, sync auto vers MIDI)
 
-### 3.2 — TablatureRenderer.js (moteur de rendu Canvas)
+### 3.2 — TablatureRenderer.js (moteur de rendu Canvas) [TERMINEE]
 - [x] Rendu des 1-6 lignes de cordes avec labels (note + octave)
 - [x] Numeros de frettes sur les lignes (+ duree en trait)
 - [x] Barres de mesure / beat lines
@@ -86,8 +86,8 @@ violon, etc.).
 - [x] Selection (click, Ctrl+click, box select)
 - [x] Hit testing (detection de clic sur un event)
 - [x] Zoom (ticksPerPixel) et scroll horizontal
-- [ ] **Hover highlighting** — declare dans les couleurs mais pas utilise dans le rendu
-- [ ] **Drag to pan** — mousedown sur espace vide commence une selection, pas un pan
+- [x] Hover highlighting (couleur hoverHighlight derriere l'event survole)
+- [x] Drag-to-pan (Alt+drag ou clic molette sur espace vide)
 
 ### 3.3 — FretboardDiagram.js (preview temps reel)
 - [x] Diagramme vertical : cordes verticales, frettes horizontales
@@ -196,7 +196,7 @@ violon, etc.).
 |-------|-------------|--------|----------|
 | 1 | Modele de donnees & Backend | TERMINEE | - |
 | 2 | Algorithme MIDI <-> Tablature | TERMINEE | - |
-| 3 | Editeur frontend | ~80% | Manque drag, copy/paste, undo/redo |
+| 3 | Editeur frontend | TERMINEE | - |
 | 4 | Sync bidirectionnelle | ~90% | Manque warning note non jouable |
 | 5 | Integration UI | ~85% | Manque auto-detection GM, mode tablature seule |
 | 6 | CC20/CC21 hardware | TERMINEE | - |
@@ -206,8 +206,7 @@ violon, etc.).
 
 ### Priorite MOYENNE (qualite d'edition)
 
-3. **Phase 3** — Completer l'editeur : drag & drop, undo/redo, copier/coller
-4. **Phase 5.4** — Auto-detection programmes GM pour proposer la config tablature
+3. **Phase 5.4** — Auto-detection programmes GM pour proposer la config tablature
 5. **Phase 4.4** — Warning visuel si une note du piano roll n'est pas jouable
 
 ### Priorite BASSE (polish)

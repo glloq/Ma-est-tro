@@ -50,6 +50,17 @@ class TablatureRenderer {
         this._isDragging = false;
         this._dragStart = null;
         this._hoverEvent = null;
+        this._dragMode = null;    // 'select' | 'move' | 'pan'
+        this._moveStartTick = 0;  // Tick position at drag start for note moving
+        this._moveStartString = 0;
+
+        // Undo/redo (snapshot-based, same pattern as piano roll)
+        this._undoStack = [];
+        this._redoStack = [];
+        this._maxUndoSize = 50;
+
+        // Clipboard
+        this._clipboard = [];
 
         // Bind event handlers
         this._onMouseDown = this._handleMouseDown.bind(this);
@@ -57,10 +68,12 @@ class TablatureRenderer {
         this._onMouseUp = this._handleMouseUp.bind(this);
         this._onDblClick = this._handleDblClick.bind(this);
 
+        this._onContextMenu = (e) => { if (e.button === 1) e.preventDefault(); };
         this.canvas.addEventListener('mousedown', this._onMouseDown);
         this.canvas.addEventListener('mousemove', this._onMouseMove);
         this.canvas.addEventListener('mouseup', this._onMouseUp);
         this.canvas.addEventListener('dblclick', this._onDblClick);
+        this.canvas.addEventListener('auxclick', this._onContextMenu);
     }
 
     // ========================================================================
@@ -160,6 +173,8 @@ class TablatureRenderer {
     }
 
     deleteSelected() {
+        if (this.selectedEvents.size === 0) return 0;
+        this.saveSnapshot();
         const indices = Array.from(this.selectedEvents).sort((a, b) => b - a);
         for (const i of indices) {
             this.tabEvents.splice(i, 1);
@@ -168,6 +183,82 @@ class TablatureRenderer {
         this.redraw();
         return indices.length;
     }
+
+    // ========================================================================
+    // UNDO / REDO (snapshot-based)
+    // ========================================================================
+
+    saveSnapshot() {
+        const snapshot = this.tabEvents.map(e => ({ ...e }));
+        this._undoStack.push(snapshot);
+        this._redoStack = [];
+        if (this._undoStack.length > this._maxUndoSize) {
+            this._undoStack.shift();
+        }
+    }
+
+    undo() {
+        if (this._undoStack.length === 0) return false;
+        this._redoStack.push(this.tabEvents.map(e => ({ ...e })));
+        this.tabEvents = this._undoStack.pop().map(e => ({ ...e }));
+        this.selectedEvents.clear();
+        this.redraw();
+        return true;
+    }
+
+    redo() {
+        if (this._redoStack.length === 0) return false;
+        this._undoStack.push(this.tabEvents.map(e => ({ ...e })));
+        this.tabEvents = this._redoStack.pop().map(e => ({ ...e }));
+        this.selectedEvents.clear();
+        this.redraw();
+        return true;
+    }
+
+    canUndo() { return this._undoStack.length > 0; }
+    canRedo() { return this._redoStack.length > 0; }
+
+    // ========================================================================
+    // CLIPBOARD
+    // ========================================================================
+
+    copySelected() {
+        if (this.selectedEvents.size === 0) return 0;
+        const selected = this.getSelectedEvents();
+        if (selected.length === 0) return 0;
+        const minTick = Math.min(...selected.map(e => e.tick));
+        this._clipboard = selected.map(e => ({ ...e, tick: e.tick - minTick }));
+        return this._clipboard.length;
+    }
+
+    paste(atTick) {
+        if (this._clipboard.length === 0) return 0;
+        this.saveSnapshot();
+        this.selectedEvents.clear();
+        const baseIndex = this.tabEvents.length;
+        for (const evt of this._clipboard) {
+            this.tabEvents.push({ ...evt, tick: evt.tick + atTick });
+        }
+        this.tabEvents.sort((a, b) => a.tick - b.tick);
+        // Select pasted events (find them by reference after sort)
+        for (let i = 0; i < this.tabEvents.length; i++) {
+            if (this.tabEvents[i].tick >= atTick) {
+                // Check if this is one of our pasted events
+                for (const clipEvt of this._clipboard) {
+                    if (this.tabEvents[i].tick === clipEvt.tick + atTick &&
+                        this.tabEvents[i].string === clipEvt.string &&
+                        this.tabEvents[i].fret === clipEvt.fret) {
+                        this.selectedEvents.add(i);
+                        break;
+                    }
+                }
+            }
+        }
+        this.redraw();
+        return this._clipboard.length;
+    }
+
+    hasClipboard() { return this._clipboard.length > 0; }
 
     // ========================================================================
     // RENDERING
@@ -292,12 +383,20 @@ class TablatureRenderer {
 
             const y = this._stringToY(displayIndex);
             const isSelected = this.selectedEvents.has(i);
+            const isHovered = this._hoverEvent === i && !isSelected;
             const fretText = this.isFretless ? event.fret.toFixed(1) : event.fret.toString();
 
             // Measure text width for background
             ctx.font = 'bold 13px monospace';
             const textWidth = ctx.measureText(fretText).width;
             const padding = 3;
+
+            // Hover highlight (drawn behind the note)
+            if (isHovered) {
+                ctx.fillStyle = this.colors.hoverHighlight;
+                ctx.fillRect(x - textWidth / 2 - padding - 2, y - 10,
+                    textWidth + (padding + 2) * 2, 20);
+            }
 
             // Background rectangle
             if (isSelected) {
@@ -443,6 +542,15 @@ class TablatureRenderer {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
+        // Alt+click or middle button = pan
+        if (e.altKey || e.button === 1) {
+            this._isDragging = true;
+            this._dragMode = 'pan';
+            this._dragStart = { x, y, scrollX: this.scrollX };
+            e.preventDefault();
+            return;
+        }
+
         const hitIndex = this._hitTest(x, y);
 
         if (hitIndex >= 0) {
@@ -459,9 +567,17 @@ class TablatureRenderer {
                 this.selectedEvents.clear();
                 this.selectedEvents.add(hitIndex);
             }
-            this.redraw();
 
-            // Emit selection change
+            // If clicked on a selected event, start drag-to-move
+            if (this.selectedEvents.has(hitIndex) && this.selectedEvents.size > 0) {
+                this._isDragging = true;
+                this._dragMode = 'move';
+                this._dragStart = { x, y };
+                this._moveStartTick = this._xToTick(x);
+                this._moveStartString = this._yToString(y);
+            }
+
+            this.redraw();
             this._emitEvent('selectionchange', { selected: this.getSelectedIndices() });
         } else {
             // Start selection rectangle
@@ -469,6 +585,7 @@ class TablatureRenderer {
                 this.selectedEvents.clear();
             }
             this._isDragging = true;
+            this._dragMode = 'select';
             this._dragStart = { x, y };
             this.selectionRect = { x1: x, y1: y, x2: x, y2: y };
             this.redraw();
@@ -480,40 +597,107 @@ class TablatureRenderer {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        if (this._isDragging && this.selectionRect) {
-            this.selectionRect.x2 = x;
-            this.selectionRect.y2 = y;
+        if (this._isDragging) {
+            if (this._dragMode === 'select' && this.selectionRect) {
+                this.selectionRect.x2 = x;
+                this.selectionRect.y2 = y;
+                this.redraw();
+            } else if (this._dragMode === 'pan') {
+                const dx = (x - this._dragStart.x) * this.ticksPerPixel;
+                this.scrollX = Math.max(0, this._dragStart.scrollX - dx);
+                this.redraw();
+            }
+            // For 'move' mode, visual feedback is deferred to mouseup (snap to grid)
+            return;
+        }
+
+        // Hover tracking (no drag)
+        const hitIndex = this._hitTest(x, y);
+        if (hitIndex !== this._hoverEvent) {
+            this._hoverEvent = hitIndex >= 0 ? hitIndex : null;
             this.redraw();
         }
     }
 
     _handleMouseUp(e) {
-        if (this._isDragging && this.selectionRect) {
-            // Select all events within the rectangle
-            const r = this.selectionRect;
-            const minX = Math.min(r.x1, r.x2);
-            const maxX = Math.max(r.x1, r.x2);
-            const minY = Math.min(r.y1, r.y2);
-            const maxY = Math.max(r.y1, r.y2);
+        if (this._isDragging) {
+            if (this._dragMode === 'select' && this.selectionRect) {
+                const r = this.selectionRect;
+                const minX = Math.min(r.x1, r.x2);
+                const maxX = Math.max(r.x1, r.x2);
+                const minY = Math.min(r.y1, r.y2);
+                const maxY = Math.max(r.y1, r.y2);
 
-            for (let i = 0; i < this.tabEvents.length; i++) {
-                const evt = this.tabEvents[i];
-                const displayIndex = this.numStrings - evt.string;
-                const evtX = this._tickToX(evt.tick);
-                const evtY = this._stringToY(displayIndex);
+                for (let i = 0; i < this.tabEvents.length; i++) {
+                    const evt = this.tabEvents[i];
+                    const displayIndex = this.numStrings - evt.string;
+                    const evtX = this._tickToX(evt.tick);
+                    const evtY = this._stringToY(displayIndex);
 
-                if (evtX >= minX && evtX <= maxX && evtY >= minY && evtY <= maxY) {
-                    this.selectedEvents.add(i);
+                    if (evtX >= minX && evtX <= maxX && evtY >= minY && evtY <= maxY) {
+                        this.selectedEvents.add(i);
+                    }
+                }
+                this._emitEvent('selectionchange', { selected: this.getSelectedIndices() });
+
+            } else if (this._dragMode === 'move') {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const currentTick = this._xToTick(x);
+                const currentString = this._yToString(y);
+                const deltaTick = currentTick - this._moveStartTick;
+                const deltaString = (currentString > 0 ? currentString : this._moveStartString) - this._moveStartString;
+
+                if (deltaTick !== 0 || deltaString !== 0) {
+                    this.saveSnapshot();
+                    const indices = this.getSelectedIndices();
+                    for (const i of indices) {
+                        const evt = this.tabEvents[i];
+                        evt.tick = Math.max(0, evt.tick + deltaTick);
+                        if (deltaString !== 0) {
+                            const newString = evt.string + deltaString;
+                            if (newString >= 1 && newString <= this.numStrings) {
+                                evt.string = newString;
+                            }
+                        }
+                    }
+                    this.tabEvents.sort((a, b) => a.tick - b.tick);
+                    // Rebuild selection indices after sort
+                    this._rebuildSelectionAfterSort(indices);
+                    this._emitEvent('moveevents', { deltaTick, deltaString });
                 }
             }
-
-            this._emitEvent('selectionchange', { selected: this.getSelectedIndices() });
         }
 
         this._isDragging = false;
+        this._dragMode = null;
         this._dragStart = null;
         this.selectionRect = null;
         this.redraw();
+    }
+
+    /**
+     * After sorting, selected event indices may have changed.
+     * Re-find them by object identity isn't possible after sort,
+     * so we tag events before sort and re-find them.
+     */
+    _rebuildSelectionAfterSort(oldIndices) {
+        // Tag selected events before sort
+        const tagged = new Set();
+        for (const i of oldIndices) {
+            if (this.tabEvents[i]) {
+                this.tabEvents[i]._selected = true;
+                tagged.add(i);
+            }
+        }
+        this.selectedEvents.clear();
+        for (let i = 0; i < this.tabEvents.length; i++) {
+            if (this.tabEvents[i]._selected) {
+                this.selectedEvents.add(i);
+                delete this.tabEvents[i]._selected;
+            }
+        }
     }
 
     _handleDblClick(e) {
@@ -574,6 +758,7 @@ class TablatureRenderer {
         this.canvas.removeEventListener('mousemove', this._onMouseMove);
         this.canvas.removeEventListener('mouseup', this._onMouseUp);
         this.canvas.removeEventListener('dblclick', this._onDblClick);
+        this.canvas.removeEventListener('auxclick', this._onContextMenu);
     }
 }
 
