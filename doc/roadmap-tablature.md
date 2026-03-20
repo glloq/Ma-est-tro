@@ -142,7 +142,7 @@ violon, etc.).
 - [x] `hasStringInstrument()` — verifie si un instrument a cordes existe pour le device/channel courant
 - [x] Sync scroll piano roll -> tablature
 - [x] `destroy()` nettoie le tablature editor
-- [ ] **Toggle piano-roll / tablature / les deux** — actuellement le panel tablature s'affiche SOUS le piano roll, pas en remplacement. Pas de mode "tablature seule"
+- [x] Mode "tablature seule" — bouton toggle (&#9634;) masque le piano roll via `.tab-only-mode` CSS class, restaure a la fermeture
 
 ### 5.3 — Modal de configuration instrument a cordes [TERMINEE]
 - [x] `StringInstrumentConfigModal.js` (extends BaseModal) — modal dedie
@@ -189,10 +189,10 @@ violon, etc.).
 
 ## Phase 7 : Internationalisation [TERMINEE]
 
-### 7.1 — Cles de traduction
-- [x] en.json : 11 cles `tablature.*` + 14 cles `stringInstrument.*` (dont presets)
+### 7.1 — Cles de traduction [TERMINEE]
+- [x] en.json : 15 cles `tablature.*` + 11 cles `stringInstrument.*` (dont presets)
 - [x] fr.json : traductions completes
-- [ ] **Autres langues** — non verifie (le projet supporte 28 langues)
+- [x] 26 autres langues : sections `tablature` + `stringInstrument` ajoutees (fallback EN)
 
 ---
 
@@ -204,19 +204,17 @@ violon, etc.).
 | 2 | Algorithme MIDI <-> Tablature | TERMINEE | - |
 | 3 | Editeur frontend | TERMINEE | - |
 | 4 | Sync bidirectionnelle | ~90% | Manque warning note non jouable |
-| 5 | Integration UI | ~95% | Reste mode tablature seule (Phase 5.2) |
+| 5 | Integration UI | TERMINEE | - |
 | 6 | CC20/CC21 hardware | TERMINEE | - |
-| 7 | i18n | ~95% | Verifier les 26 autres langues |
+| 7 | i18n | TERMINEE | EN fallback pour 26 langues |
 
 ## Prochaines priorites
 
 ### Priorite MOYENNE (qualite d'edition)
 
-### Priorite BASSE (polish)
+### Priorite BASSE (polish, differe)
 
-3. **Phase 5.2** — Mode "tablature seule" (sans piano roll)
-4. **Phase 4.4b** — EventBus dedie pour la sync tab/MIDI
-5. **Phase 7** — Verifier i18n sur les 26 autres langues
+3. **Phase 4.4b** — EventBus dedie pour la sync tab/MIDI (refactoring interne)
 
 ---
 

@@ -1049,7 +1049,8 @@
     "conversionFailed": "Tablature conversion failed",
     "configureStringInstrument": "Configure string instrument",
     "gmDetected": "{{instrument}} detected — configure as string instrument?",
-    "autoConfig": "Auto-configure"
+    "autoConfig": "Auto-configure",
+    "tabOnlyMode": "Toggle tablature-only view"
   },
   "stringInstrument": {
     "title": "String Instrument Configuration",

@@ -1049,7 +1049,8 @@
     "conversionFailed": "Échec de la conversion en tablature",
     "configureStringInstrument": "Configurer instrument à cordes",
     "gmDetected": "{{instrument}} détecté — configurer comme instrument à cordes ?",
-    "autoConfig": "Auto-configurer"
+    "autoConfig": "Auto-configurer",
+    "tabOnlyMode": "Afficher tablature uniquement"
   },
   "stringInstrument": {
     "title": "Configuration de l'instrument à cordes",

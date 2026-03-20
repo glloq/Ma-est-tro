@@ -14,6 +14,7 @@ class TablatureEditor {
 
         // State
         this.isVisible = false;
+        this.tabOnlyMode = false;     // Toggle piano roll visibility
         this.stringInstrument = null;  // Current string instrument config from DB
         this.tabEvents = [];            // Current tablature data
         this.isSyncing = false;         // Guard against sync loops
@@ -78,6 +79,12 @@ class TablatureEditor {
     }
 
     hide() {
+        // Restore piano roll if in tab-only mode
+        if (this.tabOnlyMode) {
+            this.tabOnlyMode = false;
+            const editorContainer = this.modal.container?.querySelector('.midi-editor-container');
+            if (editorContainer) editorContainer.classList.remove('tab-only-mode');
+        }
         if (this.containerEl) {
             this.containerEl.style.display = 'none';
         }
@@ -117,6 +124,7 @@ class TablatureEditor {
                     <span class="tablature-tuning" id="tab-tuning-display"></span>
                 </div>
                 <div class="tablature-toolbar">
+                    <button class="tab-tool-btn" data-action="tab-view-mode" title="${this.t('tablature.tabOnlyMode')}">&#9634;</button>
                     <button class="tab-tool-btn" data-action="tab-undo" title="${this.t('midiEditor.undo')} (Ctrl+Z)">&#8630;</button>
                     <button class="tab-tool-btn" data-action="tab-redo" title="${this.t('midiEditor.redo')} (Ctrl+Y)">&#8631;</button>
                     <button class="tab-tool-btn" data-action="tab-copy" title="Copy (Ctrl+C)">CPY</button>
@@ -510,6 +518,25 @@ class TablatureEditor {
         }
     }
 
+    _toggleTabOnlyMode() {
+        this.tabOnlyMode = !this.tabOnlyMode;
+        const editorContainer = this.modal.container?.querySelector('.midi-editor-container');
+        const viewBtn = this.containerEl?.querySelector('[data-action="tab-view-mode"]');
+
+        if (editorContainer) {
+            if (this.tabOnlyMode) {
+                editorContainer.classList.add('tab-only-mode');
+                if (viewBtn) viewBtn.classList.add('active');
+            } else {
+                editorContainer.classList.remove('tab-only-mode');
+                if (viewBtn) viewBtn.classList.remove('active');
+            }
+        }
+
+        // Resize tablature to fill available space
+        this.handleResize();
+    }
+
     /**
      * Show inline input for entering a fret number
      * @param {number} tick
@@ -595,6 +622,9 @@ class TablatureEditor {
             if (!action) return;
 
             switch (action) {
+                case 'tab-view-mode':
+                    this._toggleTabOnlyMode();
+                    break;
                 case 'tab-undo':
                     this._performUndo();
                     break;
