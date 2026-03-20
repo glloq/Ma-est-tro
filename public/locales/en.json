@@ -471,7 +471,10 @@
     "drumKit": "GM Drum Kit",
     "drumKitNotice": "Drum kits use MIDI channel 10 and discrete note mode. These settings will be applied automatically on save.",
     "whiteKeys": "White keys",
-    "blackKeys": "Black keys"
+    "blackKeys": "Black keys",
+    "polyphony": "Polyphony",
+    "polyphonyHelp": "Maximum number of simultaneous notes (1-128). Default: 16",
+    "polyphonyAutoString": "auto-set from number of strings"
   },
   "lighting": {
     "title": "Lighting Control",

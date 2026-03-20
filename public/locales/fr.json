@@ -471,7 +471,10 @@
     "drumKit": "Kit batterie GM",
     "drumKitNotice": "Les kits de batterie utilisent le canal MIDI 10 et le mode notes individuelles. Ces réglages seront appliqués automatiquement à la sauvegarde.",
     "whiteKeys": "Touches blanches",
-    "blackKeys": "Touches noires"
+    "blackKeys": "Touches noires",
+    "polyphony": "Polyphonie",
+    "polyphonyHelp": "Nombre maximum de notes simultanées (1-128). Défaut: 16",
+    "polyphonyAutoString": "auto-défini par le nombre de cordes"
   },
   "lighting": {
     "title": "Contrôle Lumière",
