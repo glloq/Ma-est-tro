@@ -27,12 +27,22 @@ class TablatureConverter {
    * @param {boolean} instrumentConfig.is_fretless - Whether the instrument has no frets
    * @param {number} instrumentConfig.capo_fret - Capo position (shifts all open strings up)
    */
+  // Available algorithms
+  static ALGORITHMS = {
+    min_movement: 'min_movement',
+    lowest_fret: 'lowest_fret',
+    highest_fret: 'highest_fret',
+    zone: 'zone'
+  };
+
   constructor(instrumentConfig) {
     this.tuning = instrumentConfig.tuning;
     this.numStrings = instrumentConfig.num_strings;
     this.numFrets = instrumentConfig.num_frets;
     this.isFretless = instrumentConfig.is_fretless;
     this.capoFret = instrumentConfig.capo_fret || 0;
+    this.ccEnabled = instrumentConfig.cc_enabled !== undefined ? !!instrumentConfig.cc_enabled : true;
+    this.algorithm = instrumentConfig.tab_algorithm || 'min_movement';
 
     // Effective open-string notes with capo applied
     this.effectiveTuning = this.tuning.map(note => note + this.capoFret);
@@ -56,12 +66,32 @@ class TablatureConverter {
    * @returns {Array<Object>} Tablature events sorted by tick
    *   Each event: { tick, string (1-based), fret (0-based or float for fretless), velocity, duration, midiNote, channel }
    */
-  convertMidiToTablature(notes) {
+  convertMidiToTablature(notes, algorithmOverride) {
     if (!notes || notes.length === 0) return [];
 
-    // Group simultaneous notes (same tick) into chords
-    const chordGroups = this._groupByTick(notes);
+    const algo = algorithmOverride || this.algorithm;
 
+    switch (algo) {
+      case 'lowest_fret':
+        return this._convertLowestFret(notes);
+      case 'highest_fret':
+        return this._convertHighestFret(notes);
+      case 'zone':
+        return this._convertZone(notes);
+      case 'min_movement':
+      default:
+        return this._convertMinMovement(notes);
+    }
+  }
+
+  // ==========================================================================
+  // Algorithm: min_movement (default — original algorithm)
+  // Minimizes hand movement between consecutive notes/chords
+  // ==========================================================================
+
+  /** @private */
+  _convertMinMovement(notes) {
+    const chordGroups = this._groupByTick(notes);
     const tabEvents = [];
     let lastHandPosition = this._getDefaultHandPosition();
 
@@ -70,47 +100,28 @@ class TablatureConverter {
       const chordNotes = group.notes;
 
       if (chordNotes.length === 1) {
-        // Single note — pick best position closest to current hand
         const note = chordNotes[0];
         const positions = this._getPossiblePositions(note.n);
-
-        if (positions.length === 0) {
-          // Note out of range — skip with warning
-          continue;
-        }
+        if (positions.length === 0) continue;
 
         const best = this._pickClosest(positions, lastHandPosition);
         tabEvents.push({
-          tick,
-          string: best.string,
-          fret: best.fret,
-          velocity: note.v,
-          duration: note.g,
-          midiNote: note.n,
-          channel: note.c
+          tick, string: best.string, fret: best.fret,
+          velocity: note.v, duration: note.g, midiNote: note.n, channel: note.c
         });
 
-        // Smooth hand movement: blend toward the new fret (don't jump instantly)
         if (best.fret > 0) {
           lastHandPosition = Math.round(lastHandPosition * 0.3 + best.fret * 0.7);
         }
       } else {
-        // Chord — optimize assignment across strings
         const assignment = this._assignChord(chordNotes, lastHandPosition);
-
         for (const entry of assignment) {
           tabEvents.push({
-            tick,
-            string: entry.string,
-            fret: entry.fret,
-            velocity: entry.velocity,
-            duration: entry.duration,
-            midiNote: entry.midiNote,
-            channel: entry.channel
+            tick, string: entry.string, fret: entry.fret,
+            velocity: entry.velocity, duration: entry.duration,
+            midiNote: entry.midiNote, channel: entry.channel
           });
         }
-
-        // Update hand position to average fret of the chord (ignoring open strings)
         const frettedPositions = assignment.filter(e => e.fret > 0);
         if (frettedPositions.length > 0) {
           lastHandPosition = Math.round(
@@ -121,6 +132,283 @@ class TablatureConverter {
     }
 
     return tabEvents;
+  }
+
+  // ==========================================================================
+  // Algorithm: lowest_fret
+  // Always picks the lowest fret available (open strings preferred)
+  // ==========================================================================
+
+  /** @private */
+  _convertLowestFret(notes) {
+    const chordGroups = this._groupByTick(notes);
+    const tabEvents = [];
+
+    for (const group of chordGroups) {
+      const tick = group.tick;
+      const chordNotes = group.notes;
+
+      if (chordNotes.length === 1) {
+        const note = chordNotes[0];
+        const positions = this._getPossiblePositions(note.n);
+        if (positions.length === 0) continue;
+
+        // Pick the position with the lowest fret
+        const best = positions.reduce((a, b) => a.fret <= b.fret ? a : b);
+        tabEvents.push({
+          tick, string: best.string, fret: best.fret,
+          velocity: note.v, duration: note.g, midiNote: note.n, channel: note.c
+        });
+      } else {
+        // Chord: assign with lowest-fret preference
+        const assignment = this._assignChordWithPicker(chordNotes,
+          (positions) => positions.reduce((a, b) => a.fret <= b.fret ? a : b));
+        for (const entry of assignment) {
+          tabEvents.push({
+            tick, string: entry.string, fret: entry.fret,
+            velocity: entry.velocity, duration: entry.duration,
+            midiNote: entry.midiNote, channel: entry.channel
+          });
+        }
+      }
+    }
+
+    return tabEvents;
+  }
+
+  // ==========================================================================
+  // Algorithm: highest_fret
+  // Prefers the highest fret / highest string position
+  // ==========================================================================
+
+  /** @private */
+  _convertHighestFret(notes) {
+    const chordGroups = this._groupByTick(notes);
+    const tabEvents = [];
+
+    for (const group of chordGroups) {
+      const tick = group.tick;
+      const chordNotes = group.notes;
+
+      if (chordNotes.length === 1) {
+        const note = chordNotes[0];
+        const positions = this._getPossiblePositions(note.n);
+        if (positions.length === 0) continue;
+
+        // Pick the position with the highest fret
+        const best = positions.reduce((a, b) => a.fret >= b.fret ? a : b);
+        tabEvents.push({
+          tick, string: best.string, fret: best.fret,
+          velocity: note.v, duration: note.g, midiNote: note.n, channel: note.c
+        });
+      } else {
+        const assignment = this._assignChordWithPicker(chordNotes,
+          (positions) => positions.reduce((a, b) => a.fret >= b.fret ? a : b));
+        for (const entry of assignment) {
+          tabEvents.push({
+            tick, string: entry.string, fret: entry.fret,
+            velocity: entry.velocity, duration: entry.duration,
+            midiNote: entry.midiNote, channel: entry.channel
+          });
+        }
+      }
+    }
+
+    return tabEvents;
+  }
+
+  // ==========================================================================
+  // Algorithm: zone
+  // Groups notes in a fixed fret zone per string, minimizing per-string
+  // movement. Analyzes the whole piece first to find optimal zones.
+  // ==========================================================================
+
+  /** @private */
+  _convertZone(notes) {
+    const ZONE_SIZE = 5; // fret span per zone
+    const chordGroups = this._groupByTick(notes);
+
+    // Phase 1: Determine optimal zone center per string by analyzing all notes
+    const stringZones = this._computeStringZones(notes, ZONE_SIZE);
+
+    const tabEvents = [];
+
+    for (const group of chordGroups) {
+      const tick = group.tick;
+      const chordNotes = group.notes;
+
+      if (chordNotes.length === 1) {
+        const note = chordNotes[0];
+        const positions = this._getPossiblePositions(note.n);
+        if (positions.length === 0) continue;
+
+        // Pick position closest to that string's zone center
+        const best = this._pickBestInZone(positions, stringZones, ZONE_SIZE);
+        tabEvents.push({
+          tick, string: best.string, fret: best.fret,
+          velocity: note.v, duration: note.g, midiNote: note.n, channel: note.c
+        });
+      } else {
+        // Chord: assign within zones
+        const assignment = this._assignChordInZone(chordNotes, stringZones, ZONE_SIZE);
+        for (const entry of assignment) {
+          tabEvents.push({
+            tick, string: entry.string, fret: entry.fret,
+            velocity: entry.velocity, duration: entry.duration,
+            midiNote: entry.midiNote, channel: entry.channel
+          });
+        }
+      }
+    }
+
+    return tabEvents;
+  }
+
+  /**
+   * Analyze all notes to find the optimal zone center for each string.
+   * For each string, finds the fret zone that covers the most playable notes.
+   * @private
+   */
+  _computeStringZones(notes, zoneSize) {
+    const zones = new Array(this.numStrings).fill(0);
+
+    // Count how many notes each string could play at each fret zone
+    for (let s = 0; s < this.numStrings; s++) {
+      const openNote = this.effectiveTuning[s];
+      const maxFret = this.isFretless ? 48 : this.numFrets;
+      const fretHits = new Array(maxFret + 1).fill(0);
+
+      for (const note of notes) {
+        const fret = note.n - openNote;
+        if (fret >= 0 && fret <= maxFret) {
+          fretHits[fret]++;
+        }
+      }
+
+      // Find zone center with maximum coverage
+      let bestCenter = 0;
+      let bestScore = 0;
+      for (let center = 0; center <= maxFret; center++) {
+        let score = 0;
+        const lo = Math.max(0, center - Math.floor(zoneSize / 2));
+        const hi = Math.min(maxFret, center + Math.floor(zoneSize / 2));
+        for (let f = lo; f <= hi; f++) {
+          score += fretHits[f];
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          bestCenter = center;
+        }
+      }
+
+      zones[s] = bestCenter;
+    }
+
+    return zones;
+  }
+
+  /**
+   * Pick the position closest to the string's assigned zone
+   * @private
+   */
+  _pickBestInZone(positions, stringZones, zoneSize) {
+    let best = positions[0];
+    let bestCost = Infinity;
+
+    for (const pos of positions) {
+      const zoneCenter = stringZones[pos.string - 1];
+      const halfZone = Math.floor(zoneSize / 2);
+      // Cost: distance from zone center, with strong penalty for being outside the zone
+      let cost;
+      if (pos.fret === 0) {
+        cost = 0.5; // Open strings are always OK
+      } else {
+        const dist = Math.abs(pos.fret - zoneCenter);
+        cost = dist <= halfZone ? dist * 0.5 : dist * 3;
+      }
+      if (cost < bestCost) {
+        bestCost = cost;
+        best = pos;
+      }
+    }
+
+    return best;
+  }
+
+  /**
+   * Assign chord notes using zone preference (greedy with zone cost)
+   * @private
+   */
+  _assignChordInZone(chordNotes, stringZones, zoneSize) {
+    const usedStrings = {};
+    const result = [];
+    const halfZone = Math.floor(zoneSize / 2);
+
+    // Sort notes by pitch (lowest first) for consistent string assignment
+    const sorted = [...chordNotes].sort((a, b) => a.n - b.n);
+
+    for (const note of sorted) {
+      const positions = this._getPossiblePositions(note.n)
+        .filter(pos => !usedStrings[pos.string]);
+
+      if (positions.length === 0) continue;
+
+      // Score by zone proximity
+      const scored = positions.map(pos => {
+        const zoneCenter = stringZones[pos.string - 1];
+        let cost;
+        if (pos.fret === 0) {
+          cost = 0.5;
+        } else {
+          const dist = Math.abs(pos.fret - zoneCenter);
+          cost = dist <= halfZone ? dist * 0.5 : dist * 3;
+        }
+        return { ...pos, cost };
+      }).sort((a, b) => a.cost - b.cost);
+
+      const best = scored[0];
+      usedStrings[best.string] = true;
+      result.push({
+        string: best.string, fret: best.fret,
+        velocity: note.v, duration: note.g, midiNote: note.n, channel: note.c
+      });
+    }
+
+    return result;
+  }
+
+  // ==========================================================================
+  // Shared chord helper for lowest_fret / highest_fret
+  // ==========================================================================
+
+  /**
+   * Assign chord notes using a simple picker function (greedy, no backtracking).
+   * @private
+   * @param {Array} chordNotes
+   * @param {Function} picker - (positions) => best position
+   */
+  _assignChordWithPicker(chordNotes, picker) {
+    const usedStrings = {};
+    const result = [];
+
+    // Sort by pitch (lowest first) for natural string order
+    const sorted = [...chordNotes].sort((a, b) => a.n - b.n);
+
+    for (const note of sorted) {
+      const positions = this._getPossiblePositions(note.n)
+        .filter(pos => !usedStrings[pos.string]);
+
+      if (positions.length === 0) continue;
+
+      const best = picker(positions);
+      usedStrings[best.string] = true;
+      result.push({
+        string: best.string, fret: best.fret,
+        velocity: note.v, duration: note.g, midiNote: note.n, channel: note.c
+      });
+    }
+
+    return result;
   }
 
   /**
@@ -173,21 +461,23 @@ class TablatureConverter {
 
       if (midiNote < 0 || midiNote > 127) continue;
 
-      // Generate CC20 (string select) before the note
-      ccEvents.push({
-        tick: event.tick,
-        cc: CC_STRING_SELECT,
-        value: event.string,  // 1-based string number
-        channel: event.channel || 0
-      });
+      // Generate CC20 (string select) and CC21 (fret select) only if cc_enabled
+      if (this.ccEnabled) {
+        ccEvents.push({
+          tick: event.tick,
+          cc: CC_STRING_SELECT,
+          value: event.string,  // 1-based string number
+          channel: event.channel || 0
+        });
 
-      // Generate CC21 (fret select) before the note
-      ccEvents.push({
-        tick: event.tick,
-        cc: CC_FRET_SELECT,
-        value: Math.round(event.fret),
-        channel: event.channel || 0
-      });
+        // Generate CC21 (fret select) before the note
+        ccEvents.push({
+          tick: event.tick,
+          cc: CC_FRET_SELECT,
+          value: Math.round(event.fret),
+          channel: event.channel || 0
+        });
+      }
 
       // Generate MIDI note
       notes.push({

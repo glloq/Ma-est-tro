@@ -18,7 +18,9 @@ async function stringInstrumentCreate(app, data) {
     num_frets: data.num_frets,
     tuning: data.tuning,
     is_fretless: data.is_fretless,
-    capo_fret: data.capo_fret
+    capo_fret: data.capo_fret,
+    cc_enabled: data.cc_enabled,
+    tab_algorithm: data.tab_algorithm
   });
   return { success: true, id };
 }
@@ -32,7 +34,9 @@ async function stringInstrumentUpdate(app, data) {
     num_frets: data.num_frets,
     tuning: data.tuning,
     is_fretless: data.is_fretless,
-    capo_fret: data.capo_fret
+    capo_fret: data.capo_fret,
+    cc_enabled: data.cc_enabled,
+    tab_algorithm: data.tab_algorithm
   });
   return { success: updated };
 }

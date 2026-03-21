@@ -33,7 +33,9 @@ class StringInstrumentConfigModal extends BaseModal {
             num_frets: 24,
             tuning: [40, 45, 50, 55, 59, 64],
             is_fretless: false,
-            capo_fret: 0
+            capo_fret: 0,
+            cc_enabled: true,
+            tab_algorithm: 'min_movement'
         };
 
         this.presets = {};
@@ -78,7 +80,9 @@ class StringInstrumentConfigModal extends BaseModal {
                     num_frets: resp.instrument.num_frets || 24,
                     tuning: resp.instrument.tuning || [40, 45, 50, 55, 59, 64],
                     is_fretless: !!resp.instrument.is_fretless,
-                    capo_fret: resp.instrument.capo_fret || 0
+                    capo_fret: resp.instrument.capo_fret || 0,
+                    cc_enabled: resp.instrument.cc_enabled !== undefined ? !!resp.instrument.cc_enabled : true,
+                    tab_algorithm: resp.instrument.tab_algorithm || 'min_movement'
                 };
             }
         } catch (e) {
@@ -146,6 +150,11 @@ class StringInstrumentConfigModal extends BaseModal {
                 </div>`;
         }).join('');
 
+        const ccLabel = this.t('stringInstrument.ccEnabled') !== 'stringInstrument.ccEnabled'
+            ? this.t('stringInstrument.ccEnabled')
+            : 'Enable CC20/CC21 (string & fret select)';
+        const ccCollapsedClass = c.cc_enabled ? '' : 'si-collapsed';
+
         return `
             <div class="si-config-form">
                 <div class="si-top-row">
@@ -159,30 +168,48 @@ class StringInstrumentConfigModal extends BaseModal {
                     </div>
                 </div>
 
-                <div class="si-params-row">
-                    <div class="si-field">
-                        <label for="si-strings">${this.t('stringInstrument.numStrings')}</label>
-                        <input type="number" id="si-strings" class="si-input si-input-sm" value="${c.num_strings}" min="1" max="12">
-                    </div>
-                    <div class="si-field">
-                        <label for="si-frets">${this.t('stringInstrument.numFrets')}</label>
-                        <input type="number" id="si-frets" class="si-input si-input-sm" value="${c.num_frets}" min="0" max="36"
-                               ${c.is_fretless ? 'disabled' : ''}>
-                    </div>
+                <div class="si-cc-toggle-row">
                     <div class="si-field si-checkbox-field">
-                        <input type="checkbox" id="si-fretless" ${c.is_fretless ? 'checked' : ''}>
-                        <label for="si-fretless">${this.t('stringInstrument.isFretless')}</label>
+                        <input type="checkbox" id="si-cc-enabled" ${c.cc_enabled ? 'checked' : ''}>
+                        <label for="si-cc-enabled">${ccLabel}</label>
                     </div>
-                    <div class="si-field">
-                        <label for="si-capo">${this.t('stringInstrument.capoFret')}</label>
-                        <input type="number" id="si-capo" class="si-input si-input-sm" value="${c.capo_fret}" min="0" max="36">
+                    <div class="si-field si-algo-field">
+                        <label for="si-algorithm">${this.t('stringInstrument.algorithm') || 'Conversion algorithm'}</label>
+                        <select id="si-algorithm" class="si-input">
+                            <option value="min_movement" ${c.tab_algorithm === 'min_movement' ? 'selected' : ''}>${this.t('tablature.algoMinMovement') || 'Min movement'}</option>
+                            <option value="lowest_fret" ${c.tab_algorithm === 'lowest_fret' ? 'selected' : ''}>${this.t('tablature.algoLowestFret') || 'Lowest fret'}</option>
+                            <option value="highest_fret" ${c.tab_algorithm === 'highest_fret' ? 'selected' : ''}>${this.t('tablature.algoHighestFret') || 'Highest fret'}</option>
+                            <option value="zone" ${c.tab_algorithm === 'zone' ? 'selected' : ''}>${this.t('tablature.algoZone') || 'Zone'}</option>
+                        </select>
                     </div>
                 </div>
 
-                <div class="si-tuning-section">
-                    <label class="si-section-title">${this.t('stringInstrument.tuning')}</label>
-                    <div class="si-tuning-visual" id="si-tuning-visual">
-                        ${tuningRows}
+                <div class="si-details-section ${ccCollapsedClass}" id="si-details-section">
+                    <div class="si-params-row">
+                        <div class="si-field">
+                            <label for="si-strings">${this.t('stringInstrument.numStrings')}</label>
+                            <input type="number" id="si-strings" class="si-input si-input-sm" value="${c.num_strings}" min="1" max="12">
+                        </div>
+                        <div class="si-field">
+                            <label for="si-frets">${this.t('stringInstrument.numFrets')}</label>
+                            <input type="number" id="si-frets" class="si-input si-input-sm" value="${c.num_frets}" min="0" max="36"
+                                   ${c.is_fretless ? 'disabled' : ''}>
+                        </div>
+                        <div class="si-field si-checkbox-field">
+                            <input type="checkbox" id="si-fretless" ${c.is_fretless ? 'checked' : ''}>
+                            <label for="si-fretless">${this.t('stringInstrument.isFretless')}</label>
+                        </div>
+                        <div class="si-field">
+                            <label for="si-capo">${this.t('stringInstrument.capoFret')}</label>
+                            <input type="number" id="si-capo" class="si-input si-input-sm" value="${c.capo_fret}" min="0" max="36">
+                        </div>
+                    </div>
+
+                    <div class="si-tuning-section">
+                        <label class="si-section-title">${this.t('stringInstrument.tuning')}</label>
+                        <div class="si-tuning-visual" id="si-tuning-visual">
+                            ${tuningRows}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -258,6 +285,15 @@ class StringInstrumentConfigModal extends BaseModal {
             }
         });
 
+        // CC enabled toggle
+        this.$('#si-cc-enabled')?.addEventListener('change', (e) => {
+            this.config.cc_enabled = e.target.checked;
+            const section = this.dialog?.querySelector('#si-details-section');
+            if (section) {
+                section.classList.toggle('si-collapsed', !e.target.checked);
+            }
+        });
+
         // Fretless toggle
         this.$('#si-fretless')?.addEventListener('change', (e) => {
             this.config.is_fretless = e.target.checked;
@@ -290,6 +326,8 @@ class StringInstrumentConfigModal extends BaseModal {
             } else if (e.target.id === 'si-capo') {
                 const v = parseInt(e.target.value);
                 if (!isNaN(v) && v >= 0 && v <= 36) this.config.capo_fret = v;
+            } else if (e.target.id === 'si-algorithm') {
+                this.config.tab_algorithm = e.target.value;
             }
         });
 
@@ -396,6 +434,13 @@ class StringInstrumentConfigModal extends BaseModal {
         if (body) {
             body.innerHTML = this.renderBody();
             // Re-attach specific handlers
+            this.$('#si-cc-enabled')?.addEventListener('change', (e) => {
+                this.config.cc_enabled = e.target.checked;
+                const section = this.dialog?.querySelector('#si-details-section');
+                if (section) {
+                    section.classList.toggle('si-collapsed', !e.target.checked);
+                }
+            });
             this.$('#si-preset')?.addEventListener('change', (e) => {
                 this._applyPreset(e.target.value);
             });
@@ -433,7 +478,9 @@ class StringInstrumentConfigModal extends BaseModal {
                 num_frets: this.config.num_frets,
                 tuning: this.config.tuning,
                 is_fretless: this.config.is_fretless,
-                capo_fret: this.config.capo_fret
+                capo_fret: this.config.capo_fret,
+                cc_enabled: this.config.cc_enabled,
+                tab_algorithm: this.config.tab_algorithm
             };
 
             if (this.existingId) {

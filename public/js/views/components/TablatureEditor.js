@@ -156,6 +156,12 @@ class TablatureEditor {
                     <span class="tablature-icon">TAB</span>
                     <span class="tablature-instrument-badge" id="tab-instrument-badge"></span>
                     <span class="tablature-tuning" id="tab-tuning-display"></span>
+                    <select class="tab-algo-select" id="tab-algo-select" title="${this.t('tablature.algorithm') || 'Conversion algorithm'}">
+                        <option value="min_movement">${this.t('tablature.algoMinMovement') || 'Min movement'}</option>
+                        <option value="lowest_fret">${this.t('tablature.algoLowestFret') || 'Lowest fret'}</option>
+                        <option value="highest_fret">${this.t('tablature.algoHighestFret') || 'Highest fret'}</option>
+                        <option value="zone">${this.t('tablature.algoZone') || 'Zone'}</option>
+                    </select>
                 </div>
                 <div class="tablature-toolbar">
                     <span class="tab-mode-group">
@@ -226,6 +232,12 @@ class TablatureEditor {
                 .map(n => noteNames[n % 12])
                 .join('-');
             tuningEl.textContent = tuningStr;
+        }
+
+        // Set algorithm selector
+        const algoSelect = this.containerEl.querySelector('#tab-algo-select');
+        if (algoSelect) {
+            algoSelect.value = this.stringInstrument.tab_algorithm || 'min_movement';
         }
     }
 
@@ -680,6 +692,31 @@ class TablatureEditor {
     }
 
     /**
+     * Handle algorithm change from selector — re-convert MIDI notes
+     * @param {string} algorithm
+     */
+    async _onAlgorithmChange(algorithm) {
+        if (!this.stringInstrument || !algorithm) return;
+
+        // Save to DB
+        if (this.stringInstrument.id) {
+            try {
+                await this.api.sendCommand('string_instrument_update', {
+                    id: this.stringInstrument.id,
+                    tab_algorithm: algorithm
+                });
+                this.stringInstrument.tab_algorithm = algorithm;
+            } catch (error) {
+                this.logger.error('Failed to save algorithm preference:', error);
+            }
+        }
+
+        // Re-convert from current MIDI notes with the new algorithm
+        const channelNotes = (this.modal.fullSequence || []).filter(n => n.c === this.channel);
+        await this.convertFromMidi(channelNotes);
+    }
+
+    /**
      * Show inline input for entering a fret number
      * @param {number} tick
      * @param {number} string - 1-based string number
@@ -761,6 +798,14 @@ class TablatureEditor {
 
     _attachToolbarEvents() {
         if (!this.containerEl) return;
+
+        // Algorithm selector
+        const algoSelect = this.containerEl.querySelector('#tab-algo-select');
+        if (algoSelect) {
+            algoSelect.addEventListener('change', (e) => {
+                this._onAlgorithmChange(e.target.value);
+            });
+        }
 
         this.containerEl.addEventListener('click', (e) => {
             const action = e.target.closest('[data-action]')?.dataset.action;

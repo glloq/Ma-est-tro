@@ -5385,13 +5385,18 @@ class MidiEditorModal {
         if (!this._stringInstrumentChannels) {
             this._stringInstrumentChannels = new Set();
         }
+        if (!this._stringInstrumentCCEnabled) {
+            this._stringInstrumentCCEnabled = new Map();
+        }
 
         try {
             const resp = await this.api.sendCommand('string_instrument_list', {});
             if (resp?.instruments) {
                 this._stringInstrumentChannels.clear();
+                this._stringInstrumentCCEnabled.clear();
                 for (const si of resp.instruments) {
                     this._stringInstrumentChannels.add(si.channel);
+                    this._stringInstrumentCCEnabled.set(si.channel, si.cc_enabled !== false);
                 }
             }
         } catch { /* ignore */ }
@@ -5411,7 +5416,9 @@ class MidiEditorModal {
                 typeof MidiEditorChannelPanel !== 'undefined' &&
                 MidiEditorChannelPanel.getStringInstrumentCategory(channelInfo.program) !== null;
             const hasConfig = this._stringInstrumentChannels.has(ch);
-            const isStringInstrument = isGmString || hasConfig;
+            // Only show TAB button if cc_enabled is true (or if GM-detected without explicit config)
+            const ccEnabled = this._stringInstrumentCCEnabled.get(ch);
+            const isStringInstrument = (isGmString && ccEnabled !== false) || (hasConfig && ccEnabled !== false);
 
             const existingTabBtn = group.querySelector('.channel-tab-btn');
 

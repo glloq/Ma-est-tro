@@ -63,6 +63,23 @@
     opacity: 0.8;
 }
 
+.tab-algo-select {
+    font-size: 11px;
+    font-family: monospace;
+    font-weight: 600;
+    padding: 1px 4px;
+    border: 1px solid var(--border-color, #e9ecef);
+    border-radius: var(--border-radius, 4px);
+    background: var(--bg-secondary, #fff);
+    color: var(--text-primary, #2c3e50);
+    cursor: pointer;
+    outline: none;
+}
+
+.tab-algo-select:focus {
+    border-color: var(--accent-primary, #667eea);
+}
+
 /* ---- Toolbar ---- */
 .tablature-toolbar {
     display: flex;
@@ -258,6 +275,12 @@ body.dark-mode .fretboard-diagram-wrapper {
     border-left-color: #4a5568;
 }
 
+body.dark-mode .tab-algo-select {
+    background: #2d3748;
+    color: #e0e0e0;
+    border-color: #4a5568;
+}
+
 body.dark-mode .tab-fret-input {
     background: #2d3748;
     color: #e0e0e0;
@@ -269,6 +292,49 @@ body.dark-mode .tab-fret-input {
     display: flex;
     flex-direction: column;
     gap: 12px;
+}
+
+.si-cc-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px;
+    background: rgba(102, 126, 234, 0.08);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: var(--border-radius, 4px);
+    flex-wrap: wrap;
+}
+
+.si-cc-toggle-row label {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.si-algo-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.si-algo-field label {
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.si-details-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    overflow: hidden;
+}
+
+.si-details-section.si-collapsed {
+    max-height: 0;
+    opacity: 0.4;
+    pointer-events: none;
+    margin: 0;
 }
 
 .si-top-row {
