@@ -71,6 +71,9 @@ class TablatureEditor {
         this.containerEl.style.display = 'flex';
         this.isVisible = true;
 
+        // Update labels for the current instrument (name, tuning, algorithm)
+        this._updateLabels();
+
         // Split view: piano roll + tablature
         this._setPianoRollVisible(false);
 
