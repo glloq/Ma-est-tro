@@ -15,6 +15,7 @@ class TablatureRenderer {
         this.tuning = options.tuning || [40, 45, 50, 55, 59, 64];
         this.numFrets = options.numFrets || 24;
         this.isFretless = options.isFretless || false;
+        this.capoFret = options.capoFret || 0;
 
         // Layout constants
         this.lineSpacing = 20;        // Pixels between string lines
@@ -392,7 +393,7 @@ class TablatureRenderer {
             const isSelected = this.selectedEvents.has(i);
             const isHovered = this._hoverEvent === i && !isSelected;
             const isUnplayable = !this.isFretless && event.fret > this.numFrets;
-            const fretText = this.isFretless ? event.fret.toFixed(1) : event.fret.toString();
+            const fretText = event.fret.toString();
 
             // Measure text width for background
             ctx.font = 'bold 13px monospace';
@@ -692,9 +693,9 @@ class TablatureRenderer {
                         if (deltaString !== 0) {
                             const newString = evt.string + deltaString;
                             if (newString >= 1 && newString <= this.numStrings) {
-                                // Recalculate fret to preserve the same MIDI note
+                                // Recalculate fret to preserve the same MIDI note (account for capo)
                                 if (evt.midiNote !== undefined && this.tuning) {
-                                    const newOpenNote = this.tuning[newString - 1];
+                                    const newOpenNote = this.tuning[newString - 1] + this.capoFret;
                                     const newFret = evt.midiNote - newOpenNote;
                                     const maxFret = this.isFretless ? 48 : (this.numFrets || 24);
                                     if (newFret >= 0 && newFret <= maxFret) {
@@ -780,10 +781,10 @@ class TablatureRenderer {
 
     _computeStringLabels() {
         const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-        // Display top to bottom = highest to lowest string
+        // Display top to bottom = highest to lowest string (with capo offset)
         const labels = [];
         for (let i = this.numStrings - 1; i >= 0; i--) {
-            const midiNote = this.tuning[i];
+            const midiNote = this.tuning[i] + this.capoFret;
             if (midiNote !== undefined) {
                 const name = noteNames[midiNote % 12];
                 const octave = Math.floor(midiNote / 12) - 1;

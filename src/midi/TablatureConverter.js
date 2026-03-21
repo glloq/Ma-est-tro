@@ -37,7 +37,8 @@ class TablatureConverter {
 
   constructor(instrumentConfig) {
     this.tuning = instrumentConfig.tuning;
-    this.numStrings = instrumentConfig.num_strings;
+    // Use tuning array length as authoritative string count if they disagree
+    this.numStrings = instrumentConfig.tuning?.length || instrumentConfig.num_strings;
     this.numFrets = instrumentConfig.num_frets;
     this.isFretless = instrumentConfig.is_fretless;
     this.capoFret = instrumentConfig.capo_fret || 0;

@@ -230,10 +230,11 @@ class TablatureEditor {
         }
         if (tuningEl && this.stringInstrument.tuning) {
             const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const capo = this.stringInstrument.capo_fret || 0;
             const tuningStr = this.stringInstrument.tuning
-                .map(n => noteNames[n % 12])
+                .map(n => noteNames[(n + capo) % 12])
                 .join('-');
-            tuningEl.textContent = tuningStr;
+            tuningEl.textContent = tuningStr + (capo > 0 ? ` (capo ${capo})` : '');
         }
 
         // Set algorithm selector
@@ -263,7 +264,8 @@ class TablatureEditor {
             numStrings: this.stringInstrument.num_strings,
             tuning: this.stringInstrument.tuning,
             numFrets: this.stringInstrument.num_frets,
-            isFretless: this.stringInstrument.is_fretless
+            isFretless: this.stringInstrument.is_fretless,
+            capoFret: this.stringInstrument.capo_fret || 0
         });
 
         // Sync zoom/scroll with piano roll if available
@@ -345,12 +347,13 @@ class TablatureEditor {
     _simpleMidiToTab(midiNotes) {
         const tuning = this.stringInstrument.tuning;
         const numFrets = this.stringInstrument.num_frets;
+        const capo = this.stringInstrument.capo_fret || 0;
         const events = [];
 
         for (const note of midiNotes) {
             // Find first string that can play this note
             for (let s = 0; s < tuning.length; s++) {
-                const fret = note.n - tuning[s];
+                const fret = note.n - (tuning[s] + capo);
                 if (fret >= 0 && (this.stringInstrument.is_fretless || fret <= numFrets)) {
                     events.push({
                         tick: note.t,
@@ -546,16 +549,17 @@ class TablatureEditor {
         if (!this.stringInstrument) return;
 
         const tuning = this.stringInstrument.tuning;
+        const capo = this.stringInstrument.capo_fret || 0;
         const numFrets = this.stringInstrument.num_frets;
         const maxFret = this.stringInstrument.is_fretless ? 48 : (numFrets || 24);
         const indices = this.renderer.getSelectedIndices();
 
-        // Check all can move to target string
+        // Check all can move to target string (fret relative to capo)
         const moves = [];
         for (const i of indices) {
             const evt = this.tabEvents[i];
             if (!evt) continue;
-            const newFret = evt.midiNote - tuning[targetString - 1];
+            const newFret = evt.midiNote - (tuning[targetString - 1] + capo);
             if (newFret < 0 || newFret > maxFret) return; // Can't play on that string
             moves.push({ index: i, newString: targetString, newFret });
         }
@@ -671,18 +675,19 @@ class TablatureEditor {
         if (!this.stringInstrument) return;
 
         const tuning = this.stringInstrument.tuning;
+        const capo = this.stringInstrument.capo_fret || 0;
         const numFrets = this.stringInstrument.num_frets;
         const numStrings = this.stringInstrument.num_strings;
         const indices = this.renderer.getSelectedIndices();
 
-        // Check all can move before committing
+        // Check all can move before committing (fret relative to capo)
         const moves = [];
         for (const i of indices) {
             const evt = this.tabEvents[i];
             if (!evt) continue;
             const newString = evt.string + direction;
             if (newString < 1 || newString > numStrings) return; // Can't move out of range
-            const newFret = evt.midiNote - tuning[newString - 1];
+            const newFret = evt.midiNote - (tuning[newString - 1] + capo);
             const maxFret = this.stringInstrument.is_fretless ? 48 : (numFrets || 24);
             if (newFret < 0 || newFret > maxFret) return; // Can't play on that string
             moves.push({ index: i, newString, newFret });
@@ -763,13 +768,14 @@ class TablatureEditor {
             const fretVal = parseInt(input.value);
             if (!isNaN(fretVal) && fretVal >= 0 && fretVal <= maxFret) {
                 if (this.renderer) this.renderer.saveSnapshot();
+                const capo = this.stringInstrument.capo_fret || 0;
                 if (editIndex !== null) {
                     // Update existing
                     this.tabEvents[editIndex].fret = fretVal;
-                    this.tabEvents[editIndex].midiNote = this.stringInstrument.tuning[string - 1] + fretVal;
+                    this.tabEvents[editIndex].midiNote = this.stringInstrument.tuning[string - 1] + capo + fretVal;
                 } else {
                     // Add new
-                    const midiNote = this.stringInstrument.tuning[string - 1] + fretVal;
+                    const midiNote = this.stringInstrument.tuning[string - 1] + capo + fretVal;
                     this.tabEvents.push({
                         tick,
                         string,

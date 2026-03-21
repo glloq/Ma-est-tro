@@ -38,11 +38,11 @@ class StringInstrumentDatabase {
     'bass_6_standard':    { name: 'Bass 6-String Standard (BEADGC)', strings: 6, frets: 24, tuning: [23, 28, 33, 38, 43, 48] },
 
     // Ukulele (4 strings)
-    'ukulele_standard':   { name: 'Ukulele Standard (GCEA)',       strings: 4, frets: 18, tuning: [55, 48, 52, 57] },
+    'ukulele_standard':   { name: 'Ukulele Standard (GCEA)',       strings: 4, frets: 18, tuning: [67, 60, 64, 69] },
     'ukulele_baritone':   { name: 'Ukulele Baritone (DGBE)',       strings: 4, frets: 18, tuning: [50, 55, 59, 64] },
 
     // Banjo (5 strings)
-    'banjo_standard':     { name: 'Banjo Open G (gDGBD)',          strings: 5, frets: 22, tuning: [62, 50, 55, 59, 62] },
+    'banjo_standard':     { name: 'Banjo Open G (gDGBD)',          strings: 5, frets: 22, tuning: [67, 50, 55, 59, 62] },
 
     // Violin family (fretless)
     'violin':             { name: 'Violin (GDAE)',                 strings: 4, frets: 0, tuning: [55, 62, 69, 76], fretless: true },
