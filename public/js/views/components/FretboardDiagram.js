@@ -45,21 +45,56 @@ class FretboardDiagram {
 
     updateTheme() {
         const isDark = document.body.classList.contains('dark-mode');
-        this.colors = {
-            background: isDark ? '#1a1a2e' : '#f5f0e8',
-            fretboard: isDark ? '#2d1f0e' : '#d4a574',
-            fretWire: isDark ? '#888888' : '#aaaaaa',
-            nut: isDark ? '#cccccc' : '#f0f0e0',
-            string: isDark ? '#b0b0b0' : '#666666',
-            stringLabel: isDark ? '#a0aec0' : '#555555',
-            fretNumber: isDark ? '#718096' : '#888888',
-            fingerDot: '#667eea',
-            fingerDotActive: '#ff4444',
-            fingerText: '#ffffff',
-            openString: '#28a745',
-            mutedString: '#dc3545',
-            marker: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
-        };
+        const isColored = document.body.classList.contains('theme-colored');
+        if (isColored) {
+            this.colors = {
+                background: '#f0f4ff',
+                fretboard: '#c8b898',
+                fretWire: '#a0a0b8',
+                nut: '#e8e0d8',
+                string: '#5a6089',
+                stringLabel: '#5a6089',
+                fretNumber: '#9498b8',
+                fingerDot: '#667eea',
+                fingerDotActive: '#ef476f',
+                fingerText: '#ffffff',
+                openString: '#06d6a0',
+                mutedString: '#ef476f',
+                marker: 'rgba(102,126,234,0.08)',
+            };
+        } else if (isDark) {
+            this.colors = {
+                background: '#1a1a2e',
+                fretboard: '#2d1f0e',
+                fretWire: '#888888',
+                nut: '#cccccc',
+                string: '#b0b0b0',
+                stringLabel: '#a0aec0',
+                fretNumber: '#718096',
+                fingerDot: '#667eea',
+                fingerDotActive: '#ff4444',
+                fingerText: '#ffffff',
+                openString: '#28a745',
+                mutedString: '#dc3545',
+                marker: 'rgba(255,255,255,0.1)',
+            };
+        } else {
+            this.colors = {
+                background: '#f5f0e8',
+                fretboard: '#d4a574',
+                fretWire: '#aaaaaa',
+                nut: '#f0f0e0',
+                string: '#666666',
+                stringLabel: '#555555',
+                fretNumber: '#888888',
+                fingerDot: '#667eea',
+                fingerDotActive: '#ff4444',
+                fingerText: '#ffffff',
+                openString: '#28a745',
+                mutedString: '#dc3545',
+                marker: 'rgba(0,0,0,0.08)',
+            };
+        }
     }
 
     // ========================================================================

@@ -1299,6 +1299,32 @@ class SettingsModal {
         // Supprimer les classes de thème précédentes
         document.body.classList.remove('theme-light', 'theme-dark', 'theme-colored', 'dark-mode');
 
+        // Nettoyer toutes les custom properties inline pour éviter les fuites entre thèmes
+        const propsToClean = [
+            '--bg-primary', '--bg-secondary', '--bg-tertiary',
+            '--text-primary', '--text-secondary', '--text-muted', '--text-disabled',
+            '--border-color', '--border-light',
+            '--accent-primary', '--accent-secondary',
+            '--success-color', '--warning-color', '--danger-color', '--info-color',
+            '--card-bg', '--header-bg',
+            '--shadow-light', '--shadow-medium', '--shadow-heavy',
+            '--shadow-sm', '--shadow-md', '--shadow-lg',
+            '--primary-color', '--primary-hover', '--primary-active',
+            '--secondary-color', '--accent-warning', '--accent-danger', '--accent-success',
+            '--color-primary', '--color-secondary', '--color-accent',
+            '--instrument-primary', '--instrument-success', '--instrument-warning',
+            '--instrument-error', '--instrument-usb', '--instrument-wifi',
+            '--instrument-bluetooth', '--instrument-bg', '--instrument-border', '--instrument-shadow',
+            '--bluetooth-primary', '--bluetooth-success', '--bluetooth-danger',
+            '--bluetooth-border', '--bluetooth-shadow',
+            '--network-primary', '--network-secondary', '--network-success',
+            '--network-danger', '--network-border', '--network-shadow',
+            '--focus-ring',
+            '--scrollbar-track-bg', '--scrollbar-thumb-bg', '--scrollbar-thumb-hover',
+            '--scrollbar-thumb-active', '--scrollbar-thumb-border', '--scrollbar-corner-bg'
+        ];
+        propsToClean.forEach(p => root.style.removeProperty(p));
+
         // Ajouter la nouvelle classe
         document.body.classList.add(`theme-${theme}`);
         // Also add dark-mode class for CSS compatibility (used by themes.css, variables.css, etc.)
@@ -1306,7 +1332,7 @@ class SettingsModal {
             document.body.classList.add('dark-mode');
         }
 
-        // Appliquer les variables CSS selon le thème
+        // Appliquer les variables CSS selon le thème (renfort inline pour garantir la cohérence)
         switch (theme) {
             case 'dark':
                 root.style.setProperty('--bg-primary', '#1a1a1a');
@@ -1319,6 +1345,8 @@ class SettingsModal {
                 break;
 
             case 'colored':
+                // Les variables complètes sont dans variables.css body.theme-colored
+                // On ne set ici que les essentielles pour éviter un flash
                 root.style.setProperty('--bg-primary', '#f0f4ff');
                 root.style.setProperty('--bg-secondary', '#ffffff');
                 root.style.setProperty('--bg-tertiary', '#e8eeff');
@@ -1346,6 +1374,9 @@ class SettingsModal {
                 root.style.setProperty('--header-bg', '#ffffff');
                 break;
         }
+
+        // Notifier les canvas renderers de mettre à jour leurs couleurs
+        document.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme } }));
 
         this.logger?.info(`Theme applied: ${theme}`);
     }

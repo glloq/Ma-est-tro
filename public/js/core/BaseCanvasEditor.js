@@ -165,13 +165,16 @@ class BaseCanvasEditor {
         // Root container
         this.element = document.createElement('div');
         this.element.className = this.getEditorClassName();
+        const isColored = document.body.classList.contains('theme-colored');
+        const editorBg = isColored ? '#f0f4ff' : '#1a1a1a';
+        const editorBorder = isColored ? '#d4daff' : '#333';
         this.element.style.cssText = `
             width: 100%;
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: #1a1a1a;
-            border-top: 1px solid #333;
+            background: ${editorBg};
+            border-top: 1px solid ${editorBorder};
             position: relative;
             overflow: hidden;
             min-height: 0;
@@ -605,7 +608,8 @@ class BaseCanvasEditor {
         ctx.clearRect(0, 0, w, h);
 
         // Vertical grid lines (time axis)
-        ctx.strokeStyle = '#3a3a3a';
+        const isColored = document.body.classList.contains('theme-colored');
+        ctx.strokeStyle = isColored ? '#d4daff' : '#3a3a3a';
         ctx.lineWidth = 1;
 
         const gridSize = this.options.grid;
@@ -626,7 +630,7 @@ class BaseCanvasEditor {
         this.renderGridLabels(ctx, labelMargin);
 
         // Vertical border separating label area
-        ctx.strokeStyle = '#555';
+        ctx.strokeStyle = isColored ? '#b0b8e8' : '#555';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(labelMargin, 0);
@@ -683,7 +687,7 @@ class BaseCanvasEditor {
     /** @private */
     _drawSelectionRect(x1, y1, x2, y2) {
         const ctx = this.ctx;
-        ctx.strokeStyle = '#2196F3';
+        ctx.strokeStyle = document.body.classList.contains('theme-colored') ? '#667eea' : '#2196F3';
         ctx.lineWidth = 1;
         ctx.setLineDash([5, 5]);
         ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
@@ -693,7 +697,7 @@ class BaseCanvasEditor {
     /** @private */
     _drawLinePreview(start, end) {
         const ctx = this.ctx;
-        ctx.strokeStyle = '#9E9E9E';
+        ctx.strokeStyle = document.body.classList.contains('theme-colored') ? '#9498b8' : '#9E9E9E';
         ctx.lineWidth = 1;
         ctx.setLineDash([5, 5]);
         ctx.beginPath();
@@ -980,9 +984,10 @@ class BaseCanvasEditor {
      * @param {function} [opts.getLabelColor] - Per-value label color (value => string|null)
      */
     drawHorizontalGridLines(ctx, labelMargin, values, opts = {}) {
-        const lineColor = opts.lineColor || '#3a3a3a';
-        const labelColor = opts.labelColor || '#aaa';
-        const bgColor = opts.bgColor || '#1a1a1a';
+        const isColored = document.body.classList.contains('theme-colored');
+        const lineColor = opts.lineColor || (isColored ? '#d4daff' : '#3a3a3a');
+        const labelColor = opts.labelColor || (isColored ? '#5a6089' : '#aaa');
+        const bgColor = opts.bgColor || (isColored ? '#f0f4ff' : '#1a1a1a');
         const font = opts.font || '11px monospace';
         const formatLabel = opts.formatLabel || ((v) => v.toString());
         const w = this.gridCanvas.width;
