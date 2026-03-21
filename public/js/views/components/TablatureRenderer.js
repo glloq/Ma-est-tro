@@ -86,21 +86,56 @@ class TablatureRenderer {
 
     updateTheme() {
         const isDark = document.body.classList.contains('dark-mode');
-        this.colors = {
-            background: isDark ? '#1a1a2e' : '#ffffff',
-            stringLine: isDark ? '#4a5568' : '#999999',
-            stringLabel: isDark ? '#a0aec0' : '#666666',
-            fretNumber: isDark ? '#e0e0e0' : '#222222',
-            fretNumberSelected: '#ffffff',
-            fretNumberBg: 'transparent',
-            fretNumberSelectedBg: '#667eea',
-            measureLine: isDark ? '#2d3748' : '#e0e0e0',
-            beatLine: isDark ? '#1f2937' : '#f0f0f0',
-            playhead: '#ff4444',
-            hoverHighlight: isDark ? 'rgba(102,126,234,0.2)' : 'rgba(102,126,234,0.1)',
-            selectionRect: 'rgba(102,126,234,0.3)',
-            unplayable: isDark ? '#ff6666' : '#cc0000',
-        };
+        const isColored = document.body.classList.contains('theme-colored');
+        if (isColored) {
+            this.colors = {
+                background: '#f0f4ff',
+                stringLine: '#b0b8e8',
+                stringLabel: '#5a6089',
+                fretNumber: '#2d3561',
+                fretNumberSelected: '#ffffff',
+                fretNumberBg: 'transparent',
+                fretNumberSelectedBg: '#667eea',
+                measureLine: '#d4daff',
+                beatLine: '#e8eeff',
+                playhead: '#ef476f',
+                hoverHighlight: 'rgba(102,126,234,0.15)',
+                selectionRect: 'rgba(102,126,234,0.3)',
+                unplayable: '#ef476f',
+            };
+        } else if (isDark) {
+            this.colors = {
+                background: '#1a1a2e',
+                stringLine: '#4a5568',
+                stringLabel: '#a0aec0',
+                fretNumber: '#e0e0e0',
+                fretNumberSelected: '#ffffff',
+                fretNumberBg: 'transparent',
+                fretNumberSelectedBg: '#667eea',
+                measureLine: '#2d3748',
+                beatLine: '#1f2937',
+                playhead: '#ff4444',
+                hoverHighlight: 'rgba(102,126,234,0.2)',
+                selectionRect: 'rgba(102,126,234,0.3)',
+                unplayable: '#ff6666',
+            };
+        } else {
+            this.colors = {
+                background: '#ffffff',
+                stringLine: '#999999',
+                stringLabel: '#666666',
+                fretNumber: '#222222',
+                fretNumberSelected: '#ffffff',
+                fretNumberBg: 'transparent',
+                fretNumberSelectedBg: '#667eea',
+                measureLine: '#e0e0e0',
+                beatLine: '#f0f0f0',
+                playhead: '#ff4444',
+                hoverHighlight: 'rgba(102,126,234,0.1)',
+                selectionRect: 'rgba(102,126,234,0.3)',
+                unplayable: '#cc0000',
+            };
+        }
     }
 
     // ========================================================================

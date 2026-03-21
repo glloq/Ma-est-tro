@@ -44,8 +44,13 @@ class PianoRollView {
         ];
         this.mutedColor = '#444';
         this.bgColor = '#111';
+        this.gridColor = '#333';
+        this.labelColor = '#888';
 
         this.init();
+
+        // Écouter les changements de thème
+        document.addEventListener('theme-changed', () => this.updateTheme());
     }
 
     log(level, msg) {
@@ -61,7 +66,29 @@ class PianoRollView {
         this.createDOM();
         this.setupEvents();
         this.loadSettings();
+        this.updateTheme();
         this.log('info', 'v6 initialized (direct audio timing)');
+    }
+
+    updateTheme() {
+        const isDark = document.body.classList.contains('dark-mode');
+        const isColored = document.body.classList.contains('theme-colored');
+        if (isColored) {
+            this.bgColor = '#e8eeff';
+            this.mutedColor = '#9498b8';
+            this.gridColor = '#d4daff';
+            this.labelColor = '#5a6089';
+        } else if (isDark) {
+            this.bgColor = '#111';
+            this.mutedColor = '#444';
+            this.gridColor = '#333';
+            this.labelColor = '#888';
+        } else {
+            this.bgColor = '#111';
+            this.mutedColor = '#444';
+            this.gridColor = '#333';
+            this.labelColor = '#888';
+        }
     }
 
     loadSettings() {
@@ -471,7 +498,8 @@ class PianoRollView {
         }
 
         // Playhead
-        this.ctx.strokeStyle = '#fff';
+        const isColoredTheme = document.body.classList.contains('theme-colored');
+        this.ctx.strokeStyle = isColoredTheme ? '#667eea' : '#fff';
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
         this.ctx.moveTo(playheadX, 0);
@@ -481,7 +509,7 @@ class PianoRollView {
         // Temps - directement en secondes
         const m = Math.floor(this.currentTime / 60);
         const s = Math.floor(this.currentTime % 60);
-        this.ctx.fillStyle = '#fff';
+        this.ctx.fillStyle = isColoredTheme ? '#2d3561' : '#fff';
         this.ctx.font = '12px monospace';
         this.ctx.textAlign = 'left';
         this.ctx.fillText(`${m}:${s.toString().padStart(2, '0')}`, 5, 15);

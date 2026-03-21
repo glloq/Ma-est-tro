@@ -10891,7 +10891,8 @@
 
                         // Appliquer le thème
                         if (settings.theme) {
-                            document.body.classList.remove('theme-light', 'theme-dark', 'theme-colored');
+                            document.body.classList.remove('theme-light', 'theme-dark', 'theme-colored', 'dark-mode');
+                            if (settings.theme === 'dark') document.body.classList.add('dark-mode');
                             document.body.classList.add(`theme-${settings.theme}`);
 
                             const root = document.documentElement;
