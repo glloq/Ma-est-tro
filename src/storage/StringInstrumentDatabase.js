@@ -75,8 +75,8 @@ class StringInstrumentDatabase {
       const stmt = this.db.prepare(`
         INSERT INTO string_instruments (
           device_id, channel, instrument_name, num_strings, num_frets,
-          tuning, is_fretless, capo_fret, cc_enabled
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          tuning, is_fretless, capo_fret, cc_enabled, tab_algorithm
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(device_id, channel) DO UPDATE SET
           instrument_name = excluded.instrument_name,
           num_strings = excluded.num_strings,
@@ -84,7 +84,8 @@ class StringInstrumentDatabase {
           tuning = excluded.tuning,
           is_fretless = excluded.is_fretless,
           capo_fret = excluded.capo_fret,
-          cc_enabled = excluded.cc_enabled
+          cc_enabled = excluded.cc_enabled,
+          tab_algorithm = excluded.tab_algorithm
       `);
 
       const result = stmt.run(
@@ -96,7 +97,8 @@ class StringInstrumentDatabase {
         tuningJson,
         config.is_fretless ? 1 : 0,
         config.capo_fret || 0,
-        config.cc_enabled !== undefined ? (config.cc_enabled ? 1 : 0) : 1
+        config.cc_enabled !== undefined ? (config.cc_enabled ? 1 : 0) : 1,
+        config.tab_algorithm || 'min_movement'
       );
 
       this.logger.info(`String instrument created/updated for ${config.device_id} ch${config.channel}`);
@@ -231,6 +233,14 @@ class StringInstrumentDatabase {
       if (updates.cc_enabled !== undefined) {
         fields.push('cc_enabled = ?');
         values.push(updates.cc_enabled ? 1 : 0);
+      }
+      if (updates.tab_algorithm !== undefined) {
+        const valid = ['min_movement', 'lowest_fret', 'highest_fret', 'zone'];
+        if (!valid.includes(updates.tab_algorithm)) {
+          throw new Error(`tab_algorithm must be one of: ${valid.join(', ')}`);
+        }
+        fields.push('tab_algorithm = ?');
+        values.push(updates.tab_algorithm);
       }
 
       if (fields.length === 0) return false;
@@ -432,6 +442,7 @@ class StringInstrumentDatabase {
       is_fretless: !!row.is_fretless,
       capo_fret: row.capo_fret,
       cc_enabled: row.cc_enabled !== undefined ? !!row.cc_enabled : true,
+      tab_algorithm: row.tab_algorithm || 'min_movement',
       created_at: row.created_at,
       updated_at: row.updated_at
     };

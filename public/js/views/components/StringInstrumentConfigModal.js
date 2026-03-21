@@ -34,7 +34,8 @@ class StringInstrumentConfigModal extends BaseModal {
             tuning: [40, 45, 50, 55, 59, 64],
             is_fretless: false,
             capo_fret: 0,
-            cc_enabled: true
+            cc_enabled: true,
+            tab_algorithm: 'min_movement'
         };
 
         this.presets = {};
@@ -80,7 +81,8 @@ class StringInstrumentConfigModal extends BaseModal {
                     tuning: resp.instrument.tuning || [40, 45, 50, 55, 59, 64],
                     is_fretless: !!resp.instrument.is_fretless,
                     capo_fret: resp.instrument.capo_fret || 0,
-                    cc_enabled: resp.instrument.cc_enabled !== undefined ? !!resp.instrument.cc_enabled : true
+                    cc_enabled: resp.instrument.cc_enabled !== undefined ? !!resp.instrument.cc_enabled : true,
+                    tab_algorithm: resp.instrument.tab_algorithm || 'min_movement'
                 };
             }
         } catch (e) {
@@ -170,6 +172,15 @@ class StringInstrumentConfigModal extends BaseModal {
                     <div class="si-field si-checkbox-field">
                         <input type="checkbox" id="si-cc-enabled" ${c.cc_enabled ? 'checked' : ''}>
                         <label for="si-cc-enabled">${ccLabel}</label>
+                    </div>
+                    <div class="si-field si-algo-field">
+                        <label for="si-algorithm">${this.t('stringInstrument.algorithm') || 'Conversion algorithm'}</label>
+                        <select id="si-algorithm" class="si-input">
+                            <option value="min_movement" ${c.tab_algorithm === 'min_movement' ? 'selected' : ''}>${this.t('tablature.algoMinMovement') || 'Min movement'}</option>
+                            <option value="lowest_fret" ${c.tab_algorithm === 'lowest_fret' ? 'selected' : ''}>${this.t('tablature.algoLowestFret') || 'Lowest fret'}</option>
+                            <option value="highest_fret" ${c.tab_algorithm === 'highest_fret' ? 'selected' : ''}>${this.t('tablature.algoHighestFret') || 'Highest fret'}</option>
+                            <option value="zone" ${c.tab_algorithm === 'zone' ? 'selected' : ''}>${this.t('tablature.algoZone') || 'Zone'}</option>
+                        </select>
                     </div>
                 </div>
 
@@ -315,6 +326,8 @@ class StringInstrumentConfigModal extends BaseModal {
             } else if (e.target.id === 'si-capo') {
                 const v = parseInt(e.target.value);
                 if (!isNaN(v) && v >= 0 && v <= 36) this.config.capo_fret = v;
+            } else if (e.target.id === 'si-algorithm') {
+                this.config.tab_algorithm = e.target.value;
             }
         });
 
@@ -466,7 +479,8 @@ class StringInstrumentConfigModal extends BaseModal {
                 tuning: this.config.tuning,
                 is_fretless: this.config.is_fretless,
                 capo_fret: this.config.capo_fret,
-                cc_enabled: this.config.cc_enabled
+                cc_enabled: this.config.cc_enabled,
+                tab_algorithm: this.config.tab_algorithm
             };
 
             if (this.existingId) {
