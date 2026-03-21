@@ -37,7 +37,8 @@ class TablatureConverter {
 
   constructor(instrumentConfig) {
     this.tuning = instrumentConfig.tuning;
-    this.numStrings = instrumentConfig.num_strings;
+    // Use tuning array length as authoritative string count if they disagree
+    this.numStrings = instrumentConfig.tuning?.length || instrumentConfig.num_strings;
     this.numFrets = instrumentConfig.num_frets;
     this.isFretless = instrumentConfig.is_fretless;
     this.capoFret = instrumentConfig.capo_fret || 0;
@@ -483,9 +484,9 @@ class TablatureConverter {
       notes.push({
         t: event.tick,
         n: midiNote,
-        v: event.velocity || 100,
+        v: event.velocity !== undefined ? event.velocity : 100,
         g: event.duration || 480,
-        c: event.channel || 0
+        c: event.channel !== undefined ? event.channel : 0
       });
     }
 
