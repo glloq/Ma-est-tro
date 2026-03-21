@@ -127,23 +127,7 @@
     padding: 16px;
 }
 
-.matrix-wrapper::-webkit-scrollbar {
-    width: 20px;
-    height: 20px;
-}
-
-.matrix-wrapper::-webkit-scrollbar-track {
-    background: #1a1a1a;
-}
-
-.matrix-wrapper::-webkit-scrollbar-thumb {
-    background: #3a3a3a;
-    border-radius: 5px;
-}
-
-.matrix-wrapper::-webkit-scrollbar-thumb:hover {
-    background: #4a4a4a;
-}
+/* Scrollbar : style global touch-friendly (voir main.css + variables.css) */
 
 /* ===== MATRIX GRID ===== */
 .matrix-grid {

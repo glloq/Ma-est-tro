@@ -375,31 +375,7 @@
     }
 }
 
-/* ============================================================================
-   SCROLLBAR pour les listes
-   ============================================================================ */
-
-.selector-content::-webkit-scrollbar,
-.instruments-list::-webkit-scrollbar {
-    width: 16px;
-    height: 16px;
-}
-
-.selector-content::-webkit-scrollbar-track,
-.instruments-list::-webkit-scrollbar-track {
-    background: var(--bg-dark);
-}
-
-.selector-content::-webkit-scrollbar-thumb,
-.instruments-list::-webkit-scrollbar-thumb {
-    background: var(--bg-light);
-    border-radius: 4px;
-}
-
-.selector-content::-webkit-scrollbar-thumb:hover,
-.instruments-list::-webkit-scrollbar-thumb:hover {
-    background: var(--color-primary);
-}
+/* Scrollbar : style global touch-friendly (voir main.css + variables.css) */
 
 /* ============================================================================
    ANIMATIONS

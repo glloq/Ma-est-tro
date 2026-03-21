@@ -108,6 +108,16 @@
 
     /* Focus (accessibility) */
     --focus-ring: 0 0 0 3px rgba(102, 126, 234, 0.4);
+
+    /* Scrollbar (touch-friendly) */
+    --scrollbar-size: 14px;
+    --scrollbar-track-bg: var(--bg-tertiary);
+    --scrollbar-thumb-bg: var(--accent-primary);
+    --scrollbar-thumb-hover: var(--accent-secondary);
+    --scrollbar-thumb-active: #5a6fd6;
+    --scrollbar-thumb-radius: 7px;
+    --scrollbar-thumb-border: 3px solid var(--bg-tertiary);
+    --scrollbar-corner-bg: var(--bg-tertiary);
 }
 
 /* ===== THÈME SOMBRE ===== */
@@ -145,6 +155,14 @@ body.dark-mode {
     --network-shadow: rgba(0, 0, 0, 0.3);
 
     --focus-ring: 0 0 0 3px rgba(102, 126, 234, 0.6);
+
+    /* Scrollbar dark overrides */
+    --scrollbar-track-bg: #2a2a2a;
+    --scrollbar-thumb-bg: #5a6a8a;
+    --scrollbar-thumb-hover: #7a8aaa;
+    --scrollbar-thumb-active: #8a9aba;
+    --scrollbar-thumb-border: 3px solid #2a2a2a;
+    --scrollbar-corner-bg: #2a2a2a;
 
     background: var(--bg-primary);
     color: var(--text-primary);

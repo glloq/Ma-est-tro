@@ -424,23 +424,7 @@
     width: 0;
 }
 
-/* Scrollbar */
-.editor-sidebar::-webkit-scrollbar {
-    width: 16px;
-}
-
-.editor-sidebar::-webkit-scrollbar-track {
-    background: var(--bg-primary);
-}
-
-.editor-sidebar::-webkit-scrollbar-thumb {
-    background: #3a3a3a;
-    border-radius: 4px;
-}
-
-.editor-sidebar::-webkit-scrollbar-thumb:hover {
-    background: #4a4a4a;
-}
+/* Scrollbar : style global touch-friendly (voir main.css + variables.css) */
 
 /* ===== LEFT SIDEBAR - FILE INFO ===== */
 .left-panel {

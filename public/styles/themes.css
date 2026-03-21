@@ -381,24 +381,7 @@ body.dark-mode .badge-primary {
     background: var(--accent-primary);
 }
 
-/* Scrollbars pour le thème sombre */
-body.dark-mode ::-webkit-scrollbar {
-    width: 20px;
-    height: 20px;
-}
-
-body.dark-mode ::-webkit-scrollbar-track {
-    background: var(--bg-tertiary);
-}
-
-body.dark-mode ::-webkit-scrollbar-thumb {
-    background: #718096;
-    border-radius: 4px;
-}
-
-body.dark-mode ::-webkit-scrollbar-thumb:hover {
-    background: #a0aec0;
-}
+/* Scrollbars pour le thème sombre - géré via les variables dans variables.css */
 
 /* ===== Instrument Management Page Modal (dark mode) ===== */
 
