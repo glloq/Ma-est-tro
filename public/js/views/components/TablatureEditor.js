@@ -199,9 +199,16 @@ class TablatureEditor {
         const tuningEl = this.containerEl.querySelector('#tab-tuning-display');
 
         if (badgeEl) {
-            const name = this.stringInstrument.instrument_name || 'Guitar';
+            // Use the channel's GM instrument name if available, otherwise the string instrument name
+            const channelInfo = this.modal.channels?.find(c => c.channel === this.channel);
+            const gmName = channelInfo?.instrument;
+            const siName = this.stringInstrument.instrument_name;
             const nStrings = this.stringInstrument.num_strings || 6;
-            badgeEl.textContent = `${name} ${nStrings}str`;
+
+            // Prefer GM name (e.g. "Acoustic Guitar (nylon)"), fall back to string instrument name
+            const displayName = gmName || siName || 'Guitar';
+            badgeEl.textContent = `${displayName} · ${nStrings}str`;
+            badgeEl.title = displayName;
         }
         if (tuningEl && this.stringInstrument.tuning) {
             const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
