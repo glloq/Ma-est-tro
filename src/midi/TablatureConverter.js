@@ -33,6 +33,7 @@ class TablatureConverter {
     this.numFrets = instrumentConfig.num_frets;
     this.isFretless = instrumentConfig.is_fretless;
     this.capoFret = instrumentConfig.capo_fret || 0;
+    this.ccEnabled = instrumentConfig.cc_enabled !== undefined ? !!instrumentConfig.cc_enabled : true;
 
     // Effective open-string notes with capo applied
     this.effectiveTuning = this.tuning.map(note => note + this.capoFret);
@@ -173,21 +174,23 @@ class TablatureConverter {
 
       if (midiNote < 0 || midiNote > 127) continue;
 
-      // Generate CC20 (string select) before the note
-      ccEvents.push({
-        tick: event.tick,
-        cc: CC_STRING_SELECT,
-        value: event.string,  // 1-based string number
-        channel: event.channel || 0
-      });
+      // Generate CC20 (string select) and CC21 (fret select) only if cc_enabled
+      if (this.ccEnabled) {
+        ccEvents.push({
+          tick: event.tick,
+          cc: CC_STRING_SELECT,
+          value: event.string,  // 1-based string number
+          channel: event.channel || 0
+        });
 
-      // Generate CC21 (fret select) before the note
-      ccEvents.push({
-        tick: event.tick,
-        cc: CC_FRET_SELECT,
-        value: Math.round(event.fret),
-        channel: event.channel || 0
-      });
+        // Generate CC21 (fret select) before the note
+        ccEvents.push({
+          tick: event.tick,
+          cc: CC_FRET_SELECT,
+          value: Math.round(event.fret),
+          channel: event.channel || 0
+        });
+      }
 
       // Generate MIDI note
       notes.push({

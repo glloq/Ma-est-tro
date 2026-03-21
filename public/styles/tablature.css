@@ -271,6 +271,33 @@ body.dark-mode .tab-fret-input {
     gap: 12px;
 }
 
+.si-cc-toggle-row {
+    padding: 8px 12px;
+    background: rgba(102, 126, 234, 0.08);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: var(--border-radius, 4px);
+}
+
+.si-cc-toggle-row label {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.si-details-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    overflow: hidden;
+}
+
+.si-details-section.si-collapsed {
+    max-height: 0;
+    opacity: 0.4;
+    pointer-events: none;
+    margin: 0;
+}
+
 .si-top-row {
     display: flex;
     gap: 12px;

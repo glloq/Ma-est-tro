@@ -75,15 +75,16 @@ class StringInstrumentDatabase {
       const stmt = this.db.prepare(`
         INSERT INTO string_instruments (
           device_id, channel, instrument_name, num_strings, num_frets,
-          tuning, is_fretless, capo_fret
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          tuning, is_fretless, capo_fret, cc_enabled
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(device_id, channel) DO UPDATE SET
           instrument_name = excluded.instrument_name,
           num_strings = excluded.num_strings,
           num_frets = excluded.num_frets,
           tuning = excluded.tuning,
           is_fretless = excluded.is_fretless,
-          capo_fret = excluded.capo_fret
+          capo_fret = excluded.capo_fret,
+          cc_enabled = excluded.cc_enabled
       `);
 
       const result = stmt.run(
@@ -94,7 +95,8 @@ class StringInstrumentDatabase {
         config.num_frets !== undefined ? config.num_frets : 24,
         tuningJson,
         config.is_fretless ? 1 : 0,
-        config.capo_fret || 0
+        config.capo_fret || 0,
+        config.cc_enabled !== undefined ? (config.cc_enabled ? 1 : 0) : 1
       );
 
       this.logger.info(`String instrument created/updated for ${config.device_id} ch${config.channel}`);
@@ -225,6 +227,10 @@ class StringInstrumentDatabase {
         }
         fields.push('capo_fret = ?');
         values.push(updates.capo_fret);
+      }
+      if (updates.cc_enabled !== undefined) {
+        fields.push('cc_enabled = ?');
+        values.push(updates.cc_enabled ? 1 : 0);
       }
 
       if (fields.length === 0) return false;
@@ -425,6 +431,7 @@ class StringInstrumentDatabase {
       tuning,
       is_fretless: !!row.is_fretless,
       capo_fret: row.capo_fret,
+      cc_enabled: row.cc_enabled !== undefined ? !!row.cc_enabled : true,
       created_at: row.created_at,
       updated_at: row.updated_at
     };
