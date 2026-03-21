@@ -224,7 +224,7 @@ class TablatureEditor {
             const channelInfo = this.modal.channels?.find(c => c.channel === this.channel);
             const gmName = channelInfo?.instrument;
             const siName = this.stringInstrument.instrument_name;
-            const nStrings = this.stringInstrument.num_strings || 6;
+            const nStrings = this.stringInstrument.tuning?.length || this.stringInstrument.num_strings || 6;
 
             // Prefer GM name (e.g. "Acoustic Guitar (nylon)"), fall back to string instrument name
             const displayName = gmName || siName || this.t('stringInstrument.string');
@@ -264,7 +264,6 @@ class TablatureEditor {
         }
 
         this.renderer = new TablatureRenderer(this.tabCanvasEl, {
-            numStrings: this.stringInstrument.num_strings,
             tuning: this.stringInstrument.tuning,
             numFrets: this.stringInstrument.num_frets,
             isFretless: this.stringInstrument.is_fretless,
@@ -296,7 +295,6 @@ class TablatureEditor {
         }
 
         this.fretboard = new FretboardDiagram(this.fretboardCanvasEl, {
-            numStrings: this.stringInstrument.num_strings,
             tuning: this.stringInstrument.tuning,
             numFrets: this.stringInstrument.num_frets,
             isFretless: this.stringInstrument.is_fretless,

@@ -78,9 +78,15 @@ class StringInstrumentDatabase {
    */
   createStringInstrument(config) {
     try {
+      // Ensure num_strings matches tuning array length
+      const tuning = config.tuning || [40, 45, 50, 55, 59, 64];
+      if (Array.isArray(tuning)) {
+        config.num_strings = tuning.length;
+      }
+
       this._validateConfig(config);
 
-      const tuningJson = JSON.stringify(config.tuning || [40, 45, 50, 55, 59, 64]);
+      const tuningJson = JSON.stringify(tuning);
 
       const stmt = this.db.prepare(`
         INSERT INTO string_instruments (
@@ -192,10 +198,10 @@ class StringInstrumentDatabase {
    */
   updateStringInstrument(id, updates) {
     try {
-      if (updates.tuning && updates.num_strings) {
-        if (Array.isArray(updates.tuning) && updates.tuning.length !== updates.num_strings) {
-          throw new Error(`Tuning array length (${updates.tuning.length}) must match num_strings (${updates.num_strings})`);
-        }
+      // Sync num_strings from tuning array length (tuning is authoritative)
+      if (updates.tuning) {
+        const tuning = Array.isArray(updates.tuning) ? updates.tuning : JSON.parse(updates.tuning);
+        updates.num_strings = tuning.length;
       }
 
       const fields = [];
@@ -441,12 +447,15 @@ class StringInstrumentDatabase {
       }
     }
 
+    // Authoritative string count = tuning array length (fixes any DB desync)
+    const num_strings = tuning.length;
+
     return {
       id: row.id,
       device_id: row.device_id,
       channel: row.channel,
       instrument_name: row.instrument_name,
-      num_strings: row.num_strings,
+      num_strings,
       num_frets: row.num_frets,
       tuning,
       is_fretless: !!row.is_fretless,
