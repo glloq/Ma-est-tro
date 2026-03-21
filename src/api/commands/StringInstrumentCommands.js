@@ -100,12 +100,7 @@ async function stringInstrumentCreateFromPreset(app, data) {
   const preset = app.database.stringInstrumentDB.getTuningPreset(data.preset);
   if (!preset) throw new Error(`Unknown preset: ${data.preset}`);
 
-  // Check if instrument already exists for this device/channel
-  const existing = app.database.stringInstrumentDB.getStringInstrument(data.device_id, data.channel);
-  if (existing) {
-    return { success: true, id: existing.id, existing: true };
-  }
-
+  // Use UPSERT: createStringInstrument already has ON CONFLICT DO UPDATE
   const id = app.database.stringInstrumentDB.createStringInstrument({
     device_id: data.device_id,
     channel: data.channel,
