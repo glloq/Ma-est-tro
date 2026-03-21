@@ -10,9 +10,9 @@ class TablatureRenderer {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
 
-        // Instrument config
-        this.numStrings = options.numStrings || 6;
+        // Instrument config (tuning array length is authoritative for string count)
         this.tuning = options.tuning || [40, 45, 50, 55, 59, 64];
+        this.numStrings = this.tuning.length;
         this.numFrets = options.numFrets || 24;
         this.isFretless = options.isFretless || false;
         this.capoFret = options.capoFret || 0;
@@ -113,8 +113,8 @@ class TablatureRenderer {
     }
 
     setInstrumentConfig(config) {
-        this.numStrings = config.num_strings || config.numStrings || 6;
         this.tuning = config.tuning || [40, 45, 50, 55, 59, 64];
+        this.numStrings = this.tuning.length;
         this.numFrets = config.num_frets || config.numFrets || 24;
         this.isFretless = config.is_fretless || config.isFretless || false;
         this.stringLabels = this._computeStringLabels();
