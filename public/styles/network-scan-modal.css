@@ -136,25 +136,7 @@
     -webkit-overflow-scrolling: touch !important;
 }
 
-/* Style de la scrollbar */
-.network-scan-modal .modal-body::-webkit-scrollbar {
-    width: 16px;
-}
-
-.network-scan-modal .modal-body::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-.network-scan-modal .modal-body::-webkit-scrollbar-thumb {
-    background: var(--network-primary);
-    border-radius: 4px;
-    transition: background 0.2s;
-}
-
-.network-scan-modal .modal-body::-webkit-scrollbar-thumb:hover {
-    background: var(--network-secondary);
-}
+/* Scrollbar : style global touch-friendly (voir main.css + variables.css) */
 
 /* ============================================================================
    MANUAL IP SECTION
@@ -374,25 +356,7 @@
     flex: 1 1 auto;
 }
 
-/* Style de la scrollbar pour les listes de devices */
-.devices-list::-webkit-scrollbar {
-    width: 12px;
-}
-
-.devices-list::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-}
-
-.devices-list::-webkit-scrollbar-thumb {
-    background: var(--network-primary);
-    border-radius: 3px;
-    transition: background 0.2s;
-}
-
-.devices-list::-webkit-scrollbar-thumb:hover {
-    background: var(--network-secondary);
-}
+/* Scrollbar devices : style global touch-friendly (voir main.css + variables.css) */
 
 .devices-grid {
     display: flex;

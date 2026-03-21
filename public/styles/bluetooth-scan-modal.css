@@ -142,25 +142,7 @@
     -webkit-overflow-scrolling: touch !important;
 }
 
-/* Style de la scrollbar */
-.bluetooth-scan-modal .modal-body::-webkit-scrollbar {
-    width: 16px;
-}
-
-.bluetooth-scan-modal .modal-body::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-.bluetooth-scan-modal .modal-body::-webkit-scrollbar-thumb {
-    background: var(--bluetooth-primary);
-    border-radius: 4px;
-    transition: background 0.2s;
-}
-
-.bluetooth-scan-modal .modal-body::-webkit-scrollbar-thumb:hover {
-    background: #8e44ad;
-}
+/* Scrollbar : style global touch-friendly (voir main.css + variables.css) */
 
 /* ============================================================================
    SCAN SECTION

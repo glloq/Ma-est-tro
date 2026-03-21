@@ -292,23 +292,7 @@
     overflow-y: auto;
 }
 
-.modal-body::-webkit-scrollbar {
-    width: 16px;
-}
-
-.modal-body::-webkit-scrollbar-track {
-    background: var(--bg-primary);
-    border-radius: 4px;
-}
-
-.modal-body::-webkit-scrollbar-thumb {
-    background: #3a3a3a;
-    border-radius: 4px;
-}
-
-.modal-body::-webkit-scrollbar-thumb:hover {
-    background: #4a4a4a;
-}
+/* Scrollbar : style global touch-friendly (voir main.css + variables.css) */
 
 .modal-footer {
     display: flex;
