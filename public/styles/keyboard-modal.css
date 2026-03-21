@@ -778,6 +778,10 @@ body.theme-colored .keyboard-modal .modal-dialog {
     box-shadow: 0 20px 60px rgba(118, 75, 162, 0.25);
 }
 
+body.theme-colored .keyboard-modal .modal-header {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
+}
+
 body.theme-colored .keyboard-modal .modal-body {
     background: transparent;
 }
