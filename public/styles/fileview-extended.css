@@ -459,12 +459,30 @@
 }
 
 /* Fichier avec routage configuré */
-.file-row.routed {
+.file-row.routed,
+.file-row.routing-playable {
     border-left: 3px solid #10b981;
 }
 
-.file-row.routed:hover {
+.file-row.routed:hover,
+.file-row.routing-playable:hover {
     border-left-color: #059669;
+}
+
+.file-row.routing-partial {
+    border-left: 3px solid #f59e0b;
+}
+
+.file-row.routing-partial:hover {
+    border-left-color: #d97706;
+}
+
+.file-row.routing-routed-incomplete {
+    border-left: 3px solid #3b82f6;
+}
+
+.file-row.routing-routed-incomplete:hover {
+    border-left-color: #2563eb;
 }
 
 /* Boutons de succès (routage configuré) */
@@ -637,8 +655,17 @@
         color: #34d399;
     }
 
-    .file-row.routed {
+    .file-row.routed,
+    .file-row.routing-playable {
         border-left-color: #34d399;
+    }
+
+    .file-row.routing-partial {
+        border-left-color: #fbbf24;
+    }
+
+    .file-row.routing-routed-incomplete {
+        border-left-color: #60a5fa;
     }
 
     .routing-info,
