@@ -22,21 +22,33 @@ async function midiSend(app, data) {
 }
 
 async function midiSendNote(app, data) {
+  // velocity 0 = noteOff (standard MIDI convention)
+  if (data.velocity === 0) {
+    app.deviceManager.sendMessage(data.deviceId, 'noteoff', {
+      channel: data.channel,
+      note: data.note,
+      velocity: 0
+    });
+    return { success: true };
+  }
+
   app.deviceManager.sendMessage(data.deviceId, 'noteon', {
     channel: data.channel,
     note: data.note,
     velocity: data.velocity
   });
 
-  // Send noteOff after duration (default 500ms)
-  const duration = data.duration || 500;
-  setTimeout(() => {
-    app.deviceManager.sendMessage(data.deviceId, 'noteoff', {
-      channel: data.channel,
-      note: data.note,
-      velocity: 0
-    });
-  }, duration);
+  // Only auto-send noteOff when duration is explicitly provided
+  // (for programmatic playback, not interactive keyboard)
+  if (data.duration) {
+    setTimeout(() => {
+      app.deviceManager.sendMessage(data.deviceId, 'noteoff', {
+        channel: data.channel,
+        note: data.note,
+        velocity: 0
+      });
+    }, data.duration);
+  }
 
   return { success: true };
 }

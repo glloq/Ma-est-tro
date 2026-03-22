@@ -601,6 +601,11 @@ class KeyboardModalNew {
             // Charger les capacités de l'instrument sélectionné
             await this.loadDeviceCapabilities(deviceId);
 
+            // Envoyer Program Change si l'instrument a un programme GM défini
+            if (this.selectedDevice && !this.selectedDevice.isVirtual && this.backend) {
+                await this.sendProgramChange(deviceId);
+            }
+
             // Auto-centrer le clavier sur la plage de notes de l'instrument
             this.autoCenterKeyboard();
 
@@ -781,6 +786,20 @@ class KeyboardModalNew {
     // MIDI
     // ========================================================================
 
+    /**
+     * Retourne le canal MIDI de l'instrument sélectionné (depuis les capacités ou le device)
+     * @returns {number} Canal MIDI (0-15)
+     */
+    getSelectedChannel() {
+        if (this.selectedDeviceCapabilities && this.selectedDeviceCapabilities.channel !== undefined) {
+            return this.selectedDeviceCapabilities.channel;
+        }
+        if (this.selectedDevice && this.selectedDevice.channel !== undefined) {
+            return this.selectedDevice.channel;
+        }
+        return 0;
+    }
+
     playNote(note) {
         if (note < 21 || note > 108) return;
 
@@ -804,7 +823,8 @@ class KeyboardModalNew {
                 return;
             }
 
-            this.backend.sendNoteOn(deviceId, note, this.velocity, 0)
+            const channel = this.getSelectedChannel();
+            this.backend.sendNoteOn(deviceId, note, this.velocity, channel)
                 .catch(err => {
                     this.logger.error('[KeyboardModal] Note ON failed:', err);
                 });
@@ -832,7 +852,8 @@ class KeyboardModalNew {
                 return;
             }
 
-            this.backend.sendNoteOff(deviceId, note, 0)
+            const channel = this.getSelectedChannel();
+            this.backend.sendNoteOff(deviceId, note, channel)
                 .catch(err => {
                     this.logger.error('[KeyboardModal] Note OFF failed:', err);
                 });
@@ -951,14 +972,46 @@ class KeyboardModalNew {
             return;
         }
 
+        const channel = this.getSelectedChannel();
         this.backend.sendCommand('midi_send_cc', {
             deviceId: deviceId,
-            channel: 0,
+            channel: channel,
             controller: 1, // CC#1 = Modulation Wheel
             value: value
         }).catch(err => {
             this.logger.error('[KeyboardModal] Modulation CC send failed:', err);
         });
+    }
+
+    /**
+     * Envoyer un Program Change à l'instrument sélectionné
+     * pour activer le bon son GM sur le bon canal
+     */
+    async sendProgramChange(deviceId) {
+        const caps = this.selectedDeviceCapabilities;
+        const device = this.selectedDevice;
+
+        // Chercher gm_program dans les capabilities, puis dans le device
+        let gmProgram = null;
+        if (caps && caps.gm_program !== undefined && caps.gm_program !== null) {
+            gmProgram = caps.gm_program;
+        } else if (device && device.gm_program !== undefined && device.gm_program !== null) {
+            gmProgram = device.gm_program;
+        }
+
+        if (gmProgram === null) return;
+
+        const channel = this.getSelectedChannel();
+        try {
+            await this.backend.sendCommand('midi_send_program', {
+                deviceId: deviceId,
+                channel: channel,
+                program: gmProgram
+            });
+            this.logger.info(`[KeyboardModal] Program Change: ${gmProgram} on channel ${channel}`);
+        } catch (err) {
+            this.logger.error('[KeyboardModal] Program Change failed:', err);
+        }
     }
 
     /**
