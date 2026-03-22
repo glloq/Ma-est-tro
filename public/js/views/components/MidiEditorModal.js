@@ -59,6 +59,8 @@ class MidiEditorModal {
         this.channelDisabled = new Set();
         // Currently open channel settings popover channel (-1 = none)
         this._channelSettingsOpen = -1;
+        // Per-channel playable notes highlights: Map<channel, Set<noteNumber>>
+        this.channelPlayableHighlights = new Map();
 
         // Channel panel (manages tablature buttons, device selector, instrument selector)
         this.channelPanel = typeof MidiEditorChannelPanel !== 'undefined' ? new MidiEditorChannelPanel(this) : null;
@@ -5547,6 +5549,7 @@ class MidiEditorModal {
 
         const isDisabled = this.channelDisabled.has(channel);
         const currentRouting = this.channelRouting.get(channel) || '';
+        const isHighlighted = this.channelPlayableHighlights.has(channel);
 
         // Build device options
         let deviceOptions = `<option value="">${this.t('midiEditor.noRouting')}</option>`;
@@ -5564,6 +5567,10 @@ class MidiEditorModal {
             deviceOptions += `<option value="${value}" ${selected}>${name}</option>`;
         });
 
+        // Determine if "show playable notes" button should be available
+        const hasRouting = !!currentRouting;
+        const color = this.channelColors[channel % this.channelColors.length];
+
         const popover = document.createElement('div');
         popover.className = 'channel-settings-popover';
         popover.innerHTML = `
@@ -5579,6 +5586,15 @@ class MidiEditorModal {
             <div class="channel-settings-section">
                 <label class="channel-settings-label">${this.t('midiEditor.channelRoutingLabel')}</label>
                 <select class="channel-routing-select">${deviceOptions}</select>
+            </div>
+            <div class="channel-settings-section">
+                <button class="channel-show-playable-btn ${isHighlighted ? 'active' : ''}"
+                    ${!hasRouting ? 'disabled' : ''}
+                    style="${isHighlighted ? `--highlight-color: ${color}` : ''}"
+                >
+                    <span class="playable-color-dot" style="background: ${color}"></span>
+                    ${this.t('midiEditor.showPlayableNotes')}
+                </button>
             </div>
         `;
 
@@ -5606,7 +5622,26 @@ class MidiEditorModal {
         // Event: routing select
         const routingSelect = popover.querySelector('.channel-routing-select');
         routingSelect.addEventListener('change', () => {
-            this.setChannelRouting(channel, routingSelect.value || null);
+            const newValue = routingSelect.value || null;
+            this.setChannelRouting(channel, newValue);
+            // Update show playable button state
+            const playableBtn = popover.querySelector('.channel-show-playable-btn');
+            if (playableBtn) {
+                playableBtn.disabled = !newValue;
+                if (!newValue) {
+                    // Remove highlight when routing is cleared
+                    this._clearChannelPlayableHighlight(channel);
+                    playableBtn.classList.remove('active');
+                }
+            }
+        });
+
+        // Event: show playable notes button
+        const playableBtn = popover.querySelector('.channel-show-playable-btn');
+        playableBtn.addEventListener('click', async () => {
+            if (playableBtn.disabled) return;
+            await this._toggleChannelPlayableHighlight(channel);
+            playableBtn.classList.toggle('active', this.channelPlayableHighlights.has(channel));
         });
 
         // Close on outside click (deferred to avoid immediate close)
@@ -5632,6 +5667,97 @@ class MidiEditorModal {
             btn.classList.add('channel-disabled');
         } else {
             btn.classList.remove('channel-disabled');
+        }
+    }
+
+    /**
+     * Toggle playable notes highlight for a specific channel.
+     * Loads capabilities from the routed device and highlights playable rows on the piano roll.
+     */
+    async _toggleChannelPlayableHighlight(channel) {
+        if (this.channelPlayableHighlights.has(channel)) {
+            // Turn off
+            this._clearChannelPlayableHighlight(channel);
+            return;
+        }
+
+        const routedValue = this.channelRouting.get(channel);
+        if (!routedValue) return;
+
+        // Parse deviceId and optional sub-channel
+        let deviceId = routedValue;
+        let devChannel = undefined;
+        if (routedValue.includes('::')) {
+            const parts = routedValue.split('::');
+            deviceId = parts[0];
+            devChannel = parseInt(parts[1]);
+        }
+
+        try {
+            const params = { deviceId };
+            if (devChannel !== undefined) params.channel = devChannel;
+            const response = await this.api.sendCommand('instrument_get_capabilities', params);
+
+            if (response && response.capabilities) {
+                const caps = response.capabilities;
+                const mode = caps.note_selection_mode || 'range';
+                let notes = null;
+
+                if (mode === 'discrete' && caps.selected_notes && Array.isArray(caps.selected_notes)) {
+                    notes = new Set(caps.selected_notes.map(n => parseInt(n)));
+                } else if (mode === 'range') {
+                    const minNote = caps.note_range_min != null ? parseInt(caps.note_range_min) : 0;
+                    const maxNote = caps.note_range_max != null ? parseInt(caps.note_range_max) : 127;
+                    if (minNote !== 0 || maxNote !== 127) {
+                        notes = new Set();
+                        for (let n = minNote; n <= maxNote; n++) notes.add(n);
+                    }
+                }
+
+                if (notes && notes.size > 0) {
+                    this.channelPlayableHighlights.set(channel, notes);
+                } else {
+                    // Full range = highlight all (store null to mean "all notes")
+                    this.channelPlayableHighlights.set(channel, null);
+                }
+            } else {
+                // No capabilities = highlight all notes
+                this.channelPlayableHighlights.set(channel, null);
+            }
+        } catch (error) {
+            this.log('error', `Failed to load capabilities for channel ${channel}:`, error);
+            // Fallback: highlight all notes
+            this.channelPlayableHighlights.set(channel, null);
+        }
+
+        this._syncPianoRollHighlights();
+    }
+
+    /**
+     * Remove playable notes highlight for a channel
+     */
+    _clearChannelPlayableHighlight(channel) {
+        this.channelPlayableHighlights.delete(channel);
+        this._syncPianoRollHighlights();
+    }
+
+    /**
+     * Push channel playable highlights to the piano roll and redraw
+     */
+    _syncPianoRollHighlights() {
+        if (!this.pianoRoll) return;
+
+        // Build a structure the piano roll can use: Map<channel, {notes: Set|null, color: string}>
+        const highlights = new Map();
+        this.channelPlayableHighlights.forEach((notes, ch) => {
+            const color = this.channelColors[ch % this.channelColors.length];
+            highlights.set(ch, { notes, color });
+        });
+
+        this.pianoRoll.channelPlayableHighlights = highlights;
+
+        if (typeof this.pianoRoll.redraw === 'function') {
+            this.pianoRoll.redraw();
         }
     }
 

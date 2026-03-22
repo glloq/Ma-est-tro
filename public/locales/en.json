@@ -368,7 +368,8 @@
     "channelSettingsTitle": "Channel {channel}",
     "channelEnabled": "Enabled",
     "channelRoutingLabel": "Instrument routing",
-    "noRouting": "-- No routing --"
+    "noRouting": "-- No routing --",
+    "showPlayableNotes": "Playable notes"
   },
   "errors": {
     "deviceNotFound": "Device not found: {deviceId}",
