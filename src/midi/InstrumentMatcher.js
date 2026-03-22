@@ -751,7 +751,7 @@ class InstrumentMatcher {
 
     // Si l'instrument n'a pas de liste de CCs configuree : score neutre (pas plein)
     if (!instrumentCCs || instrumentCCs.length === 0) {
-      const ccWeight = this.config.getWeight('ccSupport'); // 15
+      const ccWeight = this.config.getWeight('ccSupport');
       return { score: Math.round(ccWeight * 0.53), info: 'Instrument CC support unknown (not configured)' };
     }
 
@@ -759,7 +759,8 @@ class InstrumentMatcher {
     const supportedCount = channelCCs.filter(cc => instrumentCCs.includes(cc)).length;
     const supportRatio = supportedCount / channelCCs.length;
 
-    const score = Math.round(15 * supportRatio);
+    const ccWeight = this.config.getWeight('ccSupport');
+    const score = Math.round(ccWeight * supportRatio);
 
     if (supportRatio === 1) {
       return {
