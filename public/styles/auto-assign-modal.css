@@ -151,14 +151,31 @@
 }
 
 /* ==========================================================================
+   Range Bar Header (below modal header, always visible)
+   ========================================================================== */
+
+.aa-range-bar-header {
+  padding: 2px 14px 0;
+  background: #f8f8f8;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.aa-range-bar-header:empty {
+  display: none;
+}
+
+/* ==========================================================================
    Sticky Channel Header (stays visible on scroll)
    ========================================================================== */
 
 .aa-channel-sticky {
-  padding: 8px 14px 4px;
+  padding: 6px 14px 2px;
   background: #fafafa;
   border-bottom: 1px solid #e8e8e8;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 /* ==========================================================================
@@ -525,6 +542,11 @@ body.dark-mode .aa-tab.active {
 body.dark-mode .auto-assign-modal .aa-body {
   background: #1e1e2e;
   color: #e0e0e0;
+}
+
+body.dark-mode .aa-range-bar-header {
+  background: #1a1a2a;
+  border-bottom-color: #333;
 }
 
 body.dark-mode .aa-channel-sticky {
@@ -954,8 +976,9 @@ body.dark-mode .aa-tab-drum {
    ========================================================================== */
 
 .aa-range-bar-container {
-  margin: 4px 0 6px;
-  padding: 4px 0;
+  margin: 2px 0 4px;
+  padding: 2px 0;
+  overflow: hidden;
 }
 
 .aa-range-bar {
@@ -997,11 +1020,13 @@ body.dark-mode .aa-tab-drum {
 
 .aa-range-legend {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 4px 10px;
   font-size: 10px;
   color: #666;
   margin-top: 2px;
   align-items: center;
+  overflow: hidden;
 }
 
 .aa-range-legend-item {

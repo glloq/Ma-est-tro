@@ -363,6 +363,10 @@ class AutoAssignModal {
             <button class="modal-close" onclick="autoAssignModalInstance.close()">x</button>
           </div>
 
+          <div class="aa-range-bar-header" id="aaRangeBar">
+            ${this.renderRangeBar(this.activeTab)}
+          </div>
+
           <div class="aa-tabs-bar">
             ${tabsHTML}
           </div>
@@ -457,12 +461,11 @@ class AutoAssignModal {
 
   /**
    * Render sticky channel header (stays visible while scrolling)
-   * Contains: channel title + original MIDI instrument + range bar
+   * Contains: channel title + original MIDI instrument
    */
   renderChannelStickyHeader(channel) {
     const ch = String(channel);
     const isSkipped = this.skippedChannels.has(channel);
-    const selectedDeviceId = this.selectedAssignments[ch]?.deviceId;
     const analysis = this.selectedAssignments[ch]?.channelAnalysis || this.channelAnalyses[channel];
 
     // Original MIDI instrument from the file
@@ -474,9 +477,6 @@ class AutoAssignModal {
       ? `<span class="aa-midi-instrument" title="MIDI: ${primaryProgram != null ? 'Program ' + primaryProgram : 'Drums'}">${escapeHtml(midiInstrumentName)}</span>`
       : '';
 
-    // Range bar
-    const rangeBarHTML = (!isSkipped && selectedDeviceId) ? this.renderRangeBar(channel) : '';
-
     return `
       <div class="aa-channel-header">
         <h3>${_t('autoAssign.channel')} ${channel + 1}
@@ -485,7 +485,6 @@ class AutoAssignModal {
           ${isSkipped ? `<span class="aa-skipped-badge">[${_t('autoAssign.skippedLabel')}]</span>` : ''}
         </h3>
       </div>
-      ${rangeBarHTML}
     `;
   }
 
@@ -1418,6 +1417,10 @@ class AutoAssignModal {
     const sticky = document.getElementById('aaChannelSticky');
     if (sticky) {
       sticky.innerHTML = this.renderChannelStickyHeader(this.activeTab);
+    }
+    const rangeBar = document.getElementById('aaRangeBar');
+    if (rangeBar) {
+      rangeBar.innerHTML = this.renderRangeBar(this.activeTab);
     }
   }
 
