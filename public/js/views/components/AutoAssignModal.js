@@ -1645,8 +1645,11 @@ class AutoAssignModal {
       } else {
         // No adapted file needed (no transposition required)
         // Routings were saved against the original file
-        // Apply routings to the current MidiPlayer if loaded
+        // Reload routings in the editor so UI reflects the changes immediately
         if (this.editorRef) {
+          if (typeof this.editorRef._loadSavedRoutings === 'function') {
+            await this.editorRef._loadSavedRoutings();
+          }
           // Notify the editor that routings were applied
           if (typeof this.editorRef.showNotification === 'function') {
             const skippedMsg = this.skippedChannels.size > 0

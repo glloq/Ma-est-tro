@@ -5541,7 +5541,14 @@ class MidiEditorModal {
         if (!this.currentFile) return;
         try {
             const result = await this.api.sendCommand('get_file_routings', { fileId: this.currentFile });
-            if (!result || !result.routings || result.routings.length === 0) return;
+
+            // Clear previous routing state before repopulating
+            this.channelRouting.clear();
+
+            if (!result || !result.routings || result.routings.length === 0) {
+                this.refreshChannelButtons();
+                return;
+            }
 
             // Build a lookup of multi-instrument devices
             const multiInstrumentDevices = new Set();
@@ -5561,10 +5568,8 @@ class MidiEditorModal {
                 this.channelRouting.set(routing.channel, routingKey);
             }
 
-            if (this.channelRouting.size > 0) {
-                this.log('info', `Restored ${this.channelRouting.size} saved channel routing(s) from database`);
-                this.refreshChannelButtons();
-            }
+            this.log('info', `Restored ${this.channelRouting.size} saved channel routing(s) from database`);
+            this.refreshChannelButtons();
         } catch (error) {
             this.log('warn', 'Failed to load saved routings:', error);
         }
