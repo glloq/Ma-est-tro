@@ -151,6 +151,17 @@
 }
 
 /* ==========================================================================
+   Sticky Channel Header (stays visible on scroll)
+   ========================================================================== */
+
+.aa-channel-sticky {
+  padding: 8px 14px 4px;
+  background: #fafafa;
+  border-bottom: 1px solid #e8e8e8;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
    Tab Content Area
    ========================================================================== */
 
@@ -173,22 +184,34 @@
 }
 
 .aa-channel-header h3 {
-  margin: 0 0 6px 0;
-  font-size: 16px;
+  margin: 0 0 2px 0;
+  font-size: 15px;
   color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .aa-drum-badge {
   color: #888;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: normal;
+}
+
+.aa-midi-instrument {
+  font-size: 12px;
+  font-weight: normal;
+  color: #666;
+  background: #eef;
+  padding: 1px 6px;
+  border-radius: 3px;
 }
 
 .aa-skipped-badge {
   color: #cc0000;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: normal;
-  margin-left: 8px;
 }
 
 .aa-no-compatible {
@@ -504,8 +527,18 @@ body.dark-mode .auto-assign-modal .aa-body {
   color: #e0e0e0;
 }
 
+body.dark-mode .aa-channel-sticky {
+  background: #1e1e2e;
+  border-bottom-color: #333;
+}
+
 body.dark-mode .aa-channel-header h3 {
   color: #e0e0e0;
+}
+
+body.dark-mode .aa-midi-instrument {
+  color: #b0b8d0;
+  background: #2a2a4a;
 }
 
 /* Stats */
