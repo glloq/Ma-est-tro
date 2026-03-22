@@ -1447,6 +1447,24 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                     this.ctx.fillRect(this.yruler+this.kbwidth, ys|0, this.swidth,1);
                 }
             }
+
+            // Per-channel playable note highlights (colored transparent overlay)
+            if(this.channelPlayableHighlights && this.channelPlayableHighlights.size > 0) {
+                const savedAlpha = this.ctx.globalAlpha;
+                this.channelPlayableHighlights.forEach(function(info) {
+                    const highlightColor = info.color;
+                    const notes = info.notes; // Set or null (null = all notes)
+                    for(let y=0;y<128;++y){
+                        const isHighlighted = !notes || notes.has(y);
+                        if(!isHighlighted) continue;
+                        let ys = this.height - (y - this.yoffset) * this.steph;
+                        this.ctx.globalAlpha = 0.15;
+                        this.ctx.fillStyle = highlightColor;
+                        this.ctx.fillRect(this.yruler+this.kbwidth, ys|0, this.swidth, -this.steph);
+                    }
+                }.bind(this));
+                this.ctx.globalAlpha = savedAlpha;
+            }
             for(let t=0;;t+=this.grid){
                 let x=this.stepw*(t-this.xoffset)+this.yruler+this.kbwidth;
                 this.ctx.fillRect(x|0,this.xruler,1,this.sheight);
