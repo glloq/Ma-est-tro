@@ -11,10 +11,10 @@ const ScoringConfig = {
    * Poids maximum pour chaque critère (total = 100)
    */
   weights: {
-    programMatch: 30,      // Match du programme MIDI GM
-    noteRange: 25,         // Compatibilité de plage de notes
+    programMatch: 34,      // Match du programme MIDI GM
+    noteRange: 29,         // Compatibilité de plage de notes
     polyphony: 15,         // Polyphonie suffisante
-    ccSupport: 15,         // Support des contrôleurs MIDI
+    ccSupport: 7,          // Support des contrôleurs MIDI (faible impact)
     instrumentType: 10,    // Type d'instrument (drums, bass, etc.)
     channelSpecial: 5      // Canal spécial (ex: canal 10 = drums)
   },
@@ -61,7 +61,7 @@ const ScoringConfig = {
     sameCategoryMatch: 20,        // Même catégorie GM
     perfectNoteRange: 25,         // Pas de transposition
     highPolyphonyMargin: 15,      // Marge de polyphonie > 8
-    allCCsSupported: 15,          // Tous les CCs supportés
+    allCCsSupported: 7,           // Tous les CCs supportés
     typeMatch: 10,                // Type détecté correspond
     channel10Drums: 5             // Canal 10 assigné à drums
   },
@@ -75,10 +75,10 @@ const ScoringConfig = {
     drumChannelDrumBonus: 15,          // Instrument drum assigne au canal 9 (remplace ancien +5)
     drumChannelWeights: {
       programMatch: 10,       // Reduit (drums n'utilisent pas les programmes GM standard sur ch10)
-      noteRange: 35,          // Augmente (qualite du mapping drum est critique)
+      noteRange: 37,          // Augmente (qualite du mapping drum est critique)
       polyphony: 10,          // Reduit (drums = polyphonie limitee)
-      ccSupport: 10,          // Reduit
-      instrumentType: 20,     // Augmente (type match critique pour drums)
+      ccSupport: 5,           // Faible impact pour drums
+      instrumentType: 23,     // Augmente (type match critique pour drums)
       channelSpecial: 15      // Augmente (bonus canal drums)
     }
   },
