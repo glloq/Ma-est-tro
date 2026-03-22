@@ -441,6 +441,29 @@ class FileManager {
         }
       }
 
+      // Routing status computation
+      let routingStatus = 'unrouted';
+      let isAdapted = false;
+      let hasAutoAssigned = false;
+      try {
+        const routings = this.app.database.getRoutingsByFile(fileId);
+        const effectiveChannelCount = channels.length || file.channel_count || file.tracks || 1;
+        const enabledRoutings = routings.filter(r => r.enabled !== false);
+        const routedCount = enabledRoutings.length;
+
+        if (routedCount > 0 && routedCount < effectiveChannelCount) {
+          routingStatus = 'partial';
+        } else if (routedCount >= effectiveChannelCount && effectiveChannelCount > 0) {
+          const minScore = Math.min(...enabledRoutings.map(r => r.compatibility_score ?? 0));
+          routingStatus = minScore === 100 ? 'playable' : 'routed_incomplete';
+        }
+
+        isAdapted = file.is_original === 0 || file.is_original === false;
+        hasAutoAssigned = enabledRoutings.some(r => r.auto_assigned);
+      } catch (routingErr) {
+        this.app.logger.warn(`Failed to compute routing status for file ${fileId}: ${routingErr.message}`);
+      }
+
       return {
         id: file.id,
         filename: file.filename,
@@ -455,7 +478,10 @@ class FileManager {
         channelCount: channels.length || file.channel_count || 0,
         channels: channels,
         noteCount: noteCount,
-        uploadedAt: file.uploaded_at
+        uploadedAt: file.uploaded_at,
+        routingStatus: routingStatus,
+        isAdapted: isAdapted,
+        hasAutoAssigned: hasAutoAssigned
       };
     } catch (error) {
       this.app.logger.error(`Get file metadata failed for file ${fileId}: ${error.message}`);

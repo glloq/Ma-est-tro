@@ -440,12 +440,15 @@ class MidiDatabase {
         }
       }
 
-      // Routing status filter (detailed: unrouted, partial, full, validated, playable)
-      // Uses inline subqueries instead of CTE for maximum compatibility
-      if (filters.routingStatus) {
-        const validStatuses = ['unrouted', 'partial', 'full', 'validated', 'playable'];
-        if (!validStatuses.includes(filters.routingStatus)) {
-          throw new Error(`Invalid routingStatus: ${filters.routingStatus}. Must be one of: ${validStatuses.join(', ')}`);
+      // Routing status filter (detailed: unrouted, partial, full, validated, playable, routed_incomplete, auto_assigned)
+      // Supports single status (routingStatus) or multiple statuses (routingStatuses array)
+      const statusList = filters.routingStatuses || (filters.routingStatus ? [filters.routingStatus] : []);
+      if (statusList.length > 0) {
+        const validStatuses = ['unrouted', 'partial', 'full', 'validated', 'playable', 'routed_incomplete', 'auto_assigned'];
+        for (const s of statusList) {
+          if (!validStatuses.includes(s)) {
+            throw new Error(`Invalid routingStatus: ${s}. Must be one of: ${validStatuses.join(', ')}`);
+          }
         }
 
         // Subquery for counting enabled routings for this file
@@ -454,26 +457,39 @@ class MidiDatabase {
         const minScoreSql = '(SELECT MIN(compatibility_score) FROM midi_instrument_routings WHERE midi_file_id = mf.id AND enabled = 1)';
         // Effective channel count: use channel_count if set, else tracks count, else 1
         const channelCountSql = 'COALESCE(NULLIF(mf.channel_count, 0), mf.tracks, 1)';
+        // Subquery for auto-assigned check
+        const hasAutoAssignedSql = '(SELECT COUNT(*) FROM midi_instrument_routings WHERE midi_file_id = mf.id AND enabled = 1 AND auto_assigned = 1)';
 
-        switch (filters.routingStatus) {
-          case 'unrouted':
-            wheres.push(`${routedCountSql} = 0`);
-            break;
-          case 'partial':
-            wheres.push(`${routedCountSql} > 0 AND ${routedCountSql} < ${channelCountSql}`);
-            break;
-          case 'full':
-            wheres.push(`${routedCountSql} >= ${channelCountSql} AND ${channelCountSql} > 0`);
-            break;
-          case 'validated': {
-            const threshold = filters.validatedThreshold || 70;
-            wheres.push(`${routedCountSql} >= ${channelCountSql} AND ${channelCountSql} > 0 AND ${minScoreSql} >= ?`);
-            params.push(threshold);
-            break;
+        const orConditions = [];
+        for (const status of statusList) {
+          switch (status) {
+            case 'unrouted':
+              orConditions.push(`${routedCountSql} = 0`);
+              break;
+            case 'partial':
+              orConditions.push(`(${routedCountSql} > 0 AND ${routedCountSql} < ${channelCountSql})`);
+              break;
+            case 'full':
+              orConditions.push(`(${routedCountSql} >= ${channelCountSql} AND ${channelCountSql} > 0)`);
+              break;
+            case 'routed_incomplete':
+              orConditions.push(`(${routedCountSql} >= ${channelCountSql} AND ${channelCountSql} > 0 AND ${minScoreSql} < 100)`);
+              break;
+            case 'validated': {
+              const threshold = filters.validatedThreshold || 70;
+              orConditions.push(`(${routedCountSql} >= ${channelCountSql} AND ${channelCountSql} > 0 AND ${minScoreSql} >= ${Number(threshold)})`);
+              break;
+            }
+            case 'playable':
+              orConditions.push(`(${routedCountSql} >= ${channelCountSql} AND ${channelCountSql} > 0 AND ${minScoreSql} = 100)`);
+              break;
+            case 'auto_assigned':
+              orConditions.push(`(${hasAutoAssignedSql} > 0)`);
+              break;
           }
-          case 'playable':
-            wheres.push(`${routedCountSql} >= ${channelCountSql} AND ${channelCountSql} > 0 AND ${minScoreSql} = 100`);
-            break;
+        }
+        if (orConditions.length > 0) {
+          wheres.push(`(${orConditions.join(' OR ')})`);
         }
       }
 

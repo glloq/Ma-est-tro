@@ -54,7 +54,8 @@ class FilterManager {
       channelCountMin: null,
       channelCountMax: null,
       hasRouting: null, // null | true | false
-      routingStatus: null, // null | 'unrouted' | 'partial' | 'full' | 'validated' | 'playable'
+      routingStatus: null, // null | 'unrouted' | 'partial' | 'full' | 'validated' | 'playable' (legacy single)
+      routingStatuses: [], // Array of routing statuses for multi-select checkboxes
       validatedThreshold: null,
       playableOnInstruments: [], // Array of instrument IDs
       playableMode: 'routed', // 'routed' | 'compatible'
@@ -242,10 +243,25 @@ class FilterManager {
           unrouted: t('filters.routingUnrouted'),
           partial: t('filters.routingPartial'),
           full: t('filters.routingFull'),
+          routed_incomplete: t('filters.routingRoutedIncomplete'),
           validated: t('filters.routingValidated'),
-          playable: t('filters.routingPlayable')
+          playable: t('filters.routingPlayable'),
+          auto_assigned: t('filters.routingAutoAssigned')
         };
         return t('filters.labelRoutingStatus', { status: labels[value] || value });
+      }
+      case 'routingStatuses': {
+        const statusLabels = {
+          unrouted: t('filters.routingUnrouted'),
+          partial: t('filters.routingPartial'),
+          full: t('filters.routingFull'),
+          routed_incomplete: t('filters.routingRoutedIncomplete'),
+          validated: t('filters.routingValidated'),
+          playable: t('filters.routingPlayable'),
+          auto_assigned: t('filters.routingAutoAssigned')
+        };
+        const names = value.map(s => statusLabels[s] || s).join(', ');
+        return t('filters.labelRoutingStatus', { status: names });
       }
       case 'playableOnInstruments':
         return t('filters.labelPlayableOn', { count: value.length, mode: this.filters.playableMode });
@@ -312,6 +328,7 @@ class FilterManager {
       (this.filters.gmPrograms && this.filters.gmPrograms.length > 0) ||
       this.filters.hasRouting !== null ||
       this.filters.routingStatus !== null ||
+      (this.filters.routingStatuses && this.filters.routingStatuses.length > 0) ||
       (this.filters.playableOnInstruments && this.filters.playableOnInstruments.length > 0) ||
       this.filters.minCompatibilityScore !== null ||
       this.filters.channelCountMin !== null ||

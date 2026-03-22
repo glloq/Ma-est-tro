@@ -115,8 +115,9 @@ async function fileFilter(app, data) {
     gmPrograms: data.gmPrograms,
     gmMode: data.gmMode || 'ANY',
 
-    // Routing status filter
+    // Routing status filter (supports single string or array of statuses)
     routingStatus: data.routingStatus,
+    routingStatuses: data.routingStatuses,
     validatedThreshold: data.validatedThreshold,
 
     // Playable on instruments filter
@@ -203,6 +204,32 @@ async function fileReanalyzeAll(app) {
   };
 }
 
+async function fileRoutingStatus(app, data) {
+  const fileId = data.fileId;
+  if (!fileId) throw new Error('fileId is required');
+
+  const file = app.database.getFile(fileId);
+  if (!file) throw new Error(`File not found: ${fileId}`);
+
+  const routings = app.database.getRoutingsByFile(fileId);
+  const channelCount = file.channel_count || file.tracks || 1;
+  const enabledRoutings = routings.filter(r => r.enabled !== false);
+  const routedCount = enabledRoutings.length;
+
+  let status = 'unrouted';
+  if (routedCount > 0 && routedCount < channelCount) {
+    status = 'partial';
+  } else if (routedCount >= channelCount && channelCount > 0) {
+    const minScore = Math.min(...enabledRoutings.map(r => r.compatibility_score ?? 0));
+    status = minScore === 100 ? 'playable' : 'routed_incomplete';
+  }
+
+  const hasAutoAssigned = enabledRoutings.some(r => r.auto_assigned);
+  const isAdapted = file.is_original === 0 || file.is_original === false;
+
+  return { success: true, fileId, status, isAdapted, hasAutoAssigned, routedCount, channelCount };
+}
+
 async function midiInstrumentsList(app) {
   const instruments = app.database.getDistinctInstruments();
   return {
@@ -239,6 +266,7 @@ export function register(registry, app) {
   registry.register('file_filter', (data) => fileFilter(app, data));
   registry.register('file_channels', (data) => fileChannels(app, data));
   registry.register('file_reanalyze_all', () => fileReanalyzeAll(app));
+  registry.register('file_routing_status', (data) => fileRoutingStatus(app, data));
   registry.register('midi_instruments_list', () => midiInstrumentsList(app));
   registry.register('midi_categories_list', () => midiCategoriesList(app));
 }
