@@ -37,9 +37,6 @@ class MidiTransposer {
     let notesSuppressed = 0;
     const totalNotes = this.countAllNotes(midiData);
 
-    // Track noteOn events that were suppressed so we can suppress matching noteOffs
-    const suppressedNotes = new Set(); // "channel:note:tick" keys
-
     for (const track of modifiedData.tracks) {
       if (!track.events) continue;
 
@@ -92,7 +89,7 @@ class MidiTransposer {
               eventsToRemove.push(i);
               if (event.type === 'noteOn') {
                 notesSuppressed++;
-                suppressedNotes.add(`${channel}:${currentNote}`);
+
               }
               continue;
             }
@@ -259,6 +256,7 @@ class MidiTransposer {
       transpositions,
       notes_changed: stats.notesChanged || 0,
       notes_remapped: stats.notesRemapped || 0,
+      notes_suppressed: stats.notesSuppressed || 0,
       total_notes: stats.totalNotes || 0
     };
   }
