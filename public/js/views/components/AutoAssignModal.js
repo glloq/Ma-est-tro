@@ -230,7 +230,7 @@ class AutoAssignModal {
           transpositionSemitones: assignment?.transposition?.semitones || 0,
           octaveWrappingEnabled: assignment?.octaveWrappingEnabled || false,
           noteOffset: 0,
-          strategy: (assignment?.transposition?.semitones) ? 'transpose' : 'ignore',
+          strategy: assignment?.octaveWrappingEnabled ? 'octaveWrap' : (assignment?.transposition?.semitones) ? 'transpose' : 'ignore',
           drumStrategy: 'intelligent'
         };
       }
@@ -1417,9 +1417,12 @@ class AutoAssignModal {
             ...(assignment.transposition || {}),
             semitones: adaptation.transpositionSemitones || 0
           };
-          preparedAssignments[channel].suppressOutOfRange = true;
-          preparedAssignments[channel].noteRangeMin = assignment.noteRangeMin;
-          preparedAssignments[channel].noteRangeMax = assignment.noteRangeMax;
+          // Only enable suppress if the instrument has a defined range
+          if (assignment.noteRangeMin != null && assignment.noteRangeMax != null) {
+            preparedAssignments[channel].suppressOutOfRange = true;
+            preparedAssignments[channel].noteRangeMin = assignment.noteRangeMin;
+            preparedAssignments[channel].noteRangeMax = assignment.noteRangeMax;
+          }
         }
         // 'ignore' strategy: no transposition modifications
 
@@ -1428,7 +1431,24 @@ class AutoAssignModal {
           preparedAssignments[channel].noteOffset = adaptation.noteOffset;
         }
 
-        // Apply drum mapping overrides
+        // Apply drum strategy filtering
+        const drumStrategy = adaptation.drumStrategy || 'intelligent';
+        if (drumStrategy !== 'intelligent') {
+          const currentRemapping = preparedAssignments[channel].noteRemapping || {};
+          if (drumStrategy === 'direct') {
+            // Keep only 1:1 mappings (src === tgt)
+            const filtered = {};
+            for (const [src, tgt] of Object.entries(currentRemapping)) {
+              if (parseInt(src) === tgt) filtered[src] = tgt;
+            }
+            preparedAssignments[channel].noteRemapping = filtered;
+          } else if (drumStrategy === 'manual') {
+            // Only use manual overrides, discard auto-mapping
+            preparedAssignments[channel].noteRemapping = {};
+          }
+        }
+
+        // Apply drum mapping overrides (manual adjustments always applied on top)
         const drumOverrides = this.drumMappingOverrides[channel] || {};
         if (Object.keys(drumOverrides).length > 0) {
           const baseRemapping = preparedAssignments[channel].noteRemapping || {};
