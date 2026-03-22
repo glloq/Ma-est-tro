@@ -363,7 +363,12 @@
       "1/32": "1/32"
     },
     "settingsPopover": "Settings",
-    "ccChannelFilter": "CC Ch:"
+    "ccChannelFilter": "CC Ch:",
+    "channelSettings": "Channel settings",
+    "channelSettingsTitle": "Channel {channel}",
+    "channelEnabled": "Enabled",
+    "channelRoutingLabel": "Instrument routing",
+    "noRouting": "-- No routing --"
   },
   "errors": {
     "deviceNotFound": "Device not found: {deviceId}",

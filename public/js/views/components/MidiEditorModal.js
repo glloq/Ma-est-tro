@@ -53,6 +53,13 @@ class MidiEditorModal {
         this.selectedDeviceCapabilities = null; // Capacités de l'appareil sélectionné
         this.playableNotes = null; // Set des notes jouables (0-127) ou null si pas de filtre
 
+        // Per-channel routing: Map<channel, deviceValue> (e.g. "deviceId" or "deviceId::channel")
+        this.channelRouting = new Map();
+        // Per-channel disabled state: Set<channel>
+        this.channelDisabled = new Set();
+        // Currently open channel settings popover channel (-1 = none)
+        this._channelSettingsOpen = -1;
+
         // Channel panel (manages tablature buttons, device selector, instrument selector)
         this.channelPanel = typeof MidiEditorChannelPanel !== 'undefined' ? new MidiEditorChannelPanel(this) : null;
 
@@ -2213,8 +2220,10 @@ class MidiEditorModal {
         // Boutons pour chaque canal
         this.channels.forEach(ch => {
             const isActive = this.activeChannels.has(ch.channel);
+            const isDisabled = this.channelDisabled.has(ch.channel);
             const color = this.channelColors[ch.channel % this.channelColors.length];
             const activeClass = isActive ? 'active' : '';
+            const disabledClass = isDisabled ? 'channel-disabled' : '';
 
             // Générer les styles inline directement (sans lueur)
             const inlineStyles = isActive
@@ -2236,23 +2245,29 @@ class MidiEditorModal {
                         title="${this.t('drumPattern.toggleEditor')}">DRUM</button>
             ` : '';
 
-            // Afficher l'instrument en petit sous le bouton si le canal a un program change explicite
-            const instrumentLabel = (ch.hasExplicitProgram || ch.channel === 9)
-                ? `<span class="channel-instrument-label">${ch.instrument}</span>`
-                : '';
+            // Show routed instrument name (real device) if available, otherwise GM name
+            const routedName = this.getRoutedInstrumentName(ch.channel);
+            const displayName = routedName
+                || (ch.hasExplicitProgram || ch.channel === 9 ? ch.instrument : '');
+            const labelText = displayName
+                ? `${ch.channel + 1} : ${displayName}`
+                : `${ch.channel + 1}`;
+
+            // Settings gear button
+            const settingsBtn = `<button class="channel-settings-btn" data-channel="${ch.channel}" title="${this.t('midiEditor.channelSettings')}">⚙</button>`;
 
             buttons += `
                 <div class="channel-btn-group">
                     <button
-                        class="channel-btn ${activeClass}"
+                        class="channel-btn ${activeClass} ${disabledClass}"
                         data-channel="${ch.channel}"
                         data-color="${color}"
                         style="${inlineStyles}"
                         title="${this.t('midiEditor.notesChannel', { count: ch.noteCount, channel: ch.channel + 1 })}"
                     >
-                        <span class="channel-label">${ch.channel + 1}${ch.hasExplicitProgram || ch.channel === 9 ? ' : ' + ch.instrument : ''}</span>
+                        <span class="channel-label">${labelText}</span>
                     </button>
-                    ${instrumentLabel}
+                    ${settingsBtn}
                     ${drumBtn}
                 </div>
             `;
@@ -3487,6 +3502,24 @@ class MidiEditorModal {
                 });
             });
 
+            // Attach events on channel settings buttons
+            const settingsButtons = this.container.querySelectorAll('.channel-settings-btn');
+            settingsButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const channel = parseInt(btn.dataset.channel);
+                    if (!isNaN(channel)) {
+                        this._toggleChannelSettingsPopover(channel, btn);
+                    }
+                });
+            });
+
+            // Update disabled visual states
+            this.channelDisabled.forEach(ch => {
+                this._updateChannelDisabledVisual(ch);
+            });
+
             // Update TAB button active states
             this._updateChannelTabButtons();
 
@@ -4664,6 +4697,19 @@ class MidiEditorModal {
             });
         });
 
+        // Boutons réglages sous les canaux
+        const settingsButtons = this.container.querySelectorAll('.channel-settings-btn');
+        settingsButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const channel = parseInt(btn.dataset.channel);
+                if (!isNaN(channel)) {
+                    this._toggleChannelSettingsPopover(channel, btn);
+                }
+            });
+        });
+
         // Boutons TAB sous les canaux (instruments à cordes)
         const tabButtons = this.container.querySelectorAll('.channel-tab-btn');
         tabButtons.forEach(btn => {
@@ -5421,6 +5467,165 @@ class MidiEditorModal {
      */
     getEffectiveDeviceId() {
         return this.selectedConnectedDevice || '_editor';
+    }
+
+    /**
+     * Get the routed instrument display name for a channel.
+     * Returns null if no routing is set for this channel.
+     */
+    getRoutedInstrumentName(channel) {
+        const routedValue = this.channelRouting.get(channel);
+        if (!routedValue) return null;
+
+        // Find the matching device in connectedDevices
+        for (const device of this.connectedDevices) {
+            let value;
+            if (device._multiInstrument) {
+                value = `${device.id}::${device._channel}`;
+            } else {
+                value = device.id;
+            }
+            if (value === routedValue) {
+                return device.displayName || device.custom_name || device.name || device.id;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Set channel routing to a specific connected device
+     */
+    setChannelRouting(channel, deviceValue) {
+        if (deviceValue) {
+            this.channelRouting.set(channel, deviceValue);
+        } else {
+            this.channelRouting.delete(channel);
+        }
+        this.refreshChannelButtons();
+    }
+
+    /**
+     * Toggle channel disabled state
+     */
+    toggleChannelDisabled(channel) {
+        if (this.channelDisabled.has(channel)) {
+            this.channelDisabled.delete(channel);
+        } else {
+            this.channelDisabled.add(channel);
+        }
+        // Sync with playback muting
+        if (this.playbackManager) {
+            this.playbackManager.syncMutedChannels();
+        }
+        this.refreshChannelButtons();
+    }
+
+    /**
+     * Open/close channel settings popover
+     */
+    _toggleChannelSettingsPopover(channel, buttonEl) {
+        // Close any existing popover
+        const existingPopover = this.container?.querySelector('.channel-settings-popover');
+        if (existingPopover) {
+            existingPopover.remove();
+        }
+
+        // If same channel, just close
+        if (this._channelSettingsOpen === channel) {
+            this._channelSettingsOpen = -1;
+            return;
+        }
+
+        this._channelSettingsOpen = channel;
+
+        const isDisabled = this.channelDisabled.has(channel);
+        const currentRouting = this.channelRouting.get(channel) || '';
+
+        // Build device options
+        let deviceOptions = `<option value="">${this.t('midiEditor.noRouting')}</option>`;
+        this.connectedDevices.forEach(device => {
+            let value, name;
+            if (device._multiInstrument) {
+                value = `${device.id}::${device._channel}`;
+                const chLabel = `Ch${(device._channel || 0) + 1}`;
+                name = `${device.displayName || device.name} [${chLabel}]`;
+            } else {
+                value = device.id;
+                name = device.displayName || device.name || device.id;
+            }
+            const selected = currentRouting === value ? 'selected' : '';
+            deviceOptions += `<option value="${value}" ${selected}>${name}</option>`;
+        });
+
+        const popover = document.createElement('div');
+        popover.className = 'channel-settings-popover';
+        popover.innerHTML = `
+            <div class="channel-settings-header">
+                <span>${this.t('midiEditor.channelSettingsTitle', { channel: channel + 1 })}</span>
+            </div>
+            <div class="channel-settings-section">
+                <label class="channel-settings-toggle">
+                    <input type="checkbox" class="channel-enabled-checkbox" ${!isDisabled ? 'checked' : ''}>
+                    <span>${this.t('midiEditor.channelEnabled')}</span>
+                </label>
+            </div>
+            <div class="channel-settings-section">
+                <label class="channel-settings-label">${this.t('midiEditor.channelRoutingLabel')}</label>
+                <select class="channel-routing-select">${deviceOptions}</select>
+            </div>
+        `;
+
+        // Position relative to the button
+        const group = buttonEl.closest('.channel-btn-group');
+        if (group) {
+            group.style.position = 'relative';
+            group.appendChild(popover);
+        }
+
+        // Event: enabled checkbox
+        const checkbox = popover.querySelector('.channel-enabled-checkbox');
+        checkbox.addEventListener('change', () => {
+            if (checkbox.checked && this.channelDisabled.has(channel)) {
+                this.channelDisabled.delete(channel);
+            } else if (!checkbox.checked && !this.channelDisabled.has(channel)) {
+                this.channelDisabled.add(channel);
+            }
+            if (this.playbackManager) {
+                this.playbackManager.syncMutedChannels();
+            }
+            this._updateChannelDisabledVisual(channel);
+        });
+
+        // Event: routing select
+        const routingSelect = popover.querySelector('.channel-routing-select');
+        routingSelect.addEventListener('change', () => {
+            this.setChannelRouting(channel, routingSelect.value || null);
+        });
+
+        // Close on outside click (deferred to avoid immediate close)
+        setTimeout(() => {
+            const closeHandler = (e) => {
+                if (!popover.contains(e.target)) {
+                    popover.remove();
+                    this._channelSettingsOpen = -1;
+                    document.removeEventListener('mousedown', closeHandler);
+                }
+            };
+            document.addEventListener('mousedown', closeHandler);
+        }, 0);
+    }
+
+    /**
+     * Update visual state of a disabled channel button
+     */
+    _updateChannelDisabledVisual(channel) {
+        const btn = this.container?.querySelector(`.channel-btn[data-channel="${channel}"]`);
+        if (!btn) return;
+        if (this.channelDisabled.has(channel)) {
+            btn.classList.add('channel-disabled');
+        } else {
+            btn.classList.remove('channel-disabled');
+        }
     }
 
     /**
