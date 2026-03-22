@@ -923,6 +923,7 @@ class InstrumentDatabase {
       if (channel !== undefined && channel !== null) {
         const stmt = this.db.prepare(`
           SELECT
+            channel, gm_program,
             note_range_min, note_range_max, supported_ccs,
             note_selection_mode, selected_notes, polyphony,
             capabilities_source, capabilities_updated_at
@@ -933,6 +934,7 @@ class InstrumentDatabase {
       } else {
         const stmt = this.db.prepare(`
           SELECT
+            channel, gm_program,
             note_range_min, note_range_max, supported_ccs,
             note_selection_mode, selected_notes, polyphony,
             capabilities_source, capabilities_updated_at
@@ -967,6 +969,8 @@ class InstrumentDatabase {
       }
 
       return {
+        channel: result.channel !== undefined && result.channel !== null ? result.channel : 0,
+        gm_program: result.gm_program !== undefined ? result.gm_program : null,
         note_range_min: result.note_range_min,
         note_range_max: result.note_range_max,
         supported_ccs: supportedCcs,
