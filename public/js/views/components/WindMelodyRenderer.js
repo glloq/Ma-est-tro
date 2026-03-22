@@ -23,6 +23,7 @@ class WindMelodyRenderer {
         this.bottomMargin = 0;
         this.ticksPerPixel = 2;
         this.scrollX = 0;
+        this.scrollY = 0;           // Vertical scroll in semitones (pitch offset)
 
         // Time signature
         this.ticksPerBeat = 480;
@@ -31,6 +32,12 @@ class WindMelodyRenderer {
         // Display range for pitch (adds padding above/below instrument range)
         this.displayNoteMin = Math.max(0, this.noteMin - 5);
         this.displayNoteMax = Math.min(127, this.noteMax + 5);
+
+        // Interaction tool: 'pan' (default) or 'edit'
+        this.tool = options.tool || 'pan';
+
+        // Scroll change callback (for syncing with external scroll bars)
+        this.onScrollChange = options.onScrollChange || null;
 
         // Data
         this.melodyEvents = [];     // {tick, note, velocity, duration, channel, articulation}
@@ -181,11 +188,23 @@ class WindMelodyRenderer {
     setScrollX(tickOffset) {
         this.scrollX = Math.max(0, tickOffset);
         this.redraw();
+        this._notifyScrollChange();
+    }
+
+    setScrollY(noteOffset) {
+        this.scrollY = noteOffset;
+        // Adjust display range based on scroll
+        const range = this.noteMax - this.noteMin + 10;
+        this.displayNoteMin = Math.max(0, this.noteMin - 5 + this.scrollY);
+        this.displayNoteMax = Math.min(127, this.displayNoteMin + range);
+        this.redraw();
+        this._notifyScrollChange();
     }
 
     setZoom(ticksPerPixel) {
         this.ticksPerPixel = Math.max(0.5, Math.min(20, ticksPerPixel));
         this.redraw();
+        this._notifyScrollChange();
     }
 
     setPlayhead(tick) {
@@ -197,6 +216,46 @@ class WindMelodyRenderer {
         this.ticksPerBeat = ticksPerBeat || 480;
         this.beatsPerMeasure = beatsPerMeasure || 4;
         this.redraw();
+    }
+
+    /**
+     * Center the view on the note range present in the melody events.
+     * Called when the editor opens to ensure notes are visible.
+     */
+    centerOnNotes() {
+        if (this.melodyEvents.length === 0) return;
+
+        // Find note range
+        let minNote = 127, maxNote = 0, minTick = Infinity;
+        for (const evt of this.melodyEvents) {
+            if (evt.note < minNote) minNote = evt.note;
+            if (evt.note > maxNote) maxNote = evt.note;
+            if (evt.tick < minTick) minTick = evt.tick;
+        }
+
+        // Center pitch display on the actual notes (with padding)
+        const centerNote = Math.floor((minNote + maxNote) / 2);
+        const range = this.noteMax - this.noteMin + 10;
+        this.displayNoteMin = Math.max(0, centerNote - Math.floor(range / 2));
+        this.displayNoteMax = Math.min(127, this.displayNoteMin + range);
+        this.scrollY = this.displayNoteMin - Math.max(0, this.noteMin - 5);
+
+        // Scroll horizontally to the first note
+        this.scrollX = Math.max(0, minTick - this.ticksPerBeat);
+
+        this.redraw();
+        this._notifyScrollChange();
+    }
+
+    _notifyScrollChange() {
+        if (this.onScrollChange) {
+            this.onScrollChange({
+                scrollX: this.scrollX,
+                scrollY: this.scrollY,
+                displayNoteMin: this.displayNoteMin,
+                displayNoteMax: this.displayNoteMax,
+            });
+        }
     }
 
     // ========================================================================
@@ -495,10 +554,10 @@ class WindMelodyRenderer {
         const hitIdx = this._hitTestNote(mx, my);
 
         if (e.button === 0) {
-            if (hitIdx >= 0) {
-                // Click on note
-                if (e.shiftKey) {
-                    // Toggle selection
+            if (this.tool === 'pan') {
+                // Pan mode: drag to scroll the view
+                if (hitIdx >= 0 && e.shiftKey) {
+                    // Shift+click on note in pan mode = select note
                     if (this.selectedEvents.has(hitIdx)) {
                         this.selectedEvents.delete(hitIdx);
                     } else {
@@ -506,27 +565,43 @@ class WindMelodyRenderer {
                     }
                     this.redraw();
                 } else {
-                    if (!this.selectedEvents.has(hitIdx)) {
-                        this.selectedEvents.clear();
-                        this.selectedEvents.add(hitIdx);
-                    }
-                    // Start drag-move
+                    // Start panning
                     this._isDragging = true;
-                    this._dragMode = 'move';
-                    this._dragStart = { x: mx, y: my };
-                    this._moveOffset = { tick: 0, note: 0 };
-                    this.redraw();
+                    this._dragMode = 'pan';
+                    this._dragStart = { x: mx, y: my, scrollX: this.scrollX, displayNoteMin: this.displayNoteMin, displayNoteMax: this.displayNoteMax };
+                    this.canvas.style.cursor = 'grabbing';
                 }
             } else {
-                // Click on empty space — start selection rect or add note
-                if (e.shiftKey) {
-                    this._isDragging = true;
-                    this._dragMode = 'select';
-                    this._dragStart = { x: mx, y: my };
-                    this.selectionRect = { x: mx, y: my, w: 0, h: 0 };
+                // Edit mode
+                if (hitIdx >= 0) {
+                    if (e.shiftKey) {
+                        if (this.selectedEvents.has(hitIdx)) {
+                            this.selectedEvents.delete(hitIdx);
+                        } else {
+                            this.selectedEvents.add(hitIdx);
+                        }
+                        this.redraw();
+                    } else {
+                        if (!this.selectedEvents.has(hitIdx)) {
+                            this.selectedEvents.clear();
+                            this.selectedEvents.add(hitIdx);
+                        }
+                        this._isDragging = true;
+                        this._dragMode = 'move';
+                        this._dragStart = { x: mx, y: my };
+                        this._moveOffset = { tick: 0, note: 0 };
+                        this.redraw();
+                    }
                 } else {
-                    this.selectedEvents.clear();
-                    this.redraw();
+                    if (e.shiftKey) {
+                        this._isDragging = true;
+                        this._dragMode = 'select';
+                        this._dragStart = { x: mx, y: my };
+                        this.selectionRect = { x: mx, y: my, w: 0, h: 0 };
+                    } else {
+                        this.selectedEvents.clear();
+                        this.redraw();
+                    }
                 }
             }
         }
@@ -537,7 +612,22 @@ class WindMelodyRenderer {
         const mx = e.clientX - rect.left;
         const my = e.clientY - rect.top;
 
-        if (this._isDragging && this._dragMode === 'select') {
+        if (this._isDragging && this._dragMode === 'pan') {
+            // Pan: scroll view by dragging
+            const dx = (mx - this._dragStart.x) * this.ticksPerPixel;
+            const dy = (my - this._dragStart.y);
+            const noteH = this._getNoteHeight() || 10;
+            const noteDelta = Math.round(dy / noteH);
+
+            this.scrollX = Math.max(0, this._dragStart.scrollX - dx);
+            const range = this._dragStart.displayNoteMax - this._dragStart.displayNoteMin;
+            this.displayNoteMin = Math.max(0, this._dragStart.displayNoteMin + noteDelta);
+            this.displayNoteMax = Math.min(127, this.displayNoteMin + range);
+            this.scrollY = this.displayNoteMin - Math.max(0, this.noteMin - 5);
+
+            this.redraw();
+            this._notifyScrollChange();
+        } else if (this._isDragging && this._dragMode === 'select') {
             this.selectionRect = {
                 x: Math.min(mx, this._dragStart.x),
                 y: Math.min(my, this._dragStart.y),
@@ -546,33 +636,32 @@ class WindMelodyRenderer {
             };
             this.redraw();
         } else if (this._isDragging && this._dragMode === 'move') {
-            // Preview move offset
             const tickDelta = (mx - this._dragStart.x) * this.ticksPerPixel;
             const noteDelta = -Math.round((my - this._dragStart.y) / (this._getNoteHeight() || 10));
             this._moveOffset = { tick: tickDelta, note: noteDelta };
             this.redraw();
         } else {
-            // Hover highlight
+            // Hover
             const newHover = this._hitTestNote(mx, my);
             if (newHover !== this._hoverIndex) {
                 this._hoverIndex = newHover;
-                this.canvas.style.cursor = newHover >= 0 ? 'pointer' : 'crosshair';
+                if (this.tool === 'pan') {
+                    this.canvas.style.cursor = newHover >= 0 ? 'pointer' : 'grab';
+                } else {
+                    this.canvas.style.cursor = newHover >= 0 ? 'pointer' : 'crosshair';
+                }
             }
         }
     }
 
     _handleMouseUp(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
-
-        if (this._isDragging && this._dragMode === 'select') {
-            // Finalize selection
+        if (this._isDragging && this._dragMode === 'pan') {
+            this.canvas.style.cursor = 'grab';
+        } else if (this._isDragging && this._dragMode === 'select') {
             this._selectInRect(this.selectionRect);
             this.selectionRect = null;
             this.redraw();
         } else if (this._isDragging && this._dragMode === 'move' && this._moveOffset) {
-            // Commit move
             const { tick: dt, note: dn } = this._moveOffset;
             if (Math.abs(dt) > 10 || dn !== 0) {
                 this.saveSnapshot();
@@ -626,15 +715,20 @@ class WindMelodyRenderer {
             const factor = e.deltaY > 0 ? 1.2 : 0.8;
             this.setZoom(this.ticksPerPixel * factor);
         } else if (e.shiftKey) {
-            // Vertical pitch scroll
-            const delta = e.deltaY > 0 ? -2 : 2;
-            this.displayNoteMin = Math.max(0, this.displayNoteMin + delta);
-            this.displayNoteMax = Math.min(127, this.displayNoteMax + delta);
-            this.redraw();
-        } else {
-            // Horizontal scroll
+            // Horizontal scroll with shift+wheel
             const delta = e.deltaY * this.ticksPerPixel * 2;
-            this.setScrollX(this.scrollX + delta);
+            this.scrollX = Math.max(0, this.scrollX + delta);
+            this.redraw();
+            this._notifyScrollChange();
+        } else {
+            // Vertical pitch scroll (default wheel = vertical)
+            const delta = e.deltaY > 0 ? -2 : 2;
+            const range = this.displayNoteMax - this.displayNoteMin;
+            this.displayNoteMin = Math.max(0, this.displayNoteMin + delta);
+            this.displayNoteMax = Math.min(127, this.displayNoteMin + range);
+            this.scrollY = this.displayNoteMin - Math.max(0, this.noteMin - 5);
+            this.redraw();
+            this._notifyScrollChange();
         }
     }
 

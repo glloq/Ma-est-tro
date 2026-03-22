@@ -5258,6 +5258,11 @@ class MidiEditorModal {
             renderer.setScrollX(newOffset);
         }
 
+        // Synchroniser l'éditeur vent
+        if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) {
+            this.windInstrumentEditor.scrollHorizontal(percentage);
+        }
+
         // Synchroniser l'éditeur CC
         this.syncCCEditor();
     }
@@ -5266,20 +5271,25 @@ class MidiEditorModal {
      * Défilement vertical (0-100%)
      */
     scrollVertical(percentage) {
-        if (!this.pianoRoll) return;
+        if (this.pianoRoll) {
+            const yrange = this.pianoRoll.yrange || parseInt(this.pianoRoll.getAttribute('yrange')) || 36;
 
-        const yrange = this.pianoRoll.yrange || parseInt(this.pianoRoll.getAttribute('yrange')) || 36;
+            // Plage complète MIDI: 0-127 notes
+            const totalMidiRange = 128;
+            const maxOffset = Math.max(0, totalMidiRange - yrange);
+            const newOffset = Math.round((percentage / 100) * maxOffset);
 
-        // Plage complète MIDI: 0-127 notes
-        const totalMidiRange = 128;
-        const maxOffset = Math.max(0, totalMidiRange - yrange);
-        const newOffset = Math.round((percentage / 100) * maxOffset);
+            this.pianoRoll.yoffset = newOffset;
+            this.pianoRoll.setAttribute('yoffset', newOffset.toString());
 
-        this.pianoRoll.yoffset = newOffset;
-        this.pianoRoll.setAttribute('yoffset', newOffset.toString());
+            if (typeof this.pianoRoll.redraw === 'function') {
+                this.pianoRoll.redraw();
+            }
+        }
 
-        if (typeof this.pianoRoll.redraw === 'function') {
-            this.pianoRoll.redraw();
+        // Synchroniser l'éditeur vent
+        if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) {
+            this.windInstrumentEditor.scrollVertical(percentage);
         }
     }
 

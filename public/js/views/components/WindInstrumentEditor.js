@@ -79,6 +79,10 @@ class WindInstrumentEditor {
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 this.handleResize();
+                // Center view on the notes after layout settles
+                if (this.renderer) {
+                    this.renderer.centerOnNotes();
+                }
             });
         });
     }
@@ -257,6 +261,8 @@ class WindInstrumentEditor {
             noteMax: this.windPreset?.rangeMax || 84,
             comfortMin: this.windPreset?.comfortMin || 48,
             comfortMax: this.windPreset?.comfortMax || 84,
+            tool: 'pan',
+            onScrollChange: (info) => this._syncScrollBars(info),
         });
 
         // Sync zoom/scroll with piano roll
@@ -519,6 +525,72 @@ class WindInstrumentEditor {
 
         this.breathMarks = marks;
         if (this.renderer) this.renderer.setBreathMarks(marks);
+    }
+
+    // ========================================================================
+    // SCROLL BAR SYNC
+    // ========================================================================
+
+    /**
+     * Sync external scroll bars when the renderer scroll changes (pan, wheel, etc.)
+     * Called by the renderer's onScrollChange callback.
+     */
+    _syncScrollBars(info) {
+        if (!this.isVisible) return;
+
+        const maxTick = this.modal.midiData?.maxTick || 0;
+
+        // Update horizontal scroll bar
+        const scrollHSlider = document.getElementById('scroll-h-slider');
+        if (scrollHSlider && maxTick > 0 && this.renderer) {
+            const canvasWidth = this.melodyCanvasEl?.width || 800;
+            const visibleTicks = (canvasWidth - this.renderer.headerWidth) * this.renderer.ticksPerPixel;
+            const maxOffset = Math.max(1, maxTick - visibleTicks);
+            const percentage = Math.min(100, (this.renderer.scrollX / maxOffset) * 100);
+            scrollHSlider.value = percentage;
+        }
+
+        // Update vertical scroll bar
+        const scrollVSlider = document.getElementById('scroll-v-slider');
+        if (scrollVSlider && this.renderer) {
+            const totalRange = 128;
+            const displayRange = this.renderer.displayNoteMax - this.renderer.displayNoteMin;
+            const maxOffset = Math.max(1, totalRange - displayRange);
+            const yoffset = this.renderer.displayNoteMin;
+            const percentage = Math.min(100, (yoffset / maxOffset) * 100);
+            scrollVSlider.value = percentage;
+        }
+    }
+
+    /**
+     * Called by MidiEditorModal.scrollHorizontal() to sync this editor with the scroll bar.
+     * @param {number} percentage - 0-100
+     */
+    scrollHorizontal(percentage) {
+        if (!this.renderer) return;
+        const maxTick = this.modal.midiData?.maxTick || 0;
+        const canvasWidth = this.melodyCanvasEl?.width || 800;
+        const visibleTicks = (canvasWidth - this.renderer.headerWidth) * this.renderer.ticksPerPixel;
+        const maxOffset = Math.max(0, maxTick - visibleTicks);
+        const newOffset = Math.round((percentage / 100) * maxOffset);
+        this.renderer.scrollX = newOffset;
+        this.renderer.redraw();
+    }
+
+    /**
+     * Called by MidiEditorModal.scrollVertical() to sync this editor with the scroll bar.
+     * @param {number} percentage - 0-100
+     */
+    scrollVertical(percentage) {
+        if (!this.renderer) return;
+        const totalRange = 128;
+        const displayRange = this.renderer.displayNoteMax - this.renderer.displayNoteMin;
+        const maxOffset = Math.max(0, totalRange - displayRange);
+        const newOffset = Math.round((percentage / 100) * maxOffset);
+        this.renderer.displayNoteMin = Math.max(0, newOffset);
+        this.renderer.displayNoteMax = Math.min(127, newOffset + displayRange);
+        this.renderer.scrollY = newOffset - Math.max(0, this.renderer.noteMin - 5);
+        this.renderer.redraw();
     }
 
     // ========================================================================
