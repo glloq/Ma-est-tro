@@ -104,8 +104,8 @@ class MidiEditorPlayback {
                     mutedChannels.push(ch.channel);
                 }
             } else {
-                // Normal mode: mute inactive channels
-                if (!m.activeChannels.has(ch.channel)) {
+                // Normal mode: mute inactive channels or disabled channels
+                if (!m.activeChannels.has(ch.channel) || m.channelDisabled.has(ch.channel)) {
                     mutedChannels.push(ch.channel);
                 }
             }
