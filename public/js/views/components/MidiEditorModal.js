@@ -3014,6 +3014,9 @@ class MidiEditorModal {
         this.pianoRoll.setAttribute('markend', maxTick.toString());
         this.pianoRoll.setAttribute('cursor', '0');
 
+        // Clean, modern piano roll colors (theme-aware)
+        this._applyPianoRollTheme();
+
         this.log('info', `Piano roll configured: xrange=${xrange}, yrange=${noteRange}, yoffset=${yoffset} (centered), tempo=${this.tempo || 120} BPM, timebase=${this.ticksPerBeat || 480} ticks/beat`);
 
         // Ajouter au conteneur AVANT de charger la sequence
@@ -4275,6 +4278,45 @@ class MidiEditorModal {
     }
 
     /**
+     * Apply clean, modern colors to the piano roll based on the current theme.
+     */
+    _applyPianoRollTheme() {
+        if (!this.pianoRoll) return;
+
+        const isDark = document.body.classList.contains('dark-mode');
+        const isColored = document.body.classList.contains('theme-colored');
+
+        if (isDark) {
+            // Dark mode: deep dark background, subtle contrast
+            this.pianoRoll.setAttribute('collt', '#2a2d35');    // White key rows
+            this.pianoRoll.setAttribute('coldk', '#22252b');    // Black key rows
+            this.pianoRoll.setAttribute('colgrid', '#3a3d45');  // Grid lines (subtle)
+            this.pianoRoll.setAttribute('colrulerbg', '#1e2028');
+            this.pianoRoll.setAttribute('colrulerfg', '#8890a0');
+            this.pianoRoll.setAttribute('colrulerborder', '#3a3d45');
+            this.pianoRoll.setAttribute('colnoteborder', 'rgba(255,255,255,0.15)');
+        } else if (isColored) {
+            // Colored theme: soft pastel tones
+            this.pianoRoll.setAttribute('collt', '#f0f0f8');    // White key rows
+            this.pianoRoll.setAttribute('coldk', '#e4e4f0');    // Black key rows
+            this.pianoRoll.setAttribute('colgrid', '#d0d0e0');  // Grid lines (subtle)
+            this.pianoRoll.setAttribute('colrulerbg', '#e8e8f4');
+            this.pianoRoll.setAttribute('colrulerfg', '#4a3f6b');
+            this.pianoRoll.setAttribute('colrulerborder', '#d0d0e0');
+            this.pianoRoll.setAttribute('colnoteborder', 'rgba(102,126,234,0.2)');
+        } else {
+            // Light mode: clean white/off-white
+            this.pianoRoll.setAttribute('collt', '#f8f9fa');    // White key rows
+            this.pianoRoll.setAttribute('coldk', '#edf0f4');    // Black key rows
+            this.pianoRoll.setAttribute('colgrid', '#dee2e6');  // Grid lines (subtle)
+            this.pianoRoll.setAttribute('colrulerbg', '#e9ecef');
+            this.pianoRoll.setAttribute('colrulerfg', '#495057');
+            this.pianoRoll.setAttribute('colrulerborder', '#dee2e6');
+            this.pianoRoll.setAttribute('colnoteborder', 'rgba(0,0,0,0.1)');
+        }
+    }
+
+    /**
      * Initialize the PlaybackTimelineBar for the piano editor.
      */
     _initTimelineBar(maxTick, ticksPerBeat, xrange) {
@@ -4297,16 +4339,24 @@ class MidiEditorModal {
             leftOffset: pianoLeftOffset,
             height: 30,
             onSeek: (tick) => {
-                // Position the piano roll cursor and update playback start
+                // Clamp playhead within the current range markers
+                const rangeStart = this.timelineBar.rangeStart || 0;
+                const rangeEnd = this.timelineBar.rangeEnd || (this.midiData?.maxTick || 0);
+                const clampedTick = Math.max(rangeStart, Math.min(tick, rangeEnd));
+
+                // Update piano roll cursor visually
                 if (this.pianoRoll) {
-                    this.pianoRoll.cursor = tick;
+                    this.pianoRoll.cursor = clampedTick;
                 }
-                this.playbackStartTick = tick;
-                // Seek the synthesizer to the new position
+                // Seek the synthesizer to the new position (stays within range)
                 if (this.synthesizer && typeof this.synthesizer.seek === 'function') {
-                    this.synthesizer.seek(tick);
+                    this.synthesizer.seek(clampedTick);
                 }
-                this.log('debug', `Timeline seek to tick ${tick}`);
+                // Update the timeline bar playhead to the clamped position
+                if (this.timelineBar) {
+                    this.timelineBar.setPlayhead(clampedTick);
+                }
+                this.log('debug', `Timeline seek to tick ${clampedTick}`);
             },
             onRangeChange: (start, end) => {
                 // Sync range markers with the piano roll
@@ -4314,9 +4364,29 @@ class MidiEditorModal {
                     this.pianoRoll.setAttribute('markstart', start.toString());
                     this.pianoRoll.setAttribute('markend', end.toString());
                 }
-                // Update the synthesizer playback range
-                if (this.playback) {
-                    this.playback.updatePlaybackRange();
+                // Update playback range on synthesizer
+                this.playbackStartTick = start;
+                this.playbackEndTick = end;
+                if (this.synthesizer) {
+                    // Preserve current position if within new range
+                    const currentTick = this.synthesizer.currentTick || 0;
+                    this.synthesizer.startTick = Math.max(0, start);
+                    this.synthesizer.endTick = end;
+                    // Keep currentTick if still in range, otherwise reset to start
+                    if (currentTick < start || currentTick > end) {
+                        this.synthesizer.currentTick = start;
+                    }
+                }
+                // Also update the playhead if it's outside the new range
+                if (this.timelineBar) {
+                    const playhead = this.timelineBar.playheadTick;
+                    if (playhead < start) {
+                        this.timelineBar.setPlayhead(start);
+                        if (this.pianoRoll) this.pianoRoll.cursor = start;
+                    } else if (playhead > end) {
+                        this.timelineBar.setPlayhead(end);
+                        if (this.pianoRoll) this.pianoRoll.cursor = end;
+                    }
                 }
                 this.log('debug', `Timeline range changed: ${start} - ${end}`);
             },
