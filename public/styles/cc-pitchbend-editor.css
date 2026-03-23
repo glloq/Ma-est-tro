@@ -2,8 +2,8 @@
 
 .cc-pitchbend-editor {
     width: 100%;
-    background: #1a1a1a;
-    border-top: 1px solid #333;
+    background: var(--bg-primary, #f8f9fa);
+    border-top: 1px solid var(--border-color, #e9ecef);
     position: relative;
     overflow: hidden;
 }
@@ -11,8 +11,8 @@
 /* Velocity Editor Styles */
 .velocity-editor {
     width: 100%;
-    background: #1a1a1a;
-    border-top: 1px solid #333;
+    background: var(--bg-primary, #f8f9fa);
+    border-top: 1px solid var(--border-color, #e9ecef);
     position: relative;
     overflow: hidden;
 }
@@ -36,7 +36,7 @@
 
 .midi-editor-section {
     position: relative;
-    background: #1a1a1a;
+    background: var(--bg-primary, #f8f9fa);
 }
 
 .midi-editor-section.notes-section {
@@ -62,7 +62,7 @@
 /* Section CC - utilise tout l'espace disponible ou se collapse */
 .midi-editor-section.cc-section {
     flex: 0 0 auto;
-    border-top: 2px solid #444;
+    border-top: 2px solid var(--border-color, #e9ecef);
     display: flex;
     flex-direction: column;
     transition: all 0.3s ease-out;
@@ -83,8 +83,8 @@
 .cc-section-header {
     flex: 0 0 auto;
     padding: 4px 12px;
-    background: linear-gradient(180deg, #2d2d2d 0%, #242424 100%);
-    border-bottom: 1px solid #333;
+    background: var(--bg-tertiary, #e9ecef);
+    border-bottom: 1px solid var(--border-color, #e9ecef);
     cursor: pointer;
     user-select: none;
     transition: background 0.2s;
@@ -92,7 +92,7 @@
 }
 
 .cc-section-header:hover {
-    background: linear-gradient(180deg, #353535 0%, #2a2a2a 100%);
+    background: var(--bg-secondary, #fff);
 }
 
 .cc-section-title {
@@ -101,7 +101,7 @@
     gap: 8px;
     font-size: 12px;
     font-weight: 600;
-    color: #e0e0e0;
+    color: var(--text-primary, #2c3e50);
     width: 100%;
     position: relative;
 }
@@ -109,7 +109,7 @@
 .cc-collapse-icon {
     font-size: 10px;
     transition: transform 0.3s;
-    color: #888;
+    color: var(--text-secondary, #6c757d);
 }
 
 .cc-section-header.collapsed .cc-collapse-icon {
@@ -139,8 +139,8 @@
     align-items: center;
     gap: 8px;
     padding: 6px 12px;
-    background: linear-gradient(180deg, #2d2d2d 0%, #242424 100%);
-    border-bottom: 1px solid #333;
+    background: var(--bg-tertiary, #e9ecef);
+    border-bottom: 1px solid var(--border-color, #e9ecef);
     flex-wrap: wrap;
     max-height: 65px; /* LIMITE: Maximum 65px pour toolbar (groupes + labels) */
     overflow: hidden;
@@ -149,7 +149,7 @@
 .cc-toolbar-label {
     font-size: 10px;
     font-weight: 600;
-    color: #888;
+    color: var(--text-secondary, #6c757d);
     text-transform: uppercase;
     margin-right: 4px;
     white-space: nowrap;
@@ -158,7 +158,7 @@
 .cc-toolbar-divider {
     width: 1px;
     height: 24px;
-    background: #444;
+    background: var(--border-color, #e9ecef);
     margin: 0 8px;
 }
 
@@ -169,8 +169,8 @@
     flex: 1;
     min-height: 0;
     max-height: 100%; /* AJOUT: Contraindre au conteneur parent */
-    background: #1a1a1a;
-    overflow: hidden; /* AJOUT: Empêcher débordement */
+    background: var(--bg-primary, #f8f9fa);
+    overflow: hidden;
 }
 
 /* Conteneur des groupes de boutons CC */
@@ -193,7 +193,7 @@
 .cc-group-label {
     font-size: 7px;
     font-weight: 600;
-    color: #666;
+    color: var(--text-secondary, #6c757d);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     line-height: 1;
@@ -208,10 +208,10 @@
 /* Boutons CC individuels */
 .cc-type-btn {
     padding: 3px 6px;
-    background: #2d2d2d;
-    border: 1px solid #444;
+    background: var(--bg-secondary, #fff);
+    border: 1px solid var(--border-color, #e9ecef);
     border-radius: 0;
-    color: #bbb;
+    color: var(--text-secondary, #6c757d);
     font-size: 9px;
     font-weight: 600;
     cursor: pointer;
@@ -236,9 +236,9 @@
 }
 
 .cc-type-btn:hover {
-    background: #353535;
-    border-color: #555;
-    color: #e0e0e0;
+    background: var(--accent-primary, #667eea);
+    border-color: var(--accent-primary, #667eea);
+    color: #fff;
     z-index: 1;
     position: relative;
 }
@@ -261,10 +261,10 @@
 
 .cc-tool-btn {
     padding: 6px 10px;
-    background: #2d2d2d;
-    border: 1px solid #444;
+    background: var(--bg-secondary, #fff);
+    border: 1px solid var(--border-color, #e9ecef);
     border-radius: 4px;
-    color: #bbb;
+    color: var(--text-secondary, #6c757d);
     font-size: 14px;
     cursor: pointer;
     transition: all 0.2s;
@@ -274,9 +274,9 @@
 }
 
 .cc-tool-btn:hover {
-    background: #353535;
-    border-color: #555;
-    color: #e0e0e0;
+    background: var(--accent-primary, #667eea);
+    border-color: var(--accent-primary, #667eea);
+    color: #fff;
 }
 
 .cc-tool-btn.active {
@@ -338,10 +338,10 @@
 
 .cc-channel-btn {
     padding: 3px 6px;
-    background: #2d2d2d;
-    border: 1px solid #444;
+    background: var(--bg-secondary, #fff);
+    border: 1px solid var(--border-color, #e9ecef);
     border-radius: 3px;
-    color: #bbb;
+    color: var(--text-secondary, #6c757d);
     font-size: 10px;
     font-weight: 600;
     cursor: pointer;
@@ -352,9 +352,9 @@
 }
 
 .cc-channel-btn:hover {
-    background: #353535;
-    border-color: #555;
-    color: #e0e0e0;
+    background: var(--accent-primary, #667eea);
+    border-color: var(--accent-primary, #667eea);
+    color: #fff;
 }
 
 .cc-channel-btn.active {
@@ -366,7 +366,7 @@
 /* Message quand aucun canal n'est disponible */
 .cc-no-channels {
     padding: 8px;
-    color: #888;
+    color: var(--text-secondary, #6c757d);
     font-size: 10px;
     text-align: center;
     font-style: italic;
@@ -375,9 +375,9 @@
 /* Barre de resize entre notes et CC */
 .cc-resize-bar {
     height: 12px;
-    background: #3a3a3a;
-    border-top: 1px solid #555;
-    border-bottom: 1px solid #555;
+    background: var(--bg-tertiary, #e9ecef);
+    border-top: 1px solid var(--border-color, #e9ecef);
+    border-bottom: 1px solid var(--border-color, #e9ecef);
     cursor: ns-resize;
     display: none; /* Cachée par défaut */
     align-items: center;
@@ -405,7 +405,7 @@
 
 .cc-resize-bar .resize-grip {
     display: block;
-    color: #888;
+    color: var(--text-secondary, #6c757d);
     font-size: 12px;
     line-height: 0.6;
     letter-spacing: 3px;
@@ -612,4 +612,88 @@
 
 .cc-pitchbend-editor.dragging canvas {
     cursor: grabbing !important;
+}
+
+/* ========================================================================
+   DARK MODE OVERRIDES
+   ======================================================================== */
+body.dark-mode .cc-pitchbend-editor,
+body.dark-mode .velocity-editor {
+    background: #1a1a1a;
+    border-top-color: #333;
+}
+
+body.dark-mode .midi-editor-section {
+    background: #1a1a1a;
+}
+
+body.dark-mode .cc-section-header {
+    background: linear-gradient(180deg, #2d2d2d 0%, #242424 100%);
+    border-bottom-color: #333;
+}
+
+body.dark-mode .cc-section-header:hover {
+    background: linear-gradient(180deg, #353535 0%, #2a2a2a 100%);
+}
+
+body.dark-mode .cc-section-title {
+    color: #e0e0e0;
+}
+
+body.dark-mode .cc-type-toolbar {
+    background: linear-gradient(180deg, #2d2d2d 0%, #242424 100%);
+    border-bottom-color: #333;
+}
+
+body.dark-mode .cc-type-btn {
+    background: #2d2d2d;
+    border-color: #444;
+    color: #bbb;
+}
+
+body.dark-mode .cc-type-btn:hover {
+    background: #353535;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+body.dark-mode .cc-tool-btn {
+    background: #2d2d2d;
+    border-color: #444;
+    color: #bbb;
+}
+
+body.dark-mode .cc-tool-btn:hover {
+    background: #353535;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+body.dark-mode .cc-channel-btn {
+    background: #2d2d2d;
+    border-color: #444;
+    color: #bbb;
+}
+
+body.dark-mode .cc-channel-btn:hover {
+    background: #353535;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+body.dark-mode .cc-editor-layout {
+    background: #1a1a1a;
+}
+
+body.dark-mode .cc-resize-bar {
+    background: #3a3a3a;
+    border-color: #555;
+}
+
+body.dark-mode .cc-toolbar-divider {
+    background: #444;
+}
+
+body.dark-mode .midi-editor-section.cc-section {
+    border-top-color: #444;
 }

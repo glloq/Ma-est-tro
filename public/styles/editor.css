@@ -86,24 +86,24 @@
     font-weight: 500;
 }
 
-/* Tool Buttons */
+/* Tool Buttons - Theme-aware using CSS variables */
 .tool-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 4px;
     padding: 8px 10px;
-    background: linear-gradient(180deg, #3a3a3a 0%, #2d2d2d 100%);
-    border: 1px solid #555;
+    background: var(--bg-secondary, #fff);
+    border: 1px solid var(--border-color, #e9ecef);
     border-radius: 6px;
-    color: var(--text-primary);
+    color: var(--text-primary, #2c3e50);
     cursor: pointer;
     font-size: 13px;
     font-weight: 500;
     transition: all 0.2s ease;
     white-space: nowrap;
     position: relative;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-light, 0 2px 4px rgba(0,0,0,0.05));
 }
 
 .tool-btn .icon {
@@ -116,10 +116,11 @@
 }
 
 .tool-btn:hover:not(:disabled) {
-    background: linear-gradient(180deg, #454545 0%, #383838 100%);
-    border-color: #667eea;
+    background: var(--accent-primary, #667eea);
+    border-color: var(--accent-primary, #667eea);
+    color: #fff;
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 12px rgba(102, 126, 234, 0.2);
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
 }
 
 .tool-btn:active:not(:disabled) {
@@ -129,7 +130,7 @@
 
 .tool-btn.active {
     background: linear-gradient(180deg, #5a6fd8 0%, #4a5fc8 100%);
-    border-color: #667eea;
+    border-color: var(--accent-primary, #667eea);
     color: #fff;
     font-weight: 600;
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
@@ -145,6 +146,21 @@
     opacity: 0.4;
     cursor: not-allowed;
     transform: none !important;
+}
+
+/* Dark mode overrides for tool buttons */
+body.dark-mode .tool-btn {
+    background: linear-gradient(180deg, #3a3a3a 0%, #2d2d2d 100%);
+    border-color: #555;
+    color: #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .tool-btn:hover:not(:disabled) {
+    background: linear-gradient(180deg, #454545 0%, #383838 100%);
+    border-color: #667eea;
+    color: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 12px rgba(102, 126, 234, 0.2);
 }
 
 .tool-btn.btn-primary {

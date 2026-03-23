@@ -1367,9 +1367,31 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             }
             e.preventDefault();
         };
+        // OPTIMISATION: Batch mode pour éviter les redraws multiples pendant l'init
+        this._batchMode = false;
+        this._layoutDirty = false;
+
+        this.beginBatchUpdate = function() {
+            this._batchMode = true;
+            this._layoutDirty = false;
+        };
+
+        this.endBatchUpdate = function() {
+            this._batchMode = false;
+            if (this._layoutDirty) {
+                this._layoutDirty = false;
+                this.layout();
+            }
+        };
+
         this.layout=function(){
             if(typeof(this.kbwidth)=="undefined")
                 return;
+            // En batch mode, différer le layout
+            if (this._batchMode) {
+                this._layoutDirty = true;
+                return;
+            }
             const proll = this.proll;
             const bodystyle = this.body.style;
             if(this.bgsrc)
@@ -1411,35 +1433,29 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 ygrid = 1; // Très zoomé : afficher chaque note
             }
 
-            // Log pour débogage
-            if(Math.random() < 0.01) { // Log seulement 1% du temps pour ne pas spammer
-                console.log('[PianoRoll Grid] yrange:', this.yrange, 'ygrid:', ygrid, 'xrange:', this.xrange, 'grid:', this.grid);
-            }
-
             // Couleurs pour les notes non jouables (grisées)
-            const colUnplayableLt = '#707070'; // Gris clair pour notes blanches non jouables
-            const colUnplayableDk = '#505050'; // Gris foncé pour notes noires non jouables
+            const colUnplayableLt = '#707070';
+            const colUnplayableDk = '#505050';
 
-            // Pre-compute per-note highlight colors (tinted background) — single pass, no globalAlpha
-            let noteHighlightLt = null; // light key tinted colors [128]
-            let noteHighlightDk = null; // dark key tinted colors [128]
+            // OPTIMISATION: Cache des couleurs highlight pour éviter le recalcul à chaque frame
+            let noteHighlightLt = null;
+            let noteHighlightDk = null;
             if(this.channelPlayableHighlights && this.channelPlayableHighlights.size > 0) {
-                noteHighlightLt = new Array(128);
-                noteHighlightDk = new Array(128);
-                // Parse base row colors once
-                const baseLt = {r:0xcc,g:0xcc,b:0xcc}; // #ccc
-                const baseDk = {r:0xaa,g:0xaa,b:0xaa}; // #aaa
-                const _parseHex = function(hex) {
-                    hex = hex.replace('#','');
-                    if(hex.length===3) hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
-                    return {r:parseInt(hex.substr(0,2),16),g:parseInt(hex.substr(2,2),16),b:parseInt(hex.substr(4,2),16)};
-                };
-                const _blend = function(base, tint, t) {
-                    return 'rgb('+Math.round(base.r+(tint.r-base.r)*t)+','+Math.round(base.g+(tint.g-base.g)*t)+','+Math.round(base.b+(tint.b-base.b)*t)+')';
-                };
-                // Apply last matching highlight per note (blend 40% for clear visibility)
-                this.channelPlayableHighlights.forEach(function(info) {
-                    const tint = _parseHex(info.color);
+                if (this._highlightsDirty || !this._cachedHighlightLt) {
+                    noteHighlightLt = new Array(128);
+                    noteHighlightDk = new Array(128);
+                    const baseLt = {r:0xcc,g:0xcc,b:0xcc};
+                    const baseDk = {r:0xaa,g:0xaa,b:0xaa};
+                    const _parseHex = function(hex) {
+                        hex = hex.replace('#','');
+                        if(hex.length===3) hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+                        return {r:parseInt(hex.substr(0,2),16),g:parseInt(hex.substr(2,2),16),b:parseInt(hex.substr(4,2),16)};
+                    };
+                    const _blend = function(base, tint, t) {
+                        return 'rgb('+Math.round(base.r+(tint.r-base.r)*t)+','+Math.round(base.g+(tint.g-base.g)*t)+','+Math.round(base.b+(tint.b-base.b)*t)+')';
+                    };
+                    this.channelPlayableHighlights.forEach(function(info) {
+                        const tint = _parseHex(info.color);
                     const notes = info.notes;
                     for(let y=0;y<128;++y){
                         if(!notes || notes.has(y)) {
@@ -1448,6 +1464,13 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                         }
                     }
                 });
+                    this._cachedHighlightLt = noteHighlightLt;
+                    this._cachedHighlightDk = noteHighlightDk;
+                    this._highlightsDirty = false;
+                } else {
+                    noteHighlightLt = this._cachedHighlightLt;
+                    noteHighlightDk = this._cachedHighlightDk;
+                }
             }
 
             for(let y=0;y<128;++y){

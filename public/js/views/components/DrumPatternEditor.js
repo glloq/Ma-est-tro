@@ -116,10 +116,6 @@ class DrumPatternEditor {
     destroy() {
         document.removeEventListener('keydown', this._onKeyDown);
         this._detachCanvasEvents();
-        if (this.timelineBar) {
-            this.timelineBar.destroy();
-            this.timelineBar = null;
-        }
         if (this.gridRenderer) {
             this.gridRenderer.destroy();
             this.gridRenderer = null;
@@ -176,7 +172,6 @@ class DrumPatternEditor {
                     <button class="drum-tool-btn drum-close-btn" data-action="drum-close" title="${this.t('common.close')}">&times;</button>
                 </div>
             </div>
-            <div class="playback-timeline-wrap drum-timeline-container" id="drum-timeline-container"></div>
             <div class="drum-pattern-body">
                 <div class="drum-grid-canvas-wrapper">
                     <canvas id="drum-grid-canvas" class="drum-grid-canvas"></canvas>
@@ -330,55 +325,7 @@ class DrumPatternEditor {
             this.toolsPanel.setGridRenderer(this.gridRenderer);
         }
 
-        // Initialize PlaybackTimelineBar
-        this._initTimelineBar();
-    }
-
-    _initTimelineBar() {
-        const timelineContainer = this.containerEl?.querySelector('#drum-timeline-container');
-        if (!timelineContainer || typeof PlaybackTimelineBar === 'undefined') return;
-
-        if (this.timelineBar) {
-            this.timelineBar.destroy();
-            this.timelineBar = null;
-        }
-
-        const headerWidth = this.gridRenderer?.headerWidth || 80;
-
-        this.timelineBar = new PlaybackTimelineBar(timelineContainer, {
-            ticksPerBeat: 480,
-            beatsPerMeasure: 4,
-            leftOffset: headerWidth,
-            height: 30,
-            onSeek: (tick) => {
-                if (this.modal.pianoRoll) {
-                    this.modal.pianoRoll.cursor = tick;
-                }
-                if (this.modal.synthesizer && typeof this.modal.synthesizer.seek === 'function') {
-                    this.modal.synthesizer.seek(tick);
-                }
-            },
-            onRangeChange: (start, end) => {
-                if (this.modal.pianoRoll) {
-                    this.modal.pianoRoll.setAttribute('markstart', start.toString());
-                    this.modal.pianoRoll.setAttribute('markend', end.toString());
-                }
-                if (this.modal.timelineBar) {
-                    this.modal.timelineBar.setRange(start, end);
-                }
-            },
-        });
-
-        if (this.modal.pianoRoll) {
-            const pr = this.modal.pianoRoll;
-            const maxTick = this.modal.midiData?.maxTick || 0;
-            this.timelineBar.setTotalTicks(maxTick);
-            this.timelineBar.setRange(pr.markstart || 0, pr.markend || maxTick);
-            if (this.gridRenderer) {
-                this.timelineBar.setZoom(this.gridRenderer.ticksPerPixel);
-                this.timelineBar.setScrollX(this.gridRenderer.scrollX);
-            }
-        }
+        // PlaybackTimelineBar is managed by the main MidiEditorModal (no duplicate)
     }
 
     _initToolsPanel() {
@@ -566,13 +513,7 @@ class DrumPatternEditor {
             this.gridRenderer.setPlayhead(tick);
         }
 
-        // Update timeline bar
-        if (this.timelineBar) {
-            this.timelineBar.setPlayhead(tick);
-            if (this.gridRenderer) {
-                this.timelineBar.setScrollX(this.gridRenderer.scrollX);
-            }
-        }
+        // PlaybackTimelineBar is updated by MidiEditorModal.updatePlaybackCursor()
     }
 
     // ========================================================================
