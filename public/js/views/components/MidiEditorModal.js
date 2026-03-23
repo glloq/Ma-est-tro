@@ -1276,9 +1276,9 @@ class MidiEditorModal {
             const xoffset = this.pianoRoll.xoffset || 0;
             const xrange = this.pianoRoll.xrange || 1920;
             const containerWidth = this.container?.querySelector('#playback-timeline-container')?.clientWidth || 800;
-            const pianoKeyWidth = 40;
+            const pianoLeftOffset = 64; // yruler (24) + kbwidth (40)
             this.timelineBar.setScrollX(xoffset);
-            this.timelineBar.setZoom(xrange / Math.max(1, containerWidth - pianoKeyWidth));
+            this.timelineBar.setZoom(xrange / Math.max(1, containerWidth - pianoLeftOffset));
         }
     }
 
@@ -3003,20 +3003,29 @@ class MidiEditorModal {
         this.pianoRoll.setAttribute('editmode', 'dragpoly');
         this.pianoRoll.setAttribute('xrange', xrange.toString());
         this.pianoRoll.setAttribute('yrange', noteRange.toString());
-        this.pianoRoll.setAttribute('yoffset', yoffset.toString()); // Centrer verticalement
+        this.pianoRoll.setAttribute('yoffset', yoffset.toString());
         this.pianoRoll.setAttribute('wheelzoom', '1');
         this.pianoRoll.setAttribute('xscroll', '1');
         this.pianoRoll.setAttribute('yscroll', '1');
-        // Marqueurs de lecture (triangles verts) - début et fin de la séquence
+        // Désactiver le xruler natif du piano roll (remplacé par PlaybackTimelineBar)
+        this.pianoRoll.setAttribute('xruler', '0');
+        // Marqueurs de lecture - gardés en interne pour le state mais masqués visuellement
         this.pianoRoll.setAttribute('markstart', '0');
         this.pianoRoll.setAttribute('markend', maxTick.toString());
-        // Curseur de lecture (triangle orange) - au début
         this.pianoRoll.setAttribute('cursor', '0');
 
         this.log('info', `Piano roll configured: xrange=${xrange}, yrange=${noteRange}, yoffset=${yoffset} (centered), tempo=${this.tempo || 120} BPM, timebase=${this.ticksPerBeat || 480} ticks/beat`);
 
         // Ajouter au conteneur AVANT de charger la sequence
         container.appendChild(this.pianoRoll);
+
+        // Masquer les marqueurs SVG natifs du piano roll (remplacés par PlaybackTimelineBar)
+        const cursorImg = this.pianoRoll.querySelector('#wac-cursor');
+        const markStartImg = this.pianoRoll.querySelector('#wac-markstart');
+        const markEndImg = this.pianoRoll.querySelector('#wac-markend');
+        if (cursorImg) cursorImg.style.display = 'none';
+        if (markStartImg) markStartImg.style.display = 'none';
+        if (markEndImg) markEndImg.style.display = 'none';
 
         // OPTIMISATION: Batch les assignations de propriétés pour éviter les redraws multiples
         // Chaque propriété avec observer 'layout' déclenche layout() → redraw()
@@ -4278,24 +4287,26 @@ class MidiEditorModal {
             this.timelineBar = null;
         }
 
-        // Compute leftOffset to align with piano roll keys
-        // The webaudio-pianoroll component has an internal key width of ~40px
-        const pianoKeyWidth = 40;
+        // Compute leftOffset to align with piano roll note area
+        // Piano roll offset = yruler (24px, octave labels) + kbwidth (40px, keyboard)
+        const pianoLeftOffset = 24 + 40; // 64px
 
         this.timelineBar = new PlaybackTimelineBar(timelineContainer, {
             ticksPerBeat: ticksPerBeat,
             beatsPerMeasure: 4,
-            leftOffset: pianoKeyWidth,
+            leftOffset: pianoLeftOffset,
             height: 30,
             onSeek: (tick) => {
-                // Position the piano roll cursor and seek the synthesizer
+                // Position the piano roll cursor and update playback start
                 if (this.pianoRoll) {
                     this.pianoRoll.cursor = tick;
                 }
+                this.playbackStartTick = tick;
+                // Seek the synthesizer to the new position
                 if (this.synthesizer && typeof this.synthesizer.seek === 'function') {
                     this.synthesizer.seek(tick);
                 }
-                this.playbackStartTick = tick;
+                this.log('debug', `Timeline seek to tick ${tick}`);
             },
             onRangeChange: (start, end) => {
                 // Sync range markers with the piano roll
@@ -4303,12 +4314,17 @@ class MidiEditorModal {
                     this.pianoRoll.setAttribute('markstart', start.toString());
                     this.pianoRoll.setAttribute('markend', end.toString());
                 }
+                // Update the synthesizer playback range
+                if (this.playback) {
+                    this.playback.updatePlaybackRange();
+                }
+                this.log('debug', `Timeline range changed: ${start} - ${end}`);
             },
         });
 
         this.timelineBar.setTotalTicks(maxTick);
         this.timelineBar.setRange(0, maxTick);
-        this.timelineBar.setZoom(xrange / ((timelineContainer.clientWidth || 800) - pianoKeyWidth));
+        this.timelineBar.setZoom(xrange / ((timelineContainer.clientWidth || 800) - pianoLeftOffset));
     }
 
     /**
