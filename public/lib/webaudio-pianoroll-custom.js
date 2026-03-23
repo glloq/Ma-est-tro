@@ -79,7 +79,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
         root.innerHTML =
 `<style>
 .pianoroll{
-    background:#ccc;
+    background:transparent;
 }
 :host {
     user-select: none;
@@ -1420,6 +1420,13 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             const end=(this.markend-this.xoffset)*this.stepw+this.yruler+this.kbwidth;
             this.markendimg.style.left=(end+this.markendoffset)+"px";
         };
+        // Helper: darken a hex color by a factor (0.0 = black, 1.0 = unchanged)
+        this._darkenColor=function(hex, factor){
+            if(!hex || hex.charAt(0)!=='#') return hex;
+            let r=parseInt(hex.substr(1,2),16), g=parseInt(hex.substr(3,2),16), b=parseInt(hex.substr(5,2),16);
+            r=Math.round(r*factor); g=Math.round(g*factor); b=Math.round(b*factor);
+            return '#'+((1<<24)|(r<<16)|(g<<8)|b).toString(16).slice(1);
+        };
         this.redrawGrid=function(){
             // Calculer le pas de grille vertical adaptatif en fonction du zoom (transition progressive)
             let ygrid = 1; // Par défaut, afficher chaque note
@@ -1433,9 +1440,9 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 ygrid = 1; // Très zoomé : afficher chaque note
             }
 
-            // Couleurs pour les notes non jouables (grisées)
-            const colUnplayableLt = '#707070';
-            const colUnplayableDk = '#505050';
+            // Couleurs pour les notes non jouables (grisées) - derived from base colors
+            const colUnplayableLt = this._darkenColor(this.collt, 0.7);
+            const colUnplayableDk = this._darkenColor(this.coldk, 0.7);
 
             // OPTIMISATION: Cache des couleurs highlight pour éviter le recalcul à chaque frame
             let noteHighlightLt = null;
