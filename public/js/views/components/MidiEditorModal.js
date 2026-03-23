@@ -4172,18 +4172,30 @@ class MidiEditorModal {
         if (!this.isPlaying && !this.isPaused) {
             this.loadSequenceForPlayback();
 
-            // Si le curseur a été déplacé manuellement, démarrer depuis cette position
-            if (this.pianoRoll && this.pianoRoll.cursor > 0) {
-                this.synthesizer.seek(this.pianoRoll.cursor);
-            }
+            // Déterminer la position de départ : curseur ou début de la plage
+            const cursorTick = this.pianoRoll ? (this.pianoRoll.cursor || 0) : 0;
+            const rangeStart = this.synthesizer.startTick || 0;
+            const rangeEnd = this.synthesizer.endTick || 0;
+            const startAt = (cursorTick > 0 && cursorTick >= rangeStart && (!rangeEnd || cursorTick <= rangeEnd))
+                ? cursorTick : rangeStart;
+
+            // Positionner le synthétiseur AVANT play() et forcer le chemin "resume"
+            // pour que play() ne réinitialise pas currentTick à startTick
+            this.synthesizer.currentTick = startAt;
+            this.synthesizer.lastScheduledTick = startAt;
+            this.synthesizer.isPaused = true;
         } else if (this.isPaused) {
             // En pause : reprendre depuis la position actuelle du curseur (qui peut avoir été déplacé)
             if (this.pianoRoll) {
-                this.synthesizer.seek(this.pianoRoll.cursor);
+                const cursorTick = this.pianoRoll.cursor || 0;
+                if (cursorTick > 0) {
+                    this.synthesizer.currentTick = cursorTick;
+                    this.synthesizer.lastScheduledTick = cursorTick;
+                }
             }
         }
 
-        // Démarrer la lecture
+        // Démarrer la lecture — play() prend le chemin isPaused et préserve currentTick
         await this.synthesizer.play();
 
         this.isPlaying = true;
@@ -4192,7 +4204,7 @@ class MidiEditorModal {
         // Mettre à jour l'UI
         this.updatePlaybackButtons();
 
-        this.log('info', 'Playback started');
+        this.log('info', `Playback started at tick ${this.synthesizer.currentTick}`);
     }
 
     /**

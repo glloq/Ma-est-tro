@@ -835,7 +835,8 @@ class MidiSynthesizer {
         }
 
         if (wasPlaying) {
-            this.isPaused = false;
+            // Keep isPaused=true (set by pause()) so play() takes the resume path
+            // and preserves currentTick instead of resetting to startTick
             this.play();
         }
     }
