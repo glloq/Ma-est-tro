@@ -5281,41 +5281,6 @@ class MidiEditorModal {
     }
 
     /**
-     * Ajuster la grille en fonction du niveau de zoom horizontal
-     * Plus on dézoome, moins on affiche de lignes de grille
-     */
-    updateGridResolution(xrange) {
-        if (!this.pianoRoll) return;
-
-        let gridValue;
-
-        // Cacher le quadrillage si zoom supérieur à 2000
-        if (xrange > 2000) {
-            gridValue = 100000; // Valeur très grande = grille invisible
-        }
-        // Adapter la résolution de la grille selon le zoom
-        // grid = pas en ticks entre les lignes (petit = beaucoup de lignes, grand = peu de lignes)
-        // Donc: plus on est zoomé (petit xrange), plus grid doit être PETIT
-        else if (xrange < 500) {
-            gridValue = 1;  // Ultra zoomé : ligne tous les 1 tick (maximum de détails)
-        } else if (xrange < 1000) {
-            gridValue = 2;  // Très zoomé : ligne tous les 2 ticks
-        } else if (xrange < 1500) {
-            gridValue = 4;  // Zoomé : ligne tous les 4 ticks (quarter notes)
-        } else {
-            gridValue = 8;  // Normal : ligne tous les 8 ticks
-        }
-
-        // Mettre à jour les deux : attribut ET propriété
-        this.pianoRoll.setAttribute('grid', gridValue.toString());
-        if (this.pianoRoll.grid !== undefined) {
-            this.pianoRoll.grid = gridValue;
-        }
-
-        this.log('info', `Grid resolution updated: ${gridValue} (xrange=${xrange})`);
-    }
-
-    /**
      * Zoom horizontal
      */
     zoomHorizontal(factor) {
@@ -5333,9 +5298,6 @@ class MidiEditorModal {
         if (this.pianoRoll.xrange !== undefined) {
             this.pianoRoll.xrange = newRange;
         }
-
-        // Ajuster la grille en fonction du nouveau zoom
-        this.updateGridResolution(newRange);
 
         // Forcer le redraw avec un court délai
         setTimeout(() => {
