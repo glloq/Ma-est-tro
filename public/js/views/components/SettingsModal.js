@@ -907,7 +907,7 @@ class SettingsModal {
 
         // Wait for server to come back online, then reload
         const waitForServer = async () => {
-            const maxAttempts = 60;
+            const maxAttempts = 90;
             let serverWasDown = false;
 
             for (let i = 0; i < maxAttempts; i++) {
