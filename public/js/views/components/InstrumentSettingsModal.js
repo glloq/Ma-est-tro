@@ -12,6 +12,44 @@ class InstrumentSettingsModal extends BaseModal {
         '#a855f7','#0ea5e9','#22c55e','#eab308'
     ];
 
+    static DRUM_CATEGORIES = {
+        kicks:   { notes: [35, 36], icon: '🥁', name: 'Kicks' },
+        snares:  { notes: [37, 38, 40], icon: '🪘', name: 'Snares' },
+        hiHats:  { notes: [42, 44, 46], icon: '🎩', name: 'Hi-Hats' },
+        toms:    { notes: [41, 43, 45, 47, 48, 50], icon: '🥁', name: 'Toms' },
+        crashes: { notes: [49, 55, 57], icon: '💥', name: 'Crashes' },
+        rides:   { notes: [51, 53, 59], icon: '🔔', name: 'Rides' },
+        latin:   { notes: [60,61,62,63,64,65,66,67,68], icon: '🪇', name: 'Latin' },
+        misc:    { notes: [39,52,54,56,58,69,70,71,72,73,74,75,76,77,78,79,80,81], icon: '🎵', name: 'Divers' }
+    };
+
+    static DRUM_NOTE_NAMES = {
+        35:'Ac. Bass Drum',36:'Bass Drum 1',37:'Side Stick',38:'Ac. Snare',39:'Hand Clap',
+        40:'Electric Snare',41:'Low Floor Tom',42:'Closed Hi-Hat',43:'High Floor Tom',
+        44:'Pedal Hi-Hat',45:'Low Tom',46:'Open Hi-Hat',47:'Low-Mid Tom',48:'Hi-Mid Tom',
+        49:'Crash Cymbal 1',50:'High Tom',51:'Ride Cymbal 1',52:'Chinese Cymbal',
+        53:'Ride Bell',54:'Tambourine',55:'Splash Cymbal',56:'Cowbell',57:'Crash Cymbal 2',
+        58:'Vibraslap',59:'Ride Cymbal 2',60:'Hi Bongo',61:'Low Bongo',62:'Mute Hi Conga',
+        63:'Open Hi Conga',64:'Low Conga',65:'High Timbale',66:'Low Timbale',67:'High Agogô',
+        68:'Low Agogô',69:'Cabasa',70:'Maracas',71:'Short Whistle',72:'Long Whistle',
+        73:'Short Güiro',74:'Long Güiro',75:'Claves',76:'Hi Wood Block',77:'Low Wood Block',
+        78:'Mute Cuíca',79:'Open Cuíca',80:'Mute Triangle',81:'Open Triangle'
+    };
+
+    static DRUM_PRIORITIES = {
+        36:100,35:100,38:100,40:100,42:90,49:70,46:60,
+        41:50,43:50,45:50,47:50,48:50,50:50,51:40,53:40,59:40
+    };
+
+    static DRUM_PRESETS = {
+        gm_standard:  { name: 'GM Standard', notes: Array.from({length:47}, (_,i) => i+35) },
+        gm_reduced:   { name: 'Kit Essentiel', notes: [35,36,38,40,42,44,46,41,43,45,47,48,49,50,51] },
+        rock:         { name: 'Rock', notes: [35,36,38,40,42,46,41,43,45,48,49,51,55,57] },
+        jazz:         { name: 'Jazz', notes: [35,38,42,44,46,41,43,45,49,51,53,59,55] },
+        electronic:   { name: 'Électronique', notes: [36,38,40,42,46,41,45,48,49,51,39,54,56] },
+        latin:        { name: 'Latin', notes: [35,38,42,46,60,61,62,63,64,65,66,67,68,75,76] }
+    };
+
     static SECTIONS = [
         { id: 'identity', icon: '🎵', labelKey: 'instrumentSettings.sectionIdentity', fallback: 'Identité' },
         { id: 'notes',    icon: '🎹', labelKey: 'instrumentSettings.sectionNotes',    fallback: 'Notes' },
@@ -390,8 +428,77 @@ class InstrumentSettingsModal extends BaseModal {
     }
 
     _renderDrumsSection() {
-        // Placeholder — sera rempli à l'étape 5
-        return '<p>Section Drums (à implémenter)</p>';
+        const tab = this._getActiveTab();
+        if (!tab) return '';
+        const settings = tab.settings;
+
+        // Init drum selected notes from settings
+        const selectedNotes = new Set(settings.selected_notes || []);
+        this._drumSelectedNotes = selectedNotes;
+
+        // Preset select
+        const presets = InstrumentSettingsModal.DRUM_PRESETS;
+        let presetOpts = '<option value="">-- Preset --</option>';
+        for (const [id, preset] of Object.entries(presets)) {
+            presetOpts += `<option value="${id}">${this.escape(preset.name)}</option>`;
+        }
+
+        // Categories with notes
+        const cats = InstrumentSettingsModal.DRUM_CATEGORIES;
+        const noteNames = InstrumentSettingsModal.DRUM_NOTE_NAMES;
+        const priorities = InstrumentSettingsModal.DRUM_PRIORITIES;
+
+        let catsHtml = '';
+        for (const [catId, cat] of Object.entries(cats)) {
+            const catNotes = cat.notes;
+            const checkedCount = catNotes.filter(n => selectedNotes.has(n)).length;
+            const allChecked = checkedCount === catNotes.length;
+            const badgeClass = allChecked ? 'all' : '';
+
+            let notesHtml = '';
+            for (const note of catNotes) {
+                const checked = selectedNotes.has(note) ? 'checked' : '';
+                const priority = priorities[note] || 0;
+                const star = priority >= 90 ? '★' : (priority >= 50 ? '☆' : '');
+                notesHtml += `<label class="ism-drum-note">
+                    <input type="checkbox" class="ism-drum-note-cb" data-note="${note}" data-cat="${catId}" ${checked}>
+                    <span class="ism-drum-note-num">${note}</span>
+                    <span class="ism-drum-note-name">${this.escape(noteNames[note] || `Note ${note}`)}</span>
+                    ${star ? `<span class="ism-drum-note-star">${star}</span>` : ''}
+                </label>`;
+            }
+
+            catsHtml += `<div class="ism-drum-category" data-cat="${catId}">
+                <div class="ism-drum-cat-header">
+                    <span class="ism-drum-cat-icon">${cat.icon}</span>
+                    <span class="ism-drum-cat-name">${this.escape(cat.name)}</span>
+                    <span class="ism-drum-cat-badge ${badgeClass}">${checkedCount}/${catNotes.length}</span>
+                    <button type="button" class="ism-drum-cat-toggle" data-cat="${catId}" title="Tout cocher/décocher">${allChecked ? '☑' : '☐'}</button>
+                    <span class="ism-drum-cat-chevron">▸</span>
+                </div>
+                <div class="ism-drum-cat-body">
+                    <div class="ism-drum-notes">${notesHtml}</div>
+                </div>
+            </div>`;
+        }
+
+        const totalSelected = selectedNotes.size;
+        const totalAvailable = Object.values(cats).reduce((sum, c) => sum + c.notes.length, 0);
+
+        return `
+            <h3 class="ism-section-title"><span class="ism-section-title-icon">🥁</span> ${this.t('instrumentSettings.sectionDrums') || 'Percussions'}</h3>
+
+            <div class="ism-drum-toolbar">
+                <select class="ism-drum-preset-select">${presetOpts}</select>
+                <button type="button" class="btn btn-small ism-drum-apply-preset">${this.t('common.apply') || 'Appliquer'}</button>
+            </div>
+
+            <div class="ism-drum-summary" id="drumSummary">
+                <span class="ism-drum-stat ${totalSelected > 0 ? 'good' : 'bad'}">${totalSelected} / ${totalAvailable} notes</span>
+            </div>
+
+            <div class="ism-drum-categories">${catsHtml}</div>
+        `;
     }
 
     _renderAdvancedSection() {
@@ -558,6 +665,44 @@ class InstrumentSettingsModal extends BaseModal {
         return { channel, settings, stringInstrumentConfig, isBleDevice };
     }
 
+    // ========== DRUM HELPERS ==========
+
+    _refreshDrumUI() {
+        this.$$('.ism-drum-note-cb').forEach(cb => {
+            cb.checked = this._drumSelectedNotes.has(parseInt(cb.dataset.note));
+        });
+        for (const catId of Object.keys(InstrumentSettingsModal.DRUM_CATEGORIES)) {
+            this._updateDrumCategoryBadge(catId);
+        }
+        this._updateDrumSummary();
+        // Update toggle buttons
+        this.$$('.ism-drum-cat-toggle').forEach(btn => {
+            const cat = InstrumentSettingsModal.DRUM_CATEGORIES[btn.dataset.cat];
+            if (cat) btn.textContent = cat.notes.every(n => this._drumSelectedNotes.has(n)) ? '☑' : '☐';
+        });
+    }
+
+    _updateDrumCategoryBadge(catId) {
+        const cat = InstrumentSettingsModal.DRUM_CATEGORIES[catId];
+        if (!cat) return;
+        const checked = cat.notes.filter(n => this._drumSelectedNotes.has(n)).length;
+        const badge = this.$(`.ism-drum-category[data-cat="${catId}"] .ism-drum-cat-badge`);
+        if (badge) {
+            badge.textContent = `${checked}/${cat.notes.length}`;
+            badge.classList.toggle('all', checked === cat.notes.length);
+        }
+        const toggle = this.$(`.ism-drum-cat-toggle[data-cat="${catId}"]`);
+        if (toggle) toggle.textContent = checked === cat.notes.length ? '☑' : '☐';
+    }
+
+    _updateDrumSummary() {
+        const summary = this.$('#drumSummary');
+        if (!summary) return;
+        const total = Object.values(InstrumentSettingsModal.DRUM_CATEGORIES).reduce((s, c) => s + c.notes.length, 0);
+        const count = this._drumSelectedNotes.size;
+        summary.innerHTML = `<span class="ism-drum-stat ${count > 0 ? 'good' : 'bad'}">${count} / ${total} notes</span>`;
+    }
+
     // ========== HELPERS ==========
 
     _getActiveTab() {
@@ -621,6 +766,49 @@ class InstrumentSettingsModal extends BaseModal {
                 });
             });
         });
+
+        // Drum category expand/collapse
+        this.$$('.ism-drum-cat-header').forEach(header => {
+            header.addEventListener('click', (e) => {
+                if (e.target.closest('.ism-drum-cat-toggle')) return;
+                header.closest('.ism-drum-category').classList.toggle('expanded');
+            });
+        });
+
+        // Drum category toggle all
+        this.$$('.ism-drum-cat-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const catId = btn.dataset.cat;
+                const cat = InstrumentSettingsModal.DRUM_CATEGORIES[catId];
+                if (!cat) return;
+                const allChecked = cat.notes.every(n => this._drumSelectedNotes.has(n));
+                cat.notes.forEach(n => allChecked ? this._drumSelectedNotes.delete(n) : this._drumSelectedNotes.add(n));
+                this._refreshDrumUI();
+            });
+        });
+
+        // Drum note checkboxes
+        this.$$('.ism-drum-note-cb').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const note = parseInt(cb.dataset.note);
+                cb.checked ? this._drumSelectedNotes.add(note) : this._drumSelectedNotes.delete(note);
+                this._updateDrumCategoryBadge(cb.dataset.cat);
+                this._updateDrumSummary();
+            });
+        });
+
+        // Drum preset apply
+        const applyPreset = this.$('.ism-drum-apply-preset');
+        if (applyPreset) {
+            applyPreset.addEventListener('click', () => {
+                const sel = this.$('.ism-drum-preset-select');
+                if (!sel || !sel.value) return;
+                const preset = InstrumentSettingsModal.DRUM_PRESETS[sel.value];
+                if (!preset) return;
+                this._drumSelectedNotes = new Set(preset.notes);
+                this._refreshDrumUI();
+            });
+        }
 
         // Note selection mode toggle
         this.$$('.ism-mode-btn').forEach(btn => {
