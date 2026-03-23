@@ -352,8 +352,41 @@ class InstrumentSettingsModal extends BaseModal {
     }
 
     _renderStringsSection() {
-        // Placeholder — sera rempli à l'étape 4
-        return '<p>Section Cordes (à implémenter)</p>';
+        const tab = this._getActiveTab();
+        if (!tab) return '';
+        const settings = tab.settings;
+        const config = tab.stringInstrumentConfig;
+        const gmCategory = typeof getGmStringCategory === 'function' ? getGmStringCategory(settings.gm_program) : null;
+
+        // Reuse global helpers
+        const presetOptions = typeof renderSiPresetOptions === 'function'
+            ? renderSiPresetOptions(this.tuningPresets, config, gmCategory) : '';
+        const tuningRows = typeof renderSiTuningRows === 'function'
+            ? renderSiTuningRows(config, config ? config.num_frets : 24) : '';
+
+        const numStrings = config ? config.num_strings : 6;
+
+        return `
+            <h3 class="ism-section-title"><span class="ism-section-title-icon">🎸</span> ${this.t('instrumentSettings.sectionStrings') || 'Instrument à cordes'}</h3>
+
+            <div class="ism-string-section">
+                <div class="ism-form-row">
+                    <div class="ism-form-group">
+                        <label>${this.t('stringInstrument.tuningPreset') || 'Preset d\'accordage'}</label>
+                        <select id="siPresetSelect" onchange="onSiPresetChanged(this)">${presetOptions}</select>
+                    </div>
+                    <div class="ism-form-group ism-narrow">
+                        <label>${this.t('stringInstrument.numStrings') || 'Cordes'}</label>
+                        <input type="number" id="siNumStrings" value="${numStrings}" min="1" max="12" onchange="onSiStringsChanged(this)">
+                    </div>
+                </div>
+
+                <div class="ism-form-group">
+                    <label>${this.t('stringInstrument.tuning') || 'Accordage'}</label>
+                    <div id="siTuningGrid" class="ism-tuning-grid">${tuningRows}</div>
+                </div>
+            </div>
+        `;
     }
 
     _renderDrumsSection() {
