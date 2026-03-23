@@ -153,6 +153,9 @@ class LightingManager extends EventEmitter {
   // ==================== EVENT LISTENERS ====================
 
   _setupEventListeners() {
+    // Track recently routed events to avoid double wildcard evaluation
+    this._recentRoutedEvents = new Set();
+
     // Store bound handlers so we can remove them on shutdown
     this._onMidiRouted = (event) => this._evaluateRoutedEvent(event);
     this._onMidiMessage = (event) => this._evaluateWildcardEvent(event);
@@ -181,6 +184,12 @@ class LightingManager extends EventEmitter {
     const instrumentId = event.destination;
     const midiData = this._normalizeMidiData(event);
 
+    // Mark this event as routed so _evaluateWildcardEvent skips wildcard rules for it
+    const evtKey = `${midiData.type}_${midiData.channel}_${midiData.note ?? ''}_${midiData.controller ?? ''}_${event.timestamp || Date.now()}`;
+    this._recentRoutedEvents.add(evtKey);
+    // Clean up after a short delay to prevent memory buildup
+    setTimeout(() => this._recentRoutedEvents.delete(evtKey), 50);
+
     // Check rules for this specific instrument
     const instrumentRules = this.rulesByInstrument.get(instrumentId);
     if (instrumentRules) {
@@ -205,14 +214,15 @@ class LightingManager extends EventEmitter {
   _evaluateWildcardEvent(event) {
     if (this.allRules.length === 0) return;
 
-    // Skip wildcard evaluation if this event was already routed to an instrument
-    // (routed events already evaluate wildcard rules in _evaluateRoutedEvent)
-    if (event.destination) return;
-
     const wildcardRules = this.rulesByInstrument.get('*');
     if (!wildcardRules || wildcardRules.length === 0) return;
 
     const midiData = this._normalizeMidiData(event);
+
+    // Skip if this event was already processed by _evaluateRoutedEvent (which includes wildcards)
+    const evtKey = `${midiData.type}_${midiData.channel}_${midiData.note ?? ''}_${midiData.controller ?? ''}_${event.timestamp || Date.now()}`;
+    if (this._recentRoutedEvents.has(evtKey)) return;
+
     for (const rule of wildcardRules) {
       if (this._matchesCondition(rule.condition_config, midiData)) {
         this._executeAction(rule, midiData);
@@ -821,23 +831,32 @@ class LightingManager extends EventEmitter {
   }
 
   createGroup(name, deviceIds) {
-    this.deviceGroups.set(name, new Set(deviceIds));
     try {
       this.app.database.insertLightingGroup(name, deviceIds);
+      this.deviceGroups.set(name, new Set(deviceIds));
     } catch (error) {
       this.logger.warn(`Failed to persist group "${name}": ${error.message}`);
+      throw error;
     }
     return { success: true };
   }
 
   deleteGroup(name) {
+    const backup = this.deviceGroups.get(name);
     this.deviceGroups.delete(name);
     try {
       this.app.database.deleteLightingGroup(name);
     } catch (error) {
+      // Restore memory state on DB failure
+      if (backup) this.deviceGroups.set(name, backup);
       this.logger.warn(`Failed to delete group "${name}" from DB: ${error.message}`);
+      throw error;
     }
     return { success: true };
+  }
+
+  reloadGroups() {
+    this._loadGroups();
   }
 
   getGroups() {

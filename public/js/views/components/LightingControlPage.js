@@ -428,12 +428,17 @@ class LightingControlPage {
       </div>`;
   }
 
+  _safeColor(c) {
+    // Sanitize a color value for safe CSS injection (only allow hex colors)
+    return /^#[0-9a-fA-F]{3,8}$/.test(c) ? c : '#888';
+  }
+
   _buildColorPreview(action) {
     const pill = (bg) => `<div style="width:28px;height:16px;border-radius:4px;background:${bg};border:1px solid #ddd;flex-shrink:0;"></div>`;
     if (action.type === 'velocity_mapped' && action.color_map) {
-      const c0 = action.color_map['0'] || '#0000FF';
-      const c64 = action.color_map['64'] || '#FFFF00';
-      const c127 = action.color_map['127'] || '#FF0000';
+      const c0 = this._safeColor(action.color_map['0'] || '#0000FF');
+      const c64 = this._safeColor(action.color_map['64'] || '#FFFF00');
+      const c127 = this._safeColor(action.color_map['127'] || '#FF0000');
       return pill(`linear-gradient(to right,${c0},${c64},${c127})`);
     }
     if (action.type === 'rainbow' || action.type === 'color_cycle') {
@@ -464,21 +469,21 @@ class LightingControlPage {
       return pill('linear-gradient(to right,#FFF 0%,#FFF 45%,#000 50%,#000 95%,#FFF 100%)');
     }
     if (action.type === 'chase') {
-      const c1 = action.color || '#FF0000';
-      const c2 = action.color2 || '#000000';
+      const c1 = this._safeColor(action.color || '#FF0000');
+      const c2 = this._safeColor(action.color2 || '#000000');
       return pill(`repeating-linear-gradient(to right,${c1} 0px,${c1} 7px,${c2} 7px,${c2} 14px)`);
     }
     if (action.type === 'wave') {
-      const c1 = action.color || '#0000FF';
-      const c2 = action.color2 || '#000000';
+      const c1 = this._safeColor(action.color || '#0000FF');
+      const c2 = this._safeColor(action.color2 || '#000000');
       return pill(`linear-gradient(to right,${c2},${c1},${c2},${c1},${c2})`);
     }
     if (action.type === 'breathe') {
-      const c = action.color || '#FF0000';
+      const c = this._safeColor(action.color || '#FF0000');
       return pill(`linear-gradient(to right,#000,${c},#000)`);
     }
-    const color = action.color || '#FFFFFF';
-    return `<div style="width:16px;height:16px;border-radius:50%;background:${this._escapeHtml(color)};border:2px solid #ddd;flex-shrink:0;"></div>`;
+    const color = this._safeColor(action.color || '#FFFFFF');
+    return `<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid #ddd;flex-shrink:0;"></div>`;
   }
 
   // ==================== DEVICE GROUPS PANEL ====================
@@ -1197,7 +1202,7 @@ class LightingControlPage {
 
       select.innerHTML = '<option value="">-- Manuel --</option>' +
         this._dmxProfiles.map(p =>
-          `<option value="${this._escapeHtml(p.id)}">${this._escapeHtml(p.name)} (${p.channels}ch)</option>`
+          `<option value="${this._escapeHtml(p.key)}">${this._escapeHtml(p.name)} (${p.channels}ch)</option>`
         ).join('');
     } catch (e) { /* ignore - profiles not available */ }
   }
@@ -1209,7 +1214,7 @@ class LightingControlPage {
     const channelsInput = document.getElementById(channelsId);
     if (!select || !channelsInput || !this._dmxProfiles) return;
 
-    const profile = this._dmxProfiles.find(p => p.id === select.value);
+    const profile = this._dmxProfiles.find(p => p.key === select.value);
     if (profile) {
       channelsInput.value = profile.channels;
     }
@@ -1340,14 +1345,14 @@ class LightingControlPage {
     } else if (type === 'mqtt') {
       connectionConfig = {
         broker_url: document.getElementById('ldFormMqttBroker')?.value || 'mqtt://localhost:1883',
-        base_topic: document.getElementById('ldFormMqttTopic')?.value || 'maestro/light',
+        base_topic: document.getElementById('ldFormMqttTopic')?.value || 'wled/maestro',
         firmware: document.getElementById('ldFormMqttFirmware')?.value || 'wled',
         username: document.getElementById('ldFormMqttUser')?.value || undefined,
         password: document.getElementById('ldFormMqttPass')?.value || undefined
       };
     } else if (type === 'http') {
       connectionConfig = {
-        base_url: document.getElementById('ldFormHttpUrl')?.value || 'http://localhost',
+        base_url: document.getElementById('ldFormHttpUrl')?.value || 'http://192.168.1.100',
         firmware: document.getElementById('ldFormHttpFirmware')?.value || 'wled',
         api_key: document.getElementById('ldFormHttpApiKey')?.value || null
       };
@@ -1397,6 +1402,7 @@ class LightingControlPage {
 
     // Reuse the add device form, then populate with existing values
     this._editingDeviceId = device.id;
+    this._editingDeviceEnabled = device.enabled;
     this.showAddDeviceForm();
 
     // Defer to let the DOM render
@@ -1521,6 +1527,18 @@ class LightingControlPage {
         if (fmtEl) fmtEl.value = cfg.color_format || 'rgb_float';
       }
 
+      // Add enabled checkbox for edit mode
+      const buttonsDiv = formEl.querySelector('div[style*="justify-content:flex-end"]');
+      if (buttonsDiv) {
+        const enabledDiv = document.createElement('div');
+        enabledDiv.style.cssText = 'margin-bottom:12px;';
+        enabledDiv.innerHTML = `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input id="ldFormEnabled" type="checkbox" ${device.enabled ? 'checked' : ''}>
+          <span style="font-size:12px;color:${t.text};">Activé</span>
+        </label>`;
+        buttonsDiv.parentNode.insertBefore(enabledDiv, buttonsDiv);
+      }
+
       // Change submit button text
       const submitBtns = formEl.querySelectorAll('button');
       submitBtns.forEach(btn => {
@@ -1610,14 +1628,14 @@ class LightingControlPage {
     } else if (type === 'mqtt') {
       connectionConfig = {
         broker_url: document.getElementById('ldFormMqttBroker')?.value || 'mqtt://localhost:1883',
-        base_topic: document.getElementById('ldFormMqttTopic')?.value || 'maestro/light',
+        base_topic: document.getElementById('ldFormMqttTopic')?.value || 'wled/maestro',
         firmware: document.getElementById('ldFormMqttFirmware')?.value || 'wled',
         username: document.getElementById('ldFormMqttUser')?.value || undefined,
         password: document.getElementById('ldFormMqttPass')?.value || undefined
       };
     } else if (type === 'http') {
       connectionConfig = {
-        base_url: document.getElementById('ldFormHttpUrl')?.value || 'http://localhost',
+        base_url: document.getElementById('ldFormHttpUrl')?.value || 'http://192.168.1.100',
         firmware: document.getElementById('ldFormHttpFirmware')?.value || 'wled',
         api_key: document.getElementById('ldFormHttpApiKey')?.value || null
       };
@@ -1633,7 +1651,8 @@ class LightingControlPage {
     try {
       await this.apiClient.sendCommand('lighting_device_update', {
         id: this._editingDeviceId,
-        name, led_count: ledCount, enabled: true,
+        name, led_count: ledCount,
+        enabled: document.getElementById('ldFormEnabled')?.checked ?? this._editingDeviceEnabled ?? true,
         connection_config: connectionConfig
       });
       document.getElementById('lightingDeviceForm')?.remove();
@@ -2391,7 +2410,9 @@ class LightingControlPage {
       const y = e.clientY - rect.top;
       const scaleX = canvas.width / rect.width;
       const scaleY = canvas.height / rect.height;
-      const pixel = ctx.getImageData(x * scaleX, y * scaleY, 1, 1).data;
+      lastPickX = Math.round(x * scaleX);
+      lastPickY = Math.round(y * scaleY);
+      const pixel = ctx.getImageData(lastPickX, lastPickY, 1, 1).data;
       selectedColor = `#${pixel[0].toString(16).padStart(2, '0')}${pixel[1].toString(16).padStart(2, '0')}${pixel[2].toString(16).padStart(2, '0')}`;
 
       const preview = document.getElementById('colorWheelPreview');
@@ -2401,6 +2422,8 @@ class LightingControlPage {
     };
 
     // Brightness slider
+    // Brightness slider
+    let lastPickX = null, lastPickY = null;
     const briSlider = document.getElementById('colorWheelBrightness');
     const briVal = document.getElementById('colorWheelBriVal');
     if (briSlider) {
@@ -2408,6 +2431,15 @@ class LightingControlPage {
         brightnessMultiplier = parseInt(briSlider.value) / 100;
         if (briVal) briVal.textContent = briSlider.value + '%';
         drawWheel();
+        // Re-sample color at last picked position after redraw
+        if (lastPickX !== null && lastPickY !== null) {
+          const pixel = ctx.getImageData(lastPickX, lastPickY, 1, 1).data;
+          selectedColor = `#${pixel[0].toString(16).padStart(2, '0')}${pixel[1].toString(16).padStart(2, '0')}${pixel[2].toString(16).padStart(2, '0')}`;
+          const preview = document.getElementById('colorWheelPreview');
+          const hex = document.getElementById('colorWheelHex');
+          if (preview) preview.style.background = selectedColor;
+          if (hex) hex.textContent = selectedColor.toUpperCase();
+        }
       });
     }
 
