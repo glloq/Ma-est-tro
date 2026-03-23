@@ -572,29 +572,32 @@ class MidiEditorModal {
      * Attacher les event listeners aux boutons de canal pour CC ou Velocity
      */
     attachEditorChannelListeners() {
-        if (!this.container) return;
+        // OPTIMISATION: Event delegation au lieu de listeners individuels
+        // Les boutons .cc-channel-btn sont recréés dynamiquement, l'event delegation
+        // sur le container parent évite de réattacher des listeners à chaque update
+        if (this._ccChannelDelegationAttached) return;
+        this._ccChannelDelegationAttached = true;
 
-        const channelButtons = this.container.querySelectorAll('.cc-channel-btn');
-        channelButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const channel = parseInt(btn.dataset.channel);
+        const channelSelector = document.getElementById('editor-channel-selector');
+        if (!channelSelector) return;
 
-                if (!isNaN(channel)) {
-                    // Mettre à jour l'UI
-                    channelButtons.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
+        channelSelector.addEventListener('click', (e) => {
+            const btn = e.target.closest('.cc-channel-btn');
+            if (!btn) return;
+            e.preventDefault();
+            const channel = parseInt(btn.dataset.channel);
+            if (isNaN(channel)) return;
 
-                    // Mettre à jour l'éditeur approprié
-                    if (this.currentCCType === 'velocity' && this.velocityEditor) {
-                        this.velocityEditor.setChannel(channel);
-                        this.log('info', `Canal vélocité sélectionné: ${channel + 1}`);
-                    } else if (this.ccEditor) {
-                        this.ccEditor.setChannel(channel);
-                        this.log('info', `Canal CC sélectionné: ${channel + 1}`);
-                    }
-                }
-            });
+            channelSelector.querySelectorAll('.cc-channel-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            if (this.currentCCType === 'velocity' && this.velocityEditor) {
+                this.velocityEditor.setChannel(channel);
+                this.log('info', `Canal vélocité sélectionné: ${channel + 1}`);
+            } else if (this.ccEditor) {
+                this.ccEditor.setChannel(channel);
+                this.log('info', `Canal CC sélectionné: ${channel + 1}`);
+            }
         });
     }
 
@@ -742,10 +745,16 @@ class MidiEditorModal {
             return parseInt(a.replace('cc', '')) - parseInt(b.replace('cc', ''));
         });
 
+        // OPTIMISATION: Pré-calculer les counts en un seul passage au lieu de O(n) par CC type
+        const ccCounts = new Map();
+        this.ccEvents.forEach(e => ccCounts.set(e.type, (ccCounts.get(e.type) || 0) + 1));
+
+        // OPTIMISATION: DocumentFragment pour un seul reflow DOM au lieu d'un par bouton
+        const fragment = document.createDocumentFragment();
         sortedCCs.forEach(ccType => {
             const ccNum = parseInt(ccType.replace('cc', ''));
             const ccName = this._getCCName(ccNum);
-            const count = this.ccEvents.filter(e => e.type === ccType).length;
+            const count = ccCounts.get(ccType) || 0;
 
             const btn = document.createElement('button');
             btn.className = 'cc-type-btn dynamic';
@@ -753,13 +762,9 @@ class MidiEditorModal {
             btn.title = `${ccName} (${this.t('midiEditor.events', { count })})`;
             btn.textContent = `CC${ccNum}`;
 
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.selectCCType(ccType);
-            });
-
-            dynamicContainer.appendChild(btn);
+            fragment.appendChild(btn);
         });
+        dynamicContainer.appendChild(fragment);
 
         this.log('info', `Added ${sortedCCs.length} dynamic CC buttons: ${sortedCCs.join(', ')}`);
     }
@@ -1041,13 +1046,11 @@ class MidiEditorModal {
             } else {
                 // Synchroniser avec le piano roll actuel
                 this.syncTempoEditor();
-                // Attendre que le layout soit recalculé avant de resize
+                // OPTIMISATION: Simple RAF au lieu de double RAF (-1 frame de délai)
                 requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        if (this.tempoEditor && this.tempoEditor.resize) {
-                            this.tempoEditor.resize();
-                        }
-                    });
+                    if (this.tempoEditor && this.tempoEditor.resize) {
+                        this.tempoEditor.resize();
+                    }
                 });
             }
 
@@ -1066,13 +1069,11 @@ class MidiEditorModal {
                 // Recharger la séquence complète (le filtrage par canal se fait dans l'éditeur)
                 this.velocityEditor.setSequence(this.fullSequence);
                 this.syncVelocityEditor();
-                // Attendre que le layout soit recalculé avant de resize
+                // OPTIMISATION: Simple RAF au lieu de double RAF (-1 frame de délai)
                 requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        if (this.velocityEditor && this.velocityEditor.resize) {
-                            this.velocityEditor.resize();
-                        }
-                    });
+                    if (this.velocityEditor && this.velocityEditor.resize) {
+                        this.velocityEditor.resize();
+                    }
                 });
             }
 
@@ -1091,13 +1092,11 @@ class MidiEditorModal {
                 this.initCCEditor();
             } else {
                 this.ccEditor.setCC(ccType);
-                // Attendre que le layout soit recalculé avant de resize
+                // OPTIMISATION: Simple RAF au lieu de double RAF
                 requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        if (this.ccEditor && this.ccEditor.resize) {
-                            this.ccEditor.resize();
-                        }
-                    });
+                    if (this.ccEditor && this.ccEditor.resize) {
+                        this.ccEditor.resize();
+                    }
                 });
                 // Mettre à jour le sélecteur de canal car les canaux utilisés peuvent varier selon le type CC
                 this.updateEditorChannelSelector();
@@ -3019,30 +3018,25 @@ class MidiEditorModal {
         // Ajouter au conteneur AVANT de charger la sequence
         container.appendChild(this.pianoRoll);
 
-        // Assigner APRÈS avoir ajouté au DOM pour que les propriétés soient bien initialisées
-        // Tempo et timebase du fichier MIDI (importants pour l'affichage du temps en secondes)
+        // OPTIMISATION: Batch les assignations de propriétés pour éviter les redraws multiples
+        // Chaque propriété avec observer 'layout' déclenche layout() → redraw()
+        // Sans batch: 3+ redraws inutiles. Avec batch: 1 seul redraw à la fin.
+        this.pianoRoll.beginBatchUpdate();
+
         this.pianoRoll.tempo = this.tempo || 120;
         this.pianoRoll.timebase = this.ticksPerBeat || 480;
-
-        // Grille visuelle fixe pour voir les subdivisions (1/16 note = 120 ticks)
         this.pianoRoll.grid = 120;
 
-        // Snap to grid pour contraindre le positionnement des notes
         const currentSnap = this.snapValues[this.currentSnapIndex];
         this.pianoRoll.snap = currentSnap.ticks;
 
+        this.pianoRoll.endBatchUpdate();
+
         this.log('info', `Piano roll grid/snap: grid=${this.pianoRoll.grid} ticks, snap=${this.pianoRoll.snap} ticks (${currentSnap.label})`);
 
-        // Forcer updateTimer() et redraw pour afficher les secondes
-        if (typeof this.pianoRoll.updateTimer === 'function') {
-            this.pianoRoll.updateTimer();
-        }
-        if (typeof this.pianoRoll.redrawXRuler === 'function') {
-            this.pianoRoll.redrawXRuler();
-        }
-
-        // Attendre que le composant soit monté
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // OPTIMISATION: Remplacer setTimeout(100ms) par un seul RAF
+        // Le composant est déjà monté après appendChild, pas besoin d'attendre 100ms
+        await new Promise(resolve => requestAnimationFrame(resolve));
 
         // Définir les couleurs des canaux MIDI sur le piano roll AVANT de charger la séquence
         this.pianoRoll.channelColors = this.channelColors;
@@ -3071,10 +3065,7 @@ class MidiEditorModal {
             // Assigner la sequence au piano roll
             this.pianoRoll.sequence = this.sequence;
 
-            // Attendre un peu avant le redraw
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            // Forcer un redraw pour appliquer les couleurs
+            // OPTIMISATION: redraw direct via RAF au lieu de setTimeout(50ms)
             if (typeof this.pianoRoll.redraw === 'function') {
                 this.pianoRoll.redraw();
                 this.log('info', 'Piano roll redrawn with channel colors');
@@ -4782,55 +4773,40 @@ class MidiEditorModal {
             }
         });
 
-        // Boutons de canal
-        const channelButtons = this.container.querySelectorAll('.channel-btn');
-        channelButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
+        // OPTIMISATION: Event delegation pour tous les boutons de canal
+        // Remplace 4 boucles forEach × 16 boutons = ~64 listeners par 1 seul listener
+        this.container.addEventListener('click', (e) => {
+            const channelBtn = e.target.closest('.channel-btn');
+            if (channelBtn) {
                 e.preventDefault();
-                const channel = parseInt(btn.dataset.channel);
-                if (!isNaN(channel)) {
-                    this.toggleChannel(channel);
-                }
-            });
-        });
-
-        // Boutons réglages sous les canaux
-        const settingsButtons = this.container.querySelectorAll('.channel-settings-btn');
-        settingsButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
+                const channel = parseInt(channelBtn.dataset.channel);
+                if (!isNaN(channel)) this.toggleChannel(channel);
+                return;
+            }
+            const settingsBtn = e.target.closest('.channel-settings-btn');
+            if (settingsBtn) {
                 e.preventDefault();
                 e.stopPropagation();
-                const channel = parseInt(btn.dataset.channel);
-                if (!isNaN(channel)) {
-                    this._toggleChannelSettingsPopover(channel, btn);
-                }
-            });
-        });
-
-        // Boutons TAB sous les canaux (instruments à cordes)
-        const tabButtons = this.container.querySelectorAll('.channel-tab-btn');
-        tabButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
+                const channel = parseInt(settingsBtn.dataset.channel);
+                if (!isNaN(channel)) this._toggleChannelSettingsPopover(channel, settingsBtn);
+                return;
+            }
+            const tabBtn = e.target.closest('.channel-tab-btn');
+            if (tabBtn) {
                 e.preventDefault();
                 e.stopPropagation();
-                const channel = parseInt(btn.dataset.channel);
-                if (!isNaN(channel)) {
-                    this._openTablatureForChannel(channel);
-                }
-            });
-        });
-
-        // Boutons DRUM sous les canaux (percussion)
-        const drumButtons = this.container.querySelectorAll('.channel-drum-btn');
-        drumButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
+                const channel = parseInt(tabBtn.dataset.channel);
+                if (!isNaN(channel)) this._openTablatureForChannel(channel);
+                return;
+            }
+            const drumBtn = e.target.closest('.channel-drum-btn');
+            if (drumBtn) {
                 e.preventDefault();
                 e.stopPropagation();
-                const channel = parseInt(btn.dataset.channel);
-                if (!isNaN(channel)) {
-                    this._openDrumPatternForChannel(channel);
-                }
-            });
+                const channel = parseInt(drumBtn.dataset.channel);
+                if (!isNaN(channel)) this._openDrumPatternForChannel(channel);
+                return;
+            }
         });
 
         // Sélecteur d'instrument connecté (pour filtrer les notes jouables)
@@ -4878,30 +4854,23 @@ class MidiEditorModal {
         }
 
         // Boutons de type CC (horizontaux)
-        const ccTypeButtons = this.container.querySelectorAll('.cc-type-btn');
-        ccTypeButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
+        // OPTIMISATION: Event delegation pour boutons CC type, outils et suppression
+        // Remplace ~20+ listeners individuels par 1 seul listener délégué
+        this.container.addEventListener('click', (e) => {
+            const ccTypeBtn = e.target.closest('.cc-type-btn');
+            if (ccTypeBtn) {
                 e.preventDefault();
-                const ccType = btn.dataset.ccType;
-                if (ccType) {
-                    this.selectCCType(ccType);
-                }
-            });
-        });
-
-        // Boutons d'outils (partagés entre CC et Velocity)
-        const ccToolButtons = this.container.querySelectorAll('.cc-tool-btn');
-        ccToolButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
+                const ccType = ccTypeBtn.dataset.ccType;
+                if (ccType) this.selectCCType(ccType);
+                return;
+            }
+            const ccToolBtn = e.target.closest('.cc-tool-btn');
+            if (ccToolBtn) {
                 e.preventDefault();
-                const tool = btn.dataset.tool;
+                const tool = ccToolBtn.dataset.tool;
                 if (tool) {
-                    // Désactiver tous les boutons
-                    ccToolButtons.forEach(b => b.classList.remove('active'));
-                    // Activer le bouton cliqué
-                    btn.classList.add('active');
-
-                    // Changer l'outil sur l'éditeur approprié
+                    this.container.querySelectorAll('.cc-tool-btn').forEach(b => b.classList.remove('active'));
+                    ccToolBtn.classList.add('active');
                     if (this.currentCCType === 'tempo' && this.tempoEditor) {
                         this.tempoEditor.setTool(tool);
                     } else if (this.currentCCType === 'velocity' && this.velocityEditor) {
@@ -4910,17 +4879,14 @@ class MidiEditorModal {
                         this.ccEditor.setTool(tool);
                     }
                 }
-            });
-        });
-
-        // Bouton de suppression pour CC/Velocity
-        const ccDeleteBtn = this.container.querySelector('#cc-delete-btn');
-        if (ccDeleteBtn) {
-            ccDeleteBtn.addEventListener('click', (e) => {
+                return;
+            }
+            if (e.target.closest('#cc-delete-btn')) {
                 e.preventDefault();
                 this.deleteSelectedCCVelocity();
-            });
-        }
+                return;
+            }
+        });
 
         // Les event listeners pour les boutons de canal sont attachés
         // dans attachEditorChannelListeners() appelé depuis updateEditorChannelSelector()
@@ -5345,34 +5311,49 @@ class MidiEditorModal {
     setupScrollSynchronization() {
         if (!this.pianoRoll) return;
 
-        // OPTIMISATION: Polling réduit à 50ms (20fps) au lieu de 16ms (60fps)
-        // Car webaudio-pianoroll ne déclenche pas toujours d'événements pour xoffset/yoffset
         let lastXOffset = this.pianoRoll.xoffset || 0;
         let lastYOffset = this.pianoRoll.yoffset || 0;
         let syncScheduled = false;
+        // OPTIMISATION: Intervalle adaptatif - ralentit quand idle, accélère quand actif
+        let idleCount = 0;
+        const ACTIVE_INTERVAL = 50;   // 20fps quand actif
+        const IDLE_INTERVAL = 200;    // 5fps quand idle
+        const IDLE_THRESHOLD = 10;    // 10 cycles sans changement → passer en idle
 
-        this.syncInterval = setInterval(() => {
+        const pollFn = () => {
             if (!this.pianoRoll) {
                 clearInterval(this.syncInterval);
                 return;
             }
 
-            // Ne pas écraser les sliders quand le wind editor gère le scroll lui-même
             if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) return;
 
             const currentXOffset = this.pianoRoll.xoffset || 0;
             const currentYOffset = this.pianoRoll.yoffset || 0;
 
-            // OPTIMISATION: Vérifier que le changement est significatif (> 1 tick)
-            // pour éviter les updates inutiles dus à l'arrondi
             const xOffsetChanged = Math.abs(currentXOffset - lastXOffset) > 0.5;
             const yOffsetChanged = Math.abs(currentYOffset - lastYOffset) > 0.01;
 
-            // Si xoffset a changé de manière significative, mettre à jour
+            if (xOffsetChanged || yOffsetChanged) {
+                idleCount = 0;
+                // Repasser en mode actif si on était en idle
+                if (this._syncIdle) {
+                    this._syncIdle = false;
+                    clearInterval(this.syncInterval);
+                    this.syncInterval = setInterval(pollFn, ACTIVE_INTERVAL);
+                }
+            } else {
+                idleCount++;
+                // Passer en mode idle après IDLE_THRESHOLD cycles sans changement
+                if (!this._syncIdle && idleCount >= IDLE_THRESHOLD) {
+                    this._syncIdle = true;
+                    clearInterval(this.syncInterval);
+                    this.syncInterval = setInterval(pollFn, IDLE_INTERVAL);
+                }
+            }
+
             if (xOffsetChanged) {
                 this.updateHorizontalSlider(currentXOffset);
-
-                // OPTIMISATION: Throttler syncAllEditors avec requestAnimationFrame
                 if (!syncScheduled) {
                     syncScheduled = true;
                     requestAnimationFrame(() => {
@@ -5380,16 +5361,17 @@ class MidiEditorModal {
                         syncScheduled = false;
                     });
                 }
-
                 lastXOffset = currentXOffset;
             }
 
-            // Si yoffset a changé de manière significative, mettre à jour le slider vertical
             if (yOffsetChanged) {
                 this.updateVerticalSlider(currentYOffset);
                 lastYOffset = currentYOffset;
             }
-        }, 50); // OPTIMISATION: 50ms (20fps) au lieu de 16ms (60fps)
+        };
+
+        this._syncIdle = false;
+        this.syncInterval = setInterval(pollFn, ACTIVE_INTERVAL);
     }
 
     /**
@@ -5966,6 +5948,7 @@ class MidiEditorModal {
         });
 
         this.pianoRoll.channelPlayableHighlights = highlights;
+        this.pianoRoll._highlightsDirty = true;
 
         if (typeof this.pianoRoll.redraw === 'function') {
             this.pianoRoll.redraw();
