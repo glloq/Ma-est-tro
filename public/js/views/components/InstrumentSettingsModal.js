@@ -201,8 +201,63 @@ class InstrumentSettingsModal extends BaseModal {
     }
 
     _renderIdentitySection() {
-        // Placeholder — sera rempli à l'étape 2
-        return '<p>Section Identité (à implémenter)</p>';
+        const tab = this._getActiveTab();
+        if (!tab) return '';
+        const settings = tab.settings;
+        const channel = tab.channel;
+
+        // GM Program dropdown (reuse global helper)
+        const gmOptions = typeof renderGMInstrumentOptions === 'function'
+            ? renderGMInstrumentOptions(settings.gm_program, channel) : '';
+
+        // Channel grid (16 buttons)
+        const usedChannels = this.instrumentTabs.map(t => t.channel).filter(ch => ch !== channel);
+        const colors = InstrumentSettingsModal.CHANNEL_COLORS;
+        let channelGrid = '';
+        for (let ch = 0; ch < 16; ch++) {
+            const isUsed = usedChannels.includes(ch);
+            const isCurrent = ch === channel;
+            const isDrum = (ch === 9);
+            const cls = isCurrent ? 'active' : (isUsed ? '' : '');
+            channelGrid += `<button type="button" class="ism-channel-btn ${cls}" data-channel="${ch}" ${isUsed && !isCurrent ? 'disabled' : ''} style="--ch-color: ${colors[ch]}; ${isCurrent ? `background: ${colors[ch]}; color: #fff; border-color: ${colors[ch]};` : `border-color: ${colors[ch]};`}">
+                ${ch + 1}${isDrum ? ' DR' : ''}
+            </button>`;
+        }
+
+        return `
+            <h3 class="ism-section-title"><span class="ism-section-title-icon">🎵</span> ${this.t('instrumentSettings.sectionIdentity') || 'Identité'}</h3>
+
+            <div class="ism-form-group">
+                <label>${this.t('instrumentSettings.gmInstrument') || 'Type d\'instrument (General MIDI)'}</label>
+                <select id="gmProgramSelect">${gmOptions}</select>
+                <span class="ism-form-hint">${this.t('instrumentSettings.gmInstrumentHelp') || 'Sélectionnez le type d\'instrument pour le routage MIDI'}</span>
+                <div id="drumKitDesc" style="display: none; margin-top: 8px; padding: 10px 14px; background: #f0f4ff; border-left: 4px solid #667eea; border-radius: 0 6px 6px 0; font-size: 13px;"></div>
+                <div id="drumKitNotice" class="ism-drum-notice" style="display: none;">
+                    ${this.t('instrumentSettings.drumKitNotice') || 'Les kits de batterie utilisent le canal MIDI 10 et le mode notes individuelles.'}
+                </div>
+            </div>
+
+            <div class="ism-form-group">
+                <label>${this.t('instrumentSettings.customName') || 'Nom personnalisé'}</label>
+                <input type="text" id="customName" value="${this.escape(settings.custom_name || '')}" placeholder="${this.t('instrumentSettings.customNamePlaceholder') || 'Ex: Ma guitare'}">
+                <span class="ism-form-hint">${this.t('instrumentSettings.customNameHelp') || 'Nom affiché dans l\'interface'}</span>
+            </div>
+
+            <div class="ism-form-group">
+                <label>${this.t('instrumentSettings.midiChannel') || 'Canal MIDI'}</label>
+                <div class="ism-channel-grid" id="channelGrid">${channelGrid}</div>
+                <span class="ism-form-hint">${this.t('instrumentSettings.midiChannelHelp') || 'Canal MIDI utilisé par cet instrument'}</span>
+                <input type="hidden" id="channelSelect" value="${channel}">
+            </div>
+
+            <div class="ism-form-group">
+                <label>${this.t('instrumentSettings.deviceName') || 'Appareil'}</label>
+                <div class="ism-info-card">
+                    <span class="ism-info-label">${this.escape(this.device.name)}</span>
+                    ${this.device.usbSerialNumber ? `<span style="color: #9ca3af; font-size: 12px;">SN: ${this.escape(this.device.usbSerialNumber)}</span>` : ''}
+                </div>
+            </div>
+        `;
     }
 
     _renderNotesSection() {
@@ -431,6 +486,36 @@ class InstrumentSettingsModal extends BaseModal {
         if (cancelBtn) cancelBtn.addEventListener('click', () => this.close());
         const deleteBtn = this.$('.ism-delete-btn');
         if (deleteBtn) deleteBtn.addEventListener('click', () => this._deleteTab());
+
+        // Channel grid
+        this.$$('.ism-channel-btn:not([disabled])').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const ch = parseInt(btn.dataset.channel);
+                const hiddenInput = this.$('#channelSelect');
+                if (hiddenInput) hiddenInput.value = ch;
+                this.$$('.ism-channel-btn').forEach(b => {
+                    const bCh = parseInt(b.dataset.channel);
+                    const color = InstrumentSettingsModal.CHANNEL_COLORS[bCh];
+                    b.classList.toggle('active', bCh === ch);
+                    b.style.background = bCh === ch ? color : '';
+                    b.style.color = bCh === ch ? '#fff' : '';
+                });
+            });
+        });
+
+        // GM Program change
+        const gmSelect = this.$('#gmProgramSelect');
+        if (gmSelect) {
+            gmSelect.addEventListener('change', () => {
+                if (typeof onGmProgramChanged === 'function') onGmProgramChanged(gmSelect);
+                // Refresh sidebar to show/hide strings/drums
+                const sidebar = this.$('.ism-sidebar');
+                if (sidebar) sidebar.outerHTML = this._renderSidebar();
+                this.$$('.ism-nav-item').forEach(btn => {
+                    btn.addEventListener('click', () => this._switchSection(btn.dataset.section));
+                });
+            });
+        }
     }
 }
 
