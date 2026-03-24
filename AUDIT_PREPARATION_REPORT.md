@@ -325,3 +325,91 @@ Les tests utilisent SQLite en mémoire avec un logger mocké.
 **Recommandation [P2] :** Exécuter `npm audit`. Supprimer `dotenv` inutilisé ou l'utiliser réellement. Mettre à jour Express vers la dernière 4.x. Envisager `npm-check-updates` en CI.
 
 ---
+
+## Matrice de Conformité
+
+Échelle : **0** = Absent | **1** = Ébauche | **2** = Partiel | **3** = Adéquat | **4** = Excellent
+
+| # | Sous-section | Standard de référence | Score actuel | Score cible | Priorité |
+|---|-------------|----------------------|:------------:|:-----------:|:--------:|
+| 1.1 | Structure & Organisation | Clean Architecture | 3 | 4 | P3 |
+| 1.2 | Patterns & SOLID | SOLID Principles | 2 | 4 | P2 |
+| 1.3 | Injection de Dépendances | DIP / Clean Architecture | 1 | 3 | P2 |
+| 1.4 | Gestion des Erreurs | Resilience Patterns | 2 | 3 | P3 |
+| 1.5 | Configuration | 12-Factor App (III, X, XI) | 0 | 3 | P1 |
+| 1.6 | Qualité DRY/KISS | DRY / KISS | 2 | 3 | P3 |
+| 1.7 | Typage & Documentation | TypeScript / JSDoc | 1 | 3 | P3 |
+| 1.8 | Architecture Frontend | SPA Best Practices | 2 | 3 | P2 |
+| 1.9 | Design API | REST/WS Best Practices | 1 | 3 | P1 |
+| 2.1 | Gestion de Processus | PM2 / Process Management | 3 | 3 | P3 |
+| 2.2 | Containerisation | Docker / OCI | 0 | 3 | P2 |
+| 2.3 | Pipeline CI/CD | GitHub Actions / CI Best Practices | 0 | 3 | P1 |
+| 2.4 | Base de Données & Migrations | Migration Best Practices | 2 | 3 | P3 |
+| 2.5 | Logging & Observabilité | 12-Factor (XI) / Structured Logging | 1 | 3 | P1 |
+| 2.6 | Sauvegarde & Reprise | Backup & DR | 1 | 3 | P2 |
+| 2.7 | Posture de Sécurité | OWASP Top 10 | 0 | 3 | P1 |
+| 2.8 | Scalabilité & Performance | Performance Best Practices | 2 | 3 | P4 |
+| 3.1 | Couverture de Tests | Test Pyramid / Coverage | 1 | 3 | P1 |
+| 3.2 | Linting & Formatage | ESLint / Prettier | 0 | 3 | P1 |
+| 3.3 | Hooks Pre-commit | Husky / lint-staged | 0 | 3 | P1 |
+| 3.4 | Documentation | Documentation Standards | 2 | 3 | P3 |
+| 3.5 | Gestion des Dépendances | npm audit / Dependency Hygiene | 1 | 3 | P2 |
+
+**Score moyen global : 1.3 / 4**
+
+---
+
+## Plan d'Action Priorisé
+
+### Phase 1 — Quick Wins (1-2 semaines) `[P1]`
+
+| # | Action | Fichiers impactés |
+|---|--------|-------------------|
+| 1 | Créer `.eslintrc.json` avec `eslint:recommended` et corriger les violations | `.eslintrc.json` (nouveau) |
+| 2 | Ajouter Prettier + `.editorconfig` | `.prettierrc`, `.editorconfig` (nouveaux) |
+| 3 | Installer Husky + lint-staged pour hooks pre-commit | `package.json`, `.husky/` (nouveau) |
+| 4 | Ajouter `npm test -- --coverage` et établir une baseline | `package.json` |
+| 5 | Créer un workflow GitHub Actions CI (lint + test) | `.github/workflows/ci.yml` (nouveau) |
+| 6 | Implémenter les surcharges env-vars dans Config.js, utiliser dotenv | `src/config/Config.js` |
+| 7 | Ajouter une authentification basique au WebSocket/HTTP | `src/api/WebSocketServer.js`, `src/api/HttpServer.js` |
+| 8 | Ajouter Helmet.js pour les headers de sécurité | `src/api/HttpServer.js` |
+| 9 | Ajouter la rotation de logs dans Logger.js | `src/core/Logger.js` |
+
+### Phase 2 — Fondations (2-4 semaines) `[P2]`
+
+| # | Action | Fichiers impactés |
+|---|--------|-------------------|
+| 10 | Compléter la migration DI (supprimer le passthrough `app`) | `src/core/Application.js`, tous les services |
+| 11 | Ajouter des tests pour ServiceContainer, Config, EventBus, CommandRegistry | `tests/` (nouveaux fichiers) |
+| 12 | Créer Dockerfile + docker-compose.yml | `Dockerfile`, `docker-compose.yml` (nouveaux) |
+| 13 | Implémenter les sauvegardes automatiques avec node-schedule | `src/storage/Database.js` ou nouveau module |
+| 14 | Ajouter la documentation API pour les 15 modules de commandes | `docs/API.md` (nouveau) |
+| 15 | Ajouter une étape de build frontend (Vite) | `vite.config.js` (nouveau), `package.json` |
+| 16 | Exécuter npm audit et mettre à jour les dépendances | `package.json`, `package-lock.json` |
+
+### Phase 3 — Maturité (1-2 mois) `[P3]`
+
+| # | Action | Fichiers impactés |
+|---|--------|-------------------|
+| 17 | Ajouter une hiérarchie d'erreurs structurée | `src/core/errors/` (nouveau répertoire) |
+| 18 | Ajouter le logging JSON structuré | `src/core/Logger.js` |
+| 19 | Extraire le helper générique de mise à jour DB (DRY) | `src/storage/` |
+| 20 | Ajouter JSDoc + `@ts-check` sur le codebase | Tous les fichiers `.js` |
+| 21 | Ajouter le support des migrations descendantes | `src/storage/Database.js`, `migrations/` |
+| 22 | Ajouter la documentation d'architecture | `ARCHITECTURE.md` (nouveau) |
+| 23 | Ajouter une suite de tests E2E | `tests/e2e/` (nouveau) |
+| 24 | Ajouter un endpoint Prometheus pour les métriques | `src/api/HttpServer.js` |
+
+### Phase 4 — Excellence (3+ mois) `[P4]`
+
+| # | Action | Fichiers impactés |
+|---|--------|-------------------|
+| 25 | Migration TypeScript pour les nouveaux modules | `tsconfig.json` (nouveau), fichiers `.ts` |
+| 26 | Framework de tests frontend (Playwright ou Vitest) | `tests/frontend/` (nouveau) |
+| 27 | Versioning API | `src/api/` |
+| 28 | Documentation du chemin de migration PostgreSQL | `docs/` |
+| 29 | Load testing et benchmarks de performance | `tests/performance/` (nouveau) |
+
+---
+
+*Rapport généré le 2026-03-24 — Ma-est-tro v5.0.0*
