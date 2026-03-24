@@ -57,6 +57,7 @@ class Application {
 
   /**
    * Register a service in both the container and on `this` for backward compat.
+   * New services should use container.resolve() or container.inject() instead.
    * @param {string} name - Service name
    * @param {*} instance - Service instance
    */
@@ -65,9 +66,36 @@ class Application {
     this.container.register(name, instance);
   }
 
+  /**
+   * Create a legacy app-like facade from the container.
+   * Use this when constructing services that still expect `app` as first arg.
+   * This allows gradual migration: services can access deps via this facade
+   * while being resolved through the container.
+   * @returns {Object} A proxy that resolves properties from the container
+   */
+  _createAppFacade() {
+    const container = this.container;
+    const self = this;
+    return new Proxy(
+      {},
+      {
+        get(_, prop) {
+          // Try container first, then fall back to Application instance
+          if (container.has(prop)) {
+            return container.resolve(prop);
+          }
+          return self[prop];
+        }
+      }
+    );
+  }
+
   async initialize() {
     try {
       this.logger.info('Initializing application...');
+
+      // Register app facade so container-resolved services can access legacy deps
+      this.container.register('app', this._createAppFacade());
 
       // Initialize database
       this._registerService('database', new Database(this));
