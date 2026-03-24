@@ -3,14 +3,19 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import dotenv from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Load .env file if present
+dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 class Config {
   constructor(configPath = null) {
     this.configPath = configPath || path.join(__dirname, '../../config.json');
     this.config = this.loadConfig();
+    this._applyEnvOverrides();
   }
 
   loadConfig() {
@@ -70,6 +75,48 @@ class Config {
     };
   }
 
+  /**
+   * Apply environment variable overrides to config values.
+   * Env vars follow the pattern: MAESTRO_SECTION_KEY (e.g., MAESTRO_SERVER_PORT=3000)
+   */
+  _applyEnvOverrides() {
+    const envMap = {
+      PORT: 'server.port',
+      MAESTRO_SERVER_PORT: 'server.port',
+      MAESTRO_SERVER_WS_PORT: 'server.wsPort',
+      MAESTRO_DATABASE_PATH: 'database.path',
+      MAESTRO_LOG_LEVEL: 'logging.level',
+      MAESTRO_LOG_FILE: 'logging.file',
+      MAESTRO_BLE_ENABLED: 'ble.enabled',
+      MAESTRO_SERIAL_ENABLED: 'serial.enabled',
+      MAESTRO_SERIAL_BAUD_RATE: 'serial.baudRate'
+    };
+
+    for (const [envKey, configKey] of Object.entries(envMap)) {
+      const envValue = process.env[envKey];
+      if (envValue === undefined) continue;
+
+      // Type coercion based on current config type
+      const currentValue = this.get(configKey);
+      let typedValue;
+
+      if (typeof currentValue === 'number') {
+        typedValue = Number(envValue);
+        if (isNaN(typedValue)) continue;
+      } else if (typeof currentValue === 'boolean') {
+        typedValue = envValue === 'true' || envValue === '1';
+      } else {
+        typedValue = envValue;
+      }
+
+      try {
+        this.set(configKey, typedValue);
+      } catch (_) {
+        // Skip invalid env values silently
+      }
+    }
+  }
+
   get(key, defaultValue = null) {
     const keys = key.split('.');
     let value = this.config;
@@ -101,7 +148,7 @@ class Config {
       'latency.defaultIterations': (v) => Number.isInteger(v) && v >= 1 && v <= 100,
       'latency.recalibrationDays': (v) => Number.isInteger(v) && v >= 1,
       'ble.scanDuration': (v) => Number.isInteger(v) && v > 0,
-      'serial.baudRate': (v) => Number.isInteger(v) && v > 0,
+      'serial.baudRate': (v) => Number.isInteger(v) && v > 0
     };
 
     if (validators[key] && !validators[key](value)) {
