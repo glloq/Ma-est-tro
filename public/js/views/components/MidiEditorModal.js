@@ -5787,9 +5787,11 @@ class MidiEditorModal {
             this.windInstrumentEditor.hide();
             this._updateWindButtonState(false);
         }
-        // Rebuild buttons (handles TAB/WIND removal for routed channels, disabled states, etc.)
-        // keepPopover=true so the settings popover stays open for the user to see the result.
-        this.refreshChannelButtons(true);
+        // Update only the affected chip (routing line + TAB/WIND buttons)
+        // instead of rebuilding ALL chips via innerHTML — which destroys DOM
+        // elements under the cursor and breaks hover/click state.
+        this._updateChipRouting(channel);
+        this._refreshStringInstrumentChannels();
 
         // Persist routing to database, then notify external components
         // (file list, routing modal) so they read fresh data from DB
@@ -6087,6 +6089,43 @@ class MidiEditorModal {
             chip.classList.add('channel-disabled');
         } else {
             chip.classList.remove('channel-disabled');
+        }
+    }
+
+    /**
+     * Update routing indicator on a single channel chip (non-destructive).
+     * Avoids refreshChannelButtons() which would rebuild all DOM and break hover/click.
+     */
+    _updateChipRouting(channel) {
+        const chip = this.container?.querySelector(`.channel-chip[data-channel="${channel}"]`);
+        if (!chip) return;
+
+        const content = chip.querySelector('.chip-content');
+        if (!content) return;
+
+        // Update or remove the routing sub-line
+        let routeEl = content.querySelector('.chip-routing-line');
+        const routedName = this.getRoutedInstrumentName(channel);
+
+        if (routedName) {
+            if (!routeEl) {
+                routeEl = document.createElement('span');
+                routeEl.className = 'chip-routing-line';
+                content.appendChild(routeEl);
+            }
+            routeEl.textContent = `→ ${routedName}`;
+            routeEl.title = routedName;
+        } else if (routeEl) {
+            routeEl.remove();
+        }
+
+        // Remove TAB/WIND buttons for routed channels (real instrument overrides GM)
+        const group = chip.closest('.channel-chip-group');
+        if (group && routedName) {
+            const tabBtn = group.querySelector('.channel-tab-btn');
+            if (tabBtn) tabBtn.remove();
+            const windBtn = group.querySelector('.channel-wind-btn');
+            if (windBtn) windBtn.remove();
         }
     }
 
@@ -6394,7 +6433,7 @@ class MidiEditorModal {
 
             if (isStringInstrument && !existingTabBtn) {
                 // Add TAB button for newly detected string instrument
-                const color = channelBtn.dataset.color || '#667eea';
+                const color = channelChip.dataset.color || '#667eea';
                 const btn = document.createElement('button');
                 btn.className = 'channel-tab-btn';
                 btn.dataset.channel = ch;
