@@ -3574,9 +3574,10 @@ class MidiEditorModal {
     /**
      * Rafraîchir les boutons de canal
      */
-    refreshChannelButtons() {
-        // Close any open channel settings popover before rebuilding buttons
-        this._closeChannelSettingsPopover();
+    refreshChannelButtons(keepPopover = false) {
+        if (!keepPopover) {
+            this._closeChannelSettingsPopover();
+        }
 
         const channelsToolbar = this.container?.querySelector('.channels-toolbar');
         if (channelsToolbar) {
@@ -4948,6 +4949,7 @@ class MidiEditorModal {
             const channelBtn = e.target.closest('.channel-btn');
             if (channelBtn) {
                 e.preventDefault();
+                e.stopPropagation();
                 const channel = parseInt(channelBtn.dataset.channel);
                 if (!isNaN(channel)) this.toggleChannel(channel);
                 return;
@@ -5730,9 +5732,9 @@ class MidiEditorModal {
             this.windInstrumentEditor.hide();
             this._updateWindButtonState(false);
         }
-        // Update only the affected channel button instead of rebuilding all buttons,
-        // so the settings popover stays open for the user to see the result.
-        this._updateChannelButtonRouting(channel);
+        // Rebuild buttons (handles TAB/WIND removal for routed channels, disabled states, etc.)
+        // keepPopover=true so the settings popover stays open for the user to see the result.
+        this.refreshChannelButtons(true);
 
         // Persist routing to database, then notify external components
         // (file list, routing modal) so they read fresh data from DB
