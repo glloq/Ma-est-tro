@@ -4,6 +4,13 @@
 //   Displays a measure/beat ruler, draggable playhead, and draggable
 //   start/end range markers. Designed for integration into piano roll,
 //   wind, drum, and tablature editors.
+//
+//   Interaction model:
+//   - Drag playhead marker → seek
+//   - Double-click on empty area → seek to that position
+//   - Drag on empty area → pan the view horizontally
+//   - Mouse wheel → horizontal scroll
+//   - Touch support for all interactions
 // ============================================================================
 
 class PlaybackTimelineBar {
@@ -42,6 +49,7 @@ class PlaybackTimelineBar {
         // Callbacks
         this.onSeek = options.onSeek || null;
         this.onRangeChange = options.onRangeChange || null;
+        this.onPan = options.onPan || null;
 
         // Interaction state
         this._isDragging = false;
@@ -49,6 +57,17 @@ class PlaybackTimelineBar {
         this._hoverTarget = null;   // for cursor changes
         this._dirty = true;
         this._rafId = null;
+
+        // Pan state (drag on empty area to scroll the view)
+        this._isPanning = false;
+        this._panStartX = 0;
+        this._panStartScrollX = 0;
+
+        // Double-click detection
+        this._lastClickTime = 0;
+        this._lastClickX = 0;
+        this._DOUBLE_CLICK_MS = 350;
+        this._DOUBLE_CLICK_PX = 8;
 
         // Marker geometry constants
         this._markerSize = 8;       // triangle half-width
@@ -61,11 +80,30 @@ class PlaybackTimelineBar {
         this._onMouseDown = this._handleMouseDown.bind(this);
         this._onMouseMove = this._handleMouseMove.bind(this);
         this._onMouseUp = this._handleMouseUp.bind(this);
+        this._onWheel = this._handleWheel.bind(this);
+        this._onDblClick = this._handleDblClick.bind(this);
+        this._onTouchStart = this._handleTouchStart.bind(this);
+        this._onTouchMove = this._handleTouchMove.bind(this);
+        this._onTouchEnd = this._handleTouchEnd.bind(this);
         this._onResize = this.resize.bind(this);
 
+        // Mouse events
         this.canvas.addEventListener('mousedown', this._onMouseDown);
         this.canvas.addEventListener('mousemove', this._onMouseMove);
         window.addEventListener('mouseup', this._onMouseUp);
+
+        // Double-click for seek
+        this.canvas.addEventListener('dblclick', this._onDblClick);
+
+        // Wheel for horizontal scroll
+        this.canvas.addEventListener('wheel', this._onWheel, { passive: false });
+
+        // Touch events
+        this.canvas.addEventListener('touchstart', this._onTouchStart, { passive: false });
+        this.canvas.addEventListener('touchmove', this._onTouchMove, { passive: false });
+        this.canvas.addEventListener('touchend', this._onTouchEnd, { passive: false });
+
+        // Resize
         window.addEventListener('resize', this._onResize);
 
         // Initial sizing
@@ -248,23 +286,19 @@ class PlaybackTimelineBar {
         const target = this._hitTest(pos.x, pos.y);
 
         if (target) {
-            // Start dragging a specific marker
+            // Start dragging a specific marker (playhead, rangeStart, rangeEnd)
             this._isDragging = true;
             this._dragTarget = target;
             e.preventDefault();
             return;
         }
 
-        // Click on empty area → move playhead
+        // Empty area → start panning the view
         if (pos.x >= this.leftOffset) {
-            const tick = Math.max(0, this._xToTick(pos.x));
-            this.playheadTick = this._snapToBeat(tick);
-            this._isDragging = true;
-            this._dragTarget = 'playhead';
-            this._dirty = true; this._scheduleRender();
-            if (this.onSeek) {
-                this.onSeek(this.playheadTick);
-            }
+            this._isPanning = true;
+            this._panStartX = pos.x;
+            this._panStartScrollX = this.scrollX;
+            this.canvas.style.cursor = 'grabbing';
             e.preventDefault();
         }
     }
@@ -272,6 +306,7 @@ class PlaybackTimelineBar {
     _handleMouseMove(e) {
         const pos = this._getCanvasPos(e);
 
+        // Marker dragging (playhead, range markers)
         if (this._isDragging && this._dragTarget) {
             const tick = Math.max(0, this._xToTick(pos.x));
             const snapped = this._snapToBeat(tick);
@@ -280,27 +315,32 @@ class PlaybackTimelineBar {
                 case 'playhead':
                     this.playheadTick = snapped;
                     this._dirty = true; this._scheduleRender();
-                    if (this.onSeek) {
-                        this.onSeek(this.playheadTick);
-                    }
+                    if (this.onSeek) this.onSeek(this.playheadTick);
                     break;
 
                 case 'rangeStart':
                     this.rangeStart = Math.min(snapped, this.rangeEnd);
                     this._dirty = true; this._scheduleRender();
-                    if (this.onRangeChange) {
-                        this.onRangeChange(this.rangeStart, this.rangeEnd);
-                    }
+                    if (this.onRangeChange) this.onRangeChange(this.rangeStart, this.rangeEnd);
                     break;
 
                 case 'rangeEnd':
                     this.rangeEnd = Math.max(snapped, this.rangeStart);
                     this._dirty = true; this._scheduleRender();
-                    if (this.onRangeChange) {
-                        this.onRangeChange(this.rangeStart, this.rangeEnd);
-                    }
+                    if (this.onRangeChange) this.onRangeChange(this.rangeStart, this.rangeEnd);
                     break;
             }
+            return;
+        }
+
+        // View panning (drag on empty area)
+        if (this._isPanning) {
+            const dx = pos.x - this._panStartX;
+            const tickDelta = dx * this.ticksPerPixel;
+            const newScrollX = Math.max(0, this._panStartScrollX - tickDelta);
+            this.scrollX = newScrollX;
+            this._dirty = true; this._scheduleRender();
+            if (this.onPan) this.onPan(this.scrollX);
             return;
         }
 
@@ -311,7 +351,7 @@ class PlaybackTimelineBar {
             if (target === 'playhead' || target === 'rangeStart' || target === 'rangeEnd') {
                 this.canvas.style.cursor = 'ew-resize';
             } else if (pos.x >= this.leftOffset) {
-                this.canvas.style.cursor = 'pointer';
+                this.canvas.style.cursor = 'grab';
             } else {
                 this.canvas.style.cursor = 'default';
             }
@@ -322,6 +362,152 @@ class PlaybackTimelineBar {
         if (this._isDragging) {
             this._isDragging = false;
             this._dragTarget = null;
+        }
+        if (this._isPanning) {
+            this._isPanning = false;
+            this.canvas.style.cursor = 'grab';
+        }
+    }
+
+    // Double-click → seek playhead to position
+    _handleDblClick(e) {
+        const pos = this._getCanvasPos(e);
+        if (pos.x < this.leftOffset) return;
+
+        // Don't double-click on markers (they use drag)
+        const target = this._hitTest(pos.x, pos.y);
+        if (target) return;
+
+        const tick = Math.max(0, this._xToTick(pos.x));
+        this.playheadTick = this._snapToBeat(tick);
+        this._dirty = true; this._scheduleRender();
+        if (this.onSeek) this.onSeek(this.playheadTick);
+        e.preventDefault();
+    }
+
+    // ========================================================================
+    // WHEEL (horizontal scroll)
+    // ========================================================================
+
+    _handleWheel(e) {
+        e.preventDefault();
+
+        // Use deltaX for horizontal scroll; fall back to deltaY if no horizontal delta
+        let delta = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+
+        // Line mode (deltaMode === 1): multiply by ~40px equivalent
+        if (e.deltaMode === 1) delta *= 40;
+        // Page mode (deltaMode === 2): multiply by canvas width
+        if (e.deltaMode === 2) {
+            const w = this.canvas.width / (window.devicePixelRatio || 1);
+            delta *= (w - this.leftOffset);
+        }
+
+        const tickDelta = delta * this.ticksPerPixel;
+        const newScrollX = Math.max(0, this.scrollX + tickDelta);
+        this.scrollX = newScrollX;
+        this._dirty = true; this._scheduleRender();
+        if (this.onPan) this.onPan(this.scrollX);
+    }
+
+    // ========================================================================
+    // TOUCH INTERACTION
+    // ========================================================================
+
+    _getTouchPos(touch) {
+        const rect = this.canvas.getBoundingClientRect();
+        return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+    }
+
+    _handleTouchStart(e) {
+        if (e.touches.length !== 1) return;
+        e.preventDefault();
+
+        const pos = this._getTouchPos(e.touches[0]);
+        const target = this._hitTest(pos.x, pos.y);
+
+        // Double-tap detection → seek
+        const now = Date.now();
+        if (now - this._lastClickTime < this._DOUBLE_CLICK_MS &&
+            Math.abs(pos.x - this._lastClickX) < this._DOUBLE_CLICK_PX) {
+            // Double-tap: seek playhead
+            if (pos.x >= this.leftOffset && !target) {
+                const tick = Math.max(0, this._xToTick(pos.x));
+                this.playheadTick = this._snapToBeat(tick);
+                this._dirty = true; this._scheduleRender();
+                if (this.onSeek) this.onSeek(this.playheadTick);
+            }
+            this._lastClickTime = 0;
+            return;
+        }
+        this._lastClickTime = now;
+        this._lastClickX = pos.x;
+
+        if (target) {
+            // Drag a marker
+            this._isDragging = true;
+            this._dragTarget = target;
+            return;
+        }
+
+        // Pan on empty area
+        if (pos.x >= this.leftOffset) {
+            this._isPanning = true;
+            this._panStartX = pos.x;
+            this._panStartScrollX = this.scrollX;
+        }
+    }
+
+    _handleTouchMove(e) {
+        if (e.touches.length !== 1) return;
+        e.preventDefault();
+
+        const pos = this._getTouchPos(e.touches[0]);
+
+        // Marker drag
+        if (this._isDragging && this._dragTarget) {
+            const tick = Math.max(0, this._xToTick(pos.x));
+            const snapped = this._snapToBeat(tick);
+
+            switch (this._dragTarget) {
+                case 'playhead':
+                    this.playheadTick = snapped;
+                    this._dirty = true; this._scheduleRender();
+                    if (this.onSeek) this.onSeek(this.playheadTick);
+                    break;
+                case 'rangeStart':
+                    this.rangeStart = Math.min(snapped, this.rangeEnd);
+                    this._dirty = true; this._scheduleRender();
+                    if (this.onRangeChange) this.onRangeChange(this.rangeStart, this.rangeEnd);
+                    break;
+                case 'rangeEnd':
+                    this.rangeEnd = Math.max(snapped, this.rangeStart);
+                    this._dirty = true; this._scheduleRender();
+                    if (this.onRangeChange) this.onRangeChange(this.rangeStart, this.rangeEnd);
+                    break;
+            }
+            return;
+        }
+
+        // Pan
+        if (this._isPanning) {
+            const dx = pos.x - this._panStartX;
+            const tickDelta = dx * this.ticksPerPixel;
+            const newScrollX = Math.max(0, this._panStartScrollX - tickDelta);
+            this.scrollX = newScrollX;
+            this._dirty = true; this._scheduleRender();
+            if (this.onPan) this.onPan(this.scrollX);
+        }
+    }
+
+    _handleTouchEnd(e) {
+        e.preventDefault();
+        if (this._isDragging) {
+            this._isDragging = false;
+            this._dragTarget = null;
+        }
+        if (this._isPanning) {
+            this._isPanning = false;
         }
     }
 
@@ -536,6 +722,11 @@ class PlaybackTimelineBar {
         this.canvas.removeEventListener('mousedown', this._onMouseDown);
         this.canvas.removeEventListener('mousemove', this._onMouseMove);
         window.removeEventListener('mouseup', this._onMouseUp);
+        this.canvas.removeEventListener('dblclick', this._onDblClick);
+        this.canvas.removeEventListener('wheel', this._onWheel);
+        this.canvas.removeEventListener('touchstart', this._onTouchStart);
+        this.canvas.removeEventListener('touchmove', this._onTouchMove);
+        this.canvas.removeEventListener('touchend', this._onTouchEnd);
         window.removeEventListener('resize', this._onResize);
 
         // Remove canvas from DOM

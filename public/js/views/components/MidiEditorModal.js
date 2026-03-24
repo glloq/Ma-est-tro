@@ -4313,6 +4313,11 @@ class MidiEditorModal {
             this.drumPatternEditor.updatePlayhead(resetTick);
         }
 
+        // Reset wind instrument editor playhead
+        if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) {
+            this.windInstrumentEditor.updatePlayhead(resetTick);
+        }
+
         this.updatePlaybackButtons();
 
         this.log('info', `Playback stopped, cursor reset to tick ${resetTick}`);
@@ -4429,7 +4434,45 @@ class MidiEditorModal {
                 if (this.timelineBar) {
                     this.timelineBar.setPlayhead(clampedTick);
                 }
+                // Sync playhead across all active editors
+                if (this.tablatureEditor && this.tablatureEditor.isVisible) {
+                    this.tablatureEditor.updatePlayhead(clampedTick);
+                }
+                if (this.drumPatternEditor && this.drumPatternEditor.isVisible) {
+                    this.drumPatternEditor.updatePlayhead(clampedTick);
+                }
+                if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) {
+                    this.windInstrumentEditor.updatePlayhead(clampedTick);
+                }
                 this.log('debug', `Timeline seek to tick ${clampedTick}`);
+            },
+            onPan: (newScrollX) => {
+                // Timeline drag/wheel panned the view — sync all editors
+                if (this.pianoRoll) {
+                    this.pianoRoll.xoffset = newScrollX;
+                    if (typeof this.pianoRoll.redraw === 'function' &&
+                        !(this.windInstrumentEditor && this.windInstrumentEditor.isVisible)) {
+                        this.pianoRoll.redraw();
+                    }
+                }
+                // Sync horizontal slider
+                this.updateHorizontalSlider(newScrollX);
+                // Sync tablature
+                if (this.tablatureEditor && this.tablatureEditor.isVisible && this.tablatureEditor.renderer) {
+                    this.tablatureEditor.renderer.setScrollX(newScrollX);
+                }
+                // Sync drum editor
+                if (this.drumPatternEditor && this.drumPatternEditor.isVisible && this.drumPatternEditor.gridRenderer) {
+                    this.drumPatternEditor.gridRenderer.setScrollX(newScrollX);
+                }
+                // Sync wind editor
+                if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible && this.windInstrumentEditor.renderer) {
+                    this.windInstrumentEditor.renderer.setScrollX(newScrollX);
+                }
+                // Sync CC/velocity/tempo editors
+                this.syncCCEditor();
+                this.syncVelocityEditor();
+                this.syncTempoEditor();
             },
             onRangeChange: (start, end) => {
                 // Sync range markers with the piano roll
@@ -4573,6 +4616,11 @@ class MidiEditorModal {
         // Reset drum pattern playhead
         if (this.drumPatternEditor && this.drumPatternEditor.isVisible) {
             this.drumPatternEditor.updatePlayhead(resetTick);
+        }
+
+        // Reset wind instrument editor playhead
+        if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) {
+            this.windInstrumentEditor.updatePlayhead(resetTick);
         }
 
         this.updatePlaybackButtons();
@@ -5628,6 +5676,16 @@ class MidiEditorModal {
             const renderer = this.tablatureEditor.renderer;
             const canvasWidth = this.tablatureEditor.tabCanvasEl?.width || 800;
             const visibleTicks = (canvasWidth - renderer.headerWidth) * renderer.ticksPerPixel;
+            const maxOffset = Math.max(0, maxTick - visibleTicks);
+            const newOffset = Math.round((percentage / 100) * maxOffset);
+            renderer.setScrollX(newOffset);
+        }
+
+        // Synchroniser l'éditeur drum
+        if (this.drumPatternEditor && this.drumPatternEditor.isVisible && this.drumPatternEditor.gridRenderer) {
+            const renderer = this.drumPatternEditor.gridRenderer;
+            const canvasWidth = this.drumPatternEditor.gridCanvasEl?.width || 800;
+            const visibleTicks = (canvasWidth - (renderer.headerWidth || 0)) * (renderer.ticksPerPixel || 2);
             const maxOffset = Math.max(0, maxTick - visibleTicks);
             const newOffset = Math.round((percentage / 100) * maxOffset);
             renderer.setScrollX(newOffset);

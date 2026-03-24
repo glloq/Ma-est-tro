@@ -321,6 +321,14 @@ class MidiEditorPlayback {
             }
         }
 
+        // Update PlaybackTimelineBar
+        if (m.timelineBar) {
+            m.timelineBar.setPlayhead(tick);
+            if (m.pianoRoll) {
+                m.timelineBar.setScrollX(m.pianoRoll.xoffset || 0);
+            }
+        }
+
         // Update tablature editor playhead, fretboard, and auto-scroll
         if (m.tablatureEditor && m.tablatureEditor.isVisible) {
             m.tablatureEditor.updatePlayhead(tick);
@@ -337,6 +345,16 @@ class MidiEditorPlayback {
                 scrollHSlider.value = percentage;
             }
         }
+
+        // Update drum pattern editor playhead
+        if (m.drumPatternEditor && m.drumPatternEditor.isVisible) {
+            m.drumPatternEditor.updatePlayhead(tick);
+        }
+
+        // Update wind instrument editor playhead
+        if (m.windInstrumentEditor && m.windInstrumentEditor.isVisible) {
+            m.windInstrumentEditor.updatePlayhead(tick);
+        }
     }
 
     /**
@@ -351,12 +369,32 @@ class MidiEditorPlayback {
             m.pianoRoll.cursor = m.playbackStartTick;
         }
 
+        const resetTick = m.playbackStartTick || 0;
+
+        // Reset timeline bar
+        if (m.timelineBar) {
+            m.timelineBar.setPlayhead(resetTick);
+            if (m.pianoRoll) {
+                m.timelineBar.setScrollX(m.pianoRoll.xoffset || 0);
+            }
+        }
+
         // Reset tablature playhead and clear fretboard positions
         if (m.tablatureEditor && m.tablatureEditor.isVisible) {
-            m.tablatureEditor.updatePlayhead(m.playbackStartTick || 0);
+            m.tablatureEditor.updatePlayhead(resetTick);
             if (m.tablatureEditor.fretboard) {
                 m.tablatureEditor.fretboard.clearActivePositions();
             }
+        }
+
+        // Reset drum pattern playhead
+        if (m.drumPatternEditor && m.drumPatternEditor.isVisible) {
+            m.drumPatternEditor.updatePlayhead(resetTick);
+        }
+
+        // Reset wind instrument editor playhead
+        if (m.windInstrumentEditor && m.windInstrumentEditor.isVisible) {
+            m.windInstrumentEditor.updatePlayhead(resetTick);
         }
 
         this.updatePlaybackButtons();
