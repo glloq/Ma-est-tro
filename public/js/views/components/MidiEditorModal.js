@@ -4904,6 +4904,17 @@ class MidiEditorModal {
             }
         });
 
+        // Close channel settings popover on any mousedown outside it.
+        // Uses CAPTURE phase so it fires before the piano roll's stopPropagation().
+        this.container.addEventListener('mousedown', (e) => {
+            if (this._channelSettingsOpen >= 0) {
+                const popover = this.container.querySelector('.channel-settings-popover');
+                if (popover && popover.contains(e.target)) return;
+                if (e.target.closest('.channel-settings-btn')) return;
+                this._closeChannelSettingsPopover();
+            }
+        }, true);
+
         // OPTIMISATION: Event delegation pour tous les boutons de canal
         // Remplace 4 boucles forEach × 16 boutons = ~64 listeners par 1 seul listener
         this.container.addEventListener('click', (e) => {
@@ -5809,10 +5820,6 @@ class MidiEditorModal {
         if (existingPopover) {
             existingPopover.remove();
         }
-        const existingBackdrop = this.container?.querySelector('.channel-settings-backdrop');
-        if (existingBackdrop) {
-            existingBackdrop.remove();
-        }
         this._channelSettingsOpen = -1;
     }
 
@@ -5888,15 +5895,6 @@ class MidiEditorModal {
         popover.style.top = `${rect.bottom + 4}px`;
         popover.style.left = `${rect.left + rect.width / 2}px`;
         popover.style.transform = 'translateX(-50%)';
-        // Backdrop: transparent overlay that closes popover on click outside
-        const backdrop = document.createElement('div');
-        backdrop.className = 'channel-settings-backdrop';
-        backdrop.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this._closeChannelSettingsPopover();
-        });
-        this.container.appendChild(backdrop);
         this.container.appendChild(popover);
 
         // Event: enabled checkbox
