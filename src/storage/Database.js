@@ -134,6 +134,52 @@ class DatabaseManager {
   }
 
   /**
+   * Rollback the last N migrations using down scripts.
+   * Down scripts must exist in migrations/down/ with matching filenames.
+   * @param {number} steps - Number of migrations to rollback (default 1)
+   */
+  rollbackMigrations(steps = 1) {
+    const migrationsDir = path.join(__dirname, '../../migrations');
+    const downDir = path.join(migrationsDir, 'down');
+
+    if (!fs.existsSync(downDir)) {
+      throw new Error('No down migrations directory found');
+    }
+
+    const applied = this.db
+      .prepare('SELECT version, name FROM migrations ORDER BY version DESC LIMIT ?')
+      .all(steps);
+
+    if (applied.length === 0) {
+      this.app.logger.info('No migrations to rollback');
+      return;
+    }
+
+    for (const migration of applied) {
+      const downFile = path.join(downDir, migration.name);
+      if (!fs.existsSync(downFile)) {
+        throw new Error(`Down migration not found for ${migration.name}. Cannot rollback.`);
+      }
+
+      const sql = fs.readFileSync(downFile, 'utf8');
+      try {
+        this.app.logger.info(`Rolling back migration ${migration.version}: ${migration.name}`);
+        this.db.exec('BEGIN TRANSACTION');
+        this.db.exec(sql);
+        this.db.prepare('DELETE FROM migrations WHERE version = ?').run(migration.version);
+        this.db.exec('COMMIT');
+        this.app.logger.info(`Rollback of migration ${migration.version} completed`);
+      } catch (error) {
+        this.db.exec('ROLLBACK');
+        this.app.logger.error(
+          `Rollback of migration ${migration.version} failed: ${error.message}`
+        );
+        throw error;
+      }
+    }
+  }
+
+  /**
    * Ensure required columns exist in instruments_latency table
    * This is a safety net for partial migration failures
    */
