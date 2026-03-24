@@ -8,12 +8,25 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "migrate": "node scripts/migrate-db.js",
+    "migrate:rollback": "node scripts/rollback-db.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "test:frontend": "vitest run",
+    "test:frontend:watch": "vitest",
+    "bench": "node tests/performance/benchmark.js",
+    "lint": "eslint src/ public/js/ tests/",
+    "lint:fix": "eslint src/ public/js/ tests/ --fix",
+    "format": "prettier --write \"src/**/*.js\" \"public/js/**/*.js\" \"tests/**/*.js\"",
+    "typecheck": "tsc --noEmit",
+    "build": "vite build",
+    "preview": "vite preview",
+    "dev:frontend": "vite",
     "pm2:start": "pm2 start ecosystem.config.cjs",
     "pm2:stop": "pm2 stop midimind",
     "pm2:restart": "pm2 restart midimind",
     "pm2:logs": "pm2 logs midimind",
-    "pm2:status": "pm2 status"
+    "pm2:status": "pm2 status",
+    "prepare": "husky"
   },
   "keywords": [
     "midi",
@@ -28,6 +41,7 @@
     "dotenv": "^16.3.1",
     "easymidi": "^2.0.1",
     "express": "^4.18.2",
+    "helmet": "^8.1.0",
     "midi-file": "^1.2.4",
     "node-ble": "^1.9.1",
     "node-schedule": "^2.1.1",
@@ -39,9 +53,23 @@
     "rpi-ws281x-native": "^1.0.0"
   },
   "devDependencies": {
+    "@types/node": "^25.5.0",
     "eslint": "^8.55.0",
+    "husky": "^9.1.7",
     "jest": "^29.7.0",
-    "nodemon": "^3.0.2"
+    "jsdom": "^29.0.1",
+    "lint-staged": "^16.4.0",
+    "nodemon": "^3.0.2",
+    "prettier": "^3.8.1",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.2",
+    "vitest": "^4.1.1"
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --max-warnings 200",
+      "prettier --check"
+    ]
   },
   "engines": {
     "node": ">=18.0.0"

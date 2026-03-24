@@ -3,7 +3,17 @@
 // Split into sections: DB filters, FileCommands handler, FilterManager client
 
 import { jest, describe, test, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
-import Database from 'better-sqlite3';
+
+let Database;
+let betterSqliteAvailable = false;
+try {
+  Database = (await import('better-sqlite3')).default;
+  betterSqliteAvailable = true;
+} catch {
+  // Native bindings not available — DB tests will be skipped
+}
+
+const describeIfSqlite = betterSqliteAvailable ? describe : describe.skip;
 import MidiDatabase from '../src/storage/MidiDatabase.js';
 
 // ============================================================
@@ -100,21 +110,142 @@ function seedTestData(db) {
   // 8 test MIDI files
   const files = [
     // id=1
-    { filename: 'piano_sonata.mid', size: 5000, tracks: 4, duration: 240, tempo: 120, ppq: 480, uploaded_at: '2026-01-15T10:00:00Z', folder: '/classical', is_original: 1, instrument_types: '["Piano"]', channel_count: 3, has_drums: 0, has_melody: 1, has_bass: 0 },
+    {
+      filename: 'piano_sonata.mid',
+      size: 5000,
+      tracks: 4,
+      duration: 240,
+      tempo: 120,
+      ppq: 480,
+      uploaded_at: '2026-01-15T10:00:00Z',
+      folder: '/classical',
+      is_original: 1,
+      instrument_types: '["Piano"]',
+      channel_count: 3,
+      has_drums: 0,
+      has_melody: 1,
+      has_bass: 0
+    },
     // id=2
-    { filename: 'rock_anthem.mid', size: 8000, tracks: 6, duration: 180, tempo: 140, ppq: 480, uploaded_at: '2026-02-10T10:00:00Z', folder: '/rock', is_original: 1, instrument_types: '["Piano","Drums","Bass","Guitar"]', channel_count: 5, has_drums: 1, has_melody: 1, has_bass: 1 },
+    {
+      filename: 'rock_anthem.mid',
+      size: 8000,
+      tracks: 6,
+      duration: 180,
+      tempo: 140,
+      ppq: 480,
+      uploaded_at: '2026-02-10T10:00:00Z',
+      folder: '/rock',
+      is_original: 1,
+      instrument_types: '["Piano","Drums","Bass","Guitar"]',
+      channel_count: 5,
+      has_drums: 1,
+      has_melody: 1,
+      has_bass: 1
+    },
     // id=3
-    { filename: 'jazz_combo.mid', size: 6000, tracks: 5, duration: 300, tempo: 100, ppq: 480, uploaded_at: '2026-03-01T10:00:00Z', folder: '/jazz', is_original: 1, instrument_types: '["Piano","Bass","Drums"]', channel_count: 4, has_drums: 1, has_melody: 1, has_bass: 1 },
+    {
+      filename: 'jazz_combo.mid',
+      size: 6000,
+      tracks: 5,
+      duration: 300,
+      tempo: 100,
+      ppq: 480,
+      uploaded_at: '2026-03-01T10:00:00Z',
+      folder: '/jazz',
+      is_original: 1,
+      instrument_types: '["Piano","Bass","Drums"]',
+      channel_count: 4,
+      has_drums: 1,
+      has_melody: 1,
+      has_bass: 1
+    },
     // id=4
-    { filename: 'simple_melody.mid', size: 1000, tracks: 2, duration: 60, tempo: 90, ppq: 480, uploaded_at: '2026-03-15T10:00:00Z', folder: '/pop', is_original: 1, instrument_types: '["Piano"]', channel_count: 1, has_drums: 0, has_melody: 1, has_bass: 0 },
+    {
+      filename: 'simple_melody.mid',
+      size: 1000,
+      tracks: 2,
+      duration: 60,
+      tempo: 90,
+      ppq: 480,
+      uploaded_at: '2026-03-15T10:00:00Z',
+      folder: '/pop',
+      is_original: 1,
+      instrument_types: '["Piano"]',
+      channel_count: 1,
+      has_drums: 0,
+      has_melody: 1,
+      has_bass: 0
+    },
     // id=5 (adapted copy of rock_anthem)
-    { filename: 'rock_anthem_adapted.mid', size: 8000, tracks: 6, duration: 180, tempo: 140, ppq: 480, uploaded_at: '2026-02-11T10:00:00Z', folder: '/rock', is_original: 0, parent_file_id: 2, instrument_types: '["Piano","Drums","Bass","Guitar"]', channel_count: 5, has_drums: 1, has_melody: 1, has_bass: 1 },
+    {
+      filename: 'rock_anthem_adapted.mid',
+      size: 8000,
+      tracks: 6,
+      duration: 180,
+      tempo: 140,
+      ppq: 480,
+      uploaded_at: '2026-02-11T10:00:00Z',
+      folder: '/rock',
+      is_original: 0,
+      parent_file_id: 2,
+      instrument_types: '["Piano","Drums","Bass","Guitar"]',
+      channel_count: 5,
+      has_drums: 1,
+      has_melody: 1,
+      has_bass: 1
+    },
     // id=6
-    { filename: 'orchestral_suite.mid', size: 15000, tracks: 10, duration: 600, tempo: 80, ppq: 480, uploaded_at: '2026-01-01T10:00:00Z', folder: '/classical/baroque', is_original: 1, instrument_types: '["Strings","Brass","Woodwinds"]', channel_count: 8, has_drums: 0, has_melody: 1, has_bass: 1 },
+    {
+      filename: 'orchestral_suite.mid',
+      size: 15000,
+      tracks: 10,
+      duration: 600,
+      tempo: 80,
+      ppq: 480,
+      uploaded_at: '2026-01-01T10:00:00Z',
+      folder: '/classical/baroque',
+      is_original: 1,
+      instrument_types: '["Strings","Brass","Woodwinds"]',
+      channel_count: 8,
+      has_drums: 0,
+      has_melody: 1,
+      has_bass: 1
+    },
     // id=7
-    { filename: 'drum_solo.mid', size: 3000, tracks: 2, duration: 120, tempo: 160, ppq: 480, uploaded_at: '2026-03-20T10:00:00Z', folder: '/jazz', is_original: 1, instrument_types: '["Drums"]', channel_count: 1, has_drums: 1, has_melody: 0, has_bass: 0 },
+    {
+      filename: 'drum_solo.mid',
+      size: 3000,
+      tracks: 2,
+      duration: 120,
+      tempo: 160,
+      ppq: 480,
+      uploaded_at: '2026-03-20T10:00:00Z',
+      folder: '/jazz',
+      is_original: 1,
+      instrument_types: '["Drums"]',
+      channel_count: 1,
+      has_drums: 1,
+      has_melody: 0,
+      has_bass: 0
+    },
     // id=8
-    { filename: 'synth_pad.mid', size: 4000, tracks: 3, duration: 90, tempo: 110, ppq: 480, uploaded_at: '2026-02-20T10:00:00Z', folder: '/electronic', is_original: 1, instrument_types: '["Synth"]', channel_count: 2, has_drums: 0, has_melody: 1, has_bass: 0 },
+    {
+      filename: 'synth_pad.mid',
+      size: 4000,
+      tracks: 3,
+      duration: 90,
+      tempo: 110,
+      ppq: 480,
+      uploaded_at: '2026-02-20T10:00:00Z',
+      folder: '/electronic',
+      is_original: 1,
+      instrument_types: '["Synth"]',
+      channel_count: 2,
+      has_drums: 0,
+      has_melody: 1,
+      has_bass: 0
+    }
   ];
 
   const insertFile = db.prepare(`
@@ -199,14 +330,14 @@ function seedTestData(db) {
     VALUES (?, ?, ?, ?, ?, ?)
   `);
   insertInstr.run('inst_1', 'dev_A', 0, 'Piano', 21, 108); // wide piano range
-  insertInstr.run('inst_2', 'dev_B', 1, 'Bass', 28, 55);   // bass range
+  insertInstr.run('inst_2', 'dev_B', 1, 'Bass', 28, 55); // bass range
 }
 
 // ============================================================
 // SECTION 1: MidiDatabase.filterFiles — Simple filters
 // ============================================================
 
-describe('MidiDatabase.filterFiles', () => {
+describeIfSqlite('MidiDatabase.filterFiles', () => {
   let db;
   let midiDb;
 
@@ -233,169 +364,181 @@ describe('MidiDatabase.filterFiles', () => {
   // --- Filename ---
   test('filename partial match', () => {
     const results = midiDb.filterFiles({ filename: 'rock' });
-    expect(results.map(f => f.id).sort()).toEqual([2, 5]);
+    expect(results.map((f) => f.id).sort()).toEqual([2, 5]);
   });
 
   test('filename case-insensitive (SQLite LIKE is case-insensitive for ASCII)', () => {
     const results = midiDb.filterFiles({ filename: 'PIANO' });
-    expect(results.map(f => f.id)).toEqual([1]);
+    expect(results.map((f) => f.id)).toEqual([1]);
   });
 
   // --- Folder ---
   test('folder exact match', () => {
     const results = midiDb.filterFiles({ folder: '/rock' });
-    expect(results.map(f => f.id).sort()).toEqual([2, 5]);
+    expect(results.map((f) => f.id).sort()).toEqual([2, 5]);
   });
 
   test('folder with subfolders', () => {
     const results = midiDb.filterFiles({ folder: '/classical', includeSubfolders: true });
-    expect(results.map(f => f.id).sort()).toEqual([1, 6]);
+    expect(results.map((f) => f.id).sort()).toEqual([1, 6]);
   });
 
   test('folder without subfolders excludes subfolders', () => {
     const results = midiDb.filterFiles({ folder: '/classical', includeSubfolders: false });
-    expect(results.map(f => f.id)).toEqual([1]);
+    expect(results.map((f) => f.id)).toEqual([1]);
   });
 
   // --- Duration ---
   test('durationMin filter', () => {
     const results = midiDb.filterFiles({ durationMin: 200 });
-    expect(results.map(f => f.id).sort()).toEqual([1, 3, 6]);
+    expect(results.map((f) => f.id).sort()).toEqual([1, 3, 6]);
   });
 
   test('durationMax filter', () => {
     const results = midiDb.filterFiles({ durationMax: 100 });
-    expect(results.map(f => f.id).sort()).toEqual([4, 8]);
+    expect(results.map((f) => f.id).sort()).toEqual([4, 8]);
   });
 
   test('duration range', () => {
     const results = midiDb.filterFiles({ durationMin: 100, durationMax: 200 });
-    expect(results.map(f => f.id).sort()).toEqual([2, 5, 7]);
+    expect(results.map((f) => f.id).sort()).toEqual([2, 5, 7]);
   });
 
   // --- Tempo ---
   test('tempoMin filter', () => {
     const results = midiDb.filterFiles({ tempoMin: 140 });
-    expect(results.map(f => f.id).sort()).toEqual([2, 5, 7]);
+    expect(results.map((f) => f.id).sort()).toEqual([2, 5, 7]);
   });
 
   test('tempoMax filter', () => {
     const results = midiDb.filterFiles({ tempoMax: 100 });
-    expect(results.map(f => f.id).sort()).toEqual([3, 4, 6]);
+    expect(results.map((f) => f.id).sort()).toEqual([3, 4, 6]);
   });
 
   // --- Tracks ---
   test('tracksMin filter', () => {
     const results = midiDb.filterFiles({ tracksMin: 5 });
-    expect(results.map(f => f.id).sort()).toEqual([2, 3, 5, 6]);
+    expect(results.map((f) => f.id).sort()).toEqual([2, 3, 5, 6]);
   });
 
   test('tracksMax filter', () => {
     const results = midiDb.filterFiles({ tracksMax: 2 });
-    expect(results.map(f => f.id).sort()).toEqual([4, 7]);
+    expect(results.map((f) => f.id).sort()).toEqual([4, 7]);
   });
 
   // --- Channel count ---
   test('channel count range', () => {
     const results = midiDb.filterFiles({ channelCountMin: 4, channelCountMax: 5 });
-    expect(results.map(f => f.id).sort()).toEqual([2, 3, 5]);
+    expect(results.map((f) => f.id).sort()).toEqual([2, 3, 5]);
   });
 
   // --- Upload date ---
   test('uploadedAfter filter', () => {
     const results = midiDb.filterFiles({ uploadedAfter: '2026-03-01T00:00:00Z' });
-    expect(results.map(f => f.id).sort()).toEqual([3, 4, 7]);
+    expect(results.map((f) => f.id).sort()).toEqual([3, 4, 7]);
   });
 
   test('uploadedBefore filter', () => {
     const results = midiDb.filterFiles({ uploadedBefore: '2026-01-31T23:59:59Z' });
-    expect(results.map(f => f.id).sort()).toEqual([1, 6]);
+    expect(results.map((f) => f.id).sort()).toEqual([1, 6]);
   });
 
   // --- isOriginal ---
   test('isOriginal true', () => {
     const results = midiDb.filterFiles({ isOriginal: true });
-    const ids = results.map(f => f.id).sort();
+    const ids = results.map((f) => f.id).sort();
     expect(ids).toEqual([1, 2, 3, 4, 6, 7, 8]);
   });
 
   test('isOriginal false', () => {
     const results = midiDb.filterFiles({ isOriginal: false });
-    expect(results.map(f => f.id)).toEqual([5]);
+    expect(results.map((f) => f.id)).toEqual([5]);
   });
 
   // --- Boolean quick filters ---
   test('hasDrums true', () => {
     const results = midiDb.filterFiles({ hasDrums: true });
-    expect(results.map(f => f.id).sort()).toEqual([2, 3, 5, 7]);
+    expect(results.map((f) => f.id).sort()).toEqual([2, 3, 5, 7]);
   });
 
   test('hasDrums false', () => {
     const results = midiDb.filterFiles({ hasDrums: false });
-    expect(results.map(f => f.id).sort()).toEqual([1, 4, 6, 8]);
+    expect(results.map((f) => f.id).sort()).toEqual([1, 4, 6, 8]);
   });
 
   test('hasMelody true', () => {
     const results = midiDb.filterFiles({ hasMelody: true });
-    expect(results.map(f => f.id).sort()).toEqual([1, 2, 3, 4, 5, 6, 8]);
+    expect(results.map((f) => f.id).sort()).toEqual([1, 2, 3, 4, 5, 6, 8]);
   });
 
   test('hasBass true', () => {
     const results = midiDb.filterFiles({ hasBass: true });
-    expect(results.map(f => f.id).sort()).toEqual([2, 3, 5, 6]);
+    expect(results.map((f) => f.id).sort()).toEqual([2, 3, 5, 6]);
   });
 
   // --- Instrument types (legacy broad categories) ---
   test('instrumentTypes ANY single', () => {
     const results = midiDb.filterFiles({ instrumentTypes: ['Piano'], instrumentMode: 'ANY' });
-    expect(results.map(f => f.id).sort()).toEqual([1, 2, 3, 4, 5]);
+    expect(results.map((f) => f.id).sort()).toEqual([1, 2, 3, 4, 5]);
   });
 
   test('instrumentTypes ANY multiple', () => {
-    const results = midiDb.filterFiles({ instrumentTypes: ['Piano', 'Drums'], instrumentMode: 'ANY' });
-    expect(results.map(f => f.id).sort()).toEqual([1, 2, 3, 4, 5, 7]);
+    const results = midiDb.filterFiles({
+      instrumentTypes: ['Piano', 'Drums'],
+      instrumentMode: 'ANY'
+    });
+    expect(results.map((f) => f.id).sort()).toEqual([1, 2, 3, 4, 5, 7]);
   });
 
   test('instrumentTypes ALL', () => {
-    const results = midiDb.filterFiles({ instrumentTypes: ['Piano', 'Bass'], instrumentMode: 'ALL' });
-    expect(results.map(f => f.id).sort()).toEqual([2, 3, 5]);
+    const results = midiDb.filterFiles({
+      instrumentTypes: ['Piano', 'Bass'],
+      instrumentMode: 'ALL'
+    });
+    expect(results.map((f) => f.id).sort()).toEqual([2, 3, 5]);
   });
 
   test('instrumentTypes EXACT single', () => {
     const results = midiDb.filterFiles({ instrumentTypes: ['Piano'], instrumentMode: 'EXACT' });
-    expect(results.map(f => f.id).sort()).toEqual([1, 4]);
+    expect(results.map((f) => f.id).sort()).toEqual([1, 4]);
   });
 
   test('instrumentTypes EXACT multiple', () => {
-    const results = midiDb.filterFiles({ instrumentTypes: ['Piano', 'Bass', 'Drums'], instrumentMode: 'EXACT' });
-    expect(results.map(f => f.id)).toEqual([3]);
+    const results = midiDb.filterFiles({
+      instrumentTypes: ['Piano', 'Bass', 'Drums'],
+      instrumentMode: 'EXACT'
+    });
+    expect(results.map((f) => f.id)).toEqual([3]);
   });
 
   // --- GM instrument filters ---
   test('gmInstruments ANY', () => {
     const results = midiDb.filterFiles({ gmInstruments: ['Acoustic Grand Piano'], gmMode: 'ANY' });
-    expect(results.map(f => f.id).sort()).toEqual([1, 2, 3, 4, 5]);
+    expect(results.map((f) => f.id).sort()).toEqual([1, 2, 3, 4, 5]);
   });
 
   test('gmInstruments ALL', () => {
-    const results = midiDb.filterFiles({ gmInstruments: ['Acoustic Grand Piano', 'Electric Bass (finger)'], gmMode: 'ALL' });
-    expect(results.map(f => f.id).sort()).toEqual([2, 5]);
+    const results = midiDb.filterFiles({
+      gmInstruments: ['Acoustic Grand Piano', 'Electric Bass (finger)'],
+      gmMode: 'ALL'
+    });
+    expect(results.map((f) => f.id).sort()).toEqual([2, 5]);
   });
 
   test('gmCategories ANY', () => {
     const results = midiDb.filterFiles({ gmCategories: ['Piano', 'Bass'], gmMode: 'ANY' });
-    expect(results.map(f => f.id).sort()).toEqual([1, 2, 3, 4, 5]);
+    expect(results.map((f) => f.id).sort()).toEqual([1, 2, 3, 4, 5]);
   });
 
   test('gmCategories ALL', () => {
     const results = midiDb.filterFiles({ gmCategories: ['Piano', 'Bass'], gmMode: 'ALL' });
-    expect(results.map(f => f.id).sort()).toEqual([2, 3, 5]);
+    expect(results.map((f) => f.id).sort()).toEqual([2, 3, 5]);
   });
 
   test('gmPrograms ANY', () => {
     const results = midiDb.filterFiles({ gmPrograms: [0], gmMode: 'ANY' });
     // program 0 = piano channels + drums standard kit (also program 0 on ch9)
-    const ids = results.map(f => f.id).sort();
+    const ids = results.map((f) => f.id).sort();
     expect(ids).toContain(1);
     expect(ids).toContain(2);
     expect(ids).toContain(3);
@@ -404,20 +547,20 @@ describe('MidiDatabase.filterFiles', () => {
   test('gmPrograms ALL', () => {
     const results = midiDb.filterFiles({ gmPrograms: [0, 33], gmMode: 'ALL' });
     // program 0 AND program 33: files 2 and 5
-    expect(results.map(f => f.id).sort()).toEqual([2, 5]);
+    expect(results.map((f) => f.id).sort()).toEqual([2, 5]);
   });
 
   // --- Sorting ---
   test('default sort is uploaded_at DESC', () => {
     const results = midiDb.filterFiles({});
-    const ids = results.map(f => f.id);
+    const ids = results.map((f) => f.id);
     // Most recent first: 7(Mar20), 4(Mar15), 3(Mar01), 8(Feb20), 5(Feb11), 2(Feb10), 1(Jan15), 6(Jan01)
     expect(ids).toEqual([7, 4, 3, 8, 5, 2, 1, 6]);
   });
 
   test('sort by filename ASC', () => {
     const results = midiDb.filterFiles({ sortBy: 'filename', sortOrder: 'ASC' });
-    const names = results.map(f => f.filename);
+    const names = results.map((f) => f.filename);
     // Verify each name is <= the next (SQLite binary collation)
     for (let i = 1; i < names.length; i++) {
       expect(names[i] >= names[i - 1]).toBe(true);
@@ -426,19 +569,19 @@ describe('MidiDatabase.filterFiles', () => {
 
   test('sort by duration DESC', () => {
     const results = midiDb.filterFiles({ sortBy: 'duration', sortOrder: 'DESC' });
-    const durations = results.map(f => f.duration);
+    const durations = results.map((f) => f.duration);
     expect(durations).toEqual([600, 300, 240, 180, 180, 120, 90, 60]);
   });
 
   test('invalid sortBy falls back to uploaded_at DESC', () => {
     const results = midiDb.filterFiles({ sortBy: 'DROP TABLE midi_files;--', sortOrder: 'ASC' });
     const defaultResults = midiDb.filterFiles({});
-    expect(results.map(f => f.id)).toEqual(defaultResults.map(f => f.id));
+    expect(results.map((f) => f.id)).toEqual(defaultResults.map((f) => f.id));
   });
 
   test('invalid sortOrder falls back to DESC', () => {
     const results = midiDb.filterFiles({ sortBy: 'filename', sortOrder: 'INVALID' });
-    const names = results.map(f => f.filename);
+    const names = results.map((f) => f.filename);
     // Verify each name is >= the next (DESC, SQLite binary collation)
     for (let i = 1; i < names.length; i++) {
       expect(names[i] <= names[i - 1]).toBe(true);
@@ -463,36 +606,36 @@ describe('MidiDatabase.filterFiles', () => {
   test('routingStatus unrouted', () => {
     const results = midiDb.filterFiles({ routingStatus: 'unrouted' });
     // Files 1, 6, 8 have no routings
-    expect(results.map(f => f.id).sort()).toEqual([1, 6, 8]);
+    expect(results.map((f) => f.id).sort()).toEqual([1, 6, 8]);
   });
 
   test('routingStatus partial', () => {
     const results = midiDb.filterFiles({ routingStatus: 'partial' });
     // File 3: 2 routings out of 4 channels
-    expect(results.map(f => f.id)).toEqual([3]);
+    expect(results.map((f) => f.id)).toEqual([3]);
   });
 
   test('routingStatus playable', () => {
     const results = midiDb.filterFiles({ routingStatus: 'playable' });
     // Files 2, 7: all routed with minScore=100
-    expect(results.map(f => f.id).sort()).toEqual([2, 7]);
+    expect(results.map((f) => f.id).sort()).toEqual([2, 7]);
   });
 
   test('routingStatus routed_incomplete', () => {
     const results = midiDb.filterFiles({ routingStatus: 'routed_incomplete' });
     // Files 4, 5: all routed but minScore < 100
-    expect(results.map(f => f.id).sort()).toEqual([4, 5]);
+    expect(results.map((f) => f.id).sort()).toEqual([4, 5]);
   });
 
   test('routingStatus auto_assigned', () => {
     const results = midiDb.filterFiles({ routingStatus: 'auto_assigned' });
     // File 5: has auto_assigned=1 routings
-    expect(results.map(f => f.id)).toEqual([5]);
+    expect(results.map((f) => f.id)).toEqual([5]);
   });
 
   test('multiple routingStatuses', () => {
     const results = midiDb.filterFiles({ routingStatuses: ['unrouted', 'partial'] });
-    expect(results.map(f => f.id).sort()).toEqual([1, 3, 6, 8]);
+    expect(results.map((f) => f.id).sort()).toEqual([1, 3, 6, 8]);
   });
 
   test('invalid routing status throws', () => {
@@ -502,32 +645,38 @@ describe('MidiDatabase.filterFiles', () => {
   // --- Legacy hasRouting ---
   test('hasRouting true', () => {
     const results = midiDb.filterFiles({ hasRouting: true });
-    expect(results.map(f => f.id).sort()).toEqual([2, 3, 4, 5, 7]);
+    expect(results.map((f) => f.id).sort()).toEqual([2, 3, 4, 5, 7]);
   });
 
   test('hasRouting false', () => {
     const results = midiDb.filterFiles({ hasRouting: false });
-    expect(results.map(f => f.id).sort()).toEqual([1, 6, 8]);
+    expect(results.map((f) => f.id).sort()).toEqual([1, 6, 8]);
   });
 
   // --- minCompatibilityScore ---
   test('minCompatibilityScore with hasRouting', () => {
     const results = midiDb.filterFiles({ hasRouting: true, minCompatibilityScore: 95 });
     // AVG score >= 95: files 2(avg=100), 3(avg=95), 7(avg=100)
-    expect(results.map(f => f.id).sort()).toEqual([2, 3, 7]);
+    expect(results.map((f) => f.id).sort()).toEqual([2, 3, 7]);
   });
 
   // --- Playable on instruments ---
   test('playableOnInstruments routed mode', () => {
-    const results = midiDb.filterFiles({ playableOnInstruments: ['inst_1'], playableMode: 'routed' });
+    const results = midiDb.filterFiles({
+      playableOnInstruments: ['inst_1'],
+      playableMode: 'routed'
+    });
     // inst_1 has device_id=dev_A, files with routing to dev_A: 2, 3, 4, 5
-    expect(results.map(f => f.id).sort()).toEqual([2, 3, 4, 5]);
+    expect(results.map((f) => f.id).sort()).toEqual([2, 3, 4, 5]);
   });
 
   test('playableOnInstruments compatible mode', () => {
-    const results = midiDb.filterFiles({ playableOnInstruments: ['inst_2'], playableMode: 'compatible' });
+    const results = midiDb.filterFiles({
+      playableOnInstruments: ['inst_2'],
+      playableMode: 'compatible'
+    });
     // inst_2 range 28-55, channels with overlapping ranges exist in files with bass/low notes
-    const ids = results.map(f => f.id);
+    const ids = results.map((f) => f.id);
     expect(ids.length).toBeGreaterThan(0);
     // Files with channels in bass range: 2,3,5 (bass channels 28-55), also 1,4,6 have channels overlapping
     expect(ids).toContain(2);
@@ -537,20 +686,28 @@ describe('MidiDatabase.filterFiles', () => {
   // --- Combined filters ---
   test('hasDrums + tempoMin combined', () => {
     const results = midiDb.filterFiles({ hasDrums: true, tempoMin: 140 });
-    expect(results.map(f => f.id).sort()).toEqual([2, 5, 7]);
+    expect(results.map((f) => f.id).sort()).toEqual([2, 5, 7]);
   });
 
   test('folder + instrumentTypes combined', () => {
-    const results = midiDb.filterFiles({ folder: '/rock', instrumentTypes: ['Piano'], instrumentMode: 'ANY' });
-    expect(results.map(f => f.id).sort()).toEqual([2, 5]);
+    const results = midiDb.filterFiles({
+      folder: '/rock',
+      instrumentTypes: ['Piano'],
+      instrumentMode: 'ANY'
+    });
+    expect(results.map((f) => f.id).sort()).toEqual([2, 5]);
   });
 
   test('all simple filters at once', () => {
     const results = midiDb.filterFiles({
-      filename: 'rock', folder: '/rock', durationMin: 100, tempoMin: 130,
-      hasDrums: true, isOriginal: true
+      filename: 'rock',
+      folder: '/rock',
+      durationMin: 100,
+      tempoMin: 130,
+      hasDrums: true,
+      isOriginal: true
     });
-    expect(results.map(f => f.id)).toEqual([2]);
+    expect(results.map((f) => f.id)).toEqual([2]);
   });
 
   // --- Edge cases ---
@@ -568,7 +725,7 @@ describe('MidiDatabase.filterFiles', () => {
   });
 
   test('SQL injection via sortBy is sanitized', () => {
-    const results = midiDb.filterFiles({ sortBy: "filename; DROP TABLE midi_files;--" });
+    const results = midiDb.filterFiles({ sortBy: 'filename; DROP TABLE midi_files;--' });
     expect(results).toHaveLength(8);
     const count = db.prepare('SELECT COUNT(*) as c FROM midi_files').get().c;
     expect(count).toBe(8);
@@ -579,7 +736,7 @@ describe('MidiDatabase.filterFiles', () => {
 // SECTION 2: FileCommands.fileFilter handler
 // ============================================================
 
-describe('FileCommands.fileFilter (via register)', () => {
+describeIfSqlite('FileCommands.fileFilter (via register)', () => {
   let fileFilterHandler;
 
   beforeAll(async () => {
@@ -601,10 +758,10 @@ describe('FileCommands.fileFilter (via register)', () => {
         getFileChannels: jest.fn(() => []),
         getDistinctInstruments: jest.fn(() => []),
         getDistinctCategories: jest.fn(() => []),
-        getRoutingsByFile: jest.fn(() => []),
+        getRoutingsByFile: jest.fn(() => [])
       },
       fileManager: {
-        reanalyzeAllFiles: jest.fn(async () => ({ processed: 0, errors: 0 })),
+        reanalyzeAllFiles: jest.fn(async () => ({ processed: 0, errors: 0 }))
       }
     };
 
@@ -760,7 +917,7 @@ describe('FileCommands.fileFilter (via register)', () => {
       filename: 'test',
       folder: '/jazz',
       durationMin: 60,
-      tempoMax: 120,
+      tempoMax: 120
     });
     expect(result.filters).toContain('filename: "test"');
     expect(result.filters).toContain('folder: "/jazz"');
@@ -771,7 +928,7 @@ describe('FileCommands.fileFilter (via register)', () => {
   test('filter summary with GM instruments', async () => {
     const result = await fileFilterHandler({
       gmInstruments: ['Acoustic Grand Piano'],
-      gmMode: 'ALL',
+      gmMode: 'ALL'
     });
     expect(result.filters).toContain('GM instruments: Acoustic Grand Piano (ALL)');
   });
@@ -798,7 +955,9 @@ describe('FileCommands.fileFilter (via register)', () => {
 
   test('total matches files.length', async () => {
     fileFilterHandler._mockApp.database.filterFiles.mockReturnValue([
-      { id: 1 }, { id: 2 }, { id: 3 }
+      { id: 1 },
+      { id: 2 },
+      { id: 3 }
     ]);
     const result = await fileFilterHandler({});
     expect(result.total).toBe(3);
@@ -819,9 +978,13 @@ describe('FilterManager', () => {
     // Setup globals needed by FilterManager
     globalThis.localStorage = {
       store: {},
-      getItem: jest.fn(key => globalThis.localStorage.store[key] || null),
-      setItem: jest.fn((key, value) => { globalThis.localStorage.store[key] = value; }),
-      clear: jest.fn(() => { globalThis.localStorage.store = {}; })
+      getItem: jest.fn((key) => globalThis.localStorage.store[key] || null),
+      setItem: jest.fn((key, value) => {
+        globalThis.localStorage.store[key] = value;
+      }),
+      clear: jest.fn(() => {
+        globalThis.localStorage.store = {};
+      })
     };
     globalThis.window = { i18n: null };
 
@@ -883,7 +1046,7 @@ describe('FilterManager', () => {
       fm.setFilter('filename', 'delayed', true);
       expect(fm.getFilter('filename')).toBe(''); // not set immediately
       // Wait for debounce (300ms + margin)
-      await new Promise(r => setTimeout(r, 350));
+      await new Promise((r) => setTimeout(r, 350));
       expect(fm.getFilter('filename')).toBe('delayed');
     });
 
@@ -929,8 +1092,8 @@ describe('FilterManager', () => {
       fm.setFilter('durationMin', 60);
       const active = fm.getActiveFilters();
       expect(active.length).toBe(2);
-      expect(active.find(f => f.key === 'filename')).toBeDefined();
-      expect(active.find(f => f.key === 'durationMin')).toBeDefined();
+      expect(active.find((f) => f.key === 'filename')).toBeDefined();
+      expect(active.find((f) => f.key === 'durationMin')).toBeDefined();
     });
 
     test('getFilters returns copy', () => {
@@ -1021,10 +1184,46 @@ describe('FilterManager', () => {
 
   describe('applyClientFilters', () => {
     const testFiles = [
-      { id: 1, filename: 'piano_sonata.mid', folder: '/classical', duration: 240, tempo: 120, tracks: 4, uploaded_at: '2026-01-15T10:00:00Z', is_original: 1 },
-      { id: 2, filename: 'rock_anthem.mid', folder: '/rock', duration: 180, tempo: 140, tracks: 6, uploaded_at: '2026-02-10T10:00:00Z', is_original: 1 },
-      { id: 3, filename: 'jazz_combo.mid', folder: '/jazz', duration: 300, tempo: 100, tracks: 5, uploaded_at: '2026-03-01T10:00:00Z', is_original: 1 },
-      { id: 4, filename: 'simple_melody.mid', folder: '/pop', duration: 60, tempo: 90, tracks: 2, uploaded_at: '2026-03-15T10:00:00Z', is_original: 0 },
+      {
+        id: 1,
+        filename: 'piano_sonata.mid',
+        folder: '/classical',
+        duration: 240,
+        tempo: 120,
+        tracks: 4,
+        uploaded_at: '2026-01-15T10:00:00Z',
+        is_original: 1
+      },
+      {
+        id: 2,
+        filename: 'rock_anthem.mid',
+        folder: '/rock',
+        duration: 180,
+        tempo: 140,
+        tracks: 6,
+        uploaded_at: '2026-02-10T10:00:00Z',
+        is_original: 1
+      },
+      {
+        id: 3,
+        filename: 'jazz_combo.mid',
+        folder: '/jazz',
+        duration: 300,
+        tempo: 100,
+        tracks: 5,
+        uploaded_at: '2026-03-01T10:00:00Z',
+        is_original: 1
+      },
+      {
+        id: 4,
+        filename: 'simple_melody.mid',
+        folder: '/pop',
+        duration: 60,
+        tempo: 90,
+        tracks: 2,
+        uploaded_at: '2026-03-15T10:00:00Z',
+        is_original: 0
+      }
     ];
 
     test('returns empty for empty input', () => {
@@ -1038,57 +1237,66 @@ describe('FilterManager', () => {
     test('filters by filename case-insensitive', () => {
       fm.setFilter('filename', 'PIANO');
       const result = fm.applyClientFilters(testFiles);
-      expect(result.map(f => f.id)).toEqual([1]);
+      expect(result.map((f) => f.id)).toEqual([1]);
     });
 
     test('filters by folder exact match', () => {
       fm.setFilter('folder', '/rock');
       const result = fm.applyClientFilters(testFiles);
-      expect(result.map(f => f.id)).toEqual([2]);
+      expect(result.map((f) => f.id)).toEqual([2]);
     });
 
     test('filters by folder with subfolders', () => {
       const filesWithSub = [
         ...testFiles,
-        { id: 5, filename: 'baroque.mid', folder: '/classical/baroque', duration: 600, tempo: 80, tracks: 10, uploaded_at: '2026-01-01T10:00:00Z', is_original: 1 },
+        {
+          id: 5,
+          filename: 'baroque.mid',
+          folder: '/classical/baroque',
+          duration: 600,
+          tempo: 80,
+          tracks: 10,
+          uploaded_at: '2026-01-01T10:00:00Z',
+          is_original: 1
+        }
       ];
       fm.setFilter('folder', '/classical');
       fm.setFilter('includeSubfolders', true);
       const result = fm.applyClientFilters(filesWithSub);
-      expect(result.map(f => f.id).sort()).toEqual([1, 5]);
+      expect(result.map((f) => f.id).sort()).toEqual([1, 5]);
     });
 
     test('filters by duration range', () => {
       fm.setFilter('durationMin', 100);
       fm.setFilter('durationMax', 200);
       const result = fm.applyClientFilters(testFiles);
-      expect(result.map(f => f.id)).toEqual([2]);
+      expect(result.map((f) => f.id)).toEqual([2]);
     });
 
     test('filters by tempo range', () => {
       fm.setFilter('tempoMin', 100);
       fm.setFilter('tempoMax', 130);
       const result = fm.applyClientFilters(testFiles);
-      expect(result.map(f => f.id).sort()).toEqual([1, 3]);
+      expect(result.map((f) => f.id).sort()).toEqual([1, 3]);
     });
 
     test('filters by track count range', () => {
       fm.setFilter('tracksMin', 5);
       const result = fm.applyClientFilters(testFiles);
-      expect(result.map(f => f.id).sort()).toEqual([2, 3]);
+      expect(result.map((f) => f.id).sort()).toEqual([2, 3]);
     });
 
     test('filters by upload date range', () => {
       fm.setFilter('uploadedAfter', '2026-02-01T00:00:00Z');
       fm.setFilter('uploadedBefore', '2026-02-28T23:59:59Z');
       const result = fm.applyClientFilters(testFiles);
-      expect(result.map(f => f.id)).toEqual([2]);
+      expect(result.map((f) => f.id)).toEqual([2]);
     });
 
     test('filters by isOriginal', () => {
       fm.setFilter('isOriginal', false);
       const result = fm.applyClientFilters(testFiles);
-      expect(result.map(f => f.id)).toEqual([4]);
+      expect(result.map((f) => f.id)).toEqual([4]);
     });
 
     test('combined client filters', () => {
@@ -1096,7 +1304,7 @@ describe('FilterManager', () => {
       fm.setFilter('tempoMin', 110);
       fm.setFilter('isOriginal', true);
       const result = fm.applyClientFilters(testFiles);
-      expect(result.map(f => f.id).sort()).toEqual([1, 2]);
+      expect(result.map((f) => f.id).sort()).toEqual([1, 2]);
     });
   });
 
@@ -1106,32 +1314,32 @@ describe('FilterManager', () => {
     const files = [
       { id: 1, filename: 'beta.mid', duration: 100, uploaded_at: '2026-01-01T00:00:00Z' },
       { id: 2, filename: 'alpha.mid', duration: 300, uploaded_at: '2026-03-01T00:00:00Z' },
-      { id: 3, filename: 'gamma.mid', duration: 200, uploaded_at: '2026-02-01T00:00:00Z' },
+      { id: 3, filename: 'gamma.mid', duration: 200, uploaded_at: '2026-02-01T00:00:00Z' }
     ];
 
     test('sorts by string field ASC', () => {
       fm.setFilter('sortBy', 'filename');
       fm.setFilter('sortOrder', 'ASC');
       const sorted = fm.sortFiles(files);
-      expect(sorted.map(f => f.filename)).toEqual(['alpha.mid', 'beta.mid', 'gamma.mid']);
+      expect(sorted.map((f) => f.filename)).toEqual(['alpha.mid', 'beta.mid', 'gamma.mid']);
     });
 
     test('sorts by numeric field DESC', () => {
       fm.setFilter('sortBy', 'duration');
       fm.setFilter('sortOrder', 'DESC');
       const sorted = fm.sortFiles(files);
-      expect(sorted.map(f => f.duration)).toEqual([300, 200, 100]);
+      expect(sorted.map((f) => f.duration)).toEqual([300, 200, 100]);
     });
 
     test('default sort is uploaded_at DESC', () => {
       const sorted = fm.sortFiles(files);
-      expect(sorted.map(f => f.id)).toEqual([2, 3, 1]);
+      expect(sorted.map((f) => f.id)).toEqual([2, 3, 1]);
     });
 
     test('handles undefined values in sort', () => {
       const filesWithUndef = [
         { id: 1, filename: 'a.mid' },
-        { id: 2, filename: 'b.mid', duration: 100 },
+        { id: 2, filename: 'b.mid', duration: 100 }
       ];
       fm.setFilter('sortBy', 'duration');
       fm.setFilter('sortOrder', 'DESC');
@@ -1228,7 +1436,7 @@ describe('FilterManager', () => {
       fm.setFilter('filename', 'original');
       fm.savePreset('safe');
       fm.setFilter('filename', 'changed');
-      const preset = fm.getPresets().find(p => p.name === 'safe');
+      const preset = fm.getPresets().find((p) => p.name === 'safe');
       expect(preset.filters.filename).toBe('original');
     });
   });
@@ -1295,7 +1503,18 @@ describe('FilterManager', () => {
     test('onFilterApplied called after client filter', () => {
       const cb = jest.fn();
       fm.onFilterApplied = cb;
-      fm.applyClientFilters([{ id: 1, filename: 'a.mid', folder: '/', duration: 60, tempo: 120, tracks: 1, uploaded_at: '2026-01-01', is_original: 1 }]);
+      fm.applyClientFilters([
+        {
+          id: 1,
+          filename: 'a.mid',
+          folder: '/',
+          duration: 60,
+          tempo: 120,
+          tracks: 1,
+          uploaded_at: '2026-01-01',
+          is_original: 1
+        }
+      ]);
       expect(cb).toHaveBeenCalledTimes(1);
     });
 

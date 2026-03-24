@@ -1,5 +1,6 @@
 // src/api/HttpServer.js
 import express from 'express';
+import helmet from 'helmet';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -21,13 +22,37 @@ class HttpServer {
   }
 
   setupRoutes() {
+    // Security headers
+    this.expressApp.use(
+      helmet({
+        contentSecurityPolicy: false, // Disabled for SPA with inline scripts
+        crossOriginEmbedderPolicy: false
+      })
+    );
+
+    // API token authentication (optional, enabled via MAESTRO_API_TOKEN env var)
+    const apiToken = process.env.MAESTRO_API_TOKEN;
+    if (apiToken) {
+      this.expressApp.use('/api', (req, res, next) => {
+        if (req.path === '/health') return next(); // Health check always public
+        const token = req.headers.authorization?.replace('Bearer ', '') || req.query.token;
+        if (token !== apiToken) {
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+        next();
+      });
+      this.app.logger.info('API token authentication enabled');
+    }
+
     // Serve static files from public directory
     const publicPath = path.join(__dirname, '../../public');
-    this.expressApp.use(express.static(publicPath, {
-      etag: true,
-      lastModified: true,
-      maxAge: 0 // No caching for development - JS files always fresh
-    }));
+    this.expressApp.use(
+      express.static(publicPath, {
+        etag: true,
+        lastModified: true,
+        maxAge: 0 // No caching for development - JS files always fresh
+      })
+    );
 
     // API health check
     this.expressApp.get('/api/health', (req, res) => {
@@ -48,6 +73,39 @@ class HttpServer {
         memory: process.memoryUsage(),
         uptime: process.uptime()
       });
+    });
+
+    // Prometheus-compatible metrics endpoint
+    this.expressApp.get('/api/metrics', (req, res) => {
+      const mem = process.memoryUsage();
+      const wsClients = this.app.wsServer?.getStats()?.clients || 0;
+      const uptime = process.uptime();
+
+      const lines = [
+        '# HELP maestro_uptime_seconds Application uptime in seconds',
+        '# TYPE maestro_uptime_seconds gauge',
+        `maestro_uptime_seconds ${uptime.toFixed(1)}`,
+        '',
+        '# HELP maestro_websocket_clients Number of connected WebSocket clients',
+        '# TYPE maestro_websocket_clients gauge',
+        `maestro_websocket_clients ${wsClients}`,
+        '',
+        '# HELP maestro_memory_heap_used_bytes Node.js heap used bytes',
+        '# TYPE maestro_memory_heap_used_bytes gauge',
+        `maestro_memory_heap_used_bytes ${mem.heapUsed}`,
+        '',
+        '# HELP maestro_memory_rss_bytes Node.js RSS bytes',
+        '# TYPE maestro_memory_rss_bytes gauge',
+        `maestro_memory_rss_bytes ${mem.rss}`,
+        '',
+        `# HELP maestro_info Application version info`,
+        `# TYPE maestro_info gauge`,
+        `maestro_info{version="${APP_VERSION}"} 1`,
+        ''
+      ];
+
+      res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+      res.send(lines.join('\n'));
     });
 
     // Fallback to index.html for SPA

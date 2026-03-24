@@ -16,6 +16,7 @@ import WebSocketServer from '../api/WebSocketServer.js';
 import HttpServer from '../api/HttpServer.js';
 import CommandHandler from '../api/CommandHandler.js';
 import AutoAssigner from '../midi/AutoAssigner.js';
+import BackupScheduler from '../storage/BackupScheduler.js';
 
 class Application {
   constructor(configPath = null) {
@@ -56,6 +57,7 @@ class Application {
 
   /**
    * Register a service in both the container and on `this` for backward compat.
+   * New services should use container.resolve() or container.inject() instead.
    * @param {string} name - Service name
    * @param {*} instance - Service instance
    */
@@ -64,9 +66,36 @@ class Application {
     this.container.register(name, instance);
   }
 
+  /**
+   * Create a legacy app-like facade from the container.
+   * Use this when constructing services that still expect `app` as first arg.
+   * This allows gradual migration: services can access deps via this facade
+   * while being resolved through the container.
+   * @returns {Object} A proxy that resolves properties from the container
+   */
+  _createAppFacade() {
+    const container = this.container;
+    const self = this;
+    return new Proxy(
+      {},
+      {
+        get(_, prop) {
+          // Try container first, then fall back to Application instance
+          if (container.has(prop)) {
+            return container.resolve(prop);
+          }
+          return self[prop];
+        }
+      }
+    );
+  }
+
   async initialize() {
     try {
       this.logger.info('Initializing application...');
+
+      // Register app facade so container-resolved services can access legacy deps
+      this.container.register('app', this._createAppFacade());
 
       // Initialize database
       this._registerService('database', new Database(this));
@@ -76,7 +105,10 @@ class Application {
       this._registerService('midiRouter', new MidiRouter(this));
       this._registerService('midiPlayer', new MidiPlayer(this));
       this._registerService('latencyCompensator', new LatencyCompensator(this));
-      this._registerService('delayCalibrator', new DelayCalibrator(this.deviceManager, this.logger));
+      this._registerService(
+        'delayCalibrator',
+        new DelayCalibrator(this.deviceManager, this.logger)
+      );
 
       // Initialize storage
       this._registerService('fileManager', new FileManager(this));
@@ -139,32 +171,56 @@ class Application {
 
     // Define handlers with references for cleanup
     const handlers = [
-      ['midi_message', (data) => {
-        this.logger.debug(`MIDI message: ${data.device} ${data.type}`);
-      }],
-      ['device_connected', (data) => {
-        this.logger.info(`Device connected: ${data.deviceId}`);
-        this.wsServer?.broadcast('device_connected', data);
-      }],
-      ['device_disconnected', (data) => {
-        this.logger.info(`Device disconnected: ${data.deviceId}`);
-        this.wsServer?.broadcast('device_disconnected', data);
-      }],
-      ['midi_routed', (data) => {
-        this.logger.debug(`MIDI routed: ${data.route}`);
-      }],
-      ['file_uploaded', (data) => {
-        this.logger.info(`File uploaded: ${data.filename}`);
-      }],
-      ['playback_started', () => {
-        this.logger.info('Playback started');
-      }],
-      ['playback_stopped', () => {
-        this.logger.info('Playback stopped');
-      }],
-      ['error', (error) => {
-        this.logger.error(`Application error: ${error.message}`);
-      }]
+      [
+        'midi_message',
+        (data) => {
+          this.logger.debug(`MIDI message: ${data.device} ${data.type}`);
+        }
+      ],
+      [
+        'device_connected',
+        (data) => {
+          this.logger.info(`Device connected: ${data.deviceId}`);
+          this.wsServer?.broadcast('device_connected', data);
+        }
+      ],
+      [
+        'device_disconnected',
+        (data) => {
+          this.logger.info(`Device disconnected: ${data.deviceId}`);
+          this.wsServer?.broadcast('device_disconnected', data);
+        }
+      ],
+      [
+        'midi_routed',
+        (data) => {
+          this.logger.debug(`MIDI routed: ${data.route}`);
+        }
+      ],
+      [
+        'file_uploaded',
+        (data) => {
+          this.logger.info(`File uploaded: ${data.filename}`);
+        }
+      ],
+      [
+        'playback_started',
+        () => {
+          this.logger.info('Playback started');
+        }
+      ],
+      [
+        'playback_stopped',
+        () => {
+          this.logger.info('Playback stopped');
+        }
+      ],
+      [
+        'error',
+        (error) => {
+          this.logger.error(`Application error: ${error.message}`);
+        }
+      ]
     ];
 
     for (const [event, handler] of handlers) {
@@ -196,6 +252,10 @@ class Application {
       this.wsServer.httpServer = this.httpServer.server;
       this.wsServer.start(); // start() already calls startHeartbeat()
 
+      // Start automated backups
+      this.backupScheduler = new BackupScheduler(this);
+      this.backupScheduler.start();
+
       this.running = true;
       this.logger.info('=== MidiMind 5.0 Running ===');
       this.logger.info(`HTTP/WebSocket server: http://localhost:${this.config.server.port}`);
@@ -204,9 +264,13 @@ class Application {
       try {
         const missingCount = this.database.countFilesWithoutChannels();
         if (missingCount > 0) {
-          this.logger.info(`Found ${missingCount} files without channel analysis data, starting auto-reanalysis...`);
+          this.logger.info(
+            `Found ${missingCount} files without channel analysis data, starting auto-reanalysis...`
+          );
           const result = await this.fileManager.reanalyzeAllFiles();
-          this.logger.info(`Auto-reanalysis complete: ${result.analyzed} analyzed, ${result.failed} failed`);
+          this.logger.info(
+            `Auto-reanalysis complete: ${result.analyzed} analyzed, ${result.failed} failed`
+          );
         }
       } catch (error) {
         this.logger.warn(`Auto-reanalysis failed (non-critical): ${error.message}`);
@@ -221,6 +285,11 @@ class Application {
     try {
       this.logger.info('Stopping application...');
       this.running = false;
+
+      // Stop backup scheduler
+      if (this.backupScheduler) {
+        this.backupScheduler.stop();
+      }
 
       // Stop and destroy player
       if (this.midiPlayer) {
