@@ -6146,6 +6146,9 @@ class MidiEditorModal {
         this.pianoRoll.channelPlayableHighlights = highlights;
         this.pianoRoll._highlightsDirty = true;
 
+        if (typeof this.pianoRoll.invalidateGridBuffer === 'function') {
+            this.pianoRoll.invalidateGridBuffer();
+        }
         if (typeof this.pianoRoll.redraw === 'function') {
             this.pianoRoll.redraw();
         }
