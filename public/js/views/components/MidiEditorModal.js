@@ -375,7 +375,7 @@ class MidiEditorModal {
 
                 // Program Change (instrument)
                 if (event.type === 'programChange') {
-                    const channel = event.channel || 0;
+                    const channel = event.channel ?? 0;
                     channelInstruments.set(channel, event.programNumber);
                     this.log('debug', `Channel ${channel}: program ${event.programNumber} (${this.getInstrumentName(event.programNumber)})`);
                 }
@@ -383,7 +383,7 @@ class MidiEditorModal {
                 // Note On
                 if (event.type === 'noteOn' && event.velocity > 0) {
                     noteOnCount++;
-                    const channel = event.channel || 0;
+                    const channel = event.channel ?? 0;
                     const key = `${channel}_${event.noteNumber}`;
                     activeNotes.set(key, {
                         tick: currentTick,
@@ -405,7 +405,7 @@ class MidiEditorModal {
                 // Note Off
                 else if (event.type === 'noteOff' || (event.type === 'noteOn' && event.velocity === 0)) {
                     noteOffCount++;
-                    const channel = event.channel || 0;
+                    const channel = event.channel ?? 0;
                     const key = `${channel}_${event.noteNumber}`;
                     const noteOn = activeNotes.get(key);
 

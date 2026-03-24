@@ -485,7 +485,7 @@ class TablatureConverter {
           tick: event.tick,
           cc: CC_STRING_SELECT,
           value: event.string,  // 1-based string number
-          channel: event.channel || 0
+          channel: event.channel ?? 0
         });
 
         // Generate CC21 (fret select) before the note
@@ -493,7 +493,7 @@ class TablatureConverter {
           tick: event.tick,
           cc: CC_FRET_SELECT,
           value: Math.round(event.fret),
-          channel: event.channel || 0
+          channel: event.channel ?? 0
         });
       }
 

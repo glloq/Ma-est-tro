@@ -119,14 +119,14 @@ class MidiEditorFileOps {
                 currentTick += event.deltaTime || 0;
 
                 if (event.type === 'programChange') {
-                    const channel = event.channel || 0;
+                    const channel = event.channel ?? 0;
                     channelInstruments.set(channel, event.programNumber);
                     m.log('debug', `Channel ${channel}: program ${event.programNumber} (${m.getInstrumentName(event.programNumber)})`);
                 }
 
                 if (event.type === 'noteOn' && event.velocity > 0) {
                     noteOnCount++;
-                    const channel = event.channel || 0;
+                    const channel = event.channel ?? 0;
                     const key = `${channel}_${event.noteNumber}`;
                     activeNotes.set(key, {
                         tick: currentTick,
@@ -145,7 +145,7 @@ class MidiEditorFileOps {
                     }
                 } else if (event.type === 'noteOff' || (event.type === 'noteOn' && event.velocity === 0)) {
                     noteOffCount++;
-                    const channel = event.channel || 0;
+                    const channel = event.channel ?? 0;
                     const key = `${channel}_${event.noteNumber}`;
                     const noteOn = activeNotes.get(key);
 

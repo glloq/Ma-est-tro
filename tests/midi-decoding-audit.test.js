@@ -644,3 +644,130 @@ describe('MidiMessage', () => {
     expect(invalid.validate().valid).toBe(false);
   });
 });
+
+// ============================================================
+// 8. Routing / Editor Channel Consistency
+// ============================================================
+
+describe('Routing / Editor Channel Consistency — No Ghost Channels', () => {
+  let analyzer;
+
+  beforeEach(() => {
+    analyzer = new ChannelAnalyzer(mockLogger);
+  });
+
+  test('CC-only channel is NOT detected as active (no ghost channels)', () => {
+    // Channel 5 has only CC events — no notes
+    const events = [
+      cc(5, 7, 100, 0),     // Volume on channel 5
+      cc(5, 10, 64, 10),    // Pan on channel 5
+      cc(5, 64, 127, 20),   // Sustain on channel 5
+      noteOn(1, 60, 100, 0),
+      noteOff(1, 60, 0, 50)
+    ];
+
+    const midiData = createMidiData([events]);
+    const channels = analyzer.extractActiveChannels(midiData);
+
+    // Channel 5 should NOT appear — it has no notes
+    expect(channels).toEqual([1]);
+    expect(channels).not.toContain(5);
+  });
+
+  test('programChange-only channel is NOT detected as active', () => {
+    // Channel 3 has only a program change — no notes
+    const events = [
+      programChange(3, 25, 0),
+      noteOn(0, 60, 100, 10),
+      noteOff(0, 60, 0, 50)
+    ];
+
+    const midiData = createMidiData([events]);
+    const channels = analyzer.extractActiveChannels(midiData);
+
+    expect(channels).toEqual([0]);
+    expect(channels).not.toContain(3);
+  });
+
+  test('pitchBend-only channel is NOT detected as active', () => {
+    const events = [
+      pitchBend(7, 4000, 0),
+      noteOn(0, 60, 100, 10),
+      noteOff(0, 60, 0, 50)
+    ];
+
+    const midiData = createMidiData([events]);
+    const channels = analyzer.extractActiveChannels(midiData);
+
+    expect(channels).toEqual([0]);
+    expect(channels).not.toContain(7);
+  });
+
+  test('mixed file: channels with notes detected, CC-only channels excluded', () => {
+    // Typical MIDI file scenario:
+    // Channel 0: has CC events + program change but NO notes
+    // Channel 1: has notes + CC events
+    // Channel 9: has drum notes
+    const events = [
+      // Channel 0: CC-only (ghost channel scenario)
+      cc(0, 7, 100, 0),
+      cc(0, 10, 64, 5),
+      programChange(0, 48, 10),
+
+      // Channel 1: has notes
+      programChange(1, 25, 0),
+      cc(1, 7, 80, 5),
+      noteOn(1, 60, 100, 20),
+      noteOff(1, 60, 0, 70),
+      noteOn(1, 64, 90, 80),
+      noteOff(1, 64, 0, 130),
+
+      // Channel 9: has drum notes
+      noteOn(9, 36, 100, 20),
+      noteOff(9, 36, 0, 40),
+      noteOn(9, 38, 100, 60),
+      noteOff(9, 38, 0, 80)
+    ];
+
+    const midiData = createMidiData([events]);
+    const channels = analyzer.extractActiveChannels(midiData);
+
+    // Routing and Editor should show the SAME channels: [1, 9]
+    // Channel 0 is a ghost — should NOT appear
+    expect(channels).toEqual([1, 9]);
+    expect(channels).not.toContain(0);
+  });
+
+  test('channel 0 with notes IS correctly detected (not confused with falsy)', () => {
+    const events = [
+      noteOn(0, 60, 100, 0),
+      noteOff(0, 60, 0, 50),
+      noteOn(5, 72, 100, 10),
+      noteOff(5, 72, 0, 60)
+    ];
+
+    const midiData = createMidiData([events]);
+    const channels = analyzer.extractActiveChannels(midiData);
+
+    // Channel 0 has notes — must be detected
+    expect(channels).toContain(0);
+    expect(channels).toEqual([0, 5]);
+  });
+
+  test('analyzeAllChannels only analyzes channels with notes', () => {
+    const events = [
+      cc(3, 7, 100, 0),        // CC-only on channel 3
+      noteOn(1, 60, 100, 10),
+      noteOff(1, 60, 0, 50),
+      noteOn(9, 36, 100, 20),
+      noteOff(9, 36, 0, 70)
+    ];
+
+    const midiData = createMidiData([events]);
+    const analyses = analyzer.analyzeAllChannels(midiData);
+
+    // Only channels 1 and 9 should be analyzed
+    expect(analyses.length).toBe(2);
+    expect(analyses.map(a => a.channel)).toEqual([1, 9]);
+  });
+});

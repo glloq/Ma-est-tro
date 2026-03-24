@@ -465,8 +465,13 @@ class FileManager {
           const channelsUsed = new Set();
           midi.tracks.forEach(track => {
             track.forEach(event => {
-              if (event.channel !== undefined) channelsUsed.add(event.channel);
-              if (event.type === 'noteOn' || event.type === 'noteOff') noteCount++;
+              // Only detect channels with note events (aligns with
+              // ChannelAnalyzer and MidiPlayer — no ghost channels)
+              if (event.channel !== undefined &&
+                  (event.type === 'noteOn' || event.type === 'noteOff')) {
+                channelsUsed.add(event.channel);
+                noteCount++;
+              }
             });
           });
           channels = Array.from(channelsUsed).sort((a, b) => a - b);
