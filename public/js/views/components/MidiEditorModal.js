@@ -2281,44 +2281,36 @@ class MidiEditorModal {
      */
     renderChannelButtons() {
         if (!this.channels || this.channels.length === 0) {
-            return `<div class="channel-buttons"><span>${this.t('midiEditor.noActiveChannel')}</span></div>`;
+            return `<div class="channel-chips"><span>${this.t('midiEditor.noActiveChannel')}</span></div>`;
         }
 
-        let buttons = '<div class="channel-buttons">';
+        let html = '<div class="channel-chips">';
 
-        // Boutons pour chaque canal
+        // Chips pour chaque canal
         this.channels.forEach(ch => {
             const isActive = this.activeChannels.has(ch.channel);
             const isDisabled = this.channelDisabled.has(ch.channel);
             const color = this.channelColors[ch.channel % this.channelColors.length];
             const activeClass = isActive ? 'active' : '';
             const disabledClass = isDisabled ? 'channel-disabled' : '';
+            const isPlayableHighlighted = this.channelPlayableHighlights?.has(ch.channel);
+            const playableClass = isPlayableHighlighted ? 'playable-active' : '';
 
-            // Générer les styles inline directement (sans lueur)
+            // Inline styles for chip (color bar + tinted background when active)
             const inlineStyles = isActive
-                ? `
-                    --channel-color: ${color};
-                    background: ${color};
-                    border-color: ${color};
-                `.trim()
-                : `
-                    --channel-color: ${color};
-                    border-color: ${color};
-                `.trim();
+                ? `--chip-color: ${color}; --chip-bg: ${color}20; --chip-border: ${color}cc;`
+                : `--chip-color: ${color}; --chip-bg: transparent; --chip-border: ${color}4d;`;
 
-            // DRUM button for channel 9 is always included (drums are always channel 9)
+            // DRUM button for channel 9
             const drumBtn = ch.channel === 9 ? `
-                    <button class="channel-drum-btn" data-channel="9"
-                        title="${this.t('drumPattern.toggleEditor')}">DRUM</button>
-            ` : '';
+                <button class="channel-drum-btn" data-channel="9"
+                    title="${this.t('drumPattern.toggleEditor')}">DRUM</button>` : '';
 
-            // TAB/WIND buttons: render synchronously based on GM detection to avoid flicker
-            // _refreshStringInstrumentChannels() may later adjust based on DB cc_enabled
+            // TAB/WIND buttons
             let tabBtn = '';
             let windBtn = '';
             try {
                 if (ch.channel !== 9 && !this.channelRouting.has(ch.channel)) {
-                    // TAB: GM string instrument detection
                     if (typeof MidiEditorChannelPanel !== 'undefined' &&
                         MidiEditorChannelPanel.getStringInstrumentCategory(ch.program) !== null) {
                         const ccEnabled = this._stringInstrumentCCEnabled?.get(ch.channel);
@@ -2327,7 +2319,6 @@ class MidiEditorModal {
                                 title="${this.t('tablature.tabButton', { instrument: ch.instrument || this.t('stringInstrument.string') })}">${this.t('midiEditor.tabButton')}</button>`;
                         }
                     }
-                    // WIND: GM wind instrument detection (56-79)
                     if (typeof WindInstrumentDatabase !== 'undefined' && WindInstrumentDatabase.isWindInstrument(ch.program)) {
                         const preset = WindInstrumentDatabase.getPresetByProgram(ch.program);
                         windBtn = `<button class="channel-wind-btn" data-channel="${ch.channel}"
@@ -2336,34 +2327,41 @@ class MidiEditorModal {
                 }
             } catch { /* ignore — buttons will be added by _refreshStringInstrumentChannels */ }
 
-            // Show routed instrument name (real device) if available
-            const routedName = this.getRoutedInstrumentName(ch.channel);
-            // Channel label: number + GM instrument (limité à 15 caractères)
+            // GM instrument name (full, no forced truncation — CSS handles ellipsis)
             const gmLabelFull = (ch.hasExplicitProgram || ch.channel === 9) ? ch.instrument : '';
-            const gmLabel = gmLabelFull.length > 15 ? gmLabelFull.substring(0, 15) + '…' : gmLabelFull;
-            const mainLabel = gmLabel
-                ? `${ch.channel + 1} : ${gmLabel}`
-                : `${ch.channel + 1}`;
-            // Routed instrument line (shown below main label if routed)
+            const mainLabel = gmLabelFull
+                ? `<span class="chip-number">${ch.channel + 1}</span><span class="chip-dot">·</span><span class="chip-instrument">${gmLabelFull}</span>`
+                : `<span class="chip-number">${ch.channel + 1}</span>`;
+
+            // Routed instrument line
+            const routedName = this.getRoutedInstrumentName(ch.channel);
             const routedLine = routedName
-                ? `<span class="channel-routed-label">→ ${routedName}</span>`
+                ? `<span class="chip-routing-line">→ ${routedName}</span>`
                 : '';
 
-            // Settings gear button
-            const settingsBtn = `<button class="channel-settings-btn" data-channel="${ch.channel}" title="${this.t('midiEditor.channelSettings')}">⚙</button>`;
+            // Playable notes indicator (shown on chip when highlighted)
+            const playableIndicator = isPlayableHighlighted
+                ? `<span class="chip-playable-dot" style="background: ${color}" title="${this.t('midiEditor.showPlayableNotes')}"></span>`
+                : '';
 
-            buttons += `
-                <div class="channel-btn-group">
-                    <div class="channel-btn-row">
+            // Settings gear button (always visible, compact)
+            const settingsBtn = `<button class="chip-settings-btn" data-channel="${ch.channel}" title="${this.t('midiEditor.channelSettings')}">⚙</button>`;
+
+            html += `
+                <div class="channel-chip-group">
+                    <div class="channel-chip-row">
                         <button
-                            class="channel-btn ${activeClass} ${disabledClass}"
+                            class="channel-chip ${activeClass} ${disabledClass} ${playableClass}"
                             data-channel="${ch.channel}"
                             data-color="${color}"
                             style="${inlineStyles}"
-                            title="${this.t('midiEditor.notesChannel', { count: ch.noteCount, channel: ch.channel + 1 })}"
+                            title="${gmLabelFull ? `${ch.channel + 1}: ${gmLabelFull}` : `Ch ${ch.channel + 1}`} — ${this.t('midiEditor.notesChannel', { count: ch.noteCount, channel: ch.channel + 1 })}"
                         >
-                            <span class="channel-label">${mainLabel}</span>
-                            ${routedLine}
+                            <span class="chip-color-bar" style="background: ${color}"></span>
+                            <span class="chip-content">
+                                <span class="chip-main-line">${mainLabel}${playableIndicator}</span>
+                                ${routedLine}
+                            </span>
                         </button>
                         ${settingsBtn}
                     </div>
@@ -2372,8 +2370,14 @@ class MidiEditorModal {
             `;
         });
 
-        buttons += '</div>';
-        return buttons;
+        html += '</div>';
+
+        // Bouton global "Show All" sticky à droite
+        html += `<div class="channel-global-actions">
+            <button class="btn-show-all-channels" title="${this.t('midiEditor.showAllChannels')}">👁</button>
+        </div>`;
+
+        return html;
     }
 
     /**
@@ -2670,31 +2674,38 @@ class MidiEditorModal {
      * Mettre à jour l'état visuel des boutons de canal
      */
     updateChannelButtons() {
-        const buttons = this.container?.querySelectorAll('.channel-btn');
-        if (!buttons) return;
+        const chips = this.container?.querySelectorAll('.channel-chip');
+        if (!chips) return;
 
-        buttons.forEach(btn => {
-            const channel = parseInt(btn.dataset.channel);
-            const color = btn.dataset.color; // Récupérer la couleur depuis data-attribute
+        chips.forEach(chip => {
+            const channel = parseInt(chip.dataset.channel);
+            const color = chip.dataset.color;
             const isActive = this.activeChannels.has(channel);
 
             if (isActive) {
-                btn.classList.add('active');
-                // Appliquer les styles pour l'état actif (sans lueur)
-                btn.style.cssText = `
-                    --channel-color: ${color};
-                    background: ${color};
-                    border-color: ${color};
-                `;
+                chip.classList.add('active');
+                chip.style.cssText = `--chip-color: ${color}; --chip-bg: ${color}20; --chip-border: ${color}cc;`;
             } else {
-                btn.classList.remove('active');
-                // Appliquer les styles pour l'état inactif (sans lueur)
-                btn.style.cssText = `
-                    --channel-color: ${color};
-                    border-color: ${color};
-                `;
+                chip.classList.remove('active');
+                chip.style.cssText = `--chip-color: ${color}; --chip-bg: transparent; --chip-border: ${color}4d;`;
             }
+
+            // Update playable notes indicator
+            const isPlayableHighlighted = this.channelPlayableHighlights?.has(channel);
+            chip.classList.toggle('playable-active', !!isPlayableHighlighted);
         });
+
+        // Also update gear button border colors to match chip
+        const gears = this.container?.querySelectorAll('.chip-settings-btn');
+        if (gears) {
+            gears.forEach(gear => {
+                const channel = parseInt(gear.dataset.channel);
+                const chip = this.container?.querySelector(`.channel-chip[data-channel="${channel}"]`);
+                if (chip) {
+                    gear.style.setProperty('--chip-border', chip.style.getPropertyValue('--chip-border'));
+                }
+            });
+        }
 
         // Mettre à jour le compteur de notes
         this.updateStats();
@@ -4952,20 +4963,33 @@ class MidiEditorModal {
         // OPTIMISATION: Event delegation pour tous les boutons de canal
         // Remplace 4 boucles forEach × 16 boutons = ~64 listeners par 1 seul listener
         this.container.addEventListener('click', (e) => {
-            const channelBtn = e.target.closest('.channel-btn');
-            if (channelBtn) {
+            const channelChip = e.target.closest('.channel-chip');
+            if (channelChip) {
                 e.preventDefault();
                 e.stopPropagation();
-                const channel = parseInt(channelBtn.dataset.channel);
+                const channel = parseInt(channelChip.dataset.channel);
                 if (!isNaN(channel)) this.toggleChannel(channel);
                 return;
             }
-            const settingsBtn = e.target.closest('.channel-settings-btn');
+            const settingsBtn = e.target.closest('.chip-settings-btn');
             if (settingsBtn) {
                 e.preventDefault();
                 e.stopPropagation();
                 const channel = parseInt(settingsBtn.dataset.channel);
                 if (!isNaN(channel)) this._toggleChannelSettingsPopover(channel, settingsBtn);
+                return;
+            }
+            // Global "Show All" button
+            const showAllBtn = e.target.closest('.btn-show-all-channels');
+            if (showAllBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const previousActiveChannels = new Set(this.activeChannels);
+                this.channels.forEach(ch => this.activeChannels.add(ch.channel));
+                this.updateSequenceFromActiveChannels(previousActiveChannels);
+                this.updateChannelButtons();
+                this.updateInstrumentSelector();
+                this.syncMutedChannels();
                 return;
             }
             const tabBtn = e.target.closest('.channel-tab-btn');
@@ -4990,6 +5014,26 @@ class MidiEditorModal {
                 e.stopPropagation();
                 const channel = parseInt(windBtn.dataset.channel);
                 if (!isNaN(channel)) this._openWindEditorForChannel(channel);
+                return;
+            }
+        });
+
+        // Double-click on channel chip = Solo (hide all others)
+        this.container.addEventListener('dblclick', (e) => {
+            const channelChip = e.target.closest('.channel-chip');
+            if (channelChip) {
+                e.preventDefault();
+                e.stopPropagation();
+                const channel = parseInt(channelChip.dataset.channel);
+                if (!isNaN(channel)) {
+                    const previousActiveChannels = new Set(this.activeChannels);
+                    this.activeChannels.clear();
+                    this.activeChannels.add(channel);
+                    this.updateSequenceFromActiveChannels(previousActiveChannels);
+                    this.updateChannelButtons();
+                    this.updateInstrumentSelector();
+                    this.syncMutedChannels();
+                }
                 return;
             }
         });
@@ -5911,7 +5955,6 @@ class MidiEditorModal {
             deviceOptions += `<option value="${value}" ${selected}>${name}</option>`;
         });
 
-        // Determine if "show playable notes" button should be available
         const hasRouting = !!currentRouting;
         const color = this.channelColors[channel % this.channelColors.length];
 
@@ -5928,17 +5971,15 @@ class MidiEditorModal {
                 </label>
             </div>
             <div class="channel-settings-section">
-                <label class="channel-settings-label">${this.t('midiEditor.channelRoutingLabel')}</label>
-                <select class="channel-routing-select">${deviceOptions}</select>
+                <label class="channel-settings-toggle">
+                    <input type="checkbox" class="channel-playable-checkbox" ${isHighlighted ? 'checked' : ''} ${!hasRouting ? 'disabled' : ''}>
+                    <span class="playable-color-dot" style="background: ${color}"></span>
+                    <span>${this.t('midiEditor.showPlayableNotes')}</span>
+                </label>
             </div>
             <div class="channel-settings-section">
-                <button class="channel-show-playable-btn ${isHighlighted ? 'active' : ''}"
-                    ${!hasRouting ? 'disabled' : ''}
-                    style="${isHighlighted ? `--highlight-color: ${color}` : ''}"
-                >
-                    <span class="playable-color-dot" style="background: ${color}"></span>
-                    ${this.t('midiEditor.showPlayableNotes')}
-                </button>
+                <label class="channel-settings-label">${this.t('midiEditor.channelRoutingLabel')}</label>
+                <select class="channel-routing-select">${deviceOptions}</select>
             </div>
             <div class="channel-settings-section channel-visibility-actions">
                 <button class="channel-hide-others-btn">${this.t('midiEditor.hideOtherChannels')}</button>
@@ -5959,7 +6000,7 @@ class MidiEditorModal {
         // Close popover on any outside click (global listener on document)
         this._popoverOutsideClickHandler = (e) => {
             if (popover.contains(e.target)) return;
-            if (e.target.closest('.channel-settings-btn')) return;
+            if (e.target.closest('.chip-settings-btn')) return;
             this._closeChannelSettingsPopover();
         };
         document.addEventListener('mousedown', this._popoverOutsideClickHandler, true);
@@ -5985,29 +6026,30 @@ class MidiEditorModal {
             this._updateChannelDisabledVisual(channel);
         });
 
+        // Event: playable notes toggle checkbox
+        const playableCheckbox = popover.querySelector('.channel-playable-checkbox');
+        playableCheckbox.addEventListener('change', async () => {
+            if (playableCheckbox.disabled) return;
+            await this._toggleChannelPlayableHighlight(channel);
+            playableCheckbox.checked = this.channelPlayableHighlights.has(channel);
+            // Update chip visual
+            this.updateChannelButtons();
+        });
+
         // Event: routing select
         const routingSelect = popover.querySelector('.channel-routing-select');
         routingSelect.addEventListener('change', () => {
             const newValue = routingSelect.value || null;
             this.setChannelRouting(channel, newValue);
-            // Update show playable button state
-            const playableBtn = popover.querySelector('.channel-show-playable-btn');
-            if (playableBtn) {
-                playableBtn.disabled = !newValue;
+            // Update playable toggle state
+            if (playableCheckbox) {
+                playableCheckbox.disabled = !newValue;
                 if (!newValue) {
-                    // Remove highlight when routing is cleared
                     this._clearChannelPlayableHighlight(channel);
-                    playableBtn.classList.remove('active');
+                    playableCheckbox.checked = false;
+                    this.updateChannelButtons();
                 }
             }
-        });
-
-        // Event: show playable notes button
-        const playableBtn = popover.querySelector('.channel-show-playable-btn');
-        playableBtn.addEventListener('click', async () => {
-            if (playableBtn.disabled) return;
-            await this._toggleChannelPlayableHighlight(channel);
-            playableBtn.classList.toggle('active', this.channelPlayableHighlights.has(channel));
         });
 
         // Event: hide other channels (solo this one)
@@ -6039,12 +6081,12 @@ class MidiEditorModal {
      * Update visual state of a disabled channel button
      */
     _updateChannelDisabledVisual(channel) {
-        const btn = this.container?.querySelector(`.channel-btn[data-channel="${channel}"]`);
-        if (!btn) return;
+        const chip = this.container?.querySelector(`.channel-chip[data-channel="${channel}"]`);
+        if (!chip) return;
         if (this.channelDisabled.has(channel)) {
-            btn.classList.add('channel-disabled');
+            chip.classList.add('channel-disabled');
         } else {
-            btn.classList.remove('channel-disabled');
+            chip.classList.remove('channel-disabled');
         }
     }
 
@@ -6307,13 +6349,13 @@ class MidiEditorModal {
         } catch { /* ignore */ }
 
         // Add/remove TAB buttons per channel based on string instrument detection
-        const btnGroups = this.container?.querySelectorAll('.channel-btn-group');
-        if (!btnGroups) return;
+        const chipGroups = this.container?.querySelectorAll('.channel-chip-group');
+        if (!chipGroups) return;
 
-        btnGroups.forEach(group => {
-            const channelBtn = group.querySelector('.channel-btn');
-            if (!channelBtn) return;
-            const ch = parseInt(channelBtn.dataset.channel);
+        chipGroups.forEach(group => {
+            const channelChip = group.querySelector('.channel-chip');
+            if (!channelChip) return;
+            const ch = parseInt(channelChip.dataset.channel);
             if (isNaN(ch)) return;
 
             // Channel 9 (drums): add DRUM button instead of TAB
