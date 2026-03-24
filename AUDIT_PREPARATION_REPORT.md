@@ -252,3 +252,76 @@ Ma-est-tro est un système d'orchestration MIDI temps réel conçu pour Raspberr
 **Recommandation [P4] :** Documenter les limitations de scalabilité. Envisager un chemin de migration PostgreSQL pour les scénarios multi-instances.
 
 ---
+
+## Domaine 3 : Tests & Qualité
+
+**Score global : 0.8 / 4 — ROUGE**
+
+### 3.1 Couverture & Stratégie de Tests
+
+**État actuel :** Jest 29.7.0 avec `--experimental-vm-modules` pour le support ESM. 3 suites de tests :
+- `midi-filter.test.js` — requêtes de filtres DB
+- `midi-adaptation.test.js` — adaptation de fichiers MIDI
+- `audit-i18n.test.js` — complétude i18n
+
+Les tests utilisent SQLite en mémoire avec un logger mocké.
+
+**Couverture :**
+- 3 suites sur 67 fichiers backend = **~4.5% de couverture fichier**
+- 0 tests frontend sur 48 fichiers
+- Pas de rapport de couverture configuré (pas de flag `--coverage`, `coverage/` dans `.gitignore` mais jamais généré)
+
+**Écarts — Modules non testés :**
+- Handlers de commandes (15 modules, 3 553 lignes)
+- Serveur WebSocket et HTTP
+- EventBus, ServiceContainer, Config
+- Cycle de vie de l'Application
+- Tout le traitement MIDI core
+- Tous les managers
+
+**Fichier de référence :** `tests/midi-filter.test.js` (bon pattern à suivre : DB en mémoire, mock logger)
+
+**Recommandation [P1] :** Ajouter le rapport de couverture (`--coverage`). Cibler les chemins critiques en premier : `CommandRegistry.handle()`, `ServiceContainer`, `Config.js`, `EventBus`. Réutiliser les patterns de mock existants.
+
+### 3.2 Linting & Formatage de Code
+
+**État actuel :** ESLint 8.55.0 dans `devDependencies` mais **AUCUN fichier de configuration** (`.eslintrc.*`, `eslint.config.*`). Pas de Prettier. Pas d'EditorConfig.
+
+**Écart :** ESLint installé mais totalement non fonctionnel sans configuration. Zéro enforcement de style de code.
+
+**Recommandation [P1] :** Créer `.eslintrc.json` avec `eslint:recommended` + `env: { node: true, es2022: true, browser: true }`. Ajouter Prettier. Ajouter `.editorconfig`.
+
+### 3.3 Hooks Pre-commit & Automatisation
+
+**État actuel :** Aucun Husky, aucun lint-staged, aucun hook pre-commit d'aucune sorte.
+
+**Écart :** Rien n'empêche du code cassé d'être commité.
+
+**Recommandation [P1] :** Installer Husky + lint-staged. Exécuter ESLint et les tests sur pre-commit.
+
+### 3.4 Documentation
+
+**État actuel :** 15+ documents dans `/docs/` couvrant des fonctionnalités spécifiques (système d'assignation, câblage GPIO, installation, guides MIDI). `README.md` présent. Plusieurs documents d'audit existent déjà à la racine (`AUDIT_REPORT.md`, `MUSIC_EDITORS_AUDIT.md`).
+
+**Conformité :** Bonne documentation des fonctionnalités.
+
+**Manquants :**
+- Vue d'ensemble de l'architecture
+- Référence API
+- Guide de contribution
+- Changelog
+
+**Recommandation [P3] :** Ajouter `ARCHITECTURE.md`, `API.md`, `CONTRIBUTING.md`, `CHANGELOG.md`.
+
+### 3.5 Gestion des Dépendances
+
+**État actuel :** 9 dépendances de production, 2 optionnelles, 3 de développement. Champ `engines` spécifiant Node >= 18. `package-lock.json` présent.
+
+**Écarts :**
+- `dotenv` installé mais inutilisé
+- Express 4.18.2 potentiellement ancien avec des vulnérabilités connues
+- Pas d'audit `npm audit` en CI
+
+**Recommandation [P2] :** Exécuter `npm audit`. Supprimer `dotenv` inutilisé ou l'utiliser réellement. Mettre à jour Express vers la dernière 4.x. Envisager `npm-check-updates` en CI.
+
+---
