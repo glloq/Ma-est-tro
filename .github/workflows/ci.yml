@@ -28,8 +28,14 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-      - run: npm ci --ignore-scripts
-      - run: npm run test:coverage
+      - name: Install dependencies (with native builds)
+        run: npm ci
+        env:
+          npm_config_optional: false
+      - name: Run tests with coverage
+        run: npm run test:coverage
+      - name: Run frontend tests
+        run: npm run test:frontend
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4
