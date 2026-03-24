@@ -70,9 +70,8 @@ container.register('config', { port: 8080 });
 
 results.push(bench('resolve (instance)', () => container.resolve('logger')));
 
-container.factory('lazy', () => ({ id: Math.random() }));
 results.push(
-  bench('resolve (factory, first call)', () => {
+  bench('resolve (factory)', () => {
     container.factory('lazy', () => ({ id: Math.random() }));
     container.resolve('lazy');
   })

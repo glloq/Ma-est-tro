@@ -155,12 +155,16 @@ class DatabaseManager {
       return;
     }
 
+    // Pre-check: ensure ALL down migration files exist before starting
     for (const migration of applied) {
       const downFile = path.join(downDir, migration.name);
       if (!fs.existsSync(downFile)) {
         throw new Error(`Down migration not found for ${migration.name}. Cannot rollback.`);
       }
+    }
 
+    for (const migration of applied) {
+      const downFile = path.join(downDir, migration.name);
       const sql = fs.readFileSync(downFile, 'utf8');
       try {
         this.app.logger.info(`Rolling back migration ${migration.version}: ${migration.name}`);

@@ -1,9 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Log rotation defaults
 const MAX_LOG_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -14,8 +10,8 @@ class Logger {
     this.level = config.level || 'info';
     this.logFile = config.file || null;
     this.jsonFormat = config.jsonFormat || false;
-    this.maxLogSize = config.maxLogSize || MAX_LOG_SIZE;
-    this.maxLogFiles = config.maxLogFiles || MAX_LOG_FILES;
+    this.maxLogSize = config.maxLogSize > 0 ? config.maxLogSize : MAX_LOG_SIZE;
+    this.maxLogFiles = config.maxLogFiles >= 1 ? config.maxLogFiles : MAX_LOG_FILES;
     this.levels = {
       debug: 0,
       info: 1,
@@ -89,15 +85,15 @@ class Logger {
     const reset = '\x1b[0m';
     console.log(`${colors[level]}${logMessage}${reset}`);
 
-    // File output (async to avoid blocking event loop)
+    // File output (sync to avoid write/rotation race conditions)
     if (this.logFile) {
-      const fileContent = this.jsonFormat ? this.formatJson(level, message, data) : logMessage;
-      fs.appendFile(this.logFile, fileContent + '\n', 'utf8', (error) => {
-        if (error) {
-          console.error('Failed to write to log file:', error);
-        }
-      });
       this._checkRotation();
+      const fileContent = this.jsonFormat ? this.formatJson(level, message, data) : logMessage;
+      try {
+        fs.appendFileSync(this.logFile, fileContent + '\n', 'utf8');
+      } catch (error) {
+        console.error('Failed to write to log file:', error.message);
+      }
     }
   }
 

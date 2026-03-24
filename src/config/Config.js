@@ -102,7 +102,10 @@ class Config {
 
       if (typeof currentValue === 'number') {
         typedValue = Number(envValue);
-        if (isNaN(typedValue)) continue;
+        if (isNaN(typedValue)) {
+          console.warn(`Config: ignoring invalid numeric env var ${envKey}=${envValue}`);
+          continue;
+        }
       } else if (typeof currentValue === 'boolean') {
         typedValue = envValue === 'true' || envValue === '1';
       } else {
@@ -111,8 +114,8 @@ class Config {
 
       try {
         this.set(configKey, typedValue);
-      } catch (_) {
-        // Skip invalid env values silently
+      } catch (e) {
+        console.warn(`Config: env var ${envKey} rejected: ${e.message}`);
       }
     }
   }
@@ -140,9 +143,17 @@ class Config {
       'midi.bufferSize': (v) => Number.isInteger(v) && v > 0,
       'midi.sampleRate': (v) => Number.isInteger(v) && v > 0,
       'midi.defaultLatency': (v) => typeof v === 'number' && v >= 0,
-      'database.path': (v) => typeof v === 'string' && v.length > 0 && !v.includes('..'),
+      'database.path': (v) =>
+        typeof v === 'string' &&
+        v.length > 0 &&
+        !path.isAbsolute(v) &&
+        !path.normalize(v).startsWith('..'),
       'logging.level': (v) => ['error', 'warn', 'info', 'debug'].includes(v),
-      'logging.file': (v) => typeof v === 'string' && v.length > 0 && !v.includes('..'),
+      'logging.file': (v) =>
+        typeof v === 'string' &&
+        v.length > 0 &&
+        !path.isAbsolute(v) &&
+        !path.normalize(v).startsWith('..'),
       'playback.defaultTempo': (v) => typeof v === 'number' && v > 0 && v <= 999,
       'playback.defaultVolume': (v) => Number.isInteger(v) && v >= 0 && v <= 127,
       'latency.defaultIterations': (v) => Number.isInteger(v) && v >= 1 && v <= 100,

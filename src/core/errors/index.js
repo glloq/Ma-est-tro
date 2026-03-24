@@ -48,6 +48,13 @@ export class NotFoundError extends ApplicationError {
     this.name = 'NotFoundError';
     this.resource = resource;
   }
+
+  toJSON() {
+    return {
+      ...super.toJSON(),
+      resource: this.resource
+    };
+  }
 }
 
 /**
@@ -79,6 +86,13 @@ export class MidiError extends ApplicationError {
     this.name = 'MidiError';
     this.device = device;
   }
+
+  toJSON() {
+    return {
+      ...super.toJSON(),
+      device: this.device
+    };
+  }
 }
 
 /**
@@ -89,5 +103,12 @@ export class DatabaseError extends ApplicationError {
     super(message, 'ERR_DATABASE', 500);
     this.name = 'DatabaseError';
     this.operation = operation;
+  }
+
+  toJSON() {
+    return {
+      ...super.toJSON(),
+      operation: this.operation
+    };
   }
 }
