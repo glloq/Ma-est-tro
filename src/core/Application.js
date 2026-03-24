@@ -361,10 +361,10 @@ class Application {
       running: this.running,
       uptime: process.uptime(),
       memory: process.memoryUsage(),
-      devices: this.deviceManager ? this.deviceManager.getDeviceList().length : 0,
-      routes: this.midiRouter ? this.midiRouter.getRouteList().length : 0,
-      files: this.database ? this.database.getFiles('/').length : 0,
-      wsClients: this.wsServer ? this.wsServer.getStats().clients : 0
+      devices: this.deviceManager?.getDeviceList()?.length ?? 0,
+      routes: this.midiRouter?.getRouteList()?.length ?? 0,
+      files: this.database?.getFiles('/')?.length ?? 0,
+      wsClients: this.wsServer?.getStats()?.clients ?? 0
     };
   }
 

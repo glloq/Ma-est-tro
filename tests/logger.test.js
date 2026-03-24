@@ -80,30 +80,23 @@ describe('Logger', () => {
   });
 
   describe('file writing', () => {
-    test('writes to log file', (done) => {
+    test('writes to log file', () => {
       const logFile = path.join(tmpDir, 'test.log');
       const logger = new Logger({ level: 'info', file: logFile });
       logger.info('file test');
 
-      // appendFile is async, give it a moment
-      setTimeout(() => {
-        const content = fs.readFileSync(logFile, 'utf8');
-        expect(content).toContain('file test');
-        done();
-      }, 100);
+      const content = fs.readFileSync(logFile, 'utf8');
+      expect(content).toContain('file test');
     });
 
-    test('writes JSON format to file when enabled', (done) => {
+    test('writes JSON format to file when enabled', () => {
       const logFile = path.join(tmpDir, 'json.log');
       const logger = new Logger({ level: 'info', file: logFile, jsonFormat: true });
       logger.info('json test');
 
-      setTimeout(() => {
-        const content = fs.readFileSync(logFile, 'utf8').trim();
-        const parsed = JSON.parse(content);
-        expect(parsed.message).toBe('json test');
-        done();
-      }, 100);
+      const content = fs.readFileSync(logFile, 'utf8').trim();
+      const parsed = JSON.parse(content);
+      expect(parsed.message).toBe('json test');
     });
   });
 

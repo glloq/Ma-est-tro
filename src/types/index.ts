@@ -48,11 +48,23 @@ export interface SerialConfig {
   ports: string[];
 }
 
+export interface PlaybackConfig {
+  defaultTempo: number;
+  defaultVolume: number;
+}
+
+export interface LatencyConfig {
+  defaultIterations: number;
+  recalibrationDays: number;
+}
+
 export interface AppConfig {
   server: ServerConfig;
   midi: MidiConfig;
   database: DatabaseConfig;
   logging: LoggingConfig;
+  playback: PlaybackConfig;
+  latency: LatencyConfig;
   ble: BleConfig;
   serial: SerialConfig;
 }

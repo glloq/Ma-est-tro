@@ -10,8 +10,8 @@ class Logger {
     this.level = config.level || 'info';
     this.logFile = config.file || null;
     this.jsonFormat = config.jsonFormat || false;
-    this.maxLogSize = config.maxLogSize || MAX_LOG_SIZE;
-    this.maxLogFiles = config.maxLogFiles || MAX_LOG_FILES;
+    this.maxLogSize = config.maxLogSize > 0 ? config.maxLogSize : MAX_LOG_SIZE;
+    this.maxLogFiles = config.maxLogFiles >= 1 ? config.maxLogFiles : MAX_LOG_FILES;
     this.levels = {
       debug: 0,
       info: 1,
