@@ -122,7 +122,12 @@ class MidiPlayer {
 
     midi.tracks.forEach((track, trackIndex) => {
       track.forEach(event => {
-        if (event.channel !== undefined) {
+        // Only detect channels that have note events — CC-only or
+        // programChange-only channels are "ghost" channels that should
+        // not appear in the routing UI (aligns with ChannelAnalyzer
+        // and MidiEditorModal which also use notes-only detection)
+        if (event.channel !== undefined &&
+            (event.type === 'noteOn' || event.type === 'noteOff')) {
           channelsSet.add(event.channel);
         }
       });

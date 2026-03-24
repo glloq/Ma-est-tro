@@ -205,7 +205,7 @@ class AudioPreview {
 
         // Process note events
         if (event.type === 'noteOn' && event.velocity > 0) {
-          const channel = event.channel || 0;
+          const channel = event.channel ?? 0;
 
           // Filter by channel if specified
           if (channelFilter !== undefined && channel !== channelFilter) {

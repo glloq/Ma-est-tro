@@ -281,8 +281,8 @@ class FileManager {
           trackNames: analysis.trackNames || []
         });
 
-        // Update note range
-        if (analysis.noteRange) {
+        // Update note range (guard against null values from empty channels)
+        if (analysis.noteRange && analysis.noteRange.min !== null && analysis.noteRange.max !== null) {
           noteMin = Math.min(noteMin, analysis.noteRange.min);
           noteMax = Math.max(noteMax, analysis.noteRange.max);
         }
@@ -465,8 +465,13 @@ class FileManager {
           const channelsUsed = new Set();
           midi.tracks.forEach(track => {
             track.forEach(event => {
-              if (event.channel !== undefined) channelsUsed.add(event.channel);
-              if (event.type === 'noteOn' || event.type === 'noteOff') noteCount++;
+              // Only detect channels with note events (aligns with
+              // ChannelAnalyzer and MidiPlayer — no ghost channels)
+              if (event.channel !== undefined &&
+                  (event.type === 'noteOn' || event.type === 'noteOff')) {
+                channelsUsed.add(event.channel);
+                noteCount++;
+              }
             });
           });
           channels = Array.from(channelsUsed).sort((a, b) => a - b);

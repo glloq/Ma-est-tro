@@ -375,7 +375,7 @@ class MidiEditorModal {
 
                 // Program Change (instrument)
                 if (event.type === 'programChange') {
-                    const channel = event.channel || 0;
+                    const channel = event.channel ?? 0;
                     channelInstruments.set(channel, event.programNumber);
                     this.log('debug', `Channel ${channel}: program ${event.programNumber} (${this.getInstrumentName(event.programNumber)})`);
                 }
@@ -383,8 +383,24 @@ class MidiEditorModal {
                 // Note On
                 if (event.type === 'noteOn' && event.velocity > 0) {
                     noteOnCount++;
-                    const channel = event.channel || 0;
+                    const channel = event.channel ?? 0;
                     const key = `${channel}_${event.noteNumber}`;
+
+                    // If a note is already active on this key, close it first
+                    // (handles overlapping noteOn without intermediate noteOff)
+                    const existing = activeNotes.get(key);
+                    if (existing) {
+                        const gate = Math.max(1, currentTick - existing.tick);
+                        allNotes.push({
+                            tick: existing.tick,
+                            note: existing.note,
+                            gate: gate,
+                            velocity: existing.velocity,
+                            channel: existing.channel
+                        });
+                        channelNoteCount.set(existing.channel, (channelNoteCount.get(existing.channel) || 0) + 1);
+                    }
+
                     activeNotes.set(key, {
                         tick: currentTick,
                         note: event.noteNumber,
@@ -405,7 +421,7 @@ class MidiEditorModal {
                 // Note Off
                 else if (event.type === 'noteOff' || (event.type === 'noteOn' && event.velocity === 0)) {
                     noteOffCount++;
-                    const channel = event.channel || 0;
+                    const channel = event.channel ?? 0;
                     const key = `${channel}_${event.noteNumber}`;
                     const noteOn = activeNotes.get(key);
 
@@ -426,6 +442,24 @@ class MidiEditorModal {
                     }
                 }
             });
+
+            // Flush orphaned notes (noteOn without matching noteOff at end of track)
+            // Give them a default duration of 1 tick so they appear in the editor
+            for (const [key, noteOn] of activeNotes) {
+                const defaultGate = Math.max(1, currentTick - noteOn.tick);
+                allNotes.push({
+                    tick: noteOn.tick,
+                    note: noteOn.note,
+                    gate: defaultGate > 0 ? defaultGate : 480, // fallback: 1 beat
+                    velocity: noteOn.velocity,
+                    channel: noteOn.channel
+                });
+                channelNoteCount.set(noteOn.channel, (channelNoteCount.get(noteOn.channel) || 0) + 1);
+            }
+            if (activeNotes.size > 0) {
+                this.log('warn', `Track ${trackIndex}: ${activeNotes.size} orphaned notes (no noteOff) recovered`);
+            }
+            activeNotes.clear();
 
             this.log('debug', `Track ${trackIndex} summary: ${noteOnCount} note-ons, ${noteOffCount} note-offs, ${allNotes.length} complete notes`);
         });
