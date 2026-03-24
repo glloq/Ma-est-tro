@@ -123,28 +123,25 @@ class MidiEditorChannelPanel {
      */
     updateChannelButtons() {
         const m = this.modal;
-        const buttons = m.container?.querySelectorAll('.channel-btn');
-        if (!buttons) return;
+        const chips = m.container?.querySelectorAll('.channel-chip');
+        if (!chips) return;
 
-        buttons.forEach(btn => {
-            const channel = parseInt(btn.dataset.channel);
-            const color = btn.dataset.color;
+        chips.forEach(chip => {
+            const channel = parseInt(chip.dataset.channel);
+            const color = chip.dataset.color;
             const isActive = m.activeChannels.has(channel);
 
             if (isActive) {
-                btn.classList.add('active');
-                btn.style.cssText = `
-                    --channel-color: ${color};
-                    background: ${color};
-                    border-color: ${color};
-                `;
+                chip.classList.add('active');
+                chip.style.cssText = `--chip-color: ${color}; --chip-bg: ${color}20; --chip-border: ${color}cc;`;
             } else {
-                btn.classList.remove('active');
-                btn.style.cssText = `
-                    --channel-color: ${color};
-                    border-color: ${color};
-                `;
+                chip.classList.remove('active');
+                chip.style.cssText = `--chip-color: ${color}; --chip-bg: transparent; --chip-border: ${color}4d;`;
             }
+
+            // Update playable notes indicator
+            const isPlayableHighlighted = m.channelPlayableHighlights?.has(channel);
+            chip.classList.toggle('playable-active', !!isPlayableHighlighted);
         });
 
         m.updateStats();

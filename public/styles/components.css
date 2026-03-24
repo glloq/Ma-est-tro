@@ -864,14 +864,13 @@
     font-weight: 600;
 }
 
-/* Toolbar des canaux - Retour à la ligne des boutons */
+/* Toolbar des canaux - Chip strip layout */
 .midi-editor-modal .channels-toolbar {
     display: flex;
     flex-wrap: nowrap;
-    gap: 4px;
-    padding: 3px 6px;
-    height: 78px;
-    min-height: 78px;
+    gap: 0;
+    padding: 4px 0 4px 6px;
+    min-height: 54px;
     box-sizing: border-box;
     background: #252525;
     border-bottom: 1px solid #3a3a3a;
@@ -1087,198 +1086,238 @@
     overflow: hidden;
 }
 
-.midi-editor-modal .channel-buttons {
+/* ========== CHANNEL CHIP STRIP (redesign v2) ========== */
+
+.midi-editor-modal .channel-chips {
     display: flex;
-    gap: 4px;
+    gap: 3px;
     flex-wrap: nowrap;
     align-items: flex-start;
+    flex: 1;
+    min-width: 0;
 }
 
-.midi-editor-modal .channel-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 3px 8px;
-    min-height: 40px;
-    box-sizing: border-box;
-    background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
-    border: 3px solid #555;
-    border-radius: 8px 0 0 8px;
-    cursor: pointer;
-    /* Only transition box-shadow — avoid 'all' which causes unwanted
-       background/border/transform animations on state changes */
-    transition: box-shadow 0.15s ease;
-    min-width: auto;
-    position: relative;
-    overflow: hidden;
-    flex-shrink: 0;
-    flex-grow: 0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.midi-editor-modal .channel-btn::before {
-    content: none; /* Suppression complète du glow */
-}
-
-.midi-editor-modal .channel-btn:hover {
-    /* No transform — translateY caused visual disconnect with the gear button
-       and jitter at the bottom edge of the button */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 8px rgba(85, 85, 85, 0.25);
-}
-
-.midi-editor-modal .channel-btn:hover::before {
-    content: none;
-}
-
-.midi-editor-modal .channel-btn.active {
-    /* Pas d'animation */
-}
-
-.midi-editor-modal .channel-btn.active::before {
-    content: none;
-}
-
-.midi-editor-modal .channel-btn.active:hover {
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6), 0 0 12px rgba(85, 85, 85, 0.3);
-}
-
-/* Animation de pulsation pour les boutons actifs */
-@keyframes channelPulse {
-    0%, 100% {
-        filter: brightness(1);
-    }
-    50% {
-        filter: brightness(1.15);
-    }
-}
-
-.midi-editor-modal .channel-label {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #fff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 180px;
-    position: relative;
-    z-index: 1;
-    text-shadow: 0 0 10px rgba(0,0,0,1),
-                 0 0 20px rgba(0,0,0,0.8),
-                 0 2px 4px rgba(0,0,0,0.9);
-}
-
-/* Anciens styles pour compatibilité */
-.midi-editor-modal .channel-number {
-    display: none;
-}
-
-.midi-editor-modal .channel-name {
-    display: none;
-}
-
-/* Suppression des styles .channel-count (élément retiré) */
-.midi-editor-modal .channel-count {
-    display: none;
-    color: #aaa;
-    position: relative;
-    z-index: 1;
-    text-shadow: 0 0 6px rgba(0,0,0,1),
-                 0 1px 3px rgba(0,0,0,0.8);
-}
-
-.midi-editor-modal .channel-btn.active .channel-label {
-    color: #fff;
-    font-weight: 700;
-    text-shadow: 0 0 15px rgba(0,0,0,1),
-                 0 0 25px rgba(0,0,0,0.9),
-                 0 0 10px rgba(255,255,255,0.5),
-                 0 3px 6px rgba(0,0,0,1);
-}
-
-/* Channel button group (channel btn + TAB sub-button) */
-.midi-editor-modal .channel-btn-group {
+/* Chip group: chip-row + optional DRUM/TAB/WIND sub-buttons */
+.midi-editor-modal .channel-chip-group {
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 1px;
+    flex-shrink: 0;
 }
 
-/* Row: channel button + settings gear side by side */
-.midi-editor-modal .channel-btn-row {
+/* Row: chip + settings gear side by side */
+.midi-editor-modal .channel-chip-row {
     display: flex;
     flex-direction: row;
     align-items: stretch;
     gap: 0;
 }
 
-/* Highlight entire row (button + gear) on hover for visual coherence */
-.midi-editor-modal .channel-btn-row:hover > .channel-settings-btn {
-    border-color: #666;
-}
-
-.midi-editor-modal .channel-instrument-label {
-    display: block;
-    font-size: 9px;
-    color: #999;
-    text-align: center;
-    line-height: 1.1;
-    padding: 0 2px;
-    max-width: 100%;
+/* --- Main Chip Button --- */
+.midi-editor-modal .channel-chip {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0;
+    min-height: 44px;
+    box-sizing: border-box;
+    background: var(--chip-bg, #1e1e1e);
+    border: 1px solid var(--chip-border, #555);
+    border-right: none;
+    border-radius: 6px 0 0 6px;
+    cursor: pointer;
+    transition: box-shadow 0.15s ease;
+    position: relative;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    flex-shrink: 0;
+    flex-grow: 0;
 }
 
-/* Channel settings gear button (right side of channel button) */
-.midi-editor-modal .channel-settings-btn {
+.midi-editor-modal .channel-chip:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.midi-editor-modal .channel-chip.active {
+    box-shadow: 0 0 8px color-mix(in srgb, var(--chip-color, #555) 30%, transparent);
+}
+
+.midi-editor-modal .channel-chip.active:hover {
+    box-shadow: 0 0 12px color-mix(in srgb, var(--chip-color, #555) 40%, transparent);
+}
+
+/* Color bar on the left edge */
+.midi-editor-modal .chip-color-bar {
+    width: 4px;
+    align-self: stretch;
+    flex-shrink: 0;
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
+}
+
+.midi-editor-modal .channel-chip.active .chip-color-bar {
+    opacity: 1;
+}
+
+/* Chip content area */
+.midi-editor-modal .chip-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 3px 8px;
+    min-width: 0;
+    gap: 1px;
+}
+
+/* Main line: number · instrument */
+.midi-editor-modal .chip-main-line {
     display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 0 10px;
-    font-size: 16px;
-    color: #999;
-    background: linear-gradient(180deg, #1a1a1a 0%, #111 100%);
-    border: 1px solid #444;
-    border-left: none;
-    border-radius: 0 6px 6px 0;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    line-height: 1;
+    gap: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 170px;
+    line-height: 1.2;
+}
+
+.midi-editor-modal .chip-number {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #fff;
     flex-shrink: 0;
 }
 
-.midi-editor-modal .channel-settings-btn:hover {
-    color: #fff;
-    background: linear-gradient(180deg, #333 0%, #222 100%);
-    border-color: #888;
+.midi-editor-modal .chip-dot {
+    font-size: 0.75rem;
+    color: #666;
+    margin: 0 4px;
+    flex-shrink: 0;
 }
 
-/* Routed instrument name below the main label */
-.midi-editor-modal .channel-routed-label {
+.midi-editor-modal .chip-instrument {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #bbb;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.midi-editor-modal .channel-chip.active .chip-instrument {
+    color: #fff;
+}
+
+.midi-editor-modal .channel-chip.active .chip-number {
+    text-shadow: 0 0 8px rgba(255,255,255,0.3);
+}
+
+/* Playable notes dot indicator on chip */
+.midi-editor-modal .chip-playable-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-left: 5px;
+    flex-shrink: 0;
+    animation: playablePulse 2s ease-in-out infinite;
+}
+
+@keyframes playablePulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+/* Routing sub-line */
+.midi-editor-modal .chip-routing-line {
     font-size: 0.6rem;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.7);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 120px;
+    max-width: 130px;
     line-height: 1.1;
-    position: relative;
-    z-index: 1;
-    text-shadow: 0 0 6px rgba(0,0,0,1), 0 1px 2px rgba(0,0,0,0.9);
 }
 
-/* Channel disabled state */
-.midi-editor-modal .channel-btn.channel-disabled {
+/* Chip disabled state */
+.midi-editor-modal .channel-chip.channel-disabled {
     opacity: 0.35;
     filter: grayscale(0.6);
 }
 
+/* --- Compact Settings Gear Button --- */
+.midi-editor-modal .chip-settings-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    font-size: 14px;
+    color: #777;
+    background: #1a1a1a;
+    border: 1px solid var(--chip-border, #444);
+    border-left: none;
+    border-radius: 0 6px 6px 0;
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.midi-editor-modal .chip-settings-btn:hover {
+    color: #fff;
+    background: #2a2a2a;
+}
+
+/* Highlight gear on chip-row hover */
+.midi-editor-modal .channel-chip-row:hover > .chip-settings-btn {
+    color: #aaa;
+    border-color: #666;
+}
+
+/* --- Global Actions (sticky right) --- */
+.midi-editor-modal .channel-global-actions {
+    display: flex;
+    align-items: center;
+    padding: 0 4px 0 8px;
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: linear-gradient(90deg, transparent 0%, #252525 20%, #252525 100%);
+    flex-shrink: 0;
+}
+
+.midi-editor-modal .btn-show-all-channels {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    background: #2a2a2a;
+    border: 1px solid #555;
+    border-radius: 6px;
+    color: #ccc;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.midi-editor-modal .btn-show-all-channels:hover {
+    color: #fff;
+    background: #3a3a3a;
+    border-color: #888;
+}
+
+/* Legacy compat: hide old elements if still in DOM */
+.midi-editor-modal .channel-buttons { display: none; }
+.midi-editor-modal .channel-number { display: none; }
+.midi-editor-modal .channel-name { display: none; }
+.midi-editor-modal .channel-count { display: none; }
+
 /* Channel settings popover */
 .channel-settings-popover {
     position: fixed;
-    z-index: 10010; /* Must be above modal (z-index: 10002) since popover is in document.body */
+    z-index: 10010;
     background: #1e1e1e;
     border: 1px solid #555;
     border-radius: 8px;
@@ -1327,6 +1366,16 @@
     height: 14px;
 }
 
+.channel-settings-toggle input[type="checkbox"]:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.channel-settings-toggle input[type="checkbox"]:disabled + span + span,
+.channel-settings-toggle input[type="checkbox"]:disabled ~ span {
+    opacity: 0.5;
+}
+
 .channel-settings-label {
     font-size: 10px;
     font-weight: 600;
@@ -1349,39 +1398,6 @@
 .channel-routing-select:focus {
     outline: none;
     border-color: #667eea;
-}
-
-/* Show playable notes button */
-.channel-show-playable-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-    padding: 5px 8px;
-    font-size: 11px;
-    color: #bbb;
-    background: #1a1a1a;
-    border: 1px solid #444;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.channel-show-playable-btn:hover:not(:disabled) {
-    color: #fff;
-    background: #252525;
-    border-color: #666;
-}
-
-.channel-show-playable-btn:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
-}
-
-.channel-show-playable-btn.active {
-    color: #fff;
-    background: #2a2a2a;
-    border-color: #888;
 }
 
 .channel-visibility-actions {
