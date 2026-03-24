@@ -1100,13 +1100,15 @@
     align-items: center;
     justify-content: center;
     padding: 3px 8px;
-    height: 40px;
+    min-height: 40px;
     box-sizing: border-box;
     background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
     border: 3px solid #555;
     border-radius: 8px 0 0 8px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    /* Only transition box-shadow — avoid 'all' which causes unwanted
+       background/border/transform animations on state changes */
+    transition: box-shadow 0.15s ease;
     min-width: auto;
     position: relative;
     overflow: hidden;
@@ -1120,8 +1122,9 @@
 }
 
 .midi-editor-modal .channel-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), 0 0 12px rgba(85, 85, 85, 0.3);
+    /* No transform — translateY caused visual disconnect with the gear button
+       and jitter at the bottom edge of the button */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 8px rgba(85, 85, 85, 0.25);
 }
 
 .midi-editor-modal .channel-btn:hover::before {
@@ -1137,8 +1140,7 @@
 }
 
 .midi-editor-modal .channel-btn.active:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5), 0 0 20px rgba(85, 85, 85, 0.4);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6), 0 0 12px rgba(85, 85, 85, 0.3);
 }
 
 /* Animation de pulsation pour les boutons actifs */
@@ -1210,6 +1212,11 @@
     gap: 0;
 }
 
+/* Highlight entire row (button + gear) on hover for visual coherence */
+.midi-editor-modal .channel-btn-row:hover > .channel-settings-btn {
+    border-color: #666;
+}
+
 .midi-editor-modal .channel-instrument-label {
     display: block;
     font-size: 9px;
@@ -1250,14 +1257,16 @@
 /* Routed instrument name below the main label */
 .midi-editor-modal .channel-routed-label {
     font-size: 0.6rem;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.8);
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 120px;
-    line-height: 1;
-    text-shadow: 0 0 8px rgba(0,0,0,1), 0 1px 3px rgba(0,0,0,0.9);
+    line-height: 1.1;
+    position: relative;
+    z-index: 1;
+    text-shadow: 0 0 6px rgba(0,0,0,1), 0 1px 2px rgba(0,0,0,0.9);
 }
 
 /* Channel disabled state */
