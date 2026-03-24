@@ -9,6 +9,7 @@
     "dev": "nodemon server.js",
     "migrate": "node scripts/migrate-db.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "lint": "eslint src/ public/js/ tests/",
     "lint:fix": "eslint src/ public/js/ tests/ --fix",
     "format": "prettier --write \"src/**/*.js\" \"public/js/**/*.js\" \"tests/**/*.js\"",
