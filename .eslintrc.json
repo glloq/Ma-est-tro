@@ -37,6 +37,16 @@
       }
     },
     {
+      "files": ["tests/frontend/**/*.js"],
+      "env": {
+        "node": true,
+        "browser": true
+      },
+      "rules": {
+        "no-undef": "off"
+      }
+    },
+    {
       "files": ["public/js/**/*.js"],
       "env": {
         "browser": true
