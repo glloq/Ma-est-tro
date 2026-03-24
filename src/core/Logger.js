@@ -13,6 +13,7 @@ class Logger {
   constructor(config = {}) {
     this.level = config.level || 'info';
     this.logFile = config.file || null;
+    this.jsonFormat = config.jsonFormat || false;
     this.maxLogSize = config.maxLogSize || MAX_LOG_SIZE;
     this.maxLogFiles = config.maxLogFiles || MAX_LOG_FILES;
     this.levels = {
@@ -54,12 +55,31 @@ class Logger {
     return logMessage;
   }
 
+  formatJson(level, message, data = null) {
+    const entry = {
+      timestamp: new Date().toISOString(),
+      level,
+      message
+    };
+
+    if (data) {
+      if (data instanceof Error) {
+        entry.error = { message: data.message, stack: data.stack };
+      } else if (typeof data === 'object') {
+        entry.data = data;
+      } else {
+        entry.data = data;
+      }
+    }
+
+    return JSON.stringify(entry);
+  }
+
   write(level, message, data = null) {
     if (!this.shouldLog(level)) return;
 
+    // Console output with human-readable colors
     const logMessage = this.format(level, message, data);
-
-    // Console output with colors
     const colors = {
       debug: '\x1b[36m', // Cyan
       info: '\x1b[32m', // Green
@@ -71,7 +91,8 @@ class Logger {
 
     // File output (async to avoid blocking event loop)
     if (this.logFile) {
-      fs.appendFile(this.logFile, logMessage + '\n', 'utf8', (error) => {
+      const fileContent = this.jsonFormat ? this.formatJson(level, message, data) : logMessage;
+      fs.appendFile(this.logFile, fileContent + '\n', 'utf8', (error) => {
         if (error) {
           console.error('Failed to write to log file:', error);
         }
