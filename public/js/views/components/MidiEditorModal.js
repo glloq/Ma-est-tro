@@ -62,6 +62,8 @@ class MidiEditorModal {
         this._routedGmPrograms = new Map();
         // Preview source: 'gm' (original MIDI file instruments) or 'routed' (routed instrument gm_program)
         this.previewSource = 'gm';
+        // Global toggle: auto-show playable notes for all routed channels
+        this.showPlayableNotes = false;
 
         // Channel panel (manages tablature buttons, device selector, instrument selector)
         this.channelPanel = typeof MidiEditorChannelPanel !== 'undefined' ? new MidiEditorChannelPanel(this) : null;
@@ -840,6 +842,11 @@ class MidiEditorModal {
 
         // Synchroniser les canaux mutés avec le synthétiseur (pendant la lecture)
         this.syncMutedChannels();
+
+        // Refresh playable notes highlights (hidden channels should not show highlights)
+        if (this.channelPlayableHighlights.size > 0) {
+            this._syncPianoRollHighlights();
+        }
     }
 
     /**
@@ -2744,6 +2751,14 @@ class MidiEditorModal {
                                     🎵 GM
                                 </button>
                             </div>
+                            <div class="settings-popover-section">
+                                <label class="settings-label">🎹 Notes jouables</label>
+                                <button class="tool-btn-compact playable-notes-toggle" id="playable-notes-toggle"
+                                    data-active="false"
+                                    title="Afficher/masquer les notes jouables des instruments routés">
+                                    OFF
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -4445,6 +4460,37 @@ class MidiEditorModal {
     }
 
     /**
+     * Toggle global display of playable notes for all routed channels
+     */
+    async togglePlayableNotesGlobal() {
+        this.showPlayableNotes = !this.showPlayableNotes;
+
+        const btn = this.container?.querySelector('#playable-notes-toggle');
+        if (btn) {
+            btn.dataset.active = String(this.showPlayableNotes);
+            btn.textContent = this.showPlayableNotes ? 'ON' : 'OFF';
+        }
+
+        if (this.showPlayableNotes) {
+            // Enable highlights for all routed channels that don't already have one
+            const promises = [];
+            for (const [channel] of this.channelRouting) {
+                if (!this.channelPlayableHighlights.has(channel)) {
+                    promises.push(this._toggleChannelPlayableHighlight(channel));
+                }
+            }
+            await Promise.all(promises);
+        } else {
+            // Disable all highlights
+            this.channelPlayableHighlights.clear();
+            this._syncPianoRollHighlights();
+        }
+
+        this.updateChannelButtons();
+        this.log('info', `Playable notes global: ${this.showPlayableNotes ? 'ON' : 'OFF'}`);
+    }
+
+    /**
      * Get the routed instrument's gm_program for a channel from cache.
      * @returns {number|null}
      */
@@ -5245,6 +5291,12 @@ class MidiEditorModal {
             previewToggle.addEventListener('click', () => this.togglePreviewSource());
         }
 
+        // Toggle playable notes global
+        const playableToggle = document.getElementById('playable-notes-toggle');
+        if (playableToggle) {
+            playableToggle.addEventListener('click', () => this.togglePlayableNotesGlobal());
+        }
+
         // Input de tempo
         const tempoInput = document.getElementById('tempo-input');
         if (tempoInput) {
@@ -6013,6 +6065,11 @@ class MidiEditorModal {
         this._updateChipRouting(channel);
         this._refreshStringInstrumentChannels();
 
+        // Auto-enable playable notes highlight if global toggle is ON
+        if (this.showPlayableNotes && deviceValue && !this.channelPlayableHighlights.has(channel)) {
+            this._toggleChannelPlayableHighlight(channel);
+        }
+
         // Persist routing to database, then notify external components
         // (file list, routing modal) so they read fresh data from DB
         this._syncRoutingToDB().then(() => {
@@ -6448,8 +6505,10 @@ class MidiEditorModal {
         if (!this.pianoRoll) return;
 
         // Build a structure the piano roll can use: Map<channel, {notes: Set|null, color: string}>
+        // Only include highlights for visible (active) channels
         const highlights = new Map();
         this.channelPlayableHighlights.forEach((notes, ch) => {
+            if (!this.activeChannels.has(ch)) return;
             const color = this.channelColors[ch % this.channelColors.length];
             highlights.set(ch, { notes, color });
         });
