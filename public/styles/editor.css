@@ -320,6 +320,33 @@ body.dark-mode .tool-btn:hover:not(:disabled) {
     width: 100%;
 }
 
+.preview-source-toggle {
+    width: 100%;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.preview-source-toggle[data-source="gm"] {
+    background: var(--bg-tertiary, #2a2a2a);
+    color: var(--text-secondary, #aaa);
+    border: 1px solid #444;
+}
+
+.preview-source-toggle[data-source="routed"] {
+    background: rgba(102, 126, 234, 0.2);
+    color: #8b9bea;
+    border: 1px solid #667eea;
+}
+
+.preview-source-toggle:hover {
+    opacity: 0.85;
+}
+
 /* ============================================================================
    ✅ PHASE 1.2 - SNAP GRID SELECTOR
    ============================================================================ */

@@ -61,6 +61,10 @@ class MidiEditorModal {
         this._channelSettingsOpen = -1;
         // Per-channel playable notes highlights: Map<channel, Set<noteNumber>>
         this.channelPlayableHighlights = new Map();
+        // Cache of routed instrument gm_program per channel: Map<channel, number>
+        this._routedGmPrograms = new Map();
+        // Preview source: 'gm' (original MIDI file instruments) or 'routed' (routed instrument gm_program)
+        this.previewSource = 'gm';
 
         // Channel panel (manages tablature buttons, device selector, instrument selector)
         this.channelPanel = typeof MidiEditorChannelPanel !== 'undefined' ? new MidiEditorChannelPanel(this) : null;
@@ -2327,19 +2331,26 @@ class MidiEditorModal {
             let tabBtn = '';
             let windBtn = '';
             try {
-                if (ch.channel !== 9 && !this.channelRouting.has(ch.channel)) {
-                    if (typeof MidiEditorChannelPanel !== 'undefined' &&
-                        MidiEditorChannelPanel.getStringInstrumentCategory(ch.program) !== null) {
-                        const ccEnabled = this._stringInstrumentCCEnabled?.get(ch.channel);
-                        if (ccEnabled !== false) {
-                            tabBtn = `<button class="channel-tab-btn" data-channel="${ch.channel}" data-color="${color}"
-                                title="${this.t('tablature.tabButton', { instrument: ch.instrument || this.t('stringInstrument.string') })}">${this.t('midiEditor.tabButton')}</button>`;
+                if (ch.channel !== 9) {
+                    // Determine effective GM program: use routed instrument's gm_program if available
+                    const routedGm = this._routedGmPrograms.get(ch.channel);
+                    const effectiveProgram = (this.channelRouting.has(ch.channel) && routedGm != null) ? routedGm : ch.program;
+                    const showButtons = !this.channelRouting.has(ch.channel) || routedGm != null;
+
+                    if (showButtons) {
+                        if (typeof MidiEditorChannelPanel !== 'undefined' &&
+                            MidiEditorChannelPanel.getStringInstrumentCategory(effectiveProgram) !== null) {
+                            const ccEnabled = this._stringInstrumentCCEnabled?.get(ch.channel);
+                            if (ccEnabled !== false) {
+                                tabBtn = `<button class="channel-tab-btn" data-channel="${ch.channel}" data-color="${color}"
+                                    title="${this.t('tablature.tabButton', { instrument: ch.instrument || this.t('stringInstrument.string') })}">${this.t('midiEditor.tabButton')}</button>`;
+                            }
                         }
-                    }
-                    if (typeof WindInstrumentDatabase !== 'undefined' && WindInstrumentDatabase.isWindInstrument(ch.program)) {
-                        const preset = WindInstrumentDatabase.getPresetByProgram(ch.program);
-                        windBtn = `<button class="channel-wind-btn" data-channel="${ch.channel}"
-                            title="${this.t('windEditor.windEditorTitle', { name: preset?.name || this.t('windEditor.icon') })}">${this.t('midiEditor.windButton')}</button>`;
+                        if (typeof WindInstrumentDatabase !== 'undefined' && WindInstrumentDatabase.isWindInstrument(effectiveProgram)) {
+                            const preset = WindInstrumentDatabase.getPresetByProgram(effectiveProgram);
+                            windBtn = `<button class="channel-wind-btn" data-channel="${ch.channel}"
+                                title="${this.t('windEditor.windEditorTitle', { name: preset?.name || this.t('windEditor.icon') })}">${this.t('midiEditor.windButton')}</button>`;
+                        }
                     }
                 }
             } catch { /* ignore — buttons will be added by _refreshStringInstrumentChannels */ }
@@ -2879,6 +2890,14 @@ class MidiEditorModal {
                                 <select class="snap-select connected-device-select" id="connected-device-selector" title="${this.t('midiEditor.connectedDeviceTip')}">
                                     <option value="">${this.t('midiEditor.noDeviceFilter')}</option>
                                 </select>
+                            </div>
+                            <div class="settings-popover-section">
+                                <label class="settings-label">🔊 Preview</label>
+                                <button class="tool-btn-compact preview-source-toggle" id="preview-source-toggle"
+                                    data-source="gm"
+                                    title="Basculer entre instrument routé et GM original">
+                                    🎵 GM
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -4269,7 +4288,12 @@ class MidiEditorModal {
 
         // Configurer les instruments pour chaque canal
         this.channels.forEach(ch => {
-            this.synthesizer.setChannelInstrument(ch.channel, ch.program || 0);
+            let program = ch.program || 0;
+            if (this.previewSource === 'routed' && this.channelRouting.has(ch.channel)) {
+                const routedProgram = this._getRoutedGmProgram(ch.channel);
+                if (routedProgram !== null) program = routedProgram;
+            }
+            this.synthesizer.setChannelInstrument(ch.channel, program);
         });
 
         // Synchroniser les canaux mutés (canaux non actifs = mutés)
@@ -4547,6 +4571,79 @@ class MidiEditorModal {
                 }
             };
             setTimeout(() => document.addEventListener('click', closeHandler), 0);
+        }
+    }
+
+    /**
+     * Toggle preview source between GM original and routed instrument
+     */
+    togglePreviewSource() {
+        const btn = this.container?.querySelector('#preview-source-toggle');
+        if (this.previewSource === 'gm') {
+            this.previewSource = 'routed';
+            if (btn) {
+                btn.dataset.source = 'routed';
+                btn.textContent = '🎸 Routé';
+            }
+        } else {
+            this.previewSource = 'gm';
+            if (btn) {
+                btn.dataset.source = 'gm';
+                btn.textContent = '🎵 GM';
+            }
+        }
+        // Reload instruments in synthesizer if currently playing
+        if (this.synthesizer) {
+            this.loadSequenceForPlayback();
+        }
+        this.log('info', `Preview source switched to: ${this.previewSource}`);
+    }
+
+    /**
+     * Get the routed instrument's gm_program for a channel from cache.
+     * @returns {number|null}
+     */
+    _getRoutedGmProgram(channel) {
+        const gm = this._routedGmPrograms.get(channel);
+        return gm != null ? gm : null;
+    }
+
+    /**
+     * Fetch and cache routed instrument gm_programs for all routed channels.
+     */
+    async _loadRoutedGmPrograms() {
+        this._routedGmPrograms.clear();
+        const promises = [];
+        for (const [channel, routedValue] of this.channelRouting.entries()) {
+            promises.push(this._fetchAndCacheRoutedGmProgram(channel, routedValue));
+        }
+        await Promise.all(promises);
+    }
+
+    /**
+     * Fetch gm_program for a single routed device and cache it.
+     */
+    async _fetchAndCacheRoutedGmProgram(channel, routedValue) {
+        if (!routedValue) {
+            this._routedGmPrograms.delete(channel);
+            return;
+        }
+        let deviceId = routedValue;
+        let devChannel = undefined;
+        if (routedValue.includes('::')) {
+            const parts = routedValue.split('::');
+            deviceId = parts[0];
+            devChannel = parseInt(parts[1]);
+        }
+        try {
+            const params = { deviceId };
+            if (devChannel !== undefined) params.channel = devChannel;
+            const response = await this.api.sendCommand('instrument_get_capabilities', params);
+            if (response && response.capabilities && response.capabilities.gm_program != null) {
+                this._routedGmPrograms.set(channel, response.capabilities.gm_program);
+            }
+        } catch (err) {
+            this.log('warn', `Failed to fetch gm_program for routed device ${deviceId}:`, err);
         }
     }
 
@@ -5185,6 +5282,9 @@ class MidiEditorModal {
                 case 'toggle-settings-popover':
                     this.toggleSettingsPopover();
                     break;
+                case 'toggle-preview-source':
+                    this.togglePreviewSource();
+                    break;
                 // configure-string-instrument removed — config is in instrument settings
 
                 // Playback controls
@@ -5305,6 +5405,12 @@ class MidiEditorModal {
                     this.channelPanel.updateTablatureButton();
                 }
             });
+        }
+
+        // Toggle preview source (GM / Routé)
+        const previewToggle = document.getElementById('preview-source-toggle');
+        if (previewToggle) {
+            previewToggle.addEventListener('click', () => this.togglePreviewSource());
         }
 
         // Input de tempo
@@ -6043,7 +6149,7 @@ class MidiEditorModal {
     /**
      * Set channel routing to a specific connected device
      */
-    setChannelRouting(channel, deviceValue) {
+    async setChannelRouting(channel, deviceValue) {
         // Close the settings popover to prevent its capture-phase mousedown
         // handler from interfering with subsequent button clicks.
         this._closeChannelSettingsPopover();
@@ -6052,6 +6158,7 @@ class MidiEditorModal {
             this.channelRouting.set(channel, deviceValue);
         } else {
             this.channelRouting.delete(channel);
+            this._routedGmPrograms.delete(channel);
         }
         // Clear stale playable note highlights — the old device capabilities
         // no longer apply to the new routing target.
@@ -6067,10 +6174,14 @@ class MidiEditorModal {
             this.windInstrumentEditor.hide();
             this._updateWindButtonState(false);
         }
+        // Fetch routed instrument gm_program for TAB/WIND button logic
+        if (deviceValue) {
+            await this._fetchAndCacheRoutedGmProgram(channel, deviceValue);
+        }
         // Update only the affected chip (routing line + TAB/WIND buttons)
         // instead of rebuilding ALL chips via innerHTML — which destroys DOM
         // elements under the cursor and breaks hover/click state.
-        this._updateChipRouting(channel);
+        await this._updateChipRouting(channel);
         this._refreshStringInstrumentChannels();
 
         // Persist routing to database, then notify external components
@@ -6114,10 +6225,13 @@ class MidiEditorModal {
                 this.log('info', `Restored ${this.channelRouting.size} saved channel routing(s) from database`);
             }
 
+            // Fetch gm_programs for all routed instruments (needed for TAB/WIND buttons & preview)
+            await this._loadRoutedGmPrograms();
+
             // Use non-destructive DOM updates instead of refreshChannelButtons()
             // which uses innerHTML and destroys elements under the cursor,
             // breaking hover/click state on all channel buttons.
-            this._updateAllChipRoutings();
+            await this._updateAllChipRoutings();
             this.updateChannelButtons();
             this._refreshStringInstrumentChannels();
 
@@ -6382,7 +6496,7 @@ class MidiEditorModal {
      * Update routing indicator on a single channel chip (non-destructive).
      * Avoids refreshChannelButtons() which would rebuild all DOM and break hover/click.
      */
-    _updateChipRouting(channel) {
+    async _updateChipRouting(channel) {
         const chip = this.container?.querySelector(`.channel-chip[data-channel="${channel}"]`);
         if (!chip) return;
 
@@ -6405,13 +6519,58 @@ class MidiEditorModal {
             routeEl.remove();
         }
 
-        // Remove TAB/WIND buttons for routed channels (real instrument overrides GM)
+        // Update TAB/WIND buttons based on routed instrument type
         const group = chip.closest('.channel-chip-group');
-        if (group && routedName) {
-            const tabBtn = group.querySelector('.channel-tab-btn');
-            if (tabBtn) tabBtn.remove();
-            const windBtn = group.querySelector('.channel-wind-btn');
-            if (windBtn) windBtn.remove();
+        if (group && channel !== 9) {
+            const existingTab = group.querySelector('.channel-tab-btn');
+            const existingWind = group.querySelector('.channel-wind-btn');
+
+            if (routedName) {
+                // Routed channel: show TAB/WIND based on routed instrument's gm_program
+                const routedGm = this._routedGmPrograms.get(channel);
+
+                // If we don't have the gm_program yet, fetch it
+                if (routedGm == null && this.channelRouting.has(channel)) {
+                    await this._fetchAndCacheRoutedGmProgram(channel, this.channelRouting.get(channel));
+                }
+
+                const gmProgram = this._routedGmPrograms.get(channel);
+                const isString = gmProgram != null && typeof isGmStringInstrument === 'function' && isGmStringInstrument(gmProgram);
+                const isWind = gmProgram != null && typeof WindInstrumentDatabase !== 'undefined' && WindInstrumentDatabase.isWindInstrument(gmProgram);
+
+                // TAB button
+                if (isString) {
+                    if (!existingTab) {
+                        const chData = this.channels.find(c => c.channel === channel);
+                        const color = this.channelColors[channel % this.channelColors.length];
+                        const tabEl = document.createElement('button');
+                        tabEl.className = 'channel-tab-btn';
+                        tabEl.dataset.channel = channel;
+                        tabEl.dataset.color = color;
+                        tabEl.title = this.t('tablature.tabButton', { instrument: chData?.instrument || this.t('stringInstrument.string') });
+                        tabEl.textContent = this.t('midiEditor.tabButton');
+                        group.appendChild(tabEl);
+                    }
+                } else if (existingTab) {
+                    existingTab.remove();
+                }
+
+                // WIND button
+                if (isWind) {
+                    if (!existingWind) {
+                        const preset = WindInstrumentDatabase.getPresetByProgram(gmProgram);
+                        const windEl = document.createElement('button');
+                        windEl.className = 'channel-wind-btn';
+                        windEl.dataset.channel = channel;
+                        windEl.title = this.t('windEditor.windEditorTitle', { name: preset?.name || this.t('windEditor.icon') });
+                        windEl.textContent = this.t('midiEditor.windButton');
+                        group.appendChild(windEl);
+                    }
+                } else if (existingWind) {
+                    existingWind.remove();
+                }
+            }
+            // If not routed, TAB/WIND buttons are managed by initial rendering and _refreshStringInstrumentChannels
         }
     }
 
@@ -6420,18 +6579,20 @@ class MidiEditorModal {
      * Iterates through every chip group and calls _updateChipRouting for each,
      * preserving existing DOM elements (no innerHTML rebuild).
      */
-    _updateAllChipRoutings() {
+    async _updateAllChipRoutings() {
         const chipGroups = this.container?.querySelectorAll('.channel-chip-group');
         if (!chipGroups) return;
 
+        const promises = [];
         chipGroups.forEach(group => {
             const chip = group.querySelector('.channel-chip');
             if (!chip) return;
             const ch = parseInt(chip.dataset.channel);
             if (!isNaN(ch)) {
-                this._updateChipRouting(ch);
+                promises.push(this._updateChipRouting(ch));
             }
         });
+        await Promise.all(promises);
     }
 
     /**
