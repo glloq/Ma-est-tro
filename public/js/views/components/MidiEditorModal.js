@@ -47,11 +47,8 @@ class MidiEditorModal {
         this.tempoEvents = []; // Événements de tempo
         this.ccSectionExpanded = false; // État du collapse de la section CC
 
-        // Instrument connecté sélectionné pour visualiser les notes jouables
+        // Instrument connecté pour le routage
         this.connectedDevices = []; // Liste des appareils MIDI connectés
-        this.selectedConnectedDevice = null; // Appareil sélectionné (deviceId)
-        this.selectedDeviceCapabilities = null; // Capacités de l'appareil sélectionné
-        this.playableNotes = null; // Set des notes jouables (0-127) ou null si pas de filtre
 
         // Per-channel routing: Map<channel, deviceValue> (e.g. "deviceId" or "deviceId::channel")
         this.channelRouting = new Map();
@@ -206,11 +203,6 @@ class MidiEditorModal {
         this.currentFile = fileId;
         this.currentFilename = filename || fileId;
         this.isDirty = false;
-
-        // Réinitialiser la sélection d'instrument connecté (pas de filtre par défaut)
-        this.selectedConnectedDevice = null;
-        this.selectedDeviceCapabilities = null;
-        this.playableNotes = null;
 
         // Réinitialiser l'état de routage/désactivation du fichier précédent
         this.channelRouting.clear();
@@ -2544,152 +2536,11 @@ class MidiEditorModal {
                 }
                 this.connectedDevices = expandedDevices;
                 this.log('info', `Loaded ${outputDevices.length} connected output devices (${expandedDevices.length} instruments)`);
-                this.updateConnectedDeviceSelector();
             }
         } catch (error) {
             this.log('error', 'Failed to load connected devices:', error);
             this.connectedDevices = [];
         }
-    }
-
-    /**
-     * Mettre à jour le sélecteur d'instruments connectés
-     */
-    updateConnectedDeviceSelector() {
-        const selector = document.getElementById('connected-device-selector');
-        if (!selector) return;
-
-        // Générer les options
-        let options = `<option value="">${this.t('midiEditor.noDeviceFilter')}</option>`;
-
-        this.connectedDevices.forEach(device => {
-            let value, name;
-            if (device._multiInstrument) {
-                value = `${device.id}::${device._channel}`;
-                const chLabel = `Ch${(device._channel || 0) + 1}`;
-                name = `${device.displayName || device.name} [${chLabel}]`;
-            } else {
-                value = device.id;
-                name = device.displayName || device.name || device.id;
-            }
-            const selected = this.selectedConnectedDevice === value ? 'selected' : '';
-            options += `<option value="${value}" ${selected}>${name}</option>`;
-        });
-
-        selector.innerHTML = options;
-    }
-
-    /**
-     * Sélectionner un instrument connecté et charger ses capacités
-     */
-    async selectConnectedDevice(rawValue) {
-        this.selectedConnectedDevice = rawValue || null;
-
-        // Parser le format "deviceId::channel" pour les devices multi-instruments
-        let deviceId = rawValue;
-        let channel = undefined;
-        if (rawValue && rawValue.includes('::')) {
-            const parts = rawValue.split('::');
-            deviceId = parts[0];
-            channel = parseInt(parts[1]);
-        }
-
-        if (!rawValue) {
-            // Aucun appareil sélectionné : pas de filtre de notes
-            this.selectedDeviceCapabilities = null;
-            this.playableNotes = null;
-            this.updatePianoRollPlayableNotes();
-            if (this.channelPanel) this.channelPanel.updateTablatureButton();
-            this.log('info', 'No device selected - showing all notes as playable');
-            return;
-        }
-
-        try {
-            // Récupérer les capacités de l'instrument
-            const params = { deviceId };
-            if (channel !== undefined) {
-                params.channel = channel;
-            }
-            const response = await this.api.sendCommand('instrument_get_capabilities', params);
-
-            if (response && response.capabilities) {
-                this.selectedDeviceCapabilities = response.capabilities;
-                this.calculatePlayableNotes();
-                this.updatePianoRollPlayableNotes();
-                this.log('info', `Loaded capabilities for device ${deviceId}:`, this.selectedDeviceCapabilities);
-            } else {
-                // Pas de capacités définies : toutes les notes sont jouables
-                this.selectedDeviceCapabilities = null;
-                this.playableNotes = null;
-                this.updatePianoRollPlayableNotes();
-                this.log('info', `No capabilities defined for device ${deviceId}`);
-            }
-        } catch (error) {
-            this.log('error', `Failed to load capabilities for device ${deviceId}:`, error);
-            this.selectedDeviceCapabilities = null;
-            this.playableNotes = null;
-            this.updatePianoRollPlayableNotes();
-        }
-
-        // Update tablature button after device change
-        if (this.channelPanel) this.channelPanel.updateTablatureButton();
-    }
-
-    /**
-     * Calculer l'ensemble des notes jouables à partir des capacités
-     */
-    calculatePlayableNotes() {
-        if (!this.selectedDeviceCapabilities) {
-            this.playableNotes = null;
-            return;
-        }
-
-        const caps = this.selectedDeviceCapabilities;
-        const mode = caps.note_selection_mode || 'range';
-
-        if (mode === 'discrete' && caps.selected_notes && Array.isArray(caps.selected_notes)) {
-            // Mode discret : notes spécifiques (ex: pads de batterie)
-            this.playableNotes = new Set(caps.selected_notes.map(n => parseInt(n)));
-            this.log('info', `Discrete mode: ${this.playableNotes.size} playable notes`);
-        } else if (mode === 'range') {
-            // Mode range : plage de notes (min-max)
-            const minNote = caps.note_range_min !== null && caps.note_range_min !== undefined
-                ? parseInt(caps.note_range_min) : 0;
-            const maxNote = caps.note_range_max !== null && caps.note_range_max !== undefined
-                ? parseInt(caps.note_range_max) : 127;
-
-            if (minNote === 0 && maxNote === 127) {
-                // Plage complète : pas de filtre
-                this.playableNotes = null;
-                this.log('info', 'Full range (0-127) - no filter');
-            } else {
-                this.playableNotes = new Set();
-                for (let n = minNote; n <= maxNote; n++) {
-                    this.playableNotes.add(n);
-                }
-                this.log('info', `Range mode: notes ${minNote}-${maxNote} (${this.playableNotes.size} playable)`);
-            }
-        } else {
-            // Mode inconnu ou pas de restriction
-            this.playableNotes = null;
-        }
-    }
-
-    /**
-     * Mettre à jour le piano roll avec les notes jouables
-     */
-    updatePianoRollPlayableNotes() {
-        if (!this.pianoRoll) return;
-
-        // Passer les notes jouables au piano roll
-        this.pianoRoll.playableNotes = this.playableNotes;
-
-        // Forcer un redessin pour appliquer les couleurs de fond grisées
-        if (typeof this.pianoRoll.redraw === 'function') {
-            this.pianoRoll.redraw();
-        }
-
-        this.log('debug', 'Piano roll updated with playable notes filter');
     }
 
     /**
@@ -2884,12 +2735,6 @@ class MidiEditorModal {
                                     </select>
                                     <button class="tool-btn-compact" data-action="apply-instrument" id="apply-instrument-btn" title="${this.t('midiEditor.applyInstrument')}">✓</button>
                                 </div>
-                            </div>
-                            <div class="settings-popover-section">
-                                <label class="settings-label">🎹 ${this.t('midiEditor.connectedDevice')}</label>
-                                <select class="snap-select connected-device-select" id="connected-device-selector" title="${this.t('midiEditor.connectedDeviceTip')}">
-                                    <option value="">${this.t('midiEditor.noDeviceFilter')}</option>
-                                </select>
                             </div>
                             <div class="settings-popover-section">
                                 <label class="settings-label">🔊 Preview</label>
@@ -5394,19 +5239,6 @@ class MidiEditorModal {
             }
         });
 
-        // Sélecteur d'instrument connecté (pour filtrer les notes jouables)
-        const connectedDeviceSelector = document.getElementById('connected-device-selector');
-        if (connectedDeviceSelector) {
-            connectedDeviceSelector.addEventListener('change', async (e) => {
-                const deviceId = e.target.value;
-                await this.selectConnectedDevice(deviceId);
-                // Update tablature buttons after device selection changes
-                if (this.channelPanel) {
-                    this.channelPanel.updateTablatureButton();
-                }
-            });
-        }
-
         // Toggle preview source (GM / Routé)
         const previewToggle = document.getElementById('preview-source-toggle');
         if (previewToggle) {
@@ -6115,12 +5947,11 @@ class MidiEditorModal {
 
     /**
      * Get the effective device ID for string instrument operations.
-     * Returns the selected connected device, or '_editor' as fallback
-     * to allow tablature editing without a physical device.
+     * Returns '_editor' to allow tablature editing without a physical device.
      * @returns {string}
      */
     getEffectiveDeviceId() {
-        return this.selectedConnectedDevice || '_editor';
+        return '_editor';
     }
 
     /**

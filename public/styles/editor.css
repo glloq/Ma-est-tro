@@ -316,10 +316,6 @@ body.dark-mode .tool-btn:hover:not(:disabled) {
     flex: 1;
 }
 
-.settings-popover-section .connected-device-select {
-    width: 100%;
-}
-
 .preview-source-toggle {
     width: 100%;
     padding: 6px 10px;
