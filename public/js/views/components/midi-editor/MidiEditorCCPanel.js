@@ -41,12 +41,24 @@ class MidiEditorCCPanel {
         const m = this.modal;
         if (!m.container) return;
 
-        // Determiner le canal actif
-        let activeChannel = 0;
+        // Determiner le canal actif depuis les editeurs ou les canaux disponibles
+        let activeChannel = null;
         if (m.currentCCType === 'velocity' && m.velocityEditor) {
             activeChannel = m.velocityEditor.currentChannel;
         } else if (m.ccEditor) {
             activeChannel = m.ccEditor.currentChannel;
+        }
+
+        // Fallback: premier canal disponible
+        if (activeChannel === null) {
+            const allChannels = this.getAllCCChannels();
+            if (allChannels.length > 0) {
+                activeChannel = allChannels[0];
+            } else if (m.channels && m.channels.length > 0) {
+                activeChannel = m.channels[0].channel;
+            } else {
+                activeChannel = 0;
+            }
         }
 
         const usedTypes = this.getUsedCCTypesForChannel(activeChannel);
@@ -458,6 +470,8 @@ class MidiEditorCCPanel {
         const activeChannel = usedChannels.length > 0 ? usedChannels[0] : (allChannels.length > 0 ? allChannels[0] : 0);
         m.ccEditor.setChannel(activeChannel);
 
+        this.highlightUsedCCButtons();
+
         m.log('info', `CC Editor initialized - Type: ${m.currentCCType}, Channel: ${activeChannel + 1}, Type channels: [${usedChannels.map(c => c + 1).join(', ')}], All CC channels: [${allChannels.map(c => c + 1).join(', ')}]`);
 
         container.addEventListener('mouseup', () => {
@@ -768,6 +782,8 @@ class MidiEditorCCPanel {
 
         const firstChannel = m.channels.length > 0 ? m.channels[0].channel : 0;
         m.velocityEditor.setChannel(firstChannel);
+
+        this.highlightUsedCCButtons();
 
         m.log('info', `Velocity Editor initialized with ${m.fullSequence.length} notes, default channel: ${firstChannel + 1}`);
 

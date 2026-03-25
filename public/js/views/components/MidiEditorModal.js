@@ -589,6 +589,7 @@ class MidiEditorModal {
 
         // Réattacher les event listeners
         this.attachEditorChannelListeners();
+        this.highlightUsedCCButtons();
 
         this.log('info', `Sélecteur de canal mis à jour - Type ${this.currentCCType}: ${channelsToShow.length} canaux`);
     }
@@ -630,6 +631,8 @@ class MidiEditorModal {
                 this.ccEditor.setChannel(channel);
                 this.log('info', `Canal CC sélectionné: ${channel + 1}`);
             }
+
+            this.highlightUsedCCButtons();
         });
     }
 
@@ -716,6 +719,8 @@ class MidiEditorModal {
         if (usedChannels.length > 0) {
             this.log('info', `  - Canaux utilisés: ${usedChannels.map(c => c + 1).join(', ')}`);
         }
+
+        this.highlightUsedCCButtons();
     }
 
     /**
@@ -799,6 +804,8 @@ class MidiEditorModal {
         dynamicContainer.appendChild(fragment);
 
         this.log('info', `Added ${sortedCCs.length} dynamic CC buttons: ${sortedCCs.join(', ')}`);
+
+        this.highlightUsedCCButtons();
     }
 
     /**
@@ -1150,6 +1157,60 @@ class MidiEditorModal {
 
         // Mettre à jour l'état du bouton de suppression après le changement de type
         this.updateDeleteButtonState();
+        this.highlightUsedCCButtons();
+    }
+
+    /**
+     * Obtenir les types CC utilises sur un canal donne
+     */
+    getUsedCCTypesForChannel(channel) {
+        const usedTypes = new Set();
+        this.ccEvents.forEach(event => {
+            if (event.channel === channel) {
+                usedTypes.add(event.type);
+            }
+        });
+        if (this.fullSequence && this.fullSequence.some(note => note.c === channel)) {
+            usedTypes.add('velocity');
+        }
+        return usedTypes;
+    }
+
+    /**
+     * Mettre a jour le highlight des boutons CC selon les donnees presentes sur le canal actif
+     */
+    highlightUsedCCButtons() {
+        if (!this.container) return;
+
+        let activeChannel = null;
+        if (this.currentCCType === 'velocity' && this.velocityEditor) {
+            activeChannel = this.velocityEditor.currentChannel;
+        } else if (this.ccEditor) {
+            activeChannel = this.ccEditor.currentChannel;
+        }
+
+        if (activeChannel === null) {
+            const allChannels = this.getAllCCChannels();
+            if (allChannels.length > 0) {
+                activeChannel = allChannels[0];
+            } else if (this.channels && this.channels.length > 0) {
+                activeChannel = this.channels[0].channel;
+            } else {
+                activeChannel = 0;
+            }
+        }
+
+        const usedTypes = this.getUsedCCTypesForChannel(activeChannel);
+
+        const ccTypeButtons = this.container.querySelectorAll('.cc-type-btn');
+        ccTypeButtons.forEach(btn => {
+            const ccType = btn.dataset.ccType;
+            if (usedTypes.has(ccType)) {
+                btn.classList.add('has-data');
+            } else {
+                btn.classList.remove('has-data');
+            }
+        });
     }
 
     /**
@@ -1251,6 +1312,8 @@ class MidiEditorModal {
         const allChannels = this.getAllCCChannels();
         const activeChannel = usedChannels.length > 0 ? usedChannels[0] : (allChannels.length > 0 ? allChannels[0] : 0);
         this.ccEditor.setChannel(activeChannel);
+
+        this.highlightUsedCCButtons();
 
         this.log('info', `CC Editor initialized - Type: ${this.currentCCType}, Channel: ${activeChannel + 1}, Type channels: [${usedChannels.map(c => c + 1).join(', ')}], All CC channels: [${allChannels.map(c => c + 1).join(', ')}]`);
 
@@ -1458,6 +1521,8 @@ class MidiEditorModal {
         // Définir le premier canal utilisé comme canal actif par défaut
         const firstChannel = this.channels.length > 0 ? this.channels[0].channel : 0;
         this.velocityEditor.setChannel(firstChannel);
+
+        this.highlightUsedCCButtons();
 
         this.log('info', `Velocity Editor initialized with ${this.fullSequence.length} notes, default channel: ${firstChannel + 1}`);
 
