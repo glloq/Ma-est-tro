@@ -889,6 +889,47 @@ class DeviceManager {
         this.app.logger.warn(`udevadm not available: ${error.message}`);
       }
 
+      // Method 3: Check /sys/class/sound/ for USB MIDI class-compliant devices
+      // These don't appear as ttyUSB/ttyACM but still have serial numbers in sysfs
+      try {
+        const soundDevices = fs.readdirSync('/sys/class/sound')
+          .filter(d => d.startsWith('card'));
+
+        for (const card of soundDevices) {
+          try {
+            const deviceLink = `/sys/class/sound/${card}/device`;
+            if (!fs.existsSync(deviceLink)) continue;
+
+            // Walk up the sysfs tree to find the USB device's serial number
+            let usbPath = fs.realpathSync(deviceLink);
+            let serial = null;
+
+            for (let i = 0; i < 10 && usbPath !== '/'; i++) {
+              const serialFile = path.join(usbPath, 'serial');
+              if (fs.existsSync(serialFile)) {
+                serial = fs.readFileSync(serialFile, 'utf8').trim();
+                break;
+              }
+              usbPath = path.dirname(usbPath);
+            }
+
+            if (serial) {
+              const idFile = `/proc/asound/${card}/id`;
+              let cardId = card;
+              if (fs.existsSync(idFile)) {
+                cardId = fs.readFileSync(idFile, 'utf8').trim();
+              }
+              serialNumbers[cardId] = serial;
+              this.app.logger.debug(`Found USB MIDI serial for ${cardId}: ${serial}`);
+            }
+          } catch (error) {
+            // Skip individual card errors
+          }
+        }
+      } catch (error) {
+        this.app.logger.debug(`/sys/class/sound not available: ${error.message}`);
+      }
+
     } catch (error) {
       this.app.logger.warn(`Failed to get USB serial numbers: ${error.message}`);
     }
@@ -1017,11 +1058,15 @@ class DeviceManager {
         }
 
         // Check which cards have MIDI (rawmidi) interfaces
+        // Look for any midi* entry (midi0, midi1, midi2, ...) to support
+        // devices connected through USB hubs which may use indices other than 0
         const midiDeviceNames = new Set();
         for (const cardNum of cardNumbers) {
           try {
-            const midiPath = `/proc/asound/card${cardNum}/midi0`;
-            if (fs.existsSync(midiPath)) {
+            const cardDir = `/proc/asound/card${cardNum}`;
+            const entries = fs.readdirSync(cardDir);
+            const hasMidi = entries.some(entry => /^midi\d+$/.test(entry));
+            if (hasMidi) {
               // Read the card's ID for the device name
               const idPath = `/proc/asound/card${cardNum}/id`;
               let cardId = `card${cardNum}`;
