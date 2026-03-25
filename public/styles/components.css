@@ -898,11 +898,11 @@
 /* Boutons de la toolbar - taille maximale et couleurs */
 .midi-editor-modal .tool-btn {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-    padding: 6px 8px;
+    gap: 1px;
+    padding: 4px 8px;
     background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
     border: 2px solid #555;
     border-radius: 6px;
@@ -923,6 +923,14 @@
     font-size: 10px;
     white-space: nowrap;
     color: #ccc;
+}
+
+.midi-editor-modal .tool-btn .btn-shortcut {
+    font-size: 8px;
+    color: #999;
+    letter-spacing: 0.3px;
+    line-height: 1;
+    white-space: nowrap;
 }
 
 .midi-editor-modal .tool-btn:hover:not(:disabled) {

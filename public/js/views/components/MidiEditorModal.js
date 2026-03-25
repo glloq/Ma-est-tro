@@ -2774,9 +2774,11 @@ class MidiEditorModal {
                         <div class="toolbar-section">
                             <button class="tool-btn" data-action="undo" id="undo-btn" title="${this.t('midiEditor.undo')} (Ctrl+Z)" disabled>
                                 <span class="icon">↶</span>
+                                <span class="btn-shortcut">Ctrl+Z</span>
                             </button>
                             <button class="tool-btn" data-action="redo" id="redo-btn" title="${this.t('midiEditor.redo')} (Ctrl+Y)" disabled>
                                 <span class="icon">↷</span>
+                                <span class="btn-shortcut">Ctrl+Y</span>
                             </button>
                         </div>
 
@@ -2798,10 +2800,10 @@ class MidiEditorModal {
                                 <span class="icon">👁️</span>
                             </button>
                             <button class="tool-btn" data-action="mode-select" data-mode="select" title="${this.t('midiEditor.selectModeTip')}">
-                                <span class="icon">⊕</span>
+                                <span class="icon">◻</span>
                             </button>
                             <button class="tool-btn" data-action="mode-drag-notes" data-mode="drag-notes" title="${this.t('midiEditor.moveNotesTip')}">
-                                <span class="icon">🎵</span>
+                                <span class="icon">✋</span>
                             </button>
                             <button class="tool-btn" data-action="mode-add-note" data-mode="add-note" title="${this.t('midiEditor.addNoteTip')}">
                                 <span class="icon">➕</span>
@@ -2817,15 +2819,19 @@ class MidiEditorModal {
                         <div class="toolbar-section">
                             <button class="tool-btn" data-action="copy" id="copy-btn" title="${this.t('midiEditor.copy')} (Ctrl+C)" disabled>
                                 <span class="icon">📋</span>
+                                <span class="btn-shortcut">Ctrl+C</span>
                             </button>
                             <button class="tool-btn" data-action="paste" id="paste-btn" title="${this.t('midiEditor.paste')} (Ctrl+V)" disabled>
                                 <span class="icon">📄</span>
+                                <span class="btn-shortcut">Ctrl+V</span>
                             </button>
                             <button class="tool-btn" data-action="delete" id="delete-btn" title="${this.t('midiEditor.delete')} (Del)" disabled>
                                 <span class="icon">🗑</span>
+                                <span class="btn-shortcut">Suppr</span>
                             </button>
                             <button class="tool-btn" data-action="select-all" id="select-all-btn" title="${this.t('midiEditor.selectAll', { defaultValue: 'Select All' })} (Ctrl+A)">
-                                <span class="icon">⊞</span>
+                                <span class="icon">▣</span>
+                                <span class="btn-shortcut">Ctrl+A</span>
                             </button>
                         </div>
 
