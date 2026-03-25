@@ -626,7 +626,7 @@
         /* Bloc fichiers - fond coloré */
         body.theme-colored .file-list {
             background: linear-gradient(180deg, rgba(232, 236, 254, 0.5) 0%, rgba(243, 238, 255, 0.55) 50%, rgba(252, 232, 240, 0.35) 100%);
-            border-radius: 0 0 12px 12px;
+            border-radius: 0;
         }
 
         body.theme-colored .midi-files-header {
@@ -939,7 +939,11 @@
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 10px 20px 20px;
+            padding: 10px 20px 0;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
         }
 
         header {
@@ -950,6 +954,7 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             position: relative;
             z-index: 60; /* Au-dessus du piano roll */
+            flex-shrink: 0;
         }
 
         h1 {
@@ -1152,10 +1157,20 @@
         }
 
         .main-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
             gap: 6px;
-            margin-bottom: 6px;
+            margin-bottom: 0;
+        }
+
+        .main-grid > .card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            border-radius: 12px 12px 0 0;
         }
 
         .card {
@@ -1242,7 +1257,7 @@
         .file-list {
             list-style: none;
             margin-top: 12px;
-            max-height: 400px;
+            flex: 1;
             overflow-y: auto;
             overflow-x: hidden;
         }
@@ -2810,9 +2825,90 @@
             font-size: 12px;
             padding: 16px;
             border-radius: 8px;
-            height: 200px;
+            flex: 1;
+            min-height: 0;
             overflow-y: auto;
             margin-top: 12px;
+        }
+
+        /* Debug console layout */
+        #debugConsole {
+            border-radius: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        #debugConsole.hidden {
+            display: none;
+        }
+
+        /* Debug resize handle */
+        .debug-resize-handle {
+            height: 8px;
+            background: #e5e7eb;
+            cursor: ns-resize;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            position: relative;
+            user-select: none;
+        }
+
+        .debug-resize-handle.visible {
+            display: flex;
+        }
+
+        .debug-resize-handle::before {
+            content: '';
+            width: 40px;
+            height: 4px;
+            background: #9ca3af;
+            border-radius: 2px;
+        }
+
+        .debug-resize-handle:hover,
+        .debug-resize-handle.active {
+            background: #d1d5db;
+        }
+
+        .debug-resize-handle:hover::before,
+        .debug-resize-handle.active::before {
+            background: #667eea;
+        }
+
+        /* Dark theme resize handle */
+        body.theme-dark .debug-resize-handle {
+            background: #374151;
+        }
+        body.theme-dark .debug-resize-handle::before {
+            background: #6b7280;
+        }
+        body.theme-dark .debug-resize-handle:hover,
+        body.theme-dark .debug-resize-handle.active {
+            background: #4b5563;
+        }
+        body.theme-dark .debug-resize-handle:hover::before,
+        body.theme-dark .debug-resize-handle.active::before {
+            background: #667eea;
+        }
+
+        /* Colored theme resize handle */
+        body.theme-colored .debug-resize-handle {
+            background: rgba(118, 75, 162, 0.1);
+        }
+        body.theme-colored .debug-resize-handle::before {
+            background: rgba(118, 75, 162, 0.3);
+        }
+        body.theme-colored .debug-resize-handle:hover,
+        body.theme-colored .debug-resize-handle.active {
+            background: rgba(118, 75, 162, 0.15);
+        }
+        body.theme-colored .debug-resize-handle:hover::before,
+        body.theme-colored .debug-resize-handle.active::before {
+            background: #764ba2;
         }
 
         .log-line {
@@ -4544,6 +4640,9 @@
                 </section>
 
             </div>
+
+            <!-- Debug Resize Handle -->
+            <div class="debug-resize-handle" id="debugResizeHandle"></div>
 
             <!-- Console -->
             <section class="card hidden" id="debugConsole" aria-labelledby="debugConsoleHeading">
@@ -10401,6 +10500,9 @@
         document.getElementById('headerStopBtn').addEventListener('click', stopPlayback);
 
         // Event listener pour le bouton de debug
+        const debugResizeHandle = document.getElementById('debugResizeHandle');
+        const defaultDebugHeight = 250;
+
         document.getElementById('debugToggle').addEventListener('click', () => {
             const debugConsole = document.getElementById('debugConsole');
             const debugToggle = document.getElementById('debugToggle');
@@ -10408,12 +10510,50 @@
             debugConsole.classList.toggle('hidden');
             debugToggle.classList.toggle('active');
 
-            // Scroll vers le bas si on affiche les logs
             if (!debugConsole.classList.contains('hidden')) {
-                setTimeout(() => {
-                    debugConsole.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }, 100);
+                // Show resize handle and set debug height
+                debugResizeHandle.classList.add('visible');
+                const savedHeight = parseInt(localStorage.getItem('debugConsoleHeight')) || defaultDebugHeight;
+                debugConsole.style.height = savedHeight + 'px';
+            } else {
+                // Hide resize handle
+                debugResizeHandle.classList.remove('visible');
+                debugConsole.style.height = '';
             }
+        });
+
+        // Debug console resize logic
+        let debugResizing = false;
+        let debugStartY = 0;
+        let debugStartHeight = 0;
+
+        debugResizeHandle.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            debugResizing = true;
+            debugStartY = e.clientY;
+            const debugConsole = document.getElementById('debugConsole');
+            debugStartHeight = debugConsole.offsetHeight;
+            debugResizeHandle.classList.add('active');
+            document.body.style.cursor = 'ns-resize';
+            document.body.style.userSelect = 'none';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!debugResizing) return;
+            const deltaY = debugStartY - e.clientY;
+            const newHeight = Math.max(100, Math.min(window.innerHeight * 0.7, debugStartHeight + deltaY));
+            const debugConsole = document.getElementById('debugConsole');
+            debugConsole.style.height = newHeight + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!debugResizing) return;
+            debugResizing = false;
+            debugResizeHandle.classList.remove('active');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            const debugConsole = document.getElementById('debugConsole');
+            localStorage.setItem('debugConsoleHeight', debugConsole.offsetHeight);
         });
 
         // Event listener pour le bouton de réglages
