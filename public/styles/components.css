@@ -943,6 +943,13 @@
     border-color: #444;
 }
 
+.midi-editor-modal .tool-btn.mode-unsupported {
+    opacity: 0.2;
+    cursor: not-allowed;
+    border-color: #333;
+    background: #1a1a1a;
+}
+
 /* Couleurs spécifiques par action */
 .midi-editor-modal .tool-btn[data-action="undo"],
 .midi-editor-modal .tool-btn[data-action="redo"] {
@@ -1122,12 +1129,12 @@
     padding: 0;
     min-height: 44px;
     box-sizing: border-box;
-    background: var(--chip-bg, #1e1e1e);
-    border: 1px solid var(--chip-border, #555);
+    background: color-mix(in srgb, var(--chip-color, #555) 20%, #1e1e1e);
+    border: 1px solid color-mix(in srgb, var(--chip-color, #555) 30%, #333);
     border-right: none;
     border-radius: 6px 0 0 6px;
     cursor: pointer;
-    transition: box-shadow 0.15s ease;
+    transition: background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
     position: relative;
     overflow: hidden;
     flex-shrink: 0;
@@ -1135,28 +1142,19 @@
 }
 
 .midi-editor-modal .channel-chip:hover {
+    background: color-mix(in srgb, var(--chip-color, #555) 30%, #1e1e1e);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .midi-editor-modal .channel-chip.active {
+    background: color-mix(in srgb, var(--chip-color, #555) 50%, #1e1e1e);
+    border-color: color-mix(in srgb, var(--chip-color, #555) 70%, #333);
     box-shadow: 0 0 8px color-mix(in srgb, var(--chip-color, #555) 30%, transparent);
 }
 
 .midi-editor-modal .channel-chip.active:hover {
+    background: color-mix(in srgb, var(--chip-color, #555) 55%, #1e1e1e);
     box-shadow: 0 0 12px color-mix(in srgb, var(--chip-color, #555) 40%, transparent);
-}
-
-/* Color bar on the left edge */
-.midi-editor-modal .chip-color-bar {
-    width: 4px;
-    align-self: stretch;
-    flex-shrink: 0;
-    opacity: 0.5;
-    transition: opacity 0.15s ease;
-}
-
-.midi-editor-modal .channel-chip.active .chip-color-bar {
-    opacity: 1;
 }
 
 /* Chip content area */
@@ -1521,10 +1519,11 @@
     position: absolute;
     right: 0;
     top: 0;
-    bottom: 40px;
+    bottom: 40px; /* leave room for horizontal scrollbar */
     width: 40px;
-    height: calc(100% - 40px);
+    height: auto;
     flex-direction: column;
+    z-index: 10;
 }
 
 /* Boutons de navigation des sliders */

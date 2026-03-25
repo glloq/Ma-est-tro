@@ -2315,10 +2315,8 @@ class MidiEditorModal {
             const isPlayableHighlighted = this.channelPlayableHighlights?.has(ch.channel);
             const playableClass = isPlayableHighlighted ? 'playable-active' : '';
 
-            // Inline styles for chip (color bar + tinted background when active)
-            const inlineStyles = isActive
-                ? `--chip-color: ${color}; --chip-bg: ${color}20; --chip-border: ${color}cc;`
-                : `--chip-color: ${color}; --chip-bg: transparent; --chip-border: ${color}4d;`;
+            // Inline styles for chip (full background color)
+            const inlineStyles = `--chip-color: ${color};`;
 
             // DRUM button for channel 9
             const drumBtn = ch.channel === 9 ? `
@@ -2376,7 +2374,6 @@ class MidiEditorModal {
                             style="${inlineStyles}"
                             title="${gmLabelFull ? `${ch.channel + 1}: ${gmLabelFull}` : `Ch ${ch.channel + 1}`} — ${this.t('midiEditor.notesChannel', { count: ch.noteCount, channel: ch.channel + 1 })}"
                         >
-                            <span class="chip-color-bar" style="background: ${color}"></span>
                             <span class="chip-content">
                                 <span class="chip-main-line">${mainLabel}${playableIndicator}</span>
                                 ${routedLine}
@@ -2827,6 +2824,9 @@ class MidiEditorModal {
                             <button class="tool-btn" data-action="delete" id="delete-btn" title="${this.t('midiEditor.delete')} (Del)" disabled>
                                 <span class="icon">🗑</span>
                             </button>
+                            <button class="tool-btn" data-action="select-all" id="select-all-btn" title="${this.t('midiEditor.selectAll', { defaultValue: 'Select All' })} (Ctrl+A)">
+                                <span class="icon">⊞</span>
+                            </button>
                         </div>
 
                         <div class="toolbar-divider"></div>
@@ -2887,18 +2887,18 @@ class MidiEditorModal {
                                 <div class="piano-roll-container" id="piano-roll-container">
                                     <!-- webaudio-pianoroll sera inséré ici -->
                                 </div>
-                                <!-- Slider vertical avec boutons -->
-                                <div class="scroll-controls scroll-controls-vertical">
-                                    <button class="scroll-btn scroll-btn-up" data-action="scroll-up">▲</button>
-                                    <input type="range" class="scroll-slider scroll-vertical" id="scroll-v-slider" min="0" max="100" value="0" step="1" orient="vertical">
-                                    <button class="scroll-btn scroll-btn-down" data-action="scroll-down">▼</button>
-                                </div>
                             </div>
                             <!-- Slider horizontal avec boutons (toujours visible) -->
                             <div class="scroll-controls scroll-controls-horizontal">
                                 <button class="scroll-btn scroll-btn-left" data-action="scroll-left">◄</button>
                                 <input type="range" class="scroll-slider scroll-horizontal" id="scroll-h-slider" min="0" max="100" value="0" step="1">
                                 <button class="scroll-btn scroll-btn-right" data-action="scroll-right">►</button>
+                            </div>
+                            <!-- Slider vertical: couvre toute la hauteur (timeline + piano roll) -->
+                            <div class="scroll-controls scroll-controls-vertical">
+                                <button class="scroll-btn scroll-btn-up" data-action="scroll-up">▲</button>
+                                <input type="range" class="scroll-slider scroll-vertical" id="scroll-v-slider" min="0" max="100" value="0" step="1" orient="vertical">
+                                <button class="scroll-btn scroll-btn-down" data-action="scroll-down">▼</button>
                             </div>
                         </div>
 
@@ -3280,9 +3280,47 @@ class MidiEditorModal {
     // ========================================================================
 
     /**
+     * Retourne l'editeur specialise actif (Drum, Wind, Tablature) ou null si piano roll
+     */
+    _getActiveSpecializedEditor() {
+        if (this.drumPatternEditor?.isVisible) return this.drumPatternEditor;
+        if (this.windInstrumentEditor?.isVisible) return this.windInstrumentEditor;
+        if (this.tablatureEditor?.isVisible) return this.tablatureEditor;
+        return null;
+    }
+
+    /**
+     * Retourne le renderer interne de l'editeur specialise actif
+     */
+    _getActiveSpecializedRenderer() {
+        const editor = this._getActiveSpecializedEditor();
+        if (!editor) return null;
+        return editor.gridRenderer || editor.renderer || null;
+    }
+
+    /**
      * Annuler la dernière action
      */
     undo() {
+        const specializedRenderer = this._getActiveSpecializedRenderer();
+        if (specializedRenderer) {
+            if (specializedRenderer.undo()) {
+                const editor = this._getActiveSpecializedEditor();
+                // Wind editor needs monophony enforcement
+                if (editor && typeof editor._enforceMonophony === 'function') {
+                    editor._enforceMonophony();
+                }
+                if (editor && typeof editor._syncToMidi === 'function') {
+                    editor._syncToMidi();
+                }
+                this.isDirty = true;
+                this.updateSaveButton();
+                this.updateUndoRedoButtonsState();
+                this.updateEditButtons();
+            }
+            return;
+        }
+
         if (!this.pianoRoll || typeof this.pianoRoll.undo !== 'function') {
             this.log('warn', 'Undo not available');
             return;
@@ -3301,6 +3339,24 @@ class MidiEditorModal {
      * Refaire la dernière action annulée
      */
     redo() {
+        const specializedRenderer = this._getActiveSpecializedRenderer();
+        if (specializedRenderer) {
+            if (specializedRenderer.redo()) {
+                const editor = this._getActiveSpecializedEditor();
+                if (editor && typeof editor._enforceMonophony === 'function') {
+                    editor._enforceMonophony();
+                }
+                if (editor && typeof editor._syncToMidi === 'function') {
+                    editor._syncToMidi();
+                }
+                this.isDirty = true;
+                this.updateSaveButton();
+                this.updateUndoRedoButtonsState();
+                this.updateEditButtons();
+            }
+            return;
+        }
+
         if (!this.pianoRoll || typeof this.pianoRoll.redo !== 'function') {
             this.log('warn', 'Redo not available');
             return;
@@ -3319,10 +3375,19 @@ class MidiEditorModal {
      * Mettre à jour l'état des boutons undo/redo
      */
     updateUndoRedoButtonsState() {
-        if (!this.pianoRoll) return;
-
         const undoBtn = document.getElementById('undo-btn');
         const redoBtn = document.getElementById('redo-btn');
+
+        const specializedRenderer = this._getActiveSpecializedRenderer();
+        if (specializedRenderer) {
+            const canUndo = typeof specializedRenderer.canUndo === 'function' ? specializedRenderer.canUndo() : true;
+            const canRedo = typeof specializedRenderer.canRedo === 'function' ? specializedRenderer.canRedo() : true;
+            if (undoBtn) undoBtn.disabled = !canUndo;
+            if (redoBtn) redoBtn.disabled = !canRedo;
+            return;
+        }
+
+        if (!this.pianoRoll) return;
 
         if (undoBtn) {
             undoBtn.disabled = !this.pianoRoll.canUndo();
@@ -3364,6 +3429,18 @@ class MidiEditorModal {
      * Copier les notes sélectionnées
      */
     copy() {
+        const specializedRenderer = this._getActiveSpecializedRenderer();
+        if (specializedRenderer) {
+            if (typeof specializedRenderer.copySelected === 'function') {
+                specializedRenderer.copySelected();
+                this.log('info', 'Copied selection from specialized editor');
+                // Enable paste button
+                const pasteBtn = document.getElementById('paste-btn');
+                if (pasteBtn) pasteBtn.disabled = false;
+            }
+            return;
+        }
+
         if (!this.pianoRoll || typeof this.pianoRoll.copySelection !== 'function') {
             this.showNotification(this.t('midiEditor.copyNotAvailable'), 'error');
             return;
@@ -3394,6 +3471,25 @@ class MidiEditorModal {
      * Coller les notes du clipboard
      */
     paste() {
+        const specializedRenderer = this._getActiveSpecializedRenderer();
+        if (specializedRenderer) {
+            if (typeof specializedRenderer.hasClipboard === 'function' && specializedRenderer.hasClipboard()) {
+                const tick = specializedRenderer.playheadTick || 0;
+                specializedRenderer.paste(tick);
+                const editor = this._getActiveSpecializedEditor();
+                if (editor && typeof editor._enforceMonophony === 'function') {
+                    editor._enforceMonophony();
+                }
+                if (editor && typeof editor._syncToMidi === 'function') {
+                    editor._syncToMidi();
+                }
+                this.isDirty = true;
+                this.updateSaveButton();
+                this.updateEditButtons();
+            }
+            return;
+        }
+
         if (!this.clipboard || this.clipboard.length === 0) {
             this.showNotification(this.t('midiEditor.clipboardEmpty'), 'info');
             return;
@@ -3423,6 +3519,22 @@ class MidiEditorModal {
      * Supprimer les notes sélectionnées
      */
     deleteSelectedNotes() {
+        const specializedRenderer = this._getActiveSpecializedRenderer();
+        if (specializedRenderer) {
+            if (typeof specializedRenderer.deleteSelected === 'function') {
+                if (specializedRenderer.deleteSelected() > 0) {
+                    const editor = this._getActiveSpecializedEditor();
+                    if (editor && typeof editor._syncToMidi === 'function') {
+                        editor._syncToMidi();
+                    }
+                    this.isDirty = true;
+                    this.updateSaveButton();
+                    this.updateEditButtons();
+                }
+            }
+            return;
+        }
+
         if (!this.pianoRoll || typeof this.pianoRoll.deleteSelection !== 'function') {
             this.showNotification(this.t('midiEditor.deleteNotAvailable'), 'error');
             return;
@@ -3492,19 +3604,8 @@ class MidiEditorModal {
      * Sélectionner toutes les notes affichées (canaux actifs)
      */
     selectAllNotes() {
-        if (!this.pianoRoll || typeof this.pianoRoll.selectAll !== 'function') {
-            this.log('warn', 'selectAll not available on piano roll');
-            return;
-        }
-
-        // Sélectionner toutes les notes
-        this.pianoRoll.selectAll();
-
-        // Mettre à jour les boutons d'édition
-        this.updateEditButtons();
-
-        const count = this.getSelectionCount();
-        this.log('info', `Selected all notes: ${count}`);
+        // Delegate to the unified selectAll() which handles all editor types
+        this.selectAll();
     }
 
     /**
@@ -3916,9 +4017,20 @@ class MidiEditorModal {
     setEditMode(mode) {
         this.editMode = mode;
 
-        // Utiliser la méthode setUIMode du piano roll
-        if (this.pianoRoll && typeof this.pianoRoll.setUIMode === 'function') {
-            this.pianoRoll.setUIMode(mode);
+        // Dispatch to specialized editor if active
+        const editor = this._getActiveSpecializedEditor();
+        if (editor) {
+            // Map main toolbar modes to specialized editor modes
+            const modeMap = { 'drag-view': 'pan', 'select': 'select' };
+            const editorMode = modeMap[mode] || mode;
+            if (typeof editor._setEditMode === 'function') {
+                editor._setEditMode(editorMode);
+            }
+        } else {
+            // Utiliser la méthode setUIMode du piano roll
+            if (this.pianoRoll && typeof this.pianoRoll.setUIMode === 'function') {
+                this.pianoRoll.setUIMode(mode);
+            }
         }
 
         // Mettre à jour l'UI
@@ -3931,25 +4043,94 @@ class MidiEditorModal {
      * Mettre à jour les boutons de mode
      */
     updateModeButtons() {
-        const modeButtons = this.container?.querySelectorAll('[data-mode]');
+        const modeButtons = this.container?.querySelectorAll('.editor-toolbar [data-mode]');
         if (!modeButtons) return;
+
+        // Determine supported modes based on active editor
+        const supportedModes = this._getSupportedModes();
 
         modeButtons.forEach(btn => {
             const btnMode = btn.dataset.mode;
-            if (btnMode === this.editMode) {
-                btn.classList.add('active');
-                btn.disabled = true; // Griser le bouton du mode actif
-            } else {
+            const isSupported = supportedModes.includes(btnMode);
+
+            if (!isSupported) {
+                // Disable unsupported modes (grayed out)
                 btn.classList.remove('active');
+                btn.classList.add('mode-unsupported');
+                btn.disabled = true;
+            } else if (btnMode === this.editMode) {
+                btn.classList.add('active');
+                btn.classList.remove('mode-unsupported');
+                btn.disabled = true;
+            } else {
+                btn.classList.remove('active', 'mode-unsupported');
                 btn.disabled = false;
             }
         });
     }
 
     /**
+     * Retourne les modes supportes par l'editeur actif
+     */
+    _getSupportedModes() {
+        const editor = this._getActiveSpecializedEditor();
+        if (!editor) {
+            // Piano roll: all modes
+            return ['drag-view', 'select', 'drag-notes', 'add-note', 'resize-note'];
+        }
+        if (editor === this.drumPatternEditor) {
+            return ['drag-view', 'select'];
+        }
+        if (editor === this.windInstrumentEditor) {
+            return ['drag-view', 'select'];
+        }
+        if (editor === this.tablatureEditor) {
+            return ['drag-view', 'select'];
+        }
+        return ['drag-view', 'select'];
+    }
+
+    /**
+     * Selectionner tous les elements de l'editeur actif
+     */
+    selectAll() {
+        const specializedRenderer = this._getActiveSpecializedRenderer();
+        if (specializedRenderer) {
+            if (typeof specializedRenderer.selectAll === 'function') {
+                specializedRenderer.selectAll();
+                this.updateEditButtons();
+            }
+            return;
+        }
+
+        // Piano roll: select all notes
+        if (this.pianoRoll && typeof this.pianoRoll.selectAll === 'function') {
+            this.pianoRoll.selectAll();
+            this.updateEditButtons();
+        }
+    }
+
+    /**
      * Mettre à jour les boutons d'édition (copy, paste, delete, change channel)
      */
     updateEditButtons() {
+        const specializedRenderer = this._getActiveSpecializedRenderer();
+        if (specializedRenderer) {
+            // For specialized editors, enable buttons based on renderer state
+            const hasSelection = typeof specializedRenderer.getSelectionCount === 'function'
+                ? specializedRenderer.getSelectionCount() > 0
+                : true; // Default to enabled if we can't check
+            const copyBtn = document.getElementById('copy-btn');
+            const deleteBtn = document.getElementById('delete-btn');
+            const pasteBtn = document.getElementById('paste-btn');
+            const changeChannelBtn = document.getElementById('change-channel-btn');
+            if (copyBtn) copyBtn.disabled = !hasSelection;
+            if (deleteBtn) deleteBtn.disabled = !hasSelection;
+            if (pasteBtn) pasteBtn.disabled = !(typeof specializedRenderer.hasClipboard === 'function' && specializedRenderer.hasClipboard());
+            if (changeChannelBtn) changeChannelBtn.disabled = true; // Not applicable for specialized editors
+            return;
+        }
+
         const selectionCount = this.getSelectionCount();
         const hasSelection = selectionCount > 0;
 
@@ -4980,6 +5161,9 @@ class MidiEditorModal {
                 case 'delete':
                     this.deleteSelectedNotes();
                     break;
+                case 'select-all':
+                    this.selectAll();
+                    break;
                 case 'change-channel':
                     this.changeChannel();
                     break;
@@ -5481,6 +5665,16 @@ class MidiEditorModal {
      * Zoom horizontal
      */
     zoomHorizontal(factor) {
+        // Dispatch to specialized editor if active
+        const specializedRenderer = this._getActiveSpecializedRenderer();
+        if (specializedRenderer && typeof specializedRenderer.setZoom === 'function') {
+            const currentTPP = specializedRenderer.ticksPerPixel || 2;
+            // factor < 1 = zoom in (reduce ticksPerPixel), factor > 1 = zoom out
+            specializedRenderer.setZoom(currentTPP * factor);
+            this.syncAllEditors();
+            return;
+        }
+
         if (!this.pianoRoll) {
             this.log('warn', 'Cannot zoom: piano roll not initialized');
             return;
