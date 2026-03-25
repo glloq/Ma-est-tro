@@ -73,6 +73,12 @@ class AutoAssignModal {
     if (this.editorRef && typeof this.editorRef.getInstrumentName === 'function') {
       return this.editorRef.getInstrumentName(program);
     }
+    if (typeof getGMInstrumentName === 'function') {
+      return getGMInstrumentName(program);
+    }
+    if (typeof GM_INSTRUMENTS !== 'undefined' && GM_INSTRUMENTS[program]) {
+      return GM_INSTRUMENTS[program];
+    }
     return `Program ${program}`;
   }
 
@@ -650,7 +656,7 @@ class AutoAssignModal {
       ? _t('autoAssign.drums')
       : this.getGmProgramName(primaryProgram);
     const midiInstrumentHTML = midiInstrumentName
-      ? `<span class="aa-midi-instrument" title="MIDI: ${primaryProgram != null ? 'Program ' + primaryProgram : 'Drums'}">${escapeHtml(midiInstrumentName)}</span>`
+      ? `<span class="aa-midi-instrument" title="MIDI: ${primaryProgram != null ? escapeHtml(this.getGmProgramName(primaryProgram) || 'Program ' + primaryProgram) : 'Drums'}">${escapeHtml(midiInstrumentName)}</span>`
       : '';
 
     const isAutoSkipped = this.autoSkippedChannels && this.autoSkippedChannels.has(channel);
@@ -2051,7 +2057,8 @@ class AutoAssignModal {
   formatInstrumentInfo(instrument, compat) {
     const parts = [];
     if (instrument.gm_program !== null && instrument.gm_program !== undefined) {
-      parts.push(`GM ${instrument.gm_program}`);
+      const gmName = this.getGmProgramName(instrument.gm_program);
+      parts.push(gmName || `GM ${instrument.gm_program}`);
     }
     if (compat.transposition && compat.transposition.octaves !== 0) {
       const direction = compat.transposition.octaves > 0 ? 'up' : 'down';
