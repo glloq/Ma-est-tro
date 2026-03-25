@@ -6009,10 +6009,8 @@ class MidiEditorModal {
         if (deviceValue) {
             await this._fetchAndCacheRoutedGmProgram(channel, deviceValue);
         }
-        // Update only the affected chip (routing line + TAB/WIND buttons)
-        // instead of rebuilding ALL chips via innerHTML — which destroys DOM
-        // elements under the cursor and breaks hover/click state.
-        await this._updateChipRouting(channel);
+        // Update only the affected chip routing label, then refresh TAB/WIND buttons
+        this._updateChipRouting(channel);
         this._refreshStringInstrumentChannels();
 
         // Persist routing to database, then notify external components
@@ -6062,7 +6060,7 @@ class MidiEditorModal {
             // Use non-destructive DOM updates instead of refreshChannelButtons()
             // which uses innerHTML and destroys elements under the cursor,
             // breaking hover/click state on all channel buttons.
-            await this._updateAllChipRoutings();
+            this._updateAllChipRoutings();
             this.updateChannelButtons();
             this._refreshStringInstrumentChannels();
 
@@ -6326,8 +6324,10 @@ class MidiEditorModal {
     /**
      * Update routing indicator on a single channel chip (non-destructive).
      * Avoids refreshChannelButtons() which would rebuild all DOM and break hover/click.
+     * Only updates the routing label — TAB/WIND buttons are managed centrally
+     * by _refreshStringInstrumentChannels() using _routedGmPrograms cache.
      */
-    async _updateChipRouting(channel) {
+    _updateChipRouting(channel) {
         const chip = this.container?.querySelector(`.channel-chip[data-channel="${channel}"]`);
         if (!chip) return;
 
@@ -6349,60 +6349,6 @@ class MidiEditorModal {
         } else if (routeEl) {
             routeEl.remove();
         }
-
-        // Update TAB/WIND buttons based on routed instrument type
-        const group = chip.closest('.channel-chip-group');
-        if (group && channel !== 9) {
-            const existingTab = group.querySelector('.channel-tab-btn');
-            const existingWind = group.querySelector('.channel-wind-btn');
-
-            if (routedName) {
-                // Routed channel: show TAB/WIND based on routed instrument's gm_program
-                const routedGm = this._routedGmPrograms.get(channel);
-
-                // If we don't have the gm_program yet, fetch it
-                if (routedGm == null && this.channelRouting.has(channel)) {
-                    await this._fetchAndCacheRoutedGmProgram(channel, this.channelRouting.get(channel));
-                }
-
-                const gmProgram = this._routedGmPrograms.get(channel);
-                const isString = gmProgram != null && typeof isGmStringInstrument === 'function' && isGmStringInstrument(gmProgram);
-                const isWind = gmProgram != null && typeof WindInstrumentDatabase !== 'undefined' && WindInstrumentDatabase.isWindInstrument(gmProgram);
-
-                // TAB button
-                if (isString) {
-                    if (!existingTab) {
-                        const chData = this.channels.find(c => c.channel === channel);
-                        const color = this.channelColors[channel % this.channelColors.length];
-                        const tabEl = document.createElement('button');
-                        tabEl.className = 'channel-tab-btn';
-                        tabEl.dataset.channel = channel;
-                        tabEl.dataset.color = color;
-                        tabEl.title = this.t('tablature.tabButton', { instrument: chData?.instrument || this.t('stringInstrument.string') });
-                        tabEl.textContent = this.t('midiEditor.tabButton');
-                        group.appendChild(tabEl);
-                    }
-                } else if (existingTab) {
-                    existingTab.remove();
-                }
-
-                // WIND button
-                if (isWind) {
-                    if (!existingWind) {
-                        const preset = WindInstrumentDatabase.getPresetByProgram(gmProgram);
-                        const windEl = document.createElement('button');
-                        windEl.className = 'channel-wind-btn';
-                        windEl.dataset.channel = channel;
-                        windEl.title = this.t('windEditor.windEditorTitle', { name: preset?.name || this.t('windEditor.icon') });
-                        windEl.textContent = this.t('midiEditor.windButton');
-                        group.appendChild(windEl);
-                    }
-                } else if (existingWind) {
-                    existingWind.remove();
-                }
-            }
-            // If not routed, TAB/WIND buttons are managed by initial rendering and _refreshStringInstrumentChannels
-        }
     }
 
     /**
@@ -6410,20 +6356,18 @@ class MidiEditorModal {
      * Iterates through every chip group and calls _updateChipRouting for each,
      * preserving existing DOM elements (no innerHTML rebuild).
      */
-    async _updateAllChipRoutings() {
+    _updateAllChipRoutings() {
         const chipGroups = this.container?.querySelectorAll('.channel-chip-group');
         if (!chipGroups) return;
 
-        const promises = [];
         chipGroups.forEach(group => {
             const chip = group.querySelector('.channel-chip');
             if (!chip) return;
             const ch = parseInt(chip.dataset.channel);
             if (!isNaN(ch)) {
-                promises.push(this._updateChipRouting(ch));
+                this._updateChipRouting(ch);
             }
         });
-        await Promise.all(promises);
     }
 
     /**
@@ -6714,15 +6658,15 @@ class MidiEditorModal {
             }
 
             const channelInfo = this.channels?.find(c => c.channel === ch);
-            // If channel has routing to a real instrument, GM program is irrelevant
-            // for determining TAB/WIND buttons — the real instrument type prevails
+            // Determine effective GM program: use routed instrument's gm_program if available
             const hasRouting = this.channelRouting.has(ch);
+            const routedGm = this._routedGmPrograms.get(ch);
+            const effectiveProgram = (hasRouting && routedGm != null) ? routedGm : (channelInfo?.program ?? null);
 
-            const isGmString = !hasRouting && channelInfo &&
+            // String instrument detection: check effective program (routed or GM)
+            const isGmString = effectiveProgram != null &&
                 typeof MidiEditorChannelPanel !== 'undefined' &&
-                MidiEditorChannelPanel.getStringInstrumentCategory(channelInfo.program) !== null;
-            // Only show TAB button for GM-detected string instruments (when no routing override)
-            // DB records alone are not enough (they may be stale after instrument change)
+                MidiEditorChannelPanel.getStringInstrumentCategory(effectiveProgram) !== null;
             const ccEnabled = this._stringInstrumentCCEnabled.get(ch);
             const isStringInstrument = isGmString && ccEnabled !== false;
 
@@ -6749,17 +6693,16 @@ class MidiEditorModal {
             }
 
             // Wind instrument detection (GM 56-79: Brass, Reed, Pipe)
-            // Skip if channel has routing — GM program no longer represents the real instrument
+            // Uses effective program (routed gm_program or MIDI file GM)
             if (ch !== 9 && typeof WindInstrumentDatabase !== 'undefined') {
-                const chInfo = this.channels?.find(c => c.channel === ch);
-                const isWind = !hasRouting && chInfo && WindInstrumentDatabase.isWindInstrument(chInfo.program);
+                const isWind = effectiveProgram != null && WindInstrumentDatabase.isWindInstrument(effectiveProgram);
                 const existingWindBtn = group.querySelector('.channel-wind-btn');
 
                 if (isWind && !existingWindBtn) {
                     const windBtn = document.createElement('button');
                     windBtn.className = 'channel-wind-btn';
                     windBtn.dataset.channel = ch;
-                    windBtn.title = this.t('windEditor.windEditorTitle', { name: WindInstrumentDatabase.getPresetByProgram(chInfo.program)?.name || this.t('windEditor.icon') });
+                    windBtn.title = this.t('windEditor.windEditorTitle', { name: WindInstrumentDatabase.getPresetByProgram(effectiveProgram)?.name || this.t('windEditor.icon') });
                     windBtn.textContent = this.t('midiEditor.windButton');
                     windBtn.addEventListener('click', (ev) => {
                         ev.preventDefault();
