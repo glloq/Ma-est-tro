@@ -13,9 +13,9 @@
  *   CC20 (string select) + CC21 (fret select) events before each note-on.
  */
 
-// CC numbers for string instrument control (matches constants.js MIDI_CC)
-const CC_STRING_SELECT = 20;  // Select string number (1-6)
-const CC_FRET_SELECT = 21;    // Select fret position (0-36)
+// Default CC numbers for string instrument control (matches constants.js MIDI_CC)
+const CC_STRING_SELECT_DEFAULT = 20;
+const CC_FRET_SELECT_DEFAULT = 21;
 
 class TablatureConverter {
 
@@ -26,6 +26,15 @@ class TablatureConverter {
    * @param {number} instrumentConfig.num_frets - Number of frets (0 = fretless)
    * @param {boolean} instrumentConfig.is_fretless - Whether the instrument has no frets
    * @param {number} instrumentConfig.capo_fret - Capo position (shifts all open strings up)
+   * @param {number} [instrumentConfig.cc_string_number] - CC number for string select (default 20)
+   * @param {number} [instrumentConfig.cc_string_min] - Min value for string CC (default 1)
+   * @param {number} [instrumentConfig.cc_string_max] - Max value for string CC (default 12)
+   * @param {number} [instrumentConfig.cc_string_offset] - Offset for string CC value (default 0)
+   * @param {number} [instrumentConfig.cc_fret_number] - CC number for fret select (default 21)
+   * @param {number} [instrumentConfig.cc_fret_min] - Min value for fret CC (default 0)
+   * @param {number} [instrumentConfig.cc_fret_max] - Max value for fret CC (default 36)
+   * @param {number} [instrumentConfig.cc_fret_offset] - Offset for fret CC value (default 0)
+   * @param {number[]} [instrumentConfig.frets_per_string] - Per-string fret counts (null = uniform)
    */
   // Available algorithms
   static ALGORITHMS = {
@@ -45,14 +54,30 @@ class TablatureConverter {
     this.ccEnabled = instrumentConfig.cc_enabled !== undefined ? !!instrumentConfig.cc_enabled : true;
     this.algorithm = instrumentConfig.tab_algorithm || 'min_movement';
 
+    // Configurable CC numbers and parameters
+    this.ccStringNumber = instrumentConfig.cc_string_number !== undefined ? instrumentConfig.cc_string_number : CC_STRING_SELECT_DEFAULT;
+    this.ccStringMin = instrumentConfig.cc_string_min !== undefined ? instrumentConfig.cc_string_min : 1;
+    this.ccStringMax = instrumentConfig.cc_string_max !== undefined ? instrumentConfig.cc_string_max : 12;
+    this.ccStringOffset = instrumentConfig.cc_string_offset || 0;
+    this.ccFretNumber = instrumentConfig.cc_fret_number !== undefined ? instrumentConfig.cc_fret_number : CC_FRET_SELECT_DEFAULT;
+    this.ccFretMin = instrumentConfig.cc_fret_min !== undefined ? instrumentConfig.cc_fret_min : 0;
+    this.ccFretMax = instrumentConfig.cc_fret_max !== undefined ? instrumentConfig.cc_fret_max : 36;
+    this.ccFretOffset = instrumentConfig.cc_fret_offset || 0;
+
+    // Per-string fret counts (null = use numFrets for all)
+    this.fretsPerString = instrumentConfig.frets_per_string || null;
+
     // Effective open-string notes with capo applied
     this.effectiveTuning = this.tuning.map(note => note + this.capoFret);
 
-    // Precompute the playable range per string
-    this.stringRanges = this.effectiveTuning.map(openNote => ({
-      min: openNote,
-      max: this.isFretless ? openNote + 48 : openNote + this.numFrets
-    }));
+    // Precompute the playable range per string (using per-string frets if available)
+    this.stringRanges = this.effectiveTuning.map((openNote, i) => {
+      const maxFrets = this.fretsPerString ? (this.fretsPerString[i] || this.numFrets) : this.numFrets;
+      return {
+        min: openNote,
+        max: this.isFretless ? openNote + 48 : openNote + maxFrets
+      };
+    });
   }
 
   // ==========================================================================
@@ -479,20 +504,23 @@ class TablatureConverter {
 
       if (midiNote < 0 || midiNote > 127) continue;
 
-      // Generate CC20 (string select) and CC21 (fret select) only if cc_enabled
+      // Generate CC events (string select + fret select) only if cc_enabled
       if (this.ccEnabled) {
+        // String select: apply offset and clamp to configured range
+        const stringVal = Math.max(this.ccStringMin, Math.min(this.ccStringMax, event.string + this.ccStringOffset));
         ccEvents.push({
           tick: event.tick,
-          cc: CC_STRING_SELECT,
-          value: event.string,  // 1-based string number
+          cc: this.ccStringNumber,
+          value: stringVal,
           channel: event.channel ?? 0
         });
 
-        // Generate CC21 (fret select) before the note
+        // Fret select: apply offset and clamp to configured range
+        const fretVal = Math.max(this.ccFretMin, Math.min(this.ccFretMax, Math.round(event.fret) + this.ccFretOffset));
         ccEvents.push({
           tick: event.tick,
-          cc: CC_FRET_SELECT,
-          value: Math.round(event.fret),
+          cc: this.ccFretNumber,
+          value: fretVal,
           channel: event.channel ?? 0
         });
       }
@@ -564,7 +592,9 @@ class TablatureConverter {
           positions.push({ string: i + 1, fret });
         }
       } else {
-        if (fret <= this.numFrets) {
+        // Use per-string fret count if available, otherwise global numFrets
+        const maxFret = this.fretsPerString ? (this.fretsPerString[i] || this.numFrets) : this.numFrets;
+        if (fret <= maxFret) {
           positions.push({ string: i + 1, fret });
         }
       }
