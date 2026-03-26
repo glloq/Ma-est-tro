@@ -566,9 +566,8 @@ class MidiEditorModal {
             channelsToShow = this.channels.map(ch => ch.channel).sort((a, b) => a - b);
             activeChannel = this.velocityEditor ? this.velocityEditor.currentChannel : -1;
         } else {
-            // Pour CC/Pitchbend, afficher les canaux utilisés pour ce type
-            const usedChannels = this.getCCChannelsUsed();
-            channelsToShow = usedChannels.length > 0 ? usedChannels : this.getAllCCChannels();
+            // Pour CC/Pitchbend, afficher tous les canaux du fichier (pas seulement ceux ayant des CC)
+            channelsToShow = this.channels.map(ch => ch.channel).sort((a, b) => a - b);
             activeChannel = this.ccEditor ? this.ccEditor.currentChannel : -1;
         }
 
