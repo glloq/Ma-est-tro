@@ -577,8 +577,11 @@ class VelocityEditor {
         if (!this.renderScheduled) {
             this.renderScheduled = true;
             requestAnimationFrame(() => {
-                this.render();
-                this.renderScheduled = false;
+                try {
+                    this.render();
+                } finally {
+                    this.renderScheduled = false;
+                }
             });
         }
     }
@@ -652,6 +655,7 @@ class VelocityEditor {
 
         // Grille horizontale (valeurs de vélocité) - IDENTIQUE À CC
         const values = [0, 32, 64, 96, 127]; // IDENTIQUE À CC
+        const isColored = document.body.classList.contains('theme-colored');
         ctx.strokeStyle = '#3a3a3a'; // IDENTIQUE À CC
         ctx.lineWidth = 1;
 
@@ -665,7 +669,6 @@ class VelocityEditor {
             ctx.stroke();
 
             // Zone de label (fond)
-            const isColored = document.body.classList.contains('theme-colored');
             ctx.fillStyle = isColored ? '#f0f4ff' : '#1a1a1a';
             ctx.fillRect(0, y - 7, labelMargin - 2, 14);
 
