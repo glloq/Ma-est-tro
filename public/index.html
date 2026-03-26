@@ -5913,7 +5913,9 @@
             return defaults;
         })();
         let debugMonitorActive = false;
-        const DEBUG_MAX_LINES = 500;
+        const DEBUG_MAX_LINES = 300;
+        let debugMidiCount = 0;
+        let debugMidiResetTimer = null;
 
         // Note names for MIDI display
         const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -6000,18 +6002,20 @@
         // Trim log console to max lines
         function trimLogConsole() {
             const logEl = document.getElementById('logConsole');
-            while (logEl.childElementCount > DEBUG_MAX_LINES) {
+            if (!logEl) return;
+            while (logEl.children.length > DEBUG_MAX_LINES && logEl.firstChild) {
                 logEl.removeChild(logEl.firstChild);
             }
         }
 
         // Logger (app messages)
         function log(message, type = 'info') {
-            if (!debugFilters.sources.app) return;
             const logEl = document.getElementById('logConsole');
+            if (!logEl) return;
             const line = document.createElement('div');
             line.className = `log-line ${type}`;
             line.dataset.source = 'app';
+            if (!debugFilters.sources.app) line.style.display = 'none';
             const time = new Date().toLocaleTimeString();
             line.textContent = `[${time}] ${message}`;
             logEl.appendChild(line);
@@ -6021,12 +6025,21 @@
             }
         }
 
-        // MIDI Logger
+        // MIDI Logger (rate-limited: max 100 msgs/sec to protect browser)
         function logMidi(eventData) {
+            if (!eventData || !eventData.type) return;
             const { device, type, data, timestamp } = eventData;
-            if (!passesMidiFilter(type, data, device)) return;
+            if (!data || !passesMidiFilter(type, data, device)) return;
+
+            // Rate limiting
+            debugMidiCount++;
+            if (!debugMidiResetTimer) {
+                debugMidiResetTimer = setTimeout(() => { debugMidiCount = 0; debugMidiResetTimer = null; }, 1000);
+            }
+            if (debugMidiCount > 100) return;
 
             const logEl = document.getElementById('logConsole');
+            if (!logEl) return;
             const line = document.createElement('div');
             const category = getMidiTypeCategory(type);
             line.className = `log-line midi-${category}`;
@@ -6035,9 +6048,8 @@
             if (data.channel !== undefined) line.dataset.channel = data.channel;
             if (device) line.dataset.device = device;
 
-            const time = new Date(timestamp || Date.now()).toLocaleTimeString('fr-FR', {
-                hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3
-            });
+            const now = new Date(timestamp || Date.now());
+            const time = now.toLocaleTimeString() + '.' + String(now.getMilliseconds()).padStart(3, '0');
             line.textContent = `[${time}] ${formatMidiMessage(type, data, device)}`;
             logEl.appendChild(line);
             trimLogConsole();
@@ -6251,6 +6263,13 @@
                     initBatchActions(); // Initialiser les actions par lots
                     initAdvancedFilters(); // Initialiser les filtres avancés
 
+                    // Re-start MIDI debug monitoring if console was open (reconnect case)
+                    const dbgConsole = document.getElementById('debugConsole');
+                    if (dbgConsole && !dbgConsole.classList.contains('hidden')) {
+                        debugMonitorActive = false;
+                        startDebugMonitoring();
+                    }
+
                     // NOTE: file_routing_bulk_sync removed — it caused a cycle where
                     // localStorage stale data was re-inserted into DB on every page load.
                     // The DB is now the single source of truth for routing status.
@@ -6412,15 +6431,6 @@
                 // MIDI Monitor Events (debug console)
                 api.on('monitor_event', (data) => {
                     logMidi(data);
-                });
-
-                // On reconnect, restart monitoring if debug console was open
-                api.on('connected', () => {
-                    const debugConsole = document.getElementById('debugConsole');
-                    if (debugConsole && !debugConsole.classList.contains('hidden')) {
-                        debugMonitorActive = false; // Reset flag so startDebugMonitoring works
-                        startDebugMonitoring();
-                    }
                 });
 
                 await api.connect();
