@@ -1173,7 +1173,7 @@ class InstrumentSettingsModal extends BaseModal {
         const tab = this._getActiveTab();
         const config = tab?.stringInstrumentConfig;
         const numStrings = config?.num_strings || parseInt(this.$('#siNumStrings')?.value) || 6;
-        const numFrets = 36; // Always allow full range; per-string values hold actual fret counts
+        const numFrets = 24; // Max fret range for the diagram
         const tuning = config?.tuning || [];
 
         requestAnimationFrame(() => {

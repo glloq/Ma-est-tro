@@ -513,7 +513,7 @@ class StringInstrumentConfigModal extends BaseModal {
 
             this.neckDiagram = new NeckDiagramConfig(canvas, {
                 numStrings: this.config.num_strings,
-                numFrets: 36,
+                numFrets: 24,
                 fretsPerString: initFrets,
                 tuning: this.config.tuning,
                 isFretless: this.config.is_fretless,
