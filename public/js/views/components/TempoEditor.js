@@ -78,6 +78,8 @@ class TempoEditor {
             position: absolute;
             top: 0;
             left: 0;
+            width: 100%;
+            height: 100%;
             cursor: crosshair;
         `;
         this.ctx = this.canvas.getContext('2d');
@@ -416,8 +418,10 @@ class TempoEditor {
                 this.dragStart = { ticks, tempo };
             }
         } else if (this.selectionRect) {
-            // Rectangle de sélection en cours
-            this.renderSelectionRect(this.selectionRect.x, this.selectionRect.y, x, y);
+            // Rectangle de sélection en cours - stocker les coordonnées courantes
+            this.selectionRect.currentX = x;
+            this.selectionRect.currentY = y;
+            this.renderThrottled();
         }
     }
 
@@ -435,6 +439,8 @@ class TempoEditor {
             this.renderThrottled();
         }
         if (this.dragStart) {
+            this.saveState();
+            this.notifyChange();
             this.dragStart = null;
         }
     }
@@ -506,20 +512,7 @@ class TempoEditor {
         this.renderThrottled();
     }
 
-    renderSelectionRect(x1, y1, x2, y2) {
-        if (!this.renderScheduled) {
-            this.renderScheduled = true;
-            requestAnimationFrame(() => {
-                this.render();
-                this.ctx.strokeStyle = '#2196F3';
-                this.ctx.lineWidth = 1;
-                this.ctx.setLineDash([5, 5]);
-                this.ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-                this.ctx.setLineDash([]);
-                this.renderScheduled = false;
-            });
-        }
-    }
+    // renderSelectionRect est désormais intégré dans render()
 
     // === Création de ligne avec courbes ===
 
@@ -574,8 +567,11 @@ class TempoEditor {
         if (!this.renderScheduled) {
             this.renderScheduled = true;
             requestAnimationFrame(() => {
-                this.render();
-                this.renderScheduled = false;
+                try {
+                    this.render();
+                } finally {
+                    this.renderScheduled = false;
+                }
             });
         }
     }
@@ -595,6 +591,19 @@ class TempoEditor {
 
         // Événements
         this.renderEvents();
+
+        // Rectangle de sélection
+        if (this.selectionRect && this.selectionRect.currentX !== undefined) {
+            this.ctx.strokeStyle = '#2196F3';
+            this.ctx.lineWidth = 1;
+            this.ctx.setLineDash([5, 5]);
+            this.ctx.strokeRect(
+                this.selectionRect.x, this.selectionRect.y,
+                this.selectionRect.currentX - this.selectionRect.x,
+                this.selectionRect.currentY - this.selectionRect.y
+            );
+            this.ctx.setLineDash([]);
+        }
 
         this.isDirty = false;
     }
