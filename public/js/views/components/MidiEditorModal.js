@@ -652,6 +652,8 @@ class MidiEditorModal {
             } else if (this.ccEditor) {
                 this.ccEditor.setChannel(channel);
                 this.log('info', `Canal CC sélectionné: ${channel + 1}`);
+                // Auto-sélectionner un CC type avec données sur ce canal
+                this.selectBestCCTypeForChannel(channel);
             }
 
             // Mettre à jour le highlight des CC et les boutons dynamiques
@@ -1150,6 +1152,24 @@ class MidiEditorModal {
     }
 
     /**
+     * Sélectionner le meilleur type CC pour un canal donné
+     * Si le type actuel n'a pas de données sur le canal, sélectionner le premier type avec données
+     */
+    selectBestCCTypeForChannel(channel) {
+        const usedTypes = this.getUsedCCTypesForChannel(channel);
+
+        // Si le type actuel a des données sur ce canal, le garder
+        if (usedTypes.has(this.currentCCType)) return;
+
+        // Chercher le premier CC type avec des données sur ce canal (hors velocity/tempo)
+        const ccTypes = Array.from(usedTypes).filter(t => t !== 'velocity' && t !== 'tempo');
+        if (ccTypes.length > 0) {
+            this.selectCCType(ccTypes[0]);
+        }
+        // Sinon garder le type actuel (l'utilisateur peut dessiner de nouveaux CC)
+    }
+
+    /**
      * Sélectionner le type de CC/Velocity à éditer
      */
     selectCCType(ccType) {
@@ -1629,6 +1649,9 @@ class MidiEditorModal {
         const usedChannels = this.getCCChannelsUsed();
         const activeChannel = fileChannels.length > 0 ? fileChannels[0] : (usedChannels.length > 0 ? usedChannels[0] : 0);
         this.ccEditor.setChannel(activeChannel);
+
+        // Auto-sélectionner un CC type qui a des données sur ce canal
+        this.selectBestCCTypeForChannel(activeChannel);
 
         this.highlightUsedCCButtons();
 
