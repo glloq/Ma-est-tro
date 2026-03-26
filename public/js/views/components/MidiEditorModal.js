@@ -552,9 +552,16 @@ class MidiEditorModal {
         const channelSelector = document.getElementById('editor-channel-selector');
         if (!channelSelector) return;
 
-        // Le tempo n'utilise pas de canaux - masquer le sélecteur
+        // Le tempo est global - afficher tous les canaux comme actifs
         if (this.currentCCType === 'tempo') {
-            channelSelector.innerHTML = '';
+            const allChannels = this.channels.map(ch => ch.channel).sort((a, b) => a - b);
+            if (allChannels.length === 0) {
+                channelSelector.innerHTML = '';
+                return;
+            }
+            channelSelector.innerHTML = allChannels.map(channel =>
+                `<button class="cc-channel-btn active" data-channel="${channel}" title="${this.t('midiEditor.channelTip', { channel: channel + 1 })}" disabled>${channel + 1}</button>`
+            ).join('');
             return;
         }
 
