@@ -20,7 +20,16 @@ async function stringInstrumentCreate(app, data) {
     is_fretless: data.is_fretless,
     capo_fret: data.capo_fret,
     cc_enabled: data.cc_enabled,
-    tab_algorithm: data.tab_algorithm
+    tab_algorithm: data.tab_algorithm,
+    cc_string_number: data.cc_string_number,
+    cc_string_min: data.cc_string_min,
+    cc_string_max: data.cc_string_max,
+    cc_string_offset: data.cc_string_offset,
+    cc_fret_number: data.cc_fret_number,
+    cc_fret_min: data.cc_fret_min,
+    cc_fret_max: data.cc_fret_max,
+    cc_fret_offset: data.cc_fret_offset,
+    frets_per_string: data.frets_per_string
   });
   return { success: true, id };
 }
@@ -36,7 +45,16 @@ async function stringInstrumentUpdate(app, data) {
     is_fretless: data.is_fretless,
     capo_fret: data.capo_fret,
     cc_enabled: data.cc_enabled,
-    tab_algorithm: data.tab_algorithm
+    tab_algorithm: data.tab_algorithm,
+    cc_string_number: data.cc_string_number,
+    cc_string_min: data.cc_string_min,
+    cc_string_max: data.cc_string_max,
+    cc_string_offset: data.cc_string_offset,
+    cc_fret_number: data.cc_fret_number,
+    cc_fret_min: data.cc_fret_min,
+    cc_fret_max: data.cc_fret_max,
+    cc_fret_offset: data.cc_fret_offset,
+    frets_per_string: data.frets_per_string
   });
   return { success: updated };
 }

@@ -88,11 +88,18 @@ class StringInstrumentDatabase {
 
       const tuningJson = JSON.stringify(tuning);
 
+      const fretsPerStringJson = config.frets_per_string
+        ? JSON.stringify(Array.isArray(config.frets_per_string) ? config.frets_per_string : JSON.parse(config.frets_per_string))
+        : null;
+
       const stmt = this.db.prepare(`
         INSERT INTO string_instruments (
           device_id, channel, instrument_name, num_strings, num_frets,
-          tuning, is_fretless, capo_fret, cc_enabled, tab_algorithm
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          tuning, is_fretless, capo_fret, cc_enabled, tab_algorithm,
+          cc_string_number, cc_string_min, cc_string_max, cc_string_offset,
+          cc_fret_number, cc_fret_min, cc_fret_max, cc_fret_offset,
+          frets_per_string
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(device_id, channel) DO UPDATE SET
           instrument_name = excluded.instrument_name,
           num_strings = excluded.num_strings,
@@ -101,7 +108,16 @@ class StringInstrumentDatabase {
           is_fretless = excluded.is_fretless,
           capo_fret = excluded.capo_fret,
           cc_enabled = excluded.cc_enabled,
-          tab_algorithm = excluded.tab_algorithm
+          tab_algorithm = excluded.tab_algorithm,
+          cc_string_number = excluded.cc_string_number,
+          cc_string_min = excluded.cc_string_min,
+          cc_string_max = excluded.cc_string_max,
+          cc_string_offset = excluded.cc_string_offset,
+          cc_fret_number = excluded.cc_fret_number,
+          cc_fret_min = excluded.cc_fret_min,
+          cc_fret_max = excluded.cc_fret_max,
+          cc_fret_offset = excluded.cc_fret_offset,
+          frets_per_string = excluded.frets_per_string
       `);
 
       const result = stmt.run(
@@ -114,7 +130,16 @@ class StringInstrumentDatabase {
         config.is_fretless ? 1 : 0,
         config.capo_fret || 0,
         config.cc_enabled !== undefined ? (config.cc_enabled ? 1 : 0) : 1,
-        config.tab_algorithm || 'min_movement'
+        config.tab_algorithm || 'min_movement',
+        config.cc_string_number !== undefined ? config.cc_string_number : 20,
+        config.cc_string_min !== undefined ? config.cc_string_min : 1,
+        config.cc_string_max !== undefined ? config.cc_string_max : 12,
+        config.cc_string_offset || 0,
+        config.cc_fret_number !== undefined ? config.cc_fret_number : 21,
+        config.cc_fret_min !== undefined ? config.cc_fret_min : 0,
+        config.cc_fret_max !== undefined ? config.cc_fret_max : 36,
+        config.cc_fret_offset || 0,
+        fretsPerStringJson
       );
 
       this.logger.info(`String instrument created/updated for ${config.device_id} ch${config.channel}`);
@@ -257,6 +282,49 @@ class StringInstrumentDatabase {
         }
         fields.push('tab_algorithm = ?');
         values.push(updates.tab_algorithm);
+      }
+
+      // CC configuration fields
+      for (const ccField of ['cc_string_number', 'cc_fret_number']) {
+        if (updates[ccField] !== undefined) {
+          if (updates[ccField] < 0 || updates[ccField] > 127) {
+            throw new Error(`${ccField} must be between 0 and 127`);
+          }
+          fields.push(`${ccField} = ?`);
+          values.push(updates[ccField]);
+        }
+      }
+      for (const ccField of ['cc_string_min', 'cc_string_max', 'cc_fret_min', 'cc_fret_max']) {
+        if (updates[ccField] !== undefined) {
+          if (updates[ccField] < 0 || updates[ccField] > 127) {
+            throw new Error(`${ccField} must be between 0 and 127`);
+          }
+          fields.push(`${ccField} = ?`);
+          values.push(updates[ccField]);
+        }
+      }
+      for (const ccField of ['cc_string_offset', 'cc_fret_offset']) {
+        if (updates[ccField] !== undefined) {
+          fields.push(`${ccField} = ?`);
+          values.push(updates[ccField]);
+        }
+      }
+
+      // Per-string fret count
+      if (updates.frets_per_string !== undefined) {
+        if (updates.frets_per_string === null) {
+          fields.push('frets_per_string = ?');
+          values.push(null);
+        } else {
+          const fps = Array.isArray(updates.frets_per_string)
+            ? updates.frets_per_string
+            : JSON.parse(updates.frets_per_string);
+          for (const f of fps) {
+            if (f < 0 || f > 36) throw new Error('frets_per_string values must be between 0 and 36');
+          }
+          fields.push('frets_per_string = ?');
+          values.push(JSON.stringify(fps));
+        }
       }
 
       if (fields.length === 0) return false;
@@ -450,6 +518,16 @@ class StringInstrumentDatabase {
     // Authoritative string count = tuning array length (fixes any DB desync)
     const num_strings = tuning.length;
 
+    // Parse frets_per_string JSON if present
+    let frets_per_string = null;
+    if (row.frets_per_string) {
+      try {
+        frets_per_string = JSON.parse(row.frets_per_string);
+      } catch (e) {
+        this.logger.warn(`Failed to parse frets_per_string for string instrument ${row.id}: ${e.message}`);
+      }
+    }
+
     return {
       id: row.id,
       device_id: row.device_id,
@@ -462,6 +540,17 @@ class StringInstrumentDatabase {
       capo_fret: row.capo_fret,
       cc_enabled: row.cc_enabled !== undefined ? !!row.cc_enabled : true,
       tab_algorithm: row.tab_algorithm || 'min_movement',
+      // CC configuration
+      cc_string_number: row.cc_string_number !== undefined ? row.cc_string_number : 20,
+      cc_string_min: row.cc_string_min !== undefined ? row.cc_string_min : 1,
+      cc_string_max: row.cc_string_max !== undefined ? row.cc_string_max : 12,
+      cc_string_offset: row.cc_string_offset || 0,
+      cc_fret_number: row.cc_fret_number !== undefined ? row.cc_fret_number : 21,
+      cc_fret_min: row.cc_fret_min !== undefined ? row.cc_fret_min : 0,
+      cc_fret_max: row.cc_fret_max !== undefined ? row.cc_fret_max : 36,
+      cc_fret_offset: row.cc_fret_offset || 0,
+      // Per-string fret count
+      frets_per_string,
       created_at: row.created_at,
       updated_at: row.updated_at
     };

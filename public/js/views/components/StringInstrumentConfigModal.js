@@ -35,11 +35,25 @@ class StringInstrumentConfigModal extends BaseModal {
             is_fretless: false,
             capo_fret: 0,
             cc_enabled: true,
-            tab_algorithm: 'min_movement'
+            tab_algorithm: 'min_movement',
+            // CC configuration
+            cc_string_number: 20,
+            cc_string_min: 1,
+            cc_string_max: 12,
+            cc_string_offset: 0,
+            cc_fret_number: 21,
+            cc_fret_min: 0,
+            cc_fret_max: 36,
+            cc_fret_offset: 0,
+            // Per-string fret count (null = uniform)
+            frets_per_string: null
         };
 
         this.presets = {};
         this.existingId = null;
+
+        // Neck diagram instance (created in onOpen)
+        this.neckDiagram = null;
 
         // Piano constants
         this.NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -73,16 +87,26 @@ class StringInstrumentConfigModal extends BaseModal {
                 channel: channel
             });
             if (resp && resp.instrument) {
-                this.existingId = resp.instrument.id;
+                const inst = resp.instrument;
+                this.existingId = inst.id;
                 this.config = {
-                    instrument_name: resp.instrument.instrument_name || 'Guitar',
-                    num_strings: resp.instrument.num_strings || 6,
-                    num_frets: resp.instrument.num_frets || 24,
-                    tuning: resp.instrument.tuning || [40, 45, 50, 55, 59, 64],
-                    is_fretless: !!resp.instrument.is_fretless,
-                    capo_fret: resp.instrument.capo_fret || 0,
-                    cc_enabled: resp.instrument.cc_enabled !== undefined ? !!resp.instrument.cc_enabled : true,
-                    tab_algorithm: resp.instrument.tab_algorithm || 'min_movement'
+                    instrument_name: inst.instrument_name || 'Guitar',
+                    num_strings: inst.num_strings || 6,
+                    num_frets: inst.num_frets || 24,
+                    tuning: inst.tuning || [40, 45, 50, 55, 59, 64],
+                    is_fretless: !!inst.is_fretless,
+                    capo_fret: inst.capo_fret || 0,
+                    cc_enabled: inst.cc_enabled !== undefined ? !!inst.cc_enabled : true,
+                    tab_algorithm: inst.tab_algorithm || 'min_movement',
+                    cc_string_number: inst.cc_string_number !== undefined ? inst.cc_string_number : 20,
+                    cc_string_min: inst.cc_string_min !== undefined ? inst.cc_string_min : 1,
+                    cc_string_max: inst.cc_string_max !== undefined ? inst.cc_string_max : 12,
+                    cc_string_offset: inst.cc_string_offset || 0,
+                    cc_fret_number: inst.cc_fret_number !== undefined ? inst.cc_fret_number : 21,
+                    cc_fret_min: inst.cc_fret_min !== undefined ? inst.cc_fret_min : 0,
+                    cc_fret_max: inst.cc_fret_max !== undefined ? inst.cc_fret_max : 36,
+                    cc_fret_offset: inst.cc_fret_offset || 0,
+                    frets_per_string: inst.frets_per_string || null
                 };
             }
         } catch (e) {
@@ -182,6 +206,52 @@ class StringInstrumentConfigModal extends BaseModal {
                     </div>
                 </div>
 
+                <div class="si-cc-config-section ${ccCollapsedClass}" id="si-cc-config-section">
+                    <label class="si-section-title">CC Control</label>
+                    <div class="si-cc-row">
+                        <span class="si-cc-label">String Select</span>
+                        <div class="si-cc-params">
+                            <div class="si-cc-param">
+                                <label>CC#</label>
+                                <input type="number" class="si-input si-input-xs" id="si-cc-str-num" value="${c.cc_string_number}" min="0" max="127">
+                            </div>
+                            <div class="si-cc-param">
+                                <label>Min</label>
+                                <input type="number" class="si-input si-input-xs" id="si-cc-str-min" value="${c.cc_string_min}" min="0" max="127">
+                            </div>
+                            <div class="si-cc-param">
+                                <label>Max</label>
+                                <input type="number" class="si-input si-input-xs" id="si-cc-str-max" value="${c.cc_string_max}" min="0" max="127">
+                            </div>
+                            <div class="si-cc-param">
+                                <label>Offset</label>
+                                <input type="number" class="si-input si-input-xs" id="si-cc-str-offset" value="${c.cc_string_offset}" min="-127" max="127">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="si-cc-row">
+                        <span class="si-cc-label">Fret Select</span>
+                        <div class="si-cc-params">
+                            <div class="si-cc-param">
+                                <label>CC#</label>
+                                <input type="number" class="si-input si-input-xs" id="si-cc-fret-num" value="${c.cc_fret_number}" min="0" max="127">
+                            </div>
+                            <div class="si-cc-param">
+                                <label>Min</label>
+                                <input type="number" class="si-input si-input-xs" id="si-cc-fret-min" value="${c.cc_fret_min}" min="0" max="127">
+                            </div>
+                            <div class="si-cc-param">
+                                <label>Max</label>
+                                <input type="number" class="si-input si-input-xs" id="si-cc-fret-max" value="${c.cc_fret_max}" min="0" max="127">
+                            </div>
+                            <div class="si-cc-param">
+                                <label>Offset</label>
+                                <input type="number" class="si-input si-input-xs" id="si-cc-fret-offset" value="${c.cc_fret_offset}" min="-127" max="127">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="si-details-section ${ccCollapsedClass}" id="si-details-section">
                     <div class="si-params-row">
                         <div class="si-field">
@@ -200,6 +270,19 @@ class StringInstrumentConfigModal extends BaseModal {
                         <div class="si-field">
                             <label for="si-capo">${this.t('stringInstrument.capoFret')}</label>
                             <input type="number" id="si-capo" class="si-input si-input-sm" value="${c.capo_fret}" min="0" max="36">
+                        </div>
+                    </div>
+
+                    <div class="si-neck-section" ${c.is_fretless ? 'style="display:none"' : ''}>
+                        <div class="si-neck-header">
+                            <label class="si-section-title">${this.t('stringInstrument.numFrets')}</label>
+                            <div class="si-field si-checkbox-field si-neck-mode-toggle">
+                                <input type="checkbox" id="si-per-string-mode" ${c.frets_per_string ? 'checked' : ''}>
+                                <label for="si-per-string-mode">Par corde</label>
+                            </div>
+                        </div>
+                        <div class="si-neck-diagram-wrapper">
+                            <canvas id="si-neck-canvas" width="500" height="120"></canvas>
                         </div>
                     </div>
 
@@ -286,10 +369,10 @@ class StringInstrumentConfigModal extends BaseModal {
         // CC enabled toggle
         this.$('#si-cc-enabled')?.addEventListener('change', (e) => {
             this.config.cc_enabled = e.target.checked;
-            const section = this.dialog?.querySelector('#si-details-section');
-            if (section) {
-                section.classList.toggle('si-collapsed', !e.target.checked);
-            }
+            const detailsSection = this.dialog?.querySelector('#si-details-section');
+            const ccSection = this.dialog?.querySelector('#si-cc-config-section');
+            if (detailsSection) detailsSection.classList.toggle('si-collapsed', !e.target.checked);
+            if (ccSection) ccSection.classList.toggle('si-collapsed', !e.target.checked);
         });
 
         // Fretless toggle
@@ -329,6 +412,42 @@ class StringInstrumentConfigModal extends BaseModal {
             }
         });
 
+        // CC config inputs
+        const ccInputMap = {
+            'si-cc-str-num': 'cc_string_number',
+            'si-cc-str-min': 'cc_string_min',
+            'si-cc-str-max': 'cc_string_max',
+            'si-cc-str-offset': 'cc_string_offset',
+            'si-cc-fret-num': 'cc_fret_number',
+            'si-cc-fret-min': 'cc_fret_min',
+            'si-cc-fret-max': 'cc_fret_max',
+            'si-cc-fret-offset': 'cc_fret_offset',
+        };
+        for (const [inputId, configKey] of Object.entries(ccInputMap)) {
+            this.$(`#${inputId}`)?.addEventListener('input', (e) => {
+                const v = parseInt(e.target.value);
+                if (!isNaN(v)) this.config[configKey] = v;
+            });
+        }
+
+        // Per-string fret mode toggle
+        this.$('#si-per-string-mode')?.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                // Switch to per-string mode: init from current uniform value
+                this.config.frets_per_string = new Array(this.config.num_strings).fill(this.config.num_frets);
+            } else {
+                // Switch to uniform mode
+                this.config.frets_per_string = null;
+                if (this.neckDiagram) {
+                    this.neckDiagram.setUniformFrets(this.config.num_frets);
+                }
+            }
+            this._updateNeckDiagram();
+        });
+
+        // Initialize neck diagram
+        this._initNeckDiagram();
+
         // Click on piano keys + octave nav buttons
         this.dialog.addEventListener('click', (e) => {
             const action = e.target.closest('[data-action]')?.dataset.action;
@@ -364,6 +483,44 @@ class StringInstrumentConfigModal extends BaseModal {
                 }
                 return;
             }
+        });
+    }
+
+    // ========================================================================
+    // NECK DIAGRAM
+    // ========================================================================
+
+    _initNeckDiagram() {
+        const canvas = this.dialog?.querySelector('#si-neck-canvas');
+        if (!canvas || typeof NeckDiagramConfig === 'undefined') return;
+
+        // Size canvas to wrapper
+        const wrapper = canvas.parentElement;
+        if (wrapper) {
+            canvas.width = wrapper.clientWidth || 500;
+            canvas.height = 120;
+        }
+
+        this.neckDiagram = new NeckDiagramConfig(canvas, {
+            numStrings: this.config.num_strings,
+            numFrets: this.config.num_frets,
+            fretsPerString: this.config.frets_per_string,
+            tuning: this.config.tuning,
+            isFretless: this.config.is_fretless,
+            onChange: (fretsPerString) => {
+                this.config.frets_per_string = fretsPerString;
+            }
+        });
+    }
+
+    _updateNeckDiagram() {
+        if (!this.neckDiagram) return;
+        this.neckDiagram.setConfig({
+            numStrings: this.config.num_strings,
+            numFrets: this.config.num_frets,
+            fretsPerString: this.config.frets_per_string || new Array(this.config.num_strings).fill(this.config.num_frets),
+            tuning: this.config.tuning,
+            isFretless: this.config.is_fretless
         });
     }
 
@@ -428,16 +585,22 @@ class StringInstrumentConfigModal extends BaseModal {
     }
 
     _refreshBody() {
+        // Destroy old neck diagram before replacing DOM
+        if (this.neckDiagram) {
+            this.neckDiagram.destroy();
+            this.neckDiagram = null;
+        }
+
         const body = this.$('.modal-body');
         if (body) {
             body.innerHTML = this.renderBody();
             // Re-attach specific handlers
             this.$('#si-cc-enabled')?.addEventListener('change', (e) => {
                 this.config.cc_enabled = e.target.checked;
-                const section = this.dialog?.querySelector('#si-details-section');
-                if (section) {
-                    section.classList.toggle('si-collapsed', !e.target.checked);
-                }
+                const detailsSection = this.dialog?.querySelector('#si-details-section');
+                const ccSection = this.dialog?.querySelector('#si-cc-config-section');
+                if (detailsSection) detailsSection.classList.toggle('si-collapsed', !e.target.checked);
+                if (ccSection) ccSection.classList.toggle('si-collapsed', !e.target.checked);
             });
             this.$('#si-preset')?.addEventListener('change', (e) => {
                 this._applyPreset(e.target.value);
@@ -459,6 +622,36 @@ class StringInstrumentConfigModal extends BaseModal {
                 }
                 this._refreshBody();
             });
+            this.$('#si-per-string-mode')?.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this.config.frets_per_string = new Array(this.config.num_strings).fill(this.config.num_frets);
+                } else {
+                    this.config.frets_per_string = null;
+                    if (this.neckDiagram) this.neckDiagram.setUniformFrets(this.config.num_frets);
+                }
+                this._updateNeckDiagram();
+            });
+
+            // CC config inputs
+            const ccInputMap = {
+                'si-cc-str-num': 'cc_string_number',
+                'si-cc-str-min': 'cc_string_min',
+                'si-cc-str-max': 'cc_string_max',
+                'si-cc-str-offset': 'cc_string_offset',
+                'si-cc-fret-num': 'cc_fret_number',
+                'si-cc-fret-min': 'cc_fret_min',
+                'si-cc-fret-max': 'cc_fret_max',
+                'si-cc-fret-offset': 'cc_fret_offset',
+            };
+            for (const [inputId, configKey] of Object.entries(ccInputMap)) {
+                this.$(`#${inputId}`)?.addEventListener('input', (e) => {
+                    const v = parseInt(e.target.value);
+                    if (!isNaN(v)) this.config[configKey] = v;
+                });
+            }
+
+            // Reinit neck diagram
+            this._initNeckDiagram();
         }
     }
 
@@ -478,7 +671,16 @@ class StringInstrumentConfigModal extends BaseModal {
                 is_fretless: this.config.is_fretless,
                 capo_fret: this.config.capo_fret,
                 cc_enabled: this.config.cc_enabled,
-                tab_algorithm: this.config.tab_algorithm
+                tab_algorithm: this.config.tab_algorithm,
+                cc_string_number: this.config.cc_string_number,
+                cc_string_min: this.config.cc_string_min,
+                cc_string_max: this.config.cc_string_max,
+                cc_string_offset: this.config.cc_string_offset,
+                cc_fret_number: this.config.cc_fret_number,
+                cc_fret_min: this.config.cc_fret_min,
+                cc_fret_max: this.config.cc_fret_max,
+                cc_fret_offset: this.config.cc_fret_offset,
+                frets_per_string: this.config.frets_per_string
             };
 
             if (this.existingId) {

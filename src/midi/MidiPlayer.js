@@ -228,15 +228,12 @@ class MidiPlayer {
   }
 
   /**
-   * Inject CC20 (string select) and CC21 (fret select) events from tablature data.
+   * Inject CC events (string select + fret select) from tablature data.
+   * Uses configurable CC numbers, range, and offset from the instrument config.
    * Called after buildEventList() and loadedFileId is set.
-   * For each noteOn on a channel with tablature, inserts CC events just before the note.
    */
   _injectTablatureCCEvents() {
     if (!this.loadedFileId || !this.app.database) return;
-
-    const CC_STRING_SELECT = 20;
-    const CC_FRET_SELECT = 21;
 
     let tablatures;
     try {
@@ -250,17 +247,34 @@ class MidiPlayer {
 
     const tempoMap = this._buildTempoMap();
 
-    // Build lookup: channel -> array of {time, string, fret, midiNote}
+    // Build lookup: channel -> { events, ccConfig }
     const tabByChannel = new Map();
 
     for (const tab of tablatures) {
       if (!Array.isArray(tab.tablature_data) || tab.tablature_data.length === 0) continue;
 
-      // Skip if the instrument has CC generation disabled
+      // Load instrument config for CC numbers and parameters
+      let ccConfig = {
+        ccStringNumber: 20, ccStringMin: 1, ccStringMax: 12, ccStringOffset: 0,
+        ccFretNumber: 21, ccFretMin: 0, ccFretMax: 36, ccFretOffset: 0
+      };
+
       if (tab.string_instrument_id) {
         try {
           const instrument = this.app.database.stringInstrumentDB.getStringInstrumentById(tab.string_instrument_id);
-          if (instrument && instrument.cc_enabled === false) continue;
+          if (instrument) {
+            if (instrument.cc_enabled === false) continue;
+            ccConfig = {
+              ccStringNumber: instrument.cc_string_number !== undefined ? instrument.cc_string_number : 20,
+              ccStringMin: instrument.cc_string_min !== undefined ? instrument.cc_string_min : 1,
+              ccStringMax: instrument.cc_string_max !== undefined ? instrument.cc_string_max : 12,
+              ccStringOffset: instrument.cc_string_offset || 0,
+              ccFretNumber: instrument.cc_fret_number !== undefined ? instrument.cc_fret_number : 21,
+              ccFretMin: instrument.cc_fret_min !== undefined ? instrument.cc_fret_min : 0,
+              ccFretMax: instrument.cc_fret_max !== undefined ? instrument.cc_fret_max : 36,
+              ccFretOffset: instrument.cc_fret_offset || 0
+            };
+          }
         } catch (e) { /* ignore lookup errors */ }
       }
 
@@ -277,18 +291,20 @@ class MidiPlayer {
         });
       }
 
-      tabByChannel.set(channel, events);
+      tabByChannel.set(channel, { events, ccConfig });
     }
 
-    // For each noteOn, find matching tab event and inject CC20+CC21 just before it
+    // For each noteOn, find matching tab event and inject CC events just before it
     const ccEvents = [];
     const EPSILON = 0.0001; // CC events 0.1ms before noteOn
 
     for (const event of this.events) {
       if (event.type !== 'noteOn' || event.velocity === 0) continue;
 
-      const tabEvents = tabByChannel.get(event.channel);
-      if (!tabEvents) continue;
+      const tabData = tabByChannel.get(event.channel);
+      if (!tabData) continue;
+
+      const { events: tabEvents, ccConfig } = tabData;
 
       // Find matching tab event (closest time + same MIDI note)
       let bestMatch = null;
@@ -305,19 +321,23 @@ class MidiPlayer {
 
       // Match within 50ms tolerance
       if (bestMatch && bestTimeDiff < 0.05) {
+        // Apply offset and clamp to configured range
+        const stringVal = Math.max(ccConfig.ccStringMin, Math.min(ccConfig.ccStringMax, bestMatch.string + ccConfig.ccStringOffset));
+        const fretVal = Math.max(ccConfig.ccFretMin, Math.min(ccConfig.ccFretMax, Math.round(bestMatch.fret) + ccConfig.ccFretOffset));
+
         ccEvents.push({
           time: event.time - EPSILON,
           type: 'controller',
           channel: event.channel,
-          controller: CC_STRING_SELECT,
-          value: Math.min(127, Math.max(0, bestMatch.string))
+          controller: ccConfig.ccStringNumber,
+          value: Math.min(127, Math.max(0, stringVal))
         });
         ccEvents.push({
           time: event.time - EPSILON,
           type: 'controller',
           channel: event.channel,
-          controller: CC_FRET_SELECT,
-          value: Math.min(127, Math.max(0, Math.round(bestMatch.fret)))
+          controller: ccConfig.ccFretNumber,
+          value: Math.min(127, Math.max(0, fretVal))
         });
       }
     }
@@ -325,7 +345,7 @@ class MidiPlayer {
     if (ccEvents.length > 0) {
       this.events.push(...ccEvents);
       this.events.sort((a, b) => a.time - b.time);
-      this.app.logger.info(`Injected ${ccEvents.length} tablature CC events (CC20/CC21) for ${tabByChannel.size} channel(s)`);
+      this.app.logger.info(`Injected ${ccEvents.length} tablature CC events for ${tabByChannel.size} channel(s)`);
     }
   }
 
