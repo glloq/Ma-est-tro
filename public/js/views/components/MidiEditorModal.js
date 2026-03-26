@@ -647,8 +647,9 @@ class MidiEditorModal {
                 this.log('info', `Canal CC sélectionné: ${channel + 1}`);
             }
 
-            // Mettre à jour le highlight des CC et l'indicateur actif
+            // Mettre à jour le highlight des CC et les boutons dynamiques
             this.highlightUsedCCButtons();
+            this.updateDynamicCCButtons();
         });
     }
 
@@ -683,7 +684,8 @@ class MidiEditorModal {
                 currentTick += event.deltaTime || 0;
 
                 // Control Change events — capturer TOUS les CC (0-127)
-                if (event.type === 'controller') {
+                // Accepter 'controller' (midi-file lib) et 'controlChange' (MidiParser.js) pour robustesse
+                if (event.type === 'controller' || event.type === 'controlChange') {
                     const channel = event.channel !== undefined ? event.channel : 0;
                     const controller = event.controllerType;
 
@@ -799,7 +801,7 @@ class MidiEditorModal {
         // CC couverts par les boutons statiques
         const staticCCs = new Set(['cc1', 'cc2', 'cc5', 'cc7', 'cc10', 'cc11', 'cc74', 'cc76', 'cc77', 'cc78', 'cc91', 'pitchbend', 'aftertouch', 'polyAftertouch']);
 
-        // Trouver les CC présents dans le fichier mais pas en statique
+        // Trouver les CC présents dans le fichier mais pas en statique (tous canaux)
         const detectedCCs = new Set();
         this.ccEvents.forEach(e => {
             if (!staticCCs.has(e.type) && e.type.startsWith('cc')) {
@@ -818,6 +820,12 @@ class MidiEditorModal {
         // Afficher le groupe dynamique
         dynamicGroup.style.display = '';
 
+        // Déterminer le canal actif pour le filtrage visuel
+        const activeBtn = this.container.querySelector('#editor-channel-selector .cc-channel-btn.active');
+        const activeChannel = activeBtn ? parseInt(activeBtn.dataset.channel) :
+            (this.channels && this.channels.length > 0 ? this.channels[0].channel : 0);
+        const usedTypesOnChannel = this.getUsedCCTypesForChannel(activeChannel);
+
         // Trier les CC détectés numériquement
         const sortedCCs = Array.from(detectedCCs).sort((a, b) => {
             return parseInt(a.replace('cc', '')) - parseInt(b.replace('cc', ''));
@@ -833,9 +841,12 @@ class MidiEditorModal {
             const ccNum = parseInt(ccType.replace('cc', ''));
             const ccName = this._getCCName(ccNum);
             const count = ccCounts.get(ccType) || 0;
+            const hasDataOnChannel = usedTypesOnChannel.has(ccType);
 
             const btn = document.createElement('button');
             btn.className = 'cc-type-btn dynamic';
+            if (hasDataOnChannel) btn.classList.add('has-data');
+            if (!hasDataOnChannel) btn.classList.add('has-data-other');
             btn.dataset.ccType = ccType;
             btn.title = `${ccName} (${this.t('midiEditor.events', { count })})`;
             btn.textContent = `CC${ccNum}`;
@@ -1218,8 +1229,22 @@ class MidiEditorModal {
     }
 
     /**
+     * Obtenir l'ensemble de tous les types CC utilises dans le fichier (tous canaux confondus)
+     */
+    getAllUsedCCTypes() {
+        const allTypes = new Set();
+        this.ccEvents.forEach(event => {
+            allTypes.add(event.type);
+        });
+        if (this.fullSequence && this.fullSequence.length > 0) {
+            allTypes.add('velocity');
+        }
+        return allTypes;
+    }
+
+    /**
      * Mettre a jour la visibilite des boutons CC selon les donnees presentes sur le canal actif
-     * Masque les boutons CC sans donnees, masque les groupes vides
+     * Masque les boutons CC sans donnees dans le fichier, montre en attenue les CC d'autres canaux
      */
     highlightUsedCCButtons() {
         if (!this.container) return;
@@ -1229,19 +1254,24 @@ class MidiEditorModal {
         const activeChannel = activeBtn ? parseInt(activeBtn.dataset.channel) :
             (this.channels && this.channels.length > 0 ? this.channels[0].channel : 0);
 
-        const usedTypes = this.getUsedCCTypesForChannel(activeChannel);
+        const usedTypesOnChannel = this.getUsedCCTypesForChannel(activeChannel);
+        const allUsedTypes = this.getAllUsedCCTypes();
         const alwaysVisible = new Set(['velocity', 'tempo']);
 
         this.container.querySelectorAll('.cc-type-btn').forEach(btn => {
             const ccType = btn.dataset.ccType;
             if (!ccType) return; // bouton GO du custom CC
 
-            const hasData = usedTypes.has(ccType);
+            const hasDataOnChannel = usedTypesOnChannel.has(ccType);
+            const hasDataInFile = allUsedTypes.has(ccType);
             const isActive = btn.classList.contains('active');
             const isAlwaysVisible = alwaysVisible.has(ccType);
 
-            btn.classList.toggle('has-data', hasData);
-            btn.style.display = (isAlwaysVisible || hasData || isActive) ? '' : 'none';
+            btn.classList.toggle('has-data', hasDataOnChannel);
+            btn.classList.toggle('has-data-other', !hasDataOnChannel && hasDataInFile);
+
+            // Visible si: donnees sur le canal actif, OU donnees dans le fichier, OU toujours visible, OU actif
+            btn.style.display = (isAlwaysVisible || hasDataOnChannel || hasDataInFile || isActive) ? '' : 'none';
         });
 
         // Masquer les groupes CC entierement vides
@@ -1250,6 +1280,89 @@ class MidiEditorModal {
             const visibleBtns = group.querySelectorAll('.cc-type-btn:not([style*="display: none"])');
             group.style.display = visibleBtns.length > 0 ? '' : 'none';
         });
+    }
+
+    // ========================================================================
+    // DRAW SETTINGS POPOVER
+    // ========================================================================
+
+    /**
+     * Basculer l'affichage du popover de réglages de dessin
+     */
+    toggleDrawSettingsPopover() {
+        let popover = this.container?.querySelector('#cc-draw-settings-popover');
+
+        if (popover) {
+            const isVisible = popover.style.display !== 'none';
+            popover.style.display = isVisible ? 'none' : '';
+            return;
+        }
+
+        this.createDrawSettingsPopover();
+    }
+
+    /**
+     * Créer le popover de réglages de dessin
+     */
+    createDrawSettingsPopover() {
+        const btn = this.container?.querySelector('#cc-draw-settings-btn');
+        if (!btn) return;
+
+        const currentDensity = this.ccEditor?.drawDensityMultiplier || 1;
+
+        const popover = document.createElement('div');
+        popover.id = 'cc-draw-settings-popover';
+        popover.className = 'cc-draw-settings-popover';
+        popover.innerHTML = `
+            <div class="cc-draw-settings-section">
+                <label class="cc-draw-settings-label">${this.t('midiEditor.drawDensity')}</label>
+                <span class="cc-draw-settings-tip">${this.t('midiEditor.drawDensityTip')}</span>
+                <div class="cc-draw-density-options">
+                    <button class="cc-density-btn ${currentDensity === 0.25 ? 'active' : ''}" data-density="0.25">x4</button>
+                    <button class="cc-density-btn ${currentDensity === 0.5 ? 'active' : ''}" data-density="0.5">x2</button>
+                    <button class="cc-density-btn ${currentDensity === 1 ? 'active' : ''}" data-density="1">x1</button>
+                    <button class="cc-density-btn ${currentDensity === 2 ? 'active' : ''}" data-density="2">½</button>
+                    <button class="cc-density-btn ${currentDensity === 4 ? 'active' : ''}" data-density="4">¼</button>
+                </div>
+            </div>
+        `;
+
+        btn.parentElement.style.position = 'relative';
+        btn.parentElement.appendChild(popover);
+
+        // Attacher les listeners de densité
+        popover.querySelectorAll('.cc-density-btn').forEach(densityBtn => {
+            densityBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const density = parseFloat(densityBtn.dataset.density);
+                this.applyDrawDensity(density);
+                popover.querySelectorAll('.cc-density-btn').forEach(b => b.classList.remove('active'));
+                densityBtn.classList.add('active');
+            });
+        });
+
+        // Fermer le popover en cliquant en dehors
+        const closeHandler = (e) => {
+            if (!popover.contains(e.target) && e.target !== btn) {
+                popover.style.display = 'none';
+                document.removeEventListener('click', closeHandler);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeHandler), 0);
+    }
+
+    /**
+     * Appliquer la densité de dessin à l'éditeur CC actif
+     */
+    applyDrawDensity(multiplier) {
+        if (this.ccEditor && typeof this.ccEditor.setDrawDensity === 'function') {
+            this.ccEditor.setDrawDensity(multiplier);
+        }
+        if (this.tempoEditor && typeof this.tempoEditor.setDrawDensity === 'function') {
+            this.tempoEditor.setDrawDensity(multiplier);
+        }
+        this.log('info', `Draw density set to ${multiplier}`);
     }
 
     /**
@@ -5447,7 +5560,7 @@ class MidiEditorModal {
                 ccDrawSettingsBtn.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (this.ccPanel) this.ccPanel.toggleDrawSettingsPopover();
+                    this.toggleDrawSettingsPopover();
                 });
             }
         }
