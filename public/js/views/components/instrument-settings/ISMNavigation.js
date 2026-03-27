@@ -12,6 +12,10 @@
         this.$$('.ism-section').forEach(sec => {
             sec.classList.toggle('active', sec.dataset.section === sectionId);
         });
+        // Init piano when switching to notes section (needs visible viewport for size calc)
+        if (sectionId === 'notes') {
+            this._initPianoForActiveTab();
+        }
     };
 
     ISMNavigation._switchTab = async function(channel) {

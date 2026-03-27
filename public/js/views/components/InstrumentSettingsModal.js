@@ -477,8 +477,15 @@ class InstrumentSettingsModal extends BaseModal {
         const tab = this._getActiveTab();
         if (!tab) return;
         const s = tab.settings;
-        if (typeof initPianoKeyboard === 'function') {
+        if (typeof initPianoKeyboard !== 'function') return;
+
+        // Use requestAnimationFrame + setTimeout to ensure DOM is painted
+        const self = this;
+        requestAnimationFrame(() => {
             setTimeout(() => {
+                const container = document.getElementById('pianoKeyboardMini');
+                if (!container) return;
+
                 initPianoKeyboard(
                     s.note_range_min, s.note_range_max,
                     s.note_selection_mode || 'range',
@@ -488,7 +495,80 @@ class InstrumentSettingsModal extends BaseModal {
                     const gmSelect = document.getElementById('gmProgramSelect');
                     if (gmSelect) onGmProgramChanged(gmSelect);
                 }
-            }, 50);
+
+                // Center piano view on playable notes
+                self._centerPianoOnNotes(s);
+
+                // Apply octave mode highlighting
+                self._applyOctaveModeHighlight();
+            }, 80);
+        });
+    }
+
+    /**
+     * Center the piano viewport on the instrument's note range
+     */
+    _centerPianoOnNotes(settings) {
+        if (typeof navigatePiano !== 'function') return;
+
+        let centerNote = null;
+
+        if (settings.note_selection_mode === 'discrete' && settings.selected_notes && settings.selected_notes.length > 0) {
+            // Center on the middle of selected discrete notes
+            const sorted = [...settings.selected_notes].sort((a, b) => a - b);
+            centerNote = sorted[Math.floor(sorted.length / 2)];
+        } else if (settings.note_range_min != null && settings.note_range_max != null) {
+            // Center on middle of range
+            centerNote = Math.round((settings.note_range_min + settings.note_range_max) / 2);
+        } else {
+            // Default: center on C4 (middle C = 60)
+            centerNote = 60;
+        }
+
+        if (centerNote === null) return;
+
+        // Calculate target octave to center the view
+        const targetOctave = Math.floor(centerNote / 12) - 1;
+        const viewport = document.querySelector('.piano-viewport');
+        if (!viewport) return;
+        const OCTAVE_WIDTH = 126;
+        const availableWidth = viewport.clientWidth - 20;
+        const visibleOctaves = Math.max(1, Math.floor(availableWidth / OCTAVE_WIDTH));
+        const centerOctave = targetOctave - Math.floor(visibleOctaves / 2);
+
+        // Set the global variable directly and re-render
+        if (typeof currentPianoStartOctave !== 'undefined') {
+            const MIN_OCT = typeof MIN_OCTAVE !== 'undefined' ? MIN_OCTAVE : -1;
+            const MAX_OCT = typeof MAX_OCTAVE !== 'undefined' ? MAX_OCTAVE : 9;
+            window.currentPianoStartOctave = Math.max(MIN_OCT, Math.min(MAX_OCT - visibleOctaves + 1, centerOctave));
+            if (typeof renderPianoKeyboard === 'function') {
+                renderPianoKeyboard();
+                // Re-apply highlight after re-render
+                this._applyOctaveModeHighlight();
+            }
+        }
+    }
+
+    /**
+     * Apply octave mode highlighting on the piano keys
+     */
+    _applyOctaveModeHighlight() {
+        const octaveModeInput = document.getElementById('octaveModeInput');
+        const rootNoteInput = document.getElementById('rootNoteInput');
+        const noteRangeMin = document.getElementById('noteRangeMin');
+        const noteRangeMax = document.getElementById('noteRangeMax');
+
+        if (!octaveModeInput) return;
+
+        const modeKey = octaveModeInput.value || 'chromatic';
+        const rootNote = rootNoteInput ? parseInt(rootNoteInput.value) || 0 : 0;
+        const rangeMin = noteRangeMin && noteRangeMin.value !== '' ? parseInt(noteRangeMin.value) : 0;
+        const rangeMax = noteRangeMax && noteRangeMax.value !== '' ? parseInt(noteRangeMax.value) : 127;
+
+        const playableNotes = InstrumentSettingsModal.computePlayableNotes(rangeMin, rangeMax, modeKey, rootNote);
+
+        if (typeof this._highlightPlayableNotes === 'function') {
+            this._highlightPlayableNotes(playableNotes);
         }
     }
 
