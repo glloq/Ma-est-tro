@@ -226,11 +226,11 @@
             });
         });
 
-        // Octave mode selector
-        const octaveModeSelect = this.$('#octaveModeSelect');
-        const rootNoteSelect = this.$('#rootNoteSelect');
-        const updateOctaveMode = function() {
-            const modeKey = octaveModeSelect ? octaveModeSelect.value : 'chromatic';
+        // Octave mode toggle buttons
+        var updateOctaveMode = function() {
+            const activeBtn = self.$('.ism-octave-btn.active');
+            const modeKey = activeBtn ? activeBtn.dataset.octave : 'chromatic';
+            const rootNoteSelect = self.$('#rootNoteSelect');
             const root = rootNoteSelect ? parseInt(rootNoteSelect.value) : 0;
             // Update hidden inputs
             const modeInput = self.$('#octaveModeInput');
@@ -238,23 +238,27 @@
             const rootInput = self.$('#rootNoteInput');
             if (rootInput) rootInput.value = root;
             // Compute playable notes
-            const minInput = self.$('#noteRangeMin');
-            const maxInput = self.$('#noteRangeMax');
+            const minInput = document.getElementById('noteRangeMin');
+            const maxInput = document.getElementById('noteRangeMax');
             const rangeMin = minInput && minInput.value !== '' ? parseInt(minInput.value) : 21;
             const rangeMax = maxInput && maxInput.value !== '' ? parseInt(maxInput.value) : 108;
             const playableNotes = InstrumentSettingsModal.computePlayableNotes(rangeMin, rangeMax, modeKey, root);
             const playableInput = self.$('#playableNotesInput');
             if (playableInput) playableInput.value = JSON.stringify(playableNotes);
-            // Update info display
-            const mode = InstrumentSettingsModal.OCTAVE_MODES[modeKey];
+            // Update info
             const infoEl = self.$('#octaveInfo');
-            if (infoEl && mode) {
-                infoEl.innerHTML = `<span class="ism-octave-badge">${mode.count} notes/octave</span><span class="ism-octave-count">${playableNotes.length} notes jouables sur la plage</span>`;
-            }
+            if (infoEl) infoEl.textContent = playableNotes.length + ' notes jouables';
             // Highlight playable notes on piano keyboard
             self._highlightPlayableNotes(playableNotes);
         };
-        if (octaveModeSelect) octaveModeSelect.addEventListener('change', updateOctaveMode);
+        this.$$('.ism-octave-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                self.$$('.ism-octave-btn').forEach(function(b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                updateOctaveMode();
+            });
+        });
+        const rootNoteSelect = this.$('#rootNoteSelect');
         if (rootNoteSelect) rootNoteSelect.addEventListener('change', updateOctaveMode);
     };
 
@@ -406,6 +410,10 @@
                 if (notesSection) {
                     notesSection.innerHTML = this._renderNotesSection();
                     this._attachNotesSectionListeners();
+                    // Re-init piano if notes section is currently visible
+                    if (this.activeSection === 'notes') {
+                        this._initPianoForActiveTab();
+                    }
                 }
 
                 // Refresh identity section (emoji changes)
@@ -432,8 +440,7 @@
             }.bind(this));
         }
 
-        // Init piano
-        this._initPianoForActiveTab();
+        // Piano is initialized by _switchSection('notes') when the section becomes visible
     };
 
     ISMListeners._attachIdentitySectionListeners = function() {

@@ -219,26 +219,11 @@ class InstrumentSettingsModal extends BaseModal {
         drums:       [7, 10, 91]
     };
 
-    // Octave modes: how many notes per octave are selectable
-    // intervals = array of semitone offsets within one octave (0-11)
+    // 3 octave modes: how many notes per octave
     static OCTAVE_MODES = {
-        chromatic:      { name: 'Chromatique (12/oct)',     count: 12, intervals: [0,1,2,3,4,5,6,7,8,9,10,11] },
-        major:          { name: 'Majeure (7/oct)',          count: 7,  intervals: [0,2,4,5,7,9,11] },
-        minor:          { name: 'Mineure naturelle (7/oct)',count: 7,  intervals: [0,2,3,5,7,8,10] },
-        harmonicMin:    { name: 'Mineure harmonique (7/oct)',count: 7, intervals: [0,2,3,5,7,8,11] },
-        dorian:         { name: 'Dorien (7/oct)',           count: 7,  intervals: [0,2,3,5,7,9,10] },
-        mixolydian:     { name: 'Mixolydien (7/oct)',       count: 7,  intervals: [0,2,4,5,7,9,10] },
-        pentatonic:     { name: 'Pentatonique maj. (5/oct)',count: 5,  intervals: [0,2,4,7,9] },
-        pentatonicMin:  { name: 'Pentatonique min. (5/oct)',count: 5,  intervals: [0,3,5,7,10] },
-        blues:          { name: 'Blues (6/oct)',             count: 6,  intervals: [0,3,5,6,7,10] },
-        wholeNote:      { name: 'Tons entiers (6/oct)',     count: 6,  intervals: [0,2,4,6,8,10] },
-        majorChord:     { name: 'Accord majeur (3/oct)',    count: 3,  intervals: [0,4,7] },
-        minorChord:     { name: 'Accord mineur (3/oct)',    count: 3,  intervals: [0,3,7] },
-        seventh:        { name: 'Septième (4/oct)',         count: 4,  intervals: [0,4,7,10] },
-        diminished:     { name: 'Diminué (4/oct)',          count: 4,  intervals: [0,3,6,9] },
-        augmented:      { name: 'Augmenté (3/oct)',         count: 3,  intervals: [0,4,8] },
-        sus2:           { name: 'Sus2 (3/oct)',             count: 3,  intervals: [0,2,7] },
-        sus4:           { name: 'Sus4 (3/oct)',             count: 3,  intervals: [0,5,7] }
+        chromatic:  { name: '12 notes', label: 'Chromatique',  count: 12, intervals: [0,1,2,3,4,5,6,7,8,9,10,11] },
+        diatonic:   { name: '7 notes',  label: 'Diatonique',   count: 7,  intervals: [0,2,4,5,7,9,11] },
+        pentatonic: { name: '5 notes',  label: 'Pentatonique', count: 5,  intervals: [0,2,4,7,9] }
     };
 
     /**
@@ -283,15 +268,6 @@ class InstrumentSettingsModal extends BaseModal {
         reed: '🎷', pipe: '🪈', synthLead: '🎛️', synthPad: '🎛️',
         synthFx: '🎛️', ethnic: '🪕', percussive: '🥁', soundFx: '🔊',
         drums: '🥁'
-    };
-
-    static COMM_PROTOCOLS = {
-        midi_din:  { label: 'MIDI DIN (5-pin)', icon: '🎵' },
-        midi_usb:  { label: 'MIDI USB', icon: '🔌' },
-        midi_ble:  { label: 'MIDI BLE (Bluetooth)', icon: '📶' },
-        midi_wifi: { label: 'MIDI WiFi (RTP/rtpMIDI)', icon: '📡' },
-        serial_raw: { label: 'Serial brut (raw)', icon: '⚡' },
-        osc:       { label: 'OSC (Open Sound Control)', icon: '🌐' }
     };
 
     constructor(api) {
@@ -356,7 +332,8 @@ class InstrumentSettingsModal extends BaseModal {
                 headerEl.innerHTML = `⚙️ ${this.t('instrumentSettings.title')} — ${this.escape(device.displayName || device.name)}`;
             }
 
-            this._initPianoForActiveTab();
+            // Piano will be initialized when user switches to Notes section
+            // (viewport needs to be visible for correct size calculation)
 
             // Wire SysEx identity event listener
             this._sysexHandler = (data) => this.handleSysExIdentity(data);
@@ -473,80 +450,59 @@ class InstrumentSettingsModal extends BaseModal {
         return this.instrumentTabs.find(t => t.channel === this.activeChannel) || null;
     }
 
+    /**
+     * Init piano keyboard — must be called when the Notes section is VISIBLE
+     * so that the viewport has a real width for octave calculations.
+     */
     _initPianoForActiveTab() {
         const tab = this._getActiveTab();
         if (!tab) return;
         const s = tab.settings;
         if (typeof initPianoKeyboard !== 'function') return;
 
-        // Use requestAnimationFrame + setTimeout to ensure DOM is painted
         const self = this;
+
+        // Wait one frame so the section is fully laid out and visible
         requestAnimationFrame(() => {
-            setTimeout(() => {
-                const container = document.getElementById('pianoKeyboardMini');
-                if (!container) return;
+            const viewport = document.querySelector('.piano-viewport');
+            if (!viewport || viewport.clientWidth < 10) return; // section still hidden
 
-                initPianoKeyboard(
-                    s.note_range_min, s.note_range_max,
-                    s.note_selection_mode || 'range',
-                    s.selected_notes || []
-                );
-                if (typeof onGmProgramChanged === 'function') {
-                    const gmSelect = document.getElementById('gmProgramSelect');
-                    if (gmSelect) onGmProgramChanged(gmSelect);
-                }
+            // 1) Compute center note to position the view
+            let centerNote = 60; // default C4
+            if (s.note_selection_mode === 'discrete' && s.selected_notes && s.selected_notes.length > 0) {
+                const sorted = [...s.selected_notes].sort((a, b) => a - b);
+                centerNote = sorted[Math.floor(sorted.length / 2)];
+            } else if (s.note_range_min != null && s.note_range_max != null) {
+                centerNote = Math.round((s.note_range_min + s.note_range_max) / 2);
+            }
 
-                // Center piano view on playable notes
-                self._centerPianoOnNotes(s);
+            // 2) Set start octave BEFORE calling initPianoKeyboard so the first render is centered
+            const OCTAVE_WIDTH = 126;
+            const availableWidth = viewport.clientWidth - 20;
+            const visibleOctaves = Math.max(1, Math.floor(availableWidth / OCTAVE_WIDTH));
+            const targetOctave = Math.floor(centerNote / 12) - 1;
+            const startOctave = targetOctave - Math.floor(visibleOctaves / 2);
 
-                // Apply octave mode highlighting
-                self._applyOctaveModeHighlight();
-            }, 80);
-        });
-    }
-
-    /**
-     * Center the piano viewport on the instrument's note range
-     */
-    _centerPianoOnNotes(settings) {
-        if (typeof navigatePiano !== 'function') return;
-
-        let centerNote = null;
-
-        if (settings.note_selection_mode === 'discrete' && settings.selected_notes && settings.selected_notes.length > 0) {
-            // Center on the middle of selected discrete notes
-            const sorted = [...settings.selected_notes].sort((a, b) => a - b);
-            centerNote = sorted[Math.floor(sorted.length / 2)];
-        } else if (settings.note_range_min != null && settings.note_range_max != null) {
-            // Center on middle of range
-            centerNote = Math.round((settings.note_range_min + settings.note_range_max) / 2);
-        } else {
-            // Default: center on C4 (middle C = 60)
-            centerNote = 60;
-        }
-
-        if (centerNote === null) return;
-
-        // Calculate target octave to center the view
-        const targetOctave = Math.floor(centerNote / 12) - 1;
-        const viewport = document.querySelector('.piano-viewport');
-        if (!viewport) return;
-        const OCTAVE_WIDTH = 126;
-        const availableWidth = viewport.clientWidth - 20;
-        const visibleOctaves = Math.max(1, Math.floor(availableWidth / OCTAVE_WIDTH));
-        const centerOctave = targetOctave - Math.floor(visibleOctaves / 2);
-
-        // Set the global variable directly and re-render
-        if (typeof currentPianoStartOctave !== 'undefined') {
             const MIN_OCT = typeof MIN_OCTAVE !== 'undefined' ? MIN_OCTAVE : -1;
             const MAX_OCT = typeof MAX_OCTAVE !== 'undefined' ? MAX_OCTAVE : 9;
-            window.currentPianoStartOctave = Math.max(MIN_OCT, Math.min(MAX_OCT - visibleOctaves + 1, centerOctave));
-            if (typeof renderPianoKeyboard === 'function') {
-                renderPianoKeyboard();
-                // Re-apply highlight after re-render
-                this._applyOctaveModeHighlight();
+            window.currentPianoStartOctave = Math.max(MIN_OCT, Math.min(MAX_OCT - visibleOctaves + 1, startOctave));
+
+            // 3) Init piano (single render, already centered)
+            initPianoKeyboard(
+                s.note_range_min, s.note_range_max,
+                s.note_selection_mode || 'range',
+                s.selected_notes || []
+            );
+
+            // 4) Trigger GM program change handler for drum kit detection etc.
+            if (typeof onGmProgramChanged === 'function') {
+                const gmSelect = document.getElementById('gmProgramSelect');
+                if (gmSelect) onGmProgramChanged(gmSelect);
             }
-        }
+
+            // 5) Apply octave mode highlighting on rendered keys
+            self._applyOctaveModeHighlight();
+        });
     }
 
     /**

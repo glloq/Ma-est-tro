@@ -23,7 +23,7 @@
         this.activeSection = 'identity';
         this._syncGlobalState();
         this._refreshContent();
-        this._initPianoForActiveTab();
+        // Piano will init when user navigates to Notes section
     };
 
     ISMNavigation._refreshContent = function() {

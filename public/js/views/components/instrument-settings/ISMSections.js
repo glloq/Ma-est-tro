@@ -173,11 +173,15 @@
             ? tab.stringInstrumentConfig.num_strings
             : (settings.polyphony || '');
 
-        // Octave mode selector options
+        // 3 octave mode toggle buttons
         const octaveModes = InstrumentSettingsModal.OCTAVE_MODES;
-        let octaveOptions = '';
+        let octaveToggleHtml = '';
         for (const key of Object.keys(octaveModes)) {
-            octaveOptions += `<option value="${key}" ${key === octaveMode ? 'selected' : ''}>${octaveModes[key].name}</option>`;
+            const m = octaveModes[key];
+            octaveToggleHtml += `<button type="button" class="ism-octave-btn ${key === octaveMode ? 'active' : ''}" data-octave="${key}">
+                <span class="ism-octave-btn-count">${m.count}</span>
+                <span class="ism-octave-btn-label">${m.label}</span>
+            </button>`;
         }
 
         // Root note selector
@@ -190,8 +194,6 @@
         const rangeMin = settings.note_range_min != null ? settings.note_range_min : 21;
         const rangeMax = settings.note_range_max != null ? settings.note_range_max : 108;
         const playableNotes = InstrumentSettingsModal.computePlayableNotes(rangeMin, rangeMax, octaveMode, rootNote);
-        const currentMode = octaveModes[octaveMode];
-        const notesPerOctInfo = currentMode ? `${currentMode.count} notes/octave` : '';
 
         return `
             <h3 class="ism-section-title"><span class="ism-section-title-icon">🎹</span> ${this.t('instrumentSettings.sectionNotes') || 'Notes & Capacités'}</h3>
@@ -209,19 +211,11 @@
                     </div>
 
                     <div class="ism-octave-selector" style="${noteMode === 'discrete' ? 'display: none;' : ''}" id="octaveModeSelector">
-                        <div class="ism-form-row">
-                            <div class="ism-form-group" style="flex:2">
-                                <label>Notes par octave</label>
-                                <select id="octaveModeSelect">${octaveOptions}</select>
-                            </div>
-                            <div class="ism-form-group" style="flex:1">
-                                <label>Tonique</label>
-                                <select id="rootNoteSelect">${rootNoteOptions}</select>
-                            </div>
-                        </div>
-                        <div class="ism-octave-info" id="octaveInfo">
-                            <span class="ism-octave-badge">${notesPerOctInfo}</span>
-                            <span class="ism-octave-count">${playableNotes.length} notes jouables sur la plage</span>
+                        <div class="ism-octave-toggle">${octaveToggleHtml}</div>
+                        <div class="ism-octave-root-row">
+                            <label>Tonique</label>
+                            <select id="rootNoteSelect">${rootNoteOptions}</select>
+                            <span class="ism-octave-count" id="octaveInfo">${playableNotes.length} notes jouables</span>
                         </div>
                     </div>
 
@@ -543,23 +537,6 @@
             }
         } catch (e) { /* ignore */ }
 
-        // Communication protocol
-        const commProtocol = settings.comm_protocol || 'midi_usb';
-        const protocols = InstrumentSettingsModal.COMM_PROTOCOLS;
-        let protocolOptions = '';
-        for (const key of Object.keys(protocols)) {
-            const proto = protocols[key];
-            protocolOptions += `<option value="${key}" ${key === commProtocol ? 'selected' : ''}>${proto.icon} ${proto.label}</option>`;
-        }
-
-        // Serial baudrate
-        const serialBaudrate = settings.serial_baudrate || 115200;
-        const baudrates = [9600, 19200, 38400, 57600, 115200, 230400, 250000, 500000, 1000000];
-        let baudrateOptions = '';
-        for (const br of baudrates) {
-            baudrateOptions += `<option value="${br}" ${br === serialBaudrate ? 'selected' : ''}>${br}</option>`;
-        }
-
         // Communication timeout
         const commTimeout = settings.comm_timeout || 5000;
 
@@ -582,18 +559,6 @@
                 <span class="ism-form-hint">${this.t('instrumentSettings.macAddressHelp') || 'Adresse MAC du périphérique Bluetooth'}</span>
             </div>
             ` : '<input type="hidden" id="macAddress" value="">'}
-
-            <div class="ism-form-group">
-                <label>${this.t('instrumentSettings.commProtocol') || 'Protocole de communication'}</label>
-                <select id="commProtocol">${protocolOptions}</select>
-                <span class="ism-form-hint">${this.t('instrumentSettings.commProtocolHelp') || 'Protocole utilisé pour communiquer avec l\'appareil'}</span>
-            </div>
-
-            <div class="ism-form-group">
-                <label>${this.t('instrumentSettings.serialBaudrate') || 'Baudrate série'}</label>
-                <select id="serialBaudrate">${baudrateOptions}</select>
-                <span class="ism-form-hint">${this.t('instrumentSettings.serialBaudrateHelp') || 'Vitesse de communication série (si applicable)'}</span>
-            </div>
 
             <div class="ism-form-group">
                 <label>${this.t('instrumentSettings.commTimeout') || 'Timeout de communication (ms)'}</label>
