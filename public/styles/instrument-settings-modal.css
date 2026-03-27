@@ -859,8 +859,12 @@ body.dark-mode .ism-tab {
   color: var(--text-muted, #718096);
 }
 
+body.dark-mode .ism-tab.active {
+  background: none !important;
+}
+
 body.dark-mode .ism-tab:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.05) !important;
 }
 
 body.dark-mode .ism-section-title {
@@ -999,13 +1003,14 @@ body.theme-colored .ism-tab {
 }
 
 body.theme-colored .ism-tab:hover {
-  background: rgba(102, 126, 234, 0.08);
+  background: rgba(102, 126, 234, 0.08) !important;
   color: var(--text-primary);
 }
 
 body.theme-colored .ism-tab.active {
   color: #667eea;
   border-bottom-color: #667eea;
+  background: none !important;
 }
 
 body.theme-colored .ism-section-title {
