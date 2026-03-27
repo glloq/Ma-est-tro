@@ -657,6 +657,100 @@
     }
 
 
+    // === METHODS RESTORED FROM PLAYBACK SECTION ===
+
+    /**
+     * Toggle preview source between GM original and routed instrument
+     */
+    MidiEditorRoutingMixin.togglePreviewSource = function() {
+        const btn = this.container?.querySelector('#preview-source-toggle');
+        if (this.previewSource === 'gm') {
+            this.previewSource = 'routed';
+            if (btn) { btn.dataset.source = 'routed'; btn.textContent = '🎸 Routé'; }
+        } else {
+            this.previewSource = 'gm';
+            if (btn) { btn.dataset.source = 'gm'; btn.textContent = '🎵 GM'; }
+        }
+        if (this.synthesizer) this.loadSequenceForPlayback();
+        this.log('info', `Preview source switched to: ${this.previewSource}`);
+    }
+
+    /**
+     * Toggle global display of playable notes for all routed channels
+     */
+    MidiEditorRoutingMixin.togglePlayableNotesGlobal = async function() {
+        this.showPlayableNotes = !this.showPlayableNotes;
+
+        const btn = this.container?.querySelector('#playable-notes-toggle');
+        if (btn) {
+            btn.dataset.active = String(this.showPlayableNotes);
+            btn.textContent = this.showPlayableNotes ? 'ON' : 'OFF';
+        }
+
+        if (this.showPlayableNotes) {
+            const promises = [];
+            for (const [channel] of this.channelRouting) {
+                if (!this.channelPlayableHighlights.has(channel)) {
+                    promises.push(this._toggleChannelPlayableHighlight(channel));
+                }
+            }
+            await Promise.all(promises);
+        } else {
+            this.channelPlayableHighlights.clear();
+            this._syncPianoRollHighlights();
+        }
+
+        this.updateChannelButtons();
+        this.log('info', `Playable notes global: ${this.showPlayableNotes ? 'ON' : 'OFF'}`);
+    }
+
+    /**
+     * Get the routed instrument's gm_program for a channel from cache.
+     */
+    MidiEditorRoutingMixin._getRoutedGmProgram = function(channel) {
+        const gm = this._routedGmPrograms.get(channel);
+        return gm != null ? gm : null;
+    }
+
+    /**
+     * Fetch and cache routed instrument gm_programs for all routed channels.
+     */
+    MidiEditorRoutingMixin._loadRoutedGmPrograms = async function() {
+        this._routedGmPrograms.clear();
+        const promises = [];
+        for (const [channel, routedValue] of this.channelRouting.entries()) {
+            promises.push(this._fetchAndCacheRoutedGmProgram(channel, routedValue));
+        }
+        await Promise.all(promises);
+    }
+
+    /**
+     * Fetch gm_program for a single routed device and cache it.
+     */
+    MidiEditorRoutingMixin._fetchAndCacheRoutedGmProgram = async function(channel, routedValue) {
+        if (!routedValue) {
+            this._routedGmPrograms.delete(channel);
+            return;
+        }
+        let deviceId = routedValue;
+        let devChannel = undefined;
+        if (routedValue.includes('::')) {
+            const parts = routedValue.split('::');
+            deviceId = parts[0];
+            devChannel = parseInt(parts[1]);
+        }
+        try {
+            const params = { deviceId };
+            if (devChannel !== undefined) params.channel = devChannel;
+            const response = await this.api.sendCommand('instrument_get_capabilities', params);
+            if (response && response.capabilities && response.capabilities.gm_program != null) {
+                this._routedGmPrograms.set(channel, response.capabilities.gm_program);
+            }
+        } catch (err) {
+            this.log('warn', `Failed to fetch gm_program for routed device ${deviceId}:`, err);
+        }
+    }
+
     if (typeof window !== 'undefined') {
         window.MidiEditorRoutingMixin = MidiEditorRoutingMixin;
     }

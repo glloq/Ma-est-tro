@@ -808,6 +808,140 @@
 
 
 
+    // === METHODS RESTORED FROM PLAYBACK SECTION ===
+
+    /**
+     * Apply clean, modern colors to the piano roll based on the current theme.
+     */
+    MidiEditorEventsMixin._applyPianoRollTheme = function() {
+        if (!this.pianoRoll) return;
+
+        const isDark = document.body.classList.contains('dark-mode');
+        const isColored = document.body.classList.contains('theme-colored');
+
+        if (isDark) {
+            this.pianoRoll.setAttribute('collt', '#262830');
+            this.pianoRoll.setAttribute('coldk', '#22242a');
+            this.pianoRoll.setAttribute('colgrid', '#2e3038');
+            this.pianoRoll.setAttribute('colrulerbg', '#1e2028');
+            this.pianoRoll.setAttribute('colrulerfg', '#8890a0');
+            this.pianoRoll.setAttribute('colrulerborder', '#2e3038');
+            this.pianoRoll.setAttribute('colnoteborder', 'rgba(255,255,255,0.1)');
+        } else if (isColored) {
+            this.pianoRoll.setAttribute('collt', '#f7f7fc');
+            this.pianoRoll.setAttribute('coldk', '#f0f0f8');
+            this.pianoRoll.setAttribute('colgrid', '#e8e8f2');
+            this.pianoRoll.setAttribute('colrulerbg', '#ededf6');
+            this.pianoRoll.setAttribute('colrulerfg', '#4a3f6b');
+            this.pianoRoll.setAttribute('colrulerborder', '#e8e8f2');
+            this.pianoRoll.setAttribute('colnoteborder', 'rgba(102,126,234,0.15)');
+        } else {
+            this.pianoRoll.setAttribute('collt', '#ffffff');
+            this.pianoRoll.setAttribute('coldk', '#f5f6f8');
+            this.pianoRoll.setAttribute('colgrid', '#eceef1');
+            this.pianoRoll.setAttribute('colrulerbg', '#f0f1f3');
+            this.pianoRoll.setAttribute('colrulerfg', '#495057');
+            this.pianoRoll.setAttribute('colrulerborder', '#eceef1');
+            this.pianoRoll.setAttribute('colnoteborder', 'rgba(0,0,0,0.08)');
+        }
+    }
+
+    /**
+     * Ouvrir/fermer le popover de parametres (Canal, Instrument, Device)
+     */
+    MidiEditorEventsMixin.toggleSettingsPopover = function() {
+        const popover = this.container.querySelector('#settings-popover');
+        if (!popover) return;
+        const isVisible = popover.style.display !== 'none';
+        popover.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible) {
+            const closeHandler = (e) => {
+                if (!popover.contains(e.target) &&
+                    !e.target.closest('[data-action="toggle-settings-popover"]')) {
+                    popover.style.display = 'none';
+                    document.removeEventListener('click', closeHandler);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', closeHandler), 0);
+        }
+    }
+
+    /**
+     * Initialize the PlaybackTimelineBar for the piano editor.
+     */
+    MidiEditorEventsMixin._initTimelineBar = function(maxTick, ticksPerBeat, xrange) {
+        const timelineContainer = this.container?.querySelector('#playback-timeline-container');
+        if (!timelineContainer || typeof PlaybackTimelineBar === 'undefined') return;
+
+        if (this.timelineBar) {
+            this.timelineBar.destroy();
+            this.timelineBar = null;
+        }
+
+        const pianoLeftOffset = this._getActiveEditorHeaderWidth();
+
+        this.timelineBar = new PlaybackTimelineBar(timelineContainer, {
+            ticksPerBeat: ticksPerBeat,
+            beatsPerMeasure: 4,
+            leftOffset: pianoLeftOffset,
+            height: 30,
+            onSeek: (tick) => {
+                const rangeStart = this.timelineBar.rangeStart || 0;
+                const rangeEnd = this.timelineBar.rangeEnd || (this.midiData?.maxTick || 0);
+                const clampedTick = Math.max(rangeStart, Math.min(tick, rangeEnd));
+                if (this.pianoRoll) this.pianoRoll.cursor = clampedTick;
+                if (this.synthesizer && typeof this.synthesizer.seek === 'function') this.synthesizer.seek(clampedTick);
+                if (this.timelineBar) this.timelineBar.setPlayhead(clampedTick);
+                if (this.tablatureEditor && this.tablatureEditor.isVisible) this.tablatureEditor.updatePlayhead(clampedTick);
+                if (this.drumPatternEditor && this.drumPatternEditor.isVisible) this.drumPatternEditor.updatePlayhead(clampedTick);
+                if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) this.windInstrumentEditor.updatePlayhead(clampedTick);
+                this.log('debug', `Timeline seek to tick ${clampedTick}`);
+            },
+            onPan: (newScrollX) => {
+                if (this.pianoRoll) {
+                    this.pianoRoll.xoffset = newScrollX;
+                    if (typeof this.pianoRoll.redraw === 'function' &&
+                        !(this.windInstrumentEditor && this.windInstrumentEditor.isVisible)) {
+                        this.pianoRoll.redraw();
+                    }
+                }
+                const maxTick2 = this.midiData?.maxTick || 0;
+                const xrange2 = this.pianoRoll?.xrange || 1920;
+                this.navigationBar?.setViewport(newScrollX, xrange2, maxTick2);
+                if (this.tablatureEditor && this.tablatureEditor.isVisible && this.tablatureEditor.renderer) this.tablatureEditor.renderer.setScrollX(newScrollX);
+                if (this.drumPatternEditor && this.drumPatternEditor.isVisible && this.drumPatternEditor.gridRenderer) this.drumPatternEditor.gridRenderer.setScrollX(newScrollX);
+                if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible && this.windInstrumentEditor.renderer) this.windInstrumentEditor.renderer.setScrollX(newScrollX);
+                this.syncCCEditor();
+                this.syncVelocityEditor();
+                this.syncTempoEditor();
+            },
+            onRangeChange: (start, end) => {
+                if (this.pianoRoll) {
+                    this.pianoRoll.setAttribute('markstart', start.toString());
+                    this.pianoRoll.setAttribute('markend', end.toString());
+                }
+                this.playbackStartTick = start;
+                this.playbackEndTick = end;
+                if (this.synthesizer) {
+                    const currentTick = this.synthesizer.currentTick || 0;
+                    this.synthesizer.startTick = Math.max(0, start);
+                    this.synthesizer.endTick = end;
+                    if (currentTick < start || currentTick > end) this.synthesizer.currentTick = start;
+                }
+                if (this.timelineBar) {
+                    const playhead = this.timelineBar.playheadTick;
+                    if (playhead < start) { this.timelineBar.setPlayhead(start); if (this.pianoRoll) this.pianoRoll.cursor = start; }
+                    else if (playhead > end) { this.timelineBar.setPlayhead(end); if (this.pianoRoll) this.pianoRoll.cursor = end; }
+                }
+                this.log('debug', `Timeline range changed: ${start} - ${end}`);
+            },
+        });
+
+        this.timelineBar.setTotalTicks(maxTick);
+        this.timelineBar.setRange(0, maxTick);
+        this.timelineBar.setZoom(xrange / ((timelineContainer.clientWidth || 800) - pianoLeftOffset));
+    }
+
     if (typeof window !== 'undefined') {
         window.MidiEditorEventsMixin = MidiEditorEventsMixin;
     }
