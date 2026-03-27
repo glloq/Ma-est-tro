@@ -45,11 +45,26 @@
                 <label class="cc-draw-settings-label">${this.t('midiEditor.drawDensity')}</label>
                 <span class="cc-draw-settings-tip">${this.t('midiEditor.drawDensityTip')}</span>
                 <div class="cc-draw-density-options">
-                    <button class="cc-density-btn ${currentDensity === 0.25 ? 'active' : ''}" data-density="0.25">x4</button>
-                    <button class="cc-density-btn ${currentDensity === 0.5 ? 'active' : ''}" data-density="0.5">x2</button>
-                    <button class="cc-density-btn ${currentDensity === 1 ? 'active' : ''}" data-density="1">x1</button>
-                    <button class="cc-density-btn ${currentDensity === 2 ? 'active' : ''}" data-density="2">½</button>
-                    <button class="cc-density-btn ${currentDensity === 4 ? 'active' : ''}" data-density="4">¼</button>
+                    <button class="cc-density-btn ${currentDensity === 4 ? 'active' : ''}" data-density="4" title="${this.t('midiEditor.densityMin')}">
+                        <span class="cc-density-label">Min</span>
+                        <span class="cc-density-dots">·</span>
+                    </button>
+                    <button class="cc-density-btn ${currentDensity === 2 ? 'active' : ''}" data-density="2" title="${this.t('midiEditor.densityLow')}">
+                        <span class="cc-density-label">Low</span>
+                        <span class="cc-density-dots">· ·</span>
+                    </button>
+                    <button class="cc-density-btn cc-density-default ${currentDensity === 1 ? 'active' : ''}" data-density="1" title="${this.t('midiEditor.densityNormal')}">
+                        <span class="cc-density-label">Med</span>
+                        <span class="cc-density-dots">· · ·</span>
+                    </button>
+                    <button class="cc-density-btn ${currentDensity === 0.5 ? 'active' : ''}" data-density="0.5" title="${this.t('midiEditor.densityHigh')}">
+                        <span class="cc-density-label">High</span>
+                        <span class="cc-density-dots">· · · ·</span>
+                    </button>
+                    <button class="cc-density-btn ${currentDensity === 0.25 ? 'active' : ''}" data-density="0.25" title="${this.t('midiEditor.densityMax')}">
+                        <span class="cc-density-label">Max</span>
+                        <span class="cc-density-dots">· · · · ·</span>
+                    </button>
                 </div>
             </div>
         `;

@@ -1000,8 +1000,9 @@ body.dark-mode .midi-editor-section.cc-section {
     border-radius: 6px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
     padding: 12px 16px;
-    min-width: 220px;
+    min-width: 260px;
     animation: ccSettingsFadeIn 0.15s ease-out;
+    overflow: visible;
 }
 
 @keyframes ccSettingsFadeIn {
@@ -1036,7 +1037,12 @@ body.dark-mode .midi-editor-section.cc-section {
 }
 
 .cc-density-btn {
-    padding: 5px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 10px;
+    min-width: 42px;
     background: var(--bg-tertiary, #e9ecef);
     border: 1px solid var(--border-color, #dee2e6);
     color: var(--text-secondary, #6c757d);
@@ -1045,6 +1051,44 @@ body.dark-mode .midi-editor-section.cc-section {
     cursor: pointer;
     transition: all 0.15s;
     margin-left: -1px;
+    position: relative;
+}
+
+.cc-density-label {
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.cc-density-dots {
+    font-size: 11px;
+    letter-spacing: 1px;
+    line-height: 1;
+    opacity: 0.6;
+}
+
+.cc-density-btn.active .cc-density-dots {
+    opacity: 1;
+}
+
+/* Indicateur visuel du bouton par défaut (Med) */
+.cc-density-default::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--accent-primary, #667eea);
+    opacity: 0.5;
+}
+
+.cc-density-default.active::after {
+    opacity: 0;
 }
 
 .cc-density-btn:first-child {
@@ -1096,6 +1140,14 @@ body.dark-mode .cc-density-btn.active {
     background: #1565C0;
     border-color: #1565C0;
     color: #fff;
+}
+
+body.dark-mode .cc-density-dots {
+    opacity: 0.5;
+}
+
+body.dark-mode .cc-density-btn.active .cc-density-dots {
+    opacity: 1;
 }
 
 body.dark-mode .cc-settings-btn {
