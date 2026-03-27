@@ -84,6 +84,9 @@ class MidiEditorModal {
         this.playbackStartTick = 0;
         this.playbackEndTick = 0
 
+        // Playback manager (delegate)
+        this._playback = typeof MidiEditorPlayback !== 'undefined' ? new MidiEditorPlayback(this) : null;
+
         // Constantes partagees depuis MidiEditorConstants
         const constants = (typeof MidiEditorConstants !== 'undefined') ? MidiEditorConstants : {};
         this.snapValues = constants.snapValues || [
@@ -239,6 +242,31 @@ class MidiEditorModal {
         }
     }
 
+    // ========================================================================
+    // PLAYBACK FACADE - delegates to MidiEditorPlayback
+    // ========================================================================
+
+    async initSynthesizer() { return this._playback ? this._playback.initSynthesizer() : false; }
+    loadSequenceForPlayback() { if (this._playback) this._playback.loadSequenceForPlayback(); }
+    syncMutedChannels() { if (this._playback) this._playback.syncMutedChannels(); }
+    updatePlaybackRange() { if (this._playback) this._playback.updatePlaybackRange(); }
+    getSequenceEndTick() { return this._playback ? this._playback.getSequenceEndTick() : 0; }
+    async playbackPlay() { if (this._playback) await this._playback.playbackPlay(); }
+    playbackPause() { if (this._playback) this._playback.playbackPause(); }
+    playbackStop() { if (this._playback) this._playback.playbackStop(); }
+    togglePlayback() { if (this._playback) this._playback.togglePlayback(); }
+    updatePlaybackCursor(tick) { if (this._playback) this._playback.updatePlaybackCursor(tick); }
+    onPlaybackComplete() { if (this._playback) this._playback.onPlaybackComplete(); }
+    updatePlaybackButtons() { if (this._playback) this._playback.updatePlaybackButtons(); }
+    handleNoteFeedback(prev) { if (this._playback) this._playback.handleNoteFeedback(prev); }
+    async playNoteFeedback(n, v, c) { if (this._playback) await this._playback.playNoteFeedback(n, v, c); }
+    disposeSynthesizer() { if (this._playback) this._playback.disposeSynthesizer(); }
+
+    copySequence(sequence) {
+        if (!sequence || sequence.length === 0) return [];
+        return sequence.map(note => ({ t: note.t, g: note.g, n: note.n, c: note.c, v: note.v }));
+    }
+
 } // end class MidiEditorModal
 
 // ============================================================================
@@ -257,6 +285,12 @@ if (typeof window !== 'undefined') {
 // ============================================================================
 // APPLY MIXINS - Methods extracted to separate files for maintainability
 // ============================================================================
+
+// Copy static-like properties to the class itself (for MidiEditorModal.CC_NAMES access)
+if (typeof MidiEditorCCMixin !== 'undefined') {
+    if (MidiEditorCCMixin.CC_NAMES) MidiEditorModal.CC_NAMES = MidiEditorCCMixin.CC_NAMES;
+    if (MidiEditorCCMixin.CC_CATEGORIES) MidiEditorModal.CC_CATEGORIES = MidiEditorCCMixin.CC_CATEGORIES;
+}
 
 const _mixins = [
     typeof MidiEditorSequenceMixin !== 'undefined' ? MidiEditorSequenceMixin : null,
