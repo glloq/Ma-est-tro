@@ -451,18 +451,27 @@ class InstrumentSettingsModal extends BaseModal {
         const s = tab.settings;
         if (typeof initPianoKeyboard !== 'function') return;
 
-        const self = this;
+        // Don't init piano for drum instruments (no piano needed)
+        const gmProg = s.gm_program;
+        const isDrum = this.activeChannel === 9 || (gmProg != null && gmProg >= 128);
+        if (isDrum) return;
 
-        // Use setTimeout to ensure section is visible and laid out after CSS transition
-        setTimeout(function() {
+        const self = this;
+        let attempts = 0;
+
+        function tryInit() {
+            attempts++;
             const viewport = document.querySelector('.piano-viewport');
-            if (!viewport || viewport.clientWidth < 10) {
-                // Retry once more after another frame
-                setTimeout(function() { self._initPianoForActiveTab(); }, 100);
+
+            // Wait until viewport is visible and has width (section must be active)
+            if (!viewport || viewport.offsetWidth < 20) {
+                if (attempts < 10) {
+                    setTimeout(tryInit, 80);
+                }
                 return;
             }
 
-            // 1) Compute center note to position the view
+            // 1) Compute center note
             let centerNote = 60;
             if (s.note_selection_mode === 'discrete' && s.selected_notes && s.selected_notes.length > 0) {
                 const sorted = [...s.selected_notes].sort((a, b) => a - b);
@@ -473,7 +482,7 @@ class InstrumentSettingsModal extends BaseModal {
 
             // 2) Set start octave BEFORE calling initPianoKeyboard
             const OCTAVE_WIDTH = 126;
-            const availableWidth = viewport.clientWidth - 20;
+            const availableWidth = viewport.offsetWidth - 20;
             const visibleOctaves = Math.max(1, Math.floor(availableWidth / OCTAVE_WIDTH));
             const targetOctave = Math.floor(centerNote / 12) - 1;
             const startOctave = targetOctave - Math.floor(visibleOctaves / 2);
@@ -495,9 +504,14 @@ class InstrumentSettingsModal extends BaseModal {
                 if (gmSelect) onGmProgramChanged(gmSelect);
             }
 
-            // 5) Apply octave mode highlighting
-            self._applyOctaveModeHighlight();
-        }, 50);
+            // 5) Apply octave mode highlighting after piano is rendered
+            setTimeout(function() {
+                self._applyOctaveModeHighlight();
+            }, 20);
+        }
+
+        // Start trying after a short delay
+        setTimeout(tryInit, 30);
     }
 
     _applyOctaveModeHighlight() {

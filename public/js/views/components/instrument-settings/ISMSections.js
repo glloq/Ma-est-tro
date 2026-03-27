@@ -190,6 +190,7 @@
         return `
             <h3 class="ism-section-title"><span class="ism-section-title-icon">🎹</span> ${this.t('instrumentSettings.sectionNotes') || 'Notes & Capacités'}</h3>
 
+            ${!isDrum ? `
             <div id="noteSelectionSection" style="${isString ? 'display: none;' : ''}">
                 <div class="ism-form-group">
                     <label>${this.t('instrumentSettings.noteSelection') || 'Sélection des notes'}</label>
@@ -237,6 +238,14 @@
                     <input type="hidden" id="playableNotesInput" value="${JSON.stringify(playableNotes)}">
                 </div>
             </div>
+            ` : `
+            <input type="hidden" id="noteSelectionModeInput" value="discrete">
+            <input type="hidden" id="noteRangeMin" value="">
+            <input type="hidden" id="noteRangeMax" value="">
+            <input type="hidden" id="selectedNotesInput" value="${settings.selected_notes ? JSON.stringify(settings.selected_notes) : ''}">
+            <input type="hidden" id="octaveModeInput" value="chromatic">
+            <input type="hidden" id="playableNotesInput" value="[]">
+            `}
 
             <div class="ism-form-group">
                 <label>${this.t('instrumentSettings.polyphony') || 'Polyphonie'}</label>
