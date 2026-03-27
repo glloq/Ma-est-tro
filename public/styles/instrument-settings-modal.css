@@ -1015,6 +1015,17 @@ body.theme-colored .ism-section-title {
   color: var(--text-primary);
 }
 
+body.theme-colored .ism-section-title-icon {
+  -webkit-text-fill-color: initial;
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+}
+
+body.theme-colored .ism-modal .modal-header h2 {
+  -webkit-text-fill-color: #fff;
+}
+
 body.theme-colored .ism-form-group label {
   color: var(--text-primary);
 }
