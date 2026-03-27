@@ -406,6 +406,10 @@
                 if (notesSection) {
                     notesSection.innerHTML = this._renderNotesSection();
                     this._attachNotesSectionListeners();
+                    // Re-init piano if notes section is currently visible
+                    if (this.activeSection === 'notes') {
+                        this._initPianoForActiveTab();
+                    }
                 }
 
                 // Refresh identity section (emoji changes)
@@ -432,8 +436,7 @@
             }.bind(this));
         }
 
-        // Init piano
-        this._initPianoForActiveTab();
+        // Piano is initialized by _switchSection('notes') when the section becomes visible
     };
 
     ISMListeners._attachIdentitySectionListeners = function() {
