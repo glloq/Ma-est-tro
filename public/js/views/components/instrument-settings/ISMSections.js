@@ -543,23 +543,6 @@
             }
         } catch (e) { /* ignore */ }
 
-        // Communication protocol
-        const commProtocol = settings.comm_protocol || 'midi_usb';
-        const protocols = InstrumentSettingsModal.COMM_PROTOCOLS;
-        let protocolOptions = '';
-        for (const key of Object.keys(protocols)) {
-            const proto = protocols[key];
-            protocolOptions += `<option value="${key}" ${key === commProtocol ? 'selected' : ''}>${proto.icon} ${proto.label}</option>`;
-        }
-
-        // Serial baudrate
-        const serialBaudrate = settings.serial_baudrate || 115200;
-        const baudrates = [9600, 19200, 38400, 57600, 115200, 230400, 250000, 500000, 1000000];
-        let baudrateOptions = '';
-        for (const br of baudrates) {
-            baudrateOptions += `<option value="${br}" ${br === serialBaudrate ? 'selected' : ''}>${br}</option>`;
-        }
-
         // Communication timeout
         const commTimeout = settings.comm_timeout || 5000;
 
@@ -582,18 +565,6 @@
                 <span class="ism-form-hint">${this.t('instrumentSettings.macAddressHelp') || 'Adresse MAC du périphérique Bluetooth'}</span>
             </div>
             ` : '<input type="hidden" id="macAddress" value="">'}
-
-            <div class="ism-form-group">
-                <label>${this.t('instrumentSettings.commProtocol') || 'Protocole de communication'}</label>
-                <select id="commProtocol">${protocolOptions}</select>
-                <span class="ism-form-hint">${this.t('instrumentSettings.commProtocolHelp') || 'Protocole utilisé pour communiquer avec l\'appareil'}</span>
-            </div>
-
-            <div class="ism-form-group">
-                <label>${this.t('instrumentSettings.serialBaudrate') || 'Baudrate série'}</label>
-                <select id="serialBaudrate">${baudrateOptions}</select>
-                <span class="ism-form-hint">${this.t('instrumentSettings.serialBaudrateHelp') || 'Vitesse de communication série (si applicable)'}</span>
-            </div>
 
             <div class="ism-form-group">
                 <label>${this.t('instrumentSettings.commTimeout') || 'Timeout de communication (ms)'}</label>

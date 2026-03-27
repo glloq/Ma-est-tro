@@ -285,15 +285,6 @@ class InstrumentSettingsModal extends BaseModal {
         drums: '🥁'
     };
 
-    static COMM_PROTOCOLS = {
-        midi_din:  { label: 'MIDI DIN (5-pin)', icon: '🎵' },
-        midi_usb:  { label: 'MIDI USB', icon: '🔌' },
-        midi_ble:  { label: 'MIDI BLE (Bluetooth)', icon: '📶' },
-        midi_wifi: { label: 'MIDI WiFi (RTP/rtpMIDI)', icon: '📡' },
-        serial_raw: { label: 'Serial brut (raw)', icon: '⚡' },
-        osc:       { label: 'OSC (Open Sound Control)', icon: '🌐' }
-    };
-
     constructor(api) {
         super({
             id: 'instrument-settings-modal',
