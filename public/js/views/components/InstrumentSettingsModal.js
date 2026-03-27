@@ -219,26 +219,11 @@ class InstrumentSettingsModal extends BaseModal {
         drums:       [7, 10, 91]
     };
 
-    // Octave modes: how many notes per octave are selectable
-    // intervals = array of semitone offsets within one octave (0-11)
+    // 3 octave modes: how many notes per octave
     static OCTAVE_MODES = {
-        chromatic:      { name: 'Chromatique (12/oct)',     count: 12, intervals: [0,1,2,3,4,5,6,7,8,9,10,11] },
-        major:          { name: 'Majeure (7/oct)',          count: 7,  intervals: [0,2,4,5,7,9,11] },
-        minor:          { name: 'Mineure naturelle (7/oct)',count: 7,  intervals: [0,2,3,5,7,8,10] },
-        harmonicMin:    { name: 'Mineure harmonique (7/oct)',count: 7, intervals: [0,2,3,5,7,8,11] },
-        dorian:         { name: 'Dorien (7/oct)',           count: 7,  intervals: [0,2,3,5,7,9,10] },
-        mixolydian:     { name: 'Mixolydien (7/oct)',       count: 7,  intervals: [0,2,4,5,7,9,10] },
-        pentatonic:     { name: 'Pentatonique maj. (5/oct)',count: 5,  intervals: [0,2,4,7,9] },
-        pentatonicMin:  { name: 'Pentatonique min. (5/oct)',count: 5,  intervals: [0,3,5,7,10] },
-        blues:          { name: 'Blues (6/oct)',             count: 6,  intervals: [0,3,5,6,7,10] },
-        wholeNote:      { name: 'Tons entiers (6/oct)',     count: 6,  intervals: [0,2,4,6,8,10] },
-        majorChord:     { name: 'Accord majeur (3/oct)',    count: 3,  intervals: [0,4,7] },
-        minorChord:     { name: 'Accord mineur (3/oct)',    count: 3,  intervals: [0,3,7] },
-        seventh:        { name: 'Septième (4/oct)',         count: 4,  intervals: [0,4,7,10] },
-        diminished:     { name: 'Diminué (4/oct)',          count: 4,  intervals: [0,3,6,9] },
-        augmented:      { name: 'Augmenté (3/oct)',         count: 3,  intervals: [0,4,8] },
-        sus2:           { name: 'Sus2 (3/oct)',             count: 3,  intervals: [0,2,7] },
-        sus4:           { name: 'Sus4 (3/oct)',             count: 3,  intervals: [0,5,7] }
+        chromatic:  { name: '12 notes', label: 'Chromatique',  count: 12, intervals: [0,1,2,3,4,5,6,7,8,9,10,11] },
+        diatonic:   { name: '7 notes',  label: 'Diatonique',   count: 7,  intervals: [0,2,4,5,7,9,11] },
+        pentatonic: { name: '5 notes',  label: 'Pentatonique', count: 5,  intervals: [0,2,4,7,9] }
     };
 
     /**
