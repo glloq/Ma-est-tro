@@ -657,6 +657,14 @@
     }
 
 
+    /**
+     * Copier une sequence de notes (deep copy)
+     */
+    MidiEditorRoutingMixin.copySequence = function(sequence) {
+        if (!sequence || sequence.length === 0) return [];
+        return sequence.map(note => ({ t: note.t, g: note.g, n: note.n, c: note.c, v: note.v }));
+    }
+
     // === METHODS RESTORED FROM PLAYBACK SECTION ===
 
     /**
