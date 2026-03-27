@@ -5071,9 +5071,9 @@
     <!-- Delay Calibration Modal: now handled by CalibrationModal.js -->
 
     <!-- Scripts -->
+    <script src="js/utils/MidiConstants.js"></script>
     <script src="js/utils/escapeHtml.js"></script>
     <script src="js/utils/a11y.js"></script>
-    <script src="js/utils/FilterManager.js"></script>
     <script src="js/api/BackendAPIClient.js"></script>
 
     <!-- i18n - Internationalization (must be loaded before components) -->
@@ -5089,12 +5089,6 @@
 
     <!-- Webaudio-pianoroll library - VERSION CUSTOM avec coloration par canal MIDI -->
     <script src="lib/webaudio-pianoroll-custom.js"></script>
-
-    <!-- MIDI utilities -->
-    <script src="js/utils/MidiParser.js"></script>
-
-    <!-- Command History for Undo/Redo -->
-    <script src="js/utils/CommandHistory.js"></script>
 
     <!-- CC/Pitchbend Editor Component -->
     <script src="js/views/components/CCPitchbendEditor.js"></script>
@@ -6014,7 +6008,7 @@
         let debugMidiResetTimer = null;
 
         // Note names for MIDI debug display
-        const DEBUG_NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const DEBUG_NOTE_NAMES = (typeof MidiConstants !== 'undefined') ? MidiConstants.NOTE_NAMES : ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         function midiNoteToName(note) {
             const octave = Math.floor(note / 12) - 1;
             return `${DEBUG_NOTE_NAMES[note % 12]}${octave}`;
@@ -9314,7 +9308,7 @@
             banjo:      ['banjo_'],
         };
 
-        const SI_NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const SI_NOTE_NAMES = (typeof MidiConstants !== 'undefined') ? MidiConstants.NOTE_NAMES : ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
         function siNoteName(midi) {
             return SI_NOTE_NAMES[midi % 12] + (Math.floor(midi / 12) - 1);
@@ -9967,7 +9961,7 @@
         // ========== PIANO RANGE SELECTOR ==========
 
         // Noms des notes
-        const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const NOTE_NAMES = (typeof MidiConstants !== 'undefined') ? MidiConstants.NOTE_NAMES : ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
         // Variables pour la sélection
         let pianoRangeSelectionMode = 'start'; // 'start' ou 'end' (pour mode range)

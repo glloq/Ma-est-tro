@@ -206,7 +206,7 @@
                 const val = parseInt(input.value);
                 if (isNaN(val) || val < 0 || val > 127) return;
                 // Update badge
-                const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                const NOTE_NAMES = (typeof MidiConstants !== 'undefined') ? MidiConstants.NOTE_NAMES : ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
                 const badge = this.$(`#ismBadge${idx}`);
                 if (badge) badge.textContent = NOTE_NAMES[val % 12] + (Math.floor(val / 12) - 1);
                 // Update neck diagram
