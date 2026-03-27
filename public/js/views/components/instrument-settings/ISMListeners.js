@@ -262,7 +262,8 @@
      * Highlight playable notes on the mini piano keyboard
      */
     ISMListeners._highlightPlayableNotes = function(playableNotes) {
-        const pianoEl = this.$('#pianoKeyboardMini');
+        // Use document.getElementById as fallback since piano is rendered by global function
+        const pianoEl = document.getElementById('pianoKeyboardMini');
         if (!pianoEl) return;
         const noteSet = new Set(playableNotes);
         // Remove previous highlights
