@@ -8792,104 +8792,36 @@
             // Stocker les canaux pour la sauvegarde
             modal.dataset.channels = JSON.stringify(channels);
 
-            // Auto-assign button handler – populate dropdowns in-place
+            // Auto-assign button handler – open the full AutoAssignModal
             const autoAssignBtn = modal.querySelector('#routing-auto-assign-btn');
             if (autoAssignBtn) {
                 autoAssignBtn.addEventListener('click', async () => {
-                    // Loading state
-                    const originalText = autoAssignBtn.textContent;
-                    autoAssignBtn.textContent = '⏳ Analyse...';
-                    autoAssignBtn.disabled = true;
-                    autoAssignBtn.style.opacity = '0.6';
-
-                    // Remove previous auto-assign feedback
-                    modal.querySelectorAll('.auto-assign-badge').forEach(b => b.remove());
-                    modal.querySelectorAll('.auto-assign-summary').forEach(s => s.remove());
-                    modal.querySelectorAll('.routing-channel-row').forEach(r => r.style.backgroundColor = '');
-
-                    try {
-                        const response = await api.sendCommand('generate_assignment_suggestions', {
-                            fileId: fileId,
-                            topN: 5,
-                            minScore: 30
-                        });
-
-                        if (!response || !response.success) {
-                            throw new Error((response && response.error) || 'Auto-assign failed');
-                        }
-
-                        const autoSelection = response.autoSelection || {};
-
-                        // Helper: find matching option value in a <select>
-                        function setSelectByValue(select, ...candidateValues) {
-                            for (const value of candidateValues) {
-                                for (const option of select.options) {
-                                    if (option.value === value) {
-                                        select.value = value;
-                                        return true;
-                                    }
-                                }
-                            }
-                            return false;
-                        }
-
-                        let assignedCount = 0;
-
-                        for (const ch of channels) {
-                            const select = document.getElementById(`channel_${ch.channel}`);
-                            if (!select) continue;
-
-                            const assignment = autoSelection[ch.channel];
-                            if (!assignment || !assignment.deviceId) continue;
-
-                            // Try multi-instrument format first, then single-instrument
-                            const multiKey = `${assignment.deviceId}::${assignment.instrumentChannel}`;
-                            const singleKey = assignment.deviceId;
-                            const matched = setSelectByValue(select, multiKey, singleKey);
-
-                            const row = select.closest('.routing-channel-row');
-                            if (matched && row) {
-                                assignedCount++;
-                                // Green tint feedback
-                                row.style.transition = 'background-color 0.3s';
-                                row.style.backgroundColor = 'rgba(76, 175, 80, 0.15)';
-                                // Score badge
-                                const badge = document.createElement('span');
-                                badge.className = 'auto-assign-badge';
-                                badge.style.cssText = 'font-size: 11px; color: #4caf50; margin-left: 8px; font-weight: bold; white-space: nowrap;';
-                                badge.textContent = `${Math.round(assignment.score)}%`;
-                                select.parentElement.appendChild(badge);
-                            }
-                        }
-
-                        // Summary message
-                        const summaryEl = document.createElement('div');
-                        summaryEl.className = 'auto-assign-summary';
-                        summaryEl.style.cssText = 'padding: 8px 12px; margin: 8px 0; background: rgba(76,175,80,0.1); border-radius: 6px; font-size: 13px; color: #4caf50;';
-                        const confText = response.confidenceScore != null ? ` — confiance ${Math.round(response.confidenceScore)}%` : '';
-                        summaryEl.textContent = `⚡ ${assignedCount}/${channels.length} canaux assignés automatiquement${confText}`;
-                        const buttonsDiv = modal.querySelector('.routing-modal-buttons');
-                        if (buttonsDiv) buttonsDiv.parentElement.insertBefore(summaryEl, buttonsDiv);
-
-                        // Restore button
-                        autoAssignBtn.textContent = `✓ ${assignedCount} assignés`;
-                        autoAssignBtn.style.opacity = '1';
-                        setTimeout(() => {
-                            autoAssignBtn.textContent = originalText;
-                            autoAssignBtn.disabled = false;
-                        }, 2000);
-
-                        log(`Auto-assign: ${assignedCount}/${channels.length} canaux assignés`, 'info');
-
-                    } catch (error) {
-                        log(`Erreur auto-assign: ${error.message}`, 'error');
-                        autoAssignBtn.textContent = '❌ Erreur';
-                        autoAssignBtn.style.opacity = '1';
-                        setTimeout(() => {
-                            autoAssignBtn.textContent = originalText;
-                            autoAssignBtn.disabled = false;
-                        }, 2000);
+                    if (!window.AutoAssignModal) {
+                        log('AutoAssignModal not available', 'error');
+                        return;
                     }
+
+                    const autoModal = new window.AutoAssignModal(api, null);
+                    autoModal.show(fileId, (result) => {
+                        // Close the routing modal
+                        modal.remove();
+
+                        // Refresh file list to reflect new routing state
+                        if (window.midiFileManager) {
+                            window.midiFileManager.refreshFileList();
+                        }
+
+                        // If an adapted file was created, open it in the editor
+                        if (result.adaptedFileId && window.MidiEditorModal) {
+                            const editor = new window.MidiEditorModal(null, api);
+                            editor.show(result.adaptedFileId, result.filename || null);
+                        }
+
+                        // Notify other components that routing changed
+                        if (window.eventBus) {
+                            window.eventBus.emit('routing:changed', { fileId });
+                        }
+                    });
                 });
             }
         }

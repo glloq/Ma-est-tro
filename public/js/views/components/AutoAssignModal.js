@@ -17,6 +17,7 @@ class AutoAssignModal {
   constructor(apiClient, editorRef) {
     this.apiClient = apiClient;
     this.editorRef = editorRef; // Reference to MidiEditorModal for close/open flow
+    this.onApply = null; // Optional callback when assignments are applied (for routing modal context)
     this.fileId = null;
     this.midiData = null;
     this.suggestions = {};
@@ -170,7 +171,8 @@ class AutoAssignModal {
   /**
    * Show the modal with auto-assignment suggestions
    */
-  async show(fileId) {
+  async show(fileId, onApply) {
+    this.onApply = onApply || null;
     this.fileId = fileId;
     this.showLoading();
 
