@@ -485,3 +485,14 @@ class KeyboardModalNew {
         this.populateDeviceSelect();
     }
 }
+
+// Apply mixins (loaded via <script> tags before this file)
+if (typeof KeyboardPianoMixin !== 'undefined') {
+    Object.assign(KeyboardModalNew.prototype, KeyboardPianoMixin);
+}
+if (typeof KeyboardEventsMixin !== 'undefined') {
+    Object.assign(KeyboardModalNew.prototype, KeyboardEventsMixin);
+}
+if (typeof KeyboardControlsMixin !== 'undefined') {
+    Object.assign(KeyboardModalNew.prototype, KeyboardControlsMixin);
+}
