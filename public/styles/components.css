@@ -729,7 +729,7 @@
     max-height: none !important;
     margin: 0 !important;
     padding: 0 !important; /* AJOUT: Retirer padding pour gain de place */
-    background: var(--bg-primary-flat, #eae4f7);
+    background: #dde4f0;
     border-radius: 0;
     box-shadow: none;
     animation: scaleIn 0.2s ease-out;
@@ -847,7 +847,7 @@
     padding: 0;
     margin: 0;
     overflow: hidden;
-    background: var(--bg-primary-flat, #eae4f7);
+    background: #dde4f0;
     min-height: 0; /* Important pour flex container */
     border-radius: 0 0 12px 12px;
 }
@@ -987,36 +987,36 @@
     background: var(--bg-tertiary, #e8eeff);
 }
 
-/* Couleurs spécifiques par action */
+/* Couleurs spécifiques par action - pastels opaques */
 .midi-editor-modal .tool-btn[data-action="undo"],
 .midi-editor-modal .tool-btn[data-action="redo"] {
-    background: rgba(102, 126, 234, 0.1);
-    border-color: rgba(102, 126, 234, 0.4);
+    background: #dce3f8;
+    border-color: #99aade;
 }
 
 .midi-editor-modal .tool-btn[data-action="undo"]:hover:not(:disabled),
 .midi-editor-modal .tool-btn[data-action="redo"]:hover:not(:disabled) {
-    background: rgba(102, 126, 234, 0.2);
-    border-color: rgba(102, 126, 234, 0.6);
+    background: #c8d2f0;
+    border-color: #7a8fd4;
 }
 
 .midi-editor-modal .tool-btn[data-action="mode-drag-view"] {
-    background: rgba(118, 75, 162, 0.1);
-    border-color: rgba(118, 75, 162, 0.4);
+    background: #e8d8f0;
+    border-color: #b08cc8;
 }
 
 .midi-editor-modal .tool-btn[data-action="mode-drag-view"]:hover:not(:disabled),
 .midi-editor-modal .tool-btn[data-action="mode-drag-view"].active {
-    background: rgba(118, 75, 162, 0.2);
-    border-color: rgba(118, 75, 162, 0.6);
+    background: #dcc8e8;
+    border-color: #9a70b8;
 }
 
 .midi-editor-modal .tool-btn[data-action="mode-select"],
 .midi-editor-modal .tool-btn[data-action="mode-drag-notes"],
 .midi-editor-modal .tool-btn[data-action="mode-add-note"],
 .midi-editor-modal .tool-btn[data-action="mode-resize-note"] {
-    background: rgba(6, 214, 160, 0.1);
-    border-color: rgba(6, 214, 160, 0.4);
+    background: #d4f0e8;
+    border-color: #7cc8aa;
 }
 
 .midi-editor-modal .tool-btn[data-action="mode-select"]:hover:not(:disabled),
@@ -1027,22 +1027,22 @@
 .midi-editor-modal .tool-btn[data-action="mode-drag-notes"].active,
 .midi-editor-modal .tool-btn[data-action="mode-add-note"].active,
 .midi-editor-modal .tool-btn[data-action="mode-resize-note"].active {
-    background: rgba(6, 214, 160, 0.2);
-    border-color: rgba(6, 214, 160, 0.6);
+    background: #c0e8da;
+    border-color: #5ab894;
 }
 
 .midi-editor-modal .tool-btn[data-action="copy"],
 .midi-editor-modal .tool-btn[data-action="paste"],
 .midi-editor-modal .tool-btn[data-action="delete"] {
-    background: rgba(239, 71, 111, 0.1);
-    border-color: rgba(239, 71, 111, 0.4);
+    background: #f4dce2;
+    border-color: #d6899a;
 }
 
 .midi-editor-modal .tool-btn[data-action="copy"]:hover:not(:disabled),
 .midi-editor-modal .tool-btn[data-action="paste"]:hover:not(:disabled),
 .midi-editor-modal .tool-btn[data-action="delete"]:hover:not(:disabled) {
-    background: rgba(239, 71, 111, 0.2);
-    border-color: rgba(239, 71, 111, 0.6);
+    background: #ecc8d2;
+    border-color: #c46a80;
 }
 
 /* Boutons compacts */
@@ -1076,8 +1076,8 @@
     align-items: center;
     justify-content: center;
     padding: 8px 14px;
-    background: rgba(6, 214, 160, 0.1);
-    border: 2px solid rgba(6, 214, 160, 0.4);
+    background: #d4f0e8;
+    border: 2px solid #7cc8aa;
     border-radius: 6px;
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
@@ -1090,9 +1090,9 @@
 
 .midi-editor-modal .tool-btn-snap:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(6, 214, 160, 0.2);
-    border-color: rgba(6, 214, 160, 0.6);
-    background: rgba(6, 214, 160, 0.15);
+    box-shadow: 0 4px 8px rgba(6, 214, 160, 0.15);
+    border-color: #5ab894;
+    background: #c0e8da;
 }
 
 .midi-editor-modal .snap-label {
@@ -1166,8 +1166,8 @@
     padding: 0;
     min-height: 44px;
     box-sizing: border-box;
-    background: color-mix(in srgb, var(--chip-color, #667eea) 20%, var(--bg-secondary, #ffffff));
-    border: 1px solid color-mix(in srgb, var(--chip-color, #667eea) 35%, var(--border-color, #d4daff));
+    background: color-mix(in srgb, var(--chip-color, #667eea) 20%, #e8ecf4);
+    border: 1px solid color-mix(in srgb, var(--chip-color, #667eea) 40%, #b8c4e0);
     border-right: none;
     border-radius: 6px 0 0 6px;
     cursor: pointer;
@@ -1179,19 +1179,19 @@
 }
 
 .midi-editor-modal .channel-chip:hover {
-    background: color-mix(in srgb, var(--chip-color, #667eea) 30%, var(--bg-secondary, #ffffff));
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+    background: color-mix(in srgb, var(--chip-color, #667eea) 30%, #e0e6f2);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
 }
 
 .midi-editor-modal .channel-chip.active {
-    background: color-mix(in srgb, var(--chip-color, #667eea) 40%, var(--bg-secondary, #ffffff));
+    background: color-mix(in srgb, var(--chip-color, #667eea) 45%, #dde4f0);
     border: 2px solid var(--chip-color, #667eea);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--chip-color, #667eea) 30%, transparent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--chip-color, #667eea) 25%, #c0c8e0);
 }
 
 .midi-editor-modal .channel-chip.active:hover {
-    background: color-mix(in srgb, var(--chip-color, #667eea) 50%, var(--bg-secondary, #ffffff));
-    box-shadow: 0 0 14px color-mix(in srgb, var(--chip-color, #667eea) 40%, transparent);
+    background: color-mix(in srgb, var(--chip-color, #667eea) 55%, #d4dce8);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--chip-color, #667eea) 35%, #b0bcd8);
 }
 
 /* Chip content area */
@@ -1333,8 +1333,8 @@
     width: 44px;
     height: 44px;
     font-size: 24px;
-    background: rgba(102, 126, 234, 0.1);
-    border: 2px solid rgba(102, 126, 234, 0.4);
+    background: #dce3f8;
+    border: 2px solid #99aade;
     border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
@@ -1342,10 +1342,10 @@
 }
 
 .midi-editor-modal .btn-show-all-channels:hover {
-    background: rgba(102, 126, 234, 0.2);
-    border-color: rgba(102, 126, 234, 0.6);
+    background: #c8d2f0;
+    border-color: #7a8fd4;
     transform: scale(1.05);
-    box-shadow: 0 3px 10px rgba(102, 126, 234, 0.2);
+    box-shadow: 0 3px 10px rgba(102, 126, 234, 0.15);
 }
 
 /* Legacy compat: hide old elements if still in DOM */
