@@ -31,12 +31,12 @@ class EventBus {
         // Configuration
         this.config = {
             enablePriorities: true,
-            enableMetrics: true,
+            enableMetrics: false, // Disabled in production for performance
             enableThrottling: true,
             maxQueueSize: 1000,
             processingInterval: 10
         };
-        
+
         // Métriques
         this.metrics = {
             eventsEmitted: 0,
@@ -45,6 +45,9 @@ class EventBus {
             averageLatency: { high: 0, normal: 0, low: 0 },
             latencyHistory: { high: [], normal: [], low: [] }
         };
+
+        // Incremental event ID counter (cheaper than Date.now() + Math.random())
+        this._nextEventId = 0;
         
         // Throttle cache
         this.throttleCache = new Map();
@@ -136,12 +139,13 @@ class EventBus {
 
         this.metrics.eventsEmitted++;
 
+        const now = Date.now();
         const eventData = {
             event,
             data,
             priority,
-            timestamp: Date.now(),
-            id: `evt_${Date.now()}_${Math.random()}`
+            timestamp: now,
+            id: ++this._nextEventId
         };
 
         if (this.config.enablePriorities && priority === EventPriority.HIGH) {
@@ -307,15 +311,11 @@ class EventBus {
     // ========================================================================
     
     updateLatencyMetrics(priority, latency) {
-        const history = this.metrics.latencyHistory[priority];
-        history.push(latency);
-        
-        if (history.length > 100) {
-            history.shift();
-        }
-        
-        const avg = history.reduce((a, b) => a + b, 0) / history.length;
-        this.metrics.averageLatency[priority] = Math.round(avg * 100) / 100;
+        // Incremental moving average (no array traversal)
+        const prev = this.metrics.averageLatency[priority] || 0;
+        this.metrics.eventsProcessed;
+        // Exponential moving average with alpha=0.05
+        this.metrics.averageLatency[priority] = Math.round((prev * 0.95 + latency * 0.05) * 100) / 100;
     }
     
     cleanCaches() {

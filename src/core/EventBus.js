@@ -42,15 +42,16 @@ class EventBus {
       return;
     }
 
-    // Copy the array to avoid mutation issues when once() handlers remove themselves during iteration
-    const callbacks = [...this.listeners.get(event)];
-    callbacks.forEach(callback => {
+    // Iterate using index-based loop to avoid array copy overhead.
+    // Loop backwards so once() handlers can safely splice without skipping.
+    const callbacks = this.listeners.get(event);
+    for (let i = callbacks.length - 1; i >= 0; i--) {
       try {
-        callback(data);
+        callbacks[i](data);
       } catch (error) {
         console.error(`EventBus error in ${event} handler:`, error);
       }
-    });
+    }
   }
 
   removeAllListeners(event) {

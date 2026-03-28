@@ -1489,15 +1489,30 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 detail: { xoffset: this._xoffset, yoffset: this._yoffset, xrange: this._xrange }
             }));
         };
+        this._lastMarkerCur = null;
+        this._lastMarkerStart = null;
+        this._lastMarkerEnd = null;
         this.redrawMarker=function(){
             if(!this.initialized)
                 return;
             const cur=(this.cursor-this.xoffset)*this.stepw+this.yruler+this.kbwidth;
-            this.cursorimg.style.left=(cur+this.cursoroffset)+"px";
+            const curLeft=(cur+this.cursoroffset)+"px";
+            if(this._lastMarkerCur!==curLeft){
+                this.cursorimg.style.left=curLeft;
+                this._lastMarkerCur=curLeft;
+            }
             const start=(this.markstart-this.xoffset)*this.stepw+this.yruler+this.kbwidth;
-            this.markstartimg.style.left=(start+this.markstartoffset)+"px";
+            const startLeft=(start+this.markstartoffset)+"px";
+            if(this._lastMarkerStart!==startLeft){
+                this.markstartimg.style.left=startLeft;
+                this._lastMarkerStart=startLeft;
+            }
             const end=(this.markend-this.xoffset)*this.stepw+this.yruler+this.kbwidth;
-            this.markendimg.style.left=(end+this.markendoffset)+"px";
+            const endLeft=(end+this.markendoffset)+"px";
+            if(this._lastMarkerEnd!==endLeft){
+                this.markendimg.style.left=endLeft;
+                this._lastMarkerEnd=endLeft;
+            }
         };
         // Helper: parse hex color to {r,g,b}
         this._parseHexColor=function(hex){
@@ -1875,13 +1890,17 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             this.steph = this.sheight/this.yrange;
 
             // Compute note alpha: semi-transparent when multiple channels are visible
-            var channelSet = new Set();
-            for(var s=0;s<this.sequence.length;++s) {
-                var ch = this.sequence[s].c;
-                if(ch !== undefined) channelSet.add(ch);
-                if(channelSet.size > 1) break; // early exit
+            // Only recalculate when sequence reference changes (not every frame)
+            if (this.sequence !== this._lastSequenceRef) {
+                this._lastSequenceRef = this.sequence;
+                var channelSet = new Set();
+                for(var s=0;s<this.sequence.length;++s) {
+                    var ch = this.sequence[s].c;
+                    if(ch !== undefined) channelSet.add(ch);
+                    if(channelSet.size > 1) break;
+                }
+                this._multiChannelAlpha = channelSet.size > 1 ? 0.7 : 1.0;
             }
-            this._multiChannelAlpha = channelSet.size > 1 ? 0.7 : 1.0;
 
             // Rebuild offscreen grid buffer if needed
             if (this._gridDirty) {
