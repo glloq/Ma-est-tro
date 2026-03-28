@@ -222,6 +222,18 @@
       // Close this auto-assign modal
       this.close();
 
+      // If a callback was provided (routing modal context), delegate post-apply to caller
+      if (this.onApply) {
+        this.onApply({
+          success: true,
+          adaptedFileId: response.adaptedFileId,
+          filename: response.filename,
+          assignments: preparedAssignments,
+          skippedCount: this.skippedChannels.size
+        });
+        return;
+      }
+
       if (response.adaptedFileId) {
         // Adapted file was created (transpositions were applied)
         // Close the current editor and open the adapted file
