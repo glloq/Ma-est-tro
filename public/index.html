@@ -197,7 +197,6 @@
         body.theme-dark .folder-item:hover {
             background: #d97706;
             box-shadow: 3px 3px 0px #78350f;
-            transform: translate(1px, 1px);
         }
 
         body.theme-dark .folder-item.open {
@@ -527,12 +526,12 @@
             border: 1px solid rgba(255, 255, 255, 0.4);
         }
 
-        .btn-keyboard-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); transform: scale(1.1); }
-        .btn-settings-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); transform: scale(1.1); }
-        .btn-debug-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); transform: scale(1.1); }
-        .btn-instruments-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); transform: scale(1.1); }
-        .btn-calibration-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); transform: scale(1.1); }
-        .btn-lighting-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); transform: scale(1.1); }
+        .btn-keyboard-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); }
+        .btn-settings-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); }
+        .btn-debug-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); }
+        .btn-instruments-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); }
+        .btn-calibration-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); }
+        .btn-lighting-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); }
 
         /* Inputs */
         input,
@@ -600,7 +599,6 @@
 
         .btn-primary:hover {
             box-shadow: 0 6px 20px rgba(118, 75, 162, 0.45);
-            transform: translateY(-1px);
         }
 
         .btn-secondary {
@@ -632,6 +630,9 @@
             border-bottom: none;
             border-radius: 12px 12px 0 0;
             padding: 14px 18px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
         }
 
         .midi-files-header h2 {
@@ -671,6 +672,9 @@
             background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.1), rgba(232, 67, 147, 0.06));
             padding: 10px 14px;
             border-bottom: 1px solid rgba(118, 75, 162, 0.12);
+            position: sticky;
+            top: 0;
+            z-index: 49;
         }
 
         .midi-files-header h2 span {
@@ -709,7 +713,7 @@
         }
 
         .folder-item { background: #fbbf24; border: none; color: #451a03; box-shadow: 4px 4px 0px #d97706; transition: all 0.15s ease; }
-        .folder-item:hover { background: #fcd34d; box-shadow: 3px 3px 0px #d97706; transform: translate(1px, 1px); }
+        .folder-item:hover { background: #fcd34d; box-shadow: 3px 3px 0px #d97706; }
         .folder-item.open { background: #f59e0b; box-shadow: 4px 4px 0px #b45309; }
 
         .folder-item .folder-icon,
@@ -941,7 +945,8 @@
             display: flex;
             flex-direction: column;
             height: 100%;
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
         header {
@@ -950,7 +955,8 @@
             padding: 6px 10px;
             margin-bottom: 6px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            position: relative;
+            position: sticky;
+            top: 0;
             z-index: 60; /* Au-dessus du piano roll */
             flex-shrink: 0;
         }
@@ -988,7 +994,6 @@
         .btn-keyboard-toggle:hover {
             background: #10b981;
             border-color: #10b981;
-            transform: scale(1.1) rotate(-5deg);
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
         }
 
@@ -1014,7 +1019,6 @@
         .btn-debug-toggle:hover {
             background: #667eea;
             border-color: #667eea;
-            transform: scale(1.1) rotate(10deg);
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
 
@@ -1046,7 +1050,6 @@
         .btn-settings-toggle:hover {
             background: #f59e0b;
             border-color: #f59e0b;
-            transform: scale(1.1) rotate(-10deg);
             box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
         }
 
@@ -1072,7 +1075,6 @@
         .btn-instruments-toggle:hover {
             background: #8b5cf6;
             border-color: #8b5cf6;
-            transform: scale(1.1) rotate(10deg);
             box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
         }
 
@@ -1098,7 +1100,6 @@
         .btn-calibration-toggle:hover {
             background: #e74c3c;
             border-color: #e74c3c;
-            transform: scale(1.1) rotate(-10deg);
             box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
         }
 
@@ -1124,7 +1125,6 @@
         .btn-lighting-toggle:hover {
             background: #eab308;
             border-color: #eab308;
-            transform: scale(1.1) rotate(-10deg);
             box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3);
         }
 
@@ -1157,7 +1157,7 @@
         .main-grid {
             flex: 1;
             min-height: 0;
-            overflow-y: scroll;
+            overflow-y: visible;
             margin-bottom: 0;
         }
 
@@ -1200,7 +1200,6 @@
 
         .btn:hover {
             background: #5568d3;
-            transform: translateY(-1px);
         }
 
         .btn:disabled {
@@ -1255,17 +1254,17 @@
             padding: 0;
         }
 
-        .main-grid::-webkit-scrollbar {
+        .container::-webkit-scrollbar {
             width: 20px;
         }
 
-        .main-grid::-webkit-scrollbar-track {
+        .container::-webkit-scrollbar-track {
             background: linear-gradient(180deg, #f0f2f5 0%, #e4e7eb 100%);
             border-radius: 10px;
             box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.08);
         }
 
-        .main-grid::-webkit-scrollbar-thumb {
+        .container::-webkit-scrollbar-thumb {
             background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
             border-radius: 10px;
             border: 2px solid transparent;
@@ -1274,12 +1273,12 @@
             transition: all 0.3s ease;
         }
 
-        .main-grid::-webkit-scrollbar-thumb:hover {
+        .container::-webkit-scrollbar-thumb:hover {
             background: linear-gradient(180deg, #5a6fd6 0%, #6a4190 100%);
             box-shadow: 0 3px 10px rgba(102, 126, 234, 0.5);
         }
 
-        .main-grid::-webkit-scrollbar-thumb:active {
+        .container::-webkit-scrollbar-thumb:active {
             background: linear-gradient(180deg, #4e5fc2 0%, #5e377e 100%);
         }
 
@@ -1372,7 +1371,6 @@
 
         .search-clear-btn:hover {
             color: #667eea;
-            transform: scale(1.2);
         }
 
         .search-stats {
@@ -1510,7 +1508,6 @@
         .folder-item:hover {
             background: #fcd34d;
             box-shadow: 3px 3px 0px #b45309;
-            transform: translate(1px, 1px);
         }
 
         .folder-item.drag-over {
@@ -2372,7 +2369,6 @@
         .file-list.view-grid .file-item:hover {
             border-color: #667eea;
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-            transform: translateY(-2px);
         }
 
         /* Grid: routing background tints */
@@ -2568,7 +2564,6 @@
         .file-list.view-grid .folder-item:hover {
             border-color: #d97706;
             box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
-            transform: translateY(-2px);
         }
 
         .file-list.view-grid .folder-item.open {
@@ -3180,7 +3175,6 @@
 
         .btn-icon:hover {
             background: #5568d3;
-            transform: translateY(-1px);
         }
 
         /* Modale de réglages d'instrument */
