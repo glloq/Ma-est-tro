@@ -856,20 +856,23 @@
 }
 
 .midi-editor-modal .header-auto-assign-btn {
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: #2d8a4e;
+    border: 1px solid #3a9d5c;
     color: white;
-    padding: 4px 12px;
+    padding: 5px 14px;
     border-radius: 6px;
     font-size: 0.8rem;
+    font-weight: 600;
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(45, 138, 78, 0.4);
 }
 
 .midi-editor-modal .header-auto-assign-btn:hover {
-    background: rgba(255, 255, 255, 0.25);
-    border-color: rgba(255, 255, 255, 0.5);
+    background: #3a9d5c;
+    border-color: #4ab86c;
+    box-shadow: 0 3px 10px rgba(58, 157, 92, 0.5);
 }
 
 .midi-editor-modal .modal-title {
