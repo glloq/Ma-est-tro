@@ -265,6 +265,17 @@
                         </div>
                     </div>
 
+                    <!-- Boutons flottants au-dessus de l'éditeur -->
+                    <div class="modal-floating-buttons">
+                        <button class="btn btn-secondary" data-action="close">${this.t('common.close')}</button>
+                        <button class="btn btn-primary" data-action="save" id="save-btn">
+                            💾 ${this.t('midiEditor.save')}
+                        </button>
+                        <button class="btn btn-secondary" data-action="save-as" id="save-as-btn" title="${this.t('midiEditor.saveAs')}">
+                            📄 ${this.t('midiEditor.saveAs')}
+                        </button>
+                    </div>
+
                     <!-- Conteneur pour Notes et CC/Pitchbend -->
                     <div class="midi-editor-container">
                         <!-- Section Notes -->
@@ -394,16 +405,6 @@
                         </div>
                     </div>
 
-                    <!-- Boutons flottants en overlay -->
-                    <div class="modal-floating-buttons">
-                        <button class="btn btn-secondary" data-action="close">${this.t('common.close')}</button>
-                        <button class="btn btn-primary" data-action="save" id="save-btn">
-                            💾 ${this.t('midiEditor.save')}
-                        </button>
-                        <button class="btn btn-secondary" data-action="save-as" id="save-as-btn" title="${this.t('midiEditor.saveAs')}">
-                            📄 ${this.t('midiEditor.saveAs')}
-                        </button>
-                    </div>
                 </div>
             </div>
         `;
