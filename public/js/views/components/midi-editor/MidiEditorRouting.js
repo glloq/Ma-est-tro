@@ -97,7 +97,7 @@
             <div class="modal-dialog modal-xl">
                 <div class="modal-header">
                     <div class="modal-title">
-                        <h3>🎹 ÉdiB∞p</h3>
+                        <h3>🎹 ÉDIB∞P</h3>
                         <span class="title-separator">—</span>
                         <span class="file-name" id="editor-file-name">${escapeHtml(this.currentFilename || this.currentFile || '')}</span>
                         <button class="btn-rename-file" data-action="rename-file" title="${this.t('midiEditor.renameFile')}">✏️</button>
