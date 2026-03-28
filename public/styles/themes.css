@@ -183,6 +183,43 @@ body.dark-mode .midi-editor-modal .modal-body {
     background: #1a1a1a;
 }
 
+body.dark-mode .midi-editor-modal .tool-btn[data-action="undo"],
+body.dark-mode .midi-editor-modal .tool-btn[data-action="redo"] {
+    background: linear-gradient(180deg, #3a4a5a 0%, #2a3a4a 100%);
+    border-color: #4a6a8a;
+}
+
+body.dark-mode .midi-editor-modal .tool-btn[data-action="mode-drag-view"] {
+    background: linear-gradient(180deg, #4a3a5a 0%, #3a2a4a 100%);
+    border-color: #6a4a8a;
+}
+
+body.dark-mode .midi-editor-modal .tool-btn[data-action="mode-select"],
+body.dark-mode .midi-editor-modal .tool-btn[data-action="mode-drag-notes"],
+body.dark-mode .midi-editor-modal .tool-btn[data-action="mode-add-note"],
+body.dark-mode .midi-editor-modal .tool-btn[data-action="mode-resize-note"] {
+    background: linear-gradient(180deg, #3a5a3a 0%, #2a4a2a 100%);
+    border-color: #4a8a4a;
+}
+
+body.dark-mode .midi-editor-modal .tool-btn[data-action="copy"],
+body.dark-mode .midi-editor-modal .tool-btn[data-action="paste"],
+body.dark-mode .midi-editor-modal .tool-btn[data-action="delete"] {
+    background: linear-gradient(180deg, #5a3a3a 0%, #4a2a2a 100%);
+    border-color: #8a4a4a;
+}
+
+body.dark-mode .midi-editor-modal .tool-btn-snap {
+    background: linear-gradient(180deg, #3a4a3a 0%, #2a3a2a 100%);
+    border-color: #4a8a4a;
+    color: #fff;
+}
+
+body.dark-mode .midi-editor-modal .btn-show-all-channels {
+    background: linear-gradient(180deg, #3a4a5a 0%, #2a3a4a 100%);
+    border-color: #4a6a8a;
+}
+
 body.dark-mode .midi-editor-modal .editor-toolbar {
     background: #2a2a2a;
     border-bottom-color: #3a3a3a;
@@ -238,32 +275,6 @@ body.dark-mode .midi-editor-modal .tool-btn:disabled {
 body.dark-mode .midi-editor-modal .tool-btn.mode-unsupported {
     border-color: #333;
     background: #1a1a1a;
-}
-
-body.dark-mode .midi-editor-modal .tool-btn[data-action="undo"],
-body.dark-mode .midi-editor-modal .tool-btn[data-action="redo"] {
-    background: linear-gradient(180deg, #3a4a5a 0%, #2a3a4a 100%);
-    border-color: #4a6a8a;
-}
-
-body.dark-mode .midi-editor-modal .tool-btn[data-action="mode-drag-view"] {
-    background: linear-gradient(180deg, #4a3a5a 0%, #3a2a4a 100%);
-    border-color: #6a4a8a;
-}
-
-body.dark-mode .midi-editor-modal .tool-btn[data-action="mode-select"],
-body.dark-mode .midi-editor-modal .tool-btn[data-action="mode-drag-notes"],
-body.dark-mode .midi-editor-modal .tool-btn[data-action="mode-add-note"],
-body.dark-mode .midi-editor-modal .tool-btn[data-action="mode-resize-note"] {
-    background: linear-gradient(180deg, #3a5a3a 0%, #2a4a2a 100%);
-    border-color: #4a8a4a;
-}
-
-body.dark-mode .midi-editor-modal .tool-btn[data-action="copy"],
-body.dark-mode .midi-editor-modal .tool-btn[data-action="paste"],
-body.dark-mode .midi-editor-modal .tool-btn[data-action="delete"] {
-    background: linear-gradient(180deg, #5a3a3a 0%, #4a2a2a 100%);
-    border-color: #8a4a4a;
 }
 
 body.dark-mode .midi-editor-modal .tool-btn-compact {

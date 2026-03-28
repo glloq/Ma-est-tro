@@ -1086,18 +1086,19 @@ body.dark-mode .tool-btn:hover:not(:disabled) {
 
 .playback-section {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     gap: 4px;
 }
 
 .playback-btn {
-    min-width: 40px;
-    padding: 6px 10px;
+    min-width: 44px;
+    padding: 0 12px;
+    align-self: stretch;
     transition: background-color 0.15s ease, transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .playback-btn .icon {
-    font-size: 14px;
+    font-size: 16px;
 }
 
 /* Play button - vert */
