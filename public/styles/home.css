@@ -89,7 +89,6 @@
 .file-item:hover {
     background: var(--bg-hover);
     border-color: var(--color-primary);
-    transform: translateX(4px);
 }
 
 .file-item.active {
@@ -145,7 +144,6 @@
 .playlist-item:hover {
     background: var(--bg-hover);
     border-color: var(--color-primary);
-    transform: translateX(4px);
 }
 
 .playlist-item.active {
@@ -290,7 +288,6 @@
 .btn-mute-all:hover {
     background: var(--bg-hover);
     border-color: var(--color-warning);
-    transform: translateY(-2px);
 }
 
 .btn-mute-all.muted {
