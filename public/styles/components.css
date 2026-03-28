@@ -1613,9 +1613,11 @@
 
 .midi-editor-modal .modal-floating-buttons button:hover {
     box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.25) !important;
-    filter: brightness(0.8) !important;
+    background: linear-gradient(135deg, #5a6fd8, #6a4190) !important;
+    border-color: transparent !important;
     color: white !important;
     transform: none !important;
+    filter: none !important;
 }
 
 .midi-editor-modal .btn-sm {
