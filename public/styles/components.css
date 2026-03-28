@@ -1045,18 +1045,18 @@
     border-color: #c46a80;
 }
 
-/* Boutons compacts */
+/* Boutons compacts - même taille que les tool-btn */
 .midi-editor-modal .tool-btn-compact {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 8px 10px;
+    padding: 4px 8px;
     background: var(--bg-secondary, #ffffff);
     border: 2px solid var(--border-color, #d4daff);
     border-radius: 6px;
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-    min-height: 48px;
+    min-height: 36px;
     color: var(--text-primary, #2d3561);
     font-size: 12px;
     font-weight: 600;
@@ -1070,20 +1070,20 @@
     background: var(--bg-tertiary, #e8eeff);
 }
 
-/* Bouton snap */
+/* Bouton snap - même taille que les tool-btn */
 .midi-editor-modal .tool-btn-snap {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 8px 14px;
+    padding: 4px 10px;
     background: #d4f0e8;
     border: 2px solid #7cc8aa;
     border-radius: 6px;
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-    min-height: 48px;
+    min-height: 36px;
     color: var(--text-primary, #2d3561);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     box-shadow: var(--shadow-light);
 }
