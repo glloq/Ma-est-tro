@@ -630,15 +630,16 @@ class BaseCanvasEditor {
         const startTick = Math.floor(this.options.xoffset / gridSize) * gridSize;
         const endTick = this.options.xoffset + this.options.xrange;
 
+        // Batch all vertical grid lines into a single path for performance
+        ctx.beginPath();
         for (let t = startTick; t <= endTick; t += gridSize) {
             const x = this.ticksToX(t);
             if (x >= 0 && x <= w) {
-                ctx.beginPath();
                 ctx.moveTo(Math.max(x, labelMargin), 0);
                 ctx.lineTo(x, h);
-                ctx.stroke();
             }
         }
+        ctx.stroke();
 
         // Horizontal grid lines + labels (subclass-specific)
         this.renderGridLabels(ctx, labelMargin);

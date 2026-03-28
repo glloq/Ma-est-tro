@@ -92,6 +92,7 @@
                 }
                 this.translations = await response.json();
                 this.currentLocale = locale;
+                this._translationCache = new Map(); // Invalidate cache on locale change
                 localStorage.setItem('maestro_locale', locale);
 
                 // Mettre à jour l'attribut lang du HTML
@@ -115,6 +116,13 @@
          * @returns {string|Array|Object} - Texte traduit, tableau, objet ou clé si non trouvé
          */
         t(key, params = {}) {
+            // Fast path: cache hit for parameterless lookups
+            const hasParams = Object.keys(params).length > 0;
+            if (!hasParams && this._translationCache) {
+                const cached = this._translationCache.get(key);
+                if (cached !== undefined) return cached;
+            }
+
             const keys = key.split('.');
             let value = this.translations;
 
@@ -122,7 +130,6 @@
                 if (value && typeof value === 'object' && k in value) {
                     value = value[k];
                 } else {
-                    // Clé non trouvée, retourner la clé elle-même
                     console.warn(`[I18n] Missing translation: ${key}`);
                     return key;
                 }
@@ -144,9 +151,18 @@
             }
 
             // Interpolation des paramètres : {param} → valeur
-            return value.replace(/\{(\w+)\}/g, (match, name) => {
-                return params.hasOwnProperty(name) ? params[name] : match;
-            });
+            const result = hasParams
+                ? value.replace(/\{(\w+)\}/g, (match, name) => {
+                    return params.hasOwnProperty(name) ? params[name] : match;
+                })
+                : value;
+
+            // Cache parameterless translations
+            if (!hasParams && this._translationCache) {
+                this._translationCache.set(key, result);
+            }
+
+            return result;
         }
 
         /**
