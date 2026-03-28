@@ -107,6 +107,9 @@
                             <input type="number" id="tempo-input" class="tempo-input" min="20" max="300" step="1" value="${this.tempo || 120}" title="${this.t('midiEditor.tempoTip')}">
                         </div>
                     </div>
+                    <button class="header-auto-assign-btn" data-action="auto-assign" title="${this.t('autoAssign.title')}">
+                        🎯 ${this.t('midiEditor.autoAssign')}
+                    </button>
                     <button class="modal-close" data-action="close">&times;</button>
                 </div>
                 <div class="modal-body">
@@ -392,9 +395,6 @@
                     <!-- Boutons flottants en overlay -->
                     <div class="modal-floating-buttons">
                         <button class="btn btn-secondary" data-action="close">${this.t('common.close')}</button>
-                        <button class="btn btn-info" data-action="auto-assign" id="auto-assign-btn" title="${this.t('autoAssign.title')}">
-                            🎯 ${this.t('midiEditor.autoAssign')}
-                        </button>
                         <button class="btn btn-primary" data-action="save" id="save-btn">
                             💾 ${this.t('midiEditor.save')}
                         </button>
