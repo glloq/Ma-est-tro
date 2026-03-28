@@ -800,6 +800,24 @@
     transform: rotate(90deg);
 }
 
+.midi-editor-modal .header-auto-assign-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    margin-left: auto;
+}
+
+.midi-editor-modal .header-auto-assign-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
 .midi-editor-modal .modal-title {
     display: flex;
     align-items: center;
