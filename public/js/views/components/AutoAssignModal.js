@@ -359,6 +359,9 @@ class AutoAssignModal {
     const footer = this.modal.querySelector('.aa-footer-center');
     if (!footer || !this.midiData) return;
     footer.innerHTML = `
+      <button class="btn aa-btn-preview-original" onclick="autoAssignModalInstance.previewOriginal(${channel})" title="${_t('autoAssign.previewOriginalTip')}">
+        ${_t('autoAssign.previewOriginal')}
+      </button>
       <button class="btn" onclick="autoAssignModalInstance.previewChannel(${channel})" title="${_t('autoAssign.previewChannelTip')}">
         ${_t('autoAssign.previewChannel', {num: channel + 1})}
       </button>
@@ -550,11 +553,8 @@ class AutoAssignModal {
     // Clamp to reasonable range
     this.adaptationSettings[ch].transpositionSemitones = Math.max(-48, Math.min(48, this.adaptationSettings[ch].transpositionSemitones));
 
-    const el = document.getElementById(`transpo_${channel}`);
-    if (el) {
-      const val = this.adaptationSettings[ch].transpositionSemitones;
-      el.textContent = `${val > 0 ? '+' : ''}${val} st`;
-    }
+    // Full refresh to update piano roll and adaptation result
+    this.refreshCurrentTab();
   }
 
   /**
@@ -564,11 +564,9 @@ class AutoAssignModal {
     const ch = String(channel);
     const assignment = this.selectedAssignments[ch];
     this.adaptationSettings[ch].transpositionSemitones = assignment?.transposition?.semitones || 0;
-    const el = document.getElementById(`transpo_${channel}`);
-    if (el) {
-      const val = this.adaptationSettings[ch].transpositionSemitones;
-      el.textContent = `${val > 0 ? '+' : ''}${val} st`;
-    }
+
+    // Full refresh to update piano roll and adaptation result
+    this.refreshCurrentTab();
   }
 
   /**
@@ -579,12 +577,7 @@ class AutoAssignModal {
     if (!this.adaptationSettings[ch]) return;
     this.adaptationSettings[ch].noteOffset = (this.adaptationSettings[ch].noteOffset || 0) + delta;
     this.adaptationSettings[ch].noteOffset = Math.max(-24, Math.min(24, this.adaptationSettings[ch].noteOffset));
-
-    const el = document.getElementById(`noteOffset_${channel}`);
-    if (el) {
-      const val = this.adaptationSettings[ch].noteOffset;
-      el.textContent = `${val > 0 ? '+' : ''}${val}`;
-    }
+    this.refreshCurrentTab();
   }
 
   /**
@@ -593,8 +586,7 @@ class AutoAssignModal {
   resetNoteOffset(channel) {
     const ch = String(channel);
     this.adaptationSettings[ch].noteOffset = 0;
-    const el = document.getElementById(`noteOffset_${channel}`);
-    if (el) el.textContent = '0';
+    this.refreshCurrentTab();
   }
 
   /**
@@ -636,14 +628,38 @@ class AutoAssignModal {
   }
 
   /**
-   * Quick assign: apply auto-selection immediately
+   * Quick assign: apply auto-selection immediately with summary
    */
   async quickAssign() {
+    // Build summary of what will be assigned
+    const assigned = [];
+    const lowScore = [];
+    const splitCount = Object.keys(this.splitProposals).length;
+
+    for (const ch of this.channels) {
+      const channel = parseInt(ch);
+      const assignment = this.selectedAssignments[ch];
+      if (!assignment) continue;
+      const name = assignment.customName || assignment.instrumentName || '?';
+      const score = assignment.score || 0;
+      assigned.push({ channel: channel + 1, name, score });
+      if (score < 60) lowScore.push(channel + 1);
+    }
+
+    let summary = _t('autoAssign.quickAssignConfirm');
+    summary += `\n\n${assigned.length}/${this.channels.length} ` + _t('autoAssign.channelsWillBeAssigned', { active: assigned.length, total: this.channels.length });
+    if (lowScore.length > 0) {
+      summary += `\n⚠ Ch ${lowScore.join(', ')}: score < 60`;
+    }
+    if (splitCount > 0) {
+      summary += `\n↕ ${splitCount} split(s) available`;
+    }
+
     if (typeof window.showConfirm === 'function') {
-      const confirmed = await window.showConfirm(_t('autoAssign.quickAssignConfirm'));
+      const confirmed = await window.showConfirm(summary);
       if (!confirmed) return;
     } else {
-      if (!confirm(_t('autoAssign.quickAssignConfirm'))) return;
+      if (!confirm(summary)) return;
     }
     this.skippedChannels.clear();
     await this.validateAndApply();

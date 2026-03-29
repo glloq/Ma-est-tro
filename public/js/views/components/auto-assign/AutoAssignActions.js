@@ -341,6 +341,9 @@
       this.showStopButton();
     } catch (error) {
       console.error('Preview error:', error);
+      if (typeof window.showToast === 'function') {
+        window.showToast(_t('autoAssign.previewFailed') + ': ' + (error.message || ''), 'error');
+      }
     } finally {
       this._previewInProgress = false;
     }
@@ -363,6 +366,28 @@
     try {
       this.stopPreview();
       const ch = String(channel);
+
+      // Handle split channel preview: play full channel with combined range
+      if (this.isSplitChannel(channel) && this.splitAssignments[channel]) {
+        const splitProposal = this.splitAssignments[channel];
+        const segments = splitProposal.segments || [];
+        if (segments.length > 0) {
+          // Use first segment's GM program for sound, combined range for constraints
+          const instrumentConstraints = {};
+          // Find combined note range across all segments
+          const allMins = segments.map(s => s.noteRange?.min).filter(v => v != null);
+          const allMaxs = segments.map(s => s.noteRange?.max).filter(v => v != null);
+          if (allMins.length > 0) instrumentConstraints.noteRangeMin = Math.min(...allMins);
+          if (allMaxs.length > 0) instrumentConstraints.noteRangeMax = Math.max(...allMaxs);
+
+          await this.audioPreview.previewSingleChannel(
+            this.midiData, channel, {}, instrumentConstraints, 0, 15
+          );
+          this.showStopButton();
+        }
+        return;
+      }
+
       const assignment = this.selectedAssignments[ch];
       const adaptation = this.adaptationSettings[ch] || {};
 
@@ -390,6 +415,24 @@
         }
         // 'ignore': no transposition, just base remapping
 
+        // Apply drum strategy filtering (mirrors validateAndApply logic)
+        const drumStrategy = adaptation.drumStrategy || 'intelligent';
+        if (drumStrategy === 'direct') {
+          const filtered = {};
+          for (const [src, tgt] of Object.entries(noteRemapping)) {
+            if (parseInt(src) === tgt) filtered[src] = tgt;
+          }
+          noteRemapping = filtered;
+        } else if (drumStrategy === 'manual') {
+          noteRemapping = {};
+        }
+
+        // Apply manual drum note overrides on top
+        const drumOverrides = this.drumMappingOverrides[ch] || {};
+        if (Object.keys(drumOverrides).length > 0) {
+          noteRemapping = { ...noteRemapping, ...drumOverrides };
+        }
+
         transposition.noteRemapping = Object.keys(noteRemapping).length > 0 ? noteRemapping : null;
 
         // Instrument sound
@@ -415,6 +458,48 @@
         window.showToast(_t('autoAssign.previewFailed') + ': ' + error.message, 'error');
       } else {
         alert(_t('autoAssign.previewFailed') + ': ' + error.message);
+      }
+    } finally {
+      this._previewInProgress = false;
+    }
+  }
+
+  /**
+   * Preview original channel without any adaptation (raw MIDI)
+   */
+    AutoAssignActionsMixin.previewOriginal = async function(channel) {
+    if (!this.audioPreview || !this.midiData) {
+      if (typeof window.showToast === 'function') {
+        window.showToast(_t('autoAssign.previewNotAvailable'), 'warning');
+      } else {
+        alert(_t('autoAssign.previewNotAvailable'));
+      }
+      return;
+    }
+
+    if (this._previewInProgress) return;
+    this._previewInProgress = true;
+
+    try {
+      this.stopPreview();
+      const ch = String(channel);
+      const analysis = this.channelAnalyses[channel] || this.selectedAssignments[ch]?.channelAnalysis;
+
+      // No transposition, no constraints — play raw channel
+      const instrumentConstraints = {};
+      // Use GM program from the MIDI file analysis for sound
+      if (analysis?.primaryProgram != null) {
+        instrumentConstraints.gmProgram = analysis.primaryProgram;
+      }
+
+      await this.audioPreview.previewSingleChannel(
+        this.midiData, channel, {}, instrumentConstraints, 0, 15
+      );
+      this.showStopButton();
+    } catch (error) {
+      console.error('Preview original error:', error);
+      if (typeof window.showToast === 'function') {
+        window.showToast(_t('autoAssign.previewFailed') + ': ' + (error.message || ''), 'error');
       }
     } finally {
       this._previewInProgress = false;

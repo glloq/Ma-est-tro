@@ -114,6 +114,9 @@
             </button>
             <div class="aa-footer-center">
               ${this.midiData ? `
+                <button class="btn aa-btn-preview-original" onclick="autoAssignModalInstance.previewOriginal(${this.activeTab})" title="${_t('autoAssign.previewOriginalTip')}">
+                  ${_t('autoAssign.previewOriginal')}
+                </button>
                 <button class="btn" onclick="autoAssignModalInstance.previewChannel(${this.activeTab})" title="${_t('autoAssign.previewChannelTip')}">
                   ${_t('autoAssign.previewChannel', {num: this.activeTab + 1})}
                 </button>
@@ -271,12 +274,22 @@
 
       const typeIcon = analysis?.estimatedType ? this.getTypeIcon(analysis.estimatedType) : '';
 
+      // Strategy badge for assigned channels
+      const adapt = this.adaptationSettings[ch] || {};
+      const strategyBadgeMap = { transpose: 'T', octaveWrap: 'W', suppress: 'S' };
+      const strategyTitleMap = { transpose: _t('autoAssign.strategyTranspose'), octaveWrap: _t('autoAssign.strategyOctaveWrap'), suppress: _t('autoAssign.strategySuppress') };
+      const strategyBadge = (!isSkipped && !isSplit && adapt.strategy && strategyBadgeMap[adapt.strategy])
+        ? `<span class="aa-ov-strategy-badge" title="${strategyTitleMap[adapt.strategy]}">${strategyBadgeMap[adapt.strategy]}</span>`
+        : '';
+
       return `
         <tr class="aa-overview-row ${isSkipped ? 'skipped' : ''} ${statusClass}"
-            onclick="autoAssignModalInstance.overviewGoToChannel(${channel})">
+            tabindex="0" role="button"
+            onclick="autoAssignModalInstance.overviewGoToChannel(${channel})"
+            onkeydown="if(event.key==='Enter')autoAssignModalInstance.overviewGoToChannel(${channel})">
           <td class="aa-ov-ch">${typeIcon} Ch ${channel + 1}${channel === 9 ? ' <span class="aa-tab-drum">DR</span>' : ''} ${splitBadge}</td>
           <td class="aa-ov-original">${escapeHtml(gmName)}</td>
-          <td class="aa-ov-assigned">${isSkipped ? `<span class="aa-ov-skipped">${statusLabel}</span>` : escapeHtml(assignedName)}</td>
+          <td class="aa-ov-assigned">${isSkipped ? `<span class="aa-ov-skipped">${statusLabel}</span>` : `${escapeHtml(assignedName)} ${strategyBadge}`}</td>
           <td class="aa-ov-score">
             ${isSkipped ? '—' : `
               <div class="aa-ov-score-bar">
@@ -354,12 +367,20 @@
       : '';
 
     const isAutoSkipped = this.autoSkippedChannels && this.autoSkippedChannels.has(channel);
+    const isSplit = this.isSplitChannel(channel);
+    const headerAdaptation = this.adaptationSettings[ch] || {};
+    const headerStrategy = headerAdaptation.strategy || 'ignore';
+    const strategyLabels = { transpose: _t('autoAssign.strategyTranspose'), octaveWrap: _t('autoAssign.strategyOctaveWrap'), suppress: _t('autoAssign.strategySuppress') };
+    const strategyBadgeHTML = (!isSkipped && !isSplit && strategyLabels[headerStrategy])
+      ? `<span class="aa-ov-strategy-badge">${strategyLabels[headerStrategy]}</span>`
+      : (isSplit ? `<span class="aa-ov-strategy-badge">${_t('autoAssign.splitProposed')}</span>` : '');
 
     return `
       <div class="aa-channel-header">
         <h3>${_t('autoAssign.channel')} ${channel + 1}
           ${channel === 9 ? `<span class="aa-drum-badge">(MIDI 10)</span>` : ''}
           ${midiInstrumentHTML}
+          ${strategyBadgeHTML}
           ${isSkipped && isAutoSkipped
             ? `<span class="aa-autoskip-badge">[${_t('autoAssign.autoSkippedLabel')}]</span>`
             : isSkipped ? `<span class="aa-skipped-badge">[${_t('autoAssign.skippedLabel')}]</span>` : ''}
@@ -387,6 +408,19 @@
     // Compact view for well-assigned channels
     if (isWellAssigned && !isExpanded) {
       const assignedName = assignment?.customName || assignment?.instrumentName || '—';
+      const compactStrategy = adaptation.strategy || 'ignore';
+
+      // Show adaptation result in compact view if a strategy is active
+      let compactResultHTML = '';
+      if (compactStrategy !== 'ignore') {
+        const result = this.calculateAdaptationResult(channel, compactStrategy);
+        if (result.totalNotes > 0) {
+          const playable = result.inRange + result.recovered;
+          const allOk = result.outOfRange === 0;
+          compactResultHTML = `<span class="aa-compact-adaptation ${allOk ? 'ok' : 'warning'}">${playable}/${result.totalNotes}</span>`;
+        }
+      }
+
       return `
         <div class="aa-tab-content">
           <div class="aa-compact-summary">
@@ -395,6 +429,7 @@
               <span class="aa-compact-score ${this.getScoreClass(score)}">
                 ${this.getScoreStars(score)} ${score} — ${this.getScoreLabel(score)}
               </span>
+              ${compactResultHTML}
             </div>
             <button class="aa-compact-expand" onclick="autoAssignModalInstance.toggleChannelDetails(${channel})">
               ${_t('autoAssign.viewDetails')} &#9660;
@@ -433,7 +468,7 @@
       const showLow = this.showLowScores[ch] || false;
       const fallbackHTML = lowOptions.length > 0 ? `
         <div class="aa-low-scores-section">
-          <button class="aa-toggle-low-scores" onclick="autoAssignModalInstance.toggleLowScores(${channel})">
+          <button class="aa-toggle-low-scores" aria-expanded="${showLow}" onclick="autoAssignModalInstance.toggleLowScores(${channel})">
             ${showLow ? '&#9660;' : '&#9654;'} ${_t('autoAssign.showAllInstruments')} (${lowOptions.length})
           </button>
           ${showLow ? `
@@ -469,7 +504,7 @@
     const showLow = this.showLowScores[ch] || false;
     const lowScoreHTML = (!isSkipped && lowScoreOptions.length > 0) ? `
       <div class="aa-low-scores-section">
-        <button class="aa-toggle-low-scores" onclick="autoAssignModalInstance.toggleLowScores(${channel})">
+        <button class="aa-toggle-low-scores" aria-expanded="${showLow}" onclick="autoAssignModalInstance.toggleLowScores(${channel})">
           ${showLow ? '&#9660;' : '&#9654;'} ${_t('autoAssign.showAllInstruments')} (${lowScoreOptions.length})
         </button>
         ${showLow ? `
@@ -485,8 +520,14 @@
     // Adaptation controls (only if not skipped and instrument selected)
     const adaptationHTML = (!isSkipped && selectedInstrumentId) ? this.renderAdaptationControls(channel, adaptation) : '';
 
-    // Drum mapping config section (only for channel 9 or percussion-type channels)
+    // Note range piano roll visualization (only for non-drum channels with an instrument selected)
     const isDrumChannel = channel === 9 || (analysis && analysis.estimatedType === 'drums');
+    const semitones = adaptation.transpositionSemitones || 0;
+    const noteRangeVizHTML = (!isSkipped && !isDrumChannel && selectedInstrumentId && this.renderNoteRangeViz)
+      ? this.renderNoteRangeViz(channel, analysis, assignment, semitones)
+      : '';
+
+    // Drum mapping config section (only for channel 9 or percussion-type channels)
     const drumMappingHTML = (!isSkipped && isDrumChannel && selectedInstrumentId) ? this.renderDrumMappingSection(channel) : '';
 
     // Split proposal (show if available and channel has suggestions)
@@ -503,6 +544,7 @@
           </div>
           ${lowScoreHTML}
           ${adaptationHTML}
+          ${noteRangeVizHTML}
           ${drumMappingHTML}
           ${splitProposalHTML}
         `}
@@ -612,6 +654,30 @@
       </div>
     ` : '';
 
+    // Adaptation result feedback (real-time impact of current strategy)
+    let adaptationResultHTML = '';
+    if (!isDrumChannel && strategy !== 'ignore') {
+      const result = this.calculateAdaptationResult(channel, strategy);
+      if (result.totalNotes > 0) {
+        const allOk = result.outOfRange === 0;
+        const playable = result.inRange + result.recovered;
+        const pct = Math.round((playable / result.totalNotes) * 100);
+        adaptationResultHTML = `
+          <div class="aa-adaptation-result ${allOk ? 'ok' : (result.outOfRange > 3 ? 'warning' : 'partial')}">
+            <div class="aa-adaptation-result-bar">
+              <div class="aa-adaptation-result-fill ${allOk ? 'aa-bg-excellent' : (pct >= 80 ? 'aa-bg-good' : (pct >= 60 ? 'aa-bg-fair' : 'aa-bg-poor'))}" style="width: ${pct}%"></div>
+            </div>
+            <span class="aa-adaptation-result-text">
+              ${allOk
+                ? `${result.totalNotes}/${result.totalNotes} ${_t('autoAssign.notesPlayable')}`
+                : `${playable}/${result.totalNotes} ${_t('autoAssign.notesPlayable')}${result.recovered > 0 ? ` (${result.recovered} ${_t('autoAssign.notesRecovered')})` : ''}${result.outOfRange > 0 ? ` — ${result.outOfRange} ${_t('autoAssign.notesLost')}` : ''}`
+              }
+            </span>
+          </div>
+        `;
+      }
+    }
+
     return `
       <div class="aa-adaptation-section">
         <h4>${_t('autoAssign.adaptationTitle')}</h4>
@@ -622,6 +688,8 @@
           ${transpoHTML}
           ${drumOffsetHTML}
         </div>
+
+        ${adaptationResultHTML}
       </div>
     `;
   }
