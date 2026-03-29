@@ -387,6 +387,19 @@
     // Compact view for well-assigned channels
     if (isWellAssigned && !isExpanded) {
       const assignedName = assignment?.customName || assignment?.instrumentName || '—';
+      const compactStrategy = adaptation.strategy || 'ignore';
+
+      // Show adaptation result in compact view if a strategy is active
+      let compactResultHTML = '';
+      if (compactStrategy !== 'ignore') {
+        const result = this.calculateAdaptationResult(channel, compactStrategy);
+        if (result.totalNotes > 0) {
+          const playable = result.inRange + result.recovered;
+          const allOk = result.outOfRange === 0;
+          compactResultHTML = `<span class="aa-compact-adaptation ${allOk ? 'ok' : 'warning'}">${playable}/${result.totalNotes}</span>`;
+        }
+      }
+
       return `
         <div class="aa-tab-content">
           <div class="aa-compact-summary">
@@ -395,6 +408,7 @@
               <span class="aa-compact-score ${this.getScoreClass(score)}">
                 ${this.getScoreStars(score)} ${score} — ${this.getScoreLabel(score)}
               </span>
+              ${compactResultHTML}
             </div>
             <button class="aa-compact-expand" onclick="autoAssignModalInstance.toggleChannelDetails(${channel})">
               ${_t('autoAssign.viewDetails')} &#9660;

@@ -1701,6 +1701,43 @@ body.dark-mode .aa-strategy-desc {
   color: #6a7a8e;
 }
 
+/* Dark mode: adaptation result bar */
+body.dark-mode .aa-adaptation-result {
+  border: 1px solid #4a5568;
+}
+
+body.dark-mode .aa-adaptation-result.ok {
+  background: rgba(0, 200, 150, 0.15);
+  color: #4fd1a8;
+}
+
+body.dark-mode .aa-adaptation-result.partial {
+  background: rgba(240, 180, 41, 0.15);
+  color: #f0c060;
+}
+
+body.dark-mode .aa-adaptation-result.warning {
+  background: rgba(232, 54, 93, 0.15);
+  color: #f06080;
+}
+
+body.dark-mode .aa-adaptation-result-bar {
+  background: #3a3a4e;
+}
+
+/* Dark mode: split overview banner */
+body.dark-mode .aa-overview-banner.split {
+  background: rgba(102, 126, 234, 0.15);
+  color: #8ea4f0;
+  border-color: rgba(102, 126, 234, 0.35);
+}
+
+/* Dark mode: split badge in overview */
+body.dark-mode .aa-tab-split.active {
+  background: rgba(102, 126, 234, 0.25);
+  color: #8ea4f0;
+}
+
 /* .aa-adaptation-result now uses --aa-success-*/--aa-warning-* variables */
 
 /* Drum summary/badges now use --aa-* semantic variables */
@@ -2150,6 +2187,24 @@ body.dark-mode .aa-drum-arrow {
 .aa-compact-score {
   font-size: 13px;
   font-weight: 600;
+}
+
+.aa-compact-adaptation {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+}
+
+.aa-compact-adaptation.ok {
+  background: var(--aa-success-bg, rgba(0, 200, 150, 0.1));
+  color: var(--aa-success-text, #00c896);
+}
+
+.aa-compact-adaptation.warning {
+  background: var(--aa-warning-bg, rgba(232, 54, 93, 0.1));
+  color: var(--aa-warning-text, #e8365d);
 }
 
 .aa-compact-expand,

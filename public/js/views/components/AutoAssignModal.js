@@ -631,14 +631,38 @@ class AutoAssignModal {
   }
 
   /**
-   * Quick assign: apply auto-selection immediately
+   * Quick assign: apply auto-selection immediately with summary
    */
   async quickAssign() {
+    // Build summary of what will be assigned
+    const assigned = [];
+    const lowScore = [];
+    const splitCount = Object.keys(this.splitProposals).length;
+
+    for (const ch of this.channels) {
+      const channel = parseInt(ch);
+      const assignment = this.selectedAssignments[ch];
+      if (!assignment) continue;
+      const name = assignment.customName || assignment.instrumentName || '?';
+      const score = assignment.score || 0;
+      assigned.push({ channel: channel + 1, name, score });
+      if (score < 60) lowScore.push(channel + 1);
+    }
+
+    let summary = _t('autoAssign.quickAssignConfirm');
+    summary += `\n\n${assigned.length}/${this.channels.length} ` + _t('autoAssign.channelsWillBeAssigned', { active: assigned.length, total: this.channels.length });
+    if (lowScore.length > 0) {
+      summary += `\n⚠ Ch ${lowScore.join(', ')}: score < 60`;
+    }
+    if (splitCount > 0) {
+      summary += `\n↕ ${splitCount} split(s) available`;
+    }
+
     if (typeof window.showConfirm === 'function') {
-      const confirmed = await window.showConfirm(_t('autoAssign.quickAssignConfirm'));
+      const confirmed = await window.showConfirm(summary);
       if (!confirmed) return;
     } else {
-      if (!confirm(_t('autoAssign.quickAssignConfirm'))) return;
+      if (!confirm(summary)) return;
     }
     this.skippedChannels.clear();
     await this.validateAndApply();
