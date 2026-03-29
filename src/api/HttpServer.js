@@ -34,9 +34,9 @@ class HttpServer {
         contentSecurityPolicy: {
           directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://surikov.github.io"],
             styleSrc: ["'self'", "'unsafe-inline'"],
-            connectSrc: ["'self'", 'ws:', 'wss:'],
+            connectSrc: ["'self'", 'ws:', 'wss:', 'https://surikov.github.io'],
             imgSrc: ["'self'", 'data:'],
             fontSrc: ["'self'"],
             objectSrc: ["'none'"],
