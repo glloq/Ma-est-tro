@@ -385,6 +385,14 @@ class InstrumentDatabase {
           fields.push('comm_timeout = ?');
           values.push(settings.comm_timeout);
         }
+        if (settings.instrument_type !== undefined) {
+          fields.push('instrument_type = ?');
+          values.push(settings.instrument_type);
+        }
+        if (settings.instrument_subtype !== undefined) {
+          fields.push('instrument_subtype = ?');
+          values.push(settings.instrument_subtype);
+        }
 
         if (fields.length === 0) {
           return existing.id;
@@ -402,8 +410,8 @@ class InstrumentDatabase {
         // Insert new entry with correct channel
         const stmt = this.db.prepare(`
           INSERT INTO instruments_latency (
-            id, device_id, channel, name, custom_name, sync_delay, mac_address, usb_serial_number, gm_program, octave_mode, comm_timeout
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            id, device_id, channel, name, custom_name, sync_delay, mac_address, usb_serial_number, gm_program, octave_mode, comm_timeout, instrument_type, instrument_subtype
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
         const id = `${deviceId}_${channel}`;
@@ -418,7 +426,9 @@ class InstrumentDatabase {
           settings.usb_serial_number || null,
           settings.gm_program !== undefined ? settings.gm_program : null,
           settings.octave_mode || 'chromatic',
-          settings.comm_timeout !== undefined ? settings.comm_timeout : 5000
+          settings.comm_timeout !== undefined ? settings.comm_timeout : 5000,
+          settings.instrument_type || 'unknown',
+          settings.instrument_subtype || null
         );
 
         return id;
@@ -1094,7 +1104,8 @@ class InstrumentDatabase {
           note_selection_mode, selected_notes, supported_ccs,
           capabilities_source, capabilities_updated_at,
           mac_address, usb_serial_number,
-          sysex_manufacturer_id, sysex_family, sysex_model, sysex_version
+          sysex_manufacturer_id, sysex_family, sysex_model, sysex_version,
+          instrument_type, instrument_subtype
         FROM instruments_latency
         ORDER BY name, custom_name
       `);
@@ -1136,6 +1147,9 @@ class InstrumentDatabase {
           supported_ccs: supportedCcs,
           capabilities_source: result.capabilities_source,
           capabilities_updated_at: result.capabilities_updated_at,
+          // Type hierarchy
+          instrument_type: result.instrument_type || 'unknown',
+          instrument_subtype: result.instrument_subtype || null,
           // Additional fields for reference
           mac_address: result.mac_address,
           usb_serial_number: result.usb_serial_number,
@@ -1156,18 +1170,52 @@ class InstrumentDatabase {
 
   /**
    * Insert or update a channel routing for a MIDI file
-   * @param {Object} routing - { midi_file_id, channel, device_id, instrument_name, compatibility_score, transposition_applied, auto_assigned, assignment_reason, note_remapping, enabled }
+   * @param {Object} routing - { midi_file_id, channel, device_id, instrument_name, compatibility_score, transposition_applied, auto_assigned, assignment_reason, note_remapping, enabled, split_mode, split_note_min, split_note_max, split_polyphony_share }
    * @returns {number} routing id
    */
   insertRouting(routing) {
     try {
+      // For split routings, use a different INSERT (no ON CONFLICT since multiple rows per channel)
+      if (routing.split_mode) {
+        const stmt = this.db.prepare(`
+          INSERT INTO midi_instrument_routings
+            (midi_file_id, track_id, channel, device_id, instrument_name,
+             compatibility_score, transposition_applied, auto_assigned,
+             assignment_reason, note_remapping, enabled, created_at,
+             split_mode, split_note_min, split_note_max, split_polyphony_share)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        const result = stmt.run(
+          routing.midi_file_id,
+          routing.target_channel !== undefined ? routing.target_channel : routing.channel,
+          routing.channel,
+          routing.device_id,
+          routing.instrument_name,
+          routing.compatibility_score || null,
+          routing.transposition_applied || 0,
+          routing.auto_assigned ? 1 : 0,
+          routing.assignment_reason || null,
+          routing.note_remapping || null,
+          routing.enabled !== false ? 1 : 0,
+          routing.created_at || Date.now(),
+          routing.split_mode,
+          routing.split_note_min ?? null,
+          routing.split_note_max ?? null,
+          routing.split_polyphony_share ?? null
+        );
+
+        return result.lastInsertRowid;
+      }
+
+      // Standard routing (no split) — upsert with unique constraint
       const stmt = this.db.prepare(`
         INSERT INTO midi_instrument_routings
           (midi_file_id, track_id, channel, device_id, instrument_name,
            compatibility_score, transposition_applied, auto_assigned,
            assignment_reason, note_remapping, enabled, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(midi_file_id, channel) WHERE channel IS NOT NULL
+        ON CONFLICT(midi_file_id, channel) WHERE split_mode IS NULL
         DO UPDATE SET
           track_id = excluded.track_id,
           device_id = excluded.device_id,
@@ -1183,7 +1231,7 @@ class InstrumentDatabase {
 
       const result = stmt.run(
         routing.midi_file_id,
-        routing.target_channel !== undefined ? routing.target_channel : routing.channel, // Store instrument's target channel
+        routing.target_channel !== undefined ? routing.target_channel : routing.channel,
         routing.channel,
         routing.device_id,
         routing.instrument_name,
@@ -1199,6 +1247,33 @@ class InstrumentDatabase {
       return result.lastInsertRowid;
     } catch (error) {
       this.logger.error(`Failed to insert routing: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete all split routings for a channel, then insert new segments
+   * @param {number} fileId
+   * @param {number} channel
+   * @param {Array<Object>} segments - Array of routing objects with split fields
+   */
+  insertSplitRoutings(fileId, channel, segments) {
+    try {
+      // Remove all existing routings for this channel (both split and non-split)
+      this.db.prepare(
+        'DELETE FROM midi_instrument_routings WHERE midi_file_id = ? AND channel = ?'
+      ).run(fileId, channel);
+
+      // Insert each segment
+      for (const segment of segments) {
+        this.insertRouting({
+          ...segment,
+          midi_file_id: fileId,
+          channel: channel
+        });
+      }
+    } catch (error) {
+      this.logger.error(`Failed to insert split routings: ${error.message}`);
       throw error;
     }
   }
@@ -1220,10 +1295,14 @@ class InstrumentDatabase {
 
     return rows.map(row => ({
       ...row,
-      target_channel: row.track_id !== undefined ? row.track_id : row.channel, // Expose instrument's target channel
+      target_channel: row.track_id !== undefined ? row.track_id : row.channel,
       note_remapping: row.note_remapping ? JSON.parse(row.note_remapping) : null,
       auto_assigned: !!row.auto_assigned,
-      enabled: !!row.enabled
+      enabled: !!row.enabled,
+      split_mode: row.split_mode || null,
+      split_note_min: row.split_note_min ?? null,
+      split_note_max: row.split_note_max ?? null,
+      split_polyphony_share: row.split_polyphony_share ?? null
     }));
   }
 
