@@ -29,6 +29,7 @@ class WebSocketServer {
 
   start() {
     const apiToken = process.env.MAESTRO_API_TOKEN;
+    const serverPort = this.app.config?.server?.port || 8080;
 
     // Attach WebSocket server to existing HTTP server
     this.wss = new WSServer({
@@ -36,6 +37,24 @@ class WebSocketServer {
       maxPayload: MAX_PAYLOAD_BYTES,
       verifyClient: apiToken
         ? ({ req }, done) => {
+            // Allow same-origin connections (frontend served by this server)
+            const origin = req.headers.origin || '';
+            const host = req.headers.host || '';
+            if (origin) {
+              try {
+                const originUrl = new URL(origin);
+                const originHost = originUrl.hostname;
+                const originPort = originUrl.port || (originUrl.protocol === 'https:' ? '443' : '80');
+                const serverHost = host.split(':')[0];
+                const srvPort = String(host.split(':')[1] || serverPort);
+                if (originHost === serverHost && originPort === srvPort) {
+                  done(true);
+                  return;
+                }
+              } catch { /* invalid origin, fall through to token check */ }
+            }
+
+            // External connections require token
             const url = new URL(req.url, 'http://localhost');
             const token =
               url.searchParams.get('token') || req.headers['sec-websocket-protocol'] || '';
