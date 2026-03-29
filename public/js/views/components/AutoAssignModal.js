@@ -550,11 +550,8 @@ class AutoAssignModal {
     // Clamp to reasonable range
     this.adaptationSettings[ch].transpositionSemitones = Math.max(-48, Math.min(48, this.adaptationSettings[ch].transpositionSemitones));
 
-    const el = document.getElementById(`transpo_${channel}`);
-    if (el) {
-      const val = this.adaptationSettings[ch].transpositionSemitones;
-      el.textContent = `${val > 0 ? '+' : ''}${val} st`;
-    }
+    // Full refresh to update piano roll and adaptation result
+    this.refreshCurrentTab();
   }
 
   /**
@@ -564,11 +561,9 @@ class AutoAssignModal {
     const ch = String(channel);
     const assignment = this.selectedAssignments[ch];
     this.adaptationSettings[ch].transpositionSemitones = assignment?.transposition?.semitones || 0;
-    const el = document.getElementById(`transpo_${channel}`);
-    if (el) {
-      const val = this.adaptationSettings[ch].transpositionSemitones;
-      el.textContent = `${val > 0 ? '+' : ''}${val} st`;
-    }
+
+    // Full refresh to update piano roll and adaptation result
+    this.refreshCurrentTab();
   }
 
   /**

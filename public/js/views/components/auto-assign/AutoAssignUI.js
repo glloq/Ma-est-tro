@@ -485,8 +485,14 @@
     // Adaptation controls (only if not skipped and instrument selected)
     const adaptationHTML = (!isSkipped && selectedInstrumentId) ? this.renderAdaptationControls(channel, adaptation) : '';
 
-    // Drum mapping config section (only for channel 9 or percussion-type channels)
+    // Note range piano roll visualization (only for non-drum channels with an instrument selected)
     const isDrumChannel = channel === 9 || (analysis && analysis.estimatedType === 'drums');
+    const semitones = adaptation.transpositionSemitones || 0;
+    const noteRangeVizHTML = (!isSkipped && !isDrumChannel && selectedInstrumentId && this.renderNoteRangeViz)
+      ? this.renderNoteRangeViz(channel, analysis, assignment, semitones)
+      : '';
+
+    // Drum mapping config section (only for channel 9 or percussion-type channels)
     const drumMappingHTML = (!isSkipped && isDrumChannel && selectedInstrumentId) ? this.renderDrumMappingSection(channel) : '';
 
     // Split proposal (show if available and channel has suggestions)
@@ -503,6 +509,7 @@
           </div>
           ${lowScoreHTML}
           ${adaptationHTML}
+          ${noteRangeVizHTML}
           ${drumMappingHTML}
           ${splitProposalHTML}
         `}
@@ -612,6 +619,30 @@
       </div>
     ` : '';
 
+    // Adaptation result feedback (real-time impact of current strategy)
+    let adaptationResultHTML = '';
+    if (!isDrumChannel && strategy !== 'ignore') {
+      const result = this.calculateAdaptationResult(channel, strategy);
+      if (result.totalNotes > 0) {
+        const allOk = result.outOfRange === 0;
+        const playable = result.inRange + result.recovered;
+        const pct = Math.round((playable / result.totalNotes) * 100);
+        adaptationResultHTML = `
+          <div class="aa-adaptation-result ${allOk ? 'ok' : (result.outOfRange > 3 ? 'warning' : 'partial')}">
+            <div class="aa-adaptation-result-bar">
+              <div class="aa-adaptation-result-fill ${allOk ? 'aa-bg-excellent' : (pct >= 80 ? 'aa-bg-good' : (pct >= 60 ? 'aa-bg-fair' : 'aa-bg-poor'))}" style="width: ${pct}%"></div>
+            </div>
+            <span class="aa-adaptation-result-text">
+              ${allOk
+                ? `${result.totalNotes}/${result.totalNotes} ${_t('autoAssign.notesPlayable')}`
+                : `${playable}/${result.totalNotes} ${_t('autoAssign.notesPlayable')}${result.recovered > 0 ? ` (${result.recovered} ${_t('autoAssign.notesRecovered')})` : ''}${result.outOfRange > 0 ? ` — ${result.outOfRange} ${_t('autoAssign.notesLost')}` : ''}`
+              }
+            </span>
+          </div>
+        `;
+      }
+    }
+
     return `
       <div class="aa-adaptation-section">
         <h4>${_t('autoAssign.adaptationTitle')}</h4>
@@ -622,6 +653,8 @@
           ${transpoHTML}
           ${drumOffsetHTML}
         </div>
+
+        ${adaptationResultHTML}
       </div>
     `;
   }
