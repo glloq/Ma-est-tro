@@ -1331,6 +1331,12 @@ body.dark-mode .aa-no-compatible {
   border: 1px solid rgba(255, 152, 0, 0.8);
 }
 
+.aa-range-legend-bounds {
+  margin-left: auto;
+  color: var(--text-muted, #999);
+  font-size: 9px;
+}
+
 .aa-range-summary {
   font-size: 10px;
   font-weight: 600;
@@ -1794,6 +1800,36 @@ body.dark-mode .aa-range-legend {
 
 body.dark-mode .aa-range-drums {
   color: #aaa;
+}
+
+body.dark-mode .aa-split-bar {
+  background: #3a3a3a;
+}
+
+body.dark-mode .aa-range-channel-bg,
+body.dark-mode .aa-split-bar-chan-bg {
+  background: rgba(76, 175, 80, 0.12);
+  border-color: rgba(76, 175, 80, 0.25);
+}
+
+body.dark-mode .aa-split-range-labels {
+  color: #aaa;
+}
+
+body.dark-mode .aa-split-type-tab {
+  border-color: #4a5568;
+  color: #a0aec0;
+}
+
+body.dark-mode .aa-split-type-tab.active {
+  background: #667eea;
+  color: #fff;
+  border-color: #667eea;
+}
+
+body.dark-mode .aa-split-type-tab:hover:not(:disabled) {
+  border-color: #667eea;
+  color: #a0c4ff;
 }
 
 /* .aa-adaptation-warning now uses --aa-warning-* variables */
@@ -2875,20 +2911,6 @@ body.dark-mode .aa-inline-preview:hover {
   border: 1px solid rgba(76, 175, 80, 0.35);
   border-radius: 3px;
   box-sizing: border-box;
-}
-/* Legacy gray background — kept for backward compat */
-.aa-range-split-bg {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  background: rgba(76, 175, 80, 0.18);
-  border: 1px solid rgba(76, 175, 80, 0.35);
-  border-radius: 3px;
-  box-sizing: border-box;
-}
-.aa-rleg-chan-bg {
-  background: rgba(180, 180, 180, 0.3) !important;
-  border-color: rgba(150, 150, 150, 0.5) !important;
 }
 
 /* Muted score text */
