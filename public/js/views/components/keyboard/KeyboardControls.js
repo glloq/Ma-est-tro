@@ -113,37 +113,6 @@
     }
 
     /**
-     * Envoyer un Program Change à l'instrument sélectionné
-     * pour activer le bon son GM sur le bon canal
-     */
-    KeyboardControlsMixin.sendProgramChange = async function(deviceId) {
-        const caps = this.selectedDeviceCapabilities;
-        const device = this.selectedDevice;
-
-        // Chercher gm_program dans les capabilities, puis dans le device
-        let gmProgram = null;
-        if (caps && caps.gm_program !== undefined && caps.gm_program !== null) {
-            gmProgram = caps.gm_program;
-        } else if (device && device.gm_program !== undefined && device.gm_program !== null) {
-            gmProgram = device.gm_program;
-        }
-
-        if (gmProgram === null) return;
-
-        const channel = this.getSelectedChannel();
-        try {
-            await this.backend.sendCommand('midi_send_program', {
-                deviceId: deviceId,
-                channel: channel,
-                program: gmProgram
-            });
-            this.logger.info(`[KeyboardModal] Program Change: ${gmProgram} on channel ${channel}`);
-        } catch (err) {
-            this.logger.error('[KeyboardModal] Program Change failed:', err);
-        }
-    }
-
-    /**
      * Met à jour la visibilité des sliders vélocité et modulation
      * en fonction des capacités de l'instrument sélectionné
      */

@@ -65,7 +65,6 @@ When `MAESTRO_API_TOKEN` is set, connect with:
 | `midi_send` | Send raw MIDI message | `deviceId`, `type`, message data |
 | `midi_send_note` | Send note on/off | `deviceId`, `channel`, `note`, `velocity`, `duration?` |
 | `midi_send_cc` | Send Control Change | `deviceId`, `channel`, `controller`, `value` |
-| `midi_send_program` | Send Program Change | `deviceId`, `channel`, `program` |
 | `midi_send_pitchbend` | Send Pitch Bend | `deviceId`, `channel`, `value` |
 | `midi_panic` | All sound off on all channels | `deviceId` |
 | `midi_all_notes_off` | All notes off on all channels | `deviceId` |
