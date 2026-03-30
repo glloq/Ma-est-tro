@@ -48,11 +48,6 @@
             // Charger les capacités de l'instrument sélectionné
             await this.loadDeviceCapabilities(deviceId, selectedChannel);
 
-            // Envoyer Program Change si l'instrument a un programme GM défini
-            if (this.selectedDevice && !this.selectedDevice.isVirtual && this.backend) {
-                await this.sendProgramChange(deviceId);
-            }
-
             // Auto-centrer le clavier sur la plage de notes de l'instrument
             this.autoCenterKeyboard();
 

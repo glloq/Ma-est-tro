@@ -287,11 +287,6 @@ class PlaybackScheduler {
         channel: outChannel,
         value: event.value
       });
-    } else if (event.type === 'programChange') {
-      sendResult = device.sendMessage(routing.device, 'program', {
-        channel: outChannel,
-        program: event.program
-      });
     } else if (event.type === 'channelAftertouch') {
       sendResult = device.sendMessage(routing.device, 'channel aftertouch', {
         channel: outChannel,
@@ -344,8 +339,6 @@ class PlaybackScheduler {
       device.sendMessage(routing.device, 'cc', { channel: outChannel, controller: event.controller, value: event.value });
     } else if (event.type === 'pitchBend') {
       device.sendMessage(routing.device, 'pitchbend', { channel: outChannel, value: event.value });
-    } else if (event.type === 'programChange') {
-      device.sendMessage(routing.device, 'program', { channel: outChannel, program: event.program });
     }
   }
 

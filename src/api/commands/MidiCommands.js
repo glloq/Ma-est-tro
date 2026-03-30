@@ -62,14 +62,6 @@ async function midiSendCc(app, data) {
   return { success: true };
 }
 
-async function midiSendProgram(app, data) {
-  app.deviceManager.sendMessage(data.deviceId, 'program', {
-    channel: data.channel,
-    number: data.program
-  });
-  return { success: true };
-}
-
 async function midiSendPitchbend(app, data) {
   app.deviceManager.sendMessage(data.deviceId, 'pitchbend', {
     channel: data.channel,
@@ -115,7 +107,6 @@ export function register(registry, app) {
   registry.register('midi_send', (data) => midiSend(app, data));
   registry.register('midi_send_note', (data) => midiSendNote(app, data));
   registry.register('midi_send_cc', (data) => midiSendCc(app, data));
-  registry.register('midi_send_program', (data) => midiSendProgram(app, data));
   registry.register('midi_send_pitchbend', (data) => midiSendPitchbend(app, data));
   registry.register('midi_panic', (data) => midiPanic(app, data));
   registry.register('midi_all_notes_off', (data) => midiAllNotesOff(app, data));
