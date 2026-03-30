@@ -791,10 +791,12 @@
       const shortName = (inst.custom_name || inst.name || '?');
       const displayName = shortName.length > 16 ? shortName.slice(0, 15) + '…' : shortName;
 
+      const safeId = escapeHtml(inst.id).replace(/'/g, "\\'");
+
       if (isSplitMode) {
         return `
           <button class="aa-instbar-btn ${isInSplit ? 'split-selected' : ''}"
-                  onclick="autoAssignModalInstance.toggleSplitInstrument(${channel}, '${escapeHtml(inst.id)}')"
+                  onclick="autoAssignModalInstance.toggleSplitInstrument(${channel}, '${safeId}')"
                   title="${escapeHtml(shortName)} — ${score}/100">
             <span class="aa-instbar-name">${escapeHtml(displayName)}</span>
             <span class="aa-instbar-score ${this.getScoreClass(score)}">${score}</span>
@@ -805,7 +807,7 @@
 
       return `
         <button class="aa-instbar-btn ${isAssigned ? 'assigned' : ''}"
-                onclick="autoAssignModalInstance.assignFromOverview(${channel}, '${escapeHtml(inst.id)}')"
+                onclick="autoAssignModalInstance.assignFromOverview(${channel}, '${safeId}')"
                 title="${escapeHtml(shortName)} — ${score}/100">
           <span class="aa-instbar-name">${escapeHtml(displayName)}</span>
           <span class="aa-instbar-score ${this.getScoreClass(score)}">${score}</span>
