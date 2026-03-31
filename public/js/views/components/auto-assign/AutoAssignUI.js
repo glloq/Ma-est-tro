@@ -604,7 +604,7 @@
     ` : '';
 
     // Note offset for drums
-    const drumOffsetHTML = channel === 9 ? `
+    const drumOffsetHTML = isDrumChannel ? `
       <div class="aa-control-group">
         <label>${_t('autoAssign.noteOffset')}</label>
         <div class="aa-transposition-control">

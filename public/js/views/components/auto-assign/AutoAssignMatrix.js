@@ -325,6 +325,72 @@
     }
   };
 
+  // ========================================================================
+  // MATRIX INTERACTION METHODS
+  // ========================================================================
+
+  /**
+   * Select a channel in matrix view (updates left panel)
+   */
+  AutoAssignMatrixMixin.selectMatrixChannel = function(channel) {
+    this.selectedChannel = channel;
+    this.refreshMatrixView();
+  };
+
+  /**
+   * Select an instrument in matrix view (updates right panel)
+   */
+  AutoAssignMatrixMixin.selectMatrixInstrument = function(instrumentId) {
+    this.selectedInstrumentId = instrumentId;
+    this.refreshMatrixView();
+  };
+
+  /**
+   * Assign an instrument to a channel from a matrix cell click
+   */
+  AutoAssignMatrixMixin.assignFromMatrix = function(channel, instrumentId) {
+    this.selectedChannel = channel;
+    this.selectedInstrumentId = instrumentId;
+    this.selectInstrument(channel, instrumentId);
+    this.refreshMatrixView();
+  };
+
+  /**
+   * Switch from matrix view to detail view for a specific channel
+   */
+  AutoAssignMatrixMixin.goToDetailFromMatrix = function(channel) {
+    this.viewMode = 'overview';
+    this.selectOverviewChannel(channel);
+  };
+
+  /**
+   * Toggle skip/unskip for a channel from the matrix action bar
+   */
+  AutoAssignMatrixMixin.toggleSkipChannel = function(channel) {
+    const isSkipped = this.skippedChannels.has(channel);
+    this.toggleChannel(channel, isSkipped);
+    this.refreshMatrixView();
+  };
+
+  /**
+   * Set adaptation strategy from the matrix action bar
+   */
+  AutoAssignMatrixMixin.setMatrixStrategy = function(channel, strategy) {
+    this.setStrategy(channel, strategy);
+    this.refreshMatrixView();
+  };
+
+  /**
+   * Set transposition value from the matrix slider
+   */
+  AutoAssignMatrixMixin.setMatrixTransposition = function(channel, semitones) {
+    const ch = String(channel);
+    if (!this.adaptationSettings[ch]) return;
+    this._isDirty = true;
+    this.adaptationSettings[ch].transpositionSemitones = Math.max(-48, Math.min(48, semitones));
+    this.refreshMatrixView();
+  };
+
   // Expose mixin
   if (typeof window !== 'undefined') {
     window.AutoAssignMatrixMixin = AutoAssignMatrixMixin;
