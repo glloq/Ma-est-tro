@@ -202,6 +202,35 @@ body.dark-mode .aa-confirm-cancel:hover {
   font-size: 13px;
 }
 
+.aa-view-toggle {
+  display: inline-flex;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  margin-left: 8px;
+}
+
+.aa-view-btn {
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.aa-view-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.aa-view-btn.active {
+  background: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
 .aa-stars {
   letter-spacing: 2px;
 }

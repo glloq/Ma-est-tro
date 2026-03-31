@@ -309,6 +309,17 @@ class AutoAssignModal {
   }
 
   /**
+   * Switch between overview and matrix view modes
+   */
+  switchViewMode(mode) {
+    if (this.viewMode === mode) return;
+    this.viewMode = mode;
+
+    // Re-render the full modal to reflect the new view mode
+    this.showTabbedUI();
+  }
+
+  /**
    * Assign an instrument to a channel from the overview instrument bar
    */
   assignFromOverview(channel, instrumentId) {

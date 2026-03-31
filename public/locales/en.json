@@ -1023,6 +1023,10 @@
             "configureInstrument": "Configure instrument",
             "settingsNotAvailable": "Instrument settings not available from this context"
         },
+        "viewOverview": "Overview",
+        "viewMatrix": "Matrix",
+        "viewOverviewTip": "Channel detail view (Shift+M)",
+        "viewMatrixTip": "Routing matrix view (Shift+M)",
         "skipChannel": "Skip",
         "unskipChannel": "Unskip",
         "overview": {
