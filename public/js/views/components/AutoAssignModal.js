@@ -50,9 +50,7 @@ class AutoAssignModal {
     this.allInstruments = []; // Full instrument list (for "show all" toggle)
     this.showAllInstruments = false; // Toggle for showing unrouted instruments
     this.activeSplitType = {}; // { channel: 'range'|'polyphony'|'mixed' } — selected split type per channel
-    this.selectedChannel = null; // Matrix view: selected channel for left panel
-    this.selectedInstrumentId = null; // Matrix view: selected instrument for right panel
-    this.viewMode = 'overview'; // Current view mode: 'overview' or 'matrix'
+    this.showOverviewSummary = false; // Toggle for the inline overview summary table
 
     // GM Drum categories (mirrored from DrumNoteMapper backend)
     this.DRUM_CATEGORIES = {
@@ -309,14 +307,11 @@ class AutoAssignModal {
   }
 
   /**
-   * Switch between overview and matrix view modes
+   * Toggle the inline overview summary table
    */
-  switchViewMode(mode) {
-    if (this.viewMode === mode) return;
-    this.viewMode = mode;
-
-    // Re-render the full modal to reflect the new view mode
-    this.showTabbedUI();
+  toggleOverviewSummary() {
+    this.showOverviewSummary = !this.showOverviewSummary;
+    this.refreshMainContent();
   }
 
   /**
@@ -1028,8 +1023,6 @@ const _autoassignMixins = [
     typeof AutoAssignVizMixin !== 'undefined' ? AutoAssignVizMixin : null,
     typeof AutoAssignActionsMixin !== 'undefined' ? AutoAssignActionsMixin : null,
     typeof AutoAssignUtilsMixin !== 'undefined' ? AutoAssignUtilsMixin : null,
-    typeof AutoAssignPanelsMixin !== 'undefined' ? AutoAssignPanelsMixin : null,
-    typeof AutoAssignMatrixMixin !== 'undefined' ? AutoAssignMatrixMixin : null,
 ];
 _autoassignMixins.forEach(m => { if (m) Object.keys(m).forEach(k => { AutoAssignModal.prototype[k] = m[k]; }); });
 

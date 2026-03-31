@@ -35,20 +35,6 @@
                   <span class="aa-channel-count">
                     ${_t('autoAssign.channelsWillBeAssigned', {active: activeCount, total: this.channels.length})}
                   </span>
-                  <div class="aa-view-toggle" role="tablist">
-                    <button class="aa-view-btn ${this.viewMode === 'overview' ? 'active' : ''}"
-                            role="tab" aria-selected="${this.viewMode === 'overview'}"
-                            onclick="autoAssignModalInstance.switchViewMode('overview')"
-                            title="${_t('autoAssign.viewOverviewTip')}">
-                      ${_t('autoAssign.viewOverview')}
-                    </button>
-                    <button class="aa-view-btn ${this.viewMode === 'matrix' ? 'active' : ''}"
-                            role="tab" aria-selected="${this.viewMode === 'matrix'}"
-                            onclick="autoAssignModalInstance.switchViewMode('matrix')"
-                            title="${_t('autoAssign.viewMatrixTip')}">
-                      ${_t('autoAssign.viewMatrix')}
-                    </button>
-                  </div>
                 </div>
               </div>
               <div class="aa-header-range" id="aaRangeBar">
@@ -58,7 +44,7 @@
             <button class="modal-close" onclick="autoAssignModalInstance.close()" aria-label="${_t('common.close')}">&times;</button>
           </div>
 
-          <div class="aa-bars-container" id="aaBarsContainer" ${this.viewMode === 'matrix' ? 'style="display:none"' : ''}>
+          <div class="aa-bars-container" id="aaBarsContainer">
             <div class="aa-channel-bar" id="aaChannelBar">
               ${this.renderChannelBar()}
             </div>
@@ -68,7 +54,7 @@
           </div>
 
           <div class="modal-body aa-body" id="aaTabContent" role="region" aria-live="polite">
-            ${this.viewMode === 'matrix' && this.renderMatrixView ? this.renderMatrixView() : this.renderTabContent(activeChannel)}
+            ${this.renderTabContent(activeChannel)}
           </div>
 
           <div class="modal-footer aa-footer">
@@ -117,14 +103,6 @@
     this._escHandler = (e) => {
       if (e.key === 'Escape') {
         this.close();
-      }
-      // Shift+M: toggle between overview and matrix view
-      if (e.key === 'M' && e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
-        // Don't toggle if user is typing in an input/select
-        const tag = document.activeElement?.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-        e.preventDefault();
-        this.switchViewMode(this.viewMode === 'matrix' ? 'overview' : 'matrix');
       }
     };
     document.addEventListener('keydown', this._escHandler);
@@ -431,8 +409,17 @@
     // Split proposal (if available but not yet accepted)
     const splitProposalHTML = this.renderSplitProposal ? this.renderSplitProposal(channel) : '';
 
+    // Overview summary (collapsible)
+    const summaryToggleLabel = this.showOverviewSummary ? _t('autoAssign.hideSummary') : _t('autoAssign.showSummary');
+    const summaryToggleIcon = this.showOverviewSummary ? '&#9660;' : '&#9654;';
+    const summaryHTML = this.showOverviewSummary ? this.renderOverviewTable() : '';
+
     return `
       <div class="aa-tab-content">
+        <button class="aa-summary-toggle" onclick="autoAssignModalInstance.toggleOverviewSummary()">
+          ${summaryToggleIcon} ${summaryToggleLabel}
+        </button>
+        ${summaryHTML}
         ${statsHTML}
         ${skipHTML}
         ${instrumentInfoHTML}
@@ -552,8 +539,16 @@
       ? this.formatNoteRange(noteRange, isDrumChannel, analysis.noteDistribution)
       : (noteRange.min != null ? `${this.midiNoteToName(noteRange.min)} — ${this.midiNoteToName(noteRange.max)}` : 'N/A');
 
+    // Extended stats
+    const density = analysis.density != null ? Math.round(analysis.density * 10) / 10 : null;
+    const totalNotes = analysis.totalNotes || null;
+    const usedCCs = analysis.usedCCs || [];
+    const trackNames = analysis.trackNames || [];
+    const ccDisplay = usedCCs.length > 0 ? usedCCs.slice(0, 6).join(', ') + (usedCCs.length > 6 ? '…' : '') : null;
+    const trackDisplay = trackNames.length > 0 ? trackNames.join(', ') : null;
+
     return `
-      <div class="aa-channel-stats">
+      <div class="aa-channel-stats aa-stats-grid">
         <div class="aa-stat">
           <strong>${_t('autoAssign.noteRange')}:</strong>
           ${rangeDisplay}
@@ -567,6 +562,10 @@
           <strong>${_t('autoAssign.type')}:</strong>
           ${escapeHtml(typeLabel)} ${analysis.typeConfidence ? `<span class="aa-stat-detail">(${analysis.typeConfidence}%)</span>` : ''}
         </div>
+        ${density != null ? `<div class="aa-stat"><strong>${_t('autoAssign.density')}:</strong> ${density} ${_t('autoAssign.matrix.notesPerSec')}</div>` : ''}
+        ${totalNotes != null ? `<div class="aa-stat"><strong>${_t('autoAssign.totalNotes')}:</strong> ${totalNotes}</div>` : ''}
+        ${ccDisplay ? `<div class="aa-stat"><strong>${_t('autoAssign.usedCCsLabel')}:</strong> ${ccDisplay}</div>` : ''}
+        ${trackDisplay ? `<div class="aa-stat aa-stat-track"><strong>${_t('autoAssign.trackNamesLabel')}:</strong> ${escapeHtml(trackDisplay)}</div>` : ''}
       </div>
     `;
   }
@@ -719,6 +718,13 @@
         routedName = n.length > 18 ? n.slice(0, 17) + '…' : n;
       }
 
+      // Duplicate instrument indicator
+      const isDuplicate = !isSkipped && !isSplit && assignment?.instrumentId
+        && this.getOtherChannelsUsingInstrument(assignment.instrumentId, channel).length > 0;
+      const dupBadge = isDuplicate
+        ? `<span class="aa-chbar-dup" title="${_t('autoAssign.duplicateInstrumentTip', {channels: this.getOtherChannelsUsingInstrument(assignment.instrumentId, channel).join(', ')})}">DUP</span>`
+        : '';
+
       return `
         <button class="aa-chbar-btn ${isActive ? 'active' : ''} ${isSkipped ? 'skipped' : ''} ${this.getScoreClass(score)}"
                 data-channel="${channel}"
@@ -728,6 +734,7 @@
           <span class="aa-chbar-label">Ch ${channel + 1}</span>
           ${channel === 9 ? '<span class="aa-tab-drum">DR</span>' : ''}
           ${isSplit ? '<span class="aa-tab-split">SP</span>' : ''}
+          ${dupBadge}
           <span class="aa-chbar-gm">${escapeHtml(gmShort)}</span>
           <span class="aa-chbar-arrow">→</span>
           <span class="aa-chbar-routed ${isSkipped ? 'skipped' : ''}">${escapeHtml(routedName)}</span>
