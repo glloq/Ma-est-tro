@@ -578,7 +578,7 @@ class LightingControlPage {
         this._dmxProfiles = res.profiles || [];
       }
 
-      select.innerHTML = '<option value="">-- Manuel --</option>' +
+      select.innerHTML = `<option value="">${i18n.t('lighting.manualOption') || '-- Manuel --'}</option>` +
         this._dmxProfiles.map(p =>
           `<option value="${this._escapeHtml(p.key)}">${this._escapeHtml(p.name)} (${p.channels}ch)</option>`
         ).join('');
@@ -666,7 +666,7 @@ class LightingControlPage {
     if (device.type === 'gpio_strip' && device.connection_config?.segments?.length) {
       segRow.style.display = 'block';
       const segments = device.connection_config.segments;
-      segSelect.innerHTML = '<option value="">-- Aucun (manuel) --</option>' +
+      segSelect.innerHTML = `<option value="">${i18n.t('lighting.manualSegmentOption') || '-- Aucun (manuel) --'}</option>` +
         segments.map(s => `<option value="${this._escapeHtml(s.name)}" ${selectedSegment === s.name ? 'selected' : ''}>${this._escapeHtml(s.name)} (${s.start}-${s.end})</option>`).join('');
       if (selectedSegment) this._onSegmentSelect();
     } else {

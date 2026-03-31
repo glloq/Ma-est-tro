@@ -489,7 +489,7 @@
       const submitBtns = formEl.querySelectorAll('button');
       submitBtns.forEach(btn => {
         if (btn.textContent.trim() === 'Ajouter') {
-          btn.textContent = 'Enregistrer';
+          btn.textContent = i18n.t('lighting.save') || 'Enregistrer';
           btn.style.background = '#8b5cf6';
           btn.onclick = () => lightingControlPageInstance.submitEditDevice();
         }
