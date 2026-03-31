@@ -678,7 +678,12 @@
         "errorPrefix": "Error: {error}",
         "manualOption": "-- Manual --",
         "manualSegmentOption": "-- None (manual) --",
-        "scanTitle": "Scan devices"
+        "scanTitle": "Scan devices",
+        "nameRequired": "Name required",
+        "selectAtLeastOneDevice": "Select at least one device",
+        "velocityMinMaxError": "Velocity min must be ≤ velocity max",
+        "noteMinMaxError": "Note min must be ≤ note max",
+        "importError": "Import error: "
     },
     "instrumentManagement": {
         "title": "Управление инструментами",

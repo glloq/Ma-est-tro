@@ -916,10 +916,10 @@
 
     // Validation
     if (conditionConfig.velocity_min > conditionConfig.velocity_max) {
-      this.showToast('Vélocité min doit être ≤ vélocité max', 'warning'); return;
+      this.showToast(i18n.t('lighting.velocityMinMaxError') || 'Vélocité min doit être ≤ vélocité max', 'warning'); return;
     }
     if (conditionConfig.note_min > conditionConfig.note_max) {
-      this.showToast('Note min doit être ≤ note max', 'warning'); return;
+      this.showToast(i18n.t('lighting.noteMinMaxError') || 'Note min doit être ≤ note max', 'warning'); return;
     }
 
     try {

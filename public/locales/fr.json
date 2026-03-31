@@ -689,7 +689,12 @@
         "errorPrefix": "Erreur: {error}",
         "manualOption": "-- Manuel --",
         "manualSegmentOption": "-- Aucun (manuel) --",
-        "scanTitle": "Scanner les dispositifs"
+        "scanTitle": "Scanner les dispositifs",
+        "nameRequired": "Nom requis",
+        "selectAtLeastOneDevice": "Sélectionnez au moins un dispositif",
+        "velocityMinMaxError": "Vélocité min doit être ≤ vélocité max",
+        "noteMinMaxError": "Note min doit être ≤ note max",
+        "importError": "Erreur import: "
     },
     "instrumentManagement": {
         "title": "Gestion des instruments",

@@ -395,10 +395,10 @@ class LightingControlPage {
 
   async _createGroup() {
     const name = document.getElementById('lgFormName')?.value.trim();
-    if (!name) { this.showToast('Nom requis', 'warning'); return; }
+    if (!name) { this.showToast(i18n.t('lighting.nameRequired') || 'Nom requis', 'warning'); return; }
     const checkboxes = document.querySelectorAll('#lightingGroupsPanel .lgDeviceCb:checked');
     const deviceIds = [...checkboxes].map(cb => parseInt(cb.value));
-    if (deviceIds.length === 0) { this.showToast('Sélectionnez au moins un dispositif', 'warning'); return; }
+    if (deviceIds.length === 0) { this.showToast(i18n.t('lighting.selectAtLeastOneDevice') || 'Sélectionnez au moins un dispositif', 'warning'); return; }
 
     try {
       await this.apiClient.sendCommand('lighting_group_create', { name, device_ids: deviceIds });
