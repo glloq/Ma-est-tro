@@ -63,8 +63,37 @@ async function monitorStopAll(app) {
 }
 
 async function routeTest(app, data) {
-  // Send test MIDI message through route
-  return { success: true };
+  const route = app.midiRouter.getRoute(data.routeId);
+  if (!route) {
+    throw new Error(`Route not found: ${data.routeId}`);
+  }
+
+  // Send a short test note (middle C, velocity 80, channel 0) through the route destination
+  const channel = data.channel ?? 0;
+  const note = data.note ?? 60;
+  const velocity = data.velocity ?? 80;
+  const duration = data.duration ?? 300;
+
+  const sent = app.deviceManager.sendMessage(route.destination, 'noteon', {
+    channel,
+    note,
+    velocity
+  });
+
+  if (!sent) {
+    return { success: false, error: 'Failed to send test note to device' };
+  }
+
+  // Schedule note off after duration
+  setTimeout(() => {
+    app.deviceManager.sendMessage(route.destination, 'noteoff', {
+      channel,
+      note,
+      velocity: 0
+    });
+  }, duration);
+
+  return { success: true, destination: route.destination, note, channel };
 }
 
 async function routeDuplicate(app, data) {

@@ -50,6 +50,9 @@ class AutoAssignModal {
     this.allInstruments = []; // Full instrument list (for "show all" toggle)
     this.showAllInstruments = false; // Toggle for showing unrouted instruments
     this.activeSplitType = {}; // { channel: 'range'|'polyphony'|'mixed' } — selected split type per channel
+    this.selectedChannel = null; // Matrix view: selected channel for left panel
+    this.selectedInstrumentId = null; // Matrix view: selected instrument for right panel
+    this.viewMode = 'overview'; // Current view mode: 'overview' or 'matrix'
 
     // GM Drum categories (mirrored from DrumNoteMapper backend)
     this.DRUM_CATEGORIES = {
@@ -119,116 +122,9 @@ class AutoAssignModal {
     });
   }
 
-  /**
-   * Safely format info field (can be string or array)
-   */
-  formatInfo(info) {
-    if (!info) return '';
-    if (Array.isArray(info)) return info.map(i => escapeHtml(i)).join(' &bull; ');
-    return escapeHtml(String(info));
-  }
-
-  /**
-   * Get GM program name from program number
-   */
-  getGmProgramName(program) {
-    if (program == null || program < 0 || program > 127) return null;
-    if (this.editorRef && typeof this.editorRef.getInstrumentName === 'function') {
-      return this.editorRef.getInstrumentName(program);
-    }
-    if (typeof getGMInstrumentName === 'function') {
-      return getGMInstrumentName(program);
-    }
-    if (typeof GM_INSTRUMENTS !== 'undefined' && GM_INSTRUMENTS[program]) {
-      return GM_INSTRUMENTS[program];
-    }
-    return `Program ${program}`;
-  }
-
-  /**
-   * Convert MIDI note number to name (e.g. 60 → "C4", 61 → "C#4")
-   */
-  midiNoteToName(note) {
-    return this.NOTE_NAMES[note % 12] + (Math.floor(note / 12) - 1);
-  }
-
-  /**
-   * Check if a MIDI note is a black key (sharp/flat)
-   */
-  isBlackKey(note) {
-    const n = note % 12;
-    return n === 1 || n === 3 || n === 6 || n === 8 || n === 10;
-  }
-
-  /**
-   * Check if a note is within an instrument's playable range
-   */
-  isNoteInInstrumentRange(note, instrument) {
-    if (!instrument) return false;
-    if (instrument.note_selection_mode === 'discrete' && instrument.selected_notes) {
-      const notes = Array.isArray(instrument.selected_notes)
-        ? instrument.selected_notes
-        : (typeof instrument.selected_notes === 'string' ? JSON.parse(instrument.selected_notes) : []);
-      return notes.includes(note);
-    }
-    return note >= (instrument.note_range_min || 0) && note <= (instrument.note_range_max || 127);
-  }
-
-  /**
-   * Calculate adaptation result for a given strategy
-   * Returns { totalNotes, inRange, outOfRange, recovered }
-   */
-  calculateAdaptationResult(channel, strategy) {
-    const ch = String(channel);
-    const analysis = this.channelAnalyses[channel] || this.selectedAssignments[ch]?.channelAnalysis;
-    const adaptation = this.adaptationSettings[ch] || {};
-    const assignment = this.selectedAssignments[ch];
-
-    if (!analysis || !analysis.noteDistribution || !assignment) {
-      return { totalNotes: 0, inRange: 0, outOfRange: 0, recovered: 0 };
-    }
-
-    const allOptions = [...(this.suggestions[ch] || []), ...(this.lowScoreSuggestions[ch] || [])];
-    const selectedOption = allOptions.find(opt => opt.instrument.id === assignment.instrumentId);
-    if (!selectedOption) return { totalNotes: 0, inRange: 0, outOfRange: 0, recovered: 0 };
-
-    const inst = selectedOption.instrument;
-    const semitones = adaptation.transpositionSemitones || 0;
-    const usedNotes = Object.keys(analysis.noteDistribution).map(Number);
-    const totalNotes = usedNotes.length;
-
-    let inRange = 0;
-    let recovered = 0;
-
-    for (const note of usedNotes) {
-      let adjustedNote = note;
-
-      if (strategy === 'transpose') {
-        adjustedNote = note + semitones;
-      }
-
-      if (this.isNoteInInstrumentRange(adjustedNote, inst)) {
-        inRange++;
-      } else if (strategy === 'octaveWrap' && inst.note_selection_mode !== 'discrete') {
-        // Try wrapping ±1 octave (not meaningful for discrete instruments like drums/pads)
-        const up = adjustedNote + 12;
-        const down = adjustedNote - 12;
-        if (this.isNoteInInstrumentRange(up, inst) || this.isNoteInInstrumentRange(down, inst)) {
-          recovered++;
-        }
-      } else if (strategy === 'suppress') {
-        // Out of range notes will be suppressed - counted as "recovered" (handled)
-        recovered++;
-      }
-    }
-
-    return {
-      totalNotes,
-      inRange,
-      outOfRange: totalNotes - inRange - recovered,
-      recovered
-    };
-  }
+  // formatInfo, getGmProgramName, midiNoteToName, isBlackKey,
+  // isNoteInInstrumentRange, calculateAdaptationResult
+  // — Provided by AutoAssignUtilsMixin
 
   /**
    * Show the modal with auto-assignment suggestions
@@ -413,6 +309,17 @@ class AutoAssignModal {
   }
 
   /**
+   * Switch between overview and matrix view modes
+   */
+  switchViewMode(mode) {
+    if (this.viewMode === mode) return;
+    this.viewMode = mode;
+
+    // Re-render the full modal to reflect the new view mode
+    this.showTabbedUI();
+  }
+
+  /**
    * Assign an instrument to a channel from the overview instrument bar
    */
   assignFromOverview(channel, instrumentId) {
@@ -474,34 +381,103 @@ class AutoAssignModal {
 
     const channelMin = analysis.noteRange.min;
     const channelMax = analysis.noteRange.max;
-    const totalSpan = channelMax - channelMin + 1;
 
-    // Build segments dividing note range equally
+    // Resolve instrument objects and sort by note_range_min for optimal distribution
     const instrumentIds = Array.from(sel);
-    const segmentSize = Math.ceil(totalSpan / instrumentIds.length);
-    const segments = instrumentIds.map((instId, i) => {
-      const allOptions = [...(this.suggestions[ch] || []), ...(this.lowScoreSuggestions[ch] || [])];
+    const allOptions = [...(this.suggestions[ch] || []), ...(this.lowScoreSuggestions[ch] || [])];
+    const instruments = instrumentIds.map(instId => {
       const option = allOptions.find(opt => opt.instrument.id === instId);
-      const inst = option?.instrument || this.instrumentList?.find(x => x.id === instId);
-      const segMin = channelMin + i * segmentSize;
-      const segMax = Math.min(channelMax, segMin + segmentSize - 1);
-      return {
-        instrumentId: instId,
-        deviceId: inst?.device_id,
-        instrumentChannel: inst?.channel,
-        instrumentName: inst?.custom_name || inst?.name || 'Instrument',
-        noteRange: { min: segMin, max: segMax },
-        polyphonyShare: Math.ceil((inst?.polyphony || 16) / instrumentIds.length)
-      };
+      return option?.instrument || this.instrumentList?.find(x => x.id === instId) || null;
+    }).filter(Boolean);
+
+    // Sort instruments by their note range min (low-to-high) for natural range distribution
+    const sortedInstruments = [...instruments].sort((a, b) => {
+      const aMin = a.note_range_min ?? 0;
+      const bMin = b.note_range_min ?? 0;
+      return aMin - bMin;
     });
+
+    // Build segments using actual instrument ranges clipped to the channel's note range
+    const segments = [];
+    const gaps = [];
+    let lastMax = channelMin - 1;
+
+    for (let i = 0; i < sortedInstruments.length; i++) {
+      const inst = sortedInstruments[i];
+      const instMin = inst.note_range_min ?? 0;
+      const instMax = inst.note_range_max ?? 127;
+
+      // Segment range: intersection of instrument range with remaining channel range
+      const segMin = Math.max(channelMin, Math.max(instMin, lastMax + 1));
+      const nextInstMin = (i < sortedInstruments.length - 1)
+        ? Math.max(channelMin, sortedInstruments[i + 1].note_range_min ?? 0)
+        : channelMax + 1;
+      const segMax = Math.min(channelMax, Math.min(instMax, nextInstMin - 1));
+
+      // Fallback: if instrument range doesn't overlap, use equal division
+      const effectiveMin = segMin <= segMax ? segMin : channelMin + Math.floor(i * (channelMax - channelMin + 1) / sortedInstruments.length);
+      const effectiveMax = segMin <= segMax ? segMax : Math.min(channelMax, channelMin + Math.floor((i + 1) * (channelMax - channelMin + 1) / sortedInstruments.length) - 1);
+
+      // Detect gaps between segments
+      if (effectiveMin > lastMax + 1 && lastMax >= channelMin) {
+        gaps.push({ min: lastMax + 1, max: effectiveMin - 1 });
+      }
+
+      segments.push({
+        instrumentId: inst.id,
+        deviceId: inst.device_id,
+        instrumentChannel: inst.channel,
+        instrumentName: inst.custom_name || inst.name || 'Instrument',
+        noteRange: { min: effectiveMin, max: effectiveMax },
+        fullRange: { min: instMin, max: instMax },
+        polyphonyShare: Math.ceil((inst.polyphony || 16) / sortedInstruments.length)
+      });
+
+      lastMax = effectiveMax;
+    }
+
+    // Detect trailing gap
+    if (lastMax < channelMax && segments.length > 0) {
+      gaps.push({ min: lastMax + 1, max: channelMax });
+    }
+
+    // Calculate quality score based on actual coverage
+    const coveredNotes = segments.reduce((sum, seg) => sum + (seg.noteRange.max - seg.noteRange.min + 1), 0);
+    const totalSpan = channelMax - channelMin + 1;
+    const coverageRatio = totalSpan > 0 ? coveredNotes / totalSpan : 0;
+    // Check how well each segment fits within its instrument's real range
+    const fitScores = segments.map(seg => {
+      const inst = sortedInstruments.find(i => i.id === seg.instrumentId);
+      if (!inst) return 0;
+      const instMin = inst.note_range_min ?? 0;
+      const instMax = inst.note_range_max ?? 127;
+      const segInRange = Math.max(0,
+        Math.min(seg.noteRange.max, instMax) - Math.max(seg.noteRange.min, instMin) + 1
+      );
+      const segSpan = seg.noteRange.max - seg.noteRange.min + 1;
+      return segSpan > 0 ? segInRange / segSpan : 0;
+    });
+    const avgFit = fitScores.length > 0 ? fitScores.reduce((s, v) => s + v, 0) / fitScores.length : 0;
+    const quality = Math.round((coverageRatio * 0.5 + avgFit * 0.5) * 100);
+
+    // Detect overlap zones between adjacent segments
+    const overlapZones = [];
+    for (let i = 0; i < segments.length - 1; i++) {
+      if (segments[i].noteRange.max >= segments[i + 1].noteRange.min) {
+        overlapZones.push({
+          min: segments[i + 1].noteRange.min,
+          max: segments[i].noteRange.max
+        });
+      }
+    }
 
     const proposal = {
       type: 'range',
       channel: channel,
-      quality: 70,
+      quality: quality,
       segments: segments,
-      overlapZones: [],
-      gaps: []
+      overlapZones: overlapZones,
+      gaps: gaps
     };
 
     this.splitProposals[channel] = proposal;
@@ -849,7 +825,8 @@ class AutoAssignModal {
       danger: false
     });
     if (!confirmed) return;
-    this.skippedChannels.clear();
+    // Only keep auto-skipped channels (no available instruments), unskip manually skipped ones
+    this.skippedChannels = new Set(this.autoSkippedChannels);
     await this.validateAndApply();
   }
 
@@ -868,96 +845,9 @@ class AutoAssignModal {
     if (btn) btn.style.display = 'none';
   }
 
-  // ========================================================================
-  // UTILITIES
-  // ========================================================================
-
-  formatInstrumentInfo(instrument, compat) {
-    const parts = [];
-    if (instrument.gm_program !== null && instrument.gm_program !== undefined) {
-      const gmName = this.getGmProgramName(instrument.gm_program);
-      parts.push(gmName || `GM ${instrument.gm_program}`);
-    }
-    if (compat.transposition && compat.transposition.octaves !== 0) {
-      const direction = compat.transposition.octaves > 0 ? 'up' : 'down';
-      parts.push(`${Math.abs(compat.transposition.octaves)} ${_t('common.octave')}(s) ${direction}`);
-    } else {
-      parts.push(_t('autoAssign.noTransposition'));
-    }
-    if (instrument.note_range_min !== null && instrument.note_range_max !== null) {
-      parts.push(`${_t('autoAssign.range')}: ${this.midiNoteToName(instrument.note_range_min)}–${this.midiNoteToName(instrument.note_range_max)}`);
-    }
-    return parts.join(' &bull; ');
-  }
-
-  // Fallback methods — overridden by AutoAssignUtilsMixin if loaded
-  getScoreColor(score) {
-    if (score >= 80) return 'var(--aa-score-excellent, #00c896)';
-    if (score >= 60) return 'var(--aa-score-good, #7bc67e)';
-    if (score >= 40) return 'var(--aa-score-fair, #f0b429)';
-    return 'var(--aa-score-poor, #e8365d)';
-  }
-
-  getScoreClass(score) {
-    if (score >= 80) return 'aa-color-excellent';
-    if (score >= 60) return 'aa-color-good';
-    if (score >= 40) return 'aa-color-fair';
-    return 'aa-color-poor';
-  }
-
-  getScoreBgClass(score) {
-    if (score >= 80) return 'aa-bg-excellent';
-    if (score >= 60) return 'aa-bg-good';
-    if (score >= 40) return 'aa-bg-fair';
-    return 'aa-bg-poor';
-  }
-
-  getScoreStars(score) {
-    const filled = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
-    return '<span class="aa-stars">' + '&#9733;'.repeat(filled) + '&#9734;'.repeat(5 - filled) + '</span>';
-  }
-
-  /**
-   * Get a human-readable qualitative label for a score
-   */
-  getScoreLabel(score) {
-    if (score >= 90) return _t('autoAssign.scoreExcellent');
-    if (score >= 75) return _t('autoAssign.scoreGood');
-    if (score >= 60) return _t('autoAssign.scoreAverage');
-    if (score >= 40) return _t('autoAssign.scoreFair');
-    return _t('autoAssign.scorePoor');
-  }
-
-  /**
-   * Get a human-readable description of polyphony
-   */
-  getPolyphonyLabel(polyphony) {
-    if (!polyphony || polyphony.max == null) return 'N/A';
-    const max = polyphony.max;
-    if (max <= 1) return _t('autoAssign.polyphonyMono');
-    if (max <= 3) return _t('autoAssign.polyphonyLight', { max });
-    if (max <= 6) return _t('autoAssign.polyphonyChords', { max });
-    return _t('autoAssign.polyphonyDense', { max });
-  }
-
-  /**
-   * Get an icon/emoji for an estimated instrument type
-   */
-  getTypeIcon(type) {
-    const icons = {
-      drums: '🥁',
-      bass: '🎸',
-      melody: '🎹',
-      harmony: '🎵',
-      pad: '🎶',
-      strings: '🎻',
-      brass: '🎺',
-      woodwind: '🪈',
-      guitar: '🎸',
-      keyboard: '🎹'
-    };
-    return icons[type] || '🎵';
-  }
+  // formatInstrumentInfo, getScoreColor, getScoreClass, getScoreBgClass,
+  // getScoreStars, getScoreLabel, getPolyphonyLabel, getTypeIcon
+  // — Provided by AutoAssignUtilsMixin
 
   /**
    * Close the modal (with unsaved changes confirmation via styled modal)
@@ -1138,6 +1028,8 @@ const _autoassignMixins = [
     typeof AutoAssignVizMixin !== 'undefined' ? AutoAssignVizMixin : null,
     typeof AutoAssignActionsMixin !== 'undefined' ? AutoAssignActionsMixin : null,
     typeof AutoAssignUtilsMixin !== 'undefined' ? AutoAssignUtilsMixin : null,
+    typeof AutoAssignPanelsMixin !== 'undefined' ? AutoAssignPanelsMixin : null,
+    typeof AutoAssignMatrixMixin !== 'undefined' ? AutoAssignMatrixMixin : null,
 ];
 _autoassignMixins.forEach(m => { if (m) Object.keys(m).forEach(k => { AutoAssignModal.prototype[k] = m[k]; }); });
 

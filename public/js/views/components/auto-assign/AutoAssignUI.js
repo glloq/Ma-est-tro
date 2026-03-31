@@ -35,6 +35,20 @@
                   <span class="aa-channel-count">
                     ${_t('autoAssign.channelsWillBeAssigned', {active: activeCount, total: this.channels.length})}
                   </span>
+                  <div class="aa-view-toggle" role="tablist">
+                    <button class="aa-view-btn ${this.viewMode === 'overview' ? 'active' : ''}"
+                            role="tab" aria-selected="${this.viewMode === 'overview'}"
+                            onclick="autoAssignModalInstance.switchViewMode('overview')"
+                            title="${_t('autoAssign.viewOverviewTip')}">
+                      ${_t('autoAssign.viewOverview')}
+                    </button>
+                    <button class="aa-view-btn ${this.viewMode === 'matrix' ? 'active' : ''}"
+                            role="tab" aria-selected="${this.viewMode === 'matrix'}"
+                            onclick="autoAssignModalInstance.switchViewMode('matrix')"
+                            title="${_t('autoAssign.viewMatrixTip')}">
+                      ${_t('autoAssign.viewMatrix')}
+                    </button>
+                  </div>
                 </div>
               </div>
               <div class="aa-header-range" id="aaRangeBar">
@@ -44,7 +58,7 @@
             <button class="modal-close" onclick="autoAssignModalInstance.close()" aria-label="${_t('common.close')}">&times;</button>
           </div>
 
-          <div class="aa-bars-container">
+          <div class="aa-bars-container" id="aaBarsContainer" ${this.viewMode === 'matrix' ? 'style="display:none"' : ''}>
             <div class="aa-channel-bar" id="aaChannelBar">
               ${this.renderChannelBar()}
             </div>
@@ -54,7 +68,7 @@
           </div>
 
           <div class="modal-body aa-body" id="aaTabContent" role="region" aria-live="polite">
-            ${this.renderTabContent(activeChannel)}
+            ${this.viewMode === 'matrix' && this.renderMatrixView ? this.renderMatrixView() : this.renderTabContent(activeChannel)}
           </div>
 
           <div class="modal-footer aa-footer">
@@ -103,6 +117,14 @@
     this._escHandler = (e) => {
       if (e.key === 'Escape') {
         this.close();
+      }
+      // Shift+M: toggle between overview and matrix view
+      if (e.key === 'M' && e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        // Don't toggle if user is typing in an input/select
+        const tag = document.activeElement?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        e.preventDefault();
+        this.switchViewMode(this.viewMode === 'matrix' ? 'overview' : 'matrix');
       }
     };
     document.addEventListener('keydown', this._escHandler);
@@ -604,7 +626,7 @@
     ` : '';
 
     // Note offset for drums
-    const drumOffsetHTML = channel === 9 ? `
+    const drumOffsetHTML = isDrumChannel ? `
       <div class="aa-control-group">
         <label>${_t('autoAssign.noteOffset')}</label>
         <div class="aa-transposition-control">
