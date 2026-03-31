@@ -1023,10 +1023,12 @@
             "configureInstrument": "Configure instrument",
             "settingsNotAvailable": "Instrument settings not available from this context"
         },
-        "viewOverview": "Overview",
-        "viewMatrix": "Matrix",
-        "viewOverviewTip": "Channel detail view (Shift+M)",
-        "viewMatrixTip": "Routing matrix view (Shift+M)",
+        "showSummary": "Show all channels summary",
+        "hideSummary": "Hide summary",
+        "density": "Density",
+        "totalNotes": "Notes",
+        "usedCCsLabel": "CCs",
+        "trackNamesLabel": "Track",
         "skipChannel": "Skip",
         "unskipChannel": "Unskip",
         "overview": {

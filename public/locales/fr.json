@@ -1023,10 +1023,12 @@
             "configureInstrument": "Configurer l'instrument",
             "settingsNotAvailable": "Paramètres d'instrument non disponibles dans ce contexte"
         },
-        "viewOverview": "Aperçu",
-        "viewMatrix": "Matrice",
-        "viewOverviewTip": "Vue détail par canal (Shift+M)",
-        "viewMatrixTip": "Vue matrice de routage (Shift+M)",
+        "showSummary": "Afficher le résumé de tous les canaux",
+        "hideSummary": "Masquer le résumé",
+        "density": "Densité",
+        "totalNotes": "Notes",
+        "usedCCsLabel": "CCs",
+        "trackNamesLabel": "Piste",
         "skipChannel": "Ignorer",
         "unskipChannel": "Réactiver",
         "overview": {
