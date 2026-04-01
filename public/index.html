@@ -6953,9 +6953,15 @@
             if (isPlaying || isPaused) return;
 
             const headerFileName = document.getElementById('headerFileName');
+            const playPauseBtn = document.getElementById('headerPlayPauseBtn');
+
             if (!selectedFileId) {
                 headerFileName.textContent = i18n.t('ui.noFileSelected');
                 headerFileName.classList.remove('header-file-ready');
+                // Désactiver Play si aucun fichier en cours de lecture
+                if (!currentFileId) {
+                    playPauseBtn.disabled = true;
+                }
                 return;
             }
 
@@ -6963,6 +6969,9 @@
             if (!fileItem) {
                 headerFileName.textContent = i18n.t('ui.noFileSelected');
                 headerFileName.classList.remove('header-file-ready');
+                if (!currentFileId) {
+                    playPauseBtn.disabled = true;
+                }
                 return;
             }
 
@@ -6973,9 +6982,14 @@
             if (routed) {
                 headerFileName.textContent = '🎵 ' + filename;
                 headerFileName.classList.add('header-file-ready');
+                // Activer le bouton Play pour ce fichier routé
+                playPauseBtn.disabled = false;
             } else {
                 headerFileName.textContent = filename;
                 headerFileName.classList.remove('header-file-ready');
+                if (!currentFileId) {
+                    playPauseBtn.disabled = true;
+                }
             }
         }
 
@@ -7464,6 +7478,17 @@
             li.addEventListener('dragstart', handleDragStart);
             li.addEventListener('dragend', handleDragEnd);
 
+            // Désactiver le drag quand Shift est enfoncé (sinon le navigateur
+            // intercepte le mousedown et empêche l'événement click)
+            li.addEventListener('mousedown', (e) => {
+                if (e.shiftKey) {
+                    li.draggable = false;
+                }
+            });
+            li.addEventListener('mouseup', () => {
+                li.draggable = true;
+            });
+
             // Clic pour sélectionner (simple ou Shift+clic plage)
             li.addEventListener('click', (e) => {
                 // Ne pas sélectionner si on clique sur un bouton ou checkbox
@@ -7480,17 +7505,13 @@
                     const targetId = String(file.id);
                     const startIdx = allItems.findIndex(el => String(el.dataset.fileId) === anchorId);
                     const endIdx = allItems.findIndex(el => String(el.dataset.fileId) === targetId);
-                    console.log('[Shift+Click] anchor:', anchorId, 'target:', targetId, 'startIdx:', startIdx, 'endIdx:', endIdx, 'totalItems:', allItems.length);
                     if (startIdx !== -1 && endIdx !== -1) {
                         const from = Math.min(startIdx, endIdx);
                         const to = Math.max(startIdx, endIdx);
                         for (let idx = from; idx <= to; idx++) {
                             selectedFileIds.add(Number(allItems[idx].dataset.fileId));
                         }
-                        console.log('[Shift+Click] selectedFileIds:', [...selectedFileIds]);
                         syncBatchSelectionUI();
-                    } else {
-                        console.warn('[Shift+Click] Could not find anchor or target in DOM. allItems fileIds:', allItems.map(el => el.dataset.fileId));
                     }
                 } else {
                     // Clic simple : sélection unique
@@ -9244,6 +9265,23 @@
 
         // Toggle entre lecture et pause
         async function togglePlayPause() {
+            // Si pas de lecture en cours mais un fichier sélectionné et routé, lancer la lecture
+            if (!currentFileId && !isPlaying && !isPaused) {
+                if (selectedFileId) {
+                    const fileItem = document.querySelector(`.file-item[data-file-id="${selectedFileId}"]`);
+                    if (fileItem) {
+                        const backendStatus = fileRoutingStatusCache.get(String(selectedFileId));
+                        const routed = (backendStatus && backendStatus !== 'unrouted') || isFileRouted(selectedFileId);
+                        if (routed) {
+                            await playFile(selectedFileId, fileItem.dataset.fileName);
+                            return;
+                        }
+                    }
+                }
+                log('Sélectionnez un fichier via la liste des fichiers', 'warning');
+                return;
+            }
+
             if (!currentFileId) {
                 log('Sélectionnez un fichier via la liste des fichiers', 'warning');
                 return;
