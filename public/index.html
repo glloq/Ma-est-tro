@@ -6953,9 +6953,15 @@
             if (isPlaying || isPaused) return;
 
             const headerFileName = document.getElementById('headerFileName');
+            const playPauseBtn = document.getElementById('headerPlayPauseBtn');
+
             if (!selectedFileId) {
                 headerFileName.textContent = i18n.t('ui.noFileSelected');
                 headerFileName.classList.remove('header-file-ready');
+                // Désactiver Play si aucun fichier en cours de lecture
+                if (!currentFileId) {
+                    playPauseBtn.disabled = true;
+                }
                 return;
             }
 
@@ -6963,6 +6969,9 @@
             if (!fileItem) {
                 headerFileName.textContent = i18n.t('ui.noFileSelected');
                 headerFileName.classList.remove('header-file-ready');
+                if (!currentFileId) {
+                    playPauseBtn.disabled = true;
+                }
                 return;
             }
 
@@ -6973,9 +6982,14 @@
             if (routed) {
                 headerFileName.textContent = '🎵 ' + filename;
                 headerFileName.classList.add('header-file-ready');
+                // Activer le bouton Play pour ce fichier routé
+                playPauseBtn.disabled = false;
             } else {
                 headerFileName.textContent = filename;
                 headerFileName.classList.remove('header-file-ready');
+                if (!currentFileId) {
+                    playPauseBtn.disabled = true;
+                }
             }
         }
 
@@ -9244,6 +9258,23 @@
 
         // Toggle entre lecture et pause
         async function togglePlayPause() {
+            // Si pas de lecture en cours mais un fichier sélectionné et routé, lancer la lecture
+            if (!currentFileId && !isPlaying && !isPaused) {
+                if (selectedFileId) {
+                    const fileItem = document.querySelector(`.file-item[data-file-id="${selectedFileId}"]`);
+                    if (fileItem) {
+                        const backendStatus = fileRoutingStatusCache.get(String(selectedFileId));
+                        const routed = (backendStatus && backendStatus !== 'unrouted') || isFileRouted(selectedFileId);
+                        if (routed) {
+                            await playFile(selectedFileId, fileItem.dataset.fileName);
+                            return;
+                        }
+                    }
+                }
+                log('Sélectionnez un fichier via la liste des fichiers', 'warning');
+                return;
+            }
+
             if (!currentFileId) {
                 log('Sélectionnez un fichier via la liste des fichiers', 'warning');
                 return;
