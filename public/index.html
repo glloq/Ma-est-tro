@@ -7400,14 +7400,47 @@
             li.addEventListener('dragstart', handleDragStart);
             li.addEventListener('dragend', handleDragEnd);
 
-            // Clic pour sélectionner (simple sélection pour navigation clavier)
+            // Clic pour sélectionner (simple, Ctrl+clic multi, Shift+clic plage)
             li.addEventListener('click', (e) => {
                 // Ne pas sélectionner si on clique sur un bouton ou checkbox
                 if (e.target.tagName === 'BUTTON' || e.target.closest('button') ||
                     e.target.tagName === 'INPUT') {
                     return;
                 }
-                selectFile(file.id);
+
+                if (e.ctrlKey || e.metaKey) {
+                    // Ctrl+Clic : toggle la sélection multiple de ce fichier
+                    const isSelected = selectedFileIds.has(file.id);
+                    const checkbox = li.querySelector('.file-checkbox');
+                    if (isSelected) {
+                        selectedFileIds.delete(file.id);
+                        if (checkbox) checkbox.checked = false;
+                    } else {
+                        selectedFileIds.add(file.id);
+                        if (checkbox) checkbox.checked = true;
+                    }
+                    updateBatchActionsBar();
+                    selectFile(file.id);
+                } else if (e.shiftKey && selectedFileId) {
+                    // Shift+Clic : sélectionner la plage entre le fichier courant et celui-ci
+                    const allItems = Array.from(document.querySelectorAll('.file-item'));
+                    const startIdx = allItems.findIndex(el => el.dataset.fileId === String(selectedFileId));
+                    const endIdx = allItems.findIndex(el => el.dataset.fileId === String(file.id));
+                    if (startIdx !== -1 && endIdx !== -1) {
+                        const from = Math.min(startIdx, endIdx);
+                        const to = Math.max(startIdx, endIdx);
+                        for (let i = from; i <= to; i++) {
+                            const itemId = Number(allItems[i].dataset.fileId);
+                            selectedFileIds.add(itemId);
+                            const cb = allItems[i].querySelector('.file-checkbox');
+                            if (cb) cb.checked = true;
+                        }
+                        updateBatchActionsBar();
+                    }
+                } else {
+                    // Clic simple : sélection unique
+                    selectFile(file.id);
+                }
             });
 
             // Checkbox pour sélection multiple
