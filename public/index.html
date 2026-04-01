@@ -7464,7 +7464,7 @@
             li.addEventListener('dragstart', handleDragStart);
             li.addEventListener('dragend', handleDragEnd);
 
-            // Clic pour sélectionner (simple, Ctrl+clic multi, Shift+clic plage)
+            // Clic pour sélectionner (simple ou Shift+clic plage)
             li.addEventListener('click', (e) => {
                 // Ne pas sélectionner si on clique sur un bouton ou checkbox
                 if (e.target.tagName === 'BUTTON' || e.target.closest('button') ||
@@ -7472,18 +7472,7 @@
                     return;
                 }
 
-                const numId = Number(file.id);
-
-                if (e.ctrlKey || e.metaKey) {
-                    // Ctrl+Clic : toggle la sélection multiple de ce fichier
-                    if (selectedFileIds.has(numId)) {
-                        selectedFileIds.delete(numId);
-                    } else {
-                        selectedFileIds.add(numId);
-                    }
-                    syncBatchSelectionUI();
-                    selectFile(file.id);
-                } else if (e.shiftKey && selectedFileId != null) {
+                if (e.shiftKey && selectedFileId != null) {
                     // Shift+Clic : sélectionner la plage entre l'ancre et ce fichier
                     e.preventDefault();
                     const allItems = Array.from(document.querySelectorAll('#fileList .file-item'));
@@ -7492,7 +7481,6 @@
                     const startIdx = allItems.findIndex(el => String(el.dataset.fileId) === anchorId);
                     const endIdx = allItems.findIndex(el => String(el.dataset.fileId) === targetId);
                     if (startIdx !== -1 && endIdx !== -1) {
-                        // Ajouter toute la plage à la sélection
                         const from = Math.min(startIdx, endIdx);
                         const to = Math.max(startIdx, endIdx);
                         for (let idx = from; idx <= to; idx++) {
@@ -7500,7 +7488,6 @@
                         }
                         syncBatchSelectionUI();
                     }
-                    // L'ancre (selectedFileId) ne change pas pour permettre des Shift successifs
                 } else {
                     // Clic simple : sélection unique, annuler la multi-sélection
                     if (selectedFileIds.size > 0) {
