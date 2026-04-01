@@ -7478,6 +7478,17 @@
             li.addEventListener('dragstart', handleDragStart);
             li.addEventListener('dragend', handleDragEnd);
 
+            // Désactiver le drag quand Shift est enfoncé (sinon le navigateur
+            // intercepte le mousedown et empêche l'événement click)
+            li.addEventListener('mousedown', (e) => {
+                if (e.shiftKey) {
+                    li.draggable = false;
+                }
+            });
+            li.addEventListener('mouseup', () => {
+                li.draggable = true;
+            });
+
             // Clic pour sélectionner (simple ou Shift+clic plage)
             li.addEventListener('click', (e) => {
                 // Ne pas sélectionner si on clique sur un bouton ou checkbox
@@ -7494,17 +7505,13 @@
                     const targetId = String(file.id);
                     const startIdx = allItems.findIndex(el => String(el.dataset.fileId) === anchorId);
                     const endIdx = allItems.findIndex(el => String(el.dataset.fileId) === targetId);
-                    console.log('[Shift+Click] anchor:', anchorId, 'target:', targetId, 'startIdx:', startIdx, 'endIdx:', endIdx, 'totalItems:', allItems.length);
                     if (startIdx !== -1 && endIdx !== -1) {
                         const from = Math.min(startIdx, endIdx);
                         const to = Math.max(startIdx, endIdx);
                         for (let idx = from; idx <= to; idx++) {
                             selectedFileIds.add(Number(allItems[idx].dataset.fileId));
                         }
-                        console.log('[Shift+Click] selectedFileIds:', [...selectedFileIds]);
                         syncBatchSelectionUI();
-                    } else {
-                        console.warn('[Shift+Click] Could not find anchor or target in DOM. allItems fileIds:', allItems.map(el => el.dataset.fileId));
                     }
                 } else {
                     // Clic simple : sélection unique
