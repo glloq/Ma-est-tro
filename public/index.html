@@ -539,46 +539,6 @@
         .btn-calibration-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); }
         .btn-lighting-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); }
 
-        /* Playlist Queue Indicator (mini bar in header during playlist playback) */
-        .playlist-queue-indicator {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 4px 12px;
-            background: rgba(102, 126, 234, 0.2);
-            border: 1px solid rgba(102, 126, 234, 0.4);
-            border-radius: 6px;
-            font-size: 0.85rem;
-            color: white;
-            white-space: nowrap;
-        }
-        .playlist-queue-indicator.hidden { display: none; }
-        .playlist-queue-indicator .queue-file-name {
-            max-width: 180px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .playlist-queue-indicator .queue-position {
-            opacity: 0.8;
-            font-size: 0.8rem;
-        }
-        .playlist-queue-indicator button {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            cursor: pointer;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-        }
-        .playlist-queue-indicator button:hover {
-            background: rgba(255,255,255,0.4);
-        }
-        body.theme-dark .playlist-queue-indicator {
-            background: rgba(102, 126, 234, 0.3);
-            border-color: rgba(102, 126, 234, 0.5);
-        }
-
         /* Inputs */
         input,
         select,
@@ -3778,7 +3738,7 @@
         /* Contrôles de lecture dans le header */
         .header-playback {
             margin-top: 0;
-            padding: 0 245px;
+            padding: 0 190px;
             pointer-events: none;
         }
 
@@ -3815,6 +3775,14 @@
         .header-controls .btn {
             padding: 8px 16px;
             font-size: 13px;
+        }
+
+        .header-playlist-info {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+        .header-playlist-info.hidden {
+            display: none;
         }
 
         .header-progress {
@@ -4960,20 +4928,14 @@
                 </button>
                 </nav>
 
-                <div class="playlist-queue-indicator hidden" id="playlistQueueIndicator" role="status" aria-label="Playlist queue">
-                    <button id="queuePrevBtn" title="Previous" aria-label="Previous track">⏮</button>
-                    <span class="queue-file-name" id="queueFileName"></span>
-                    <span class="queue-position" id="queuePosition"></span>
-                    <button id="queueNextBtn" title="Next" aria-label="Next track">⏭</button>
-                    <button id="queueLoopBtn" title="Loop" aria-label="Toggle loop">🔁</button>
-                    <button id="queueStopBtn" title="Stop playlist" aria-label="Stop playlist">✕</button>
-                </div>
-
                 <div class="header-playback" role="region" aria-label="Playback controls">
                     <div class="header-controls">
                         <span class="header-file-name" id="headerFileName" aria-live="polite" data-i18n="ui.noFileSelected">Aucun fichier sélectionné</span>
+                        <span class="header-playlist-info hidden" id="headerPlaylistInfo" style="font-size:0.8rem;opacity:0.7;"></span>
                         <span class="header-time" id="headerTime" aria-live="off" aria-label="Playback time">00:00 / 00:00</span>
+                        <button class="btn" id="headerPrevBtn" style="display:none;" aria-label="Previous track" title="Previous">⏮</button>
                         <button class="btn" id="headerPlayPauseBtn" disabled aria-label="Play">▶️&nbsp;&nbsp;<span data-i18n="ui.play">Lecture</span></button>
+                        <button class="btn" id="headerNextBtn" style="display:none;" aria-label="Next track" title="Next">⏭</button>
                         <button class="btn btn-danger" id="headerStopBtn" disabled aria-label="Stop">⏹️&nbsp;&nbsp;<span data-i18n="ui.stop">Stop</span></button>
                     </div>
 
@@ -5657,6 +5619,7 @@
         let currentFileId = null;
         let isPlaying = false;
         let isPaused = false; // Nouveau: tracker si on est en pause
+        let activePlaylistId = null; // ID de la playlist en cours, null si lecture simple
         let currentDuration = 0; // Durée totale du fichier en cours (en secondes)
         let currentTempo = 120; // Tempo du fichier en cours (BPM)
         let currentTicksPerBeat = 480; // Résolution MIDI du fichier en cours
@@ -6787,19 +6750,24 @@
 
                 // 🎶 Événements playlist
                 api.on('playlist_item_changed', (data) => {
-                    const indicator = document.getElementById('playlistQueueIndicator');
-                    if (indicator) {
-                        indicator.classList.remove('hidden');
-                        document.getElementById('queueFileName').textContent = data.filename || '';
-                        document.getElementById('queuePosition').textContent = `${(data.index || 0) + 1}/${data.totalItems || '?'}`;
-                    }
+                    activePlaylistId = data.playlistId || activePlaylistId;
+                    currentFileId = data.fileId || currentFileId;
+                    isPlaying = true;
+                    isPaused = false;
                     document.getElementById('headerFileName').textContent = data.filename || '';
+                    const playlistInfo = document.getElementById('headerPlaylistInfo');
+                    if (playlistInfo) {
+                        playlistInfo.textContent = `${(data.index || 0) + 1}/${data.totalItems || '?'}`;
+                    }
+                    updatePlaybackControls();
                     log(`🎶 Playlist: ${data.filename} (${(data.index || 0) + 1}/${data.totalItems})`);
                 });
 
                 api.on('playlist_ended', () => {
-                    const indicator = document.getElementById('playlistQueueIndicator');
-                    if (indicator) indicator.classList.add('hidden');
+                    activePlaylistId = null;
+                    isPlaying = false;
+                    isPaused = false;
+                    updatePlaybackControls();
                     log('🎶 Playlist terminée');
                 });
 
@@ -9565,15 +9533,21 @@
                 if (virtualPlayer && virtualPlayer.fileId === currentFileId) {
                     virtualPlayer.stop();
                 } else {
-                    await api.sendCommand('playback_stop');
+                    // Si une playlist est active, arrêter la playlist aussi
+                    if (activePlaylistId) {
+                        await api.sendCommand('playlist_stop');
+                    } else {
+                        await api.sendCommand('playback_stop');
+                    }
                     // Émettre l'événement pour le piano roll (le backend peut ne pas envoyer playback_stopped)
                     if (window.eventBus) {
                         window.eventBus.emit('playback:stop', { fileId: currentFileId });
                     }
                 }
-                // Réinitialiser l'état de pause
+                // Réinitialiser l'état
                 isPaused = false;
                 isPlaying = false;
+                activePlaylistId = null;
                 updatePlaybackControls();
                 // Ne pas réinitialiser currentFileId pour permettre de relancer
             } catch (error) {
@@ -9584,10 +9558,21 @@
         function updatePlaybackControls() {
             const playPauseBtn = document.getElementById('headerPlayPauseBtn');
             const stopBtn = document.getElementById('headerStopBtn');
+            const prevBtn = document.getElementById('headerPrevBtn');
+            const nextBtn = document.getElementById('headerNextBtn');
+            const playlistInfo = document.getElementById('headerPlaylistInfo');
 
             // Désactiver si aucun fichier sélectionné
             playPauseBtn.disabled = !currentFileId;
             stopBtn.disabled = !currentFileId;
+
+            // Afficher/masquer les boutons prev/next selon playlist active
+            const showPlaylistNav = !!activePlaylistId;
+            prevBtn.style.display = showPlaylistNav ? '' : 'none';
+            nextBtn.style.display = showPlaylistNav ? '' : 'none';
+            if (playlistInfo) {
+                playlistInfo.classList.toggle('hidden', !showPlaylistNav);
+            }
 
             // Changer le texte et le style du bouton selon l'état
             if (isPlaying) {
@@ -11720,30 +11705,15 @@
             }
         });
 
-        // Queue indicator controls
-        document.getElementById('queuePrevBtn').addEventListener('click', () => {
-            api.sendCommand('playlist_previous').catch(err => log(`Erreur: ${err.message}`, 'error'));
+        // Playlist prev/next controls in header
+        document.getElementById('headerPrevBtn').addEventListener('click', () => {
+            if (activePlaylistId) {
+                api.sendCommand('playlist_previous').catch(err => log(`Erreur: ${err.message}`, 'error'));
+            }
         });
-        document.getElementById('queueNextBtn').addEventListener('click', () => {
-            api.sendCommand('playlist_next').catch(err => log(`Erreur: ${err.message}`, 'error'));
-        });
-        document.getElementById('queueStopBtn').addEventListener('click', () => {
-            api.sendCommand('playlist_stop').then(() => {
-                document.getElementById('playlistQueueIndicator').classList.add('hidden');
-            }).catch(err => log(`Erreur: ${err.message}`, 'error'));
-        });
-        document.getElementById('queueLoopBtn').addEventListener('click', async () => {
-            try {
-                const status = await api.sendCommand('playlist_status');
-                if (status.active && status.playlistId) {
-                    const newLoop = !status.loop;
-                    await api.sendCommand('playlist_set_loop', { playlistId: status.playlistId, loop: newLoop });
-                    const btn = document.getElementById('queueLoopBtn');
-                    btn.style.opacity = newLoop ? '1' : '0.5';
-                    log(`🔁 Loop ${newLoop ? 'activé' : 'désactivé'}`);
-                }
-            } catch (err) {
-                log(`Erreur: ${err.message}`, 'error');
+        document.getElementById('headerNextBtn').addEventListener('click', () => {
+            if (activePlaylistId) {
+                api.sendCommand('playlist_next').catch(err => log(`Erreur: ${err.message}`, 'error'));
             }
         });
 
