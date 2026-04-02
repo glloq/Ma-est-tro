@@ -1555,7 +1555,7 @@
         }
 
         .sort-order-btn.ascending {
-            transform: rotate(180deg);
+            /* Direction indicated by text content (↑/↓), no rotation needed */
         }
 
         body.theme-dark .sort-select,
@@ -4988,10 +4988,10 @@
                                         <option value="size" data-i18n="ui.sortSize">Taille</option>
                                         <option value="duration" data-i18n="ui.sortDuration">Durée</option>
                                         <option value="tempo" data-i18n="ui.sortTempo">Tempo</option>
-                                        <option value="tracks" data-i18n="ui.sortTracks">Pistes</option>
+                                        <option value="channels" data-i18n="ui.sortChannels">Canaux</option>
                                     </select>
-                                    <button id="sortOrder" class="sort-order-btn" data-i18n-title="ui.sortOrder" title="Ordre de tri">
-                                        ↓
+                                    <button id="sortOrder" class="sort-order-btn ascending" data-i18n-title="ui.sortOrder" title="Ordre de tri">
+                                        ↑
                                     </button>
                                 </div>
 
@@ -7264,7 +7264,7 @@
         // Fonction pour trier les fichiers
         async function sortFiles(files) {
             // Si tri par métadonnées non présentes directement, charger les métadonnées
-            if (['size', 'duration', 'tempo', 'tracks'].includes(currentSortBy)) {
+            if (['size', 'duration', 'tempo', 'channels'].includes(currentSortBy)) {
                 // Charger les métadonnées pour tous les fichiers
                 await Promise.all(files.map(async (file) => {
                     if (!metadataCache.has(file.id)) {
@@ -7321,12 +7321,12 @@
                         break;
                     }
 
-                    case 'tracks': {
-                        const metaTracksA = metadataCache.get(a.id);
-                        const metaTracksB = metadataCache.get(b.id);
-                        const tracksA = a.tracks || (metaTracksA ? metaTracksA.tracks : 0);
-                        const tracksB = b.tracks || (metaTracksB ? metaTracksB.tracks : 0);
-                        compareValue = tracksA - tracksB;
+                    case 'channels': {
+                        const metaChA = metadataCache.get(a.id);
+                        const metaChB = metadataCache.get(b.id);
+                        const chA = a.channel_count || (metaChA ? metaChA.channel_count : 0);
+                        const chB = b.channel_count || (metaChB ? metaChB.channel_count : 0);
+                        compareValue = chA - chB;
                         break;
                     }
                 }
@@ -7338,7 +7338,7 @@
         }
 
         // Mapping des noms de tri UI vers les champs backend
-        const sortFieldMap = { name: 'filename', date: 'uploaded_at', size: 'size', duration: 'duration', tempo: 'tempo', tracks: 'tracks' };
+        const sortFieldMap = { name: 'filename', date: 'uploaded_at', size: 'size', duration: 'duration', tempo: 'tempo', channels: 'channel_count' };
 
         // Initialiser les contrôles de tri
         function initSortControls() {
@@ -12318,24 +12318,27 @@
                 'includeSubfolders'
             ]);
 
+            // Range pairs: render one badge per pair (avoid duplicates, support Max-only)
+            const rangePairs = {
+                'durationMin': 'durationMax', 'durationMax': 'durationMin',
+                'tempoMin': 'tempoMax', 'tempoMax': 'tempoMin',
+                'tracksMin': 'tracksMax', 'tracksMax': 'tracksMin',
+                'channelCountMin': 'channelCountMax', 'channelCountMax': 'channelCountMin',
+                'uploadedAfter': 'uploadedBefore', 'uploadedBefore': 'uploadedAfter'
+            };
+            const renderedRangePairs = new Set();
+
             let badgeCount = 0;
 
             activeFilters.forEach(filter => {
                 if (skipKeys.has(filter.key)) return;
 
-                // Don't create duplicate badges for range filters (only show the Min key)
-                if (filter.key.endsWith('Max') || filter.key.endsWith('Before')) return;
-
-                // Skip range filters where both sides are null
-                if ((filter.key === 'durationMin') &&
-                    filterManager.getFilter('durationMin') === null &&
-                    filterManager.getFilter('durationMax') === null) return;
-                if ((filter.key === 'tempoMin') &&
-                    filterManager.getFilter('tempoMin') === null &&
-                    filterManager.getFilter('tempoMax') === null) return;
-                if ((filter.key === 'channelCountMin') &&
-                    filterManager.getFilter('channelCountMin') === null &&
-                    filterManager.getFilter('channelCountMax') === null) return;
+                // Range pairs: render exactly one badge per pair
+                if (filter.key in rangePairs) {
+                    const pairKey = [filter.key, rangePairs[filter.key]].sort().join('|');
+                    if (renderedRangePairs.has(pairKey)) return;
+                    renderedRangePairs.add(pairKey);
+                }
 
                 const badge = document.createElement('div');
                 badge.className = 'filter-badge';
@@ -12346,7 +12349,13 @@
 
                 badge.querySelector('.remove-badge').addEventListener('click', (e) => {
                     e.stopPropagation();
-                    removeFilter(filter.key);
+                    // For range filters, use the canonical Min/After key so removeFilter() matches
+                    let removeKey = filter.key;
+                    if (filter.key in rangePairs) {
+                        removeKey = (filter.key.endsWith('Max') || filter.key.endsWith('Before'))
+                            ? rangePairs[filter.key] : filter.key;
+                    }
+                    removeFilter(removeKey);
                 });
 
                 badgesContainer.appendChild(badge);
@@ -12375,6 +12384,9 @@
                 document.getElementById('filterChannelCountMax').value = '';
                 filterManager.setFilter('channelCountMin', null);
                 filterManager.setFilter('channelCountMax', null);
+            } else if (key === 'tracksMin' || key === 'tracksMax') {
+                filterManager.setFilter('tracksMin', null);
+                filterManager.setFilter('tracksMax', null);
             } else if (key === 'instrumentTypes') {
                 document.querySelectorAll('.filter-instrument').forEach(cb => cb.checked = false);
                 filterManager.setFilter('instrumentTypes', []);
@@ -12401,6 +12413,10 @@
                 document.getElementById('filterPlayableInstruments').selectedIndex = -1;
                 filterManager.setFilter('playableOnInstruments', []);
             } else if (key === 'uploadedAfter' || key === 'uploadedBefore') {
+                const afterInput = document.getElementById('filterUploadedAfter');
+                const beforeInput = document.getElementById('filterUploadedBefore');
+                if (afterInput) afterInput.value = '';
+                if (beforeInput) beforeInput.value = '';
                 filterManager.setFilter('uploadedAfter', null);
                 filterManager.setFilter('uploadedBefore', null);
             } else if (key === 'gmInstruments') {
@@ -12449,7 +12465,6 @@
 
                 // If no filters active, reload normally (with folder structure)
                 if (!filterManager || !filterManager.hasActiveFilters()) {
-                    filterRefreshInProgress = false;
                     await loadFiles();
                     return;
                 }
