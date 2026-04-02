@@ -154,7 +154,26 @@ async function fileFilter(app, data) {
     }
   });
 
-  const files = app.database.filterFiles(filters);
+  const rawFiles = app.database.filterFiles(filters);
+
+  // Normalize field names to match FileManager.listFiles() format (camelCase + formatted fields)
+  const files = rawFiles.map(file => ({
+    id: file.id,
+    filename: file.filename,
+    size: file.size,
+    sizeFormatted: app.fileManager.formatFileSize(file.size),
+    tracks: file.tracks,
+    duration: file.duration,
+    durationFormatted: app.fileManager.formatDuration(file.duration || 0),
+    tempo: Math.round(file.tempo || 120),
+    channelCount: file.channel_count || 0,
+    uploadedAt: file.uploaded_at,
+    folder: file.folder,
+    is_original: file.is_original,
+    // Keep snake_case aliases for backward compatibility
+    channel_count: file.channel_count || 0,
+    uploaded_at: file.uploaded_at,
+  }));
 
   // Build filter summary for response
   const appliedFilters = [];
