@@ -7324,8 +7324,8 @@
                     case 'channels': {
                         const metaChA = metadataCache.get(a.id);
                         const metaChB = metadataCache.get(b.id);
-                        const chA = a.channel_count || (metaChA ? metaChA.channel_count : 0);
-                        const chB = b.channel_count || (metaChB ? metaChB.channel_count : 0);
+                        const chA = a.channel_count || a.channelCount || (metaChA ? (metaChA.channel_count || metaChA.channelCount) : 0);
+                        const chB = b.channel_count || b.channelCount || (metaChB ? (metaChB.channel_count || metaChB.channelCount) : 0);
                         compareValue = chA - chB;
                         break;
                     }
@@ -7653,7 +7653,7 @@
                 ? `<span title="Durée">⏱ ${file.durationFormatted}</span>
                    <span title="Taille du fichier">💾 ${file.sizeFormatted || ''}</span>
                    <span title="Nombre de pistes">${file.tracks || 0} ${(file.tracks || 0) > 1 ? i18n.t('ui.tracks', 'pistes') : i18n.t('ui.track', 'piste')}</span>
-                   <span title="Canaux MIDI">🎹 ${file.channelCount || 0} ${(file.channelCount || 0) > 1 ? 'canaux' : 'canal'}</span>
+                   <span title="Canaux MIDI">🎹 ${file.channelCount || file.channel_count || 0} ${(file.channelCount || file.channel_count || 0) > 1 ? 'canaux' : 'canal'}</span>
                    <span title="Tempo">♩ ${file.tempo || 120} BPM</span>`
                 : `<span>⏳ Chargement...</span>`;
             fileNameSpan.innerHTML = `
