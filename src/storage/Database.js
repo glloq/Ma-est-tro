@@ -473,7 +473,7 @@ class DatabaseManager {
         ) VALUES (?, ?, ?, ?)
       `);
 
-      const now = new Date().toISOString();
+      const now = Date.now();
       const result = stmt.run(playlist.name, playlist.description || null, now, now);
 
       return result.lastInsertRowid;

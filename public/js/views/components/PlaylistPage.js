@@ -52,6 +52,10 @@ class PlaylistPage {
   }
 
   close() {
+    if (this._escHandler) {
+      document.removeEventListener('keydown', this._escHandler);
+      this._escHandler = null;
+    }
     if (this.modal) {
       this.modal.remove();
       this.modal = null;

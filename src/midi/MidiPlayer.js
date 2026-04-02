@@ -894,7 +894,12 @@ class MidiPlayer {
       this.seek(0);
     } else if (this.queue.length > 0) {
       // Queue active: advance to next
-      await this.nextInQueue();
+      try {
+        await this.nextInQueue();
+      } catch (error) {
+        this.app.logger.error(`Failed to advance queue: ${error.message}`);
+        this.stop();
+      }
     } else {
       this.stop();
     }

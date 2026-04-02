@@ -94,7 +94,10 @@ async function playlistStart(app, data) {
     filename: item.filename
   }));
 
-  const startIndex = data.startIndex || 0;
+  const startIndex = parseInt(data.startIndex) || 0;
+  if (startIndex < 0 || startIndex >= items.length) {
+    throw new Error(`startIndex ${startIndex} out of range (0-${items.length - 1})`);
+  }
   const loop = playlist.loop === 1;
 
   // Set queue in MidiPlayer
