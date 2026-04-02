@@ -80,15 +80,14 @@ class PlaylistPage {
     div.innerHTML = `
       <style>
         .plpage-overlay { position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center; }
-        .plpage-container { width:95%;max-width:1400px;max-height:90vh;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;background:${bg};color:${text};box-shadow:0 8px 32px rgba(0,0,0,0.3); }
+        .plpage-container { width:900px;height:600px;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;background:${bg};color:${text};box-shadow:0 8px 32px rgba(0,0,0,0.3); }
         .plpage-header { background:${hdrBg};border-bottom:2px solid ${border};padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0; }
         .plpage-header h2 { margin:0;font-size:1.4rem;display:flex;align-items:center;gap:10px; }
         .plpage-close { background:none;border:1px solid ${border};border-radius:6px;cursor:pointer;font-size:1.1rem;padding:4px 10px;color:${text};transition:all 0.2s; }
         .plpage-close:hover { background:${dark ? '#444' : '#e9ecef'}; }
-        .plpage-layout { flex:1;display:grid;grid-template-columns:260px 1fr 280px;overflow:hidden;min-height:0; }
+        .plpage-layout { flex:1;display:grid;grid-template-columns:260px 1fr;overflow:hidden;min-height:0; }
         .plpage-sidebar { overflow-y:auto;padding:15px;border-color:${border}; }
         .plpage-sidebar.left { border-right:1px solid ${border}; }
-        .plpage-sidebar.right { border-left:1px solid ${border}; }
         .plpage-main { overflow-y:auto;padding:15px; }
         .plpage-section-hdr { display:flex;justify-content:space-between;align-items:center;margin-bottom:12px; }
         .plpage-section-hdr h3 { margin:0;font-size:1.05rem; }
@@ -99,9 +98,9 @@ class PlaylistPage {
         .plpage-footer { padding:10px 20px;border-top:1px solid ${border};font-size:0.85rem;color:${textMuted};flex-shrink:0; }
         .plpage-actions { display:flex;gap:8px; }
 
-        @media (max-width: 992px) {
+        @media (max-width: 768px) {
+          .plpage-container { width:95%;height:90vh; }
           .plpage-layout { grid-template-columns:1fr; }
-          .plpage-sidebar.right { display:none; }
           .plpage-sidebar.left { border-right:none;border-bottom:1px solid ${border}; }
         }
       </style>
@@ -131,15 +130,6 @@ class PlaylistPage {
               </div>
               <div id="playlistItemsContainer"></div>
             </div>
-
-            <div class="plpage-sidebar right">
-              <div class="plpage-section-hdr">
-                <h3>${this._t('playlist.queueStatus') || 'Queue'}</h3>
-              </div>
-              <div id="playlistQueueContainer">
-                <p style="color:${textMuted};font-size:0.9rem;">${this._t('playlist.noActiveQueue') || 'No active playlist'}</p>
-              </div>
-            </div>
           </div>
 
           <div class="plpage-footer">
@@ -161,8 +151,8 @@ class PlaylistPage {
     this.modal.querySelector('#playlistPageCloseBtn')?.addEventListener('click', () => this.close());
 
     // Close on overlay click
-    this.modal.querySelector('.playlist-modal-overlay')?.addEventListener('click', (e) => {
-      if (e.target.classList.contains('playlist-modal-overlay')) this.close();
+    this.modal.querySelector('.plpage-overlay')?.addEventListener('click', (e) => {
+      if (e.target.classList.contains('plpage-overlay')) this.close();
     });
 
     // ESC to close
@@ -346,33 +336,6 @@ class PlaylistPage {
     } else {
       info.textContent = '';
     }
-  }
-
-  _updateQueueStatus() {
-    const container = this.modal?.querySelector('#playlistQueueContainer');
-    if (!container) return;
-
-    this.apiClient.sendCommand('playlist_status').then(status => {
-      if (!status.active) {
-        container.innerHTML = `<p style="color:#6c757d;font-size:0.9rem;">${this._t('playlist.noActiveQueue') || 'No active playlist'}</p>`;
-        return;
-      }
-
-      container.innerHTML = `
-        <div style="padding:10px;background:${this._isDark() ? 'rgba(102,126,234,0.15)' : '#e8ecfe'};border-radius:8px;margin-bottom:8px;">
-          <div style="font-weight:600;margin-bottom:4px;">Now Playing</div>
-          <div style="font-size:0.9rem;">${this._escapeHtml(status.currentFile?.filename || '?')}</div>
-          <div style="font-size:0.8rem;color:#6c757d;margin-top:4px;">${status.currentIndex + 1} / ${status.totalItems} ${status.loop ? '🔁' : ''}</div>
-        </div>
-        ${status.items.slice(status.currentIndex + 1, status.currentIndex + 6).map((item, i) => `
-          <div style="padding:6px 10px;font-size:0.85rem;color:#6c757d;">
-            ${status.currentIndex + 2 + i}. ${this._escapeHtml(item.filename)}
-          </div>
-        `).join('')}
-      `;
-    }).catch(() => {
-      container.innerHTML = `<p style="color:#6c757d;font-size:0.9rem;">Queue unavailable</p>`;
-    });
   }
 
   // ==================== DRAG AND DROP ====================

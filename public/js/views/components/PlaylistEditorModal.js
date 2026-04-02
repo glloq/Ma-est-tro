@@ -2,9 +2,9 @@
  * PlaylistEditorModal
  *
  * Modal for adding/removing files from a playlist.
- * Extends BaseModal with 2-column layout matching modal-playlist.css.
+ * Extends BaseModal with 2-column layout.
  *
- * Left column: Available MIDI files with search + routing status
+ * Left column: Available MIDI files with search + "Routed only" filter
  * Right column: Current playlist items (numbered, removable)
  */
 
@@ -22,7 +22,9 @@ class PlaylistEditorModal extends BaseModal {
     this.playlistId = playlistId;
     this.availableFiles = [];
     this.playlistItems = [];
+    this.routingStatusMap = new Map(); // fileId -> 'routed' | 'unrouted' | 'partial'
     this.searchQuery = '';
+    this.showRoutedOnly = false;
     this.onCloseCallback = null;
   }
 
@@ -47,18 +49,23 @@ class PlaylistEditorModal extends BaseModal {
     const inputBg = dark ? '#3a3a3a' : '#fff';
     const inputColor = dark ? '#e0e0e0' : '#333';
     const textMuted = dark ? '#999' : '#6c757d';
+    const btnBg = dark ? '#3a3a3a' : '#f3f4f6';
+    const btnBorder = dark ? '#555' : '#dee2e6';
 
     return `
       <div class="playlist-editor-content" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;min-height:0;height:100%;overflow:hidden;">
         <div class="available-files" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">
-          <div style="margin-bottom:10px;flex-shrink:0;">
+          <div style="display:flex;gap:8px;margin-bottom:10px;flex-shrink:0;">
             <input type="text" id="playlistEditorSearch"
               placeholder="${this.t('playlist.searchFiles') || 'Search files...'}"
-              style="width:100%;padding:8px 12px;border:1px solid ${border};border-radius:6px;font-size:0.9rem;background:${inputBg};color:${inputColor};box-sizing:border-box;">
+              style="flex:1;padding:8px 12px;border:1px solid ${border};border-radius:6px;font-size:0.9rem;background:${inputBg};color:${inputColor};box-sizing:border-box;">
+            <button id="playlistEditorRoutedFilter"
+              style="padding:6px 12px;border:1px solid ${btnBorder};border-radius:6px;font-size:0.8rem;cursor:pointer;background:${btnBg};color:${inputColor};white-space:nowrap;transition:all 0.2s;"
+              title="${this.t('playlist.showRoutedOnly') || 'Show only routed files'}">
+              🔀 ${this.t('playlist.routedOnly') || 'Routed only'}
+            </button>
           </div>
-          <div style="font-size:0.8rem;color:${textMuted};margin-bottom:6px;flex-shrink:0;">
-            ${this.t('playlist.availableFiles') || 'Available Files'}
-          </div>
+          <div id="playlistEditorFileCount" style="font-size:0.75rem;color:${textMuted};margin-bottom:6px;flex-shrink:0;"></div>
           <div id="playlistEditorAvailableFiles" style="flex:1;overflow-y:auto;min-height:0;"></div>
         </div>
         <div class="playlist-files" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">
@@ -77,7 +84,7 @@ class PlaylistEditorModal extends BaseModal {
   }
 
   async onOpen() {
-    // Fix modal body height to prevent overflow
+    // Fix modal body height
     if (this.dialog) {
       const body = this.dialog.querySelector('.modal-body');
       if (body) {
@@ -93,9 +100,13 @@ class PlaylistEditorModal extends BaseModal {
       this._loadPlaylistItems()
     ]);
 
+    // Load routing status for all files
+    await this._loadRoutingStatuses();
+
     this._renderAvailableFiles();
     this._renderPlaylistItems();
 
+    // Search handler
     const searchInput = this.$('#playlistEditorSearch');
     if (searchInput) {
       searchInput.addEventListener('input', () => {
@@ -104,6 +115,19 @@ class PlaylistEditorModal extends BaseModal {
       });
     }
 
+    // Routed-only filter
+    const filterBtn = this.$('#playlistEditorRoutedFilter');
+    if (filterBtn) {
+      filterBtn.addEventListener('click', () => {
+        this.showRoutedOnly = !this.showRoutedOnly;
+        filterBtn.style.background = this.showRoutedOnly ? '#667eea' : (this._isDark() ? '#3a3a3a' : '#f3f4f6');
+        filterBtn.style.color = this.showRoutedOnly ? '#fff' : (this._isDark() ? '#e0e0e0' : '#333');
+        filterBtn.style.borderColor = this.showRoutedOnly ? '#667eea' : (this._isDark() ? '#555' : '#dee2e6');
+        this._renderAvailableFiles();
+      });
+    }
+
+    // Close button
     const closeBtn = this.$('#playlistEditorCloseBtn');
     if (closeBtn) {
       closeBtn.addEventListener('click', () => this.close());
@@ -135,8 +159,34 @@ class PlaylistEditorModal extends BaseModal {
     }
   }
 
+  async _loadRoutingStatuses() {
+    // Flatten files
+    const files = [];
+    const flatten = (items) => {
+      for (const item of items) {
+        if (item.files) flatten(item.files);
+        else if (item.id) files.push(item);
+      }
+    };
+    if (Array.isArray(this.availableFiles)) flatten(this.availableFiles);
+
+    // Batch check routing for all files
+    const checks = files.map(f =>
+      this.apiClient.sendCommand('get_file_routings', { fileId: f.id })
+        .then(res => ({ id: f.id, count: (res.routings || []).length }))
+        .catch(() => ({ id: f.id, count: 0 }))
+    );
+
+    const results = await Promise.all(checks);
+    this.routingStatusMap.clear();
+    for (const r of results) {
+      this.routingStatusMap.set(r.id, r.count > 0 ? 'routed' : 'unrouted');
+    }
+  }
+
   _renderAvailableFiles() {
     const container = this.$('#playlistEditorAvailableFiles');
+    const countEl = this.$('#playlistEditorFileCount');
     if (!container) return;
 
     const dark = this._isDark();
@@ -153,24 +203,39 @@ class PlaylistEditorModal extends BaseModal {
     };
     if (Array.isArray(this.availableFiles)) flatten(this.availableFiles);
 
+    // Search filter
     if (this.searchQuery) {
       files = files.filter(f => (f.filename || '').toLowerCase().includes(this.searchQuery));
     }
 
+    // Routed-only filter
+    if (this.showRoutedOnly) {
+      files = files.filter(f => this.routingStatusMap.get(f.id) === 'routed');
+    }
+
     const addedIds = new Set(this.playlistItems.map(i => i.midi_id));
 
+    // Count display
+    if (countEl) {
+      const totalCount = files.length;
+      const routedCount = files.filter(f => this.routingStatusMap.get(f.id) === 'routed').length;
+      countEl.textContent = this.showRoutedOnly
+        ? `${totalCount} routed file(s)`
+        : `${totalCount} file(s) (${routedCount} routed)`;
+    }
+
     if (files.length === 0) {
-      container.innerHTML = `<p style="color:${textMuted};text-align:center;padding:20px;">No files found</p>`;
+      container.innerHTML = `<p style="color:${textMuted};text-align:center;padding:20px;">${this.showRoutedOnly ? 'No routed files found' : 'No files found'}</p>`;
       return;
     }
 
     container.innerHTML = files.map(f => {
       const isAdded = addedIds.has(f.id);
+      const routingStatus = this.routingStatusMap.get(f.id) || 'unrouted';
+      const isRouted = routingStatus === 'routed';
       const itemBorder = isAdded ? '#28a745' : border;
       const itemBg = isAdded ? (dark ? 'rgba(40,167,69,0.1)' : 'rgba(40,167,69,0.05)') : cardBg;
-      // Routing dot
-      const routed = f.routing_status && f.routing_status !== 'unrouted';
-      const dot = routed
+      const dot = isRouted
         ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#28a745;flex-shrink:0;" title="Routed"></span>'
         : '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#dc3545;flex-shrink:0;" title="Not routed"></span>';
 
@@ -213,18 +278,26 @@ class PlaylistEditorModal extends BaseModal {
       return;
     }
 
-    container.innerHTML = this.playlistItems.map((item, index) => `
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;margin-bottom:3px;border-radius:6px;border:1px solid ${border};background:${cardBg};transition:all 0.15s;">
-        <span style="background:#667eea;color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:600;flex-shrink:0;">${index + 1}</span>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.escape(item.filename || '')}</div>
-          <div style="font-size:0.72rem;color:${textMuted};">${this._formatDuration(item.duration)}</div>
-        </div>
-        <button class="btn-remove-file" data-item-id="${item.id}"
-                style="background:none;border:none;cursor:pointer;font-size:0.9rem;opacity:0.5;"
-                title="Remove">✕</button>
-      </div>
-    `).join('');
+    container.innerHTML = this.playlistItems.map((item, index) => {
+      const routingStatus = this.routingStatusMap.get(item.midi_id) || 'unrouted';
+      const isRouted = routingStatus === 'routed';
+      const dot = isRouted
+        ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#28a745;flex-shrink:0;" title="Routed"></span>'
+        : '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#dc3545;flex-shrink:0;" title="Not routed"></span>';
+
+      return `
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;margin-bottom:3px;border-radius:6px;border:1px solid ${border};background:${cardBg};transition:all 0.15s;">
+          <span style="background:#667eea;color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:600;flex-shrink:0;">${index + 1}</span>
+          ${dot}
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.escape(item.filename || '')}</div>
+            <div style="font-size:0.72rem;color:${textMuted};">${this._formatDuration(item.duration)}</div>
+          </div>
+          <button class="btn-remove-file" data-item-id="${item.id}"
+                  style="background:none;border:none;cursor:pointer;font-size:0.9rem;opacity:0.5;"
+                  title="Remove">✕</button>
+        </div>`;
+    }).join('');
 
     container.querySelectorAll('.btn-remove-file').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -240,7 +313,8 @@ class PlaylistEditorModal extends BaseModal {
     const statsEl = this.$('#playlistEditorStats');
     if (!statsEl) return;
     const totalDuration = this.playlistItems.reduce((sum, item) => sum + (item.duration || 0), 0);
-    statsEl.textContent = `${this.playlistItems.length} file(s) - ${this._formatDuration(totalDuration)} total`;
+    const routedCount = this.playlistItems.filter(i => this.routingStatusMap.get(i.midi_id) === 'routed').length;
+    statsEl.textContent = `${this.playlistItems.length} file(s) - ${this._formatDuration(totalDuration)} total - ${routedCount} routed`;
   }
 
   async _addFile(fileId) {
