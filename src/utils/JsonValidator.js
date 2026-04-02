@@ -192,8 +192,8 @@ class JsonValidator {
 
     switch (command) {
       case 'playback_start':
-        if (!data.outputDevice) {
-          errors.push('outputDevice is required');
+        if (!data.fileId && !data.outputDevice) {
+          errors.push('fileId or outputDevice is required');
         }
         break;
 
