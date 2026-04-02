@@ -67,6 +67,7 @@
         .btn-instruments-toggle,
         .btn-calibration-toggle,
         .btn-lighting-toggle,
+        .btn-playlist-toggle,
         .upload-drop-zone-icon,
         .search-icon,
         .confirm-modal-icon,
@@ -100,7 +101,8 @@
         body.theme-dark .btn-debug-toggle,
         body.theme-dark .btn-instruments-toggle,
         body.theme-dark .btn-calibration-toggle,
-        body.theme-dark .btn-lighting-toggle {
+        body.theme-dark .btn-lighting-toggle,
+        body.theme-dark .btn-playlist-toggle {
             background: #3d3d3d;
             border-color: #4d4d4d;
             color: #ffffff;
@@ -525,6 +527,10 @@
             background: rgba(255, 255, 255, 0.25);
             border: 1px solid rgba(255, 255, 255, 0.4);
         }
+        .btn-playlist-toggle {
+            background: rgba(255, 255, 255, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
 
         .btn-keyboard-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); }
         .btn-settings-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); }
@@ -532,6 +538,47 @@
         .btn-instruments-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); }
         .btn-calibration-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); }
         .btn-lighting-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); }
+        .btn-playlist-toggle:hover { background: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.7); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); }
+
+        /* Playlist Queue Indicator (mini bar in header during playlist playback) */
+        .playlist-queue-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 12px;
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.4);
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: white;
+            white-space: nowrap;
+        }
+        .playlist-queue-indicator.hidden { display: none; }
+        .playlist-queue-indicator .queue-file-name {
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .playlist-queue-indicator .queue-position {
+            opacity: 0.8;
+            font-size: 0.8rem;
+        }
+        .playlist-queue-indicator button {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .playlist-queue-indicator button:hover {
+            background: rgba(255,255,255,0.4);
+        }
+        body.theme-dark .playlist-queue-indicator {
+            background: rgba(102, 126, 234, 0.3);
+            border-color: rgba(102, 126, 234, 0.5);
+        }
 
         /* Inputs */
         input,
@@ -4755,6 +4802,8 @@
     <link rel="stylesheet" href="styles/playback-timeline.css">
     <link rel="stylesheet" href="styles/add-instrument-modal.css">
     <link rel="stylesheet" href="styles/calibration-modal.css">
+    <link rel="stylesheet" href="styles/playlist.css">
+    <link rel="stylesheet" href="styles/modal-playlist.css">
 </head>
 <body>
     <!-- Skip Navigation Link (Accessibility) -->
@@ -4878,10 +4927,23 @@
                     💡
                 </button>
 
+                <button class="btn-playlist-toggle" id="playlistBtn" data-i18n-title="playlist.title" title="Playlists" aria-label="Playlists">
+                    🎶
+                </button>
+
                 <button class="btn-calibration-toggle" id="calibrationBtn" data-i18n-title="ui.calibrationDelay" title="Calibration des délais (Microphone)" aria-label="Delay calibration">
                     🎤
                 </button>
                 </nav>
+
+                <div class="playlist-queue-indicator hidden" id="playlistQueueIndicator" role="status" aria-label="Playlist queue">
+                    <button id="queuePrevBtn" title="Previous" aria-label="Previous track">⏮</button>
+                    <span class="queue-file-name" id="queueFileName"></span>
+                    <span class="queue-position" id="queuePosition"></span>
+                    <button id="queueNextBtn" title="Next" aria-label="Next track">⏭</button>
+                    <button id="queueLoopBtn" title="Loop" aria-label="Toggle loop">🔁</button>
+                    <button id="queueStopBtn" title="Stop playlist" aria-label="Stop playlist">✕</button>
+                </div>
 
                 <div class="header-playback" role="region" aria-label="Playback controls">
                     <div class="header-controls">
@@ -4982,6 +5044,7 @@
                             <button class="btn" id="batchSelectAll" data-i18n="ui.selectAll">Tout sélectionner</button>
                             <button class="btn" id="batchDeselect" data-i18n="ui.deselect">Désélectionner</button>
                             <button class="btn" id="batchMove" data-i18n="ui.moveTo">📁 Déplacer vers...</button>
+                            <button class="btn" id="batchAddToPlaylist" data-i18n="playlist.addToPlaylist">📋 Ajouter à playlist</button>
                             <button class="btn btn-danger" id="batchDelete" data-i18n="ui.deleteSelected">🗑️ Supprimer</button>
                         </div>
                     </div>
@@ -5352,6 +5415,8 @@
     <script src="js/views/components/lighting/LightingPresetsUI.js"></script>
     <script src="js/views/components/lighting/LightingHelpersMixin.js"></script>
     <script src="js/views/components/LightingControlPage.js"></script>
+    <script src="js/views/components/PlaylistPage.js"></script>
+    <script src="js/views/components/PlaylistEditorModal.js"></script>
 
     <!-- Bluetooth Scan Modal Component -->
     <script src="js/views/components/BluetoothScanModal.js"></script>
@@ -5595,6 +5660,9 @@
 
         // 💡 Instance de la page de contrôle lumière
         let lightingControlPage = null;
+
+        // 🎶 Instance de la page playlists
+        let playlistPage = null;
 
         // 🆕 Instance du modal de réglages
         let settingsModal = null;
@@ -6693,6 +6761,40 @@
                     }
                 });
 
+                // 🎶 Événements playlist
+                api.on('playlist_item_changed', (data) => {
+                    const indicator = document.getElementById('playlistQueueIndicator');
+                    if (indicator) {
+                        indicator.classList.remove('hidden');
+                        document.getElementById('queueFileName').textContent = data.filename || '';
+                        document.getElementById('queuePosition').textContent = `${(data.index || 0) + 1}/${data.totalItems || '?'}`;
+                    }
+                    document.getElementById('headerFileName').textContent = data.filename || '';
+                    log(`🎶 Playlist: ${data.filename} (${(data.index || 0) + 1}/${data.totalItems})`);
+                });
+
+                api.on('playlist_ended', () => {
+                    const indicator = document.getElementById('playlistQueueIndicator');
+                    if (indicator) indicator.classList.add('hidden');
+                    log('🎶 Playlist terminée');
+                });
+
+                api.on('playback_channel_skipped', (data) => {
+                    log(`⚠️ Canal ${data.channelDisplay} ignoré: ${data.reason || 'no routing'}`, 'warning');
+                });
+
+                api.on('playback_device_error', (data) => {
+                    log(`⚠️ Device inaccessible: ${data.deviceId} (canal ${(data.channel || 0) + 1})`, 'warning');
+                });
+
+                api.on('playback_device_disconnected', (data) => {
+                    if (data.policy === 'pause') {
+                        log(`⏸ Lecture en pause: device ${data.deviceId} déconnecté`, 'warning');
+                    } else if (data.policy === 'mute') {
+                        log(`🔇 Canaux mutés (device ${data.deviceId} déconnecté): ${(data.mutedChannels || []).map(c => c + 1).join(', ')}`, 'warning');
+                    }
+                });
+
                 // Événements du player virtuel
                 document.addEventListener('virtualplayback_progress', (event) => {
                     const { position, duration, progress } = event.detail;
@@ -7152,6 +7254,11 @@
             document.getElementById('batchDeselect').addEventListener('click', deselectAllFiles);
             document.getElementById('batchDelete').addEventListener('click', batchDeleteFiles);
             document.getElementById('batchMove').addEventListener('click', batchMoveFiles);
+            document.getElementById('batchAddToPlaylist').addEventListener('click', () => {
+                if (selectedFileIds.size === 0) return;
+                const btn = document.getElementById('batchAddToPlaylist');
+                showAddToPlaylistMenu([...selectedFileIds], `${selectedFileIds.size} files`, btn);
+            });
         }
 
         // ========== TRI DES FICHIERS ==========
@@ -7620,6 +7727,17 @@
                 playFile(file.id, file.filename);
             };
 
+            // Bouton Ajouter à playlist
+            const playlistBtn = document.createElement('button');
+            playlistBtn.className = 'btn btn-secondary btn-sm';
+            playlistBtn.title = i18n.t('playlist.addToPlaylist') || 'Add to playlist';
+            playlistBtn.textContent = '📋';
+            playlistBtn.onclick = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                showAddToPlaylistMenu(file.id, file.filename, playlistBtn);
+            };
+
             // Bouton Supprimer
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'btn btn-danger btn-sm';
@@ -7634,6 +7752,7 @@
             actionsDiv.appendChild(editBtn);
             actionsDiv.appendChild(routeBtn);
             actionsDiv.appendChild(playBtn);
+            actionsDiv.appendChild(playlistBtn);
             actionsDiv.appendChild(deleteBtn);
 
             li.appendChild(checkbox);
@@ -8783,6 +8902,101 @@
             } catch (error) {
                 console.error('[extractChannelsFromMidiData] Error:', error);
                 return [];
+            }
+        }
+
+        // 🎶 Afficher le menu d'ajout à playlist pour un ou plusieurs fichiers
+        async function showAddToPlaylistMenu(fileId, filename, anchorElement) {
+            try {
+                const result = await api.sendCommand('playlist_list');
+                const playlists = result.playlists || [];
+
+                // Remove any existing menu
+                document.querySelectorAll('.playlist-dropdown-menu').forEach(m => m.remove());
+
+                const menu = document.createElement('div');
+                menu.className = 'playlist-dropdown-menu';
+                menu.style.cssText = 'position:absolute;z-index:10001;background:white;border:1px solid #dee2e6;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:6px 0;min-width:200px;';
+
+                if (document.body.classList.contains('theme-dark') || document.body.classList.contains('dark-mode')) {
+                    menu.style.background = '#2d2d2d';
+                    menu.style.borderColor = '#444';
+                }
+
+                if (playlists.length === 0) {
+                    menu.innerHTML = '<div style="padding:8px 14px;color:#6c757d;font-size:0.85rem;">No playlists yet</div>';
+                } else {
+                    playlists.forEach(pl => {
+                        const item = document.createElement('div');
+                        item.style.cssText = 'padding:8px 14px;cursor:pointer;font-size:0.9rem;transition:background 0.15s;';
+                        item.textContent = pl.name;
+                        item.addEventListener('mouseenter', () => { item.style.background = 'rgba(102,126,234,0.1)'; });
+                        item.addEventListener('mouseleave', () => { item.style.background = 'transparent'; });
+                        item.addEventListener('click', async () => {
+                            menu.remove();
+                            try {
+                                if (Array.isArray(fileId)) {
+                                    for (const fid of fileId) {
+                                        await api.sendCommand('playlist_add_file', { playlistId: pl.id, midiId: fid });
+                                    }
+                                    log(`${fileId.length} fichier(s) ajouté(s) à "${pl.name}"`, 'info');
+                                } else {
+                                    await api.sendCommand('playlist_add_file', { playlistId: pl.id, midiId: fileId });
+                                    log(`"${filename}" ajouté à "${pl.name}"`, 'info');
+                                }
+                            } catch (err) {
+                                log(`Erreur: ${err.message}`, 'error');
+                            }
+                        });
+                        menu.appendChild(item);
+                    });
+                }
+
+                // Separator + New playlist option
+                const sep = document.createElement('div');
+                sep.style.cssText = 'border-top:1px solid #dee2e6;margin:4px 0;';
+                menu.appendChild(sep);
+
+                const newItem = document.createElement('div');
+                newItem.style.cssText = 'padding:8px 14px;cursor:pointer;font-size:0.9rem;font-weight:500;color:#667eea;';
+                newItem.textContent = '+ ' + (i18n.t('playlist.newPlaylist') || 'New playlist...');
+                newItem.addEventListener('click', async () => {
+                    menu.remove();
+                    const name = prompt(i18n.t('playlist.enterName') || 'Enter playlist name:');
+                    if (!name || !name.trim()) return;
+                    try {
+                        const res = await api.sendCommand('playlist_create', { name: name.trim() });
+                        if (Array.isArray(fileId)) {
+                            for (const fid of fileId) {
+                                await api.sendCommand('playlist_add_file', { playlistId: res.playlistId, midiId: fid });
+                            }
+                            log(`${fileId.length} fichier(s) ajouté(s) à "${name.trim()}"`, 'info');
+                        } else {
+                            await api.sendCommand('playlist_add_file', { playlistId: res.playlistId, midiId: fileId });
+                            log(`"${filename}" ajouté à "${name.trim()}"`, 'info');
+                        }
+                    } catch (err) {
+                        log(`Erreur: ${err.message}`, 'error');
+                    }
+                });
+                menu.appendChild(newItem);
+
+                // Position relative to anchor
+                const rect = anchorElement.getBoundingClientRect();
+                menu.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+                menu.style.left = (rect.left + window.scrollX) + 'px';
+                document.body.appendChild(menu);
+
+                // Close on click outside
+                const closeMenu = (e) => {
+                    if (!menu.contains(e.target)) {
+                        menu.remove();
+                        document.removeEventListener('click', closeMenu);
+                    }
+                };
+                setTimeout(() => document.addEventListener('click', closeMenu), 10);
+            } catch (error) {
+                log(`Failed to load playlists: ${error.message}`, 'error');
             }
         }
 
@@ -11476,6 +11690,42 @@
             }
         });
 
+        // Event listener pour le bouton playlists
+        document.getElementById('playlistBtn').addEventListener('click', () => {
+            if (playlistPage) {
+                playlistPage.show();
+            } else {
+                log('Playlist page not initialized', 'error');
+            }
+        });
+
+        // Queue indicator controls
+        document.getElementById('queuePrevBtn').addEventListener('click', () => {
+            api.sendCommand('playlist_previous').catch(err => log(`Erreur: ${err.message}`, 'error'));
+        });
+        document.getElementById('queueNextBtn').addEventListener('click', () => {
+            api.sendCommand('playlist_next').catch(err => log(`Erreur: ${err.message}`, 'error'));
+        });
+        document.getElementById('queueStopBtn').addEventListener('click', () => {
+            api.sendCommand('playlist_stop').then(() => {
+                document.getElementById('playlistQueueIndicator').classList.add('hidden');
+            }).catch(err => log(`Erreur: ${err.message}`, 'error'));
+        });
+        document.getElementById('queueLoopBtn').addEventListener('click', async () => {
+            try {
+                const status = await api.sendCommand('playlist_status');
+                if (status.active && status.playlistId) {
+                    const newLoop = !status.loop;
+                    await api.sendCommand('playlist_set_loop', { playlistId: status.playlistId, loop: newLoop });
+                    const btn = document.getElementById('queueLoopBtn');
+                    btn.style.opacity = newLoop ? '1' : '0.5';
+                    log(`🔁 Loop ${newLoop ? 'activé' : 'désactivé'}`);
+                }
+            } catch (err) {
+                log(`Erreur: ${err.message}`, 'error');
+            }
+        });
+
         // Event listener pour le bouton de calibration
         const calibrationModal = new CalibrationModal(api, window.eventBus);
         document.getElementById('calibrationBtn').addEventListener('click', () => {
@@ -12806,6 +13056,14 @@
                 log('✓ Page de contrôle lumière initialisée', 'info');
             } else {
                 log('⚠️ LightingControlPage non disponible', 'warning');
+            }
+
+            // 🎶 Initialiser la page playlists
+            if (typeof PlaylistPage !== 'undefined') {
+                playlistPage = new PlaylistPage(api);
+                log('✓ Page de gestion des playlists initialisée', 'info');
+            } else {
+                log('⚠️ PlaylistPage non disponible', 'warning');
             }
 
             // Charger et appliquer les paramètres sauvegardés
