@@ -7339,7 +7339,10 @@
         const sortFieldMap = { name: 'filename', date: 'uploaded_at', size: 'size', duration: 'duration', tempo: 'tempo', channels: 'channel_count' };
 
         // Initialiser les contrôles de tri
+        let sortControlsInitialized = false;
         function initSortControls() {
+            if (sortControlsInitialized) return;
+            sortControlsInitialized = true;
             const sortBySelect = document.getElementById('sortBy');
             const sortOrderBtn = document.getElementById('sortOrder');
 
