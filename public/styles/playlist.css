@@ -63,7 +63,8 @@
     border-radius: 8px;
 }
 
-.btn-control {
+.playlist-view-container .btn-control,
+.plpage-container .btn-control {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -77,27 +78,32 @@
     color: #495057;
 }
 
-.btn-control .icon {
+.playlist-view-container .btn-control .icon,
+.plpage-container .btn-control .icon {
     font-size: 1.1rem;
 }
 
-.btn-control:hover {
+.playlist-view-container .btn-control:hover,
+.plpage-container .btn-control:hover {
     background: #e9ecef;
     border-color: #adb5bd;
 }
 
-.btn-control.active {
+.playlist-view-container .btn-control.active,
+.plpage-container .btn-control.active {
     background: #667eea;
     color: white;
     border-color: #667eea;
 }
 
-.btn-control.active:hover {
+.playlist-view-container .btn-control.active:hover,
+.plpage-container .btn-control.active:hover {
     background: #5568d3;
 }
 
-/* Actions droite */
-.header-right {
+/* Actions droite (scoped) */
+.playlist-view-container .header-right,
+.plpage-container .header-right {
     display: flex;
     gap: 10px;
 }
@@ -374,8 +380,9 @@
     min-width: 50px;
 }
 
-/* Actions fichier */
-.file-actions {
+/* Actions fichier (scoped to playlist context) */
+.playlist-view-container .file-actions,
+.plpage-container .file-actions {
     display: none;
     gap: 4px;
 }
@@ -578,10 +585,11 @@
 }
 
 /* ========================================================================
-   BOUTONS COMMUNS
+   BOUTONS COMMUNS (scoped to playlist context to avoid conflicts)
    ======================================================================== */
 
-.btn-icon {
+.playlist-view-container .btn-icon,
+.plpage-container .btn-icon {
     padding: 6px 10px;
     background: transparent;
     border: none;
@@ -592,12 +600,14 @@
     opacity: 0.7;
 }
 
-.btn-icon:hover {
+.playlist-view-container .btn-icon:hover,
+.plpage-container .btn-icon:hover {
     background: rgba(0,0,0,0.05);
     opacity: 1;
 }
 
-.btn {
+.playlist-view-container .pl-btn,
+.plpage-container .pl-btn {
     padding: 8px 16px;
     border: none;
     border-radius: 6px;
@@ -609,34 +619,41 @@
     gap: 6px;
 }
 
-.btn-primary {
+.playlist-view-container .pl-btn-primary,
+.plpage-container .pl-btn-primary {
     background: #667eea;
     color: white;
 }
 
-.btn-primary:hover {
+.playlist-view-container .pl-btn-primary:hover,
+.plpage-container .pl-btn-primary:hover {
     background: #5568d3;
 }
 
-.btn-secondary {
+.playlist-view-container .pl-btn-secondary,
+.plpage-container .pl-btn-secondary {
     background: #6c757d;
     color: white;
 }
 
-.btn-secondary:hover {
+.playlist-view-container .pl-btn-secondary:hover,
+.plpage-container .pl-btn-secondary:hover {
     background: #5a6268;
 }
 
-.btn-danger {
+.playlist-view-container .pl-btn-danger,
+.plpage-container .pl-btn-danger {
     background: #dc3545;
     color: white;
 }
 
-.btn-danger:hover {
+.playlist-view-container .pl-btn-danger:hover,
+.plpage-container .pl-btn-danger:hover {
     background: #c82333;
 }
 
-.btn-sm {
+.playlist-view-container .pl-btn-sm,
+.plpage-container .pl-btn-sm {
     padding: 6px 12px;
     font-size: 0.9rem;
 }
@@ -716,13 +733,15 @@ body.dark-mode .playlist-controls {
     background: var(--bg-tertiary);
 }
 
-body.dark-mode .btn-control {
+body.dark-mode .playlist-view-container .btn-control,
+body.dark-mode .plpage-container .btn-control {
     background: var(--card-bg);
     border-color: var(--border-color);
     color: var(--text-primary);
 }
 
-body.dark-mode .btn-control:hover {
+body.dark-mode .playlist-view-container .btn-control:hover,
+body.dark-mode .plpage-container .btn-control:hover {
     background: var(--bg-tertiary);
     border-color: var(--text-muted);
 }
