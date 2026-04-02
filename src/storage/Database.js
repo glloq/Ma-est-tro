@@ -786,8 +786,8 @@ class DatabaseManager {
   getRoutingsByFile(fileId, includeDisabled) {
     return this.instrumentDB.getRoutingsByFile(fileId, includeDisabled);
   }
-  getRoutingCountsByFiles(fileIds) {
-    return this.instrumentDB.getRoutingCountsByFiles(fileIds);
+  getRoutingCountsByFiles(fileIds, connectedDeviceIds) {
+    return this.instrumentDB.getRoutingCountsByFiles(fileIds, connectedDeviceIds);
   }
   deleteRoutingsByFile(fileId) {
     return this.instrumentDB.deleteRoutingsByFile(fileId);

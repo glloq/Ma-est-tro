@@ -9492,10 +9492,31 @@
                     window.eventBus.emit('playback:play', { fileId: fileId });
                 }
             } catch (error) {
-                log(`Erreur lecture: ${error.message}`, 'error');
-                currentFileId = null;
-                document.getElementById('headerFileName').textContent = i18n.t('ui.noFileSelected');
-                updatePlaybackControls();
+                log(`⚠️ Backend: ${error.message} - bascule en lecture virtuelle`, 'warning');
+                // Fallback: try virtual playback when backend fails (e.g. no output devices)
+                try {
+                    if (!virtualPlayer) {
+                        virtualPlayer = new VirtualMidiPlayer({ info: log, warn: log, error: log });
+                    } else {
+                        virtualPlayer.stop();
+                    }
+                    window.virtualPlayer = virtualPlayer;
+                    const virtualRouting = {};
+                    for (const ch of Object.keys(config.channels)) {
+                        virtualRouting[ch] = 'virtual-instrument';
+                    }
+                    await virtualPlayer.load(fileId, filename, virtualRouting);
+                    await virtualPlayer.play();
+                    log(`▶️ Lecture virtuelle de ${filename} (fallback)`, 'info');
+                    if (window.eventBus) {
+                        window.eventBus.emit('playback:play', { fileId: fileId });
+                    }
+                } catch (fallbackError) {
+                    log(`Erreur lecture: ${fallbackError.message}`, 'error');
+                    currentFileId = null;
+                    document.getElementById('headerFileName').textContent = i18n.t('ui.noFileSelected');
+                    updatePlaybackControls();
+                }
             }
         }
 
