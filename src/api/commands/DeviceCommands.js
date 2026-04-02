@@ -1,6 +1,7 @@
 // src/api/commands/DeviceCommands.js
 import InstrumentDatabase from '../../storage/InstrumentDatabase.js';
 import InstrumentTypeConfig from '../../midi/InstrumentTypeConfig.js';
+import { ValidationError, NotFoundError, ConfigurationError } from '../../core/errors/index.js';
 
 // Presets d'instruments virtuels avec capabilities pre-configurees
 const VIRTUAL_INSTRUMENT_PRESETS = {
@@ -232,7 +233,7 @@ async function deviceRefresh(app) {
 async function deviceInfo(app, data) {
   const device = app.deviceManager.getDeviceInfo(data.deviceId);
   if (!device) {
-    throw new Error(`Device not found: ${data.deviceId}`);
+    throw new NotFoundError('Device', data.deviceId);
   }
   return { device: device };
 }
@@ -262,7 +263,7 @@ async function deviceIdentityRequest(app, data) {
 
 async function deviceSaveSysExIdentity(app, data) {
   if (!app.database) {
-    throw new Error('Database not available');
+    throw new ConfigurationError('Database not available');
   }
 
   // Channel defaults to 0 for backward compatibility
@@ -277,7 +278,7 @@ async function deviceSaveSysExIdentity(app, data) {
 
 async function instrumentUpdateSettings(app, data) {
   if (!app.database) {
-    throw new Error('Database not available');
+    throw new ConfigurationError('Database not available');
   }
 
   // Get USB serial number from data or from DeviceManager
@@ -292,14 +293,14 @@ async function instrumentUpdateSettings(app, data) {
   // Channel defaults to 0 for backward compatibility
   const channel = data.channel !== undefined ? parseInt(data.channel) : 0;
   if (channel < 0 || channel > 15) {
-    throw new Error('channel must be between 0 and 15');
+    throw new ValidationError('channel must be between 0 and 15', 'channel');
   }
 
   // Validate sync_delay range (milliseconds, ±5 seconds max)
   if (data.sync_delay !== undefined) {
     const parsedDelay = parseInt(data.sync_delay);
     if (isNaN(parsedDelay) || parsedDelay < -5000 || parsedDelay > 5000) {
-      throw new Error('sync_delay must be between -5000 and 5000 milliseconds');
+      throw new ValidationError('sync_delay must be between -5000 and 5000 milliseconds', 'sync_delay');
     }
     data.sync_delay = parsedDelay;
   }
@@ -308,21 +309,21 @@ async function instrumentUpdateSettings(app, data) {
   if (data.gm_program !== undefined && data.gm_program !== null) {
     const gmProg = parseInt(data.gm_program);
     if (isNaN(gmProg) || gmProg < 0 || gmProg > 127) {
-      throw new Error('gm_program must be between 0 and 127');
+      throw new ValidationError('gm_program must be between 0 and 127', 'gm_program');
     }
     data.gm_program = gmProg;
   }
 
   // Validate custom_name length
   if (data.custom_name && data.custom_name.length > 255) {
-    throw new Error('custom_name must not exceed 255 characters');
+    throw new ValidationError('custom_name must not exceed 255 characters', 'custom_name');
   }
 
   // Validate octave_mode
   if (data.octave_mode !== undefined && data.octave_mode !== null) {
     const validModes = ['chromatic', 'diatonic', 'pentatonic'];
     if (!validModes.includes(data.octave_mode)) {
-      throw new Error('octave_mode must be one of: chromatic, diatonic, pentatonic');
+      throw new ValidationError('octave_mode must be one of: chromatic, diatonic, pentatonic', 'octave_mode');
     }
   }
 
@@ -330,7 +331,7 @@ async function instrumentUpdateSettings(app, data) {
   if (data.comm_timeout !== undefined && data.comm_timeout !== null) {
     const timeout = parseInt(data.comm_timeout);
     if (isNaN(timeout) || timeout < 100 || timeout > 30000) {
-      throw new Error('comm_timeout must be between 100 and 30000 milliseconds');
+      throw new ValidationError('comm_timeout must be between 100 and 30000 milliseconds', 'comm_timeout');
     }
     data.comm_timeout = timeout;
   }
@@ -360,7 +361,7 @@ async function instrumentUpdateSettings(app, data) {
 
 async function instrumentGetSettings(app, data) {
   if (!app.database) {
-    throw new Error('Database not available');
+    throw new ConfigurationError('Database not available');
   }
 
   // Pass channel if provided, otherwise backward compat (first match)
@@ -374,24 +375,24 @@ async function instrumentGetSettings(app, data) {
 
 async function instrumentUpdateCapabilities(app, data) {
   if (!app.database) {
-    throw new Error('Database not available');
+    throw new ConfigurationError('Database not available');
   }
 
   if (!data.deviceId) {
-    throw new Error('deviceId is required');
+    throw new ValidationError('deviceId is required', 'deviceId');
   }
 
   // Channel defaults to 0 for backward compatibility
   const channel = data.channel !== undefined ? parseInt(data.channel) : 0;
   if (channel < 0 || channel > 15) {
-    throw new Error('channel must be between 0 and 15');
+    throw new ValidationError('channel must be between 0 and 15', 'channel');
   }
 
   // Validate polyphony range
   if (data.polyphony !== undefined && data.polyphony !== null) {
     const poly = parseInt(data.polyphony);
     if (isNaN(poly) || poly < 1 || poly > 128) {
-      throw new Error('polyphony must be between 1 and 128');
+      throw new ValidationError('polyphony must be between 1 and 128', 'polyphony');
     }
     data.polyphony = poly;
   }
@@ -414,11 +415,11 @@ async function instrumentUpdateCapabilities(app, data) {
 
 async function instrumentGetCapabilities(app, data) {
   if (!app.database) {
-    throw new Error('Database not available');
+    throw new ConfigurationError('Database not available');
   }
 
   if (!data.deviceId) {
-    throw new Error('deviceId is required');
+    throw new ValidationError('deviceId is required', 'deviceId');
   }
 
   // Pass channel if provided, otherwise backward compat (first match)
@@ -432,7 +433,7 @@ async function instrumentGetCapabilities(app, data) {
 
 async function instrumentListCapabilities(app) {
   if (!app.database) {
-    throw new Error('Database not available');
+    throw new ConfigurationError('Database not available');
   }
 
   const instruments = app.database.getAllInstrumentCapabilities();
@@ -444,7 +445,7 @@ async function instrumentListCapabilities(app) {
 
 async function instrumentListRegistered(app) {
   if (!app.database) {
-    throw new Error('Database not available');
+    throw new ConfigurationError('Database not available');
   }
 
   const instruments = app.database.getInstrumentsWithCapabilities();
@@ -458,7 +459,7 @@ async function instrumentListRegistered(app) {
 
 async function instrumentListConnected(app) {
   if (!app.database) {
-    throw new Error('Database not available');
+    throw new ConfigurationError('Database not available');
   }
 
   const allInstruments = app.database.getInstrumentsWithCapabilities();
@@ -543,11 +544,11 @@ async function instrumentListConnected(app) {
 
 async function instrumentDelete(app, data) {
   if (!app.database) {
-    throw new Error('Database not available');
+    throw new ConfigurationError('Database not available');
   }
 
   if (!data.deviceId) {
-    throw new Error('deviceId is required');
+    throw new ValidationError('deviceId is required', 'deviceId');
   }
 
   const errors = [];
@@ -555,7 +556,7 @@ async function instrumentDelete(app, data) {
   const channel = hasChannel ? parseInt(data.channel) : null;
 
   if (hasChannel && (channel < 0 || channel > 15)) {
-    throw new Error('channel must be between 0 and 15');
+    throw new ValidationError('channel must be between 0 and 15', 'channel');
   }
 
   // Delete instrument settings/capabilities from instruments_latency
@@ -620,7 +621,7 @@ async function instrumentDelete(app, data) {
  */
 async function instrumentCreateVirtual(app, data) {
   if (!app.database) {
-    throw new Error('Database not available');
+    throw new ConfigurationError('Database not available');
   }
 
   // Appliquer le preset si un type est fourni
@@ -707,11 +708,11 @@ async function virtualList(app) {
  */
 async function instrumentListByDevice(app, data) {
   if (!app.database) {
-    throw new Error('Database not available');
+    throw new ConfigurationError('Database not available');
   }
 
   if (!data.deviceId) {
-    throw new Error('deviceId is required');
+    throw new ValidationError('deviceId is required', 'deviceId');
   }
 
   const instruments = app.database.getInstrumentsByDevice(data.deviceId);
@@ -747,22 +748,22 @@ async function instrumentListByDevice(app, data) {
  */
 async function instrumentAddToDevice(app, data) {
   if (!app.database) {
-    throw new Error('Database not available');
+    throw new ConfigurationError('Database not available');
   }
 
   if (!data.deviceId) {
-    throw new Error('deviceId is required');
+    throw new ValidationError('deviceId is required', 'deviceId');
   }
 
   const channel = data.channel !== undefined ? parseInt(data.channel) : null;
   if (channel === null || channel < 0 || channel > 15) {
-    throw new Error('channel is required and must be between 0 and 15');
+    throw new ValidationError('channel is required and must be between 0 and 15', 'channel');
   }
 
   // Vérifier que le canal n'est pas déjà utilisé
   const existing = app.database.getInstrumentSettings(data.deviceId, channel);
   if (existing) {
-    throw new Error(`Channel ${channel} is already in use on device ${data.deviceId}`);
+    throw new ValidationError(`Channel ${channel} is already in use on device ${data.deviceId}`, 'channel');
   }
 
   // Créer les settings de base
@@ -808,7 +809,7 @@ async function instrumentAddToDevice(app, data) {
 
 async function virtualInstrumentToggle(app, data) {
   if (!app.database) {
-    throw new Error('Database not available');
+    throw new ConfigurationError('Database not available');
   }
 
   const enabled = !!data.enabled;

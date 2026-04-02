@@ -4,6 +4,7 @@ import { timingSafeEqual } from 'crypto';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { ApplicationError } from '../core/errors/index.js';
 
 const __wsFilename = fileURLToPath(import.meta.url);
 const __wsDirname = dirname(__wsFilename);
@@ -170,7 +171,7 @@ class WebSocketServer {
 
       // Send error response with ID if we managed to parse the message
       // Only expose error details for known application errors
-      const isAppError = error.code && error.code.startsWith('ERR_');
+      const isAppError = error instanceof ApplicationError;
       const errorResponse = {
         type: 'error',
         error: isAppError ? error.message : 'Internal server error',
