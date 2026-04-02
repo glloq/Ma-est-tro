@@ -169,8 +169,8 @@ async function fileRoutingSync(app, data) {
     const deviceId = parts[0];
     const targetChannel = parts.length > 1 ? parseInt(parts[1], 10) : channel;
 
-    // Skip routings to devices that don't exist
-    if (knownDevices.size > 0 && !knownDevices.has(deviceId)) {
+    // Skip routings to devices that don't exist (but allow virtual instruments)
+    if (knownDevices.size > 0 && !knownDevices.has(deviceId) && deviceId !== 'virtual-instrument') {
       invalidDeviceIds.add(deviceId);
       continue;
     }
@@ -242,8 +242,8 @@ async function fileRoutingBulkSync(app, data) {
       // Extract deviceId (may be "deviceId::targetChannel")
       const deviceId = routingValue.split('::')[0];
 
-      // Skip routings to devices that don't exist (unless we couldn't get device list)
-      if (knownDevices.size > 0 && !knownDevices.has(deviceId)) {
+      // Skip routings to devices that don't exist (but allow virtual instruments)
+      if (knownDevices.size > 0 && !knownDevices.has(deviceId) && deviceId !== 'virtual-instrument') {
         invalidDeviceIds.add(deviceId);
         continue;
       }
