@@ -37,8 +37,7 @@
             "title": "Tema",
             "dark": "Scuro",
             "colored": "Colorato",
-            "darkDescription": "Attiva la modalità scura",
-            "light": "Chiaro"
+            "darkDescription": "Attiva la modalità scura"
         },
         "keyboard": {
             "title": "Tastiera",
@@ -124,17 +123,7 @@
             "checking": "Checking for updates...",
             "upToDate": "System is up to date",
             "updateAvailable": "Update available",
-            "checkFailed": "Unable to check for updates",
-            "errorMessage": "Si è verificato un errore durante l'aggiornamento."
-        },
-        "serial": {
-            "title": "Porte seriali",
-            "enable": "Attiva connessioni seriali MIDI",
-            "description": "Permette la comunicazione con dispositivi MIDI tramite porte seriali",
-            "baudRate": "Velocità (baud)",
-            "scan": "Cerca porte",
-            "scanning": "Ricerca in corso...",
-            "noDevices": "Nessun dispositivo trovato"
+            "checkFailed": "Unable to check for updates"
         }
     },
     "bluetooth": {
@@ -1213,10 +1202,7 @@
             "ethnic": "Etnici",
             "percussive": "Percussivo",
             "soundEffects": "Effetti sonori",
-            "drumKits": "Drum Kits (Channel 10)",
-            "chromatic": "Percussioni cromatiche",
-            "percussion": "Percussioni",
-            "sfx": "Effetti sonori"
+            "drumKits": "Drum Kits (Channel 10)"
         },
         "drumKits": {
             "0": "Kit Standard",
