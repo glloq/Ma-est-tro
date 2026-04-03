@@ -487,6 +487,7 @@
         "sortDate": "Date",
         "sortSize": "Size",
         "sortDuration": "Duration",
+        "sortChannels": "Saluran",
         "advancedFilters": "Advanced filters",
         "selectAll": "Select all",
         "deselect": "Deselect",
@@ -499,7 +500,14 @@
         "microphoneSettings": "Microphone settings",
         "dropFilesHere": "Drag and drop or",
         "clickToBrowse": "click to add MIDI files",
-        "noMidiFilesDropped": "No MIDI files found in the dropped files."
+        "noMidiFilesDropped": "No MIDI files found in the dropped files.",
+        "fileTooLarge": "File terlalu besar ({size}). Batas: {max}",
+        "duplicateFileWarning": "⚠️ File sudah ada - akan ditimpa",
+        "releaseToUpload": "Lepaskan untuk mengunggah",
+        "errorFileTooLarge": "File terlalu besar. Periksa ukuran file.",
+        "errorInvalidMidi": "File ini tampaknya bukan file MIDI yang valid. Periksa formatnya.",
+        "errorUploadTimeout": "Unggahan memakan waktu terlalu lama. Silakan coba lagi.",
+        "fileCount": "{count} file — {size}"
     },
     "instrumentSettings": {
         "title": "Pengaturan Instrumen",
