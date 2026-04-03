@@ -179,7 +179,7 @@ See [docs/INSTALLATION.md](./docs/INSTALLATION.md) for detailed instructions on 
 ## Documentation
 
 - [Installation Guide](./docs/INSTALLATION.md)
-- [Architecture](./ARCHITECTURE.md)
+- [Architecture](./docs/ARCHITECTURE.md)
 - [API Reference](./docs/API.md)
 - [Auto-Assignment System](./docs/AUTO_ASSIGNMENT.md)
 - [Tablature System](./docs/TABLATURE_IMPLEMENTATION.md)
