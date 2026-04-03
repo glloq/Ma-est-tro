@@ -401,7 +401,7 @@ class CCPitchbendEditor {
                 }
                 break;
 
-            case 'select':
+            case 'select': {
                 const clickedEvent = this.getEventAtPosition(x, y);
                 if (clickedEvent) {
                     if (e.shiftKey) {
@@ -423,8 +423,9 @@ class CCPitchbendEditor {
                 }
                 this.renderThrottled();
                 break;
+            }
 
-            case 'move':
+            case 'move': {
                 const moveEvent = this.getEventAtPosition(x, y);
                 if (moveEvent) {
                     if (!this.selectedEvents.has(moveEvent.id)) {
@@ -435,6 +436,7 @@ class CCPitchbendEditor {
                 }
                 this.renderThrottled();
                 break;
+            }
         }
     }
 

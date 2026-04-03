@@ -801,7 +801,7 @@ class LightingControlPage {
     Object.keys(mixin).forEach(key => {
       // Only add mixin method if NOT already defined on the class prototype
       // This avoids overwriting class methods with mixin duplicates
-      if (!LightingControlPage.prototype.hasOwnProperty(key)) {
+      if (!Object.hasOwn(LightingControlPage.prototype, key)) {
         LightingControlPage.prototype[key] = mixin[key];
       }
     });

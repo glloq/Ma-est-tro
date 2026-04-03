@@ -276,7 +276,7 @@ class InstrumentCapabilitiesModal {
         }
         break;
 
-      case 'array':
+      case 'array': {
         const currentCCs = Array.isArray(currentValue) ? currentValue : [];
         const commonCCs = [
           { value: 1, label: 'CC1 - Modulation' },
@@ -307,8 +307,9 @@ class InstrumentCapabilitiesModal {
           </div>
         `;
         break;
+      }
 
-      case 'note-array':
+      case 'note-array': {
         const currentNotes = Array.isArray(currentValue) ? currentValue.join(', ') : '';
         inputHTML = `
           <textarea id="${inputId}"
@@ -321,6 +322,7 @@ class InstrumentCapabilitiesModal {
           </div>
         `;
         break;
+      }
     }
 
     return `

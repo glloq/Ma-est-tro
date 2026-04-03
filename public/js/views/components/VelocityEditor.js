@@ -294,7 +294,7 @@ class VelocityEditor {
         const velocity = this.yToVelocity(y);
 
         switch (this.currentTool) {
-            case 'draw':
+            case 'draw': {
                 this.isDrawing = true;
                 this.lastDrawPosition = { x, y };
                 this.lastDrawTicks = this.snapToGrid(ticks);
@@ -306,6 +306,7 @@ class VelocityEditor {
                     this.renderThrottled();
                 }
                 break;
+            }
 
             case 'line':
                 if (!this.lineStart) {
@@ -316,7 +317,7 @@ class VelocityEditor {
                 }
                 break;
 
-            case 'select':
+            case 'select': {
                 const clickedNote = this.getNoteAtPosition(x, y);
                 if (clickedNote !== null) {
                     if (e.shiftKey) {
@@ -345,8 +346,9 @@ class VelocityEditor {
                 }
                 this.renderThrottled();
                 break;
+            }
 
-            case 'move':
+            case 'move': {
                 const moveNote = this.getNoteAtPosition(x, y);
                 if (moveNote !== null) {
                     if (!this.selectedNotes.has(moveNote)) {
@@ -364,6 +366,7 @@ class VelocityEditor {
                 }
                 this.renderThrottled();
                 break;
+            }
         }
     }
 
