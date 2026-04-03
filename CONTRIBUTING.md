@@ -89,7 +89,7 @@ Key variables:
 
 ## Project Structure
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full architecture overview.
+See [ARCHITECTURE.md](./docs/ARCHITECTURE.md) for the full architecture overview.
 
 ## API
 
