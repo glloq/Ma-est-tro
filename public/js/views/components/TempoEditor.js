@@ -9,6 +9,7 @@
  * - Respect de la grille temporelle et du zoom
  */
 
+// eslint-disable-next-line no-unused-vars
 class TempoEditor {
     constructor(container, options = {}) {
         this.container = container;
@@ -373,7 +374,7 @@ class TempoEditor {
                 }
                 break;
 
-            case 'select':
+            case 'select': {
                 // Chercher un événement proche
                 const clickedEvent = this.findEventAt(ticks, tempo);
                 if (clickedEvent) {
@@ -396,8 +397,9 @@ class TempoEditor {
                 }
                 this.renderThrottled();
                 break;
+            }
 
-            case 'move':
+            case 'move': {
                 const eventToMove = this.findEventAt(ticks, tempo);
                 if (eventToMove) {
                     if (!this.selectedEvents.has(eventToMove.id)) {
@@ -407,6 +409,7 @@ class TempoEditor {
                     this.dragStart = { ticks, tempo };
                 }
                 break;
+            }
         }
     }
 

@@ -401,7 +401,7 @@ class CCPitchbendEditor {
                 }
                 break;
 
-            case 'select':
+            case 'select': {
                 const clickedEvent = this.getEventAtPosition(x, y);
                 if (clickedEvent) {
                     if (e.shiftKey) {
@@ -423,8 +423,9 @@ class CCPitchbendEditor {
                 }
                 this.renderThrottled();
                 break;
+            }
 
-            case 'move':
+            case 'move': {
                 const moveEvent = this.getEventAtPosition(x, y);
                 if (moveEvent) {
                     if (!this.selectedEvents.has(moveEvent.id)) {
@@ -435,6 +436,7 @@ class CCPitchbendEditor {
                 }
                 this.renderThrottled();
                 break;
+            }
         }
     }
 
@@ -571,9 +573,6 @@ class CCPitchbendEditor {
     // === Utilitaires de sélection ===
 
     getEventAtPosition(x, y, threshold = 5) {
-        const ticks = this.xToTicks(x);
-        const value = this.yToValue(y);
-
         return this.getFilteredEvents().find(event => {
             const ex = this.ticksToX(event.ticks);
             const ey = this.valueToY(event.value);
@@ -687,8 +686,6 @@ class CCPitchbendEditor {
     }
 
     renderGrid() {
-        const labelMargin = 50; // Marge pour les labels à gauche
-
         // OPTIMISATION: Vérifier si la grille doit être redessinée
         // La grille change si xoffset, xrange, grid, ou currentCC changent
         if (this.gridDirty || !this.gridCanvas) {

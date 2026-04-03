@@ -214,27 +214,31 @@ class FilterManager {
       case 'folder':
         return t('filters.labelFolder', { value });
       case 'durationMin':
-      case 'durationMax':
+      case 'durationMax': {
         const durMin = this.filters.durationMin || 0;
         const durMax = this.filters.durationMax || '∞';
         return t('filters.labelDuration', { min: this.formatDuration(durMin), max: durMax === '∞' ? '∞' : this.formatDuration(durMax) });
+      }
       case 'tempoMin':
-      case 'tempoMax':
+      case 'tempoMax': {
         const tMin = this.filters.tempoMin || 0;
         const tMax = this.filters.tempoMax || '∞';
         return t('filters.labelTempo', { min: tMin, max: tMax });
+      }
       case 'tracksMin':
-      case 'tracksMax':
+      case 'tracksMax': {
         const trMin = this.filters.tracksMin || 0;
         const trMax = this.filters.tracksMax || '∞';
         return t('filters.labelTracks', { min: trMin, max: trMax });
+      }
       case 'instrumentTypes':
         return t('filters.labelInstruments', { value: value.join(', '), mode: this.filters.instrumentMode });
       case 'channelCountMin':
-      case 'channelCountMax':
+      case 'channelCountMax': {
         const chMin = this.filters.channelCountMin || 0;
         const chMax = this.filters.channelCountMax || '∞';
         return t('filters.labelChannels', { min: chMin, max: chMax });
+      }
       case 'hasRouting':
         return value ? t('filters.labelRouted') : t('filters.labelUnrouted');
       case 'routingStatus': {
@@ -608,11 +612,12 @@ class FilterManager {
 
     // Apply quick filter values silently
     switch (name) {
-      case 'recent':
+      case 'recent': {
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
         this.filters.uploadedAfter = oneWeekAgo.toISOString();
         break;
+      }
 
       case 'short':
         this.filters.durationMax = 60;

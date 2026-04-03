@@ -155,7 +155,7 @@
             // Interpolation des paramètres : {param} → valeur
             const result = hasParams
                 ? value.replace(/\{(\w+)\}/g, (match, name) => {
-                    return params.hasOwnProperty(name) ? params[name] : match;
+                    return Object.hasOwn(params, name) ? params[name] : match;
                 })
                 : value;
 

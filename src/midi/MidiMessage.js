@@ -74,12 +74,13 @@ class MidiMessage {
         this.pressure = bytes[1];
         break;
 
-      case MidiUtils.MessageTypes.PITCH_BEND:
+      case MidiUtils.MessageTypes.PITCH_BEND: {
         if (bytes.length < 3) throw new Error('Pitch Bend message requires 3 bytes');
         const lsb = bytes[1];
         const msb = bytes[2];
         this.value = MidiUtils.decode14bit(msb, lsb) - 8192; // Center at 0
         break;
+      }
 
       case MidiUtils.MessageTypes.SYSTEM:
         this.parseSystemMessage(bytes);
@@ -201,12 +202,13 @@ class MidiMessage {
         bytes.push(this.pressure);
         break;
 
-      case 'pitchbend':
+      case 'pitchbend': {
         bytes.push(MidiUtils.createStatus(MidiUtils.MessageTypes.PITCH_BEND, this.channel));
         const encoded = MidiUtils.encode14bit(this.value + 8192);
         bytes.push(encoded.lsb);
         bytes.push(encoded.msb);
         break;
+      }
 
       case 'sysex':
         bytes.push(0xF0);

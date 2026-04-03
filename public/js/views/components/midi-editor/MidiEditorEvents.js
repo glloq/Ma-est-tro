@@ -107,12 +107,13 @@
                 case 'mode-drag-notes':
                 case 'mode-drag-view':
                 case 'mode-add-note':
-                case 'mode-resize-note':
+                case 'mode-resize-note': {
                     const mode = btn.dataset.mode;
                     if (mode) {
                         this.setEditMode(mode);
                     }
                     break;
+                }
             }
         });
 
@@ -357,7 +358,6 @@
 
     // Capturer l'espace disponible RÉEL depuis modal-dialog (hauteur fixe 95vh)
                 const modalDialog = this.container.querySelector('.modal-dialog');  // ENFANT, pas parent !
-                const modalBody = this.container.querySelector('.modal-body');
                 const modalHeader = this.container.querySelector('.modal-header');
                 const toolbarHeight = this.container.querySelector('.editor-toolbar')?.clientHeight || 0;
                 const channelsToolbarHeight = this.container.querySelector('.channels-toolbar')?.clientHeight || 0;
@@ -670,7 +670,7 @@
         const onViewportChange = (e) => {
             if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) return;
 
-            const { xoffset, yoffset, xrange } = e.detail;
+            const { xoffset, xrange } = e.detail;
 
             // Update navigation overview bar
             const maxTick = this.midiData?.maxTick || 0;
