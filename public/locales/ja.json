@@ -487,6 +487,7 @@
         "sortDate": "Date",
         "sortSize": "Size",
         "sortDuration": "Duration",
+        "sortChannels": "チャンネル",
         "advancedFilters": "Advanced filters",
         "selectAll": "Select all",
         "deselect": "Deselect",
@@ -499,7 +500,14 @@
         "microphoneSettings": "Microphone settings",
         "dropFilesHere": "Drag and drop or",
         "clickToBrowse": "click to add MIDI files",
-        "noMidiFilesDropped": "No MIDI files found in the dropped files."
+        "noMidiFilesDropped": "No MIDI files found in the dropped files.",
+        "fileTooLarge": "ファイルが大きすぎます ({size})。制限: {max}",
+        "duplicateFileWarning": "⚠️ ファイルは既に存在します - 上書きされます",
+        "releaseToUpload": "リリースしてアップロード",
+        "errorFileTooLarge": "ファイルが大きすぎます。ファイルサイズを確認してください。",
+        "errorInvalidMidi": "このファイルは有効なMIDIファイルではないようです。フォーマットを確認してください。",
+        "errorUploadTimeout": "アップロードに時間がかかりすぎました。もう一度お試しください。",
+        "fileCount": "{count} ファイル — {size}"
     },
     "instrumentSettings": {
         "title": "楽器の設定",

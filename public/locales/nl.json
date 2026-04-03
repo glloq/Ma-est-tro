@@ -487,6 +487,7 @@
         "sortDate": "Date",
         "sortSize": "Size",
         "sortDuration": "Duration",
+        "sortChannels": "Kanalen",
         "advancedFilters": "Advanced filters",
         "selectAll": "Select all",
         "deselect": "Deselect",
@@ -499,7 +500,14 @@
         "microphoneSettings": "Microphone settings",
         "dropFilesHere": "Drag and drop or",
         "clickToBrowse": "click to add MIDI files",
-        "noMidiFilesDropped": "No MIDI files found in the dropped files."
+        "noMidiFilesDropped": "No MIDI files found in the dropped files.",
+        "fileTooLarge": "Bestand te groot ({size}). Limiet: {max}",
+        "duplicateFileWarning": "⚠️ Bestand bestaat al - wordt overschreven",
+        "releaseToUpload": "Loslaten om te uploaden",
+        "errorFileTooLarge": "Bestand te groot. Controleer de bestandsgrootte.",
+        "errorInvalidMidi": "Dit bestand lijkt geen geldig MIDI-bestand te zijn. Controleer het formaat.",
+        "errorUploadTimeout": "Upload duurde te lang. Probeer het opnieuw.",
+        "fileCount": "{count} bestand(en) — {size}"
     },
     "instrumentSettings": {
         "title": "Instrumentinstellingen",

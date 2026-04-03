@@ -487,6 +487,7 @@
         "sortDate": "Date",
         "sortSize": "Size",
         "sortDuration": "Duration",
+        "sortChannels": "Kênh",
         "advancedFilters": "Advanced filters",
         "selectAll": "Select all",
         "deselect": "Deselect",
@@ -499,7 +500,14 @@
         "microphoneSettings": "Microphone settings",
         "dropFilesHere": "Drag and drop or",
         "clickToBrowse": "click to add MIDI files",
-        "noMidiFilesDropped": "No MIDI files found in the dropped files."
+        "noMidiFilesDropped": "No MIDI files found in the dropped files.",
+        "fileTooLarge": "Tệp quá lớn ({size}). Giới hạn: {max}",
+        "duplicateFileWarning": "⚠️ Tệp đã tồn tại - sẽ bị ghi đè",
+        "releaseToUpload": "Thả để tải lên",
+        "errorFileTooLarge": "Tệp quá lớn. Kiểm tra kích thước tệp.",
+        "errorInvalidMidi": "Tệp này dường như không phải là tệp MIDI hợp lệ. Kiểm tra định dạng.",
+        "errorUploadTimeout": "Tải lên mất quá nhiều thời gian. Vui lòng thử lại.",
+        "fileCount": "{count} tệp — {size}"
     },
     "instrumentSettings": {
         "title": "Cài đặt Nhạc cụ",
