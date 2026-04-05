@@ -10,7 +10,7 @@
    * Each key is colored by status: green=used+in-range, red=used+out-of-range,
    * light gray=instrument range but unused, white=outside both
    */
-    AutoAssignVizMixin.renderNoteRangeViz = function(channel, analysis, assignment, semitones, strategy) {
+    AutoAssignVizMixin.renderNoteRangeViz = function(channel, analysis, assignment, semitones, pitchShift) {
     if (!analysis || !analysis.noteRange || analysis.noteRange.min == null) return '';
 
     const ch = String(channel);
@@ -23,8 +23,8 @@
     const usedNotes = Object.keys(noteDistribution).map(Number);
     if (usedNotes.length === 0) return '';
 
-    // Only apply transposition visually when the strategy actually uses it
-    const effectiveSemitones = (strategy === 'transpose' || strategy === 'autoTranspose') ? semitones : 0;
+    // Only apply transposition visually when pitch shift is active
+    const effectiveSemitones = (pitchShift === 'manual' || pitchShift === 'auto') ? semitones : 0;
 
     // Calculate transposed used notes
     const transposedNotes = usedNotes.map(n => n + effectiveSemitones);
@@ -238,10 +238,10 @@
 
     const adaptation = this.adaptationSettings[ch] || {};
     const semitones = adaptation.transpositionSemitones || 0;
-    const strategy = adaptation.strategy || 'ignore';
+    const pitchShift = adaptation.pitchShift || 'none';
 
-    // Only apply transposition visually when the strategy actually uses it
-    const effectiveSemitones = (strategy === 'transpose' || strategy === 'autoTranspose') ? semitones : 0;
+    // Only apply transposition visually when pitch shift is active
+    const effectiveSemitones = (pitchShift === 'manual' || pitchShift === 'auto') ? semitones : 0;
 
     const instMin = inst.note_range_min ?? 0;
     const instMax = inst.note_range_max ?? 127;

@@ -227,19 +227,22 @@
 
       const typeIcon = analysis?.estimatedType ? this.getTypeIcon(analysis.estimatedType) : '';
 
-      // Strategy badge for assigned channels (main strategy + optional modifiers)
+      // Strategy badges for assigned channels (combined dimensions)
       const adapt = this.adaptationSettings[ch] || {};
-      const strategyBadgeMap = { transpose: 'T', autoTranspose: 'AT', octaveWrap: 'W', noteCompression: 'C', suppress: 'S' };
-      const strategyTitleMap = { transpose: _t('autoAssign.strategyTranspose'), autoTranspose: _t('autoAssign.strategyAutoTranspose'), octaveWrap: _t('autoAssign.strategyOctaveWrap'), noteCompression: _t('autoAssign.strategyNoteCompression'), suppress: _t('autoAssign.strategySuppress') };
-      let strategyBadge = (!isSkipped && !isSplit && adapt.strategy && strategyBadgeMap[adapt.strategy])
-        ? `<span class="aa-ov-strategy-badge" title="${strategyTitleMap[adapt.strategy]}">${strategyBadgeMap[adapt.strategy]}</span>`
-        : '';
-      // Show independent modifier badges (poly reduction, CC remap)
-      if (!isSkipped && !isSplit && adapt.polyReductionEnabled) {
-        strategyBadge += `<span class="aa-ov-strategy-badge" title="${_t('autoAssign.strategyPolyReduction')}">P</span>`;
-      }
-      if (!isSkipped && !isSplit && adapt.ccRemapEnabled) {
-        strategyBadge += `<span class="aa-ov-strategy-badge" title="${_t('autoAssign.strategyCCRemap')}">CC</span>`;
+      let strategyBadge = '';
+      if (!isSkipped && !isSplit) {
+        // Pitch shift badge
+        if (adapt.pitchShift === 'auto') strategyBadge += `<span class="aa-ov-strategy-badge" title="${_t('autoAssign.pitchAuto')}">A</span>`;
+        else if (adapt.pitchShift === 'manual') strategyBadge += `<span class="aa-ov-strategy-badge" title="${_t('autoAssign.pitchManual')}">T</span>`;
+        // OOR handling badge
+        const oorBadgeMap = { octaveWrap: 'W', suppress: 'S', compress: 'C' };
+        const oorTitleMap = { octaveWrap: _t('autoAssign.oorOctaveWrap'), suppress: _t('autoAssign.oorSuppress'), compress: _t('autoAssign.oorCompress') };
+        if (adapt.oorHandling && oorBadgeMap[adapt.oorHandling]) {
+          strategyBadge += `<span class="aa-ov-strategy-badge" title="${oorTitleMap[adapt.oorHandling]}">${oorBadgeMap[adapt.oorHandling]}</span>`;
+        }
+        // Independent options badges
+        if (adapt.polyReductionEnabled) strategyBadge += `<span class="aa-ov-strategy-badge" title="${_t('autoAssign.strategyPolyReduction')}">P</span>`;
+        if (adapt.ccRemapEnabled) strategyBadge += `<span class="aa-ov-strategy-badge" title="${_t('autoAssign.strategyCCRemap')}">CC</span>`;
       }
 
       return `
@@ -342,10 +345,15 @@
     const isAutoSkipped = this.autoSkippedChannels && this.autoSkippedChannels.has(channel);
     const isSplit = this.isSplitChannel(channel);
     const headerAdaptation = this.adaptationSettings[ch] || {};
-    const headerStrategy = headerAdaptation.strategy || 'ignore';
-    const strategyLabels = { transpose: _t('autoAssign.strategyTranspose'), autoTranspose: _t('autoAssign.strategyAutoTranspose'), octaveWrap: _t('autoAssign.strategyOctaveWrap'), noteCompression: _t('autoAssign.strategyNoteCompression'), polyReduction: _t('autoAssign.strategyPolyReduction'), ccRemap: _t('autoAssign.strategyCCRemap'), suppress: _t('autoAssign.strategySuppress') };
-    const strategyBadgeHTML = (!isSkipped && !isSplit && strategyLabels[headerStrategy])
-      ? `<span class="aa-ov-strategy-badge">${strategyLabels[headerStrategy]}</span>`
+    const headerBadgeParts = [];
+    if (headerAdaptation.pitchShift === 'auto') headerBadgeParts.push(_t('autoAssign.pitchAuto'));
+    else if (headerAdaptation.pitchShift === 'manual') headerBadgeParts.push(_t('autoAssign.pitchManual'));
+    if (headerAdaptation.oorHandling && headerAdaptation.oorHandling !== 'passThrough') {
+      const oorLabels = { octaveWrap: _t('autoAssign.oorOctaveWrap'), suppress: _t('autoAssign.oorSuppress'), compress: _t('autoAssign.oorCompress') };
+      headerBadgeParts.push(oorLabels[headerAdaptation.oorHandling] || '');
+    }
+    const strategyBadgeHTML = (!isSkipped && !isSplit && headerBadgeParts.length > 0)
+      ? `<span class="aa-ov-strategy-badge">${headerBadgeParts.join(' + ')}</span>`
       : (isSplit ? `<span class="aa-ov-strategy-badge">${_t('autoAssign.splitProposed')}</span>` : '');
 
     return `
@@ -407,7 +415,7 @@
 
     // Piano roll visualization (non-drum channels with instrument selected)
     const noteRangeVizHTML = (!isSkipped && !isDrumChannel && selectedInstrumentId && this.renderNoteRangeViz)
-      ? this.renderNoteRangeViz(channel, analysis, assignment, semitones, adaptation.strategy || 'ignore')
+      ? this.renderNoteRangeViz(channel, analysis, assignment, semitones, adaptation.pitchShift || 'none')
       : '';
 
     // Drum mapping (drum channels with instrument selected)
@@ -578,75 +586,43 @@
   }
 
   /**
-   * Render adaptation controls for a channel with strategy selector
+   * Render adaptation controls for a channel with dimensional selectors
    */
     AutoAssignUIMixin.renderAdaptationControls = function(channel, adaptation) {
     const ch = String(channel);
     const assignment = this.selectedAssignments[ch];
     const semitones = adaptation.transpositionSemitones || 0;
-    const strategy = adaptation.strategy || 'ignore';
+    const pitchShift = adaptation.pitchShift || 'none';
+    const oorHandling = adaptation.oorHandling || 'passThrough';
     const isDrumChannel = channel === 9 || (assignment?.channelAnalysis?.estimatedType === 'drums');
-
-    // Strategy selector (not for drum channels - they have their own drumStrategy)
-    // Grouped by category for clearer visual hierarchy
-    // polyReduction and ccRemap are independent checkboxes, not radio options
-    const strategyGroups = [
-      { header: _t('autoAssign.strategyGroupAuto'), strategies: [
-        { value: 'autoTranspose', label: _t('autoAssign.strategyAutoTranspose'), desc: _t('autoAssign.strategyAutoTransposeDesc') },
-        { value: 'noteCompression', label: _t('autoAssign.strategyNoteCompression'), desc: _t('autoAssign.strategyNoteCompressionDesc') },
-      ]},
-      { header: _t('autoAssign.strategyGroupManual'), strategies: [
-        { value: 'transpose', label: _t('autoAssign.strategyTranspose'), desc: _t('autoAssign.strategyTransposeDesc') },
-        { value: 'octaveWrap', label: _t('autoAssign.strategyOctaveWrap'), desc: _t('autoAssign.strategyOctaveWrapDesc') },
-        { value: 'suppress', label: _t('autoAssign.strategySuppress'), desc: _t('autoAssign.strategySuppressDesc') },
-      ]},
-      { header: null, strategies: [
-        { value: 'ignore', label: _t('autoAssign.strategyIgnore'), desc: _t('autoAssign.strategyIgnoreDesc') },
-      ]}
-    ];
-
     const polyEnabled = adaptation.polyReductionEnabled || false;
     const ccEnabled = adaptation.ccRemapEnabled || false;
 
-    const strategyHTML = isDrumChannel ? '' : `
-      <div class="aa-strategy-selector">
-        <label class="aa-strategy-title">${_t('autoAssign.adaptationStrategy')}:</label>
-        <div class="aa-strategy-options">
-          ${strategyGroups.map(group => `
-            ${group.header ? `<div class="aa-strategy-group-header">${group.header}</div>` : ''}
-            ${group.strategies.map(s => `
-              <label class="aa-strategy-option ${strategy === s.value ? 'selected' : ''}">
-                <input type="radio" name="strategy_${channel}" value="${s.value}"
-                       ${strategy === s.value ? 'checked' : ''}
-                       onchange="autoAssignModalInstance.setStrategy(${channel}, '${s.value}')">
-                <span class="aa-strategy-label">${s.label}</span>
-                <span class="aa-strategy-desc">${s.desc}</span>
-              </label>
-            `).join('')}
+    // === Dimension 1: Pitch shift (inline radio buttons) ===
+    const pitchOptions = [
+      { value: 'none', label: _t('autoAssign.pitchNone') },
+      { value: 'auto', label: _t('autoAssign.pitchAuto') },
+      { value: 'manual', label: _t('autoAssign.pitchManual') }
+    ];
+    const pitchShiftHTML = isDrumChannel ? '' : `
+      <div class="aa-dimension-group">
+        <div class="aa-dimension-title">${_t('autoAssign.pitchShiftTitle')}</div>
+        <div class="aa-pitch-shift-group">
+          ${pitchOptions.map(o => `
+            <label class="aa-pitch-option ${pitchShift === o.value ? 'selected' : ''}">
+              <input type="radio" name="pitch_${channel}" value="${o.value}"
+                     ${pitchShift === o.value ? 'checked' : ''}
+                     onchange="autoAssignModalInstance.setPitchShift(${channel}, '${o.value}')">
+              <span>${o.label}</span>
+            </label>
           `).join('')}
-        </div>
-        <div class="aa-strategy-group-header">${_t('autoAssign.strategyGroupOptions')}</div>
-        <div class="aa-strategy-checkboxes">
-          <label class="aa-strategy-checkbox ${polyEnabled ? 'selected' : ''}">
-            <input type="checkbox" ${polyEnabled ? 'checked' : ''}
-                   onchange="autoAssignModalInstance.togglePolyReduction(${channel})">
-            <span class="aa-strategy-label">${_t('autoAssign.strategyPolyReduction')}</span>
-            <span class="aa-strategy-desc">${_t('autoAssign.strategyPolyReductionDesc')}</span>
-          </label>
-          <label class="aa-strategy-checkbox ${ccEnabled ? 'selected' : ''}">
-            <input type="checkbox" ${ccEnabled ? 'checked' : ''}
-                   onchange="autoAssignModalInstance.toggleCCRemap(${channel})">
-            <span class="aa-strategy-label">${_t('autoAssign.strategyCCRemap')}</span>
-            <span class="aa-strategy-desc">${_t('autoAssign.strategyCCRemapDesc')}</span>
-          </label>
         </div>
       </div>
     `;
 
-    // Transposition controls (only visible when strategy is 'transpose', not for drums)
-    const transpoHTML = (!isDrumChannel && strategy === 'transpose') ? `
+    // Manual transposition controls (visible when pitchShift is 'manual')
+    const transpoHTML = (!isDrumChannel && pitchShift === 'manual') ? `
       <div class="aa-control-group">
-        <label>${_t('autoAssign.transposition')}</label>
         <div class="aa-transposition-control">
           <button class="aa-btn-sm" onclick="autoAssignModalInstance.adjustTransposition(${channel}, -12)">-Oct</button>
           <button class="aa-btn-sm" onclick="autoAssignModalInstance.adjustTransposition(${channel}, -1)">-1</button>
@@ -663,10 +639,9 @@
     ` : '';
 
     // Auto-transpose result (read-only display of computed optimal shift)
-    const autoTranspoResult = (strategy === 'autoTranspose') ? this.calculateAdaptationResult(channel, 'autoTranspose') : null;
-    const autoTranspoHTML = (!isDrumChannel && strategy === 'autoTranspose' && autoTranspoResult?.extra) ? `
+    const autoTranspoResult = (pitchShift === 'auto') ? this.calculateAdaptationResult(channel, 'autoTranspose') : null;
+    const autoTranspoHTML = (!isDrumChannel && pitchShift === 'auto' && autoTranspoResult?.extra) ? `
       <div class="aa-control-group">
-        <label>${_t('autoAssign.autoTransposeResult')}</label>
         <div class="aa-auto-transpose-info">
           <span class="aa-transposition-value">
             ${autoTranspoResult.extra.autoTransposeSemitones > 0 ? '+' : ''}${autoTranspoResult.extra.autoTransposeSemitones} st
@@ -676,11 +651,55 @@
       </div>
     ` : '';
 
-    // Polyphony reduction info (shown when checkbox is enabled, independent of main strategy)
+    // === Dimension 2: Out-of-range handling (compact radio buttons) ===
+    const oorOptions = [
+      { value: 'passThrough', label: _t('autoAssign.oorPassThrough'), desc: _t('autoAssign.oorPassThroughDesc') },
+      { value: 'octaveWrap', label: _t('autoAssign.oorOctaveWrap'), desc: _t('autoAssign.oorOctaveWrapDesc') },
+      { value: 'suppress', label: _t('autoAssign.oorSuppress'), desc: _t('autoAssign.oorSuppressDesc') },
+      { value: 'compress', label: _t('autoAssign.oorCompress'), desc: _t('autoAssign.oorCompressDesc') }
+    ];
+    const oorHTML = isDrumChannel ? '' : `
+      <div class="aa-dimension-group">
+        <div class="aa-dimension-title">${_t('autoAssign.oorTitle')}</div>
+        <div class="aa-strategy-options">
+          ${oorOptions.map(o => `
+            <label class="aa-strategy-option ${oorHandling === o.value ? 'selected' : ''}">
+              <input type="radio" name="oor_${channel}" value="${o.value}"
+                     ${oorHandling === o.value ? 'checked' : ''}
+                     onchange="autoAssignModalInstance.setOORHandling(${channel}, '${o.value}')">
+              <span class="aa-strategy-label">${o.label}</span>
+              <span class="aa-strategy-desc">${o.desc}</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    // === Dimension 3: Options (independent checkboxes) ===
+    const optionsHTML = isDrumChannel ? '' : `
+      <div class="aa-dimension-group">
+        <div class="aa-dimension-title">${_t('autoAssign.strategyGroupOptions')}</div>
+        <div class="aa-strategy-options">
+          <label class="aa-strategy-checkbox ${polyEnabled ? 'selected' : ''}">
+            <input type="checkbox" ${polyEnabled ? 'checked' : ''}
+                   onchange="autoAssignModalInstance.togglePolyReduction(${channel})">
+            <span class="aa-strategy-label">${_t('autoAssign.strategyPolyReduction')}</span>
+            <span class="aa-strategy-desc">${_t('autoAssign.strategyPolyReductionDesc')}</span>
+          </label>
+          <label class="aa-strategy-checkbox ${ccEnabled ? 'selected' : ''}">
+            <input type="checkbox" ${ccEnabled ? 'checked' : ''}
+                   onchange="autoAssignModalInstance.toggleCCRemap(${channel})">
+            <span class="aa-strategy-label">${_t('autoAssign.strategyCCRemap')}</span>
+            <span class="aa-strategy-desc">${_t('autoAssign.strategyCCRemapDesc')}</span>
+          </label>
+        </div>
+      </div>
+    `;
+
+    // Polyphony reduction info panel
     const polyResult = polyEnabled ? this.calculateAdaptationResult(channel, 'polyReduction') : null;
     const polyReductionHTML = (!isDrumChannel && polyEnabled && polyResult?.extra) ? `
       <div class="aa-control-group">
-        <label>${_t('autoAssign.polyphonyInfo')}</label>
         <div class="aa-poly-info">
           <span>${_t('autoAssign.channelPolyphony')}: <strong>${polyResult.extra.channelPolyphony}</strong></span>
           <span>${_t('autoAssign.instrumentPolyphony')}: <strong>${polyResult.extra.instPolyphony}</strong></span>
@@ -692,7 +711,7 @@
       </div>
     ` : '';
 
-    // CC Remapping info (shown when checkbox is enabled, independent of main strategy)
+    // CC Remapping info panel
     const ccResult = ccEnabled ? this.calculateAdaptationResult(channel, 'ccRemap') : null;
     const ccRemapHTML = (!isDrumChannel && ccEnabled && ccResult?.extra) ? (() => {
       const e = ccResult.extra;
@@ -707,7 +726,6 @@
       const unmappable = (e.unsupportedCCs || []).filter(cc => !e.ccRemappingSuggestions[cc]);
       return `
         <div class="aa-control-group">
-          <label>${_t('autoAssign.ccRemapInfo')}</label>
           <div class="aa-cc-info">
             <span>${_t('autoAssign.ccCoverage')}: <strong>${e.ccCoverage}%</strong></span>
             ${e.unsupportedCCs.length > 0
@@ -746,10 +764,11 @@
       </div>
     ` : '';
 
-    // Adaptation result feedback (real-time impact of current strategy)
+    // Adaptation result feedback (combined dimensions)
     let adaptationResultHTML = '';
-    if (!isDrumChannel && strategy !== 'ignore') {
-      const result = this.calculateAdaptationResult(channel, strategy);
+    const hasAdaptation = pitchShift !== 'none' || oorHandling !== 'passThrough';
+    if (!isDrumChannel && hasAdaptation) {
+      const result = this.calculateAdaptationResult(channel);
       if (result.totalNotes > 0) {
         const allOk = result.outOfRange === 0;
         const playable = result.inRange + result.recovered;
@@ -776,15 +795,17 @@
       <div class="aa-adaptation-section">
         <h4>${_t('autoAssign.adaptationTitle')}</h4>
 
-        ${strategyHTML}
+        ${pitchShiftHTML}
+        ${transpoHTML}
+        ${autoTranspoHTML}
 
-        <div class="aa-adaptation-controls">
-          ${transpoHTML}
-          ${autoTranspoHTML}
-          ${polyReductionHTML}
-          ${ccRemapHTML}
-          ${drumOffsetHTML}
-        </div>
+        ${oorHTML}
+
+        ${optionsHTML}
+        ${polyReductionHTML}
+        ${ccRemapHTML}
+
+        ${drumOffsetHTML}
 
         ${adaptationResultHTML}
       </div>

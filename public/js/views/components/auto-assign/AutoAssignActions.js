@@ -49,7 +49,8 @@
         ...this.adaptationSettings[ch],
         transpositionSemitones: 0,
         octaveWrappingEnabled: false,
-        strategy: 'ignore',
+        pitchShift: 'none',
+        oorHandling: 'passThrough',
         polyReductionEnabled: this.adaptationSettings[ch]?.polyReductionEnabled || false,
         ccRemapEnabled: this.adaptationSettings[ch]?.ccRemapEnabled || false
       };
@@ -87,13 +88,14 @@
     };
 
     // Update adaptation settings with new transposition (preserve independent options)
+    const hasWrap = selectedOption.compatibility.octaveWrappingEnabled || false;
+    const hasTrans = selectedOption.compatibility.transposition?.semitones || 0;
     this.adaptationSettings[ch] = {
       ...this.adaptationSettings[ch],
-      transpositionSemitones: selectedOption.compatibility.transposition?.semitones || 0,
-      octaveWrappingEnabled: selectedOption.compatibility.octaveWrappingEnabled || false,
-      strategy: selectedOption.compatibility.octaveWrappingEnabled
-        ? 'octaveWrap'
-        : (selectedOption.compatibility.transposition?.semitones ? 'transpose' : 'ignore'),
+      transpositionSemitones: hasTrans,
+      octaveWrappingEnabled: hasWrap,
+      pitchShift: hasWrap ? 'manual' : hasTrans ? 'manual' : 'none',
+      oorHandling: hasWrap ? 'octaveWrap' : (this.adaptationSettings[ch]?.oorHandling || 'passThrough'),
       polyReductionEnabled: this.adaptationSettings[ch]?.polyReductionEnabled || false,
       ccRemapEnabled: this.adaptationSettings[ch]?.ccRemapEnabled || false
     };
@@ -206,19 +208,19 @@
         preparedAssignments[channel] = { ...assignment };
 
         const adaptation = this.adaptationSettings[channel] || {};
-        const strategy = adaptation.strategy || 'ignore';
+        const pitchShift = adaptation.pitchShift || 'none';
+        const oorHandling = adaptation.oorHandling || 'passThrough';
 
-        // Apply strategy-specific settings (main note adaptation strategy)
-        if (strategy === 'transpose' || strategy === 'autoTranspose') {
+        // Dimension 1: Pitch shift
+        if (pitchShift === 'auto' || pitchShift === 'manual') {
           preparedAssignments[channel].transposition = {
             ...(assignment.transposition || {}),
             semitones: adaptation.transpositionSemitones || 0
           };
-        } else if (strategy === 'octaveWrap') {
-          preparedAssignments[channel].transposition = {
-            ...(assignment.transposition || {}),
-            semitones: adaptation.transpositionSemitones || 0
-          };
+        }
+
+        // Dimension 2: Out-of-range handling
+        if (oorHandling === 'octaveWrap') {
           if (assignment.octaveWrapping) {
             const baseRemapping = assignment.noteRemapping || {};
             preparedAssignments[channel].noteRemapping = {
@@ -226,24 +228,19 @@
               ...assignment.octaveWrapping
             };
           }
-        } else if (strategy === 'suppress') {
-          preparedAssignments[channel].transposition = {
-            ...(assignment.transposition || {}),
-            semitones: adaptation.transpositionSemitones || 0
-          };
+        } else if (oorHandling === 'suppress') {
           if (assignment.noteRangeMin != null && assignment.noteRangeMax != null) {
             preparedAssignments[channel].suppressOutOfRange = true;
             preparedAssignments[channel].noteRangeMin = assignment.noteRangeMin;
             preparedAssignments[channel].noteRangeMax = assignment.noteRangeMax;
           }
-        } else if (strategy === 'noteCompression') {
+        } else if (oorHandling === 'compress') {
           if (assignment.noteRangeMin != null && assignment.noteRangeMax != null) {
             preparedAssignments[channel].noteCompression = true;
             preparedAssignments[channel].noteRangeMin = assignment.noteRangeMin;
             preparedAssignments[channel].noteRangeMax = assignment.noteRangeMax;
           }
         }
-        // 'ignore' strategy: no note adaptation
 
         // Apply independent options (can be combined with any main strategy)
         if (adaptation.polyReductionEnabled) {
@@ -494,27 +491,27 @@
       const instrumentConstraints = {};
 
       if (assignment) {
-        const strategy = adaptation.strategy || 'ignore';
+        const pitchShift = adaptation.pitchShift || 'none';
+        const oorHandling = adaptation.oorHandling || 'passThrough';
         let noteRemapping = assignment.noteRemapping || {};
 
-        // Mirror strategy logic from validateAndApply
-        if (strategy === 'transpose' || strategy === 'autoTranspose') {
+        // Dimension 1: Pitch shift
+        if (pitchShift === 'auto' || pitchShift === 'manual') {
           transposition.semitones = adaptation.transpositionSemitones || 0;
-        } else if (strategy === 'octaveWrap') {
-          transposition.semitones = adaptation.transpositionSemitones || 0;
+        }
+
+        // Dimension 2: Out-of-range handling
+        if (oorHandling === 'octaveWrap') {
           if (assignment.octaveWrapping) {
             noteRemapping = { ...noteRemapping, ...assignment.octaveWrapping };
           }
-        } else if (strategy === 'suppress') {
-          transposition.semitones = adaptation.transpositionSemitones || 0;
+        } else if (oorHandling === 'suppress') {
           if (assignment.noteRangeMin != null && assignment.noteRangeMax != null) {
             instrumentConstraints.suppressOutOfRange = true;
           }
-        } else if (strategy === 'noteCompression') {
+        } else if (oorHandling === 'compress') {
           instrumentConstraints.noteCompression = true;
         }
-        // polyReduction and ccRemap don't affect preview note playback significantly
-        // 'ignore': no transposition, just base remapping
 
         // Apply drum strategy filtering (mirrors validateAndApply logic)
         const drumStrategy = adaptation.drumStrategy || 'intelligent';
