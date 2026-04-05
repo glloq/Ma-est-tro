@@ -49,7 +49,9 @@
         ...this.adaptationSettings[ch],
         transpositionSemitones: 0,
         octaveWrappingEnabled: false,
-        strategy: 'ignore'
+        strategy: 'ignore',
+        polyReductionEnabled: this.adaptationSettings[ch]?.polyReductionEnabled || false,
+        ccRemapEnabled: this.adaptationSettings[ch]?.ccRemapEnabled || false
       };
 
       this.skippedChannels.delete(channel);
@@ -84,14 +86,16 @@
       channelAnalysis: existingAnalysis
     };
 
-    // Update adaptation settings with new transposition
+    // Update adaptation settings with new transposition (preserve independent options)
     this.adaptationSettings[ch] = {
       ...this.adaptationSettings[ch],
       transpositionSemitones: selectedOption.compatibility.transposition?.semitones || 0,
       octaveWrappingEnabled: selectedOption.compatibility.octaveWrappingEnabled || false,
       strategy: selectedOption.compatibility.octaveWrappingEnabled
         ? 'octaveWrap'
-        : (selectedOption.compatibility.transposition?.semitones ? 'transpose' : 'ignore')
+        : (selectedOption.compatibility.transposition?.semitones ? 'transpose' : 'ignore'),
+      polyReductionEnabled: this.adaptationSettings[ch]?.polyReductionEnabled || false,
+      ccRemapEnabled: this.adaptationSettings[ch]?.ccRemapEnabled || false
     };
 
     this.skippedChannels.delete(channel);
@@ -204,15 +208,13 @@
         const adaptation = this.adaptationSettings[channel] || {};
         const strategy = adaptation.strategy || 'ignore';
 
-        // Apply strategy-specific settings
+        // Apply strategy-specific settings (main note adaptation strategy)
         if (strategy === 'transpose' || strategy === 'autoTranspose') {
-          // Override transposition with user's value (autoTranspose stores computed value in same field)
           preparedAssignments[channel].transposition = {
             ...(assignment.transposition || {}),
             semitones: adaptation.transpositionSemitones || 0
           };
         } else if (strategy === 'octaveWrap') {
-          // Apply transposition + octave wrapping
           preparedAssignments[channel].transposition = {
             ...(assignment.transposition || {}),
             semitones: adaptation.transpositionSemitones || 0
@@ -225,31 +227,31 @@
             };
           }
         } else if (strategy === 'suppress') {
-          // Transpose + suppress out-of-range notes
           preparedAssignments[channel].transposition = {
             ...(assignment.transposition || {}),
             semitones: adaptation.transpositionSemitones || 0
           };
-          // Only enable suppress if the instrument has a defined range
           if (assignment.noteRangeMin != null && assignment.noteRangeMax != null) {
             preparedAssignments[channel].suppressOutOfRange = true;
             preparedAssignments[channel].noteRangeMin = assignment.noteRangeMin;
             preparedAssignments[channel].noteRangeMax = assignment.noteRangeMax;
           }
         } else if (strategy === 'noteCompression') {
-          // Compress out-of-range notes into instrument range via octave folding
           if (assignment.noteRangeMin != null && assignment.noteRangeMax != null) {
             preparedAssignments[channel].noteCompression = true;
             preparedAssignments[channel].noteRangeMin = assignment.noteRangeMin;
             preparedAssignments[channel].noteRangeMax = assignment.noteRangeMax;
           }
-        } else if (strategy === 'polyReduction') {
-          // Reduce polyphony to instrument capacity
+        }
+        // 'ignore' strategy: no note adaptation
+
+        // Apply independent options (can be combined with any main strategy)
+        if (adaptation.polyReductionEnabled) {
           const instPoly = assignment.polyphony || 16;
           preparedAssignments[channel].polyReduction = true;
           preparedAssignments[channel].maxPolyphony = instPoly;
-        } else if (strategy === 'ccRemap') {
-          // Build CC remapping from analysis
+        }
+        if (adaptation.ccRemapEnabled) {
           const analysis = this.channelAnalyses[parseInt(channel)] || assignment.channelAnalysis;
           const usedCCs = analysis?.usedCCs || [];
           let supportedCCs;
@@ -273,7 +275,6 @@
             preparedAssignments[channel].ccRemapping = ccRemapping;
           }
         }
-        // 'ignore' strategy: no transposition modifications
 
         // Add note offset for drums
         if (adaptation.noteOffset && adaptation.noteOffset !== 0) {

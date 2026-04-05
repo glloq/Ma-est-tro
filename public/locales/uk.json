@@ -1679,5 +1679,6 @@
     "autoAssign.showRoutedToggle": "Маршрутизовані",
     "autoAssign.unscored": "Not scored",
     "autoAssign.splitAccepted": "Split applied",
-    "autoAssign.removeSplit": "Remove split"
+    "autoAssign.removeSplit": "Remove split",
+    "autoAssign.strategyGroupOptions": "Параметри"
 }

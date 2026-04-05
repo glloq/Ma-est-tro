@@ -1035,6 +1035,7 @@
         "strategyGroupAuto": "Automatic",
         "strategyGroupManual": "Manual",
         "strategyGroupAdvanced": "Advanced",
+        "strategyGroupOptions": "Options",
         "autoTransposeResult": "Computed transposition",
         "polyphonyInfo": "Polyphony",
         "channelPolyphony": "Channel max",

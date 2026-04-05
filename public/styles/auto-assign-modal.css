@@ -1415,6 +1415,39 @@ body.dark-mode .aa-no-compatible {
   cursor: pointer;
 }
 
+.aa-strategy-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aa-strategy-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px dashed var(--border-color, #e0e0e0);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.aa-strategy-checkbox:hover {
+  background: var(--bg-primary, #f5f5f5);
+}
+
+.aa-strategy-checkbox.selected {
+  background: var(--aa-success-bg);
+  border-color: var(--aa-score-excellent);
+  border-style: solid;
+}
+
+.aa-strategy-checkbox input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+
 .aa-strategy-group-header {
   font-size: 10px;
   text-transform: uppercase;
@@ -1939,13 +1972,15 @@ body.dark-mode .aa-split-type-tab:hover:not(:disabled) {
 
 /* .aa-adaptation-warning now uses --aa-warning-* variables */
 
-body.dark-mode .aa-strategy-option {
+body.dark-mode .aa-strategy-option,
+body.dark-mode .aa-strategy-checkbox {
   background: #252538;
   border-color: #4a5568;
   color: #c0c8d4;
 }
 
-body.dark-mode .aa-strategy-option:hover {
+body.dark-mode .aa-strategy-option:hover,
+body.dark-mode .aa-strategy-checkbox:hover {
   background: #2d2d3f;
 }
 
