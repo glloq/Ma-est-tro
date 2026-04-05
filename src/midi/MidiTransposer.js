@@ -17,9 +17,11 @@ class MidiTransposer {
   }
 
   /**
-   * Applique des transpositions à plusieurs canaux
+   * Applique des transpositions à plusieurs canaux (single-pass pipeline).
+   * Handles transposition, note remapping, out-of-range suppression,
+   * CC remapping, and polyphony reduction in one pass per track.
    * @param {Object} midiData - Fichier MIDI parsé
-   * @param {Object} transpositions - { channel: { semitones, noteRemapping, suppressOutOfRange, noteRangeMin, noteRangeMax } }
+   * @param {Object} transpositions - { channel: { semitones, noteRemapping, suppressOutOfRange, noteRangeMin, noteRangeMax, ccMapping, maxPolyphony } }
    * @returns {Object} - { midiData, stats }
    */
   transposeChannels(midiData, transpositions) {
@@ -35,12 +37,18 @@ class MidiTransposer {
     let notesChanged = 0;
     let notesRemapped = 0;
     let notesSuppressed = 0;
+    let notesDropped = 0;
+    let ccsRemapped = 0;
     const totalNotes = this.countAllNotes(midiData);
 
     for (const track of modifiedData.tracks) {
       if (!track.events) continue;
 
       const eventsToRemove = [];
+      // Per-channel polyphony tracking: channel -> Map(note -> eventIndex)
+      const activeNotesPerChannel = new Map();
+      // Track dropped noteOn notes to also remove their matching noteOff
+      const droppedNotesPerChannel = new Map();
 
       for (let i = 0; i < track.events.length; i++) {
         const event = track.events[i];
@@ -62,7 +70,7 @@ class MidiTransposer {
             currentNote = this.clampNote(currentNote + transposition.semitones);
             if (currentNote !== originalNote) {
               if (!eventModified) {
-                newEvent = { ...event }; // Clone seulement si modification
+                newEvent = { ...event };
                 eventModified = true;
               }
               notesChanged++;
@@ -70,7 +78,6 @@ class MidiTransposer {
           }
 
           // Step 2: Apply note remapping (on transposed note)
-          // This includes both discrete note mapping (drums) and octave wrapping
           if (transposition.noteRemapping && Object.keys(transposition.noteRemapping).length > 0) {
             const remappedNote = transposition.noteRemapping[currentNote];
             if (remappedNote !== undefined) {
@@ -89,17 +96,57 @@ class MidiTransposer {
               eventsToRemove.push(i);
               if (event.type === 'noteOn') {
                 notesSuppressed++;
-
               }
               continue;
             }
           }
 
-          // Update note in event if eventModified
+          // Update note in event if modified
           if (eventModified) {
             newEvent.note = currentNote;
             if (newEvent.noteNumber !== undefined) {
               newEvent.noteNumber = currentNote;
+            }
+          }
+
+          // Step 4: Polyphony reduction (after note transforms, before commit)
+          if (transposition.maxPolyphony && transposition.maxPolyphony > 0) {
+            const finalNote = eventModified ? currentNote : (event.note ?? event.noteNumber);
+            const isNoteOn = event.type === 'noteOn' && (event.velocity ?? (eventModified ? newEvent.velocity : event.velocity)) > 0;
+            const isNoteOff = event.type === 'noteOff' || (event.type === 'noteOn' && (event.velocity ?? 0) === 0);
+
+            if (!activeNotesPerChannel.has(channel)) {
+              activeNotesPerChannel.set(channel, new Map());
+              droppedNotesPerChannel.set(channel, new Set());
+            }
+            const activeNotes = activeNotesPerChannel.get(channel);
+            const droppedNotes = droppedNotesPerChannel.get(channel);
+
+            if (isNoteOn) {
+              activeNotes.set(finalNote, i);
+
+              if (activeNotes.size > transposition.maxPolyphony) {
+                // Sort by note number, drop inner voices (keep lowest + highest)
+                const noteEntries = [...activeNotes.entries()].sort((a, b) => a[0] - b[0]);
+                while (noteEntries.length > transposition.maxPolyphony) {
+                  const midIdx = Math.floor(noteEntries.length / 2);
+                  const [droppedNote, droppedIdx] = noteEntries[midIdx];
+                  eventsToRemove.push(droppedIdx);
+                  activeNotes.delete(droppedNote);
+                  droppedNotes.add(droppedNote);
+                  noteEntries.splice(midIdx, 1);
+                  notesDropped++;
+                }
+              }
+            } else if (isNoteOff) {
+              if (droppedNotes.has(finalNote)) {
+                // Matching noteOff for a dropped noteOn — remove it too
+                eventsToRemove.push(i);
+                droppedNotes.delete(finalNote);
+                continue;
+              } else {
+                activeNotes.delete(finalNote);
+              }
             }
           }
         } else if (event.type === 'keyPressure' || event.type === 'polyAftertouch') {
@@ -140,6 +187,22 @@ class MidiTransposer {
               newEvent.noteNumber = currentNote;
             }
           }
+        } else if (event.type === 'controlChange' || event.type === 'cc') {
+          // Step 5: CC remapping (inline, same pass)
+          if (transposition.ccMapping) {
+            const cc = event.controllerNumber ?? event.controller ?? event.cc;
+            const targetCC = transposition.ccMapping[cc];
+            if (targetCC !== undefined) {
+              if (!eventModified) {
+                newEvent = { ...event };
+                eventModified = true;
+              }
+              if (newEvent.controllerNumber !== undefined) newEvent.controllerNumber = targetCC;
+              if (newEvent.controller !== undefined) newEvent.controller = targetCC;
+              if (newEvent.cc !== undefined) newEvent.cc = targetCC;
+              ccsRemapped++;
+            }
+          }
         }
 
         // Remplacer l'événement si modifié
@@ -148,10 +211,12 @@ class MidiTransposer {
         }
       }
 
-      // Remove suppressed events (in reverse order to preserve indices)
+      // Remove suppressed/dropped events (in reverse order to preserve indices)
       if (eventsToRemove.length > 0) {
-        for (let j = eventsToRemove.length - 1; j >= 0; j--) {
-          track.events.splice(eventsToRemove[j], 1);
+        // Deduplicate and sort descending
+        const uniqueRemove = [...new Set(eventsToRemove)].sort((a, b) => b - a);
+        for (const idx of uniqueRemove) {
+          track.events.splice(idx, 1);
         }
       }
     }
@@ -162,6 +227,8 @@ class MidiTransposer {
         notesChanged,
         notesRemapped,
         notesSuppressed,
+        notesDropped,
+        ccsRemapped,
         totalNotes,
         transpositions
       }
@@ -274,122 +341,37 @@ class MidiTransposer {
   /**
    * Reduce polyphony on a channel by removing excess simultaneous notes.
    * Keeps bass (lowest) and melody (highest) notes, removes inner voices.
+   * Delegates to transposeChannels single-pass pipeline.
    * @param {Object} midiData - Parsed MIDI file
    * @param {number} channel - Channel number
    * @param {number} maxPolyphony - Maximum allowed simultaneous notes
    * @returns {Object} - { midiData, stats }
    */
   reducePolyphony(midiData, channel, maxPolyphony) {
-    const modifiedData = {
-      ...midiData,
-      tracks: midiData.tracks.map(track => ({
-        ...track,
-        events: track.events ? [...track.events] : []
-      }))
-    };
-
-    let notesDropped = 0;
-
-    for (const track of modifiedData.tracks) {
-      if (!track.events) continue;
-
-      // Track active notes per timestamp
-      const activeNotes = new Map(); // note -> event index
-      const droppedNotes = new Set(); // note numbers whose noteOn was dropped (awaiting noteOff)
-      const eventsToRemove = new Set();
-
-      for (let i = 0; i < track.events.length; i++) {
-        const event = track.events[i];
-        if (event.channel !== channel) continue;
-
-        if (event.type === 'noteOn' && event.velocity > 0) {
-          activeNotes.set(event.note ?? event.noteNumber, i);
-
-          // If we exceed polyphony, remove inner voices
-          if (activeNotes.size > maxPolyphony) {
-            const noteEntries = [...activeNotes.entries()]
-              .sort((a, b) => a[0] - b[0]); // sort by note number
-
-            // Keep lowest and highest, drop from middle
-            while (noteEntries.length > maxPolyphony) {
-              // Remove the note closest to the middle
-              const midIdx = Math.floor(noteEntries.length / 2);
-              const [droppedNote, droppedIdx] = noteEntries[midIdx];
-              eventsToRemove.add(droppedIdx);
-              activeNotes.delete(droppedNote);
-              droppedNotes.add(droppedNote); // track for matching noteOff
-              noteEntries.splice(midIdx, 1);
-              notesDropped++;
-            }
-          }
-        } else if (event.type === 'noteOff' || (event.type === 'noteOn' && event.velocity === 0)) {
-          const noteNum = event.note ?? event.noteNumber;
-          if (droppedNotes.has(noteNum)) {
-            // This noteOff matches a dropped noteOn — remove it too
-            eventsToRemove.add(i);
-            droppedNotes.delete(noteNum);
-          } else {
-            activeNotes.delete(noteNum);
-          }
-        }
-      }
-
-      // Remove events in reverse order
-      const sortedRemove = [...eventsToRemove].sort((a, b) => b - a);
-      for (const idx of sortedRemove) {
-        track.events.splice(idx, 1);
-      }
-    }
-
+    const result = this.transposeChannels(midiData, {
+      [channel]: { maxPolyphony }
+    });
     return {
-      midiData: modifiedData,
-      stats: { notesDropped, totalNotes: this.countAllNotes(midiData) }
+      midiData: result.midiData,
+      stats: { notesDropped: result.stats.notesDropped, totalNotes: result.stats.totalNotes }
     };
   }
 
   /**
-   * Remap CC controllers on a channel
+   * Remap CC controllers on a channel.
+   * Delegates to transposeChannels single-pass pipeline.
    * @param {Object} midiData - Parsed MIDI file
    * @param {number} channel - Channel number
    * @param {Object} ccMapping - { sourceCC: targetCC }
    * @returns {Object} - { midiData, stats }
    */
   remapCCs(midiData, channel, ccMapping) {
-    const modifiedData = {
-      ...midiData,
-      tracks: midiData.tracks.map(track => ({
-        ...track,
-        events: track.events ? [...track.events] : []
-      }))
-    };
-
-    let ccsRemapped = 0;
-
-    for (const track of modifiedData.tracks) {
-      if (!track.events) continue;
-
-      for (let i = 0; i < track.events.length; i++) {
-        const event = track.events[i];
-        if (event.channel !== channel) continue;
-
-        if (event.type === 'controlChange' || event.type === 'cc') {
-          const cc = event.controllerNumber ?? event.controller ?? event.cc;
-          const targetCC = ccMapping[cc];
-          if (targetCC !== undefined) {
-            const newEvent = { ...event };
-            if (newEvent.controllerNumber !== undefined) newEvent.controllerNumber = targetCC;
-            if (newEvent.controller !== undefined) newEvent.controller = targetCC;
-            if (newEvent.cc !== undefined) newEvent.cc = targetCC;
-            track.events[i] = newEvent;
-            ccsRemapped++;
-          }
-        }
-      }
-    }
-
+    const result = this.transposeChannels(midiData, {
+      [channel]: { ccMapping }
+    });
     return {
-      midiData: modifiedData,
-      stats: { ccsRemapped }
+      midiData: result.midiData,
+      stats: { ccsRemapped: result.stats.ccsRemapped }
     };
   }
 
