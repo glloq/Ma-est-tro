@@ -581,29 +581,41 @@
     const isDrumChannel = channel === 9 || (assignment?.channelAnalysis?.estimatedType === 'drums');
 
     // Strategy selector (not for drum channels - they have their own drumStrategy)
-    const strategies = [
-      { value: 'autoTranspose', label: _t('autoAssign.strategyAutoTranspose'), desc: _t('autoAssign.strategyAutoTransposeDesc') },
-      { value: 'transpose', label: _t('autoAssign.strategyTranspose'), desc: _t('autoAssign.strategyTransposeDesc') },
-      { value: 'noteCompression', label: _t('autoAssign.strategyNoteCompression'), desc: _t('autoAssign.strategyNoteCompressionDesc') },
-      { value: 'octaveWrap', label: _t('autoAssign.strategyOctaveWrap'), desc: _t('autoAssign.strategyOctaveWrapDesc') },
-      { value: 'polyReduction', label: _t('autoAssign.strategyPolyReduction'), desc: _t('autoAssign.strategyPolyReductionDesc') },
-      { value: 'ccRemap', label: _t('autoAssign.strategyCCRemap'), desc: _t('autoAssign.strategyCCRemapDesc') },
-      { value: 'suppress', label: _t('autoAssign.strategySuppress'), desc: _t('autoAssign.strategySuppressDesc') },
-      { value: 'ignore', label: _t('autoAssign.strategyIgnore'), desc: _t('autoAssign.strategyIgnoreDesc') }
+    // Grouped by category for clearer visual hierarchy
+    const strategyGroups = [
+      { header: _t('autoAssign.strategyGroupAuto'), strategies: [
+        { value: 'autoTranspose', label: _t('autoAssign.strategyAutoTranspose'), desc: _t('autoAssign.strategyAutoTransposeDesc') },
+        { value: 'noteCompression', label: _t('autoAssign.strategyNoteCompression'), desc: _t('autoAssign.strategyNoteCompressionDesc') },
+      ]},
+      { header: _t('autoAssign.strategyGroupManual'), strategies: [
+        { value: 'transpose', label: _t('autoAssign.strategyTranspose'), desc: _t('autoAssign.strategyTransposeDesc') },
+        { value: 'octaveWrap', label: _t('autoAssign.strategyOctaveWrap'), desc: _t('autoAssign.strategyOctaveWrapDesc') },
+        { value: 'suppress', label: _t('autoAssign.strategySuppress'), desc: _t('autoAssign.strategySuppressDesc') },
+      ]},
+      { header: _t('autoAssign.strategyGroupAdvanced'), strategies: [
+        { value: 'polyReduction', label: _t('autoAssign.strategyPolyReduction'), desc: _t('autoAssign.strategyPolyReductionDesc') },
+        { value: 'ccRemap', label: _t('autoAssign.strategyCCRemap'), desc: _t('autoAssign.strategyCCRemapDesc') },
+      ]},
+      { header: null, strategies: [
+        { value: 'ignore', label: _t('autoAssign.strategyIgnore'), desc: _t('autoAssign.strategyIgnoreDesc') },
+      ]}
     ];
 
     const strategyHTML = isDrumChannel ? '' : `
       <div class="aa-strategy-selector">
         <label class="aa-strategy-title">${_t('autoAssign.adaptationStrategy')}:</label>
         <div class="aa-strategy-options">
-          ${strategies.map(s => `
-            <label class="aa-strategy-option ${strategy === s.value ? 'selected' : ''}">
-              <input type="radio" name="strategy_${channel}" value="${s.value}"
-                     ${strategy === s.value ? 'checked' : ''}
-                     onchange="autoAssignModalInstance.setStrategy(${channel}, '${s.value}')">
-              <span class="aa-strategy-label">${s.label}</span>
-              <span class="aa-strategy-desc">${s.desc}</span>
-            </label>
+          ${strategyGroups.map(group => `
+            ${group.header ? `<div class="aa-strategy-group-header">${group.header}</div>` : ''}
+            ${group.strategies.map(s => `
+              <label class="aa-strategy-option ${strategy === s.value ? 'selected' : ''}">
+                <input type="radio" name="strategy_${channel}" value="${s.value}"
+                       ${strategy === s.value ? 'checked' : ''}
+                       onchange="autoAssignModalInstance.setStrategy(${channel}, '${s.value}')">
+                <span class="aa-strategy-label">${s.label}</span>
+                <span class="aa-strategy-desc">${s.desc}</span>
+              </label>
+            `).join('')}
           `).join('')}
         </div>
       </div>

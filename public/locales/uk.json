@@ -1024,6 +1024,9 @@
         "strategySuppressDesc": "Remove notes outside instrument range",
         "strategyIgnore": "None",
         "strategyIgnoreDesc": "Play as-is (out-of-range notes may be clipped)",
+        "strategyGroupAuto": "Automatic",
+        "strategyGroupManual": "Manual",
+        "strategyGroupAdvanced": "Advanced",
         "adaptationResult": "Result",
         "notesPlayable": "notes playable",
         "notesRecovered": "recovered",
@@ -1131,7 +1134,10 @@
             "validateSplit": "Validate split",
             "splitMode": "Split mode — select 2+ instruments"
         },
-        "instrument": "Instrument"
+        "instrument": "Instrument",
+        "strategyGroupAuto": "Automatic",
+        "strategyGroupManual": "Manual",
+        "strategyGroupAdvanced": "Advanced"
     },
     "instrumentCapabilities": {
         "title": "Complete Instrument Capabilities",

@@ -1415,6 +1415,14 @@ body.dark-mode .aa-no-compatible {
   cursor: pointer;
 }
 
+.aa-strategy-group-header {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 4px 10px 2px;
+  letter-spacing: 0.5px;
+}
+
 .aa-strategy-label {
   font-weight: 600;
   min-width: 100px;
@@ -1544,6 +1552,8 @@ body.dark-mode .aa-no-compatible {
 .aa-cc-remap-table {
   margin-top: 4px;
   padding: 4px 0;
+  max-height: 150px;
+  overflow-y: auto;
 }
 
 .aa-cc-remap-header {

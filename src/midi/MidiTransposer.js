@@ -295,6 +295,7 @@ class MidiTransposer {
 
       // Track active notes per timestamp
       const activeNotes = new Map(); // note -> event index
+      const droppedNotes = new Set(); // note numbers whose noteOn was dropped (awaiting noteOff)
       const eventsToRemove = new Set();
 
       for (let i = 0; i < track.events.length; i++) {
@@ -316,18 +317,20 @@ class MidiTransposer {
               const [droppedNote, droppedIdx] = noteEntries[midIdx];
               eventsToRemove.add(droppedIdx);
               activeNotes.delete(droppedNote);
+              droppedNotes.add(droppedNote); // track for matching noteOff
               noteEntries.splice(midIdx, 1);
               notesDropped++;
             }
           }
         } else if (event.type === 'noteOff' || (event.type === 'noteOn' && event.velocity === 0)) {
           const noteNum = event.note ?? event.noteNumber;
-          const onIdx = activeNotes.get(noteNum);
-          if (onIdx !== undefined && eventsToRemove.has(onIdx)) {
-            // Also remove the noteOff for dropped notes
+          if (droppedNotes.has(noteNum)) {
+            // This noteOff matches a dropped noteOn — remove it too
             eventsToRemove.add(i);
+            droppedNotes.delete(noteNum);
+          } else {
+            activeNotes.delete(noteNum);
           }
-          activeNotes.delete(noteNum);
         }
       }
 
