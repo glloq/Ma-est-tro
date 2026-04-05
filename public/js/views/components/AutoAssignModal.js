@@ -220,10 +220,11 @@ class AutoAssignModal {
       for (const ch of this.channels) {
         const assignment = this.selectedAssignments[ch];
         this.adaptationSettings[ch] = {
+          pitchShift: assignment?.octaveWrappingEnabled ? 'manual' : (assignment?.transposition?.semitones) ? 'manual' : 'none',
+          oorHandling: assignment?.octaveWrappingEnabled ? 'octaveWrap' : 'passThrough',
           transpositionSemitones: assignment?.transposition?.semitones || 0,
           octaveWrappingEnabled: assignment?.octaveWrappingEnabled || false,
           noteOffset: 0,
-          strategy: assignment?.octaveWrappingEnabled ? 'octaveWrap' : (assignment?.transposition?.semitones) ? 'transpose' : 'ignore',
           drumStrategy: 'intelligent',
           polyReductionEnabled: false,
           ccRemapEnabled: false
@@ -622,29 +623,16 @@ class AutoAssignModal {
   }
 
   /**
-   * Set adaptation strategy for a channel
+   * Set pitch shift mode for a channel
    */
-  setStrategy(channel, strategy) {
+  setPitchShift(channel, value) {
     const ch = String(channel);
     if (!this.adaptationSettings[ch]) return;
     this._isDirty = true;
-    this.adaptationSettings[ch].strategy = strategy;
+    this.adaptationSettings[ch].pitchShift = value;
 
-    // When switching to octaveWrap, enable octave wrapping on the assignment
-    if (strategy === 'octaveWrap') {
-      this.adaptationSettings[ch].octaveWrappingEnabled = true;
-      if (this.selectedAssignments[ch]) {
-        this.selectedAssignments[ch].octaveWrappingEnabled = true;
-      }
-    } else {
-      this.adaptationSettings[ch].octaveWrappingEnabled = false;
-      if (this.selectedAssignments[ch]) {
-        this.selectedAssignments[ch].octaveWrappingEnabled = false;
-      }
-    }
-
-    // When switching to autoTranspose, compute and store optimal semitones
-    if (strategy === 'autoTranspose' && this.findOptimalTransposition) {
+    // When switching to auto, compute and store optimal semitones
+    if (value === 'auto' && this.findOptimalTransposition) {
       const analysis = this.channelAnalyses[channel] || this.selectedAssignments[ch]?.channelAnalysis;
       const assignment = this.selectedAssignments[ch];
       if (analysis?.noteDistribution && assignment) {
@@ -658,6 +646,25 @@ class AutoAssignModal {
           this.adaptationSettings[ch].transpositionSemitones = optimal.semitones;
         }
       }
+    }
+
+    this.refreshCurrentTab();
+  }
+
+  /**
+   * Set out-of-range handling mode for a channel
+   */
+  setOORHandling(channel, value) {
+    const ch = String(channel);
+    if (!this.adaptationSettings[ch]) return;
+    this._isDirty = true;
+    this.adaptationSettings[ch].oorHandling = value;
+
+    // Sync octaveWrappingEnabled for preview/assignment compatibility
+    const isWrap = value === 'octaveWrap';
+    this.adaptationSettings[ch].octaveWrappingEnabled = isWrap;
+    if (this.selectedAssignments[ch]) {
+      this.selectedAssignments[ch].octaveWrappingEnabled = isWrap;
     }
 
     this.refreshCurrentTab();

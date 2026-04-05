@@ -1685,5 +1685,18 @@
     "autoAssign.unscored": "Not scored",
     "autoAssign.splitAccepted": "Split applied",
     "autoAssign.removeSplit": "Remove split",
-    "autoAssign.strategyGroupOptions": "Opzioni"
+    "autoAssign.strategyGroupOptions": "Opzioni",
+    "autoAssign.pitchShiftTitle": "Pitch shift",
+    "autoAssign.pitchNone": "None",
+    "autoAssign.pitchAuto": "Auto",
+    "autoAssign.pitchManual": "Manual",
+    "autoAssign.oorTitle": "Out-of-range notes",
+    "autoAssign.oorPassThrough": "Pass through",
+    "autoAssign.oorPassThroughDesc": "Instrument may clip notes outside its range",
+    "autoAssign.oorOctaveWrap": "Octave wrap",
+    "autoAssign.oorOctaveWrapDesc": "Fold out-of-range notes to nearest octave",
+    "autoAssign.oorSuppress": "Suppress",
+    "autoAssign.oorSuppressDesc": "Remove notes outside instrument range",
+    "autoAssign.oorCompress": "Compress",
+    "autoAssign.oorCompressDesc": "Fold all out-of-range notes into playable range"
 }

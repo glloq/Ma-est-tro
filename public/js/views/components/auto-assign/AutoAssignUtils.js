@@ -110,10 +110,12 @@
     };
 
     /**
-     * Calculate adaptation result for a given strategy
+     * Calculate adaptation result for combined dimensions.
+     * @param {number} channel
+     * @param {string} [legacyStrategy] - Optional, for backward-compat (polyReduction/ccRemap info panels)
      * Returns { totalNotes, inRange, outOfRange, recovered, extra }
      */
-    AutoAssignUtilsMixin.calculateAdaptationResult = function(channel, strategy) {
+    AutoAssignUtilsMixin.calculateAdaptationResult = function(channel, legacyStrategy) {
         const ch = String(channel);
         const analysis = this.channelAnalyses[channel] || this.selectedAssignments[ch]?.channelAnalysis;
         const adaptation = this.adaptationSettings[ch] || {};
@@ -125,76 +127,38 @@
 
         const allOptions = [...(this.suggestions[ch] || []), ...(this.lowScoreSuggestions[ch] || [])];
         const selectedOption = allOptions.find(opt => opt.instrument.id === assignment.instrumentId);
-        // Fallback: find instrument in allInstruments
         const inst = selectedOption?.instrument
             || (this.allInstruments || []).find(i => i.id === assignment.instrumentId);
         if (!inst) return { totalNotes: 0, inRange: 0, outOfRange: 0, recovered: 0 };
 
-        const semitones = adaptation.transpositionSemitones || 0;
         const usedNotes = Object.keys(analysis.noteDistribution).map(Number);
         const totalNotes = usedNotes.length;
-        const instMin = inst.note_range_min ?? 0;
-        const instMax = inst.note_range_max ?? 127;
-
-        let inRange = 0;
-        let recovered = 0;
         let extra = {};
 
-        // --- Auto-transpose: find and apply optimal octave shift ---
-        if (strategy === 'autoTranspose') {
-            const optimal = this.findOptimalTransposition(usedNotes, inst);
-            extra.autoTransposeSemitones = optimal.semitones;
+        // --- Legacy: polyReduction info (independent panel) ---
+        if (legacyStrategy === 'polyReduction') {
+            const instPoly = inst.polyphony || 16;
+            const maxPoly = analysis.polyphony?.max || 1;
+            let inRange = 0;
             for (const note of usedNotes) {
-                if (this.isNoteInInstrumentRange(note + optimal.semitones, inst)) {
-                    inRange++;
-                }
+                if (this.isNoteInInstrumentRange(note, inst)) inRange++;
             }
+            if (maxPoly > instPoly) {
+                extra.polyDropRate = 1 - (instPoly / maxPoly);
+            } else {
+                extra.polyDropRate = 0;
+            }
+            extra.instPolyphony = instPoly;
+            extra.channelPolyphony = maxPoly;
             return { totalNotes, inRange, outOfRange: totalNotes - inRange, recovered: 0, extra };
         }
 
-        // --- Note compression: fold out-of-range notes into playable range ---
-        if (strategy === 'noteCompression') {
-            for (const note of usedNotes) {
-                if (this.isNoteInInstrumentRange(note, inst)) {
-                    inRange++;
-                } else {
-                    // Compression always recovers notes (folds them into range)
-                    recovered++;
-                }
-            }
-            return { totalNotes, inRange, outOfRange: 0, recovered, extra };
-        }
-
-        // --- Polyphony reduction: estimate note survival based on polyphony capacity ---
-        if (strategy === 'polyReduction') {
-            const instPoly = inst.polyphony || 16;
-            const maxPoly = analysis.polyphony?.max || 1;
-            // All notes are in principle playable pitch-wise
+        // --- Legacy: ccRemap info (independent panel) ---
+        if (legacyStrategy === 'ccRemap') {
+            let inRange = 0;
             for (const note of usedNotes) {
                 if (this.isNoteInInstrumentRange(note, inst)) inRange++;
             }
-            // Estimate how many notes would be dropped due to polyphony
-            if (maxPoly > instPoly) {
-                const survivalRate = instPoly / maxPoly;
-                extra.polyDropRate = 1 - survivalRate;
-                extra.instPolyphony = instPoly;
-                extra.channelPolyphony = maxPoly;
-            } else {
-                extra.polyDropRate = 0;
-                extra.instPolyphony = instPoly;
-                extra.channelPolyphony = maxPoly;
-            }
-            const outOfRange = totalNotes - inRange;
-            return { totalNotes, inRange, outOfRange, recovered: 0, extra };
-        }
-
-        // --- CC Remapping: analyze CC coverage ---
-        if (strategy === 'ccRemap') {
-            // For note range, treat as 'ignore' (no note modification)
-            for (const note of usedNotes) {
-                if (this.isNoteInInstrumentRange(note, inst)) inRange++;
-            }
-            // Analyze CC coverage
             const usedCCs = analysis.usedCCs || [];
             let supportedCCs;
             try {
@@ -205,7 +169,6 @@
             const supportedSet = new Set(supportedCCs);
             const unsupportedCCs = usedCCs.filter(cc => !supportedSet.has(cc));
             const ccRemappingSuggestions = {};
-            // Standard CC remapping pairs
             const CC_REMAP_TABLE = { 11: 7, 1: 74, 71: 74, 73: 72, 91: 93, 93: 91 };
             for (const cc of unsupportedCCs) {
                 const target = CC_REMAP_TABLE[cc];
@@ -219,29 +182,52 @@
             extra.ccCoverage = usedCCs.length > 0
                 ? Math.round(((usedCCs.length - unsupportedCCs.length) / usedCCs.length) * 100)
                 : 100;
-            const outOfRange = totalNotes - inRange;
-            return { totalNotes, inRange, outOfRange, recovered: 0, extra };
+            return { totalNotes, inRange, outOfRange: totalNotes - inRange, recovered: 0, extra };
         }
 
-        // --- Original strategies ---
-        for (const note of usedNotes) {
-            let adjustedNote = note;
-
-            if (strategy === 'transpose') {
-                adjustedNote = note + semitones;
+        // --- Legacy: autoTranspose info (for auto-transpose display) ---
+        if (legacyStrategy === 'autoTranspose') {
+            const optimal = this.findOptimalTransposition(usedNotes, inst);
+            extra.autoTransposeSemitones = optimal.semitones;
+            let inRange = 0;
+            for (const note of usedNotes) {
+                if (this.isNoteInInstrumentRange(note + optimal.semitones, inst)) inRange++;
             }
+            return { totalNotes, inRange, outOfRange: totalNotes - inRange, recovered: 0, extra };
+        }
+
+        // === Combined dimensions calculation ===
+        const pitchShift = adaptation.pitchShift || 'none';
+        const oorHandling = adaptation.oorHandling || 'passThrough';
+        const semitones = adaptation.transpositionSemitones || 0;
+
+        // Step 1: Determine effective pitch shift
+        let effectiveSemitones = 0;
+        if (pitchShift === 'auto') {
+            const optimal = this.findOptimalTransposition(usedNotes, inst);
+            effectiveSemitones = optimal.semitones;
+            extra.autoTransposeSemitones = optimal.semitones;
+        } else if (pitchShift === 'manual') {
+            effectiveSemitones = semitones;
+        }
+
+        // Step 2: Count notes in range after pitch shift + apply OOR handling
+        let inRange = 0;
+        let recovered = 0;
+        for (const note of usedNotes) {
+            const adjustedNote = note + effectiveSemitones;
 
             if (this.isNoteInInstrumentRange(adjustedNote, inst)) {
                 inRange++;
-            } else if (strategy === 'octaveWrap' && inst.note_selection_mode !== 'discrete') {
-                // Try wrapping +/-1 octave (not meaningful for discrete instruments like drums/pads)
+            } else if (oorHandling === 'octaveWrap' && inst.note_selection_mode !== 'discrete') {
                 const up = adjustedNote + 12;
                 const down = adjustedNote - 12;
                 if (this.isNoteInInstrumentRange(up, inst) || this.isNoteInInstrumentRange(down, inst)) {
                     recovered++;
                 }
-            } else if (strategy === 'suppress') {
-                // Out of range notes will be suppressed - counted as "recovered" (handled)
+            } else if (oorHandling === 'suppress') {
+                recovered++;
+            } else if (oorHandling === 'compress') {
                 recovered++;
             }
         }
@@ -250,7 +236,8 @@
             totalNotes,
             inRange,
             outOfRange: totalNotes - inRange - recovered,
-            recovered
+            recovered,
+            extra
         };
     };
 
