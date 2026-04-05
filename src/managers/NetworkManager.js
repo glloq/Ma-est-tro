@@ -260,13 +260,69 @@ class NetworkManager extends EventEmitter {
       await Promise.all(pingPromises);
     }
 
-    this.app.logger.info(`[NetworkManager] Subnet scan completed - ${ipFoundCount} IPs found by ping, ${this.devices.size} total devices`);
+    this.app.logger.info(`[NetworkManager] TCP scan done - ${ipFoundCount} IPs found, reading ARP table...`);
+
+    // Les TCP connects ont déclenché des requêtes ARP pour chaque IP.
+    // Lire la table ARP pour trouver les hôtes qui ont répondu à l'ARP
+    // mais pas au TCP (firewall DROP). L'ARP est Layer 2, obligatoire.
+    const arpCount = await this.readARPTable(subnet, localIP);
+
+    this.app.logger.info(`[NetworkManager] Subnet scan completed - ${ipFoundCount} TCP + ${arpCount} ARP, ${this.devices.size} total devices`);
 
     // Si aucune IP trouvée, ajouter des devices de test (environnement dev uniquement)
-    if (ipFoundCount === 0 && process.env.NODE_ENV !== 'production') {
+    if (this.devices.size === 0 && process.env.NODE_ENV !== 'production') {
       this.app.logger.warn('[NetworkManager] No IPs found - adding test devices for development');
       this.addTestDevicesIP(subnet);
     }
+  }
+
+  /**
+   * Lit la table ARP du système pour trouver les hôtes actifs.
+   * Après un scan TCP, la table ARP contient les entrées de tous les hôtes
+   * qui ont répondu aux requêtes ARP (Layer 2), même ceux avec firewall DROP.
+   * @param {string} subnet - Sous-réseau à filtrer
+   * @param {string} localIP - IP locale à exclure
+   * @returns {Promise<number>} Nombre de devices ajoutés via ARP
+   */
+  async readARPTable(subnet, localIP) {
+    let count = 0;
+    try {
+      const { stdout } = await execFileAsync('ip', ['neigh', 'show'], {
+        timeout: 5000
+      });
+
+      const lines = stdout.split('\n');
+      for (const line of lines) {
+        // Format: "192.168.1.10 dev eth0 lladdr aa:bb:cc:dd:ee:ff REACHABLE"
+        const match = line.match(/^([\d.]+)\s+.*lladdr\s+(\S+)\s+(\S+)/);
+        if (!match) continue;
+
+        const ip = match[1];
+        const state = match[3]; // REACHABLE, STALE, DELAY, PROBE
+
+        // Filtrer: bon subnet, pas notre IP, pas FAILED, pas déjà trouvé
+        if (!ip.startsWith(subnet + '.')) continue;
+        if (ip === localIP) continue;
+        if (state === 'FAILED') continue;
+        if (this.devices.has(ip)) continue;
+
+        this.devices.set(ip, {
+          ip,
+          address: ip,
+          port: '5004',
+          name: `Device (${ip})`,
+          type: 'network-ip',
+          manufacturer: 'Unknown',
+          protocol: 'IP',
+          discovered: 'arp'
+        });
+        count++;
+        this.app.logger.info(`[NetworkManager] ✅ ARP found: ${ip} (${state})`);
+      }
+    } catch (error) {
+      this.app.logger.debug(`[NetworkManager] ARP table read failed: ${error.message}`);
+    }
+    return count;
   }
 
   /**
