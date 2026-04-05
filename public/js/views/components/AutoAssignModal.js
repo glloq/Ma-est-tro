@@ -224,7 +224,9 @@ class AutoAssignModal {
           octaveWrappingEnabled: assignment?.octaveWrappingEnabled || false,
           noteOffset: 0,
           strategy: assignment?.octaveWrappingEnabled ? 'octaveWrap' : (assignment?.transposition?.semitones) ? 'transpose' : 'ignore',
-          drumStrategy: 'intelligent'
+          drumStrategy: 'intelligent',
+          polyReductionEnabled: false,
+          ccRemapEnabled: false
         };
       }
 
@@ -658,6 +660,28 @@ class AutoAssignModal {
       }
     }
 
+    this.refreshCurrentTab();
+  }
+
+  /**
+   * Toggle polyphony reduction option for a channel (independent of main strategy)
+   */
+  togglePolyReduction(channel) {
+    const ch = String(channel);
+    if (!this.adaptationSettings[ch]) return;
+    this._isDirty = true;
+    this.adaptationSettings[ch].polyReductionEnabled = !this.adaptationSettings[ch].polyReductionEnabled;
+    this.refreshCurrentTab();
+  }
+
+  /**
+   * Toggle CC remapping option for a channel (independent of main strategy)
+   */
+  toggleCCRemap(channel) {
+    const ch = String(channel);
+    if (!this.adaptationSettings[ch]) return;
+    this._isDirty = true;
+    this.adaptationSettings[ch].ccRemapEnabled = !this.adaptationSettings[ch].ccRemapEnabled;
     this.refreshCurrentTab();
   }
 

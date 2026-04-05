@@ -227,13 +227,20 @@
 
       const typeIcon = analysis?.estimatedType ? this.getTypeIcon(analysis.estimatedType) : '';
 
-      // Strategy badge for assigned channels
+      // Strategy badge for assigned channels (main strategy + optional modifiers)
       const adapt = this.adaptationSettings[ch] || {};
-      const strategyBadgeMap = { transpose: 'T', autoTranspose: 'AT', octaveWrap: 'W', noteCompression: 'C', polyReduction: 'P', ccRemap: 'CC', suppress: 'S' };
-      const strategyTitleMap = { transpose: _t('autoAssign.strategyTranspose'), autoTranspose: _t('autoAssign.strategyAutoTranspose'), octaveWrap: _t('autoAssign.strategyOctaveWrap'), noteCompression: _t('autoAssign.strategyNoteCompression'), polyReduction: _t('autoAssign.strategyPolyReduction'), ccRemap: _t('autoAssign.strategyCCRemap'), suppress: _t('autoAssign.strategySuppress') };
-      const strategyBadge = (!isSkipped && !isSplit && adapt.strategy && strategyBadgeMap[adapt.strategy])
+      const strategyBadgeMap = { transpose: 'T', autoTranspose: 'AT', octaveWrap: 'W', noteCompression: 'C', suppress: 'S' };
+      const strategyTitleMap = { transpose: _t('autoAssign.strategyTranspose'), autoTranspose: _t('autoAssign.strategyAutoTranspose'), octaveWrap: _t('autoAssign.strategyOctaveWrap'), noteCompression: _t('autoAssign.strategyNoteCompression'), suppress: _t('autoAssign.strategySuppress') };
+      let strategyBadge = (!isSkipped && !isSplit && adapt.strategy && strategyBadgeMap[adapt.strategy])
         ? `<span class="aa-ov-strategy-badge" title="${strategyTitleMap[adapt.strategy]}">${strategyBadgeMap[adapt.strategy]}</span>`
         : '';
+      // Show independent modifier badges (poly reduction, CC remap)
+      if (!isSkipped && !isSplit && adapt.polyReductionEnabled) {
+        strategyBadge += `<span class="aa-ov-strategy-badge" title="${_t('autoAssign.strategyPolyReduction')}">P</span>`;
+      }
+      if (!isSkipped && !isSplit && adapt.ccRemapEnabled) {
+        strategyBadge += `<span class="aa-ov-strategy-badge" title="${_t('autoAssign.strategyCCRemap')}">CC</span>`;
+      }
 
       return `
         <tr class="aa-overview-row ${isSkipped ? 'skipped' : ''} ${statusClass}"
@@ -582,6 +589,7 @@
 
     // Strategy selector (not for drum channels - they have their own drumStrategy)
     // Grouped by category for clearer visual hierarchy
+    // polyReduction and ccRemap are independent checkboxes, not radio options
     const strategyGroups = [
       { header: _t('autoAssign.strategyGroupAuto'), strategies: [
         { value: 'autoTranspose', label: _t('autoAssign.strategyAutoTranspose'), desc: _t('autoAssign.strategyAutoTransposeDesc') },
@@ -592,14 +600,13 @@
         { value: 'octaveWrap', label: _t('autoAssign.strategyOctaveWrap'), desc: _t('autoAssign.strategyOctaveWrapDesc') },
         { value: 'suppress', label: _t('autoAssign.strategySuppress'), desc: _t('autoAssign.strategySuppressDesc') },
       ]},
-      { header: _t('autoAssign.strategyGroupAdvanced'), strategies: [
-        { value: 'polyReduction', label: _t('autoAssign.strategyPolyReduction'), desc: _t('autoAssign.strategyPolyReductionDesc') },
-        { value: 'ccRemap', label: _t('autoAssign.strategyCCRemap'), desc: _t('autoAssign.strategyCCRemapDesc') },
-      ]},
       { header: null, strategies: [
         { value: 'ignore', label: _t('autoAssign.strategyIgnore'), desc: _t('autoAssign.strategyIgnoreDesc') },
       ]}
     ];
+
+    const polyEnabled = adaptation.polyReductionEnabled || false;
+    const ccEnabled = adaptation.ccRemapEnabled || false;
 
     const strategyHTML = isDrumChannel ? '' : `
       <div class="aa-strategy-selector">
@@ -617,6 +624,21 @@
               </label>
             `).join('')}
           `).join('')}
+        </div>
+        <div class="aa-strategy-group-header">${_t('autoAssign.strategyGroupOptions')}</div>
+        <div class="aa-strategy-checkboxes">
+          <label class="aa-strategy-checkbox ${polyEnabled ? 'selected' : ''}">
+            <input type="checkbox" ${polyEnabled ? 'checked' : ''}
+                   onchange="autoAssignModalInstance.togglePolyReduction(${channel})">
+            <span class="aa-strategy-label">${_t('autoAssign.strategyPolyReduction')}</span>
+            <span class="aa-strategy-desc">${_t('autoAssign.strategyPolyReductionDesc')}</span>
+          </label>
+          <label class="aa-strategy-checkbox ${ccEnabled ? 'selected' : ''}">
+            <input type="checkbox" ${ccEnabled ? 'checked' : ''}
+                   onchange="autoAssignModalInstance.toggleCCRemap(${channel})">
+            <span class="aa-strategy-label">${_t('autoAssign.strategyCCRemap')}</span>
+            <span class="aa-strategy-desc">${_t('autoAssign.strategyCCRemapDesc')}</span>
+          </label>
         </div>
       </div>
     `;
@@ -654,9 +676,9 @@
       </div>
     ` : '';
 
-    // Polyphony reduction info
-    const polyResult = (strategy === 'polyReduction') ? this.calculateAdaptationResult(channel, 'polyReduction') : null;
-    const polyReductionHTML = (!isDrumChannel && strategy === 'polyReduction' && polyResult?.extra) ? `
+    // Polyphony reduction info (shown when checkbox is enabled, independent of main strategy)
+    const polyResult = polyEnabled ? this.calculateAdaptationResult(channel, 'polyReduction') : null;
+    const polyReductionHTML = (!isDrumChannel && polyEnabled && polyResult?.extra) ? `
       <div class="aa-control-group">
         <label>${_t('autoAssign.polyphonyInfo')}</label>
         <div class="aa-poly-info">
@@ -670,9 +692,9 @@
       </div>
     ` : '';
 
-    // CC Remapping info
-    const ccResult = (strategy === 'ccRemap') ? this.calculateAdaptationResult(channel, 'ccRemap') : null;
-    const ccRemapHTML = (!isDrumChannel && strategy === 'ccRemap' && ccResult?.extra) ? (() => {
+    // CC Remapping info (shown when checkbox is enabled, independent of main strategy)
+    const ccResult = ccEnabled ? this.calculateAdaptationResult(channel, 'ccRemap') : null;
+    const ccRemapHTML = (!isDrumChannel && ccEnabled && ccResult?.extra) ? (() => {
       const e = ccResult.extra;
       const remapEntries = Object.entries(e.ccRemappingSuggestions || {});
       const remapRows = remapEntries.map(([src, tgt]) =>

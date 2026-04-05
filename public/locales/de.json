@@ -1027,6 +1027,7 @@
         "strategyGroupAuto": "Automatic",
         "strategyGroupManual": "Manual",
         "strategyGroupAdvanced": "Advanced",
+        "strategyGroupOptions": "Optionen",
         "adaptationResult": "Ergebnis",
         "notesPlayable": "Noten spielbar",
         "notesRecovered": "wiederhergestellt",
