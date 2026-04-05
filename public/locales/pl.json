@@ -1675,8 +1675,8 @@
         "applied": "Calibration applied for {count} instrument(s)",
         "refresh": "Refresh"
     },
-    "autoAssign.showAllToggle": "All",
-    "autoAssign.showRoutedToggle": "Routed",
+    "autoAssign.showAllToggle": "Wszystkie",
+    "autoAssign.showRoutedToggle": "Trasowane",
     "autoAssign.unscored": "Not scored",
     "autoAssign.splitAccepted": "Split applied",
     "autoAssign.removeSplit": "Remove split"
