@@ -1134,10 +1134,7 @@
             "validateSplit": "Validate split",
             "splitMode": "Split mode — select 2+ instruments"
         },
-        "instrument": "Instrument",
-        "strategyGroupAuto": "Automatic",
-        "strategyGroupManual": "Manual",
-        "strategyGroupAdvanced": "Advanced"
+        "instrument": "Instrument"
     },
     "instrumentCapabilities": {
         "title": "Completar capacidades do instrumento",
