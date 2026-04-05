@@ -322,7 +322,7 @@ async function applyAssignments(app, data) {
   if (createAdaptedFile) {
     // Build transpositions object from assignments
     const transpositions = {};
-    const postProcessing = []; // Additional processing steps (compression, poly reduction, CC remap)
+    const postProcessing = []; // Additional processing steps (compression only — needs pre-computed remapping)
     for (const [channel, assignment] of Object.entries(data.assignments)) {
       const channelNum = parseInt(channel);
       transpositions[channelNum] = {
@@ -330,39 +330,29 @@ async function applyAssignments(app, data) {
         noteRemapping: assignment.noteRemapping || null,
         suppressOutOfRange: assignment.suppressOutOfRange || false,
         noteRangeMin: assignment.noteRangeMin,
-        noteRangeMax: assignment.noteRangeMax
+        noteRangeMax: assignment.noteRangeMax,
+        // CC remapping and polyphony reduction run in the same pass
+        maxPolyphony: (assignment.polyReduction && assignment.maxPolyphony) ? assignment.maxPolyphony : null,
+        ccMapping: (assignment.ccRemapping && Object.keys(assignment.ccRemapping).length > 0) ? assignment.ccRemapping : null
       };
-      // Queue post-processing for new strategies
+      // Note compression still needs a separate pre-computed remapping pass
       if (assignment.noteCompression && assignment.noteRangeMin != null && assignment.noteRangeMax != null) {
         postProcessing.push({ type: 'compression', channel: channelNum, min: assignment.noteRangeMin, max: assignment.noteRangeMax });
       }
-      if (assignment.polyReduction && assignment.maxPolyphony) {
-        postProcessing.push({ type: 'polyReduction', channel: channelNum, maxPolyphony: assignment.maxPolyphony });
-      }
-      if (assignment.ccRemapping && Object.keys(assignment.ccRemapping).length > 0) {
-        postProcessing.push({ type: 'ccRemap', channel: channelNum, ccMapping: assignment.ccRemapping });
-      }
     }
 
-    // Apply transpositions (standard processing)
+    // Apply all transformations in a single pass (transposition, note remapping, CC remap, poly reduction)
     const transposer = new MidiTransposer(app.logger);
     let result = transposer.transposeChannels(midiData, transpositions);
     let adaptedMidiData = result.midiData;
     stats = result.stats;
 
-    // Apply post-processing steps (note compression, poly reduction, CC remapping)
+    // Apply note compression as post-processing (generates a noteRemapping, needs separate pass)
     for (const step of postProcessing) {
       if (step.type === 'compression') {
         const compResult = transposer.compressChannel(adaptedMidiData, step.channel, step.min, step.max);
         adaptedMidiData = compResult.midiData;
         stats.notesRemapped += (compResult.stats?.notesRemapped || 0);
-      } else if (step.type === 'polyReduction') {
-        const polyResult = transposer.reducePolyphony(adaptedMidiData, step.channel, step.maxPolyphony);
-        adaptedMidiData = polyResult.midiData;
-        stats.notesSuppressed += (polyResult.stats?.notesDropped || 0);
-      } else if (step.type === 'ccRemap') {
-        const ccResult = transposer.remapCCs(adaptedMidiData, step.channel, step.ccMapping);
-        adaptedMidiData = ccResult.midiData;
       }
     }
 
