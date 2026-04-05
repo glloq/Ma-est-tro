@@ -1680,8 +1680,8 @@
         "applied": "Calibración aplicada para {count} instrumento(s)",
         "refresh": "Actualizar"
     },
-    "autoAssign.showAllToggle": "All",
-    "autoAssign.showRoutedToggle": "Routed",
+    "autoAssign.showAllToggle": "Todos",
+    "autoAssign.showRoutedToggle": "Ruteados",
     "autoAssign.unscored": "Not scored",
     "autoAssign.splitAccepted": "Split applied",
     "autoAssign.removeSplit": "Remove split"
