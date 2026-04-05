@@ -85,7 +85,7 @@
             <!-- ═══════════════════════════════════════ -->
             <!-- GROUPE B : Lecture & Affichage           -->
             <!-- ═══════════════════════════════════════ -->
-            <div class="settings-group" style="margin-top: 28px;">
+            <div class="settings-group">
                 <h2 style="margin: 0 0 16px 0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #667eea; border-bottom: 2px solid var(--border-color, #e5e7eb); padding-bottom: 8px;">
                     ${i18n.t('settings.groups.playback') || 'Lecture & Affichage'}
                 </h2>
@@ -181,7 +181,7 @@
             <!-- ═══════════════════════════════════════ -->
             <!-- GROUPE C : Boutons d'interface           -->
             <!-- ═══════════════════════════════════════ -->
-            <div class="settings-group" style="margin-top: 28px;">
+            <div class="settings-group">
                 <h2 style="margin: 0 0 16px 0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #667eea; border-bottom: 2px solid var(--border-color, #e5e7eb); padding-bottom: 8px;">
                     ${i18n.t('settings.groups.buttons') || "Boutons d'interface"}
                 </h2>
@@ -294,7 +294,7 @@
             <!-- ═══════════════════════════════════════ -->
             <!-- GROUPE D : Matériel & Système            -->
             <!-- ═══════════════════════════════════════ -->
-            <div class="settings-group" style="margin-top: 28px;">
+            <div class="settings-group">
                 <h2 style="margin: 0 0 16px 0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #667eea; border-bottom: 2px solid var(--border-color, #e5e7eb); padding-bottom: 8px;">
                     ${i18n.t('settings.groups.system') || 'Matériel & Système'}
                 </h2>

@@ -102,106 +102,31 @@ class SettingsModal {
         // Modal overlay
         this.overlay = document.createElement('div');
         this.overlay.className = 'settings-modal-overlay';
-        this.overlay.style.cssText = `
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 9998;
-            align-items: center;
-            justify-content: center;
-        `;
+        this.overlay.style.display = 'none';
 
         // Modal container
         this.modal = document.createElement('div');
         this.modal.className = 'settings-modal';
-        this.modal.style.cssText = `
-            background: var(--bg-secondary, white);
-            border-radius: 12px;
-            padding: 0;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 600px;
-            width: 90%;
-            max-height: 80vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        `;
 
         // Header
         const header = document.createElement('div');
         header.className = 'settings-modal-header';
-        header.style.cssText = `
-            padding: 24px;
-            border-bottom: 1px solid var(--border-color, #e5e7eb);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        `;
         header.innerHTML = `
-            <h2 class="settings-title" style="margin: 0; color: #667eea; font-size: 20px;" data-i18n="settings.title">⚙️ ${i18n.t('settings.title')}</h2>
-            <button class="settings-close-btn" style="
-                background: transparent;
-                border: none;
-                font-size: 24px;
-                cursor: pointer;
-                color: #999;
-                line-height: 1;
-                padding: 0;
-                width: 32px;
-                height: 32px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 50%;
-                transition: all 0.2s;
-            ">×</button>
+            <h2 class="settings-title" data-i18n="settings.title">⚙️ ${i18n.t('settings.title')}</h2>
+            <button class="settings-close-btn">×</button>
         `;
 
         // Content
         const content = document.createElement('div');
         content.className = 'settings-modal-content';
-        content.style.cssText = `
-            padding: 24px;
-            overflow-y: auto;
-            flex: 1;
-        `;
         content.innerHTML = this.renderContent();
 
         // Footer
         const footer = document.createElement('div');
         footer.className = 'settings-modal-footer';
-        footer.style.cssText = `
-            padding: 16px 24px;
-            border-top: 1px solid var(--border-color, #e5e7eb);
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-        `;
         footer.innerHTML = `
-            <button class="btn btn-secondary settings-cancel-btn" style="
-                padding: 10px 20px;
-                border: 1px solid var(--border-color, #e5e7eb);
-                border-radius: 6px;
-                background: var(--bg-secondary, white);
-                color: var(--text-secondary, #666);
-                cursor: pointer;
-                font-size: 14px;
-                transition: all 0.2s;
-            ">${i18n.t('common.cancel')}</button>
-            <button class="btn btn-primary settings-save-btn" style="
-                padding: 10px 20px;
-                border: none;
-                border-radius: 6px;
-                background: #667eea;
-                color: white;
-                cursor: pointer;
-                font-size: 14px;
-                transition: all 0.2s;
-            ">${i18n.t('common.save')}</button>
+            <button class="btn settings-cancel-btn">${i18n.t('common.cancel')}</button>
+            <button class="btn settings-save-btn">${i18n.t('common.save')}</button>
         `;
 
         // Assembler le modal

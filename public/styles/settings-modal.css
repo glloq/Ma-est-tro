@@ -1,0 +1,166 @@
+/* ============================================================================
+   Settings Modal - Responsive Layout
+   ============================================================================
+   2-column grid on large screens, single column on mobile.
+   ============================================================================ */
+
+/* ========== Overlay ========== */
+.settings-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 9998;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ========== Modal container ========== */
+.settings-modal {
+  background: var(--bg-secondary, white);
+  border-radius: 12px;
+  padding: 0;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 960px;
+  width: 92%;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========== Header ========== */
+.settings-modal-header {
+  padding: 24px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.settings-modal-header .settings-title {
+  margin: 0;
+  color: #667eea;
+  font-size: 20px;
+}
+
+/* ========== Close button ========== */
+.settings-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #999;
+  line-height: 1;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.settings-close-btn:hover {
+  background: var(--bg-tertiary, #f3f4f6);
+  color: var(--text-primary, #333);
+}
+
+/* ========== Content area - 2-column grid ========== */
+.settings-modal-content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 32px;
+  align-items: start;
+}
+
+/* ========== Settings groups ========== */
+.settings-modal-content .settings-group {
+  margin-top: 0 !important; /* override inline styles */
+}
+
+/* ========== Footer ========== */
+.settings-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.settings-cancel-btn {
+  padding: 10px 20px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 6px;
+  background: var(--bg-secondary, white);
+  color: var(--text-secondary, #666);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.settings-cancel-btn:hover {
+  background: var(--bg-tertiary, #f3f4f6);
+}
+
+.settings-save-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  background: #667eea;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.settings-save-btn:hover {
+  background: #5a6fd8;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* ========== Responsive: tablet and below ========== */
+@media (max-width: 768px) {
+  .settings-modal {
+    max-width: 100%;
+    width: 100%;
+    max-height: 100vh;
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  .settings-modal-content {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-modal-content .settings-group {
+    margin-top: 28px !important;
+  }
+
+  .settings-modal-content .settings-group:first-child {
+    margin-top: 0 !important;
+  }
+}
+
+/* ========== Responsive: small phones ========== */
+@media (max-width: 480px) {
+  .settings-modal-header {
+    padding: 16px;
+  }
+
+  .settings-modal-content {
+    padding: 16px;
+  }
+
+  .settings-modal-footer {
+    padding: 12px 16px;
+  }
+}
