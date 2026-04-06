@@ -85,6 +85,7 @@ async function deviceList(app) {
           const deviceSettings = app.database.getDeviceSettings(device.id);
           if (deviceSettings && deviceSettings.custom_name) {
             device.displayName = deviceSettings.custom_name;
+            device.deviceCustomName = deviceSettings.custom_name;
           }
         } catch (_e) { /* ignore */ }
 

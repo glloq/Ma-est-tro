@@ -161,7 +161,7 @@ class InstrumentManagementPage {
           status: 2,
           _deviceId: device.id,
           _deviceName: device.name,
-          _deviceDisplayName: device.displayName || null,
+          _deviceDisplayName: device.deviceCustomName || null,
           _deviceType: device.type,
           _deviceAddress: device.address,
         };
@@ -236,7 +236,7 @@ class InstrumentManagementPage {
           device.status = 2;
           device._deviceId = device.id;
           device._deviceName = device.name;
-          device._deviceDisplayName = device.displayName || null;
+          device._deviceDisplayName = device.deviceCustomName || null;
           device._deviceType = device.type;
           device.channel = device.channel !== undefined ? device.channel : 0;
           this.instruments.push(device);
