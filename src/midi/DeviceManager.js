@@ -35,6 +35,15 @@ class DeviceManager {
 
     this.midiAvailable = midiAvailable;
 
+    // Rate limiting state
+    this._rateLimitCounters = new Map(); // deviceId -> { count, windowStart }
+    this._rateLimitCache = new Map();    // deviceId -> limit (0 = unlimited)
+
+    // Listen for device settings changes to refresh rate limit cache
+    this.app.eventBus?.on('device_settings_changed', ({ deviceId }) => {
+      this._rateLimitCache.delete(deviceId);
+    });
+
     // Delegate discovery, hot-plug monitoring, and USB serial detection
     this.discovery = new DeviceDiscovery(app, easymidi, midiAvailable);
     this.discovery.setChangeCallbacks(
@@ -312,6 +321,12 @@ class DeviceManager {
   }
 
   sendMessage(deviceName, type, data) {
+    // Skip rate limiting for real-time messages (clock, transport)
+    const isRealTime = type === 'clock' || type === 'start' || type === 'stop' || type === 'continue';
+    if (!isRealTime && this._isRateLimited(deviceName)) {
+      return false;
+    }
+
     // Broadcast to debug monitor if monitorAll is active
     if (this.app.midiRouter?.monitorAll && this.app.wsServer) {
       let instrumentName = null;
@@ -729,6 +744,55 @@ class DeviceManager {
     });
 
     this.app.logger.info('DeviceManager closed');
+  }
+
+  // ─── Rate Limiting ────────────────────────────────────────
+
+  /**
+   * Check if a device has exceeded its message rate limit.
+   * Uses a sliding 1-second window.
+   * @param {string} deviceId
+   * @returns {boolean} true if message should be dropped
+   */
+  _isRateLimited(deviceId) {
+    const limit = this._getDeviceRateLimit(deviceId);
+    if (limit <= 0) return false; // 0 = unlimited
+
+    const now = Date.now();
+    let counter = this._rateLimitCounters.get(deviceId);
+
+    if (!counter || (now - counter.windowStart) >= 1000) {
+      // New window
+      counter = { count: 1, windowStart: now };
+      this._rateLimitCounters.set(deviceId, counter);
+      return false;
+    }
+
+    counter.count++;
+    if (counter.count > limit) {
+      return true; // Drop message
+    }
+    return false;
+  }
+
+  /**
+   * Get rate limit for a device (cached, refreshed on device_settings_changed).
+   * @param {string} deviceId
+   * @returns {number} 0 = unlimited
+   */
+  _getDeviceRateLimit(deviceId) {
+    if (this._rateLimitCache.has(deviceId)) {
+      return this._rateLimitCache.get(deviceId);
+    }
+    let limit = 0;
+    if (this.app.database) {
+      try {
+        const settings = this.app.database.getDeviceSettings(deviceId);
+        if (settings) limit = settings.message_rate_limit || 0;
+      } catch (_e) { /* ignore */ }
+    }
+    this._rateLimitCache.set(deviceId, limit);
+    return limit;
   }
 }
 
