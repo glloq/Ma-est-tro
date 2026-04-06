@@ -12312,7 +12312,8 @@
             // Skip keys that are sub-parts of compound filters or mode selectors
             const skipKeys = new Set([
                 'instrumentMode', 'playableMode', 'gmMode',
-                'includeSubfolders'
+                'includeSubfolders',
+                'hasDrums', 'hasMelody', 'hasBass'  // synced copies of instrumentTypes
             ]);
 
             // Range pairs: render one badge per pair (avoid duplicates, support Max-only)
