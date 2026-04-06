@@ -642,7 +642,6 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
-            flex-shrink: 0;
         }
 
         .midi-files-header {
@@ -1253,9 +1252,9 @@
             border-radius: 0;
             flex: 1;
             min-height: 0;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-gutter: stable;
         }
 
         .card {
@@ -1342,26 +1341,22 @@
             list-style: none;
             margin-top: 8px;
             overflow-x: hidden;
-            overflow-y: auto;
-            flex: 1;
-            min-height: 0;
             width: 100%;
             box-sizing: border-box;
             padding: 0;
-            scrollbar-gutter: stable;
         }
 
-        .file-list::-webkit-scrollbar {
+        .main-grid > .card::-webkit-scrollbar {
             width: 20px;
         }
 
-        .file-list::-webkit-scrollbar-track {
+        .main-grid > .card::-webkit-scrollbar-track {
             background: linear-gradient(180deg, #f0f2f5 0%, #e4e7eb 100%);
             border-radius: 10px;
             box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.08);
         }
 
-        .file-list::-webkit-scrollbar-thumb {
+        .main-grid > .card::-webkit-scrollbar-thumb {
             background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
             border-radius: 10px;
             border: 2px solid transparent;
@@ -1370,12 +1365,12 @@
             transition: all 0.3s ease;
         }
 
-        .file-list::-webkit-scrollbar-thumb:hover {
+        .main-grid > .card::-webkit-scrollbar-thumb:hover {
             background: linear-gradient(180deg, #5a6fd6 0%, #6a4190 100%);
             box-shadow: 0 3px 10px rgba(102, 126, 234, 0.5);
         }
 
-        .file-list::-webkit-scrollbar-thumb:active {
+        .main-grid > .card::-webkit-scrollbar-thumb:active {
             background: linear-gradient(180deg, #4e5fc2 0%, #5e377e 100%);
         }
 
@@ -1396,7 +1391,6 @@
             font-size: 14px;
             transition: all 0.3s;
             display: none; /* Caché par défaut */
-            flex-shrink: 0;
         }
 
         .drop-zone-root.active {
@@ -1875,7 +1869,6 @@
             gap: 12px;
             box-shadow: none;
             z-index: 10;
-            flex-shrink: 0;
         }
 
         .batch-actions-bar.show {
