@@ -80,6 +80,14 @@ async function deviceList(app) {
           }
         }
 
+        // Enrichir avec le custom_name device-level (prioritaire sur instrument-level)
+        try {
+          const deviceSettings = app.database.getDeviceSettings(device.id);
+          if (deviceSettings && deviceSettings.custom_name) {
+            device.displayName = deviceSettings.custom_name;
+          }
+        } catch (_e) { /* ignore */ }
+
         // Charger tous les instruments/canaux configurés sur ce device
         try {
           const allInstruments = app.database.getInstrumentsByDevice(device.id);
