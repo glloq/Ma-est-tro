@@ -11972,24 +11972,7 @@
             });
 
             // ==================== SECTION BADGE COUNTER ====================
-            const sectionFilterKeys = {
-                properties: ['durationMin', 'durationMax', 'tempoMin', 'tempoMax', 'channelCountMin', 'channelCountMax', 'isOriginal'],
-                instruments: ['instrumentTypes', 'hasDrums', 'hasMelody', 'hasBass', 'gmCategories'],
-                routing: ['routingStatuses', 'playableOnInstruments']
-            };
-
-            function updateSectionBadges() {
-                if (!filterManager) return;
-                const activeKeys = new Set(filterManager.getActiveFilters().map(f => f.key));
-                for (const [section, keys] of Object.entries(sectionFilterKeys)) {
-                    const count = keys.filter(k => activeKeys.has(k)).length;
-                    const badge = document.querySelector(`[data-section-badge="${section}"]`);
-                    if (badge) {
-                        badge.textContent = count;
-                        badge.classList.toggle('visible', count > 0);
-                    }
-                }
-            }
+            // (updateSectionBadges is hoisted to outer scope so removeFilter can call it)
 
             // Duration filter
             const durationMin = document.getElementById('filterDurationMin');
@@ -12293,6 +12276,26 @@
             console.error('[Filters] Init failed:', error);
             log('❌ Erreur initialisation filtres: ' + error.message, 'error');
           }
+        }
+
+        // Section badge counter (hoisted from initAdvancedFilters so removeFilter can access it)
+        const sectionFilterKeys = {
+            properties: ['durationMin', 'durationMax', 'tempoMin', 'tempoMax', 'channelCountMin', 'channelCountMax', 'isOriginal'],
+            instruments: ['instrumentTypes', 'hasDrums', 'hasMelody', 'hasBass', 'gmCategories'],
+            routing: ['routingStatuses', 'playableOnInstruments']
+        };
+
+        function updateSectionBadges() {
+            if (!filterManager) return;
+            const activeKeys = new Set(filterManager.getActiveFilters().map(f => f.key));
+            for (const [section, keys] of Object.entries(sectionFilterKeys)) {
+                const count = keys.filter(k => activeKeys.has(k)).length;
+                const badge = document.querySelector(`[data-section-badge="${section}"]`);
+                if (badge) {
+                    badge.textContent = count;
+                    badge.classList.toggle('visible', count > 0);
+                }
+            }
         }
 
         // Update filter badges display
