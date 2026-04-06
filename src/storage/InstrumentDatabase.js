@@ -4,6 +4,7 @@
 import InstrumentSettingsDB from './InstrumentSettingsDB.js';
 import InstrumentCapabilitiesDB from './InstrumentCapabilitiesDB.js';
 import RoutingPersistenceDB from './RoutingPersistenceDB.js';
+import DeviceSettingsDB from './DeviceSettingsDB.js';
 
 class InstrumentDatabase {
   constructor(db, logger) {
@@ -14,6 +15,7 @@ class InstrumentDatabase {
     this._settings = new InstrumentSettingsDB(db, logger);
     this._capabilities = new InstrumentCapabilitiesDB(db, logger);
     this._routing = new RoutingPersistenceDB(db, logger);
+    this._deviceSettings = new DeviceSettingsDB(db, logger);
   }
 
   // ==================== INSTRUMENT PROFILES ====================
@@ -279,6 +281,13 @@ class InstrumentDatabase {
   deleteRoutingsByFile(...args) { return this._routing.deleteRoutingsByFile(...args); }
   disableVirtualRoutings(...args) { return this._routing.disableVirtualRoutings(...args); }
   enableVirtualRoutings(...args) { return this._routing.enableVirtualRoutings(...args); }
+
+  // ==================== DELEGATED: DEVICE SETTINGS ====================
+  // Full implementations in DeviceSettingsDB.js
+
+  getDeviceSettings(...args) { return this._deviceSettings.getDeviceSettings(...args); }
+  updateDeviceSettings(...args) { return this._deviceSettings.updateDeviceSettings(...args); }
+  ensureDevice(...args) { return this._deviceSettings.ensureDevice(...args); }
 }
 
 export default InstrumentDatabase;

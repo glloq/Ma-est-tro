@@ -495,6 +495,10 @@ class InstrumentManagementPage {
               </div>
             </div>
           </div>
+          <button onclick="event.stopPropagation(); instrumentManagementPageInstance.openDeviceSettings('${esc(deviceId)}', '${esc(deviceName)}')"
+            style="background:none; border:none; cursor:pointer; font-size:18px; padding:4px 8px; border-radius:6px; transition:background 0.2s; flex-shrink:0;"
+            onmouseover="this.style.background='rgba(0,0,0,0.08)'" onmouseout="this.style.background='none'"
+            title="${typeof i18n !== 'undefined' ? (i18n.t('instruments.deviceSettings') || 'Réglages du périphérique') : 'Réglages du périphérique'}">⚙️</button>
         </div>
 
         <!-- Instrument sub-cards -->
@@ -668,6 +672,18 @@ class InstrumentManagementPage {
   /**
    * Édite un instrument
    */
+  openDeviceSettings(deviceId, deviceName) {
+    if (!window.DeviceSettingsModal) {
+      this.showToast('DeviceSettingsModal not loaded', 'error');
+      return;
+    }
+    const modal = new window.DeviceSettingsModal(this.apiClient);
+    modal.show(deviceId, deviceName, () => {
+      // Refresh instrument list after save to reflect custom name changes
+      this.loadInstruments();
+    });
+  }
+
   editInstrument(deviceId, channel) {
     // Utiliser le modal existant showInstrumentSettings
     const instrument = this.instruments.find(inst =>

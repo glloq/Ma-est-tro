@@ -42,6 +42,7 @@ class MidiClockGenerator {
       this._invalidateDeviceCache();
     };
     this.app.eventBus?.on('instrument_settings_changed', this._onSettingsChanged);
+    this.app.eventBus?.on('device_settings_changed', this._onSettingsChanged);
 
     // Invalidate device cache when devices connect/disconnect
     this._onDeviceChanged = () => {
@@ -85,19 +86,15 @@ class MidiClockGenerator {
   }
 
   /**
-   * Check if a device has midi_clock_enabled on at least one channel in the DB.
+   * Check if a device has midi_clock_enabled in the devices table.
    * @param {string} deviceId
    * @returns {boolean}
    */
   _isDeviceClockEnabledInDB(deviceId) {
     if (!this.app.database) return false;
     try {
-      for (let ch = 0; ch < 16; ch++) {
-        const settings = this.app.database.getInstrumentSettings(deviceId, ch);
-        if (settings && settings.midi_clock_enabled) {
-          return true;
-        }
-      }
+      const settings = this.app.database.getDeviceSettings(deviceId);
+      return settings && !!settings.midi_clock_enabled;
     } catch (_e) { /* ignore */ }
     return false;
   }

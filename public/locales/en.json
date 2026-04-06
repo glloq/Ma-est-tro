@@ -513,6 +513,17 @@
         "errorUploadTimeout": "Upload took too long. Please try again.",
         "fileCount": "{count} file(s) — {size}"
     },
+    "deviceSettings": {
+        "title": "Device Settings",
+        "customName": "Custom Name",
+        "customNamePlaceholder": "Leave empty for default name",
+        "customNameHelp": "Default name",
+        "midiClock": "MIDI Clock",
+        "midiClockDescription": "Send MIDI clock signal to this device to synchronize arpeggiators, LFOs and sequencers",
+        "messageRateLimit": "Message Rate Limit",
+        "messageRateLimitDescription": "Maximum MIDI messages per second (0 = unlimited)",
+        "messageRateLimitUnit": "msgs/sec"
+    },
     "instrumentSettings": {
         "title": "Instrument Settings",
         "settingsButton": "Instrument settings",
@@ -1234,6 +1245,7 @@
         "ignoreSplit": "Ignore"
     },
     "instruments": {
+        "deviceSettings": "Device Settings",
         "categories": {
             "piano": "Piano",
             "chromaticPercussion": "Chromatic Percussion",
