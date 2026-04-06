@@ -62,6 +62,8 @@ class MidiEditorModal {
         this._routedGmPrograms = new Map();
         // Preview source: 'gm' (original MIDI file instruments) or 'routed' (routed instrument gm_program)
         this.previewSource = 'gm';
+        // Per-channel playable note sets for routed preview: Map<channel, Set<noteNumber>|null>
+        this._routedPlayableNotes = new Map();
         // Global toggle: auto-show playable notes for all routed channels
         this.showPlayableNotes = false;
 

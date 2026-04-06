@@ -672,17 +672,63 @@
     /**
      * Toggle preview source between GM original and routed instrument
      */
-    MidiEditorRoutingMixin.togglePreviewSource = function() {
+    MidiEditorRoutingMixin.togglePreviewSource = async function() {
         const btn = this.container?.querySelector('#preview-source-toggle');
         if (this.previewSource === 'gm') {
             this.previewSource = 'routed';
             if (btn) { btn.dataset.source = 'routed'; btn.textContent = this.t('midiEditor.routedSource') || '🎸 Routé'; }
+            // Fetch playable note ranges for all routed channels
+            await this._loadRoutedPlayableNotes();
         } else {
             this.previewSource = 'gm';
             if (btn) { btn.dataset.source = 'gm'; btn.textContent = this.t('midiEditor.gmSource') || '🎵 GM'; }
+            this._routedPlayableNotes.clear();
         }
         if (this.synthesizer) this.loadSequenceForPlayback();
         this.log('info', `Preview source switched to: ${this.previewSource}`);
+    }
+
+    /**
+     * Fetch playable note ranges from routed device capabilities for preview filtering.
+     */
+    MidiEditorRoutingMixin._loadRoutedPlayableNotes = async function() {
+        this._routedPlayableNotes.clear();
+        const promises = [];
+        for (const [channel, routedValue] of this.channelRouting) {
+            promises.push((async () => {
+                let deviceId = routedValue;
+                let devChannel = undefined;
+                if (routedValue.includes('::')) {
+                    const parts = routedValue.split('::');
+                    deviceId = parts[0];
+                    devChannel = parseInt(parts[1]);
+                }
+                try {
+                    const params = { deviceId };
+                    if (devChannel !== undefined) params.channel = devChannel;
+                    const response = await this.api.sendCommand('instrument_get_capabilities', params);
+                    if (response && response.capabilities) {
+                        const caps = response.capabilities;
+                        const mode = caps.note_selection_mode || 'range';
+                        let notes = null;
+                        if (mode === 'discrete' && caps.selected_notes && Array.isArray(caps.selected_notes)) {
+                            notes = new Set(caps.selected_notes.map(n => parseInt(n)));
+                        } else if (mode === 'range') {
+                            const minNote = caps.note_range_min != null ? parseInt(caps.note_range_min) : 0;
+                            const maxNote = caps.note_range_max != null ? parseInt(caps.note_range_max) : 127;
+                            if (minNote !== 0 || maxNote !== 127) {
+                                notes = new Set();
+                                for (let n = minNote; n <= maxNote; n++) notes.add(n);
+                            }
+                        }
+                        this._routedPlayableNotes.set(channel, notes);
+                    }
+                } catch (err) {
+                    this.log('warn', `Failed to fetch capabilities for routed channel ${channel}:`, err);
+                }
+            })());
+        }
+        await Promise.all(promises);
     }
 
     /**

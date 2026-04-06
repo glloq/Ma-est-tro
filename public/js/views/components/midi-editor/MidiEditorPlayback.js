@@ -70,9 +70,9 @@ class MidiEditorPlayback {
         const ticksPerBeat = m.ticksPerBeat || 480;
 
         // Filter out non-playable notes when using routed instruments
-        if (m.previewSource === 'routed' && m.channelPlayableHighlights.size > 0) {
+        if (m.previewSource === 'routed' && m._routedPlayableNotes.size > 0) {
             sequence = sequence.filter(note => {
-                const playable = m.channelPlayableHighlights.get(note.c);
+                const playable = m._routedPlayableNotes.get(note.c);
                 if (playable === undefined) return true;
                 if (playable === null) return true;
                 return playable.has(note.n);
@@ -499,8 +499,8 @@ class MidiEditorPlayback {
         }
 
         // Skip notes outside the routed instrument's playable range
-        if (m.previewSource === 'routed' && m.channelPlayableHighlights.has(channel)) {
-            const playable = m.channelPlayableHighlights.get(channel);
+        if (m.previewSource === 'routed' && m._routedPlayableNotes.has(channel)) {
+            const playable = m._routedPlayableNotes.get(channel);
             if (playable !== null && !playable.has(noteNumber)) {
                 return;
             }
