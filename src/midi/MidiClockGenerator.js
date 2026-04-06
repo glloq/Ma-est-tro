@@ -76,11 +76,30 @@ class MidiClockGenerator {
   }
 
   isDeviceClockEnabled(deviceId) {
+    // Runtime override takes priority (set via API)
     if (this._deviceClockEnabled.has(deviceId)) {
       return this._deviceClockEnabled.get(deviceId);
     }
-    // Default: enabled for all devices
-    return true;
+    // Check DB: device has clock enabled if ANY of its channels has midi_clock_enabled = 1
+    return this._isDeviceClockEnabledInDB(deviceId);
+  }
+
+  /**
+   * Check if a device has midi_clock_enabled on at least one channel in the DB.
+   * @param {string} deviceId
+   * @returns {boolean}
+   */
+  _isDeviceClockEnabledInDB(deviceId) {
+    if (!this.app.database) return false;
+    try {
+      for (let ch = 0; ch < 16; ch++) {
+        const settings = this.app.database.getInstrumentSettings(deviceId, ch);
+        if (settings && settings.midi_clock_enabled) {
+          return true;
+        }
+      }
+    } catch (_e) { /* ignore */ }
+    return false;
   }
 
   // ─── Playback lifecycle ─────────────────────────────────────

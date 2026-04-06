@@ -73,6 +73,10 @@ class InstrumentSettingsDB {
           fields.push('instrument_subtype = ?');
           values.push(settings.instrument_subtype);
         }
+        if (settings.midi_clock_enabled !== undefined) {
+          fields.push('midi_clock_enabled = ?');
+          values.push(settings.midi_clock_enabled ? 1 : 0);
+        }
 
         if (fields.length === 0) {
           return existing.id;
@@ -90,8 +94,8 @@ class InstrumentSettingsDB {
         // Insert new entry with correct channel
         const stmt = this.db.prepare(`
           INSERT INTO instruments_latency (
-            id, device_id, channel, name, custom_name, sync_delay, mac_address, usb_serial_number, gm_program, octave_mode, comm_timeout, instrument_type, instrument_subtype
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            id, device_id, channel, name, custom_name, sync_delay, mac_address, usb_serial_number, gm_program, octave_mode, comm_timeout, instrument_type, instrument_subtype, midi_clock_enabled
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
         const id = `${deviceId}_${channel}`;
@@ -108,7 +112,8 @@ class InstrumentSettingsDB {
           settings.octave_mode || 'chromatic',
           settings.comm_timeout !== undefined ? settings.comm_timeout : 5000,
           settings.instrument_type || 'unknown',
-          settings.instrument_subtype || null
+          settings.instrument_subtype || null,
+          settings.midi_clock_enabled ? 1 : 0
         );
 
         return id;

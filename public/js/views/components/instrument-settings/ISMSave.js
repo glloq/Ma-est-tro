@@ -73,6 +73,7 @@
             // New fields
             const octaveMode = (this.$('#octaveModeInput')?.value || '').trim() || 'chromatic';
             const commTimeout = parseInt(this.$('#commTimeout')?.value) || null;
+            const midiClockEnabled = this.$('#midiClockEnabled')?.checked ?? false;
 
             // Save base settings
             await this.api.sendCommand('instrument_update_settings', {
@@ -84,7 +85,8 @@
                 name: this.device.name,
                 gm_program: gmProgram,
                 octave_mode: octaveMode,
-                comm_timeout: commTimeout
+                comm_timeout: commTimeout,
+                midi_clock_enabled: midiClockEnabled
             });
 
             // String instrument path
