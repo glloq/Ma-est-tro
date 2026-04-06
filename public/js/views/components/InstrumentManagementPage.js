@@ -161,6 +161,7 @@ class InstrumentManagementPage {
           status: 2,
           _deviceId: device.id,
           _deviceName: device.name,
+          _deviceDisplayName: device.displayName || null,
           _deviceType: device.type,
           _deviceAddress: device.address,
         };
@@ -252,6 +253,20 @@ class InstrumentManagementPage {
         if (normalizedName) seenNormalizedNames.add(normalizedName);
       }
 
+      // Pre-fetch device-level custom names for disconnected devices
+      const deviceCustomNames = new Map();
+      const disconnectedDeviceIds = new Set(
+        registeredInstruments
+          .filter(r => !matchedDbIds.has(r.id) && !connectedIds.has(r.device_id))
+          .map(r => r.device_id)
+      );
+      for (const did of disconnectedDeviceIds) {
+        try {
+          const resp = await this.apiClient.sendCommand('device_get_settings', { deviceId: did });
+          if (resp?.settings?.custom_name) deviceCustomNames.set(did, resp.settings.custom_name);
+        } catch (_e) { /* ignore */ }
+      }
+
       for (const registered of registeredInstruments) {
         // Déjà associé à un device connecté
         if (matchedDbIds.has(registered.id)) continue;
@@ -272,6 +287,7 @@ class InstrumentManagementPage {
         registered.id = registered.device_id;
         registered._deviceId = registered.device_id;
         registered._deviceName = registered.name || registered.device_id;
+        registered._deviceDisplayName = deviceCustomNames.get(registered.device_id) || null;
         registered.connected = false;
         registered.status = 0; // disconnected
         registered.channel = registered.channel !== undefined ? registered.channel : 0;
@@ -467,7 +483,8 @@ class InstrumentManagementPage {
     const first = instruments[0];
     const esc = this._escapeHtml;
     const deviceId = first._deviceId || first.device_id || first.id;
-    const deviceName = first._deviceName || first.name || deviceId;
+    const rawDeviceName = first._deviceName || first.name || deviceId;
+    const deviceName = first._deviceDisplayName || rawDeviceName;
     const isConnected = first.status === 2 || first.connected;
     const isVirtual = this.isVirtualInstrument(first);
     const connType = this.getConnectionTypeInfo(first);
