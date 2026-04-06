@@ -584,6 +584,15 @@
                 <input type="number" id="commTimeout" value="${commTimeout}" min="100" max="30000" step="100">
                 <span class="ism-form-hint">${this.t('instrumentSettings.commTimeoutHelp') || 'Délai d\'attente maximal pour une réponse (en ms)'}</span>
             </div>
+
+            <div class="ism-form-group">
+                <label>${this.t('instrumentSettings.midiClockEnabled') || 'Horloge MIDI'}</label>
+                <label class="ism-checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="midiClockEnabled" ${settings.midi_clock_enabled ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+                    <span style="font-size: 14px;">${this.t('instrumentSettings.enableMidiClock') || 'Envoyer l\'horloge MIDI à cet instrument'}</span>
+                </label>
+                <span class="ism-form-hint">${this.t('instrumentSettings.midiClockEnabledHelp') || 'Synchroniser les arpégiateurs, LFOs et séquenceurs de cet instrument avec le tempo de lecture'}</span>
+            </div>
         `;
     };
 

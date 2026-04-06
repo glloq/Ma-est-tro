@@ -54,6 +54,11 @@ async function instrumentUpdateSettings(app, data) {
     }
   }
 
+  // Validate midi_clock_enabled (boolean)
+  if (data.midi_clock_enabled !== undefined && data.midi_clock_enabled !== null) {
+    data.midi_clock_enabled = !!data.midi_clock_enabled;
+  }
+
   // Validate comm_timeout
   if (data.comm_timeout !== undefined && data.comm_timeout !== null) {
     const timeout = parseInt(data.comm_timeout);
@@ -71,7 +76,8 @@ async function instrumentUpdateSettings(app, data) {
     name: data.name,
     gm_program: data.gm_program,
     octave_mode: data.octave_mode,
-    comm_timeout: data.comm_timeout
+    comm_timeout: data.comm_timeout,
+    midi_clock_enabled: data.midi_clock_enabled
   });
 
   // Notify routing/playback systems to invalidate cached compensation values
