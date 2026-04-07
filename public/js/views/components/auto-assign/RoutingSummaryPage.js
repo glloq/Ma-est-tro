@@ -969,7 +969,7 @@ class RoutingSummaryPage {
     // Instrument chip selection
     modal.querySelectorAll('.aa-instbar-btn[data-instrument-id]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const instId = parseInt(btn.dataset.instrumentId);
+        const instId = btn.dataset.instrumentId;
         const ch = btn.dataset.channel;
         this._selectInstrument(ch, instId, channelKeys);
       });
