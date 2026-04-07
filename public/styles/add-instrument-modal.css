@@ -125,16 +125,15 @@
   transform: scale(1.03);
 }
 
-/* Used channels: still selectable (for split mode) but visually distinct */
+/* Used channels: disabled, not selectable */
 .add-inst-channel-btn.used {
   background: var(--bg-secondary, #f1f5f9);
-  opacity: 0.85;
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
-.add-inst-channel-btn.used:hover {
-  opacity: 1;
-  background: rgba(102, 126, 234, 0.06);
-  border-style: dashed;
+.add-inst-channel-btn.used .add-inst-ch-name {
+  font-style: italic;
 }
 
 /* Drum channel distinction */
