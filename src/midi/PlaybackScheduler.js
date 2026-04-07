@@ -177,10 +177,10 @@ class PlaybackScheduler {
     const eventTime = event.time;
     const delay = Math.max(0, eventTime - currentPosition);
 
-    // For note events, pass the note to routing for split support
+    // For note events, pass the note and event type to routing for split support
     const isNoteEvent = event.type === 'noteOn' || event.type === 'noteOff';
     const note = isNoteEvent ? (event.note ?? null) : null;
-    const routing = getOutputForChannel(event.channel, note);
+    const routing = getOutputForChannel(event.channel, note, isNoteEvent ? event.type : null);
 
     if (!routing) {
       if (!this._unroutedChannels.has(event.channel)) {
@@ -253,7 +253,7 @@ class PlaybackScheduler {
 
     const isNoteEvent = event.type === 'noteOn' || event.type === 'noteOff';
     const note = isNoteEvent ? (event.note ?? null) : null;
-    const routing = getOutputForChannel(event.channel, note);
+    const routing = getOutputForChannel(event.channel, note, isNoteEvent ? event.type : null);
 
     // Handle broadcast for split routing (non-note events go to all segments)
     if (Array.isArray(routing)) {

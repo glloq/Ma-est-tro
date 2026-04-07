@@ -616,7 +616,8 @@ async function applyAssignments(app, data) {
             split_mode: (assignment.splitMode === 'fullCoverage' ? 'range' : assignment.splitMode) || 'range',
             split_note_min: seg.noteRange?.min ?? null,
             split_note_max: seg.noteRange?.max ?? null,
-            split_polyphony_share: seg.polyphonyShare ?? null
+            split_polyphony_share: seg.polyphonyShare ?? null,
+            overlap_strategy: assignment.overlapStrategy || null
           };
         });
 

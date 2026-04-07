@@ -4273,6 +4273,41 @@ body.dark-mode .aa-channel-card.skipped {
   min-width: 24px;
 }
 
+/* Smart split suggestion */
+.rs-split-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin: 6px 0;
+  background: rgba(102, 126, 234, 0.06);
+  border: 1px dashed rgba(102, 126, 234, 0.3);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.rs-split-suggestion-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.rs-split-suggestion-text {
+  flex: 1;
+  color: var(--text-secondary, #4b5563);
+}
+
+.rs-btn-try-split {
+  white-space: nowrap;
+  background: var(--accent-primary, #667eea);
+  color: white;
+  border: none;
+  font-weight: 600;
+}
+
+.rs-btn-try-split:hover {
+  opacity: 0.9;
+}
+
 /* Overlap warning */
 .rs-overlap-warning {
   background: rgba(243, 156, 18, 0.08);
@@ -4292,6 +4327,25 @@ body.dark-mode .aa-channel-card.skipped {
 .rs-overlap-btns .btn {
   font-size: 10px;
   padding: 2px 6px;
+}
+
+/* Active overlap resolution button */
+.rs-overlap-btn-active {
+  background: var(--accent-primary, #667eea) !important;
+  color: white !important;
+  border-color: var(--accent-primary, #667eea) !important;
+}
+
+/* Shared overlap state — visual feedback */
+.rs-overlap-shared {
+  background: rgba(102, 126, 234, 0.08);
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+.rs-overlap-shared-label {
+  font-style: italic;
+  color: var(--accent-primary, #667eea);
+  font-size: 10px;
 }
 
 /* Split actions row */
@@ -4734,12 +4788,25 @@ body.dark-mode .aa-channel-card.skipped {
 }
 
 .rs-transpose-value {
-  display: inline-block;
-  width: 50px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 50px;
   text-align: center;
   font-size: 13px;
   font-weight: 600;
   font-family: monospace;
+  justify-content: center;
+}
+
+.rs-transpose-playable {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--accent-primary, #667eea);
+  background: rgba(102, 126, 234, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: sans-serif;
 }
 
 /* Low score toggle */

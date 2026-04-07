@@ -104,6 +104,8 @@
 
     // Clear previous routing state before repopulating
             this.channelRouting.clear();
+            if (!this._splitChannelNames) this._splitChannelNames = new Map();
+            this._splitChannelNames.clear();
 
             if (result && result.routings && result.routings.length > 0) {
     // Build a lookup of multi-instrument devices
@@ -111,6 +113,21 @@
                 for (const device of this.connectedDevices) {
                     if (device._multiInstrument) {
                         multiInstrumentDevices.add(device.id);
+                    }
+                }
+
+    // Detect split channels (multiple routings for same channel)
+                const channelRoutingCount = {};
+                const channelInstrumentNames = {};
+                for (const routing of result.routings) {
+                    if (routing.channel == null) continue;
+                    channelRoutingCount[routing.channel] = (channelRoutingCount[routing.channel] || 0) + 1;
+                    if (!channelInstrumentNames[routing.channel]) channelInstrumentNames[routing.channel] = [];
+                    if (routing.instrument_name) channelInstrumentNames[routing.channel].push(routing.instrument_name);
+                }
+                for (const [ch, count] of Object.entries(channelRoutingCount)) {
+                    if (count > 1) {
+                        this._splitChannelNames.set(parseInt(ch), channelInstrumentNames[ch] || []);
                     }
                 }
 

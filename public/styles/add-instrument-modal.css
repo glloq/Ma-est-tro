@@ -74,13 +74,17 @@
 /* ========== Channel selection grid (for "+" add flow) ========== */
 .add-inst-channel-grid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
   padding: 8px 0;
 }
 
 .add-inst-channel-btn {
-  padding: 10px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 6px;
   border: 2px solid var(--border-color, #e2e8f0);
   border-radius: 8px;
   background: var(--bg-primary, white);
@@ -90,25 +94,58 @@
   cursor: pointer;
   transition: background-color 0.15s ease, transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   text-align: center;
+  min-height: 52px;
 }
 
-.add-inst-channel-btn:hover:not([disabled]) {
+.add-inst-ch-number {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.add-inst-ch-name {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-muted, #6b7280);
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.add-inst-ch-free {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-muted, #94a3b8);
+  font-style: italic;
+}
+
+.add-inst-channel-btn:hover {
   border-color: var(--accent-primary, #667eea);
   background: rgba(102, 126, 234, 0.08);
-  transform: scale(1.05);
+  transform: scale(1.03);
 }
 
+/* Used channels: still selectable (for split mode) but visually distinct */
 .add-inst-channel-btn.used {
   background: var(--bg-secondary, #f1f5f9);
-  color: var(--text-muted, #94a3b8);
-  border-color: var(--border-color, #e2e8f0);
-  cursor: not-allowed;
-  opacity: 0.4;
-  text-decoration: line-through;
+  opacity: 0.85;
+}
+
+.add-inst-channel-btn.used:hover {
+  opacity: 1;
+  background: rgba(102, 126, 234, 0.06);
+  border-style: dashed;
+}
+
+/* Drum channel distinction */
+.add-inst-channel-btn.drum {
+  border-width: 2px;
+  border-style: double;
+  background: linear-gradient(135deg, var(--bg-primary, white) 0%, rgba(245, 158, 11, 0.06) 100%);
 }/* Responsive */
 @media (max-width: 480px) {
   .add-inst-channel-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
   .inst-tab-name {
     display: none;
@@ -153,7 +190,7 @@ body.dark-mode .add-inst-channel-btn {
     color: var(--text-primary);
 }
 
-body.dark-mode .add-inst-channel-btn:hover:not([disabled]) {
+body.dark-mode .add-inst-channel-btn:hover {
     border-color: var(--accent-primary, #667eea);
     background: rgba(102, 126, 234, 0.15);
 }
@@ -162,4 +199,8 @@ body.dark-mode .add-inst-channel-btn.used {
     background: var(--bg-secondary);
     color: var(--text-muted);
     border-color: var(--border-color);
+}
+
+body.dark-mode .add-inst-channel-btn.drum {
+    background: linear-gradient(135deg, var(--bg-primary) 0%, rgba(245, 158, 11, 0.1) 100%);
 }

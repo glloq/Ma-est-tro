@@ -530,20 +530,31 @@ class ChannelSplitter {
     const { instA, instB, trA, trB, aMin, aMax, bMin, bMax } = bestPair;
 
     // Build segment note ranges: split at the boundary where one instrument ends and the other begins
-    // Each note goes to whichever instrument covers it; for overlapping notes, assign to instrument A
-    let splitPoint = chMin;
-    for (const note of [...channelNotes].sort((a, b) => a - b)) {
+    // Each note goes to whichever instrument covers it; for overlapping notes, assign to instrument A (low) and B (high)
+    const sortedNotes = [...channelNotes].sort((a, b) => a - b);
+    let splitPoint = chMax + 1; // default: all notes go to A
+    let foundBoundary = false;
+    for (const note of sortedNotes) {
       const inA = note >= aMin && note <= aMax;
       const inB = note >= bMin && note <= bMax;
       if (inA && !inB) continue; // clearly A
-      if (!inA && inB) { splitPoint = note; break; } // boundary
-      // Both cover it → let A handle low notes
+      if (!inA && inB) { splitPoint = note; foundBoundary = true; break; } // boundary: first note only in B
+      // Both cover it → continue looking for a clear boundary
+    }
+    // If no clear boundary found (full overlap), split at midpoint of overlapping channel notes
+    if (!foundBoundary) {
+      const overlapNotes = sortedNotes.filter(n => n >= aMin && n <= aMax && n >= bMin && n <= bMax);
+      if (overlapNotes.length > 0) {
+        const midIdx = Math.ceil(overlapNotes.length / 2);
+        splitPoint = overlapNotes[midIdx] ?? (chMax + 1);
+      }
     }
 
     // Determine effective ranges for each segment based on actual channel notes
+    // Use splitPoint to cleanly divide: A gets notes below splitPoint, B gets notes at/above splitPoint
     const notesArr = [...channelNotes].sort((a, b) => a - b);
-    const segANotes = notesArr.filter(n => n >= aMin && n <= aMax);
-    const segBNotes = notesArr.filter(n => n >= bMin && n <= bMax && !(n >= aMin && n <= aMax && segANotes.length > 0));
+    const segANotes = notesArr.filter(n => n >= aMin && n <= aMax && n < splitPoint);
+    const segBNotes = notesArr.filter(n => n >= bMin && n <= bMax && n >= splitPoint);
     // If some notes only in B, or assign notes to minimize overlap
     const segAMin = segANotes.length > 0 ? Math.min(...segANotes) : chMin;
     const segAMax = segANotes.length > 0 ? Math.max(...segANotes) : chMin;

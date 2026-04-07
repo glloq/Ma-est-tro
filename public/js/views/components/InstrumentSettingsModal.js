@@ -431,6 +431,40 @@ class InstrumentSettingsModal extends BaseModal {
     // ========== TABS BAR ==========
 
     _renderTabsBar() {
+        // Count instruments per channel and detect note range overlaps
+        const channelCounts = {};
+        const channelRanges = {};
+        for (const tab of this.instrumentTabs) {
+            const ch = tab.channel;
+            channelCounts[ch] = (channelCounts[ch] || 0) + 1;
+            if (tab.settings) {
+                if (!channelRanges[ch]) channelRanges[ch] = [];
+                channelRanges[ch].push({
+                    min: tab.settings.note_range_min ?? 0,
+                    max: tab.settings.note_range_max ?? 127
+                });
+            }
+        }
+        // Check for overlaps between tabs of the same device (different channels)
+        const channelHasOverlap = {};
+        const channels = Object.keys(channelRanges).map(Number);
+        for (let i = 0; i < channels.length; i++) {
+            for (let j = i + 1; j < channels.length; j++) {
+                const rangesA = channelRanges[channels[i]];
+                const rangesB = channelRanges[channels[j]];
+                if (rangesA && rangesB) {
+                    for (const rA of rangesA) {
+                        for (const rB of rangesB) {
+                            if (rA.min <= rB.max && rB.min <= rA.max) {
+                                channelHasOverlap[channels[i]] = true;
+                                channelHasOverlap[channels[j]] = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         let html = '<div class="ism-tabs-bar">';
         for (const tab of this.instrumentTabs) {
             const ch = tab.channel;
@@ -438,9 +472,13 @@ class InstrumentSettingsModal extends BaseModal {
             const color = InstrumentSettingsModal.CHANNEL_COLORS[ch % 16];
             const name = tab.settings.custom_name || tab.settings.name || `Ch ${ch + 1}`;
             const isDrum = (ch === 9);
-            html += `<button type="button" class="ism-tab ${isActive ? 'active' : ''}" data-channel="${ch}" style="${isActive ? `border-bottom-color: ${color}; color: ${color}; background: ${color}1a;` : ''}">
+            const count = channelCounts[ch] || 1;
+            const hasOverlap = channelHasOverlap[ch] || false;
+            html += `<button type="button" class="ism-tab ${isActive ? 'active' : ''} ${hasOverlap ? 'has-overlap' : ''}" data-channel="${ch}" style="${isActive ? `border-bottom-color: ${color}; color: ${color}; background: ${color}1a;` : ''}">
                 <span class="ism-tab-ch" style="background: ${color};">Ch ${ch + 1}${isDrum ? ' DR' : ''}</span>
                 <span class="ism-tab-name">${this.escape(name)}</span>
+                ${count > 1 ? `<span class="ism-tab-badge" title="${count} instruments sur ce canal">\u00d7${count}</span>` : ''}
+                ${hasOverlap ? '<span class="ism-tab-overlap-dot" title="Chevauchement de notes avec un autre canal"></span>' : ''}
             </button>`;
         }
         html += `<button type="button" class="ism-tab ism-tab-add" title="${this.t('instrumentManagement.addInstrument') || 'Ajouter un instrument'}">
