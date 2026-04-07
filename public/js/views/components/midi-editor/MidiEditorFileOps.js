@@ -758,7 +758,7 @@ class MidiEditorFileOps {
         }
 
         const routingPage = new window.RoutingSummaryPage(m.api);
-        routingPage.show(m.currentFile, m.currentFileName || '', m.channels || [], (result) => {
+        routingPage.show(m.currentFile, m.currentFilename || '', m.channels || [], (result) => {
             if (result && window.eventBus) {
                 window.eventBus.emit('routing:changed', result);
             }

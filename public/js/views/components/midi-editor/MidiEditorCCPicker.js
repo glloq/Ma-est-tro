@@ -1171,7 +1171,7 @@
         }
 
         const routingPage = new window.RoutingSummaryPage(this.api);
-        routingPage.show(this.currentFile, this.currentFileName || '', this.channels || [], (result) => {
+        routingPage.show(this.currentFile, this.currentFilename || '', this.channels || [], (result) => {
             if (result && window.eventBus) {
                 window.eventBus.emit('routing:changed', result);
             }
