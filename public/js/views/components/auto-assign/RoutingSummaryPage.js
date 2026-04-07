@@ -872,51 +872,99 @@ class RoutingSummaryPage {
   _renderRangeBars(channel, analysis, assignment) {
     if (!analysis?.noteRange || analysis.noteRange.min == null) return '';
 
+    const ch = String(channel);
     const chMin = analysis.noteRange.min;
     const chMax = analysis.noteRange.max;
     const isSplit = this.splitChannels.has(channel);
 
-    // Compute global range for display
-    let globalMin = chMin, globalMax = chMax;
-    const splitColors = ['#4A90D9', '#E67E22', '#27AE60', '#9B59B6'];
+    // Transposition from adaptation settings
+    const adapt = this.adaptationSettings[ch] || {};
+    const semitones = (adapt.pitchShift !== 'none') ? (adapt.transpositionSemitones || 0) : 0;
+    const trMin = Math.max(0, Math.min(127, chMin + semitones));
+    const trMax = Math.max(0, Math.min(127, chMax + semitones));
 
+    // Compute global range for display (include all bars)
+    let globalMin = chMin, globalMax = chMax;
+    if (semitones !== 0) {
+      globalMin = Math.min(globalMin, trMin);
+      globalMax = Math.max(globalMax, trMax);
+    }
+
+    const splitColors = ['#4A90D9', '#E67E22', '#27AE60', '#9B59B6'];
     let instBars = '';
+    let legendItems = '';
+    const instName = assignment?.customName || assignment?.instrumentName || _t('autoAssign.instrumentRange');
+
     if (isSplit && this.splitAssignments[channel]) {
       const segs = this.splitAssignments[channel].segments || [];
       for (const seg of segs) {
         if (seg.fullRange) { globalMin = Math.min(globalMin, seg.fullRange.min); globalMax = Math.max(globalMax, seg.fullRange.max); }
         if (seg.noteRange) { globalMin = Math.min(globalMin, seg.noteRange.min); globalMax = Math.max(globalMax, seg.noteRange.max); }
       }
+      const span = globalMax - globalMin || 1;
       instBars = segs.map((seg, i) => {
         const sMin = seg.fullRange?.min ?? seg.noteRange?.min ?? 0;
         const sMax = seg.fullRange?.max ?? seg.noteRange?.max ?? 127;
-        const left = Math.round(((sMin - globalMin) / (globalMax - globalMin || 1)) * 100);
-        const width = Math.max(2, Math.round(((sMax - sMin) / (globalMax - globalMin || 1)) * 100));
+        const left = Math.round(((sMin - globalMin) / span) * 100);
+        const width = Math.max(2, Math.round(((sMax - sMin) / span) * 100));
         const color = splitColors[i % splitColors.length];
         const name = seg.instrumentName || `Inst ${i + 1}`;
         return `<div class="rs-range-bar rs-range-inst-bar" style="left:${left}%;width:${width}%;background:${color}33;border:1px solid ${color}" title="${escapeHtml(name)}: ${midiNoteToName(sMin)}-${midiNoteToName(sMax)}"></div>`;
       }).join('');
+      // Legend for split segments
+      legendItems = segs.map((seg, i) => {
+        const color = splitColors[i % splitColors.length];
+        const name = seg.instrumentName || `Inst ${i + 1}`;
+        return `<span class="rs-range-legend-item"><span class="rs-range-legend-key" style="background:${color}80;border:1px solid ${color}"></span>${escapeHtml(name)}</span>`;
+      }).join('');
     } else if (assignment?.noteRangeMin != null) {
       globalMin = Math.min(globalMin, assignment.noteRangeMin);
       globalMax = Math.max(globalMax, assignment.noteRangeMax);
-      const iLeft = Math.round(((assignment.noteRangeMin - globalMin) / (globalMax - globalMin || 1)) * 100);
-      const iWidth = Math.max(2, Math.round(((assignment.noteRangeMax - assignment.noteRangeMin) / (globalMax - globalMin || 1)) * 100));
-      instBars = `<div class="rs-range-bar rs-range-inst-bar" style="left:${iLeft}%;width:${iWidth}%" title="${_t('autoAssign.instrumentRange')}: ${midiNoteToName(assignment.noteRangeMin)}-${midiNoteToName(assignment.noteRangeMax)}"></div>`;
+      const span = globalMax - globalMin || 1;
+      const iLeft = Math.round(((assignment.noteRangeMin - globalMin) / span) * 100);
+      const iWidth = Math.max(2, Math.round(((assignment.noteRangeMax - assignment.noteRangeMin) / span) * 100));
+      instBars = `<div class="rs-range-bar rs-range-inst-bar" style="left:${iLeft}%;width:${iWidth}%" title="${escapeHtml(instName)}: ${midiNoteToName(assignment.noteRangeMin)}-${midiNoteToName(assignment.noteRangeMax)}"></div>`;
+      legendItems = `<span class="rs-range-legend-item"><span class="rs-range-legend-key rs-range-legend-inst"></span>${escapeHtml(instName)}</span>`;
     }
 
-    const chLeft = Math.round(((chMin - globalMin) / (globalMax - globalMin || 1)) * 100);
-    const chWidth = Math.max(2, Math.round(((chMax - chMin) / (globalMax - globalMin || 1)) * 100));
+    const span = globalMax - globalMin || 1;
+    const chLeft = Math.round(((chMin - globalMin) / span) * 100);
+    const chWidth = Math.max(2, Math.round(((chMax - chMin) / span) * 100));
+
+    // Transposed bar (only if transposition active)
+    let transposedBar = '';
+    if (semitones !== 0) {
+      const trLeft = Math.round(((trMin - globalMin) / span) * 100);
+      const trWidth = Math.max(2, Math.round(((trMax - trMin) / span) * 100));
+      transposedBar = `<div class="rs-range-bar rs-range-transposed-bar" style="left:${trLeft}%;width:${trWidth}%" title="${_t('autoAssign.transposition')}: ${midiNoteToName(trMin)}-${midiNoteToName(trMax)} (${semitones > 0 ? '+' : ''}${semitones}st)"></div>`;
+    }
+
+    // Labels
+    const centerLabel = semitones !== 0
+      ? `${midiNoteToName(chMin)}-${midiNoteToName(chMax)} \u2192 ${midiNoteToName(trMin)}-${midiNoteToName(trMax)}`
+      : `${midiNoteToName(chMin)}-${midiNoteToName(chMax)}`;
+
+    // Legend
+    const transposedLegend = semitones !== 0
+      ? `<span class="rs-range-legend-item"><span class="rs-range-legend-key rs-range-legend-transposed"></span>${_t('autoAssign.transposition')} (${semitones > 0 ? '+' : ''}${semitones}st)</span>`
+      : '';
 
     return `
       <div class="rs-range-wide">
         <div class="rs-range-labels">
           <span>${midiNoteToName(globalMin)}</span>
-          <span>${_t('autoAssign.channelNotes')}: ${midiNoteToName(chMin)}-${midiNoteToName(chMax)}</span>
+          <span>${centerLabel}</span>
           <span>${midiNoteToName(globalMax)}</span>
         </div>
         <div class="rs-range-track">
           ${instBars}
+          ${transposedBar}
           <div class="rs-range-bar rs-range-ch-bar" style="left:${chLeft}%;width:${chWidth}%" title="${_t('autoAssign.channelNotes')}: ${midiNoteToName(chMin)}-${midiNoteToName(chMax)}"></div>
+        </div>
+        <div class="rs-range-legend">
+          <span class="rs-range-legend-item"><span class="rs-range-legend-key rs-range-legend-ch"></span>${_t('autoAssign.channelNotes')}</span>
+          ${transposedLegend}
+          ${legendItems}
         </div>
       </div>
     `;

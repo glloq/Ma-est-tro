@@ -3937,6 +3937,42 @@ body.dark-mode .aa-channel-card.skipped {
   z-index: 1;
 }
 
+.rs-range-transposed-bar {
+  background: rgba(243, 156, 18, 0.35);
+  border: 1px dashed #f39c12;
+  z-index: 2;
+  top: 2px;
+  height: 12px;
+}
+
+/* Range bars legend */
+.rs-range-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--text-secondary, #888);
+}
+
+.rs-range-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.rs-range-legend-key {
+  display: inline-block;
+  width: 10px;
+  height: 6px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.rs-range-legend-ch { background: var(--accent-color, #4285f4); opacity: 0.7; }
+.rs-range-legend-transposed { background: #f39c12; opacity: 0.7; }
+.rs-range-legend-inst { background: rgba(39, 174, 96, 0.5); }
+
 /* Skip/Unskip buttons */
 .rs-btn-skip, .rs-btn-unskip {
   width: 24px;
