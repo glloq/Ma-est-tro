@@ -6,13 +6,13 @@ Interface intuitive, user-friendly, compatible avec le systeme de routage intell
 
 ---
 
-## Phase 1 : Panneau Routage Simple (gauche)
+## Phase 1 : Panneau Routage Simple (gauche) -- COMPLETE
 - [x] Creation roadmap et push initial
-- [ ] Dropdown instrument par canal (selection directe dans le tableau)
-- [ ] Score + nombre de notes jouables affiches par canal
-- [ ] Bouton "routage intelligent" par canal
-- [ ] Retirer badge SP, afficher instruments assignes si decoupe appliquee
-- [ ] Toggle adaptation automatique canal MIDI en haut du modal
+- [x] Dropdown instrument par canal (selection directe dans le tableau)
+- [x] Score + nombre de notes jouables affiches par canal
+- [x] Bouton "routage intelligent" par canal
+- [x] Retirer badge SP, afficher instruments assignes si decoupe appliquee
+- [x] Toggle adaptation automatique canal MIDI en haut du modal
 
 ## Phase 2 : Routage Intelligent (panneau droit)
 - [ ] Div gauche : info canal + liste instruments si multi-instruments
@@ -42,4 +42,4 @@ Interface intuitive, user-friendly, compatible avec le systeme de routage intell
 
 ---
 
-**Derniere mise a jour** : Phase 1 en cours
+**Derniere mise a jour** : Phase 1 complete, Phase 2 en cours

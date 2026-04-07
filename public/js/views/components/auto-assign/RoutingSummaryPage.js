@@ -126,6 +126,7 @@ class RoutingSummaryPage {
     this.loading = true;
     this.adaptationSettings = {}; // Per-channel adaptation overrides
     this.showLowScores = {}; // Per-channel toggle for low score instruments
+    this.autoAdaptation = true; // Toggle for automatic MIDI channel adaptation
 
     // Preview state
     this.midiData = null;
@@ -376,6 +377,9 @@ class RoutingSummaryPage {
               <span class="rs-confidence ${getScoreClass(this.confidenceScore)}">
                 ${this.confidenceScore}/100 — ${getScoreLabel(this.confidenceScore)}
               </span>
+              <button class="rs-adapt-toggle ${this.autoAdaptation ? 'active' : ''}" id="rsAutoAdaptToggle" title="${_t('routingSummary.autoAdaptation') || 'Adaptation automatique canal MIDI'}">
+                ${this.autoAdaptation ? '&#9889; Auto' : '&#9889; Manuel'}
+              </button>
               <span class="rs-channel-count">
                 ${_t('autoAssign.channelsWillBeAssigned', { active: activeCount, total: channelKeys.length })}
               </span>
@@ -417,6 +421,59 @@ class RoutingSummaryPage {
   }
 
   // ============================================================================
+  // Helpers
+  // ============================================================================
+
+  /**
+   * Compute playable notes ratio for a channel's assignment.
+   * @returns {{ playable: number, total: number } | null}
+   */
+  _computePlayableNotes(ch) {
+    const assignment = this.selectedAssignments[String(ch)];
+    const analysis = this.channelAnalyses[parseInt(ch)] || assignment?.channelAnalysis;
+    if (!assignment || !analysis?.noteDistribution) return null;
+
+    const usedNotes = Object.keys(analysis.noteDistribution).map(Number);
+    const totalNotes = usedNotes.length;
+    if (totalNotes === 0) return null;
+
+    const instMin = assignment.noteRangeMin ?? 0;
+    const instMax = assignment.noteRangeMax ?? 127;
+    const adapt = this.adaptationSettings[String(ch)] || {};
+    const semi = (this.autoAdaptation && adapt.pitchShift !== 'none') ? (adapt.transpositionSemitones || 0) : 0;
+    const playable = usedNotes.filter(n => {
+      const shifted = n + semi;
+      return shifted >= instMin && shifted <= instMax;
+    }).length;
+    return { playable, total: totalNotes };
+  }
+
+  /**
+   * Build <option> list for instrument dropdown in summary table.
+   */
+  _buildInstrumentOptions(ch, assignment, isSkipped) {
+    const options = this.suggestions[String(ch)] || [];
+    const lowOptions = this.lowScoreSuggestions[String(ch)] || [];
+    const allOptions = [...options, ...lowOptions];
+    const currentId = assignment?.instrumentId || '';
+
+    if (allOptions.length === 0) {
+      return `<option value="">\u2014</option>`;
+    }
+
+    let html = '';
+    for (const opt of allOptions) {
+      const inst = opt.instrument;
+      const score = opt.compatibility?.score || 0;
+      const name = inst.custom_name || inst.name || '?';
+      const displayName = name.length > MAX_INST_NAME ? name.slice(0, MAX_INST_NAME - 1) + '\u2026' : name;
+      const selected = inst.id === currentId ? 'selected' : '';
+      html += `<option value="${inst.id}" ${selected}>${escapeHtml(displayName)} (${score})</option>`;
+    }
+    return html;
+  }
+
+  // ============================================================================
   // Summary table (left panel)
   // ============================================================================
 
@@ -434,45 +491,48 @@ class RoutingSummaryPage {
         ? _t('autoAssign.drums')
         : (getGmProgramName(analysis?.primaryProgram) || '\u2014');
 
-      // Assigned instrument(s)
-      let assignedName;
-      if (isSplit && this.splitAssignments[channel]) {
-        const segments = this.splitAssignments[channel].segments || [];
-        assignedName = segments.map(seg => seg.instrumentName || 'Instrument').join(' + ');
-      } else {
-        assignedName = assignment?.customName || assignment?.instrumentName || '\u2014';
-      }
-
-      // Status
-      const hasSplitProposal = !!this.splitProposals[channel];
-      let statusIcon, statusClass, statusLabel;
+      // Status class
+      let statusClass;
       if (isSkipped) {
-        statusIcon = '\u2014';
         statusClass = 'skipped';
-        statusLabel = _t('autoAssign.overviewStatusSkipped');
-      } else if (isSplit) {
-        statusIcon = '&#8645;';
+      } else if (isSplit || score >= 70) {
         statusClass = 'ok';
-        statusLabel = _t('autoAssign.splitProposed');
-      } else if (score >= 70) {
-        statusIcon = '&#10003;';
-        statusClass = 'ok';
-        statusLabel = _t('autoAssign.overviewStatusOk');
       } else {
-        statusIcon = '!';
         statusClass = 'warning';
-        statusLabel = _t('autoAssign.overviewStatusWarning');
       }
-
-      const splitBadge = (hasSplitProposal && !isSplit && !isSkipped)
-        ? '<span class="rs-split-badge" title="' + _t('autoAssign.splitProposed') + '">SP</span>'
-        : (isSplit ? '<span class="rs-split-badge active">SP</span>' : '');
 
       const typeIcon = analysis?.estimatedType ? getTypeIcon(analysis.estimatedType) : '';
       const isSelected = this.selectedChannel === channel;
 
-      // Score dot indicator (compact visual feedback in table)
+      // Score dot indicator
       const scoreDotClass = isSkipped ? 'rs-dot-skip' : (score >= 70 ? 'rs-dot-ok' : score >= 40 ? 'rs-dot-warn' : 'rs-dot-poor');
+
+      // Assigned column: dropdown for single instrument, text for split
+      let assignedHTML;
+      if (isSkipped) {
+        assignedHTML = `<span class="rs-skipped">${_t('autoAssign.overviewStatusSkipped')}</span>`;
+      } else if (isSplit && this.splitAssignments[channel]) {
+        // Show split instrument names (no SP badge)
+        const segments = this.splitAssignments[channel].segments || [];
+        const splitNames = segments.map((seg, i) => {
+          const color = ['#4A90D9', '#E67E22', '#27AE60', '#9B59B6'][i % 4];
+          const name = seg.instrumentName || 'Instrument';
+          const displayName = name.length > MAX_INST_NAME ? name.slice(0, MAX_INST_NAME - 1) + '\u2026' : name;
+          return `<span class="rs-split-inst-name" style="color:${color}" title="${escapeHtml(name)}">${escapeHtml(displayName)}</span>`;
+        }).join(' + ');
+        assignedHTML = `<div class="rs-split-instruments">${splitNames}</div>`;
+      } else {
+        // Dropdown for single instrument selection
+        assignedHTML = `<select class="rs-instrument-select" data-channel="${ch}">${this._buildInstrumentOptions(ch, assignment, isSkipped)}</select>`;
+      }
+
+      // Score + playable notes
+      let scoreHTML = '';
+      if (!isSkipped) {
+        const playableInfo = this._computePlayableNotes(ch);
+        const playableText = playableInfo ? `<span class="rs-playable-count">${playableInfo.playable}/${playableInfo.total}</span>` : '';
+        scoreHTML = `<span class="rs-score-value ${getScoreClass(score)}">${score}</span>${playableText}`;
+      }
 
       return `
         <tr class="rs-row ${isSkipped ? 'skipped' : ''} ${statusClass} ${isSelected ? 'selected' : ''}"
@@ -480,11 +540,13 @@ class RoutingSummaryPage {
             aria-label="${_t('autoAssign.channel')} ${channel + 1}">
           <td class="rs-col-ch">
             <span class="rs-score-dot ${scoreDotClass}"></span>
-            ${typeIcon} Ch ${channel + 1}${channel === 9 ? ' <span class="rs-drum-badge">DR</span>' : ''} ${splitBadge}
+            ${typeIcon} Ch ${channel + 1}${channel === 9 ? ' <span class="rs-drum-badge">DR</span>' : ''}
           </td>
           <td class="rs-col-original">${escapeHtml(gmName)}</td>
-          <td class="rs-col-assigned">${isSkipped ? '<span class="rs-skipped">' + statusLabel + '</span>' : escapeHtml(assignedName)}${isSplit ? renderSplitBar(this.splitAssignments[channel], analysis) : ''}</td>
+          <td class="rs-col-assigned">${assignedHTML}</td>
+          <td class="rs-col-score">${scoreHTML}</td>
           <td class="rs-col-actions">
+            <button class="btn btn-sm rs-btn-intelligent" data-channel="${channel}" title="${_t('routingSummary.openIntelligent') || 'Routage intelligent'}">&#9881;</button>
             ${!isSkipped ? `<button class="btn btn-sm rs-btn-skip" data-channel="${channel}" title="${_t('routingSummary.skip')}">&times;</button>` : `<button class="btn btn-sm rs-btn-unskip" data-channel="${channel}" title="${_t('routingSummary.unskip')}">+</button>`}
           </td>
         </tr>
@@ -499,6 +561,7 @@ class RoutingSummaryPage {
               <th>${_t('autoAssign.overviewChannel')}</th>
               <th>${_t('autoAssign.overviewOriginal')}</th>
               <th>${_t('autoAssign.overviewAssigned')}</th>
+              <th>${_t('routingSummary.score') || 'Score'}</th>
               <th></th>
             </tr>
           </thead>
@@ -568,22 +631,8 @@ class RoutingSummaryPage {
     const assignedName = assignment?.customName || assignment?.instrumentName || null;
 
     // Compute playable notes ratio
-    let playableInfo = '';
-    if (assignment && analysis?.noteDistribution) {
-      const usedNotes = Object.keys(analysis.noteDistribution).map(Number);
-      const totalNotes = usedNotes.length;
-      if (totalNotes > 0) {
-        const instMin = assignment.noteRangeMin ?? 0;
-        const instMax = assignment.noteRangeMax ?? 127;
-        const adapt = this.adaptationSettings[ch] || {};
-        const semi = (adapt.pitchShift !== 'none') ? (adapt.transpositionSemitones || 0) : 0;
-        const playable = usedNotes.filter(n => {
-          const shifted = n + semi;
-          return shifted >= instMin && shifted <= instMax;
-        }).length;
-        playableInfo = `(${playable}/${totalNotes})`;
-      }
-    }
+    const playableData = this._computePlayableNotes(ch);
+    const playableInfo = playableData ? `(${playableData.playable}/${playableData.total})` : '';
 
     // Adaptation controls (pitch shift + OOR handling)
     let adaptHTML = '';
@@ -1066,11 +1115,41 @@ class RoutingSummaryPage {
       });
     }
 
+    // Auto-adaptation toggle
+    const adaptToggle = modal.querySelector('#rsAutoAdaptToggle');
+    if (adaptToggle) {
+      adaptToggle.addEventListener('click', () => {
+        this.autoAdaptation = !this.autoAdaptation;
+        this._refreshUI(channelKeys);
+      });
+    }
+
+    // Instrument dropdown in summary table
+    modal.querySelectorAll('.rs-instrument-select').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        e.stopPropagation(); // Don't trigger row click
+        const ch = sel.dataset.channel;
+        const instId = sel.value;
+        if (instId) this._selectInstrument(ch, instId, channelKeys);
+      });
+      // Prevent row click when interacting with dropdown
+      sel.addEventListener('click', (e) => e.stopPropagation());
+    });
+
+    // Intelligent routing button per channel
+    modal.querySelectorAll('.rs-btn-intelligent').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const ch = parseInt(btn.dataset.channel);
+        this._selectChannel(ch);
+      });
+    });
+
     // Row clicks — select channel for detail
     modal.querySelectorAll('.rs-row').forEach(row => {
       row.addEventListener('click', (e) => {
-        // Don't trigger on button clicks
-        if (e.target.closest('.rs-btn-skip, .rs-btn-unskip')) return;
+        // Don't trigger on button/select clicks
+        if (e.target.closest('.rs-btn-skip, .rs-btn-unskip, .rs-btn-intelligent, .rs-instrument-select')) return;
         const ch = parseInt(row.dataset.channel);
         this._selectChannel(ch);
       });
@@ -1546,15 +1625,18 @@ class RoutingSummaryPage {
       if (!assignment || !assignment.deviceId) continue;
 
       const adapt = this.adaptationSettings[ch] || {};
+      const semitones = this.autoAdaptation ? (adapt.transpositionSemitones || 0) : 0;
+      const oorSuppress = this.autoAdaptation ? (adapt.oorHandling === 'suppress') : false;
+      const oorCompress = this.autoAdaptation ? (adapt.oorHandling === 'compress') : false;
       assignments[ch] = {
         deviceId: assignment.deviceId,
         instrumentId: assignment.instrumentId,
         instrumentChannel: assignment.instrumentChannel,
         instrumentName: assignment.customName || assignment.instrumentName,
-        transposition: { semitones: adapt.transpositionSemitones || 0 },
+        transposition: { semitones },
         noteRemapping: assignment.noteRemapping || null,
-        suppressOutOfRange: adapt.oorHandling === 'suppress',
-        noteCompression: adapt.oorHandling === 'compress',
+        suppressOutOfRange: oorSuppress,
+        noteCompression: oorCompress,
         gmProgram: assignment.gmProgram,
         noteRangeMin: assignment.noteRangeMin,
         noteRangeMax: assignment.noteRangeMax,
@@ -1571,12 +1653,13 @@ class RoutingSummaryPage {
       if (!splitData?.segments?.length) continue;
 
       const adapt = this.adaptationSettings[ch] || {};
+      const splitSemitones = this.autoAdaptation ? (adapt.transpositionSemitones || 0) : 0;
       assignments[ch] = {
         split: true,
         splitMode: splitData.type || 'range',
-        transposition: { semitones: adapt.transpositionSemitones || 0 },
-        suppressOutOfRange: adapt.oorHandling === 'suppress',
-        noteCompression: adapt.oorHandling === 'compress',
+        transposition: { semitones: splitSemitones },
+        suppressOutOfRange: this.autoAdaptation ? (adapt.oorHandling === 'suppress') : false,
+        noteCompression: this.autoAdaptation ? (adapt.oorHandling === 'compress') : false,
         segments: splitData.segments.map(seg => ({
           deviceId: seg.deviceId,
           instrumentId: seg.instrumentId,
