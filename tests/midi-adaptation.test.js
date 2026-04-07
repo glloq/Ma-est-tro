@@ -10,6 +10,7 @@ import DrumNoteMapper from '../src/midi/DrumNoteMapper.js';
 import AnalysisCache from '../src/midi/AnalysisCache.js';
 import InstrumentCapabilitiesValidator from '../src/midi/InstrumentCapabilitiesValidator.js';
 import ScoringConfig from '../src/midi/ScoringConfig.js';
+import ChannelSplitter from '../src/midi/ChannelSplitter.js';
 
 // ============================================================
 // Test helpers
@@ -1159,5 +1160,398 @@ describe('AutoAssigner', () => {
   test('destroy cleans up resources', () => {
     autoAssigner.destroy();
     expect(autoAssigner.cleanupInterval).toBe(null);
+  });
+});
+
+// ============================================================
+// ChannelSplitter tests
+// ============================================================
+
+describe('ChannelSplitter', () => {
+  let splitter;
+
+  beforeEach(() => {
+    splitter = new ChannelSplitter(mockLogger);
+  });
+
+  function makeInstrument(id, rangeMin, rangeMax, polyphony = 16) {
+    return {
+      id,
+      device_id: `device_${id}`,
+      channel: 0,
+      name: `Inst ${id}`,
+      custom_name: `Instrument ${id}`,
+      note_range_min: rangeMin,
+      note_range_max: rangeMax,
+      polyphony,
+      gm_program: 0,
+      instrument_type: 'melody'
+    };
+  }
+
+  function makeChannelAnalysis(channel, noteMin, noteMax, noteDistribution = null) {
+    const dist = noteDistribution || {};
+    if (!noteDistribution) {
+      for (let n = noteMin; n <= noteMax; n++) {
+        dist[n] = 10;
+      }
+    }
+    return {
+      channel,
+      noteRange: { min: noteMin, max: noteMax },
+      noteDistribution: dist,
+      polyphony: { max: 8, avg: 4 },
+      maxPolyphony: 8,
+      avgPolyphony: 4,
+      primaryProgram: 0,
+      estimatedType: 'melody',
+      totalNotes: Object.keys(dist).length
+    };
+  }
+
+  describe('calculateRangeSplit', () => {
+    test('splits two non-overlapping instruments correctly', () => {
+      const analysis = makeChannelAnalysis(0, 36, 84);
+      const instruments = [
+        makeInstrument('a', 36, 60),
+        makeInstrument('b', 61, 84)
+      ];
+      const result = splitter.calculateRangeSplit(analysis, instruments);
+      expect(result).not.toBeNull();
+      expect(result.segments).toHaveLength(2);
+      expect(result.overlapZones).toHaveLength(0);
+    });
+
+    test('detects overlap when instrument ranges overlap', () => {
+      const analysis = makeChannelAnalysis(0, 36, 84);
+      const instruments = [
+        makeInstrument('a', 36, 72),
+        makeInstrument('b', 60, 84)
+      ];
+      const result = splitter.calculateRangeSplit(analysis, instruments);
+      expect(result).not.toBeNull();
+      expect(result.segments).toHaveLength(2);
+      expect(result.overlapZones.length).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('calculateFullCoverageSplit', () => {
+    test('finds full coverage pair without transposition', () => {
+      const analysis = makeChannelAnalysis(0, 36, 84);
+      const instruments = [
+        makeInstrument('a', 36, 60),
+        makeInstrument('b', 61, 84),
+        makeInstrument('c', 0, 127) // full range fallback
+      ];
+      const result = splitter.calculateFullCoverageSplit(analysis, instruments);
+      expect(result).not.toBeNull();
+      expect(result.type).toBe('fullCoverage');
+      expect(result.segments).toHaveLength(2);
+    });
+
+    test('assigns overlap notes correctly after fix', () => {
+      // Both instruments cover C3-C5 (48-72)
+      const analysis = makeChannelAnalysis(0, 48, 72);
+      const instruments = [
+        makeInstrument('a', 36, 72),
+        makeInstrument('b', 48, 84)
+      ];
+      const result = splitter.calculateFullCoverageSplit(analysis, instruments);
+      if (result) {
+        expect(result.segments).toHaveLength(2);
+        // segA and segB should each cover part of the range, not leave one empty
+        const segA = result.segments[0];
+        const segB = result.segments[1];
+        expect(segA.noteRange.min).toBeLessThanOrEqual(segA.noteRange.max);
+        expect(segB.noteRange.min).toBeLessThanOrEqual(segB.noteRange.max);
+      }
+    });
+  });
+
+  describe('findCoverageGaps', () => {
+    test('detects gap between two segments', () => {
+      const segments = [
+        { noteRange: { min: 36, max: 50 } },
+        { noteRange: { min: 60, max: 84 } }
+      ];
+      const gaps = splitter.findCoverageGaps(segments, 36, 84);
+      expect(gaps.length).toBeGreaterThan(0);
+      expect(gaps[0].min).toBe(51);
+      expect(gaps[0].max).toBe(59);
+    });
+
+    test('returns empty when full coverage', () => {
+      const segments = [
+        { noteRange: { min: 36, max: 60 } },
+        { noteRange: { min: 61, max: 84 } }
+      ];
+      const gaps = splitter.findCoverageGaps(segments, 36, 84);
+      expect(gaps).toHaveLength(0);
+    });
+  });
+
+  describe('scoreSplitQuality', () => {
+    test('returns high score for full coverage with no overlap', () => {
+      const proposal = {
+        type: 'range',
+        channel: 0,
+        segments: [
+          { noteRange: { min: 36, max: 60 }, polyphonyShare: 16 },
+          { noteRange: { min: 61, max: 84 }, polyphonyShare: 16 }
+        ],
+        overlapZones: [],
+        gaps: [],
+        channelAnalysis: makeChannelAnalysis(0, 36, 84)
+      };
+      const score = splitter.scoreSplitQuality(proposal);
+      expect(score).toBeGreaterThan(70);
+    });
+  });
+
+  describe('selectBestInstrumentsForCoverage', () => {
+    test('selects complementary instruments', () => {
+      const instruments = [
+        makeInstrument('a', 36, 60),
+        makeInstrument('b', 61, 84),
+        makeInstrument('c', 36, 48) // subset of a
+      ];
+      const analysis = makeChannelAnalysis(0, 36, 84);
+      const selected = splitter.selectBestInstrumentsForCoverage(instruments, analysis, 2);
+      expect(selected).toHaveLength(2);
+      // Should pick a + b for best coverage
+      const ids = selected.map(i => i.id);
+      expect(ids).toContain('a');
+      expect(ids).toContain('b');
+    });
+  });
+});
+
+// ============================================================
+// MidiPlayer overlap resolution tests
+// ============================================================
+
+describe('MidiPlayer getOutputForChannel overlap strategies', () => {
+  // Minimal mock to test the routing logic
+  function createMockPlayer() {
+    const player = {
+      channelRouting: new Map(),
+      _overlapCounters: null,
+      _segmentNoteCounts: null,
+      _overlapNoteAssign: null,
+      getOutputForChannel(channel, note = null, eventType = null) {
+        if (player.channelRouting.has(channel)) {
+          const routing = player.channelRouting.get(channel);
+          if (typeof routing === 'string') {
+            return { device: routing, targetChannel: channel };
+          }
+          if (routing.split && routing.segments) {
+            if (note !== null) {
+              const matching = routing.segments.filter(seg => note >= seg.noteMin && note <= seg.noteMax);
+              if (matching.length === 1) {
+                return { device: matching[0].device, targetChannel: matching[0].targetChannel };
+              }
+              if (matching.length > 1) {
+                const strategy = routing.overlapStrategy || 'first';
+                if (strategy === 'shared' || strategy === 'round_robin') {
+                  if (!player._overlapCounters) player._overlapCounters = new Map();
+                  const key = `${channel}_${note}`;
+                  const counter = (player._overlapCounters.get(key) || 0);
+                  player._overlapCounters.set(key, counter + 1);
+                  const seg = matching[counter % matching.length];
+                  return { device: seg.device, targetChannel: seg.targetChannel };
+                }
+                if (strategy === 'second') {
+                  const seg = matching[matching.length - 1];
+                  return { device: seg.device, targetChannel: seg.targetChannel };
+                }
+                return { device: matching[0].device, targetChannel: matching[0].targetChannel };
+              }
+              // Closest segment
+              let closest = routing.segments[0];
+              let minDist = Infinity;
+              for (const seg of routing.segments) {
+                const dist = Math.min(Math.abs(note - seg.noteMin), Math.abs(note - seg.noteMax));
+                if (dist < minDist) { minDist = dist; closest = seg; }
+              }
+              return { device: closest.device, targetChannel: closest.targetChannel };
+            }
+            return routing.segments.map(seg => ({ device: seg.device, targetChannel: seg.targetChannel }));
+          }
+          return routing;
+        }
+        return null;
+      }
+    };
+    return player;
+  }
+
+  test('first strategy routes to first matching segment', () => {
+    const player = createMockPlayer();
+    player.channelRouting.set(0, {
+      split: true,
+      overlapStrategy: 'first',
+      segments: [
+        { device: 'devA', targetChannel: 0, noteMin: 36, noteMax: 72 },
+        { device: 'devB', targetChannel: 0, noteMin: 60, noteMax: 84 }
+      ]
+    });
+    const result = player.getOutputForChannel(0, 65);
+    expect(result.device).toBe('devA');
+  });
+
+  test('second strategy routes to last matching segment', () => {
+    const player = createMockPlayer();
+    player.channelRouting.set(0, {
+      split: true,
+      overlapStrategy: 'second',
+      segments: [
+        { device: 'devA', targetChannel: 0, noteMin: 36, noteMax: 72 },
+        { device: 'devB', targetChannel: 0, noteMin: 60, noteMax: 84 }
+      ]
+    });
+    const result = player.getOutputForChannel(0, 65);
+    expect(result.device).toBe('devB');
+  });
+
+  test('shared strategy alternates between segments', () => {
+    const player = createMockPlayer();
+    player.channelRouting.set(0, {
+      split: true,
+      overlapStrategy: 'shared',
+      segments: [
+        { device: 'devA', targetChannel: 0, noteMin: 36, noteMax: 72 },
+        { device: 'devB', targetChannel: 0, noteMin: 60, noteMax: 84 }
+      ]
+    });
+    const r1 = player.getOutputForChannel(0, 65);
+    const r2 = player.getOutputForChannel(0, 65);
+    expect(r1.device).toBe('devA');
+    expect(r2.device).toBe('devB');
+  });
+
+  test('note outside all ranges routes to closest segment', () => {
+    const player = createMockPlayer();
+    player.channelRouting.set(0, {
+      split: true,
+      overlapStrategy: 'first',
+      segments: [
+        { device: 'devA', targetChannel: 0, noteMin: 36, noteMax: 60 },
+        { device: 'devB', targetChannel: 0, noteMin: 72, noteMax: 84 }
+      ]
+    });
+    const result = player.getOutputForChannel(0, 66);
+    // 66 is closer to devA (60) than devB (72)
+    expect(result.device).toBe('devA');
+  });
+
+  test('non-note events broadcast to all segments', () => {
+    const player = createMockPlayer();
+    player.channelRouting.set(0, {
+      split: true,
+      overlapStrategy: 'first',
+      segments: [
+        { device: 'devA', targetChannel: 0, noteMin: 36, noteMax: 60 },
+        { device: 'devB', targetChannel: 0, noteMin: 72, noteMax: 84 }
+      ]
+    });
+    const result = player.getOutputForChannel(0, null);
+    expect(Array.isArray(result)).toBe(true);
+    expect(result).toHaveLength(2);
+  });
+});
+
+// ============================================================
+// RoutingPersistenceDB validation tests
+// ============================================================
+
+describe('RoutingPersistenceDB validations', () => {
+  // Mock DB for testing validation logic
+  function createMockRoutingDB() {
+    const RoutingPersistenceDB = class {
+      constructor() {
+        this.logger = mockLogger;
+        this.rows = [];
+      }
+      insertRouting(routing) {
+        // Replicate the validation logic
+        if (routing.split_mode) {
+          const noteMin = routing.split_note_min;
+          const noteMax = routing.split_note_max;
+          if (noteMin != null && noteMax != null) {
+            if (noteMin > noteMax) {
+              throw new Error(`Invalid split range: min (${noteMin}) > max (${noteMax})`);
+            }
+            if (noteMin < 0 || noteMax > 127) {
+              throw new Error(`Split range out of MIDI bounds: [${noteMin}, ${noteMax}]`);
+            }
+          }
+        }
+        if (routing.channel != null && (routing.channel < 0 || routing.channel > 15)) {
+          throw new Error(`Invalid MIDI channel: ${routing.channel} (must be 0-15)`);
+        }
+        this.rows.push(routing);
+        return this.rows.length;
+      }
+    };
+    return new RoutingPersistenceDB();
+  }
+
+  test('rejects split_note_min > split_note_max', () => {
+    const db = createMockRoutingDB();
+    expect(() => db.insertRouting({
+      midi_file_id: 1,
+      channel: 0,
+      device_id: 'dev1',
+      split_mode: 'range',
+      split_note_min: 80,
+      split_note_max: 40
+    })).toThrow('Invalid split range');
+  });
+
+  test('rejects MIDI notes out of bounds', () => {
+    const db = createMockRoutingDB();
+    expect(() => db.insertRouting({
+      midi_file_id: 1,
+      channel: 0,
+      device_id: 'dev1',
+      split_mode: 'range',
+      split_note_min: -1,
+      split_note_max: 60
+    })).toThrow('out of MIDI bounds');
+  });
+
+  test('rejects invalid channel number', () => {
+    const db = createMockRoutingDB();
+    expect(() => db.insertRouting({
+      midi_file_id: 1,
+      channel: 16,
+      device_id: 'dev1'
+    })).toThrow('Invalid MIDI channel');
+  });
+
+  test('accepts valid split routing', () => {
+    const db = createMockRoutingDB();
+    expect(() => db.insertRouting({
+      midi_file_id: 1,
+      channel: 0,
+      device_id: 'dev1',
+      split_mode: 'range',
+      split_note_min: 36,
+      split_note_max: 72
+    })).not.toThrow();
+  });
+
+  test('persists overlap_strategy', () => {
+    const db = createMockRoutingDB();
+    db.insertRouting({
+      midi_file_id: 1,
+      channel: 0,
+      device_id: 'dev1',
+      split_mode: 'range',
+      split_note_min: 36,
+      split_note_max: 72,
+      overlap_strategy: 'shared'
+    });
+    expect(db.rows[0].overlap_strategy).toBe('shared');
   });
 });

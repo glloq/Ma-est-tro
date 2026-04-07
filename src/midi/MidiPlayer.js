@@ -495,7 +495,7 @@ class MidiPlayer {
 
     const newIndex = this.scheduler.tick(
       state,
-      (channel) => this.getOutputForChannel(channel),
+      (channel, note, eventType) => this.getOutputForChannel(channel, note, eventType),
       {
         onStop: () => this.stop(),
         onSeek: (pos) => this.seek(pos),
@@ -565,6 +565,9 @@ class MidiPlayer {
     this.position = 0;
     this.currentEventIndex = 0;
     this._lastBroadcastPosition = undefined;
+    this._overlapCounters = null;
+    this._segmentNoteCounts = null;
+    this._overlapNoteAssign = null;
     this.scheduler.stopScheduler();
     this.sendAllNotesOff();
 
@@ -717,11 +720,15 @@ class MidiPlayer {
   /**
    * Set split routing: one channel → multiple instruments based on note ranges
    * @param {number} channel - Source MIDI channel
-   * @param {Array<Object>} segments - [{ device_id, target_channel, split_note_min, split_note_max }]
+   * @param {Array<Object>} segments - [{ device_id, target_channel, split_note_min, split_note_max, overlap_strategy }]
    */
   setChannelSplitRouting(channel, segments) {
+    // Extract overlap_strategy from first segment that has one (shared across the split)
+    const overlapStrategy = segments.find(s => s.overlap_strategy)?.overlap_strategy || 'first';
+
     const splitRouting = {
       split: true,
+      overlapStrategy,
       segments: segments.map(seg => ({
         device: seg.device_id,
         targetChannel: seg.target_channel !== undefined ? seg.target_channel : channel,
@@ -770,9 +777,10 @@ class MidiPlayer {
    * Get output routing for a channel, optionally considering the note for split routing
    * @param {number} channel
    * @param {number|null} [note=null] - MIDI note number (for split routing)
+   * @param {string|null} [eventType=null] - 'noteOn' or 'noteOff' (for least_loaded tracking)
    * @returns {Object|Array|null} - { device, targetChannel } or array for broadcast, or null if muted
    */
-  getOutputForChannel(channel, note = null) {
+  getOutputForChannel(channel, note = null, eventType = null) {
     if (this.channelRouting.has(channel)) {
       const routing = this.channelRouting.get(channel);
 
@@ -784,12 +792,69 @@ class MidiPlayer {
       // Split routing: route based on note
       if (routing.split && routing.segments) {
         if (note !== null) {
-          // Find segment covering this note
-          for (const seg of routing.segments) {
-            if (note >= seg.noteMin && note <= seg.noteMax) {
+          // Find all segments covering this note
+          const matching = routing.segments.filter(seg => note >= seg.noteMin && note <= seg.noteMax);
+
+          if (matching.length === 1) {
+            return { device: matching[0].device, targetChannel: matching[0].targetChannel };
+          }
+
+          if (matching.length > 1) {
+            // Multiple segments cover this note — apply overlap strategy
+            const strategy = routing.overlapStrategy || 'first';
+
+            if (strategy === 'shared' || strategy === 'round_robin') {
+              // Round-robin: alternate between matching segments using a per-channel counter
+              if (!this._overlapCounters) this._overlapCounters = new Map();
+              const key = `${channel}_${note}`;
+              const counter = (this._overlapCounters.get(key) || 0);
+              this._overlapCounters.set(key, counter + 1);
+              const seg = matching[counter % matching.length];
               return { device: seg.device, targetChannel: seg.targetChannel };
             }
+
+            if (strategy === 'second') {
+              // Prefer last matching segment
+              const seg = matching[matching.length - 1];
+              return { device: seg.device, targetChannel: seg.targetChannel };
+            }
+
+            if (strategy === 'least_loaded') {
+              // Route to segment with fewer active notes
+              if (!this._segmentNoteCounts) this._segmentNoteCounts = new Map();
+              // On noteOff: decrement and route to same segment as the noteOn did
+              if (eventType === 'noteOff') {
+                const noteKey = `${channel}_${note}_seg`;
+                const assignedIdx = this._overlapNoteAssign?.get(noteKey);
+                if (assignedIdx !== undefined && matching[assignedIdx]) {
+                  const seg = matching[assignedIdx];
+                  const segKey = `${seg.device}_${seg.targetChannel}`;
+                  const count = this._segmentNoteCounts.get(segKey) || 0;
+                  if (count > 0) this._segmentNoteCounts.set(segKey, count - 1);
+                  this._overlapNoteAssign.delete(noteKey);
+                  return { device: seg.device, targetChannel: seg.targetChannel };
+                }
+              }
+              // On noteOn: pick least loaded and track assignment
+              let bestSeg = matching[0];
+              let bestIdx = 0;
+              let bestCount = Infinity;
+              for (let i = 0; i < matching.length; i++) {
+                const segKey = `${matching[i].device}_${matching[i].targetChannel}`;
+                const count = this._segmentNoteCounts.get(segKey) || 0;
+                if (count < bestCount) { bestCount = count; bestSeg = matching[i]; bestIdx = i; }
+              }
+              const segKey = `${bestSeg.device}_${bestSeg.targetChannel}`;
+              this._segmentNoteCounts.set(segKey, (this._segmentNoteCounts.get(segKey) || 0) + 1);
+              if (!this._overlapNoteAssign) this._overlapNoteAssign = new Map();
+              this._overlapNoteAssign.set(`${channel}_${note}_seg`, bestIdx);
+              return { device: bestSeg.device, targetChannel: bestSeg.targetChannel };
+            }
+
+            // Default: 'first' — first matching segment wins
+            return { device: matching[0].device, targetChannel: matching[0].targetChannel };
           }
+
           // Note outside all ranges: route to closest segment
           let closest = routing.segments[0];
           let minDist = Infinity;

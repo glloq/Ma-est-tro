@@ -681,18 +681,23 @@ class RoutingSummaryPage {
               </label>
             </div>
           </div>
-          ${pitchShift === 'manual' ? `
+          ${pitchShift === 'manual' ? (() => {
+            const playableWithTranspose = this._computePlayableNotes(channel);
+            const playableLabel = playableWithTranspose
+              ? `<span class="rs-transpose-playable">${playableWithTranspose.playable}/${playableWithTranspose.total}</span>`
+              : '';
+            return `
             <div class="rs-adapt-row rs-transpose-row">
               <span class="rs-adapt-label">${_t('autoAssign.transposition')}</span>
               <div class="rs-transpose-controls">
                 <button class="btn btn-sm rs-transpose-btn" data-channel="${channel}" data-delta="-12">-12</button>
                 <button class="btn btn-sm rs-transpose-btn" data-channel="${channel}" data-delta="-1">-1</button>
-                <span class="rs-transpose-value">${semitones > 0 ? '+' : ''}${semitones}st</span>
+                <span class="rs-transpose-value">${semitones > 0 ? '+' : ''}${semitones}st ${playableLabel}</span>
                 <button class="btn btn-sm rs-transpose-btn" data-channel="${channel}" data-delta="1">+1</button>
                 <button class="btn btn-sm rs-transpose-btn" data-channel="${channel}" data-delta="12">+12</button>
               </div>
-            </div>
-          ` : ''}
+            </div>`;
+          })() : ''}
           <div class="rs-adapt-row">
             <span class="rs-adapt-label">${_t('autoAssign.oorTitle')}</span>
             <div class="rs-adapt-options">
@@ -773,16 +778,19 @@ class RoutingSummaryPage {
 
       // Detect overlaps between segments
       const overlaps = this._detectOverlaps(segments);
+      const currentStrategy = splitData?.overlapStrategy || null;
       const overlapsHTML = overlaps.map((ov, idx) => {
         const nameA = segments[ov.segA]?.instrumentName || `Inst ${ov.segA + 1}`;
         const nameB = segments[ov.segB]?.instrumentName || `Inst ${ov.segB + 1}`;
+        const sharedLabel = _t('autoAssign.splitMixed') || 'Les deux';
+        const sharedActive = currentStrategy === 'shared' ? ' rs-overlap-btn-active' : '';
         return `
-          <div class="rs-overlap-warning">
-            <span>\u26A0 ${midiNoteToName(ov.min)}-${midiNoteToName(ov.max)}: ${escapeHtml(nameA)} / ${escapeHtml(nameB)}</span>
+          <div class="rs-overlap-warning ${currentStrategy === 'shared' ? 'rs-overlap-shared' : ''}">
+            <span>${currentStrategy === 'shared' ? '🔀' : '\u26A0'} ${midiNoteToName(ov.min)}-${midiNoteToName(ov.max)}: ${escapeHtml(nameA)} / ${escapeHtml(nameB)}${currentStrategy === 'shared' ? ' <em class="rs-overlap-shared-label">(' + sharedLabel + ')</em>' : ''}</span>
             <div class="rs-overlap-btns">
               <button class="btn btn-sm rs-overlap-resolve-btn" data-channel="${channel}" data-overlap="${idx}" data-strategy="first">${escapeHtml(nameA)}</button>
               <button class="btn btn-sm rs-overlap-resolve-btn" data-channel="${channel}" data-overlap="${idx}" data-strategy="second">${escapeHtml(nameB)}</button>
-              <button class="btn btn-sm rs-overlap-resolve-btn" data-channel="${channel}" data-overlap="${idx}" data-strategy="shared">${_t('autoAssign.splitMixed')}</button>
+              <button class="btn btn-sm rs-overlap-resolve-btn${sharedActive}" data-channel="${channel}" data-overlap="${idx}" data-strategy="shared">${sharedLabel}</button>
             </div>
           </div>
         `;
@@ -866,6 +874,21 @@ class RoutingSummaryPage {
       addInstrumentHTML = `<button class="btn btn-sm rs-btn-add-multi" data-channel="${channel}">+ ${_t('routingSummary.addInstrument') || 'Ajouter instrument'}</button>`;
     }
 
+    // Smart split suggestion — show when score is low and a split proposal exists
+    let splitSuggestionHTML = '';
+    if (!isSplit && !isSkipped && score > 0 && score < 60 && hasSplitProposal) {
+      const proposal = this.splitProposals[channel];
+      const estimatedQuality = proposal?.quality ? Math.round(proposal.quality) : null;
+      const qualityLabel = estimatedQuality ? ` (${_t('autoAssign.estimatedScore') || 'score estimé'}: ${estimatedQuality})` : '';
+      splitSuggestionHTML = `
+        <div class="rs-split-suggestion">
+          <span class="rs-split-suggestion-icon">💡</span>
+          <span class="rs-split-suggestion-text">${_t('autoAssign.splitSuggestion') || 'Score faible — essayez le mode multi-instrument'}${qualityLabel}</span>
+          <button class="btn btn-sm rs-btn-try-split" data-channel="${channel}">${_t('autoAssign.trySplit') || 'Essayer'}</button>
+        </div>
+      `;
+    }
+
     return `
       <div class="rs-detail-content">
         <div class="rs-detail-header">
@@ -884,6 +907,7 @@ class RoutingSummaryPage {
         ${rangeBarsHTML}
         ${instrumentChipsHTML}
         ${adaptHTML}
+        ${splitSuggestionHTML}
         ${splitHTML}
         ${addInstrumentHTML}
       </div>
@@ -1245,6 +1269,19 @@ class RoutingSummaryPage {
       });
     });
 
+    // Smart split suggestion — "try split" button
+    modal.querySelectorAll('.rs-btn-try-split').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ch = parseInt(btn.dataset.channel);
+        const proposal = this.splitProposals[ch];
+        if (proposal) {
+          this.splitChannels.add(ch);
+          this.splitAssignments[ch] = { ...proposal };
+          this._refreshUI(channelKeys);
+        }
+      });
+    });
+
     // Instrument chip selection
     modal.querySelectorAll('.aa-instbar-btn[data-instrument-id]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1593,6 +1630,10 @@ class RoutingSummaryPage {
     }
     // 'shared' = keep overlapping (round-robin at playback), no range change
 
+    // Store the overlap strategy on the split data for persistence
+    data.overlapStrategy = strategy;
+    this.splitEdited[channel] = true;
+
     this._refreshUI(channelKeys);
   }
 
@@ -1752,6 +1793,7 @@ class RoutingSummaryPage {
       assignments[ch] = {
         split: true,
         splitMode: splitData.type || 'range',
+        overlapStrategy: splitData.overlapStrategy || null,
         transposition: { semitones: splitSemitones },
         suppressOutOfRange: this.autoAdaptation ? (adapt.oorHandling === 'suppress') : false,
         noteCompression: this.autoAdaptation ? (adapt.oorHandling === 'compress') : false,

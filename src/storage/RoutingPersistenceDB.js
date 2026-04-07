@@ -14,11 +14,29 @@ class RoutingPersistenceDB {
 
   /**
    * Insert or update a channel routing for a MIDI file
-   * @param {Object} routing - { midi_file_id, channel, device_id, instrument_name, compatibility_score, transposition_applied, auto_assigned, assignment_reason, note_remapping, enabled, split_mode, split_note_min, split_note_max, split_polyphony_share }
+   * @param {Object} routing - { midi_file_id, channel, device_id, instrument_name, compatibility_score, transposition_applied, auto_assigned, assignment_reason, note_remapping, enabled, split_mode, split_note_min, split_note_max, split_polyphony_share, overlap_strategy }
    * @returns {number} routing id
    */
   insertRouting(routing) {
     try {
+      // Validate split segment ranges
+      if (routing.split_mode) {
+        const noteMin = routing.split_note_min;
+        const noteMax = routing.split_note_max;
+        if (noteMin != null && noteMax != null) {
+          if (noteMin > noteMax) {
+            throw new Error(`Invalid split range: min (${noteMin}) > max (${noteMax})`);
+          }
+          if (noteMin < 0 || noteMax > 127) {
+            throw new Error(`Split range out of MIDI bounds: [${noteMin}, ${noteMax}]`);
+          }
+        }
+      }
+      // Validate channel
+      if (routing.channel != null && (routing.channel < 0 || routing.channel > 15)) {
+        throw new Error(`Invalid MIDI channel: ${routing.channel} (must be 0-15)`);
+      }
+
       // For split routings, use a different INSERT (no ON CONFLICT since multiple rows per channel)
       if (routing.split_mode) {
         const stmt = this.db.prepare(`
@@ -26,8 +44,9 @@ class RoutingPersistenceDB {
             (midi_file_id, track_id, channel, device_id, instrument_name,
              compatibility_score, transposition_applied, auto_assigned,
              assignment_reason, note_remapping, enabled, created_at,
-             split_mode, split_note_min, split_note_max, split_polyphony_share)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             split_mode, split_note_min, split_note_max, split_polyphony_share,
+             overlap_strategy)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
         const result = stmt.run(
@@ -46,7 +65,8 @@ class RoutingPersistenceDB {
           routing.split_mode,
           routing.split_note_min ?? null,
           routing.split_note_max ?? null,
-          routing.split_polyphony_share ?? null
+          routing.split_polyphony_share ?? null,
+          routing.overlap_strategy || null
         );
 
         return result.lastInsertRowid;
@@ -146,7 +166,8 @@ class RoutingPersistenceDB {
       split_mode: row.split_mode || null,
       split_note_min: row.split_note_min ?? null,
       split_note_max: row.split_note_max ?? null,
-      split_polyphony_share: row.split_polyphony_share ?? null
+      split_polyphony_share: row.split_polyphony_share ?? null,
+      overlap_strategy: row.overlap_strategy || null
     }));
   }
 

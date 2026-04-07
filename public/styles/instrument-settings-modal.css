@@ -127,6 +127,43 @@
   background: rgba(102, 126, 234, 0.1);
 }
 
+/* Multi-instrument badge on tab */
+.ism-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--accent-primary, #667eea);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 16px;
+  margin-left: 2px;
+}
+
+/* Overlap warning dot on tab */
+.ism-tab-overlap-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  margin-left: 4px;
+  flex-shrink: 0;
+  animation: ism-overlap-pulse 2s ease-in-out infinite;
+}
+
+.ism-tab.has-overlap {
+  position: relative;
+}
+
+@keyframes ism-overlap-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
 /* ========== Main Layout: Sidebar + Content ========== */
 .ism-layout {
   display: flex;

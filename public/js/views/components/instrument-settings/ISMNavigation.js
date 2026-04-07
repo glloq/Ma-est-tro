@@ -50,14 +50,23 @@
             return;
         }
 
-        // Channel selection popup
+        // Channel selection popup — show instrument names on used channels, highlight drums
         const colors = InstrumentSettingsModal.CHANNEL_COLORS;
+        // Build a map of channel → instrument name for used channels
+        const channelNames = {};
+        for (const tab of this.instrumentTabs) {
+            channelNames[tab.channel] = tab.settings.custom_name || tab.settings.name || `Instrument Ch${tab.channel + 1}`;
+        }
         let gridHtml = '<div class="add-inst-channel-grid">';
         for (let ch = 0; ch < 16; ch++) {
             const isUsed = usedChannels.includes(ch);
             const isDrum = (ch === 9);
-            gridHtml += `<button type="button" class="add-inst-channel-btn ${isUsed ? 'used' : ''}" data-channel="${ch}" ${isUsed ? 'disabled' : ''} style="${!isUsed ? `border-color: ${colors[ch]};` : ''}">
-                ${ch + 1}${isDrum ? ' DR' : ''}
+            const instName = channelNames[ch] || '';
+            const tooltip = isUsed ? `${instName}` : (isDrum ? 'Canal percussion' : `Canal ${ch + 1} — libre`);
+            // Used channels are selectable to allow adding a 2nd instrument (split mode)
+            gridHtml += `<button type="button" class="add-inst-channel-btn ${isUsed ? 'used' : ''} ${isDrum ? 'drum' : ''}" data-channel="${ch}" style="border-color: ${colors[ch]};" title="${tooltip}">
+                <span class="add-inst-ch-number">${ch + 1}${isDrum ? ' 🥁' : ''}</span>
+                ${isUsed ? `<span class="add-inst-ch-name">${this.escape(instName)}</span>` : '<span class="add-inst-ch-free">' + (this.t('instrumentManagement.free') || 'libre') + '</span>'}
             </button>`;
         }
         gridHtml += '</div>';
@@ -80,18 +89,40 @@
         document.body.appendChild(overlay);
 
         overlay.querySelector('[data-close-add]').addEventListener('click', () => overlay.remove());
-        overlay.querySelectorAll('.add-inst-channel-btn:not([disabled])').forEach(btn => {
+        overlay.querySelectorAll('.add-inst-channel-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const ch = parseInt(btn.dataset.channel);
+                const isUsed = usedChannels.includes(ch);
+
+                // If channel already has an instrument, confirm multi-instrument (split) mode
+                if (isUsed) {
+                    const existingName = channelNames[ch] || `Ch ${ch + 1}`;
+                    const confirmed = typeof showConfirm === 'function' && await showConfirm(
+                        (this.t('instrumentManagement.addSecondInstrument') || `Le canal ${ch + 1} a déjà "${existingName}". Ajouter un 2e instrument (mode split) ?`),
+                        {
+                            title: this.t('instrumentManagement.splitMode') || 'Mode multi-instrument',
+                            icon: '🔀',
+                            okText: this.t('common.add') || 'Ajouter'
+                        }
+                    );
+                    if (!confirmed) return;
+                }
+
                 overlay.remove();
                 try {
                     await this.api.sendCommand('instrument_add_to_device', {
                         deviceId: this.device.id,
                         channel: ch,
-                        name: `Instrument Ch${ch + 1}`
+                        name: isUsed ? `Instrument 2 Ch${ch + 1}` : `Instrument Ch${ch + 1}`
                     });
                     const newTabData = await this._loadChannelData(this.device.id, ch, this.device.type);
-                    this.instrumentTabs.push(newTabData);
+                    if (!isUsed) {
+                        this.instrumentTabs.push(newTabData);
+                    } else {
+                        // Multi-instrument: update existing tab data
+                        const idx = this.instrumentTabs.findIndex(t => t.channel === ch);
+                        if (idx >= 0) this.instrumentTabs[idx] = newTabData;
+                    }
                     this.instrumentTabs.sort((a, b) => a.channel - b.channel);
                     await this._switchTab(ch);
                 } catch (e) {

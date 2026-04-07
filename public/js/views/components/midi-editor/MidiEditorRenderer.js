@@ -75,11 +75,18 @@
                 ? `<span class="chip-number">${ch.channel + 1}</span><span class="chip-dot">·</span><span class="chip-instrument">${gmLabelFull}</span>`
                 : `<span class="chip-number">${ch.channel + 1}</span>`;
 
-    // Routed instrument line
+    // Routed instrument line — detect split routing
+            const isSplit = this._splitChannelNames && this._splitChannelNames.has(ch.channel);
+            const splitNames = isSplit ? this._splitChannelNames.get(ch.channel) : null;
             const routedName = this.getRoutedInstrumentName(ch.channel);
-            const routedLine = routedName
-                ? `<span class="chip-routing-line">→ ${routedName}</span>`
-                : '';
+            let routedLine;
+            if (isSplit && splitNames && splitNames.length > 1) {
+                routedLine = `<span class="chip-routing-line chip-split-line">🔀 ${splitNames.join(' + ')}</span>`;
+            } else if (routedName) {
+                routedLine = `<span class="chip-routing-line">→ ${routedName}</span>`;
+            } else {
+                routedLine = '';
+            }
 
     // Playable notes indicator (shown on chip when highlighted)
             const playableIndicator = isPlayableHighlighted
@@ -105,7 +112,7 @@
                             title="${gmLabelFull ? `${ch.channel + 1}: ${gmLabelFull}` : `Ch ${ch.channel + 1}`} — ${this.t('midiEditor.notesChannel', { count: ch.noteCount, channel: ch.channel + 1 })}"
                         >
                             <span class="chip-content">
-                                <span class="chip-main-line">${mainLabel}${playableIndicator}</span>
+                                <span class="chip-main-line">${mainLabel}${isSplit ? '<span class="chip-split-badge" title="Split routing">split</span>' : ''}${playableIndicator}</span>
                                 ${routedLine}
                             </span>
                         </button>
