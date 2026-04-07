@@ -1349,8 +1349,8 @@ class RoutingSummaryPage {
       });
     }
 
-    // Render initial minimap
-    this._renderMinimap();
+    // Render initial minimap (defer to ensure container has layout dimensions)
+    requestAnimationFrame(() => this._renderMinimap());
   }
 
   _renderMinimap() {
@@ -1495,14 +1495,44 @@ class RoutingSummaryPage {
 
     const channelConfigs = {};
     for (const [ch, assignment] of Object.entries(this.selectedAssignments)) {
-      if (this.skippedChannels.has(parseInt(ch))) { channelConfigs[ch] = { skipped: true }; continue; }
+      const chNum = parseInt(ch);
+      if (this.skippedChannels.has(chNum)) { channelConfigs[ch] = { skipped: true }; continue; }
+
+      const adapt = this.adaptationSettings[ch] || {};
+      const semitones = adapt.transpositionSemitones || 0;
+
+      // Build full instrument constraints from assignment
+      const constraints = assignment ? {
+        gmProgram: assignment.gmProgram,
+        noteRangeMin: assignment.noteRangeMin,
+        noteRangeMax: assignment.noteRangeMax,
+        noteSelectionMode: assignment.noteSelectionMode || undefined,
+        selectedNotes: assignment.selectedNotes || undefined,
+        suppressOutOfRange: adapt.oorHandling === 'suppress',
+        noteCompression: adapt.oorHandling === 'compress'
+      } : null;
+
+      // For split channels, build combined constraints
+      if (this.splitChannels.has(chNum) && this.splitAssignments[chNum]) {
+        const segs = this.splitAssignments[chNum].segments || [];
+        if (segs.length > 0) {
+          const combinedMin = Math.min(...segs.map(s => s.fullRange?.min ?? s.noteRange?.min ?? 0));
+          const combinedMax = Math.max(...segs.map(s => s.fullRange?.max ?? s.noteRange?.max ?? 127));
+          channelConfigs[ch] = {
+            transposition: { semitones },
+            instrumentConstraints: {
+              gmProgram: segs[0].gmProgram ?? (constraints?.gmProgram),
+              noteRangeMin: combinedMin,
+              noteRangeMax: combinedMax
+            }
+          };
+          continue;
+        }
+      }
+
       channelConfigs[ch] = {
-        transposition: this.adaptationSettings[ch]?.transpositionSemitones || 0,
-        instrumentConstraints: assignment ? {
-          gmProgram: assignment.gmProgram,
-          noteRangeMin: assignment.noteRangeMin,
-          noteRangeMax: assignment.noteRangeMax
-        } : null
+        transposition: { semitones },
+        instrumentConstraints: constraints
       };
     }
 
@@ -1522,16 +1552,19 @@ class RoutingSummaryPage {
     const ch = String(channel);
     const assignment = this.selectedAssignments[ch];
     const adapt = this.adaptationSettings[ch] || {};
+    const transposition = { semitones: adapt.transpositionSemitones || 0 };
+
     const constraints = assignment ? {
       gmProgram: assignment.gmProgram,
       noteRangeMin: assignment.noteRangeMin,
       noteRangeMax: assignment.noteRangeMax,
-      noteSelectionMode: assignment.noteSelectionMode
-    } : null;
+      noteSelectionMode: assignment.noteSelectionMode || undefined,
+      selectedNotes: assignment.selectedNotes || undefined
+    } : {};
 
     this._connectPreviewCallbacks();
     await this.audioPreview.previewSingleChannel(
-      this.midiData, channel, adapt.transpositionSemitones || 0, constraints, 0, 0, true
+      this.midiData, channel, transposition, constraints, 0, 0, true
     );
     this._previewState = 'playing';
     this._updatePreviewUI();
