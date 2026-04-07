@@ -23,11 +23,11 @@ Interface intuitive, user-friendly, compatible avec le systeme de routage intell
 - [x] Proposition ajout instrument pour couvrir notes manquantes
 - [x] Sauvegarde avec creation nouveaux canaux + refresh editeur
 
-## Phase 3 : Minimap/Preview
-- [ ] Filtrer notes jouables uniquement en preview
-- [ ] Fix minimap non mise a jour au changement d'onglet
-- [ ] Boutons preview plus clairs/comprehensibles
-- [ ] Titre fichier a droite des boutons preview
+## Phase 3 : Minimap/Preview -- COMPLETE
+- [x] Filtrer notes jouables uniquement en preview
+- [x] Fix minimap non mise a jour au changement d'onglet
+- [x] Boutons preview plus clairs/comprehensibles
+- [x] Titre fichier a droite des boutons preview
 
 ## Phase 4 : Modal Reglages Simplifie
 - [ ] 3 presets : minimal, equilibre, orchestral
@@ -42,4 +42,4 @@ Interface intuitive, user-friendly, compatible avec le systeme de routage intell
 
 ---
 
-**Derniere mise a jour** : Phase 2 complete, Phase 3 en cours
+**Derniere mise a jour** : Phase 3 complete, Phase 4 en cours

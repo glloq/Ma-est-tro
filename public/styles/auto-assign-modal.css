@@ -5243,6 +5243,35 @@ body.dark-mode .aa-channel-card.skipped {
   max-width: 120px;
 }
 
+/* ============================================================================
+ * Phase 3: Preview/Minimap improvements
+ * ============================================================================ */
+
+/* Preview button with label text */
+.rs-prev-btn-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 3px 8px;
+}
+
+.rs-prev-icon {
+  font-size: 10px;
+}
+
+/* Filename next to preview buttons */
+.rs-header-filename {
+  font-size: 11px;
+  color: var(--text-secondary, #888);
+  font-weight: 500;
+  margin-left: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
 /* Uncovered notes warning */
 .rs-uncovered-warning {
   display: flex;

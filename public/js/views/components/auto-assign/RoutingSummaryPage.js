@@ -385,7 +385,6 @@ class RoutingSummaryPage {
               </span>
             </div>
             <div class="rs-header-right">
-              <span class="rs-filename" title="${escapeHtml(this.filename)}">${escapeHtml(this.filename)}</span>
               <button class="rs-settings-btn ${this._isOverrideModified() ? 'modified' : ''}" id="rsSettingsBtn" title="${_t('routingSummary.settings')}">&#9881;</button>
               <button class="modal-close" id="rsSummaryClose">&times;</button>
             </div>
@@ -1681,6 +1680,8 @@ class RoutingSummaryPage {
   _refreshUI(channelKeys) {
     // Re-render the content area (preserving modal shell)
     this._renderContent();
+    // Ensure minimap updates after channel tab switch
+    requestAnimationFrame(() => requestAnimationFrame(() => this._renderMinimap()));
   }
 
   /**
@@ -1835,14 +1836,23 @@ class RoutingSummaryPage {
   _renderHeaderButtons() {
     const ch = this.selectedChannel;
     const chLabel = ch !== null ? (ch + 1) : '?';
+    const fnDisplay = this.filename || '';
+    const fnShort = fnDisplay.length > 30 ? fnDisplay.slice(0, 27) + '\u2026' : fnDisplay;
     return `
       <div class="rs-hdr-prev-btns">
-        <button class="btn btn-sm rs-prev-btn" id="rsPreviewAllBtn" title="${_t('routingSummary.previewAll')}">&#9654;</button>
-        <button class="btn btn-sm rs-prev-btn" id="rsPreviewChBtn" title="${_t('routingSummary.previewChannel')} ${chLabel}" ${ch === null ? 'disabled' : ''}>&#9654; Ch${chLabel}</button>
-        <button class="btn btn-sm rs-prev-btn" id="rsPreviewOrigBtn" title="${_t('routingSummary.previewOriginal')}" ${ch === null ? 'disabled' : ''}>&#9835;</button>
+        <button class="btn btn-sm rs-prev-btn rs-prev-btn-label" id="rsPreviewAllBtn" title="${_t('routingSummary.previewAll')}">
+          <span class="rs-prev-icon">&#9654;</span> ${_t('routingSummary.previewAll') || 'Tout'}
+        </button>
+        <button class="btn btn-sm rs-prev-btn rs-prev-btn-label" id="rsPreviewChBtn" title="${_t('routingSummary.previewChannel')} ${chLabel}" ${ch === null ? 'disabled' : ''}>
+          <span class="rs-prev-icon">&#9654;</span> Canal ${chLabel}
+        </button>
+        <button class="btn btn-sm rs-prev-btn rs-prev-btn-label" id="rsPreviewOrigBtn" title="${_t('routingSummary.previewOriginal')}" ${ch === null ? 'disabled' : ''}>
+          <span class="rs-prev-icon">&#9835;</span> ${_t('routingSummary.previewOriginal') || 'Original'}
+        </button>
         <button class="btn btn-sm rs-prev-btn" id="rsPreviewPauseBtn" style="display:none">&#10074;&#10074;</button>
         <button class="btn btn-sm rs-prev-btn" id="rsPreviewStopBtn" style="display:none">&#9632;</button>
         <span class="rs-preview-time" id="rsPreviewTime"></span>
+        <span class="rs-header-filename" title="${escapeHtml(fnDisplay)}">${escapeHtml(fnShort)}</span>
       </div>
     `;
   }
@@ -1991,6 +2001,28 @@ class RoutingSummaryPage {
   _extractNotesForMinimap(channelFilter) {
     const notes = [];
     if (!this.midiData?.tracks) return notes;
+
+    // Determine playable range for filtering (per-channel instrument ranges)
+    const getRange = (ch) => {
+      const chStr = String(ch);
+      const assignment = this.selectedAssignments[chStr];
+      if (!assignment) return null;
+      // For splits, use combined range
+      if (this.splitChannels.has(ch) && this.splitAssignments[ch]) {
+        const segs = this.splitAssignments[ch].segments || [];
+        if (segs.length > 0) {
+          return {
+            min: Math.min(...segs.map(s => s.fullRange?.min ?? s.noteRange?.min ?? 0)),
+            max: Math.max(...segs.map(s => s.fullRange?.max ?? s.noteRange?.max ?? 127))
+          };
+        }
+      }
+      if (assignment.noteRangeMin != null && assignment.noteRangeMax != null) {
+        return { min: assignment.noteRangeMin, max: assignment.noteRangeMax };
+      }
+      return null;
+    };
+
     for (const track of this.midiData.tracks) {
       if (!track.events) continue;
       let tick = 0;
@@ -1999,7 +2031,13 @@ class RoutingSummaryPage {
         if (event.type === 'noteOn' && event.velocity > 0) {
           const ch = event.channel ?? 0;
           if (channelFilter !== null && ch !== channelFilter) continue;
-          notes.push({ t: tick, n: event.note ?? event.noteNumber ?? 60 });
+          const note = event.note ?? event.noteNumber ?? 60;
+
+          // Filter: only include notes playable on assigned instrument(s)
+          const range = getRange(ch);
+          if (range && (note < range.min || note > range.max)) continue;
+
+          notes.push({ t: tick, n: note });
         }
       }
     }
