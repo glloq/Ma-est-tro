@@ -1762,6 +1762,8 @@ class RoutingSummaryPage {
   }
 
   _refreshUI(channelKeys) {
+    // Invalidate canvas ref before re-render (prevents drawing to detached canvas)
+    this._minimapCanvas = null;
     // Re-render the content area (preserving modal shell)
     this._renderContent();
     // Ensure minimap updates after channel tab switch
@@ -1980,9 +1982,17 @@ class RoutingSummaryPage {
     canvas.height = h * dpr;
     canvas.style.height = h + 'px';
 
-    // Determine channel filter
-    const channelFilter = (this.selectedChannel !== null) ? this.selectedChannel : null;
-    const notes = this._extractNotesForMinimap(channelFilter);
+    // Determine channel filter based on active preview mode
+    let channelFilter = null;
+    if (this._previewMode === 'channel') {
+      channelFilter = this._previewingChannel;
+    } else if (this._previewMode === 'all' || this._previewMode === 'original') {
+      channelFilter = null; // show all channels
+    } else {
+      channelFilter = (this.selectedChannel !== null) ? this.selectedChannel : null;
+    }
+    const skipRangeFilter = this._previewMode === 'original';
+    const notes = this._extractNotesForMinimap(channelFilter, skipRangeFilter);
     const totalTicks = notes.length > 0 ? notes[notes.length - 1].t + 1 : 1;
 
     this._minimapWidth = w;
@@ -2027,9 +2037,10 @@ class RoutingSummaryPage {
 
   _drawMinimapFrame(playheadPct) {
     const canvas = this._minimapCanvas;
-    if (!canvas) return;
+    if (!canvas || !canvas.parentNode) return; // Skip if canvas detached from DOM
 
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
     const dpr = window.devicePixelRatio || 1;
     const w = this._minimapWidth || 400;
     const h = this._minimapHeight || 32;
@@ -2068,12 +2079,13 @@ class RoutingSummaryPage {
     }
   }
 
-  _extractNotesForMinimap(channelFilter) {
+  _extractNotesForMinimap(channelFilter, skipRangeFilter = false) {
     const notes = [];
     if (!this.midiData?.tracks) return notes;
 
     // Determine playable range for filtering (per-channel instrument ranges)
     const getRange = (ch) => {
+      if (skipRangeFilter) return null;
       const chStr = String(ch);
       const assignment = this.selectedAssignments[chStr];
       if (!assignment) return null;
