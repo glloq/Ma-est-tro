@@ -266,6 +266,10 @@ class RoutingSummaryPage {
           assignment.noteRangeMax = matched.instrument.note_range_max;
           assignment.noteSelectionMode = matched.instrument.note_selection_mode;
           assignment.polyphony = matched.instrument.polyphony;
+          if (!assignment.customName) {
+            assignment.customName = matched.instrument.custom_name || null;
+          }
+          assignment.instrumentDisplayName = this._getInstrumentDisplayName(matched.instrument);
         }
       }
 
@@ -639,7 +643,7 @@ class RoutingSummaryPage {
     const gmName = channel === 9 ? _t('autoAssign.drums') : (getGmProgramName(analysis?.primaryProgram) || '\u2014');
     const typeIcon = analysis?.estimatedType ? getTypeIcon(analysis.estimatedType) : '';
     const score = assignment?.score || 0;
-    const assignedName = assignment?.customName || getGmProgramName(assignment?.gmProgram) || assignment?.instrumentName || null;
+    const assignedName = assignment?.instrumentDisplayName || assignment?.customName || getGmProgramName(assignment?.gmProgram) || assignment?.instrumentName || null;
 
     // Compute playable notes ratio
     const playableData = this._computePlayableNotes(ch);
@@ -1034,7 +1038,7 @@ class RoutingSummaryPage {
       const left = (iMin / FULL_RANGE) * 100;
       const width = Math.max(1, ((iMax - iMin) / FULL_RANGE) * 100);
       const color = '#4A90D9';
-      const instName = assignment?.customName || getGmProgramName(assignment?.gmProgram) || assignment?.instrumentName || _t('autoAssign.instrumentRange');
+      const instName = assignment?.instrumentDisplayName || assignment?.customName || getGmProgramName(assignment?.gmProgram) || assignment?.instrumentName || _t('autoAssign.instrumentRange');
       const connLeftPct = (iMin / FULL_RANGE) * 100;
       const connRightPct = (iMax / FULL_RANGE) * 100;
 
@@ -1611,8 +1615,9 @@ class RoutingSummaryPage {
       deviceId: selected.instrument.device_id,
       instrumentId: selected.instrument.id,
       instrumentChannel: selected.instrument.channel,
-      instrumentName: selected.instrument.custom_name || getGmProgramName(selected.instrument.gm_program) || selected.instrument.name,
+      instrumentName: selected.instrument.name,
       customName: selected.instrument.custom_name,
+      instrumentDisplayName: this._getInstrumentDisplayName(selected.instrument),
       score: selected.compatibility.score,
       transposition: selected.compatibility.transposition,
       noteRemapping: selected.compatibility.noteRemapping,
@@ -2325,6 +2330,10 @@ class RoutingSummaryPage {
           assignment.noteRangeMax = matched.instrument.note_range_max;
           assignment.noteSelectionMode = matched.instrument.note_selection_mode;
           assignment.polyphony = matched.instrument.polyphony;
+          if (!assignment.customName) {
+            assignment.customName = matched.instrument.custom_name || null;
+          }
+          assignment.instrumentDisplayName = this._getInstrumentDisplayName(matched.instrument);
         }
       }
 
