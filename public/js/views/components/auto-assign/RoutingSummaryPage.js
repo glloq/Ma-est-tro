@@ -800,6 +800,32 @@ class RoutingSummaryPage {
         `;
       }).join('');
 
+      // Detect uncovered notes
+      let uncoveredHTML = '';
+      if (analysis?.noteDistribution && segments.length > 0) {
+        const usedNotes = Object.keys(analysis.noteDistribution).map(Number);
+        const adapt = this.adaptationSettings[ch] || {};
+        const semi = (this.autoAdaptation && adapt.pitchShift !== 'none') ? (adapt.transpositionSemitones || 0) : 0;
+        const uncoveredNotes = usedNotes.filter(n => {
+          const shifted = n + semi;
+          return !segments.some(seg => {
+            const sMin = seg.noteRange?.min ?? 0;
+            const sMax = seg.noteRange?.max ?? 127;
+            return shifted >= sMin && shifted <= sMax;
+          });
+        });
+        if (uncoveredNotes.length > 0) {
+          const uncMin = Math.min(...uncoveredNotes);
+          const uncMax = Math.max(...uncoveredNotes);
+          uncoveredHTML = `
+            <div class="rs-uncovered-warning">
+              <span>\u26A0 ${uncoveredNotes.length} ${_t('routingSummary.uncoveredNotes') || 'notes non couvertes'} (${midiNoteToName(uncMin)}-${midiNoteToName(uncMax)})</span>
+              <button class="btn btn-sm rs-btn-add-segment" data-channel="${channel}">+ ${_t('routingSummary.addInstrument') || 'Ajouter instrument'}</button>
+            </div>
+          `;
+        }
+      }
+
       // Action buttons
       let actionsHTML = '';
       if (isSplit) {
@@ -833,11 +859,34 @@ class RoutingSummaryPage {
             ${renderSplitBar(activeData, analysis)}
             <div class="rs-split-segments">${segCardsHTML}</div>
             ${overlapsHTML}
+            ${uncoveredHTML}
             ${actionsHTML}
           </div>
         </div>
       `;
     }
+
+    // Multi-instrument list (for split channels)
+    let multiInstHTML = '';
+    if (isSplit && this.splitAssignments[channel]) {
+      const segments = this.splitAssignments[channel].segments || [];
+      const splitColors = ['#4A90D9', '#E67E22', '#27AE60', '#9B59B6'];
+      multiInstHTML = `<div class="rs-multi-inst-list">
+        ${segments.map((seg, i) => {
+          const color = splitColors[i % splitColors.length];
+          const name = seg.instrumentName || 'Instrument';
+          const rMin = seg.noteRange?.min ?? 0;
+          const rMax = seg.noteRange?.max ?? 127;
+          return `<div class="rs-multi-inst-item" style="border-left: 3px solid ${color}">
+            <span class="rs-multi-inst-name" style="color:${color}">${escapeHtml(name)}</span>
+            <span class="rs-multi-inst-range">${midiNoteToName(rMin)} - ${midiNoteToName(rMax)}</span>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+
+    // Mute button
+    const muteHTML = `<button class="btn btn-sm rs-btn-mute" data-channel="${channel}" title="${_t('routingSummary.muteChannel') || 'Mute'}">${isSkipped ? '&#128264;' : '&#128266;'}</button>`;
 
     return `
       <div class="rs-detail-content">
@@ -849,13 +898,22 @@ class RoutingSummaryPage {
             </span>
             ${score > 0 ? `<span class="rs-detail-score ${getScoreClass(score)}">${score}</span>` : ''}
             ${playableInfo ? `<span class="rs-detail-playable">${playableInfo}</span>` : ''}
+            ${muteHTML}
           </div>
           <button class="btn btn-sm rs-detail-close" id="rsDetailClose">&times;</button>
         </div>
 
-        ${rangeBarsHTML}
-        ${instrumentChipsHTML}
-        ${adaptHTML}
+        <div class="rs-detail-body">
+          <div class="rs-detail-left">
+            ${multiInstHTML}
+            ${instrumentChipsHTML}
+            ${adaptHTML}
+          </div>
+          <div class="rs-detail-right">
+            ${rangeBarsHTML}
+          </div>
+        </div>
+
         ${splitHTML}
       </div>
     `;
@@ -931,7 +989,9 @@ class RoutingSummaryPage {
   }
 
   /**
-   * Render wide dual range bars (channel notes vs instrument range)
+   * Render full 0-127 MIDI range visualization with two-line display.
+   * Line 1: Channel notes (with transposition applied directly)
+   * Line 2: Instrument playable range(s) with name labels and vertical connectors
    */
   _renderRangeBars(channel, analysis, assignment) {
     if (!analysis?.noteRange || analysis.noteRange.min == null) return '';
@@ -939,97 +999,113 @@ class RoutingSummaryPage {
     const ch = String(channel);
     const chMin = analysis.noteRange.min;
     const chMax = analysis.noteRange.max;
-    const isSplit = this.splitChannels.has(channel);
+    const FULL_RANGE = 128; // 0-127
 
-    // Transposition from adaptation settings
+    // Transposition: directly shift channel notes position
     const adapt = this.adaptationSettings[ch] || {};
-    const semitones = (adapt.pitchShift !== 'none') ? (adapt.transpositionSemitones || 0) : 0;
-    const trMin = Math.max(0, Math.min(127, chMin + semitones));
-    const trMax = Math.max(0, Math.min(127, chMax + semitones));
+    const semitones = (this.autoAdaptation && adapt.pitchShift !== 'none') ? (adapt.transpositionSemitones || 0) : 0;
+    const displayChMin = Math.max(0, Math.min(127, chMin + semitones));
+    const displayChMax = Math.max(0, Math.min(127, chMax + semitones));
 
-    // Compute global range for display (include all bars)
-    let globalMin = chMin, globalMax = chMax;
-    if (semitones !== 0) {
-      globalMin = Math.min(globalMin, trMin);
-      globalMax = Math.max(globalMax, trMax);
-    }
+    // Channel notes bar (line 1) - position on 0-127 scale
+    const chLeft = (displayChMin / FULL_RANGE) * 100;
+    const chWidth = Math.max(1, ((displayChMax - displayChMin) / FULL_RANGE) * 100);
 
+    const transLabel = semitones !== 0 ? ` (${semitones > 0 ? '+' : ''}${semitones}st)` : '';
+    const chBarTitle = `${_t('autoAssign.channelNotes')}: ${midiNoteToName(displayChMin)}-${midiNoteToName(displayChMax)}${transLabel}`;
+
+    // Instrument bars (line 2) - one or multiple depending on split
     const splitColors = ['#4A90D9', '#E67E22', '#27AE60', '#9B59B6'];
-    let instBars = '';
+    let instBarsHTML = '';
     let legendItems = '';
-    const instName = assignment?.customName || assignment?.instrumentName || _t('autoAssign.instrumentRange');
 
-    // Use active split data (accepted OR proposed) for range visualization
     const splitData = this._getActiveSplitData(channel);
     if (splitData?.segments?.length > 0) {
+      // Multi-instrument split
       const segs = splitData.segments;
-      for (const seg of segs) {
-        if (seg.fullRange) { globalMin = Math.min(globalMin, seg.fullRange.min); globalMax = Math.max(globalMax, seg.fullRange.max); }
-        if (seg.noteRange) { globalMin = Math.min(globalMin, seg.noteRange.min); globalMax = Math.max(globalMax, seg.noteRange.max); }
-      }
-      const span = globalMax - globalMin || 1;
-      instBars = segs.map((seg, i) => {
+      instBarsHTML = segs.map((seg, i) => {
         const sMin = seg.fullRange?.min ?? seg.noteRange?.min ?? 0;
         const sMax = seg.fullRange?.max ?? seg.noteRange?.max ?? 127;
-        const left = Math.round(((sMin - globalMin) / span) * 100);
-        const width = Math.max(2, Math.round(((sMax - sMin) / span) * 100));
+        const left = (sMin / FULL_RANGE) * 100;
+        const width = Math.max(1, ((sMax - sMin) / FULL_RANGE) * 100);
         const color = splitColors[i % splitColors.length];
         const name = seg.instrumentName || `Inst ${i + 1}`;
-        return `<div class="rs-range-bar rs-range-inst-bar" style="left:${left}%;width:${width}%;background:${color}33;border:1px solid ${color}" title="${escapeHtml(name)}: ${midiNoteToName(sMin)}-${midiNoteToName(sMax)}"></div>`;
+
+        // Detect non-played portions (dotted) based on channel note distribution
+        let dottedCSS = '';
+        if (analysis?.noteDistribution) {
+          const usedNotes = Object.keys(analysis.noteDistribution).map(Number);
+          const shiftedNotes = usedNotes.map(n => n + semitones);
+          const hasNotesInRange = shiftedNotes.some(n => n >= sMin && n <= sMax);
+          if (!hasNotesInRange) {
+            dottedCSS = 'rs-range-dotted';
+          }
+        }
+
+        // Vertical connectors at extremities
+        const connLeftPct = (sMin / FULL_RANGE) * 100;
+        const connRightPct = (sMax / FULL_RANGE) * 100;
+
+        return `
+          <div class="rs-range-inst-line">
+            <div class="rs-range-connector" style="left:${connLeftPct}%"></div>
+            <div class="rs-range-connector" style="left:${connRightPct}%"></div>
+            <div class="rs-range-bar rs-range-inst-bar ${dottedCSS}" style="left:${left}%;width:${width}%;background:${color}33;border:1px solid ${color}" title="${escapeHtml(name)}: ${midiNoteToName(sMin)}-${midiNoteToName(sMax)}"></div>
+            <span class="rs-range-inst-label" style="left:${left}%;color:${color}">${escapeHtml(name)}</span>
+          </div>
+        `;
       }).join('');
-      // Legend for split segments
       legendItems = segs.map((seg, i) => {
         const color = splitColors[i % splitColors.length];
         const name = seg.instrumentName || `Inst ${i + 1}`;
         return `<span class="rs-range-legend-item"><span class="rs-range-legend-key" style="background:${color}80;border:1px solid ${color}"></span>${escapeHtml(name)}</span>`;
       }).join('');
     } else if (assignment?.noteRangeMin != null) {
-      globalMin = Math.min(globalMin, assignment.noteRangeMin);
-      globalMax = Math.max(globalMax, assignment.noteRangeMax);
-      const span = globalMax - globalMin || 1;
-      const iLeft = Math.round(((assignment.noteRangeMin - globalMin) / span) * 100);
-      const iWidth = Math.max(2, Math.round(((assignment.noteRangeMax - assignment.noteRangeMin) / span) * 100));
-      instBars = `<div class="rs-range-bar rs-range-inst-bar" style="left:${iLeft}%;width:${iWidth}%" title="${escapeHtml(instName)}: ${midiNoteToName(assignment.noteRangeMin)}-${midiNoteToName(assignment.noteRangeMax)}"></div>`;
+      // Single instrument
+      const iMin = assignment.noteRangeMin;
+      const iMax = assignment.noteRangeMax;
+      const left = (iMin / FULL_RANGE) * 100;
+      const width = Math.max(1, ((iMax - iMin) / FULL_RANGE) * 100);
+      const color = '#4A90D9';
+      const instName = assignment?.customName || assignment?.instrumentName || _t('autoAssign.instrumentRange');
+      const connLeftPct = (iMin / FULL_RANGE) * 100;
+      const connRightPct = (iMax / FULL_RANGE) * 100;
+
+      instBarsHTML = `
+        <div class="rs-range-inst-line">
+          <div class="rs-range-connector" style="left:${connLeftPct}%"></div>
+          <div class="rs-range-connector" style="left:${connRightPct}%"></div>
+          <div class="rs-range-bar rs-range-inst-bar" style="left:${left}%;width:${width}%;background:${color}33;border:1px solid ${color}" title="${escapeHtml(instName)}: ${midiNoteToName(iMin)}-${midiNoteToName(iMax)}"></div>
+          <span class="rs-range-inst-label" style="left:${left}%;color:${color}">${escapeHtml(instName)}</span>
+        </div>
+      `;
       legendItems = `<span class="rs-range-legend-item"><span class="rs-range-legend-key rs-range-legend-inst"></span>${escapeHtml(instName)}</span>`;
     }
 
-    const span = globalMax - globalMin || 1;
-    const chLeft = Math.round(((chMin - globalMin) / span) * 100);
-    const chWidth = Math.max(2, Math.round(((chMax - chMin) / span) * 100));
-
-    // Transposed bar (only if transposition active)
-    let transposedBar = '';
-    if (semitones !== 0) {
-      const trLeft = Math.round(((trMin - globalMin) / span) * 100);
-      const trWidth = Math.max(2, Math.round(((trMax - trMin) / span) * 100));
-      transposedBar = `<div class="rs-range-bar rs-range-transposed-bar" style="left:${trLeft}%;width:${trWidth}%" title="${_t('autoAssign.transposition')}: ${midiNoteToName(trMin)}-${midiNoteToName(trMax)} (${semitones > 0 ? '+' : ''}${semitones}st)"></div>`;
+    // Octave markers for full 0-127 range
+    const octaveMarkers = [];
+    for (let oct = 0; oct <= 10; oct++) {
+      const note = oct * 12;
+      if (note <= 127) {
+        const pct = (note / FULL_RANGE) * 100;
+        octaveMarkers.push(`<span class="rs-range-octave-mark" style="left:${pct}%">C${oct - 1}</span>`);
+      }
     }
 
-    // Labels
-    const centerLabel = semitones !== 0
-      ? `${midiNoteToName(chMin)}-${midiNoteToName(chMax)} \u2192 ${midiNoteToName(trMin)}-${midiNoteToName(trMax)}`
-      : `${midiNoteToName(chMin)}-${midiNoteToName(chMax)}`;
-
-    // Legend
-    const transposedLegend = semitones !== 0
-      ? `<span class="rs-range-legend-item"><span class="rs-range-legend-key rs-range-legend-transposed"></span>${_t('autoAssign.transposition')} (${semitones > 0 ? '+' : ''}${semitones}st)</span>`
-      : '';
-
     return `
-      <div class="rs-range-wide">
-        <div class="rs-range-labels">
-          <span>${midiNoteToName(globalMin)}</span>
-          <span>${centerLabel}</span>
-          <span>${midiNoteToName(globalMax)}</span>
+      <div class="rs-range-full">
+        <div class="rs-range-labels-full">
+          <span>0</span>
+          <span>${midiNoteToName(displayChMin)}-${midiNoteToName(displayChMax)}${transLabel}</span>
+          <span>127</span>
         </div>
-        <div class="rs-range-track">
-          ${instBars}
-          ${transposedBar}
-          <div class="rs-range-bar rs-range-ch-bar" style="left:${chLeft}%;width:${chWidth}%" title="${_t('autoAssign.channelNotes')}: ${midiNoteToName(chMin)}-${midiNoteToName(chMax)}"></div>
+        <div class="rs-range-octaves">${octaveMarkers.join('')}</div>
+        <div class="rs-range-track-line" title="${chBarTitle}">
+          <div class="rs-range-bar rs-range-ch-bar" style="left:${chLeft}%;width:${chWidth}%"></div>
         </div>
+        ${instBarsHTML}
         <div class="rs-range-legend">
-          <span class="rs-range-legend-item"><span class="rs-range-legend-key rs-range-legend-ch"></span>${_t('autoAssign.channelNotes')}</span>
-          ${transposedLegend}
+          <span class="rs-range-legend-item"><span class="rs-range-legend-key rs-range-legend-ch"></span>${_t('autoAssign.channelNotes')}${transLabel}</span>
           ${legendItems}
         </div>
       </div>
@@ -1195,6 +1271,19 @@ class RoutingSummaryPage {
         this._refreshUI(channelKeys);
       });
     }
+
+    // Mute button in detail panel
+    modal.querySelectorAll('.rs-btn-mute').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ch = parseInt(btn.dataset.channel);
+        if (this.skippedChannels.has(ch)) {
+          this.skippedChannels.delete(ch);
+        } else {
+          this.skippedChannels.add(ch);
+        }
+        this._refreshUI(channelKeys);
+      });
+    });
 
     // Instrument chip selection
     modal.querySelectorAll('.aa-instbar-btn[data-instrument-id]').forEach(btn => {

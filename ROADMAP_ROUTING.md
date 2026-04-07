@@ -14,14 +14,14 @@ Interface intuitive, user-friendly, compatible avec le systeme de routage intell
 - [x] Retirer badge SP, afficher instruments assignes si decoupe appliquee
 - [x] Toggle adaptation automatique canal MIDI en haut du modal
 
-## Phase 2 : Routage Intelligent (panneau droit)
-- [ ] Div gauche : info canal + liste instruments si multi-instruments
-- [ ] Div droite : plage MIDI complete 0-127
-- [ ] Representation deux lignes (notes canal + capacites instrument)
-- [ ] Transposition = deplacement direct des notes
-- [ ] Decoupe multi-instruments avec visualisation conflits
-- [ ] Proposition ajout instrument pour couvrir notes manquantes
-- [ ] Sauvegarde avec creation nouveaux canaux + refresh editeur
+## Phase 2 : Routage Intelligent (panneau droit) -- COMPLETE
+- [x] Div gauche : info canal + liste instruments si multi-instruments
+- [x] Div droite : plage MIDI complete 0-127
+- [x] Representation deux lignes (notes canal + capacites instrument)
+- [x] Transposition = deplacement direct des notes
+- [x] Decoupe multi-instruments avec visualisation conflits
+- [x] Proposition ajout instrument pour couvrir notes manquantes
+- [x] Sauvegarde avec creation nouveaux canaux + refresh editeur
 
 ## Phase 3 : Minimap/Preview
 - [ ] Filtrer notes jouables uniquement en preview
@@ -42,4 +42,4 @@ Interface intuitive, user-friendly, compatible avec le systeme de routage intell
 
 ---
 
-**Derniere mise a jour** : Phase 1 complete, Phase 2 en cours
+**Derniere mise a jour** : Phase 2 complete, Phase 3 en cours

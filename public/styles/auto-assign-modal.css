@@ -5078,4 +5078,187 @@ body.dark-mode .aa-channel-card.skipped {
   opacity: 0.85;
 }
 
+/* ============================================================================
+ * Phase 2: Intelligent Routing Panel (detail panel)
+ * ============================================================================ */
+
+/* Detail body two-column layout */
+.rs-detail-body {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  overflow: auto;
+}
+
+.rs-detail-left {
+  flex: 0 0 auto;
+  min-width: 180px;
+  max-width: 260px;
+}
+
+.rs-detail-right {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Multi-instrument list */
+.rs-multi-inst-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.rs-multi-inst-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  background: var(--bg-tertiary, #f5f5f5);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.rs-multi-inst-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}
+
+.rs-multi-inst-range {
+  font-size: 10px;
+  color: var(--text-secondary, #888);
+  white-space: nowrap;
+}
+
+/* Mute button */
+.rs-btn-mute {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.rs-btn-mute:hover {
+  opacity: 1;
+}
+
+/* Full 0-127 MIDI range visualization */
+.rs-range-full {
+  width: 100%;
+  margin: 8px 0;
+}
+
+.rs-range-labels-full {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-secondary, #888);
+  margin-bottom: 2px;
+}
+
+.rs-range-octaves {
+  position: relative;
+  height: 14px;
+  font-size: 8px;
+  color: var(--text-muted, #bbb);
+}
+
+.rs-range-octave-mark {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* Line 1: Channel notes track */
+.rs-range-track-line {
+  position: relative;
+  height: 10px;
+  background: var(--bg-tertiary, #e8e8e8);
+  border-radius: 3px;
+  margin: 4px 0;
+}
+
+/* Line 2: Instrument range line (below) */
+.rs-range-inst-line {
+  position: relative;
+  height: 20px;
+  margin: 2px 0;
+}
+
+/* Vertical connectors from instrument range to channel line */
+.rs-range-connector {
+  position: absolute;
+  top: -6px;
+  width: 1px;
+  height: 6px;
+  background: var(--text-muted, #bbb);
+}
+
+/* Range bars on full scale */
+.rs-range-full .rs-range-bar {
+  position: absolute;
+  height: 10px;
+  border-radius: 3px;
+  top: 0;
+}
+
+.rs-range-full .rs-range-ch-bar {
+  background: var(--accent-color, #4285f4);
+  opacity: 0.8;
+}
+
+.rs-range-full .rs-range-inst-bar {
+  height: 8px;
+  top: 0;
+  border-radius: 3px;
+}
+
+/* Dotted style for non-played instrument ranges */
+.rs-range-dotted {
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 3px,
+    currentColor 3px,
+    currentColor 6px
+  ) !important;
+  opacity: 0.4;
+}
+
+/* Instrument name label below the range bar */
+.rs-range-inst-label {
+  position: absolute;
+  top: 10px;
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+/* Uncovered notes warning */
+.rs-uncovered-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  margin: 6px 0;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #856404;
+}
+
+.rs-uncovered-warning .btn {
+  flex-shrink: 0;
+}
+
 /* END OF FILE */
