@@ -437,11 +437,11 @@ class InstrumentSettingsModal extends BaseModal {
         for (const tab of this.instrumentTabs) {
             const ch = tab.channel;
             channelCounts[ch] = (channelCounts[ch] || 0) + 1;
-            if (tab.settings) {
+            if (tab.settings && tab.settings.note_range_min != null && tab.settings.note_range_max != null) {
                 if (!channelRanges[ch]) channelRanges[ch] = [];
                 channelRanges[ch].push({
-                    min: tab.settings.note_range_min ?? 0,
-                    max: tab.settings.note_range_max ?? 127
+                    min: tab.settings.note_range_min,
+                    max: tab.settings.note_range_max
                 });
             }
         }
