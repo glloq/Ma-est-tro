@@ -113,7 +113,13 @@ class ScoringSettingsModal extends BaseModal {
         nonDrumChannelDrumPenalty: -100,
         drumChannelWeights: { noteRange: 50, instrumentType: 30, polyphony: 10, programMatch: 5, ccSupport: 5 }
       },
-      splitting: { triggerBelowScore: 60, minQuality: 50, maxInstruments: 4 }
+      splitting: { triggerBelowScore: 60, minQuality: 50, maxInstruments: 4 },
+      routing: {
+        autoSplitAvoidTransposition: false,
+        preferSingleInstrument: true,
+        preferSimilarGMType: true,
+        drumFallback: {} // per-category depth: 0=exact, 1-N=substitution depth, -1=ignore
+      }
     };
   }
 
@@ -290,26 +296,30 @@ class ScoringSettingsModal extends BaseModal {
   // Section: Drums
   // ============================================================================
 
+  /**
+   * Convert legacy string drumFallback values to numeric depth.
+   * Old format: "substitute" / "ignore" / "manual"
+   * New format: 0 (exact) / 1-N (depth) / -1 (ignore)
+   */
+  static _migrateDrumFallbackValue(value, maxDepth) {
+    if (typeof value === 'number') return value;
+    if (value === 'ignore') return -1;
+    if (value === 'substitute' || value === 'manual') return maxDepth;
+    return undefined; // not set
+  }
+
   _renderDrumsSection() {
     const routing = this.overrides.routing || {};
     const drumFallback = routing.drumFallback || {};
     const categories = ScoringSettingsModal.DRUM_CATEGORIES;
 
-    // Depth labels: 0 = exact only, 1-N = substitution depth, -1 = ignore
-    const depthLabels = [
-      { value: 0, icon: '🎯', labelKey: 'scoringSettings.depthExact',  fallback: 'Exact' },
-      { value: 1, icon: '🟢', labelKey: 'scoringSettings.depthClose',  fallback: 'Proche' },
-      { value: 2, icon: '🟡', labelKey: 'scoringSettings.depthSimilar', fallback: 'Similaire' },
-      { value: 3, icon: '🟠', labelKey: 'scoringSettings.depthDistant', fallback: 'Éloigné' },
-      { value: -1, icon: '⛔', labelKey: 'scoringSettings.depthIgnore', fallback: 'Ignorer' }
-    ];
-
     let catsHtml = '';
     for (const cat of categories) {
       // Current depth value: default to full chain length (all substitutions allowed)
-      const savedDepth = drumFallback[cat.key];
       const maxDepth = cat.chain.length - 1; // chain[0] is primary, rest are subs
-      const currentDepth = savedDepth !== undefined ? savedDepth : maxDepth;
+      const rawValue = drumFallback[cat.key];
+      const migratedValue = ScoringSettingsModal._migrateDrumFallbackValue(rawValue, maxDepth);
+      const currentDepth = migratedValue !== undefined ? migratedValue : maxDepth;
 
       // Build the visual substitution chain
       let chainHtml = '';
