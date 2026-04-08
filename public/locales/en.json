@@ -1802,7 +1802,8 @@
         "ccAllSupported": "All CCs supported",
         "ccSupported": "CCs supported",
         "ccUnsupported": "unsupported",
-        "ccIgnore": "— ignore —"
+        "ccIgnore": "— ignore —",
+        "overlap": "Overlap"
     },
     "scoringSettings": {
         "title": "Auto-assignment settings",
