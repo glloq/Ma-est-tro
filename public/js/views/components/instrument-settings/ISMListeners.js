@@ -439,6 +439,27 @@
             }.bind(this));
         }
 
+        // CC tag remove buttons (event delegation — summary is re-rendered dynamically)
+        const ccSummary = this.$('#activeCCsSummary');
+        if (ccSummary) {
+            ccSummary.addEventListener('click', function(e) {
+                const removeBtn = e.target.closest('.ism-cc-tag-remove');
+                if (!removeBtn) return;
+                e.stopPropagation();
+                const ccNum = parseInt(removeBtn.dataset.cc);
+                if (isNaN(ccNum)) return;
+                const cb = this.$(`.ism-cc-checkbox[value="${ccNum}"]`);
+                if (cb) {
+                    cb.checked = false;
+                    const item = cb.closest('.ism-cc-item');
+                    if (item) item.classList.remove('checked');
+                }
+                this._updateCCHiddenInput();
+                this._updateCCGroupBadges();
+                this._updateActiveCCsSummary();
+            }.bind(this));
+        }
+
         // Piano is initialized by _switchSection('notes') when the section becomes visible
     };
 

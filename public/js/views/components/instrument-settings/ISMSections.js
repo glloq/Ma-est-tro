@@ -331,7 +331,7 @@
         const sorted = [...activeCCs].sort((a, b) => a - b);
         return sorted.map(function(cc) {
             const name = ccNames[cc] || ('CC ' + cc);
-            return `<span class="ism-active-cc-tag" title="${this.escape(name)}"><span class="ism-active-cc-num">${cc}</span> ${this.escape(name)}</span>`;
+            return `<span class="ism-active-cc-tag" title="${this.escape(name)}"><span class="ism-active-cc-num">${cc}</span> ${this.escape(name)}<button type="button" class="ism-cc-tag-remove" data-cc="${cc}" aria-label="Supprimer CC ${cc}">\u00d7</button></span>`;
         }.bind(this)).join('');
     };
 

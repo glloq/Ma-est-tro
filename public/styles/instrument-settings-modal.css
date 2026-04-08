@@ -30,28 +30,7 @@
   font-size: 1.1rem;
 }
 
-.ism-modal .modal-close {
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  font-size: 24px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-  padding: 0;
-  font-weight: 300;
-}
-
-.ism-modal .modal-close:hover {
-  background: rgba(255, 255, 255, 0.35);
-  transform: scale(1.1);
-}
+/* .ism-modal .modal-close — styled by universal close button rule in components.css */
 
 .ism-modal .modal-body {
   flex: 1;
@@ -1227,6 +1206,30 @@ body.dark-mode .ism-drum-kit-desc {
 .ism-active-cc-num {
   font-weight: 700;
   color: var(--accent-color, #667eea);
+}
+
+.ism-cc-tag-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  margin-left: 2px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted, #9ca3af);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.ism-cc-tag-remove:hover {
+  background: var(--close-btn-bg, #dc2626);
+  color: #fff;
 }
 
 .ism-apply-recommended-ccs {
