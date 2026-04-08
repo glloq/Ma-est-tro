@@ -64,7 +64,7 @@ function getGmProgramName(program) {
 const NOTE_NAMES = (typeof MidiConstants !== 'undefined') ? MidiConstants.NOTE_NAMES : ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
 function midiNoteToName(note) {
-  return NOTE_NAMES[note % 12] + (Math.floor(note / 12) - 1);
+  return NOTE_NAMES[note % 12] + Math.floor(note / 12);
 }
 
 /**
@@ -572,7 +572,7 @@ class RoutingSummaryPage {
         `;
       }
 
-      // Full mode: dropdown, score, actions
+      // Full mode: dropdown, score, polyphony, playable, actions
       let assignedHTML;
       if (isSkipped) {
         assignedHTML = `<span class="rs-skipped">${_t('autoAssign.overviewStatusSkipped')}</span>`;
@@ -586,14 +586,36 @@ class RoutingSummaryPage {
         });
         assignedHTML = `<div class="rs-split-instruments">${splitParts.join('<span class="rs-split-sep">+</span>')}</div>`;
       } else {
-        assignedHTML = `<select class="rs-instrument-select" data-channel="${ch}">${this._buildInstrumentOptions(ch, assignment, isSkipped)}</select>`;
+        assignedHTML = `<div class="rs-select-zone"><select class="rs-instrument-select" data-channel="${ch}">${this._buildInstrumentOptions(ch, assignment, isSkipped)}</select></div>`;
       }
 
-      let scoreHTML = '';
+      // Score column
+      const scoreHTML = (!isSkipped && score > 0) ? `<span class="rs-score-value ${getScoreClass(score)}">${score}</span>` : '';
+
+      // Polyphony column: instrument capacity / channel polyphony
+      let polyHTML = '';
+      if (!isSkipped) {
+        const chPoly = analysis?.polyphony?.max || null;
+        let instPoly;
+        if (isSplit && this.splitAssignments[channel]) {
+          instPoly = (this.splitAssignments[channel].segments || []).reduce((s, seg) => s + (seg.polyphonyShare || 16), 0);
+        } else {
+          instPoly = assignment?.polyphony || null;
+        }
+        if (chPoly && instPoly) {
+          const ok = instPoly >= chPoly;
+          polyHTML = `<span class="rs-poly-cell ${ok ? 'rs-poly-ok' : 'rs-poly-warn'}">${instPoly}/${chPoly}</span>`;
+        }
+      }
+
+      // Playable notes column
+      let playableHTML = '';
       if (!isSkipped) {
         const playableInfo = this._computePlayableNotes(ch);
-        const playableText = playableInfo ? `<span class="rs-playable-count">${playableInfo.playable}/${playableInfo.total}</span>` : '';
-        scoreHTML = `<span class="rs-score-value ${getScoreClass(score)}">${score}</span>${playableText}`;
+        if (playableInfo) {
+          const ok = playableInfo.playable === playableInfo.total;
+          playableHTML = `<span class="rs-playable-cell ${ok ? 'rs-poly-ok' : 'rs-poly-warn'}">${playableInfo.playable}/${playableInfo.total}</span>`;
+        }
       }
 
       return `
@@ -607,6 +629,8 @@ class RoutingSummaryPage {
           <td class="rs-col-original">${escapeHtml(gmName)}</td>
           <td class="rs-col-assigned">${assignedHTML}</td>
           <td class="rs-col-score">${scoreHTML}</td>
+          <td class="rs-col-poly">${polyHTML}</td>
+          <td class="rs-col-playable">${playableHTML}</td>
           <td class="rs-col-actions">
             ${!isSkipped ? `<button class="btn btn-sm rs-btn-skip rs-btn-mute" data-channel="${channel}" title="${_t('routingSummary.skip')}">🔊</button>` : `<button class="btn btn-sm rs-btn-unskip rs-btn-unmute" data-channel="${channel}" title="${_t('routingSummary.unskip')}">🔇</button>`}
           </td>
@@ -645,6 +669,8 @@ class RoutingSummaryPage {
               <th>${_t('autoAssign.overviewOriginal')}</th>
               <th>${_t('autoAssign.overviewAssigned')}</th>
               <th>${_t('routingSummary.score') || 'Score'}</th>
+              <th title="${_t('autoAssign.polyphony') || 'Polyphonie'}">\u266B</th>
+              <th title="${_t('autoAssign.channelNotes') || 'Notes jouables'}">\u266A</th>
               <th></th>
             </tr>
           </thead>
@@ -1178,7 +1204,7 @@ class RoutingSummaryPage {
       const note = oct * 12;
       if (note <= 127) {
         const pct = (note / FULL_RANGE) * 100;
-        octaveMarkers.push(`<span class="rs-range-octave-mark" style="left:${pct}%">C${oct - 1}</span>`);
+        octaveMarkers.push(`<span class="rs-range-octave-mark" style="left:${pct}%">C${oct}</span>`);
       }
     }
 
