@@ -620,6 +620,27 @@ class RoutingSummaryPage {
         </table>
       </div>
     `;
+    }
+
+    // Full table (no detail panel open)
+    return `
+      <div class="rs-table-wrapper">
+        <table class="rs-table">
+          <thead>
+            <tr>
+              <th>${_t('autoAssign.overviewChannel')}</th>
+              <th>${_t('autoAssign.overviewOriginal')}</th>
+              <th>${_t('autoAssign.overviewAssigned')}</th>
+              <th>${_t('routingSummary.score') || 'Score'}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+      </div>
+    `;
   }
 
   /**
