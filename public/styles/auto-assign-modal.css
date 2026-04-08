@@ -4506,6 +4506,37 @@ body.dark-mode .aa-channel-card.skipped {
   font-weight: 500;
 }
 
+/* Polyphony badge */
+.rs-detail-poly {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.rs-poly-ok {
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.1);
+}
+.rs-poly-warn {
+  color: #d97706;
+  background: rgba(217, 119, 6, 0.1);
+}
+
+/* Range label with channel color */
+.rs-range-label-ch {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* CC remap in split table */
+.rs-cc-remap-split {
+  width: 100%;
+  max-width: 80px;
+  padding: 1px 2px;
+  font-size: 9px;
+}
+
 /* CC table for multi-instrument split mode */
 .rs-cc-table {
   width: 100%;

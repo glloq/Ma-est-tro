@@ -917,25 +917,6 @@ class RoutingSummaryPage {
       `;
     }
 
-    // Multi-instrument list (for split channels)
-    let multiInstHTML = '';
-    if (isSplit && this.splitAssignments[channel]) {
-      const segments = this.splitAssignments[channel].segments || [];
-      const splitColors = ['#4A90D9', '#E67E22', '#27AE60', '#9B59B6'];
-      multiInstHTML = `<div class="rs-multi-inst-list">
-        ${segments.map((seg, i) => {
-          const color = splitColors[i % splitColors.length];
-          const name = seg.instrumentName || getGmProgramName(seg.gmProgram) || 'Instrument';
-          const rMin = seg.noteRange?.min ?? 0;
-          const rMax = seg.noteRange?.max ?? 127;
-          return `<div class="rs-multi-inst-item" style="border-left: 3px solid ${color}">
-            <span class="rs-multi-inst-name" style="color:${color}">${escapeHtml(name)}</span>
-            <span class="rs-multi-inst-range">${midiNoteToName(rMin)} - ${midiNoteToName(rMax)}</span>
-          </div>`;
-        }).join('')}
-      </div>`;
-    }
-
     // "Add instrument" button — visible when single instrument assigned, no split active
     let addInstrumentHTML = '';
     if (!isSplit && !isSkipped && assignment?.instrumentId) {
@@ -957,20 +938,49 @@ class RoutingSummaryPage {
       `;
     }
 
+    // Build route display for title
+    let routeHTML;
+    if (isSplit && this.splitAssignments[channel]) {
+      const segments = this.splitAssignments[channel].segments || [];
+      const splitColors = ['#4A90D9', '#E67E22', '#27AE60', '#9B59B6'];
+      routeHTML = escapeHtml(gmName) + ' \u2192 ' + segments.map((seg, i) => {
+        const color = splitColors[i % splitColors.length];
+        const name = seg.instrumentName || getGmProgramName(seg.gmProgram) || 'Instrument';
+        return `<strong style="color:${color}">${escapeHtml(name)}</strong>`;
+      }).join(' + ');
+    } else {
+      routeHTML = `${escapeHtml(gmName)}${assignedName ? ` \u2192 <strong>${escapeHtml(assignedName)}</strong>` : ''}`;
+    }
+
+    // Polyphony info: instrument(s) capacity vs channel usage
+    let polyHTML = '';
+    const channelPoly = analysis?.polyphony?.max || null;
+    if (channelPoly) {
+      let instPoly;
+      if (isSplit && this.splitAssignments[channel]) {
+        const segments = this.splitAssignments[channel].segments || [];
+        instPoly = segments.reduce((sum, seg) => sum + (seg.polyphonyShare || 16), 0);
+      } else {
+        instPoly = assignment?.polyphony || null;
+      }
+      if (instPoly) {
+        const polyOk = instPoly >= channelPoly;
+        polyHTML = `<span class="rs-detail-poly ${polyOk ? 'rs-poly-ok' : 'rs-poly-warn'}" title="${_t('autoAssign.polyphony') || 'Polyphonie'}">\u266B ${instPoly}/${channelPoly}</span>`;
+      }
+    }
+
     return `
       <div class="rs-detail-content">
         <div class="rs-detail-header">
           <div class="rs-detail-title">
             <span class="rs-detail-ch">${typeIcon} Ch ${channel + 1}${channel === 9 ? ' DR' : ''}</span>
-            <span class="rs-detail-route">
-              ${escapeHtml(gmName)}${assignedName ? ` \u2192 <strong>${escapeHtml(assignedName)}</strong>` : ''}
-            </span>
+            <span class="rs-detail-route">${routeHTML}</span>
             ${score > 0 ? `<span class="rs-detail-score ${getScoreClass(score)}">${score}</span>` : ''}
+            ${polyHTML}
             ${playableInfo ? `<span class="rs-detail-playable">${playableInfo}</span>` : ''}
           </div>
           <button class="btn btn-sm rs-detail-close" id="rsDetailClose">&times;</button>
         </div>
-        ${isSplit ? multiInstHTML : ''}
 
         ${rangeBarsHTML}
         ${instrumentChipsHTML}
@@ -1175,19 +1185,13 @@ class RoutingSummaryPage {
     return `
       <div class="rs-range-full">
         <div class="rs-range-labels-full">
-          <span>0</span>
-          <span>${midiNoteToName(displayChMin)}-${midiNoteToName(displayChMax)}${transLabel}</span>
-          <span>127</span>
+          <span class="rs-range-label-ch" style="color:var(--accent-color, #4285f4)">${_t('autoAssign.channelNotes') || 'Notes canal'}: ${midiNoteToName(displayChMin)}-${midiNoteToName(displayChMax)}${transLabel}</span>
         </div>
         <div class="rs-range-octaves">${octaveMarkers.join('')}</div>
         <div class="rs-range-track-line" title="${chBarTitle}">
           <div class="rs-range-bar rs-range-ch-bar" style="left:${chLeft}%;width:${chWidth}%"></div>
         </div>
         ${instBarsHTML}
-        <div class="rs-range-legend">
-          <span class="rs-range-legend-item"><span class="rs-range-legend-key rs-range-legend-ch"></span>${_t('autoAssign.channelNotes')}${transLabel}</span>
-          ${legendItems}
-        </div>
       </div>
     `;
   }
@@ -2104,15 +2108,27 @@ class RoutingSummaryPage {
         return `<th class="rs-cc-inst-col" style="color:${color}" title="${escapeHtml(name)}">${escapeHtml(short)}</th>`;
       }).join('');
 
-      // Table rows: one per CC used by channel
+      // Table rows: one per CC used by channel, with remap for unsupported
+      const currentRemap = this.ccRemapping[ch] || {};
       let supportedByAll = 0;
       let unsupportedByAny = 0;
       const bodyRows = channelCCs.map(ccNum => {
         const name = this._getCCName(ccNum);
         const cells = segCCs.map((ccs, i) => {
           if (ccs === null) return `<td class="rs-cc-cell rs-cc-cell-unknown" title="?">?</td>`;
-          if (ccs.includes(ccNum)) return `<td class="rs-cc-cell rs-cc-cell-ok" title="${_t('routingSummary.ccSupported') || 'Supporté'}">\u2713</td>`;
-          return `<td class="rs-cc-cell rs-cc-cell-no" title="${_t('routingSummary.ccUnsupported') || 'Non supporté'}">\u2717</td>`;
+          if (ccs.includes(ccNum)) return `<td class="rs-cc-cell rs-cc-cell-ok">\u2713</td>`;
+          // Unsupported: show remap dropdown
+          const currentTarget = currentRemap[ccNum];
+          const remapOpts = (ccs || [])
+            .filter(tc => !channelCCs.includes(tc) || tc === ccNum)
+            .map(tc => `<option value="${tc}" ${currentTarget === tc ? 'selected' : ''}>${this._getCCName(tc)}</option>`)
+            .join('');
+          return `<td class="rs-cc-cell rs-cc-cell-no">
+            <select class="rs-cc-remap rs-cc-remap-split" data-channel="${ch}" data-source="${ccNum}">
+              <option value="">\u2717</option>
+              ${remapOpts}
+            </select>
+          </td>`;
         }).join('');
 
         const anyUnsupported = segCCs.some(ccs => ccs !== null && !ccs.includes(ccNum));
