@@ -3657,7 +3657,7 @@ body.dark-mode .aa-channel-card.skipped {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0;
+  border-radius: 4px;
 }
 
 .rs-hdr-prev-btns .rs-preview-time {
@@ -5668,14 +5668,16 @@ body.dark-mode .rs-cc-table td {
 
 /* Filename next to preview buttons */
 .rs-header-filename {
-  font-size: 11px;
-  color: var(--text-secondary, #888);
-  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-primary, #333);
+  font-weight: 700;
   margin-left: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 200px;
+  max-width: 250px;
+  display: inline-flex;
+  align-items: center;
 }
 
 /* Split separator in summary table */
