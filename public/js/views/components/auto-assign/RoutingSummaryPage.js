@@ -842,7 +842,7 @@ class RoutingSummaryPage {
 
       // Detect overlaps between segments
       const overlaps = this._detectOverlaps(segments);
-      const currentStrategy = splitData?.overlapStrategy || null;
+      const currentStrategy = activeData?.overlapStrategy || null;
       const overlapsHTML = overlaps.map((ov, idx) => {
         const nameA = segments[ov.segA]?.instrumentName || `Inst ${ov.segA + 1}`;
         const nameB = segments[ov.segB]?.instrumentName || `Inst ${ov.segB + 1}`;
