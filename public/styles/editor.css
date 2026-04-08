@@ -347,14 +347,15 @@ body.dark-mode .tool-btn:hover:not(:disabled) {
 }
 
 .preview-source-toggle {
-    width: 100%;
-    padding: 6px 10px;
+    padding: 4px 8px;
     border-radius: 4px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.2s, transform 0.2s, opacity 0.2s, box-shadow 0.2s, border-color 0.2s;
+    transition: background-color 0.2s, opacity 0.2s, border-color 0.2s;
     text-align: center;
+    white-space: nowrap;
+    margin-left: 4px;
 }
 
 .preview-source-toggle[data-source="gm"] {

@@ -144,6 +144,11 @@
                             <button class="tool-btn playback-btn" data-action="playback-stop" id="stop-btn" title="${this.t('midiEditor.stop')}" disabled>
                                 <span class="icon stop-icon">⏹</span>
                             </button>
+                            <button class="tool-btn-compact preview-source-toggle" id="preview-source-toggle"
+                                data-source="gm"
+                                title="${this.t('midiEditor.previewSourceHint')}">
+                                🔊 GM
+                            </button>
                         </div>
 
                         <div class="toolbar-divider"></div>
@@ -253,15 +258,6 @@
                                     </select>
                                     <button class="tool-btn-apply" data-action="apply-instrument" id="apply-instrument-btn" title="${this.t('midiEditor.applyInstrument')}">${this.t('midiEditor.applyBtn')}</button>
                                 </div>
-                            </div>
-                            <div class="settings-popover-section">
-                                <label class="settings-label">🔊 ${this.t('midiEditor.previewSourceTitle')}</label>
-                                <span class="settings-popover-hint">${this.t('midiEditor.previewSourceHint')}</span>
-                                <button class="tool-btn-compact preview-source-toggle" id="preview-source-toggle"
-                                    data-source="gm"
-                                    title="${this.t('midiEditor.previewSourceHint')}">
-                                    🎵 GM
-                                </button>
                             </div>
                             <div class="settings-popover-section">
                                 <label class="settings-label">🎹 ${this.t('midiEditor.playableNotesTitle')}</label>
@@ -679,12 +675,12 @@
         const btn = this.container?.querySelector('#preview-source-toggle');
         if (this.previewSource === 'gm') {
             this.previewSource = 'routed';
-            if (btn) { btn.dataset.source = 'routed'; btn.textContent = this.t('midiEditor.routedSource') || '🎸 Routé'; }
+            if (btn) { btn.dataset.source = 'routed'; btn.textContent = this.t('midiEditor.routedSource') || '🔊 Routé'; }
             // Fetch playable note ranges for all routed channels
             await this._loadRoutedPlayableNotes();
         } else {
             this.previewSource = 'gm';
-            if (btn) { btn.dataset.source = 'gm'; btn.textContent = this.t('midiEditor.gmSource') || '🎵 GM'; }
+            if (btn) { btn.dataset.source = 'gm'; btn.textContent = this.t('midiEditor.gmSource') || '🔊 GM'; }
             this._routedPlayableNotes.clear();
         }
         if (this.synthesizer) this.loadSequenceForPlayback();

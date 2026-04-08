@@ -26,8 +26,10 @@ class MidiEditorChannelPanel {
 
         if (m.activeChannels.has(channel)) {
             m.activeChannels.delete(channel);
+            m.channelDisabled.add(channel);
         } else {
             m.activeChannels.add(channel);
+            m.channelDisabled.delete(channel);
         }
 
         m.log('info', `Toggled channel ${channel}. Active channels: [${Array.from(m.activeChannels).join(', ')}]`);
@@ -45,6 +47,13 @@ class MidiEditorChannelPanel {
         // Synchroniser les canaux mutes avec le synthetiseur
         if (m.playbackManager) {
             m.playbackManager.syncMutedChannels();
+        }
+        m._updateChannelDisabledVisual(channel);
+
+        // Sync popover checkbox if open for this channel
+        if (m._channelSettingsOpen === channel && m._channelSettingsPopoverEl) {
+            const cb = m._channelSettingsPopoverEl.querySelector('.channel-enabled-checkbox');
+            if (cb) cb.checked = m.activeChannels.has(channel);
         }
     }
 
