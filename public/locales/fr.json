@@ -1801,7 +1801,8 @@
         "ccAllSupported": "Tous les CC supportés",
         "ccSupported": "CC supportés",
         "ccUnsupported": "non supportés",
-        "ccIgnore": "— ignorer —"
+        "ccIgnore": "— ignorer —",
+        "overlap": "Superposition"
     },
     "scoringSettings": {
         "title": "Réglages d'auto-assignation",

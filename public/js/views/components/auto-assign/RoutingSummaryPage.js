@@ -1119,11 +1119,26 @@ class RoutingSummaryPage {
           </div>
         `;
       }).join('');
+      // Add overlap zone visualization
+      const overlaps = this._detectOverlaps(segs);
+      if (overlaps.length > 0) {
+        instBarsHTML += overlaps.map(ov => {
+          const oLeft = (ov.min / FULL_RANGE) * 100;
+          const oWidth = Math.max(0.5, ((ov.max - ov.min) / FULL_RANGE) * 100);
+          const nameA = segs[ov.segA]?.instrumentName || `Inst ${ov.segA + 1}`;
+          const nameB = segs[ov.segB]?.instrumentName || `Inst ${ov.segB + 1}`;
+          return `<div class="rs-range-overlap-zone" style="left:${oLeft}%;width:${oWidth}%" title="\u26A0 ${_t('routingSummary.overlap') || 'Superposition'}: ${midiNoteToName(ov.min)}-${midiNoteToName(ov.max)} (${escapeHtml(nameA)} / ${escapeHtml(nameB)})"></div>`;
+        }).join('');
+      }
+
       legendItems = segs.map((seg, i) => {
         const color = splitColors[i % splitColors.length];
         const name = seg.instrumentName || `Inst ${i + 1}`;
         return `<span class="rs-range-legend-item"><span class="rs-range-legend-key" style="background:${color}80;border:1px solid ${color}"></span>${escapeHtml(name)}</span>`;
       }).join('');
+      if (overlaps.length > 0) {
+        legendItems += `<span class="rs-range-legend-item"><span class="rs-range-legend-key" style="background:repeating-linear-gradient(45deg,rgba(245,158,11,0.3),rgba(245,158,11,0.3) 2px,transparent 2px,transparent 4px);border:1px dashed #f59e0b"></span>${_t('routingSummary.overlap') || 'Superposition'}</span>`;
+      }
     } else if (assignment?.noteRangeMin != null) {
       // Single instrument
       const iMin = assignment.noteRangeMin;
@@ -2039,6 +2054,24 @@ class RoutingSummaryPage {
   /**
    * Render CC management section for a channel's detail panel
    */
+  /**
+   * Get supported CCs for a single instrument, searching allInstruments as fallback.
+   * @returns {number[]|null} Array of CC numbers, or null if unknown
+   */
+  _getInstrumentCCs(instrumentId) {
+    // Priority 1: allInstruments (always has full DB data)
+    const fullInst = (this.allInstruments || []).find(i => i.id === instrumentId);
+    if (fullInst?.supported_ccs) {
+      return Array.isArray(fullInst.supported_ccs) ? fullInst.supported_ccs : JSON.parse(fullInst.supported_ccs || '[]');
+    }
+    // Priority 2: suggestions
+    const found = this._findInstrumentById(instrumentId);
+    if (found?.supported_ccs) {
+      return Array.isArray(found.supported_ccs) ? found.supported_ccs : JSON.parse(found.supported_ccs || '[]');
+    }
+    return null;
+  }
+
   _renderCCSection(channel) {
     const ch = String(channel);
     const analysis = this.channelAnalyses[channel];
@@ -2047,85 +2080,101 @@ class RoutingSummaryPage {
     const isSplit = this.splitChannels.has(channel);
     const isSkipped = this.skippedChannels.has(channel);
 
-    // Don't show if no instrument assigned or channel skipped
     if (isSkipped || (!assignment && !isSplit)) return '';
-    // Don't show if channel uses no CCs
     if (channelCCs.length === 0) return '';
 
-    // Get instrument supported CCs
-    let instrumentCCs = null; // null = all supported (unknown)
-    let instrumentName = '';
+    const splitColors = ['#4A90D9', '#E67E22', '#27AE60', '#9B59B6'];
+    const currentRemap = this.ccRemapping[ch] || {};
+
+    // ── Split mode: per-instrument columns ──
     if (isSplit && this.splitAssignments[channel]) {
-      // In split mode: combine supported CCs from all segments
       const segs = this.splitAssignments[channel].segments || [];
-      const allNull = segs.every(s => {
-        const inst = this._findInstrumentById(s.instrumentId);
-        return !inst || inst.supported_ccs == null;
-      });
-      if (!allNull) {
-        const combined = new Set();
-        for (const seg of segs) {
-          const inst = this._findInstrumentById(seg.instrumentId);
-          if (inst?.supported_ccs) {
-            const ccs = Array.isArray(inst.supported_ccs) ? inst.supported_ccs : JSON.parse(inst.supported_ccs || '[]');
-            ccs.forEach(cc => combined.add(cc));
-          }
-        }
-        instrumentCCs = [...combined].sort((a, b) => a - b);
+      if (segs.length === 0) return '';
+
+      // Resolve CCs for each segment
+      const segCCs = segs.map(seg => this._getInstrumentCCs(seg.instrumentId));
+      const allUnknown = segCCs.every(ccs => ccs === null);
+
+      // Table header: CC | Name | Inst1 | Inst2 | ...
+      const headerCols = segs.map((seg, i) => {
+        const color = splitColors[i % splitColors.length];
+        const name = (seg.instrumentName || '?');
+        const short = name.length > 10 ? name.slice(0, 9) + '\u2026' : name;
+        return `<th class="rs-cc-inst-col" style="color:${color}" title="${escapeHtml(name)}">${escapeHtml(short)}</th>`;
+      }).join('');
+
+      // Table rows: one per CC used by channel
+      let supportedByAll = 0;
+      let unsupportedByAny = 0;
+      const bodyRows = channelCCs.map(ccNum => {
+        const name = this._getCCName(ccNum);
+        const cells = segCCs.map((ccs, i) => {
+          if (ccs === null) return `<td class="rs-cc-cell rs-cc-cell-unknown" title="?">?</td>`;
+          if (ccs.includes(ccNum)) return `<td class="rs-cc-cell rs-cc-cell-ok" title="${_t('routingSummary.ccSupported') || 'Supporté'}">\u2713</td>`;
+          return `<td class="rs-cc-cell rs-cc-cell-no" title="${_t('routingSummary.ccUnsupported') || 'Non supporté'}">\u2717</td>`;
+        }).join('');
+
+        const anyUnsupported = segCCs.some(ccs => ccs !== null && !ccs.includes(ccNum));
+        if (anyUnsupported) unsupportedByAny++;
+        else supportedByAll++;
+
+        const rowClass = anyUnsupported ? 'rs-cc-row-warn' : '';
+        return `<tr class="${rowClass}"><td class="rs-cc-num">CC${ccNum}</td><td class="rs-cc-name">${escapeHtml(name)}</td>${cells}</tr>`;
+      }).join('');
+
+      // Summary
+      let summaryHTML;
+      if (allUnknown) {
+        summaryHTML = `<span class="rs-cc-summary rs-cc-unknown-summary">${_t('routingSummary.ccUnknown') || 'CC non configurés \u2014 supposés tous supportés'}</span>`;
+      } else if (unsupportedByAny === 0) {
+        summaryHTML = `<span class="rs-cc-summary rs-cc-ok-summary">\u2713 ${_t('routingSummary.ccAllSupported') || 'Tous les CC supportés'} (${supportedByAll})</span>`;
+      } else {
+        summaryHTML = `<span class="rs-cc-summary rs-cc-warn-summary">${supportedByAll}/${channelCCs.length} ${_t('routingSummary.ccSupported') || 'CC supportés'} \u2014 ${unsupportedByAny} ${_t('routingSummary.ccUnsupported') || 'non supportés'}</span>`;
       }
-      instrumentName = segs.map(s => s.instrumentName || '?').join(' + ');
-    } else if (assignment) {
-      instrumentCCs = assignment.supportedCcs;
-      if (instrumentCCs && typeof instrumentCCs === 'string') {
-        try { instrumentCCs = JSON.parse(instrumentCCs); } catch { instrumentCCs = null; }
-      }
-      // Fallback: look up supported_ccs directly from allInstruments (always has full DB data)
-      if (instrumentCCs == null && assignment.instrumentId) {
-        const fullInst = (this.allInstruments || []).find(i => i.id === assignment.instrumentId);
-        if (fullInst?.supported_ccs) {
-          instrumentCCs = Array.isArray(fullInst.supported_ccs) ? fullInst.supported_ccs : JSON.parse(fullInst.supported_ccs || '[]');
-        }
-      }
-      instrumentName = assignment.customName || assignment.instrumentName || '';
+
+      return `
+        <div class="rs-cc-section">
+          <h4 class="rs-cc-title">\uD83C\uDF9B ${_t('routingSummary.ccTitle') || 'Contr\u00f4leurs MIDI (CC)'}</h4>
+          ${summaryHTML}
+          <table class="rs-cc-table">
+            <thead><tr><th>CC</th><th>${_t('common.name') || 'Nom'}</th>${headerCols}</tr></thead>
+            <tbody>${bodyRows}</tbody>
+          </table>
+        </div>`;
     }
 
-    // Classify each CC used by the channel
-    const currentRemap = this.ccRemapping[ch] || {};
+    // ── Single instrument mode ──
+    let instrumentCCs = assignment?.supportedCcs ?? null;
+    if (instrumentCCs && typeof instrumentCCs === 'string') {
+      try { instrumentCCs = JSON.parse(instrumentCCs); } catch { instrumentCCs = null; }
+    }
+    if (instrumentCCs == null && assignment?.instrumentId) {
+      instrumentCCs = this._getInstrumentCCs(assignment.instrumentId);
+    }
+
     let supportedCount = 0;
     let unsupportedCount = 0;
 
     const rows = channelCCs.map(ccNum => {
       const name = this._getCCName(ccNum);
-      let status, statusIcon, statusClass;
+      let statusIcon, statusClass;
 
       if (instrumentCCs === null) {
-        // Unknown — presume all supported
-        status = 'unknown';
-        statusIcon = '?';
-        statusClass = 'rs-cc-unknown';
-        supportedCount++;
+        statusIcon = '?'; statusClass = 'rs-cc-unknown'; supportedCount++;
       } else if (instrumentCCs.includes(ccNum)) {
-        status = 'supported';
-        statusIcon = '\u2713';
-        statusClass = 'rs-cc-supported';
-        supportedCount++;
+        statusIcon = '\u2713'; statusClass = 'rs-cc-supported'; supportedCount++;
       } else {
-        status = 'unsupported';
-        statusIcon = '\u2717';
-        statusClass = 'rs-cc-unsupported';
-        unsupportedCount++;
+        statusIcon = '\u2717'; statusClass = 'rs-cc-unsupported'; unsupportedCount++;
       }
 
-      // Build remap dropdown for unsupported CCs
       let remapHTML = '';
-      if (status === 'unsupported' && instrumentCCs) {
+      if (statusClass === 'rs-cc-unsupported' && instrumentCCs) {
         const currentTarget = currentRemap[ccNum];
         const options = instrumentCCs
           .filter(targetCC => !channelCCs.includes(targetCC) || targetCC === ccNum)
           .map(targetCC => {
-            const targetName = this._getCCName(targetCC);
             const selected = currentTarget === targetCC ? 'selected' : '';
-            return `<option value="${targetCC}" ${selected}>${targetName}</option>`;
+            return `<option value="${targetCC}" ${selected}>${this._getCCName(targetCC)}</option>`;
           });
         remapHTML = `
           <select class="rs-cc-remap" data-channel="${ch}" data-source="${ccNum}">
@@ -2133,7 +2182,6 @@ class RoutingSummaryPage {
             ${options.join('')}
           </select>`;
       } else if (currentRemap[ccNum] !== undefined) {
-        // Show existing remap as text
         remapHTML = `<span class="rs-cc-remap-info">\u2192 ${this._getCCName(currentRemap[ccNum])}</span>`;
       }
 
@@ -2146,7 +2194,6 @@ class RoutingSummaryPage {
         </div>`;
     }).join('');
 
-    // Summary line
     let summaryHTML;
     if (instrumentCCs === null) {
       summaryHTML = `<span class="rs-cc-summary rs-cc-unknown-summary">${_t('routingSummary.ccUnknown') || 'CC non configurés \u2014 supposés tous supportés'}</span>`;
@@ -2494,15 +2541,28 @@ class RoutingSummaryPage {
     const adapt = this.adaptationSettings[ch] || {};
     const transposition = { semitones: adapt.transpositionSemitones || 0 };
 
-    // Build instrument constraints — pass empty object (not null) so AudioPreview
-    // still initializes the synthesizer and creates a valid sequence
-    const constraints = assignment ? {
-      gmProgram: assignment.gmProgram,
-      noteRangeMin: assignment.noteRangeMin,
-      noteRangeMax: assignment.noteRangeMax,
-      noteSelectionMode: assignment.noteSelectionMode || undefined,
-      selectedNotes: assignment.selectedNotes || undefined
-    } : {};
+    // Build instrument constraints — handle split channels with combined range
+    let constraints;
+    if (this.splitChannels.has(channel) && this.splitAssignments[channel]) {
+      const segs = this.splitAssignments[channel].segments || [];
+      if (segs.length > 0) {
+        constraints = {
+          gmProgram: segs[0].gmProgram ?? assignment?.gmProgram,
+          noteRangeMin: Math.min(...segs.map(s => s.fullRange?.min ?? s.noteRange?.min ?? 0)),
+          noteRangeMax: Math.max(...segs.map(s => s.fullRange?.max ?? s.noteRange?.max ?? 127))
+        };
+      } else {
+        constraints = {};
+      }
+    } else {
+      constraints = assignment ? {
+        gmProgram: assignment.gmProgram,
+        noteRangeMin: assignment.noteRangeMin,
+        noteRangeMax: assignment.noteRangeMax,
+        noteSelectionMode: assignment.noteSelectionMode || undefined,
+        selectedNotes: assignment.selectedNotes || undefined
+      } : {};
+    }
 
     try {
       this._connectPreviewCallbacks();
