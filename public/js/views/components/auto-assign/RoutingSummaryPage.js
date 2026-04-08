@@ -2162,7 +2162,8 @@ class RoutingSummaryPage {
       const found = options.find(o => o.instrument.id === instrumentId);
       if (found) return found.instrument;
     }
-    return null;
+    // Fallback: search in allInstruments (has full data including supported_ccs)
+    return (this.allInstruments || []).find(i => i.id === instrumentId) || null;
   }
 
   // ============================================================================
