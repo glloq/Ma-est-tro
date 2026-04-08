@@ -195,8 +195,10 @@
 
             if (this.activeChannels.has(channel)) {
                 this.activeChannels.delete(channel);
+                this.channelDisabled.add(channel);
             } else {
                 this.activeChannels.add(channel);
+                this.channelDisabled.delete(channel);
             }
 
             this.log('info', `Toggled channel ${channel}. Active channels: [${Array.from(this.activeChannels).join(', ')}]`);
@@ -221,6 +223,13 @@
 
             this.updateCCEditorChannel();
             this.syncMutedChannels();
+            this._updateChannelDisabledVisual(channel);
+
+            // Sync popover checkbox if open for this channel
+            if (this._channelSettingsOpen === channel && this._channelSettingsPopoverEl) {
+                const cb = this._channelSettingsPopoverEl.querySelector('.channel-enabled-checkbox');
+                if (cb) cb.checked = this.activeChannels.has(channel);
+            }
 
             if (this.channelPlayableHighlights.size > 0) {
                 this._syncPianoRollHighlights();

@@ -204,15 +204,19 @@
     * Toggle channel disabled state
     */
     MidiEditorTablatureMixin.toggleChannelDisabled = function(channel) {
+        const previousActiveChannels = new Set(this.activeChannels);
         if (this.channelDisabled.has(channel)) {
             this.channelDisabled.delete(channel);
+            this.activeChannels.add(channel);
         } else {
             this.channelDisabled.add(channel);
+            this.activeChannels.delete(channel);
         }
     // Sync with playback muting
         if (this.playbackManager) {
             this.playbackManager.syncMutedChannels();
         }
+        this.updateSequenceFromActiveChannels(previousActiveChannels);
         this.refreshChannelButtons();
     }
 
@@ -342,15 +346,8 @@
     // Event: enabled checkbox
         const checkbox = popover.querySelector('.channel-enabled-checkbox');
         checkbox.addEventListener('change', () => {
-            if (checkbox.checked && this.channelDisabled.has(channel)) {
-                this.channelDisabled.delete(channel);
-            } else if (!checkbox.checked && !this.channelDisabled.has(channel)) {
-                this.channelDisabled.add(channel);
-            }
-            if (this.playbackManager) {
-                this.playbackManager.syncMutedChannels();
-            }
-            this._updateChannelDisabledVisual(channel);
+            this.toggleChannelDisabled(channel);
+            checkbox.checked = !this.channelDisabled.has(channel);
         });
 
     // Event: playable notes toggle checkbox
@@ -385,6 +382,13 @@
             const previousActiveChannels = new Set(this.activeChannels);
             this.activeChannels.clear();
             this.activeChannels.add(channel);
+            this.channels.forEach(ch => {
+                if (ch.channel === channel) {
+                    this.channelDisabled.delete(ch.channel);
+                } else {
+                    this.channelDisabled.add(ch.channel);
+                }
+            });
             this.updateSequenceFromActiveChannels(previousActiveChannels);
             this.updateChannelButtons();
             this.updateInstrumentSelector();
@@ -395,7 +399,10 @@
         const showAllBtn = popover.querySelector('.channel-show-all-btn');
         showAllBtn.addEventListener('click', () => {
             const previousActiveChannels = new Set(this.activeChannels);
-            this.channels.forEach(ch => this.activeChannels.add(ch.channel));
+            this.channels.forEach(ch => {
+                this.activeChannels.add(ch.channel);
+                this.channelDisabled.delete(ch.channel);
+            });
             this.updateSequenceFromActiveChannels(previousActiveChannels);
             this.updateChannelButtons();
             this.updateInstrumentSelector();
