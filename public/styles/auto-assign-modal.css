@@ -5382,7 +5382,7 @@ body.dark-mode .rs-cc-table td {
 
 /* Score column */
 .rs-col-score {
-  width: 70px;
+  width: 40px;
   white-space: nowrap;
   text-align: center;
   font-size: 11px;
@@ -5391,13 +5391,42 @@ body.dark-mode .rs-cc-table td {
 .rs-score-value {
   font-weight: 700;
   font-size: 12px;
-  margin-right: 3px;
 }
 
-.rs-playable-count {
+/* Polyphony & playable columns */
+.rs-col-poly, .rs-col-playable {
+  width: 42px;
+  text-align: center;
   font-size: 10px;
+  white-space: nowrap;
   color: var(--text-secondary, #888);
-  font-weight: 400;
+}
+
+.rs-poly-cell, .rs-playable-cell {
+  font-weight: 600;
+}
+
+/* Instrument select click zone */
+.rs-select-zone {
+  background: rgba(66, 133, 244, 0.06);
+  border: 1px solid rgba(66, 133, 244, 0.2);
+  border-radius: 4px;
+  padding: 4px 6px;
+  margin: -4px -4px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.rs-select-zone:hover {
+  background: rgba(66, 133, 244, 0.12);
+  border-color: rgba(66, 133, 244, 0.4);
+}
+
+.rs-select-zone .rs-instrument-select {
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
 }
 
 /* Split instrument names (replaces SP badge) */
