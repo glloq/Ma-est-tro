@@ -260,7 +260,6 @@ class RoutingSummaryPage {
         const lowOptions = this.lowScoreSuggestions[ch] || [];
         const matched = options.find(o => o.instrument.id === assignment.instrumentId)
           || lowOptions.find(o => o.instrument.id === assignment.instrumentId);
-        // Fallback: look up in allInstruments if not found in suggestions
         const inst = matched?.instrument
           || (this.allInstruments || []).find(i => i.id === assignment.instrumentId);
         if (inst) {
@@ -269,7 +268,9 @@ class RoutingSummaryPage {
           assignment.noteRangeMax = inst.note_range_max;
           assignment.noteSelectionMode = inst.note_selection_mode;
           assignment.polyphony = inst.polyphony;
-          assignment.supportedCcs = inst.supported_ccs || null;
+          // supportedCcs: prefer allInstruments (always has full DB data incl. supported_ccs)
+          const fullInst = (this.allInstruments || []).find(i => i.id === assignment.instrumentId);
+          assignment.supportedCcs = fullInst?.supported_ccs || inst.supported_ccs || null;
           if (!assignment.customName) {
             assignment.customName = inst.custom_name || null;
           }
@@ -1745,7 +1746,9 @@ class RoutingSummaryPage {
       noteRangeMax: selected.instrument.note_range_max,
       noteSelectionMode: selected.instrument.note_selection_mode,
       polyphony: selected.instrument.polyphony,
-      supportedCcs: selected.instrument.supported_ccs || null,
+      supportedCcs: selected.instrument.supported_ccs
+        || ((this.allInstruments || []).find(i => i.id === instrumentId))?.supported_ccs
+        || null,
       channelAnalysis: this.channelAnalyses[parseInt(ch)] || null
     };
 
@@ -2076,11 +2079,11 @@ class RoutingSummaryPage {
       if (instrumentCCs && typeof instrumentCCs === 'string') {
         try { instrumentCCs = JSON.parse(instrumentCCs); } catch { instrumentCCs = null; }
       }
-      // Fallback: look up supported_ccs from allInstruments if not in assignment
+      // Fallback: look up supported_ccs directly from allInstruments (always has full DB data)
       if (instrumentCCs == null && assignment.instrumentId) {
-        const inst = this._findInstrumentById(assignment.instrumentId);
-        if (inst?.supported_ccs) {
-          instrumentCCs = Array.isArray(inst.supported_ccs) ? inst.supported_ccs : JSON.parse(inst.supported_ccs || '[]');
+        const fullInst = (this.allInstruments || []).find(i => i.id === assignment.instrumentId);
+        if (fullInst?.supported_ccs) {
+          instrumentCCs = Array.isArray(fullInst.supported_ccs) ? fullInst.supported_ccs : JSON.parse(fullInst.supported_ccs || '[]');
         }
       }
       instrumentName = assignment.customName || assignment.instrumentName || '';
