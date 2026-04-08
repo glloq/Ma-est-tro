@@ -4404,6 +4404,115 @@ body.dark-mode .aa-channel-card.skipped {
   opacity: 0.9;
 }
 
+/* CC Management Section */
+.rs-cc-section {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--bg-secondary, #f8f9fa);
+  border: 1px solid var(--border-color-light, #e9ecef);
+  border-radius: 6px;
+}
+
+.rs-cc-title {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0 0 6px 0;
+  color: var(--text-primary, #333);
+}
+
+.rs-cc-summary {
+  display: block;
+  font-size: 11px;
+  margin-bottom: 6px;
+  padding: 3px 6px;
+  border-radius: 3px;
+}
+
+.rs-cc-ok-summary {
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.08);
+}
+
+.rs-cc-warn-summary {
+  color: #d97706;
+  background: rgba(217, 119, 6, 0.08);
+}
+
+.rs-cc-unknown-summary {
+  color: var(--text-muted, #999);
+  font-style: italic;
+}
+
+.rs-cc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rs-cc-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.rs-cc-num {
+  font-family: monospace;
+  font-weight: 600;
+  min-width: 36px;
+  color: var(--text-secondary, #666);
+}
+
+.rs-cc-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rs-cc-status {
+  font-weight: 700;
+  min-width: 16px;
+  text-align: center;
+}
+
+.rs-cc-supported .rs-cc-status { color: #16a34a; }
+.rs-cc-unsupported .rs-cc-status { color: #dc2626; }
+.rs-cc-unknown .rs-cc-status { color: #999; }
+
+.rs-cc-unsupported {
+  background: rgba(220, 38, 38, 0.04);
+}
+
+.rs-cc-remap {
+  padding: 2px 4px;
+  font-size: 10px;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 3px;
+  background: var(--bg-primary, #fff);
+  max-width: 130px;
+}
+
+.rs-cc-remap-info {
+  font-size: 10px;
+  color: var(--accent-primary, #667eea);
+  font-weight: 500;
+}
+
+/* Dark mode */
+body.dark-mode .rs-cc-section {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+body.dark-mode .rs-cc-remap {
+  background: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
 /* Overlap warning */
 .rs-overlap-warning {
   background: rgba(243, 156, 18, 0.08);

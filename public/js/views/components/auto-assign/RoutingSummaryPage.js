@@ -125,6 +125,7 @@ class RoutingSummaryPage {
     this.onApplyCallback = null;
     this.loading = true;
     this.adaptationSettings = {}; // Per-channel adaptation overrides
+    this.ccRemapping = {}; // Per-channel CC remapping { [channel]: { sourceCC: targetCC, ... } }
     this.showLowScores = {}; // Per-channel toggle for low score instruments
     this.autoAdaptation = true; // Toggle for automatic MIDI channel adaptation
 
@@ -266,6 +267,7 @@ class RoutingSummaryPage {
           assignment.noteRangeMax = matched.instrument.note_range_max;
           assignment.noteSelectionMode = matched.instrument.note_selection_mode;
           assignment.polyphony = matched.instrument.polyphony;
+          assignment.supportedCcs = matched.instrument.supported_ccs || null;
           if (!assignment.customName) {
             assignment.customName = matched.instrument.custom_name || null;
           }
@@ -942,6 +944,7 @@ class RoutingSummaryPage {
         ${splitSuggestionHTML}
         ${splitHTML}
         ${addInstrumentHTML}
+        ${this._renderCCSection(channel)}
       </div>
     `;
   }
@@ -1451,6 +1454,22 @@ class RoutingSummaryPage {
         this._resolveOverlap(ch, overlapIdx, strategy, channelKeys);
       });
     });
+
+    // CC remapping dropdowns
+    modal.querySelectorAll('.rs-cc-remap').forEach(sel => {
+      sel.addEventListener('change', () => {
+        const ch = sel.dataset.channel;
+        const sourceCC = parseInt(sel.dataset.source);
+        const targetCC = sel.value ? parseInt(sel.value) : null;
+        if (!this.ccRemapping[ch]) this.ccRemapping[ch] = {};
+        if (targetCC !== null) {
+          this.ccRemapping[ch][sourceCC] = targetCC;
+        } else {
+          delete this.ccRemapping[ch][sourceCC];
+          if (Object.keys(this.ccRemapping[ch]).length === 0) delete this.ccRemapping[ch];
+        }
+      });
+    });
   }
 
   /**
@@ -1692,6 +1711,7 @@ class RoutingSummaryPage {
       noteRangeMax: selected.instrument.note_range_max,
       noteSelectionMode: selected.instrument.note_selection_mode,
       polyphony: selected.instrument.polyphony,
+      supportedCcs: selected.instrument.supported_ccs || null,
       channelAnalysis: this.channelAnalyses[parseInt(ch)] || null
     };
 
@@ -1802,7 +1822,8 @@ class RoutingSummaryPage {
         noteRangeMin: assignment.noteRangeMin,
         noteRangeMax: assignment.noteRangeMax,
         noteSelectionMode: assignment.noteSelectionMode,
-        score: assignment.score
+        score: assignment.score,
+        ccRemapping: this.ccRemapping[ch] || null
       };
       hasAssignment = true;
     }
@@ -1843,12 +1864,14 @@ class RoutingSummaryPage {
     // Detect if physical file modifications are needed
     let hasTransposition = false;
     let hasOorSuppression = false;
+    let hasCCRemap = false;
     for (const [ch, a] of Object.entries(assignments)) {
       if (a.transposition?.semitones && a.transposition.semitones !== 0) hasTransposition = true;
       if (a.suppressOutOfRange) hasOorSuppression = true;
       if (a.noteCompression) hasOorSuppression = true;
+      if (a.ccRemapping && Object.keys(a.ccRemapping).length > 0) hasCCRemap = true;
     }
-    const needsFileModification = hasSplit || hasTransposition || hasOorSuppression;
+    const needsFileModification = hasSplit || hasTransposition || hasOorSuppression || hasCCRemap;
 
     // Ask user how to save if file modification is needed
     let overwriteOriginal = false;
@@ -1957,6 +1980,159 @@ class RoutingSummaryPage {
     } catch (error) {
       console.error('[RoutingSummary] Apply failed:', error);
     }
+  }
+
+  // ============================================================================
+  // CC Management
+  // ============================================================================
+
+  /**
+   * Get CC name from InstrumentSettingsModal.CC_GROUPS lookup
+   */
+  _getCCName(ccNum) {
+    if (typeof InstrumentSettingsModal !== 'undefined' && InstrumentSettingsModal.CC_GROUPS) {
+      for (const group of Object.values(InstrumentSettingsModal.CC_GROUPS)) {
+        if (group.ccs && group.ccs[ccNum]) {
+          return group.ccs[ccNum].name;
+        }
+      }
+    }
+    return `CC ${ccNum}`;
+  }
+
+  /**
+   * Render CC management section for a channel's detail panel
+   */
+  _renderCCSection(channel) {
+    const ch = String(channel);
+    const analysis = this.channelAnalyses[channel];
+    const channelCCs = analysis?.usedCCs || [];
+    const assignment = this.selectedAssignments[ch];
+    const isSplit = this.splitChannels.has(channel);
+    const isSkipped = this.skippedChannels.has(channel);
+
+    // Don't show if no instrument assigned or channel skipped
+    if (isSkipped || (!assignment && !isSplit)) return '';
+    // Don't show if channel uses no CCs
+    if (channelCCs.length === 0) return '';
+
+    // Get instrument supported CCs
+    let instrumentCCs = null; // null = all supported (unknown)
+    let instrumentName = '';
+    if (isSplit && this.splitAssignments[channel]) {
+      // In split mode: combine supported CCs from all segments
+      const segs = this.splitAssignments[channel].segments || [];
+      const allNull = segs.every(s => {
+        const inst = this._findInstrumentById(s.instrumentId);
+        return !inst || inst.supported_ccs == null;
+      });
+      if (!allNull) {
+        const combined = new Set();
+        for (const seg of segs) {
+          const inst = this._findInstrumentById(seg.instrumentId);
+          if (inst?.supported_ccs) {
+            const ccs = Array.isArray(inst.supported_ccs) ? inst.supported_ccs : JSON.parse(inst.supported_ccs || '[]');
+            ccs.forEach(cc => combined.add(cc));
+          }
+        }
+        instrumentCCs = [...combined].sort((a, b) => a - b);
+      }
+      instrumentName = segs.map(s => s.instrumentName || '?').join(' + ');
+    } else if (assignment) {
+      instrumentCCs = assignment.supportedCcs;
+      if (instrumentCCs && typeof instrumentCCs === 'string') {
+        try { instrumentCCs = JSON.parse(instrumentCCs); } catch { instrumentCCs = null; }
+      }
+      instrumentName = assignment.customName || assignment.instrumentName || '';
+    }
+
+    // Classify each CC used by the channel
+    const currentRemap = this.ccRemapping[ch] || {};
+    let supportedCount = 0;
+    let unsupportedCount = 0;
+
+    const rows = channelCCs.map(ccNum => {
+      const name = this._getCCName(ccNum);
+      let status, statusIcon, statusClass;
+
+      if (instrumentCCs === null) {
+        // Unknown — presume all supported
+        status = 'unknown';
+        statusIcon = '?';
+        statusClass = 'rs-cc-unknown';
+        supportedCount++;
+      } else if (instrumentCCs.includes(ccNum)) {
+        status = 'supported';
+        statusIcon = '\u2713';
+        statusClass = 'rs-cc-supported';
+        supportedCount++;
+      } else {
+        status = 'unsupported';
+        statusIcon = '\u2717';
+        statusClass = 'rs-cc-unsupported';
+        unsupportedCount++;
+      }
+
+      // Build remap dropdown for unsupported CCs
+      let remapHTML = '';
+      if (status === 'unsupported' && instrumentCCs) {
+        const currentTarget = currentRemap[ccNum];
+        const options = instrumentCCs
+          .filter(targetCC => !channelCCs.includes(targetCC) || targetCC === ccNum)
+          .map(targetCC => {
+            const targetName = this._getCCName(targetCC);
+            const selected = currentTarget === targetCC ? 'selected' : '';
+            return `<option value="${targetCC}" ${selected}>${targetName}</option>`;
+          });
+        remapHTML = `
+          <select class="rs-cc-remap" data-channel="${ch}" data-source="${ccNum}">
+            <option value="">${_t('routingSummary.ccIgnore') || '\u2014 ignorer \u2014'}</option>
+            ${options.join('')}
+          </select>`;
+      } else if (currentRemap[ccNum] !== undefined) {
+        // Show existing remap as text
+        remapHTML = `<span class="rs-cc-remap-info">\u2192 ${this._getCCName(currentRemap[ccNum])}</span>`;
+      }
+
+      return `
+        <div class="rs-cc-row ${statusClass}">
+          <span class="rs-cc-num">CC${ccNum}</span>
+          <span class="rs-cc-name">${escapeHtml(name)}</span>
+          <span class="rs-cc-status">${statusIcon}</span>
+          ${remapHTML}
+        </div>`;
+    }).join('');
+
+    // Summary line
+    let summaryHTML;
+    if (instrumentCCs === null) {
+      summaryHTML = `<span class="rs-cc-summary rs-cc-unknown-summary">${_t('routingSummary.ccUnknown') || 'CC non configurés \u2014 supposés tous supportés'}</span>`;
+    } else if (unsupportedCount === 0) {
+      summaryHTML = `<span class="rs-cc-summary rs-cc-ok-summary">\u2713 ${_t('routingSummary.ccAllSupported') || 'Tous les CC supportés'} (${supportedCount})</span>`;
+    } else {
+      summaryHTML = `<span class="rs-cc-summary rs-cc-warn-summary">${supportedCount}/${channelCCs.length} ${_t('routingSummary.ccSupported') || 'CC supportés'} \u2014 ${unsupportedCount} ${_t('routingSummary.ccUnsupported') || 'non supportés'}</span>`;
+    }
+
+    return `
+      <div class="rs-cc-section">
+        <h4 class="rs-cc-title">\uD83C\uDFDB ${_t('routingSummary.ccTitle') || 'Contr\u00f4leurs MIDI (CC)'}</h4>
+        ${summaryHTML}
+        <div class="rs-cc-list">
+          ${rows}
+        </div>
+      </div>`;
+  }
+
+  /**
+   * Find instrument data by ID across all suggestions
+   */
+  _findInstrumentById(instrumentId) {
+    for (const ch of Object.keys(this.suggestions)) {
+      const options = [...(this.suggestions[ch] || []), ...(this.lowScoreSuggestions[ch] || [])];
+      const found = options.find(o => o.instrument.id === instrumentId);
+      if (found) return found.instrument;
+    }
+    return null;
   }
 
   // ============================================================================
