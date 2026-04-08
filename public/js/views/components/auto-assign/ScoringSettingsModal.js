@@ -1,5 +1,5 @@
 // public/js/views/components/auto-assign/ScoringSettingsModal.js
-// Standalone modal for auto-assignment scoring settings with 4 tabs
+// Standalone modal for auto-assignment scoring settings with sidebar navigation
 (function() {
 'use strict';
 
@@ -13,10 +13,31 @@ class ScoringSettingsModal extends BaseModal {
     });
     this.overrides = JSON.parse(JSON.stringify(currentOverrides));
     this.onApplyCallback = onApply;
-    this.activeTab = 'general';
+    this.activeSection = 'routing';
     this.activePreset = currentOverrides._preset || null;
     this.presetSnapshot = null;
   }
+
+  // ============================================================================
+  // Constants
+  // ============================================================================
+
+  static SECTIONS = [
+    { id: 'routing', icon: '🔀', labelKey: 'scoringSettings.tabRouting', fallback: 'Routage' },
+    { id: 'drums',   icon: '🥁', labelKey: 'scoringSettings.tabDrums',   fallback: 'Percussions' },
+    { id: 'scoring', icon: '⚖️', labelKey: 'scoringSettings.tabScoring', fallback: 'Scoring' }
+  ];
+
+  static DRUM_CATEGORIES = [
+    { key: 'kicks',   icon: '🥁', labelKey: 'scoringSettings.catKicks',   fallback: 'Kicks',   notes: '35, 36' },
+    { key: 'snares',  icon: '🪘', labelKey: 'scoringSettings.catSnares',  fallback: 'Snares',  notes: '37, 38, 40' },
+    { key: 'hiHats',  icon: '🎩', labelKey: 'scoringSettings.catHiHats',  fallback: 'Hi-Hats', notes: '42, 44, 46' },
+    { key: 'toms',    icon: '🥁', labelKey: 'scoringSettings.catToms',    fallback: 'Toms',    notes: '41, 43, 45, 47, 48, 50' },
+    { key: 'crashes', icon: '💥', labelKey: 'scoringSettings.catCrashes', fallback: 'Crashes', notes: '49, 55, 57' },
+    { key: 'rides',   icon: '🔔', labelKey: 'scoringSettings.catRides',   fallback: 'Rides',   notes: '51, 53, 59' },
+    { key: 'latin',   icon: '🪇', labelKey: 'scoringSettings.catLatin',   fallback: 'Latin',   notes: '60-68' },
+    { key: 'misc',    icon: '🎵', labelKey: 'scoringSettings.catMisc',    fallback: 'Divers',  notes: '69-81' }
+  ];
 
   // ============================================================================
   // Defaults
@@ -44,8 +65,7 @@ class ScoringSettingsModal extends BaseModal {
 
   static getPresets() {
     return [
-      { key: 'minimal', icon: '\uD83C\uDFB5', label: 'scoringSettings.presetMinimal', desc: 'scoringSettings.presetMinimalDesc',
-        summary: 'Assigne l\'instrument qui peut jouer les notes du canal',
+      { key: 'minimal', icon: '🎵', label: 'scoringSettings.presetMinimal', desc: 'scoringSettings.presetMinimalDesc',
         weights: { noteRange: 55, programMatch: 10, instrumentType: 15, polyphony: 15, ccSupport: 5 },
         scoreThresholds: { acceptable: 45, minimum: 20 },
         penalties: { transpositionPerOctave: 2, maxTranspositionOctaves: 4 },
@@ -54,8 +74,7 @@ class ScoringSettingsModal extends BaseModal {
           drumChannelWeights: { noteRange: 55, instrumentType: 25, polyphony: 10, programMatch: 5, ccSupport: 5 } },
         splitting: { triggerBelowScore: 40, minQuality: 35, maxInstruments: 2 } },
 
-      { key: 'balanced', icon: '\u2696\uFE0F', label: 'scoringSettings.presetBalanced', desc: 'scoringSettings.presetBalancedDesc',
-        summary: 'Equilibre entre jouabilite et type d\'instrument GM similaire',
+      { key: 'balanced', icon: '⚖️', label: 'scoringSettings.presetBalanced', desc: 'scoringSettings.presetBalancedDesc',
         weights: { noteRange: 40, programMatch: 22, instrumentType: 20, polyphony: 13, ccSupport: 5 },
         scoreThresholds: { acceptable: 60, minimum: 30 },
         penalties: { transpositionPerOctave: 3, maxTranspositionOctaves: 3 },
@@ -64,8 +83,7 @@ class ScoringSettingsModal extends BaseModal {
           drumChannelWeights: { noteRange: 50, instrumentType: 30, polyphony: 10, programMatch: 5, ccSupport: 5 } },
         splitting: { triggerBelowScore: 60, minQuality: 50, maxInstruments: 4 } },
 
-      { key: 'orchestral', icon: '\uD83C\uDFBB', label: 'scoringSettings.presetOrchestral', desc: 'scoringSettings.presetOrchestralDesc',
-        summary: 'Type d\'instrument GM extremement important pour le routage',
+      { key: 'orchestral', icon: '🎻', label: 'scoringSettings.presetOrchestral', desc: 'scoringSettings.presetOrchestralDesc',
         weights: { noteRange: 30, programMatch: 28, instrumentType: 28, polyphony: 8, ccSupport: 6 },
         scoreThresholds: { acceptable: 65, minimum: 35 },
         penalties: { transpositionPerOctave: 2, maxTranspositionOctaves: 2 },
@@ -103,80 +121,34 @@ class ScoringSettingsModal extends BaseModal {
     this._ensureDefaults();
     if (!this.overrides.routing) this.overrides.routing = {};
     this._detectActivePreset();
+
     const presets = ScoringSettingsModal.getPresets();
     const activeP = presets.find(p => p.key === this.activePreset);
-    const routing = this.overrides.routing;
-
-    // Drum fallback categories
-    const drumCategories = [
-      { key: 'kicks', label: 'Kicks (35-36)', notes: '35, 36' },
-      { key: 'snares', label: 'Snares (37-40)', notes: '37, 38, 40' },
-      { key: 'hiHats', label: 'Hi-Hats (42, 44, 46)', notes: '42, 44, 46' },
-      { key: 'toms', label: 'Toms (41-50)', notes: '41, 43, 45, 47, 48, 50' },
-      { key: 'crashes', label: 'Crashes (49, 55, 57)', notes: '49, 55, 57' },
-      { key: 'rides', label: 'Rides (51, 53, 59)', notes: '51, 53, 59' }
-    ];
-    const drumFallback = routing.drumFallback || {};
 
     return `
       <div class="ss-preset-bar">
         ${presets.map(p => `
-          <button class="ss-preset-chip ${this.activePreset === p.key ? 'active' : ''}" data-preset="${p.key}" title="${p.summary || this.t(p.desc)}">
+          <button class="ss-preset-chip ${this.activePreset === p.key ? 'active' : ''}" data-preset="${p.key}" title="${this.t(p.desc)}">
             <span class="ss-preset-icon">${p.icon}</span>
             <span class="ss-preset-name">${this.t(p.label)}</span>
           </button>
         `).join('')}
       </div>
-      <div class="ss-preset-desc" id="ssPresetDesc">${activeP ? (activeP.summary || this.t(activeP.desc)) : ''}</div>
-
-      <div class="ss-section-group">
-        <h4>${this.t('scoringSettings.globalRouting') || 'Reglages routage'}</h4>
-        <div class="ss-toggle-row">
-          <label class="ss-toggle-label">
-            <input type="checkbox" class="ss-routing-toggle" data-key="autoSplitAvoidTransposition" ${routing.autoSplitAvoidTransposition ? 'checked' : ''}>
-            ${this.t('scoringSettings.autoSplitAvoidTransposition') || 'Decoupe automatique si evite une transposition'}
-          </label>
-        </div>
-        <div class="ss-toggle-row">
-          <label class="ss-toggle-label">
-            <input type="checkbox" class="ss-routing-toggle" data-key="preferSingleInstrument" ${routing.preferSingleInstrument !== false ? 'checked' : ''}>
-            ${this.t('scoringSettings.preferSingleInstrument') || 'Preferer jouer sur un seul instrument'}
-          </label>
-        </div>
-        <div class="ss-toggle-row">
-          <label class="ss-toggle-label">
-            <input type="checkbox" class="ss-routing-toggle" data-key="preferSimilarGMType" ${routing.preferSimilarGMType !== false ? 'checked' : ''}>
-            ${this.t('scoringSettings.preferSimilarGMType') || 'Privilegier type GM similaire au canal'}
-          </label>
+      <div class="ss-preset-desc" id="ssPresetDesc">${activeP ? this.t(activeP.desc) : ''}</div>
+      <div class="ss-layout">
+        ${this._renderSidebar()}
+        <div class="ss-content">
+          <div class="ss-section ${this.activeSection === 'routing' ? 'active' : ''}" data-section="routing">
+            ${this._renderRoutingSection()}
+          </div>
+          <div class="ss-section ${this.activeSection === 'drums' ? 'active' : ''}" data-section="drums">
+            ${this._renderDrumsSection()}
+          </div>
+          <div class="ss-section ${this.activeSection === 'scoring' ? 'active' : ''}" data-section="scoring">
+            ${this._renderScoringSection()}
+          </div>
         </div>
       </div>
-
-      <div class="ss-section-group">
-        <h4>${this.t('scoringSettings.drumSettings') || 'Reglages Drums'}</h4>
-        <p class="ss-group-desc">${this.t('scoringSettings.drumFallbackDesc') || 'Action si note manquante par categorie'}</p>
-        ${drumCategories.map(cat => {
-          const val = drumFallback[cat.key] || 'substitute';
-          return `
-            <div class="ss-drum-fallback-row">
-              <span class="ss-drum-cat-label">${cat.label}</span>
-              <select class="ss-drum-fallback-select" data-cat="${cat.key}">
-                <option value="substitute" ${val === 'substitute' ? 'selected' : ''}>${this.t('scoringSettings.drumSubstitute') || 'Substituer'}</option>
-                <option value="ignore" ${val === 'ignore' ? 'selected' : ''}>${this.t('scoringSettings.drumIgnore') || 'Ignorer'}</option>
-              </select>
-            </div>
-          `;
-        }).join('')}
-      </div>
-
-      <details class="ss-advanced-section">
-        <summary>${this.t('scoringSettings.advanced') || 'Reglages avances'}</summary>
-        <div class="ss-advanced-content">
-          ${this._renderGeneralTab()}
-          ${this._renderTranspositionTab()}
-          ${this._renderPercussionTab()}
-          ${this._renderSplittingTab()}
-        </div>
-      </details>
     `;
   }
 
@@ -190,7 +162,162 @@ class ScoringSettingsModal extends BaseModal {
   }
 
   // ============================================================================
-  // Tab content renderers
+  // Sidebar
+  // ============================================================================
+
+  _renderSidebar() {
+    let html = '<nav class="ss-sidebar">';
+    for (const sec of ScoringSettingsModal.SECTIONS) {
+      const active = this.activeSection === sec.id ? 'active' : '';
+      html += `<button type="button" class="ss-nav-item ${active}" data-section="${sec.id}">
+        <span class="ss-nav-icon">${sec.icon}</span>
+        <span class="ss-nav-label">${this.t(sec.labelKey) || sec.fallback}</span>
+      </button>`;
+    }
+    html += '</nav>';
+    return html;
+  }
+
+  _switchSection(sectionId) {
+    this.activeSection = sectionId;
+    const dialog = this.dialog;
+    if (!dialog) return;
+    dialog.querySelectorAll('.ss-nav-item').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.section === sectionId);
+    });
+    dialog.querySelectorAll('.ss-section').forEach(sec => {
+      sec.classList.toggle('active', sec.dataset.section === sectionId);
+    });
+  }
+
+  // ============================================================================
+  // Section: Routing
+  // ============================================================================
+
+  _renderRoutingSection() {
+    const routing = this.overrides.routing;
+    return `
+      <h4 class="ss-section-title">🔀 ${this.t('scoringSettings.globalRouting') || 'Réglages routage'}</h4>
+      <p class="ss-section-desc">${this.t('scoringSettings.globalRoutingDesc') || 'Options globales pour le routage automatique des canaux MIDI.'}</p>
+
+      <div class="ss-toggle-group">
+        <label class="ss-toggle-card">
+          <input type="checkbox" class="ss-routing-toggle" data-key="autoSplitAvoidTransposition" ${routing.autoSplitAvoidTransposition ? 'checked' : ''}>
+          <div class="ss-toggle-content">
+            <span class="ss-toggle-title">${this.t('scoringSettings.autoSplitAvoidTransposition') || 'Découpe automatique si évite une transposition'}</span>
+            <span class="ss-toggle-desc">${this.t('scoringSettings.autoSplitAvoidTranspositionDesc') || 'Divise un canal entre plusieurs instruments pour éviter la transposition'}</span>
+          </div>
+        </label>
+
+        <label class="ss-toggle-card">
+          <input type="checkbox" class="ss-routing-toggle" data-key="preferSingleInstrument" ${routing.preferSingleInstrument !== false ? 'checked' : ''}>
+          <div class="ss-toggle-content">
+            <span class="ss-toggle-title">${this.t('scoringSettings.preferSingleInstrument') || 'Préférer un seul instrument'}</span>
+            <span class="ss-toggle-desc">${this.t('scoringSettings.preferSingleInstrumentDesc') || 'Évite de diviser un canal entre plusieurs instruments quand possible'}</span>
+          </div>
+        </label>
+
+        <label class="ss-toggle-card">
+          <input type="checkbox" class="ss-routing-toggle" data-key="preferSimilarGMType" ${routing.preferSimilarGMType !== false ? 'checked' : ''}>
+          <div class="ss-toggle-content">
+            <span class="ss-toggle-title">${this.t('scoringSettings.preferSimilarGMType') || 'Privilégier type GM similaire'}</span>
+            <span class="ss-toggle-desc">${this.t('scoringSettings.preferSimilarGMTypeDesc') || 'Favorise les instruments dont le type GM correspond au canal'}</span>
+          </div>
+        </label>
+      </div>
+    `;
+  }
+
+  // ============================================================================
+  // Section: Drums
+  // ============================================================================
+
+  _renderDrumsSection() {
+    const routing = this.overrides.routing || {};
+    const drumFallback = routing.drumFallback || {};
+    const drumManualMap = routing.drumManualMap || {};
+    const categories = ScoringSettingsModal.DRUM_CATEGORIES;
+
+    // Summary counts
+    let countSub = 0, countIgn = 0, countMan = 0;
+    for (const cat of categories) {
+      const val = drumFallback[cat.key] || 'substitute';
+      if (val === 'substitute') countSub++;
+      else if (val === 'ignore') countIgn++;
+      else if (val === 'manual') countMan++;
+    }
+
+    let catsHtml = '';
+    for (const cat of categories) {
+      const val = drumFallback[cat.key] || 'substitute';
+      const manualNote = drumManualMap[cat.key] != null ? drumManualMap[cat.key] : '';
+      catsHtml += `
+        <div class="ss-drum-cat-row">
+          <div class="ss-drum-cat-info">
+            <span class="ss-drum-cat-icon">${cat.icon}</span>
+            <div class="ss-drum-cat-text">
+              <span class="ss-drum-cat-name">${this.t(cat.labelKey) || cat.fallback}</span>
+              <span class="ss-drum-cat-notes">${cat.notes}</span>
+            </div>
+          </div>
+          <div class="ss-drum-options">
+            <label class="ss-drum-option ${val === 'substitute' ? 'selected' : ''}" title="${this.t('scoringSettings.drumSubstituteDesc') || 'Remplacer par la note disponible la plus proche'}">
+              <input type="radio" name="drumFallback_${cat.key}" value="substitute" ${val === 'substitute' ? 'checked' : ''} data-cat="${cat.key}">
+              <span class="ss-drum-option-icon">🔄</span>
+              <span class="ss-drum-option-label">${this.t('scoringSettings.drumSubstitute') || 'Substituer'}</span>
+            </label>
+            <label class="ss-drum-option ${val === 'ignore' ? 'selected' : ''}" title="${this.t('scoringSettings.drumIgnoreDesc') || 'Ne pas jouer cette note'}">
+              <input type="radio" name="drumFallback_${cat.key}" value="ignore" ${val === 'ignore' ? 'checked' : ''} data-cat="${cat.key}">
+              <span class="ss-drum-option-icon">⏭️</span>
+              <span class="ss-drum-option-label">${this.t('scoringSettings.drumIgnore') || 'Ignorer'}</span>
+            </label>
+            <label class="ss-drum-option ${val === 'manual' ? 'selected' : ''}" title="${this.t('scoringSettings.drumManualDesc') || 'Mapper vers une note spécifique'}">
+              <input type="radio" name="drumFallback_${cat.key}" value="manual" ${val === 'manual' ? 'checked' : ''} data-cat="${cat.key}">
+              <span class="ss-drum-option-icon">✏️</span>
+              <span class="ss-drum-option-label">${this.t('scoringSettings.drumManual') || 'Manuel'}</span>
+            </label>
+          </div>
+          <div class="ss-drum-manual-input" data-cat="${cat.key}" style="${val === 'manual' ? '' : 'display:none'}">
+            <label class="ss-drum-manual-label">${this.t('scoringSettings.drumMapTo') || 'Note cible'}</label>
+            <input type="number" class="ss-drum-manual-note" data-cat="${cat.key}" value="${manualNote}" min="0" max="127" placeholder="0-127">
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <h4 class="ss-section-title">🥁 ${this.t('scoringSettings.drumSettings') || 'Réglages Drums'}</h4>
+      <p class="ss-section-desc">${this.t('scoringSettings.drumFallbackDesc') || 'Action quand une note est manquante par catégorie de percussion.'}</p>
+
+      <div class="ss-drum-summary" id="ssDrumSummary">
+        <span class="ss-drum-summary-item ss-sub">🔄 ${countSub}</span>
+        <span class="ss-drum-summary-item ss-ign">⏭️ ${countIgn}</span>
+        <span class="ss-drum-summary-item ss-man">✏️ ${countMan}</span>
+      </div>
+
+      <div class="ss-drum-categories">
+        ${catsHtml}
+      </div>
+    `;
+  }
+
+  // ============================================================================
+  // Section: Scoring (advanced)
+  // ============================================================================
+
+  _renderScoringSection() {
+    return `
+      <h4 class="ss-section-title">⚖️ ${this.t('scoringSettings.tabScoring') || 'Scoring'}</h4>
+      <p class="ss-section-desc">${this.t('scoringSettings.scoringDesc') || 'Paramètres avancés de scoring pour l\'auto-assignation.'}</p>
+      ${this._renderGeneralTab()}
+      ${this._renderTranspositionTab()}
+      ${this._renderPercussionTab()}
+      ${this._renderSplittingTab()}
+    `;
+  }
+
+  // ============================================================================
+  // Scoring sub-sections
   // ============================================================================
 
   _renderGeneralTab() {
@@ -320,6 +447,11 @@ class ScoringSettingsModal extends BaseModal {
     const dialog = this.dialog;
     if (!dialog) return;
 
+    // Sidebar navigation
+    dialog.querySelectorAll('.ss-nav-item').forEach(btn => {
+      btn.addEventListener('click', () => this._switchSection(btn.dataset.section));
+    });
+
     // Preset chip clicks
     dialog.querySelectorAll('.ss-preset-chip').forEach(chip => {
       chip.addEventListener('click', () => this._applyPreset(chip.dataset.preset));
@@ -333,12 +465,40 @@ class ScoringSettingsModal extends BaseModal {
       });
     });
 
-    // Drum fallback selects
-    dialog.querySelectorAll('.ss-drum-fallback-select').forEach(sel => {
-      sel.addEventListener('change', () => {
+    // Drum fallback radios
+    dialog.querySelectorAll('.ss-drum-options input[type="radio"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        const cat = radio.dataset.cat;
+        const val = radio.value;
         if (!this.overrides.routing) this.overrides.routing = {};
         if (!this.overrides.routing.drumFallback) this.overrides.routing.drumFallback = {};
-        this.overrides.routing.drumFallback[sel.dataset.cat] = sel.value;
+        this.overrides.routing.drumFallback[cat] = val;
+
+        // Update visual selection
+        const row = radio.closest('.ss-drum-cat-row');
+        if (row) {
+          row.querySelectorAll('.ss-drum-option').forEach(opt => {
+            opt.classList.toggle('selected', opt.querySelector('input').checked);
+          });
+          // Show/hide manual input
+          const manualInput = row.querySelector('.ss-drum-manual-input');
+          if (manualInput) {
+            manualInput.style.display = val === 'manual' ? '' : 'none';
+          }
+        }
+
+        this._updateDrumSummary();
+      });
+    });
+
+    // Drum manual note inputs
+    dialog.querySelectorAll('.ss-drum-manual-note').forEach(input => {
+      input.addEventListener('change', () => {
+        const cat = input.dataset.cat;
+        const val = parseInt(input.value);
+        if (!this.overrides.routing) this.overrides.routing = {};
+        if (!this.overrides.routing.drumManualMap) this.overrides.routing.drumManualMap = {};
+        this.overrides.routing.drumManualMap[cat] = isNaN(val) ? null : Math.max(0, Math.min(127, val));
       });
     });
 
@@ -376,6 +536,30 @@ class ScoringSettingsModal extends BaseModal {
     dialog.querySelector('#ssReset')?.addEventListener('click', () => this._reset());
     dialog.querySelector('#ssCancel')?.addEventListener('click', () => this.close());
     dialog.querySelector('#ssApply')?.addEventListener('click', () => this._apply());
+  }
+
+  // ============================================================================
+  // Drum summary update
+  // ============================================================================
+
+  _updateDrumSummary() {
+    const summary = this.dialog?.querySelector('#ssDrumSummary');
+    if (!summary) return;
+    const routing = this.overrides.routing || {};
+    const drumFallback = routing.drumFallback || {};
+    const categories = ScoringSettingsModal.DRUM_CATEGORIES;
+    let countSub = 0, countIgn = 0, countMan = 0;
+    for (const cat of categories) {
+      const val = drumFallback[cat.key] || 'substitute';
+      if (val === 'substitute') countSub++;
+      else if (val === 'ignore') countIgn++;
+      else if (val === 'manual') countMan++;
+    }
+    summary.innerHTML = `
+      <span class="ss-drum-summary-item ss-sub">🔄 ${countSub}</span>
+      <span class="ss-drum-summary-item ss-ign">⏭️ ${countIgn}</span>
+      <span class="ss-drum-summary-item ss-man">✏️ ${countMan}</span>
+    `;
   }
 
   // ============================================================================
@@ -432,10 +616,6 @@ class ScoringSettingsModal extends BaseModal {
       totalEl.classList.toggle('error', sum !== 100);
     }
   }
-
-  // ============================================================================
-  // Actions
-  // ============================================================================
 
   // ============================================================================
   // Preset management
@@ -508,7 +688,6 @@ class ScoringSettingsModal extends BaseModal {
     const dialog = this.dialog;
     if (!dialog) return;
 
-    // Check if current values still match the active preset
     const isModified = this.presetSnapshot && JSON.stringify(this.overrides) !== this.presetSnapshot;
 
     dialog.querySelectorAll('.ss-preset-chip').forEach(chip => {
@@ -517,7 +696,6 @@ class ScoringSettingsModal extends BaseModal {
       chip.classList.toggle('modified', isActive && isModified);
     });
 
-    // Update description
     const descEl = dialog.querySelector('#ssPresetDesc');
     if (descEl) {
       if (this.activePreset) {
@@ -538,7 +716,6 @@ class ScoringSettingsModal extends BaseModal {
   }
 
   _apply() {
-    // Persist the active preset key in the overrides (ignored by backend)
     this.overrides._preset = this.activePreset;
     if (typeof this.onApplyCallback === 'function') {
       this.onApplyCallback(this.overrides);
