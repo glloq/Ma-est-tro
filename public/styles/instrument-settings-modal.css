@@ -1208,6 +1208,30 @@ body.dark-mode .ism-drum-kit-desc {
   color: var(--accent-color, #667eea);
 }
 
+.ism-cc-tag-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  margin-left: 2px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted, #9ca3af);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.ism-cc-tag-remove:hover {
+  background: var(--close-btn-bg, #dc2626);
+  color: #fff;
+}
+
 .ism-apply-recommended-ccs {
   margin-bottom: 8px;
 }
