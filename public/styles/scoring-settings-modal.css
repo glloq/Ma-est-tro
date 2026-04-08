@@ -5,6 +5,10 @@
    ============================================================================ */
 
 /* ========== Modal overrides ========== */
+.ss-modal {
+  z-index: 10010 !important;
+}
+
 .ss-modal .modal-dialog {
   max-width: 820px;
   width: 92vw;
