@@ -467,6 +467,38 @@ class RoutingSummaryPage {
   }
 
   /**
+   * Get max polyphony used by a MIDI channel from analysis data.
+   * Handles both { max, avg } objects and raw number formats.
+   */
+  _getChannelPolyphony(channel) {
+    const ch = String(channel);
+    const analysis = this.channelAnalyses[parseInt(channel)] || this.selectedAssignments[ch]?.channelAnalysis;
+    if (!analysis?.polyphony) return null;
+    if (typeof analysis.polyphony === 'number') return analysis.polyphony;
+    return analysis.polyphony.max ?? null;
+  }
+
+  /**
+   * Get total polyphony capacity of assigned instrument(s) for a channel.
+   */
+  _getInstrumentPolyphony(channel) {
+    const ch = String(channel);
+    const chNum = parseInt(channel);
+    if (this.splitChannels.has(chNum) && this.splitAssignments[chNum]) {
+      return (this.splitAssignments[chNum].segments || []).reduce((s, seg) => {
+        // Look up instrument polyphony from allInstruments
+        const inst = (this.allInstruments || []).find(i => i.id === seg.instrumentId);
+        return s + (inst?.polyphony || seg.polyphonyShare || 16);
+      }, 0);
+    }
+    const assignment = this.selectedAssignments[ch];
+    if (!assignment) return null;
+    // Prefer allInstruments data (always populated from DB)
+    const inst = (this.allInstruments || []).find(i => i.id === assignment.instrumentId);
+    return inst?.polyphony || assignment.polyphony || null;
+  }
+
+  /**
    * Compute playable notes ratio for a channel's assignment.
    * @returns {{ playable: number, total: number } | null}
    */
@@ -607,13 +639,8 @@ class RoutingSummaryPage {
       // Polyphony column: instrument capacity / channel polyphony
       let polyHTML = '';
       if (!isSkipped) {
-        const chPoly = analysis?.polyphony?.max || null;
-        let instPoly;
-        if (isSplit && this.splitAssignments[channel]) {
-          instPoly = (this.splitAssignments[channel].segments || []).reduce((s, seg) => s + (seg.polyphonyShare || 16), 0);
-        } else {
-          instPoly = assignment?.polyphony || null;
-        }
+        const chPoly = this._getChannelPolyphony(channel);
+        const instPoly = this._getInstrumentPolyphony(channel);
         if (chPoly && instPoly) {
           const ok = instPoly >= chPoly;
           polyHTML = `<span class="rs-poly-cell ${ok ? 'rs-poly-ok' : 'rs-poly-warn'}">${instPoly}/${chPoly}</span>`;
@@ -992,19 +1019,11 @@ class RoutingSummaryPage {
 
     // Polyphony info: instrument(s) capacity vs channel usage
     let polyHTML = '';
-    const channelPoly = analysis?.polyphony?.max || null;
-    if (channelPoly) {
-      let instPoly;
-      if (isSplit && this.splitAssignments[channel]) {
-        const segments = this.splitAssignments[channel].segments || [];
-        instPoly = segments.reduce((sum, seg) => sum + (seg.polyphonyShare || 16), 0);
-      } else {
-        instPoly = assignment?.polyphony || null;
-      }
-      if (instPoly) {
-        const polyOk = instPoly >= channelPoly;
-        polyHTML = `<span class="rs-detail-poly ${polyOk ? 'rs-poly-ok' : 'rs-poly-warn'}" title="${_t('autoAssign.polyphony') || 'Polyphonie'}">\u266B ${instPoly}/${channelPoly}</span>`;
-      }
+    const channelPoly = this._getChannelPolyphony(channel);
+    const instPoly = this._getInstrumentPolyphony(channel);
+    if (channelPoly && instPoly) {
+      const polyOk = instPoly >= channelPoly;
+      polyHTML = `<span class="rs-detail-poly ${polyOk ? 'rs-poly-ok' : 'rs-poly-warn'}" title="${_t('autoAssign.polyphony') || 'Polyphonie'}">\u266B ${instPoly}/${channelPoly}</span>`;
     }
 
     return `
