@@ -164,6 +164,7 @@
         body.theme-dark .file-item {
             background: #3d3d3d;
             color: #ffffff;
+            border-color: #404040;
         }
 
         body.theme-dark .file-item:hover {
@@ -1592,7 +1593,7 @@
             padding: 4px;
             padding-left: 36px;
             background: #f9fafb;
-            border: none;
+            border: 1px solid #e5e7eb;
             border-radius: 6px;
             margin-bottom: 8px;
             display: flex;
@@ -1820,14 +1821,14 @@
         }
 
         .file-item.selected {
-            background: #e0e7ff;
-            border: 2px solid #667eea;
-            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+            box-shadow: none;
         }
 
         body.theme-dark .file-item.selected {
-            background: #3d4a7a;
-            border-color: #8b9bea;
+            background: rgba(59, 130, 246, 0.18);
+            border-color: rgba(96, 165, 250, 0.5);
         }
 
         .file-checkbox {
@@ -1849,7 +1850,8 @@
         }
 
         .file-item.batch-selected {
-            background: rgba(102, 126, 234, 0.1);
+            background: rgba(59, 130, 246, 0.12);
+            border-color: #93c5fd;
         }
 
         .file-item.batch-selected .file-checkbox {
@@ -1857,7 +1859,8 @@
         }
 
         body.theme-dark .file-item.batch-selected {
-            background: rgba(102, 126, 234, 0.2);
+            background: rgba(59, 130, 246, 0.22);
+            border-color: rgba(96, 165, 250, 0.5);
         }
 
         .batch-actions-bar {
@@ -2360,12 +2363,9 @@
         }
 
         .file-list.view-compact .file-item.selected {
-            background: #e0e7ff;
+            background: #dbeafe;
+            border-color: #93c5fd;
             box-shadow: none;
-        }
-        .file-list.view-compact .file-item.selected::before {
-            background: #667eea;
-            box-shadow: 2px 0 6px rgba(102, 126, 234, 0.3);
         }
 
         .file-list.view-compact .file-checkbox {
@@ -2473,11 +2473,8 @@
         }
 
         body.theme-dark .file-list.view-compact .file-item.selected {
-            background: #3d4a7a;
-        }
-        body.theme-dark .file-list.view-compact .file-item.selected::before {
-            background: #8b9bea;
-            box-shadow: 2px 0 6px rgba(139, 155, 234, 0.3);
+            background: rgba(59, 130, 246, 0.18);
+            border-color: rgba(96, 165, 250, 0.5);
         }
 
         /* ========================================================================
@@ -2530,15 +2527,15 @@
         }
 
         .file-list.view-grid .file-item.selected {
-            border-color: #667eea;
-            background: #f0f4ff;
-            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+            background: #dbeafe;
+            border-color: #93c5fd;
+            box-shadow: none;
         }
 
         .file-list.view-grid .file-item.batch-selected {
-            border-color: #667eea;
-            background: rgba(102, 126, 234, 0.1);
-            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+            background: rgba(59, 130, 246, 0.12);
+            border-color: #93c5fd;
+            box-shadow: none;
         }
 
         .file-list.view-grid .file-checkbox {
@@ -2597,8 +2594,8 @@
         }
 
         body.theme-dark .file-list.view-grid .file-item.selected {
-            background: #3d4a7a;
-            border-color: #8b9bea;
+            background: rgba(59, 130, 246, 0.18);
+            border-color: rgba(96, 165, 250, 0.5);
         }
 
         /* Grid dark: routing background tints (aligned with blocks mode) */
