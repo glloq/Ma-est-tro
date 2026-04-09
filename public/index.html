@@ -7490,7 +7490,6 @@
 
             metadataDiv.innerHTML = `
                 <span title="Durée">⏱ ${metadata.durationFormatted}</span>
-                <span title="Taille du fichier">💾 ${metadata.sizeFormatted}</span>
                 <span title="Canaux MIDI">🎹 ${metadata.channelCount} ${metadata.channelCount > 1 ? 'canaux' : 'canal'}</span>
                 <span title="Tempo">♩ ${metadata.tempo} BPM</span>
             `;
@@ -7654,7 +7653,6 @@
             fileNameSpan.className = 'file-name';
             const metadataHtml = file.durationFormatted
                 ? `<span title="Durée">⏱ ${file.durationFormatted}</span>
-                   <span title="Taille du fichier">💾 ${file.sizeFormatted || ''}</span>
                    <span title="Canaux MIDI">🎹 ${file.channelCount || file.channel_count || 0} ${(file.channelCount || file.channel_count || 0) > 1 ? 'canaux' : 'canal'}</span>
                    <span title="Tempo">♩ ${file.tempo || 120} BPM</span>`
                 : `<span>⏳ Chargement...</span>`;
