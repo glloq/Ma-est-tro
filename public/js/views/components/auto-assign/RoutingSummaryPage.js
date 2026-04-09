@@ -1904,6 +1904,7 @@ class RoutingSummaryPage {
     this.splitAssignments[channel] = {
       type: 'range',
       quality: 0,
+      overlapStrategy: 'shared',
       segments: [currentSeg, secondSeg]
     };
     this.splitExpanded[channel] = true;
