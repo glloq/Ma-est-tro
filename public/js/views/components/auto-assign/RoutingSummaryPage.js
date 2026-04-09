@@ -1744,6 +1744,24 @@ class RoutingSummaryPage {
         }
       });
     });
+
+    // CC mute/unmute buttons
+    modal.querySelectorAll('.rs-cc-mute-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ch = btn.dataset.channel;
+        const ccNum = parseInt(btn.dataset.cc);
+        if (!this.ccRemapping[ch]) this.ccRemapping[ch] = {};
+        if (this.ccRemapping[ch][ccNum] === -1) {
+          // Re-enable: remove the disable mapping
+          delete this.ccRemapping[ch][ccNum];
+          if (Object.keys(this.ccRemapping[ch]).length === 0) delete this.ccRemapping[ch];
+        } else {
+          // Disable: set to -1 (suppress)
+          this.ccRemapping[ch][ccNum] = -1;
+        }
+        this._refreshUI(channelKeys);
+      });
+    });
   }
 
   /**
@@ -2337,29 +2355,42 @@ class RoutingSummaryPage {
       let unsupportedByAny = 0;
       const bodyRows = channelCCs.map(ccNum => {
         const name = this._getCCName(ccNum);
-        const cells = segCCs.map((ccs, i) => {
-          if (ccs === null) return `<td class="rs-cc-cell rs-cc-cell-unknown" title="?">?</td>`;
-          if (ccs.includes(ccNum)) return `<td class="rs-cc-cell rs-cc-cell-ok">\u2713</td>`;
-          // Unsupported: show remap dropdown
-          const currentTarget = currentRemap[ccNum];
-          const remapOpts = (ccs || [])
-            .filter(tc => !channelCCs.includes(tc) || tc === ccNum)
-            .map(tc => `<option value="${tc}" ${currentTarget === tc ? 'selected' : ''}>${this._getCCName(tc)}</option>`)
-            .join('');
-          return `<td class="rs-cc-cell rs-cc-cell-no">
-            <select class="rs-cc-remap rs-cc-remap-split" data-channel="${ch}" data-source="${ccNum}">
-              <option value="">\u2717</option>
-              ${remapOpts}
-            </select>
-          </td>`;
-        }).join('');
+        const isDisabled = currentRemap[ccNum] === -1;
 
-        const anyUnsupported = segCCs.some(ccs => ccs !== null && !ccs.includes(ccNum));
-        if (anyUnsupported) unsupportedByAny++;
+        const muteActive = isDisabled ? ' rs-cc-mute-active' : '';
+        const muteTitle = isDisabled
+          ? (_t('routingSummary.ccEnable') || 'Activer ce CC')
+          : (_t('routingSummary.ccDisable') || 'Désactiver ce CC');
+        const muteBtn = `<td class="rs-cc-mute-cell"><button class="rs-cc-mute-btn${muteActive}" data-channel="${ch}" data-cc="${ccNum}" title="${muteTitle}">${isDisabled ? '\u{1F507}' : '\u{1F509}'}</button></td>`;
+
+        let cells;
+        if (isDisabled) {
+          cells = segs.map(() => `<td class="rs-cc-cell rs-cc-cell-disabled">\u2014</td>`).join('');
+        } else {
+          cells = segCCs.map((ccs, i) => {
+            if (ccs === null) return `<td class="rs-cc-cell rs-cc-cell-unknown" title="?">?</td>`;
+            if (ccs.includes(ccNum)) return `<td class="rs-cc-cell rs-cc-cell-ok">\u2713</td>`;
+            // Unsupported: show remap dropdown
+            const currentTarget = currentRemap[ccNum];
+            const remapOpts = (ccs || [])
+              .filter(tc => !channelCCs.includes(tc) || tc === ccNum)
+              .map(tc => `<option value="${tc}" ${currentTarget === tc ? 'selected' : ''}>${this._getCCName(tc)}</option>`)
+              .join('');
+            return `<td class="rs-cc-cell rs-cc-cell-no">
+              <select class="rs-cc-remap rs-cc-remap-split" data-channel="${ch}" data-source="${ccNum}">
+                <option value="">\u2717</option>
+                ${remapOpts}
+              </select>
+            </td>`;
+          }).join('');
+        }
+
+        const anyUnsupported = !isDisabled && segCCs.some(ccs => ccs !== null && !ccs.includes(ccNum));
+        if (isDisabled || anyUnsupported) unsupportedByAny++;
         else supportedByAll++;
 
-        const rowClass = anyUnsupported ? 'rs-cc-row-warn' : '';
-        return `<tr class="${rowClass}"><td class="rs-cc-num">CC${ccNum}</td><td class="rs-cc-name">${escapeHtml(name)}</td>${cells}</tr>`;
+        const rowClass = isDisabled ? 'rs-cc-row-disabled' : (anyUnsupported ? 'rs-cc-row-warn' : '');
+        return `<tr class="${rowClass}">${muteBtn}<td class="rs-cc-num">CC${ccNum}</td><td class="rs-cc-name">${escapeHtml(name)}</td>${cells}</tr>`;
       }).join('');
 
       // Summary
@@ -2377,7 +2408,7 @@ class RoutingSummaryPage {
           <h4 class="rs-cc-title">\uD83C\uDF9B ${_t('routingSummary.ccTitle') || 'Contr\u00f4leurs MIDI (CC)'}</h4>
           ${summaryHTML}
           <table class="rs-cc-table">
-            <thead><tr><th>CC</th><th>${_t('common.name') || 'Nom'}</th>${headerCols}</tr></thead>
+            <thead><tr><th></th><th>CC</th><th>${_t('common.name') || 'Nom'}</th>${headerCols}</tr></thead>
             <tbody>${bodyRows}</tbody>
           </table>
         </div>`;
@@ -2397,9 +2428,12 @@ class RoutingSummaryPage {
 
     const rows = channelCCs.map(ccNum => {
       const name = this._getCCName(ccNum);
+      const isDisabled = currentRemap[ccNum] === -1;
       let statusIcon, statusClass;
 
-      if (instrumentCCs === null) {
+      if (isDisabled) {
+        statusIcon = '\u2717'; statusClass = 'rs-cc-disabled'; unsupportedCount++;
+      } else if (instrumentCCs === null) {
         statusIcon = '?'; statusClass = 'rs-cc-unknown'; supportedCount++;
       } else if (instrumentCCs.includes(ccNum)) {
         statusIcon = '\u2713'; statusClass = 'rs-cc-supported'; supportedCount++;
@@ -2407,8 +2441,15 @@ class RoutingSummaryPage {
         statusIcon = '\u2717'; statusClass = 'rs-cc-unsupported'; unsupportedCount++;
       }
 
+      // Disable toggle for all CCs
+      const muteActive = isDisabled ? ' rs-cc-mute-active' : '';
+      const muteTitle = isDisabled
+        ? (_t('routingSummary.ccEnable') || 'Activer ce CC')
+        : (_t('routingSummary.ccDisable') || 'Désactiver ce CC');
+      const muteBtn = `<button class="rs-cc-mute-btn${muteActive}" data-channel="${ch}" data-cc="${ccNum}" title="${muteTitle}">${isDisabled ? '\u{1F507}' : '\u{1F509}'}</button>`;
+
       let remapHTML = '';
-      if (statusClass === 'rs-cc-unsupported' && instrumentCCs) {
+      if (!isDisabled && statusClass === 'rs-cc-unsupported' && instrumentCCs) {
         const currentTarget = currentRemap[ccNum];
         const options = instrumentCCs
           .filter(targetCC => !channelCCs.includes(targetCC) || targetCC === ccNum)
@@ -2421,12 +2462,13 @@ class RoutingSummaryPage {
             <option value="">${_t('routingSummary.ccIgnore') || '\u2014 ignorer \u2014'}</option>
             ${options.join('')}
           </select>`;
-      } else if (currentRemap[ccNum] !== undefined) {
+      } else if (!isDisabled && currentRemap[ccNum] !== undefined) {
         remapHTML = `<span class="rs-cc-remap-info">\u2192 ${this._getCCName(currentRemap[ccNum])}</span>`;
       }
 
       return `
         <div class="rs-cc-row ${statusClass}">
+          ${muteBtn}
           <span class="rs-cc-num">CC${ccNum}</span>
           <span class="rs-cc-name">${escapeHtml(name)}</span>
           <span class="rs-cc-status">${statusIcon}</span>
