@@ -2234,19 +2234,11 @@
             flex-shrink: 0;
         }
 
-        .file-compact-meta {
-            display: none;
-        }
-
         .file-grid-state {
             display: none;
         }
 
         /* State dots hidden in compact mode — left color strip is the indicator */
-
-        .view-compact .file-compact-meta {
-            display: inline-flex;
-        }
 
         /* Grid state badge hidden — left color strip is the indicator */
 
@@ -2397,7 +2389,14 @@
         }
 
         .file-list.view-compact .file-metadata {
-            display: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #9ca3af;
+            margin-left: auto;
+            padding-right: 8px;
+            white-space: nowrap;
         }
 
         .file-list.view-compact .file-actions {
@@ -2452,18 +2451,6 @@
 
         .file-list.view-compact .routed-badge {
             font-size: 12px;
-        }
-
-        /* Compact state indicator inline */
-        .file-list.view-compact .file-compact-meta {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 11px;
-            color: #9ca3af;
-            margin-left: auto;
-            padding-right: 8px;
-            white-space: nowrap;
         }
 
         /* Dark compact: routing background tints (aligned with grid dark mode) */
@@ -7494,12 +7481,6 @@
                 <span title="Tempo">♩ ${metadata.tempo} BPM</span>
             `;
 
-            // Update compact meta too
-            const compactMeta = document.getElementById(`compact-meta-${fileId}`);
-            if (compactMeta) {
-                compactMeta.innerHTML = `${metadata.durationFormatted} · ${metadata.sizeFormatted}`;
-            }
-
             // Update routing status visual indicators from metadata
             if (metadata.routingStatus) {
                 // Update backend status cache
@@ -7666,14 +7647,6 @@
                 </div>
             `;
 
-            // Compact mode inline meta (duration only)
-            const compactMeta = document.createElement('span');
-            compactMeta.className = 'file-compact-meta';
-            compactMeta.id = `compact-meta-${file.id}`;
-            compactMeta.innerHTML = file.durationFormatted
-                ? `${file.durationFormatted} · ${file.sizeFormatted || ''}`
-                : '';
-
             // Grid state badge
             const gridLabels = { unrouted: '○ Non routé', partial: '◐ Partiel', routed_incomplete: '● Routé', playable: '✓ Jouable' };
             const gridState = document.createElement('span');
@@ -7748,7 +7721,6 @@
             li.appendChild(checkbox);
             li.appendChild(stateDot);
             li.appendChild(fileNameSpan);
-            li.appendChild(compactMeta);
             li.appendChild(gridState);
             li.appendChild(actionsDiv);
 
