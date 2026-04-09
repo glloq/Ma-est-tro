@@ -486,6 +486,9 @@ async function applyAssignments(app, data) {
       if (!assignment.split || !assignment.segments || assignment.segments.length < 2) continue;
       const channelNum = parseInt(channel);
 
+      // Overflow and alternate modes need all notes on all segments — skip physical split
+      if (assignment.behaviorMode === 'overflow' || assignment.behaviorMode === 'alternate') continue;
+
       // Find free channels for the additional segments (first segment keeps source channel)
       const freeChannels = transposer.findFreeChannels(adaptedMidiData);
       const neededChannels = assignment.segments.length - 1;
@@ -691,11 +694,16 @@ async function applyAssignments(app, data) {
             note_remapping: null,
             enabled: true,
             created_at: Date.now(),
-            split_mode: (assignment.splitMode === 'fullCoverage' ? 'range' : assignment.splitMode) || 'range',
+            split_mode: (() => {
+              const m = assignment.splitMode === 'fullCoverage' ? 'range' : assignment.splitMode;
+              if (m === 'overflow' || m === 'alternate') return 'polyphony';
+              return m || 'range';
+            })(),
             split_note_min: seg.noteRange?.min ?? null,
             split_note_max: seg.noteRange?.max ?? null,
             split_polyphony_share: seg.polyphonyShare ?? null,
-            overlap_strategy: assignment.overlapStrategy || null
+            overlap_strategy: assignment.overlapStrategy || null,
+            behavior_mode: assignment.behaviorMode || null
           };
         });
 
