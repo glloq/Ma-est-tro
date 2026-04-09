@@ -118,10 +118,20 @@
         };
         modal.addEventListener('click', this._updateModalClickHandler, true);
 
-        // Set initial content — icon+title become the permanent cache tip
-        icon.textContent = '⚠️';
-        title.textContent = 'Ctrl+Shift+R après la mise à jour pour vider le cache';
-        title.style.fontSize = '13px';
+        // Set initial content
+        icon.textContent = '🔄';
+        title.textContent = i18n.t('settings.update.inProgress') || 'Mise à jour en cours...';
+
+        // Insert persistent cache tip banner above messageEl
+        let tipBanner = modal.querySelector('#updateCacheTip');
+        if (!tipBanner) {
+            tipBanner = document.createElement('div');
+            tipBanner.id = 'updateCacheTip';
+            tipBanner.style.cssText = 'margin: 0 0 4px 0; padding: 10px 16px; background: #fef3c7; color: #92400e; border-radius: 0; font-size: 13px; text-align: center; line-height: 1.4;';
+            tipBanner.innerHTML = '⚠️ Pensez à vider le cache du navigateur après la mise à jour <br><span style="font-size: 12px; opacity: 0.8;">(Ctrl+Shift+R ou paramètres du navigateur)</span>';
+            messageEl.parentNode.insertBefore(tipBanner, messageEl);
+        }
+
         messageEl.innerHTML = `
             <div style="margin-bottom: 16px; font-size: 14px; text-align: center;">
                 🔄 ${i18n.t('settings.update.running') || 'Démarrage de la mise à jour...'}
@@ -393,6 +403,9 @@
      */
     SettingsUpdate._cleanupUpdateModal = function() {
         this._removeUpdateModalBlockers();
+        // Remove the cache tip banner
+        const tip = document.getElementById('updateCacheTip');
+        if (tip) tip.remove();
         if (this._updateModalRefs) {
             this._updateModalRefs.modal.classList.remove('visible');
             this._updateModalRefs = null;
