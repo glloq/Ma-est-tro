@@ -89,7 +89,7 @@ body.dark-mode .form-label {
 
 /* Page fichiers */
 body.dark-mode .file-item {
-    border-bottom-color: var(--border-color);
+    border-color: var(--border-color);
     color: var(--text-primary);
 }
 
@@ -98,7 +98,8 @@ body.dark-mode .file-item:hover {
 }
 
 body.dark-mode .file-item.selected {
-    background: linear-gradient(135deg, rgba(102,126,234,0.2), rgba(118,75,162,0.2));
+    background: rgba(59, 130, 246, 0.18);
+    border-color: rgba(96, 165, 250, 0.5);
 }
 
 body.dark-mode .file-name {
