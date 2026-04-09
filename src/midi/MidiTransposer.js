@@ -188,11 +188,16 @@ class MidiTransposer {
             }
           }
         } else if (event.type === 'controlChange' || event.type === 'cc') {
-          // Step 5: CC remapping (inline, same pass)
+          // Step 5: CC remapping / suppression (inline, same pass)
           if (transposition.ccMapping) {
             const cc = event.controllerNumber ?? event.controller ?? event.cc;
             const targetCC = transposition.ccMapping[cc];
             if (targetCC !== undefined) {
+              if (targetCC === -1) {
+                // Suppress this CC event entirely
+                eventsToRemove.push(i);
+                continue;
+              }
               if (!eventModified) {
                 newEvent = { ...event };
                 eventModified = true;
