@@ -272,7 +272,7 @@ Features: 0x00000001 (Note Map supported)
 
 ---
 
-## 8. Implementation Checklist
+## 8. Block 1 Implementation Checklist
 
 - [ ] Detect request `F0 7D 00 01 00 F7`
 - [ ] Correct response header `F0 7D 00 01 01`
@@ -283,3 +283,169 @@ Features: 0x00000001 (Note Map supported)
 - [ ] Feature flags 7-bit encoded (5 bytes)
 - [ ] End with `F7`
 - [ ] Total size = exactly 52 bytes
+
+---
+
+# Block 5 — Instrument Descriptor
+
+## 9. Purpose
+
+Block 5 allows a device to declare how many instruments it manages and on which MIDI channels. This is the **discovery mechanism** for multi-instrument devices.
+
+- A device with **one instrument** does NOT need Block 5 (Ma-est-tro assumes channel 0)
+- A device with **multiple instruments** SHOULD implement Block 5 so Ma-est-tro can discover them all
+
+## 10. Instrument Descriptor Request
+
+### Format
+```
+F0 7D 00 05 00 F7
+```
+
+### Byte breakdown
+| Byte | Value | Description |
+|------|-------|-------------|
+| 0 | `F0` | Start SysEx |
+| 1 | `7D` | Custom SysEx |
+| 2 | `00` | MidiMind Manufacturer ID |
+| 3 | `05` | Block 5 (Instrument Descriptor) |
+| 4 | `00` | Request flag |
+| 5 | `F7` | End SysEx |
+
+**Size**: 6 bytes
+
+## 11. Instrument Descriptor Response
+
+### Format (variable length)
+```
+F0 7D 00 05 01 <version> <num_instruments> [<entry>...] F7
+```
+
+Each `<entry>` = 3 bytes: `<channel> <gm_program> <type_id>`
+
+### Field table
+
+| Offset | Size | Field | Type | Description |
+|--------|------|-------|------|-------------|
+| 0 | 1 | Start | `F0` | SysEx start |
+| 1 | 1 | Protocol | `7D` | Custom SysEx |
+| 2 | 1 | Manufacturer | `00` | MidiMind |
+| 3 | 1 | Block ID | `05` | Instrument Descriptor |
+| 4 | 1 | Reply Flag | `01` | Response |
+| 5 | 1 | Block Version | `uint8` | Format version (currently 01) |
+| 6 | 1 | Num Instruments | `uint8` | Number of instruments (1-16) |
+| 7+ | 3×N | Entries | see below | One entry per instrument |
+| last | 1 | End | `F7` | SysEx end |
+
+### Entry format (3 bytes per instrument)
+
+| Offset | Size | Field | Description |
+|--------|------|-------|-------------|
+| +0 | 1 | Channel | MIDI channel (0-15) |
+| +1 | 1 | GM Program | General MIDI program (0-127, 0x7F = undefined) |
+| +2 | 1 | Type ID | Instrument type (see table below) |
+
+### Message size
+
+| Instruments | Total size |
+|-------------|------------|
+| 1 | 11 bytes |
+| 4 | 20 bytes |
+| 8 | 32 bytes |
+| 16 | 56 bytes |
+
+## 12. Type ID Encoding
+
+Aligned with `InstrumentTypeConfig.js` (`INSTRUMENT_TYPE_HIERARCHY`).
+
+| ID | Type Key | Label | GM Programs |
+|----|----------|-------|-------------|
+| `0x00` | `unknown` | Unknown | — |
+| `0x01` | `piano` | Piano | 0-7 |
+| `0x02` | `chromatic_percussion` | Chromatic Percussion | 8-15 |
+| `0x03` | `organ` | Organ | 16-23 |
+| `0x04` | `guitar` | Guitar | 24-31 |
+| `0x05` | `bass` | Bass | 32-39 |
+| `0x06` | `strings` | Strings | 40-47 |
+| `0x07` | `ensemble` | Ensemble | 48-55 |
+| `0x08` | `brass` | Brass | 56-63 |
+| `0x09` | `reed` | Reed | 64-71 |
+| `0x0A` | `pipe` | Pipe / Flutes | 72-79 |
+| `0x0B` | `synth_lead` | Synth Lead | 80-87 |
+| `0x0C` | `synth_pad` | Synth Pad | 88-95 |
+| `0x0D` | `synth_effects` | Synth Effects | 96-103 |
+| `0x0E` | `ethnic` | Ethnic | 104-111 |
+| `0x0F` | `drums` | Drums / Percussion | 112-119 |
+| `0x10` | `sound_effects` | Sound Effects | 120-127 |
+
+## 13. Block 5 Example — Arduino/Teensy
+
+### Multi-instrument device (Piano ch0 + Guitar ch1 + Drums ch9)
+
+```c
+#define NUM_INSTRUMENTS 3
+
+typedef struct {
+    uint8_t channel;
+    uint8_t gmProgram;
+    uint8_t typeId;
+} InstrumentEntry;
+
+const InstrumentEntry instruments[NUM_INSTRUMENTS] = {
+    { 0,  0,    0x01 },  // Piano, channel 0, GM program 0 (Acoustic Grand)
+    { 1,  24,   0x04 },  // Guitar, channel 1, GM program 24 (Nylon)
+    { 9,  0x7F, 0x0F }   // Drums, channel 9, no GM program (kit)
+};
+
+void handleDescriptorRequest() {
+    uint8_t response[8 + (NUM_INSTRUMENTS * 3)];
+    int pos = 0;
+
+    // Header
+    response[pos++] = 0xF0;
+    response[pos++] = 0x7D;
+    response[pos++] = 0x00;
+    response[pos++] = 0x05;  // Block 5
+    response[pos++] = 0x01;  // Reply
+
+    // Block version
+    response[pos++] = 0x01;
+
+    // Number of instruments
+    response[pos++] = NUM_INSTRUMENTS;
+
+    // Instrument entries
+    for (int i = 0; i < NUM_INSTRUMENTS; i++) {
+        response[pos++] = instruments[i].channel;
+        response[pos++] = instruments[i].gmProgram;
+        response[pos++] = instruments[i].typeId;
+    }
+
+    // End
+    response[pos++] = 0xF7;
+
+    usbMIDI.sendSysEx(pos, response);
+}
+```
+
+### Minimal test response (single instrument)
+
+```
+F0 7D 00 05 01  // Header + Reply
+01              // Block version
+01              // 1 instrument
+00 00 01        // Channel 0, GM program 0 (Acoustic Grand), type=piano
+F7              // End
+```
+
+Decoded: 1 instrument — Piano on channel 0, GM program 0.
+
+## 14. Block 5 Implementation Checklist
+
+- [ ] Detect request `F0 7D 00 05 00 F7`
+- [ ] Correct response header `F0 7D 00 05 01`
+- [ ] Block version = `0x01`
+- [ ] Num instruments = 1-16
+- [ ] Each entry: channel (0-15), GM program (0-127 or 0x7F), type_id (0x00-0x10)
+- [ ] Total size = 8 + (3 × num_instruments) bytes
+- [ ] Feature flag bit 3 (`INSTRUMENT_DESCRIPTOR`) set in Block 1 response
