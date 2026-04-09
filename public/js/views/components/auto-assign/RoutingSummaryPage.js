@@ -1445,6 +1445,10 @@ class RoutingSummaryPage {
         const ch = radio.dataset.channel;
         const field = radio.dataset.field;
         if (ch && field) {
+          // Skip if value hasn't actually changed (prevents re-render loop from
+          // synthetic change events fired by browser on pre-checked radios)
+          if (radio.value === this.adaptationSettings[ch]?.[field]) return;
+
           if (!this.adaptationSettings[ch]) this.adaptationSettings[ch] = {};
           this.adaptationSettings[ch][field] = radio.value;
 
