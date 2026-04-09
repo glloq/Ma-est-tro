@@ -2622,7 +2622,7 @@ class RoutingSummaryPage {
       if (skipRangeFilter) return 0;
       const chStr = String(ch);
       const adapt = this.adaptationSettings[chStr] || {};
-      return this.autoAdaptation ? (adapt.transpositionSemitones || 0) : 0;
+      return adapt.transpositionSemitones || 0;
     };
 
     for (const track of this.midiData.tracks) {
