@@ -152,6 +152,8 @@
 
         const startTime = Date.now();
         let serverDownSince = null;
+        let restartingSince = null;  // Track when "restarting" was first seen
+        let serverWasDown = false;   // Track if we ever lost contact
 
         const poll = async () => {
             if (!this._updateModalRefs || this._reloadTriggered) return;
@@ -176,6 +178,8 @@
                     const data = await resp.json();
 
                     // Server is responding
+                    const wasDown = serverDownSince !== null;
+                    if (wasDown) serverWasDown = true;
                     serverDownSince = null;
 
                     if (data.status) {
@@ -208,11 +212,34 @@
                             return; // Stop polling
                         }
 
+                        // Track "restarting" stuck state:
+                        // The update script can be killed by PM2 treekill during server restart,
+                        // leaving the status file stuck on "restarting" forever.
+                        // If the server is back online and status is still "restarting" for 20s+,
+                        // OR if the server was down and came back (restart confirmed), trigger reload.
+                        if (step === 'restarting') {
+                            if (!restartingSince) restartingSince = Date.now();
+
+                            const stuckDuration = Date.now() - restartingSince;
+                            if (serverWasDown || stuckDuration > 20000) {
+                                console.log('[SystemUpdate] Status stuck on "restarting" — server is back, triggering reload',
+                                    '(serverWasDown:', serverWasDown, 'stuckMs:', stuckDuration, ')');
+                                this._updateInProgress = false;
+                                this._doCacheClearAndReload();
+                                return; // Stop polling
+                            }
+                        } else {
+                            restartingSince = null;
+                        }
+
                         // Show step progress
                         const stepInfo = UPDATE_STEPS[step];
                         if (stepInfo && this._updateModalRefs) {
                             const { icon, messageEl } = this._updateModalRefs;
-                            const label = i18n.t('settings.update.step.' + step) || stepInfo.label;
+                            // i18n.t() returns the key itself when translation is missing (truthy string),
+                            // so check if the returned value looks like a key path
+                            const i18nLabel = i18n.t('settings.update.step.' + step);
+                            const label = (i18nLabel && !i18nLabel.includes('.')) ? i18nLabel : stepInfo.label;
                             icon.textContent = stepInfo.icon;
                             messageEl.innerHTML = `
                                 <div style="margin-bottom: 16px; font-size: 14px; text-align: center;">
