@@ -922,3 +922,171 @@ F7              // End
 - [ ] Name: ASCII printable, length 0-32
 - [ ] End with `F7`
 - [ ] Feature flag bit 4 (`INSTRUMENT_CAPABILITIES`) set in Block 1 response
+
+---
+
+# Block 7 — String Instrument Config
+
+## 21. Purpose
+
+Block 7 provides physical configuration data specific to string instruments (guitar, bass, violin, etc.). It declares string count, fret count, tuning, and optional CC control for string/fret selection.
+
+This block is **optional** and only relevant for instruments whose type is a string instrument (`guitar`, `bass`, `strings`, `ethnic` with string subtypes like `sitar`, `banjo`, `koto`, `shamisen`).
+
+## 22. String Config Request
+
+### Format
+```
+F0 7D 00 07 00 <channel> F7
+```
+
+### Byte breakdown
+| Byte | Value | Description |
+|------|-------|-------------|
+| 0 | `F0` | Start SysEx |
+| 1 | `7D` | Custom SysEx |
+| 2 | `00` | MidiMind Manufacturer ID |
+| 3 | `07` | Block 7 (String Instrument Config) |
+| 4 | `00` | Request flag |
+| 5 | `0x00-0x0F` | Target MIDI channel (0-15) |
+| 6 | `F7` | End SysEx |
+
+**Size**: 7 bytes
+
+## 23. String Config Response
+
+### Format (variable length)
+```
+F0 7D 00 07 01 <version> <channel>
+  <num_strings> <num_frets> <is_fretless> <capo_fret>
+  <cc_enabled> <cc_string_number> <cc_fret_number>
+  <tuning[num_strings]>
+F7
+```
+
+### Field table
+
+| Offset | Size | Field | Type | Description |
+|--------|------|-------|------|-------------|
+| 0 | 1 | Start | `F0` | SysEx start |
+| 1 | 1 | Protocol | `7D` | Custom SysEx |
+| 2 | 1 | Manufacturer | `00` | MidiMind |
+| 3 | 1 | Block ID | `07` | String Instrument Config |
+| 4 | 1 | Reply Flag | `01` | Response |
+| 5 | 1 | Block Version | `uint8` | Format version (currently 01) |
+| 6 | 1 | Channel | `uint8` | MIDI channel (0-15) |
+| 7 | 1 | Num Strings | `uint8` | Number of strings (1-6) |
+| 8 | 1 | Num Frets | `uint8` | Number of frets (0-36, 0 = fretless) |
+| 9 | 1 | Is Fretless | `uint8` | 0 = fretted, 1 = fretless |
+| 10 | 1 | Capo Fret | `uint8` | Capo position (0 = no capo, 1-36) |
+| 11 | 1 | CC Enabled | `uint8` | 0 = no CC control, 1 = CC control enabled |
+| 12 | 1 | CC String Number | `uint8` | CC for string selection (default: 20) |
+| 13 | 1 | CC Fret Number | `uint8` | CC for fret selection (default: 21) |
+| 14..13+N | N | Tuning | `uint8[]` | MIDI note per string, lowest to highest |
+| last | 1 | End | `F7` | SysEx end |
+
+### Message size
+
+| Instrument | Strings | Total size |
+|------------|---------|------------|
+| Guitar (6 strings) | 6 | 21 bytes |
+| Bass (4 strings) | 4 | 19 bytes |
+| Violin (4 strings) | 4 | 19 bytes |
+| Ukulele (4 strings) | 4 | 19 bytes |
+| Banjo (5 strings) | 5 | 20 bytes |
+
+### Standard tuning reference
+
+| Instrument | Tuning (MIDI notes) |
+|------------|---------------------|
+| Guitar standard | `40, 45, 50, 55, 59, 64` (E2, A2, D3, G3, B3, E4) |
+| Guitar Drop D | `38, 45, 50, 55, 59, 64` (D2, A2, D3, G3, B3, E4) |
+| Bass 4-string | `28, 33, 38, 43` (E1, A1, D2, G2) |
+| Bass 5-string | `23, 28, 33, 38, 43` (B0, E1, A1, D2, G2) |
+| Violin | `55, 62, 69, 76` (G3, D4, A4, E5) |
+| Viola | `48, 55, 62, 69` (C3, G3, D4, A4) |
+| Cello | `36, 43, 50, 57` (C2, G2, D3, A3) |
+| Ukulele standard | `67, 60, 64, 69` (G4, C4, E4, A4) |
+
+## 24. Block 7 Example — Arduino/Teensy
+
+### Guitar 6 strings, standard tuning, with CC control
+
+```c
+void handleStringConfigRequest(uint8_t requestedChannel) {
+    if (requestedChannel != 1) return;  // Guitar on channel 1
+
+    uint8_t tuning[] = { 40, 45, 50, 55, 59, 64 };  // E2 A2 D3 G3 B3 E4
+    uint8_t numStrings = sizeof(tuning);
+
+    uint8_t response[15 + numStrings];
+    int pos = 0;
+
+    // Header
+    response[pos++] = 0xF0;
+    response[pos++] = 0x7D;
+    response[pos++] = 0x00;
+    response[pos++] = 0x07;  // Block 7
+    response[pos++] = 0x01;  // Reply
+
+    // Block version + channel
+    response[pos++] = 0x01;
+    response[pos++] = 1;     // Channel 1
+
+    // String config
+    response[pos++] = numStrings;  // 6 strings
+    response[pos++] = 22;         // 22 frets
+    response[pos++] = 0;          // Not fretless
+    response[pos++] = 0;          // No capo
+
+    // CC control
+    response[pos++] = 1;          // CC enabled
+    response[pos++] = 20;         // CC20 for string selection
+    response[pos++] = 21;         // CC21 for fret selection
+
+    // Tuning (lowest to highest string)
+    for (int i = 0; i < numStrings; i++) {
+        response[pos++] = tuning[i];
+    }
+
+    // End
+    response[pos++] = 0xF7;
+
+    usbMIDI.sendSysEx(pos, response);
+}
+```
+
+### Minimal test response (4-string bass)
+
+```
+F0 7D 00 07 01  // Header + Reply
+01              // Block version
+02              // Channel 2
+04              // 4 strings
+18              // 24 frets
+00              // Not fretless
+00              // No capo
+01 14 15        // CC enabled, CC20 string, CC21 fret
+1C 21 26 2B     // Tuning: E1(28) A1(33) D2(38) G2(43)
+F7              // End
+```
+
+Decoded: 4-string bass, 24 frets, standard tuning, CC control on CC20/CC21.
+
+## 25. Block 7 Implementation Checklist
+
+- [ ] Detect request `F0 7D 00 07 00 <channel> F7`
+- [ ] Correct response header `F0 7D 00 07 01`
+- [ ] Block version = `0x01`
+- [ ] Channel matches requested channel (0-15)
+- [ ] Num strings (1-6)
+- [ ] Num frets (0-36)
+- [ ] Is fretless (0 or 1)
+- [ ] Capo fret (0-36)
+- [ ] CC enabled (0 or 1)
+- [ ] CC string/fret numbers (0-127)
+- [ ] Tuning array length = num_strings
+- [ ] Each tuning note (0-127)
+- [ ] Total size = 15 + num_strings bytes
+- [ ] End with `F7`
+- [ ] Feature flag bit 5 (`STRING_CONFIG`) set in Block 1 response
