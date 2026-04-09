@@ -4808,6 +4808,28 @@ body.dark-mode .aa-channel-card.skipped {
   text-align: center;
 }
 
+/* Per-segment CC toggle in split columns */
+.rs-cc-seg-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 0 2px;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+  vertical-align: middle;
+}
+.rs-cc-seg-toggle:hover {
+  opacity: 1;
+}
+.rs-cc-seg-toggle.rs-cc-seg-muted {
+  opacity: 1;
+}
+.rs-cc-cell-seg-muted {
+  color: #999;
+  opacity: 0.5;
+}
+
 /* Wrapper for instrument bars + overlap zones */
 .rs-range-inst-area {
   position: relative;

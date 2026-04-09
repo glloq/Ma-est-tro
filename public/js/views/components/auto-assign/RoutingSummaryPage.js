@@ -126,6 +126,7 @@ class RoutingSummaryPage {
     this.loading = true;
     this.adaptationSettings = {}; // Per-channel adaptation overrides
     this.ccRemapping = {}; // Per-channel CC remapping { [channel]: { sourceCC: targetCC, ... } }
+    this.ccSegmentMute = {}; // Per-segment CC mute { [channel]: { [ccNum]: Set<segIndex> } }
     this.showLowScores = {}; // Per-channel toggle for low score instruments
     this.autoAdaptation = true; // Toggle for automatic MIDI channel adaptation
 
@@ -484,8 +485,8 @@ class RoutingSummaryPage {
         program: _t('autoAssign.scoreProgram') || 'Programme',
         noteRange: _t('autoAssign.scoreNoteRange') || 'Tessiture',
         polyphony: _t('autoAssign.scorePolyphony') || 'Polyphonie',
-        ccSupport: _t('autoAssign.scoreCcSupport') || 'CC Support',
-        instrumentType: _t('autoAssign.scoreInstrumentType') || 'Type',
+        ccSupport: _t('autoAssign.scoreCCSupport') || 'CC Support',
+        instrumentType: _t('autoAssign.scoreType') || 'Type',
         percussion: _t('autoAssign.scorePercussion') || 'Percussion'
       };
       const ch = channelKeys[0];
@@ -1762,6 +1763,27 @@ class RoutingSummaryPage {
         this._refreshUI(channelKeys);
       });
     });
+
+    // Per-segment CC toggle buttons (split mode)
+    modal.querySelectorAll('.rs-cc-seg-toggle').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const channel = parseInt(btn.dataset.channel);
+        const ccNum = parseInt(btn.dataset.cc);
+        const segIdx = parseInt(btn.dataset.seg);
+        if (!this.ccSegmentMute[channel]) this.ccSegmentMute[channel] = {};
+        if (!this.ccSegmentMute[channel][ccNum]) this.ccSegmentMute[channel][ccNum] = new Set();
+        const muted = this.ccSegmentMute[channel][ccNum];
+        if (muted.has(segIdx)) {
+          muted.delete(segIdx);
+          if (muted.size === 0) delete this.ccSegmentMute[channel][ccNum];
+          if (Object.keys(this.ccSegmentMute[channel]).length === 0) delete this.ccSegmentMute[channel];
+        } else {
+          muted.add(segIdx);
+        }
+        this._refreshUI(channelKeys);
+      });
+    });
   }
 
   /**
@@ -2133,6 +2155,12 @@ class RoutingSummaryPage {
 
       const adapt = this.adaptationSettings[ch] || {};
       const splitSemitones = this.autoAdaptation ? (adapt.transpositionSemitones || 0) : 0;
+      // Build per-segment CC mute map for serialization (Set → Array)
+      const segMuteData = this.ccSegmentMute[chNum];
+      const ccSegMuteSerialized = segMuteData ? Object.fromEntries(
+        Object.entries(segMuteData).map(([cc, segs]) => [cc, [...segs]])
+      ) : null;
+
       assignments[ch] = {
         split: true,
         splitMode: splitData.type || 'range',
@@ -2140,6 +2168,8 @@ class RoutingSummaryPage {
         transposition: { semitones: splitSemitones },
         suppressOutOfRange: this.autoAdaptation ? (adapt.oorHandling === 'suppress') : false,
         noteCompression: this.autoAdaptation ? (adapt.oorHandling === 'compress') : false,
+        ccRemapping: this.ccRemapping[ch] || null,
+        ccSegmentMute: ccSegMuteSerialized,
         segments: splitData.segments.map(seg => ({
           deviceId: seg.deviceId,
           instrumentId: seg.instrumentId,
@@ -2363,13 +2393,21 @@ class RoutingSummaryPage {
           : (_t('routingSummary.ccDisable') || 'Désactiver ce CC');
         const muteBtn = `<td class="rs-cc-mute-cell"><button class="rs-cc-mute-btn${muteActive}" data-channel="${ch}" data-cc="${ccNum}" title="${muteTitle}">${isDisabled ? '\u{1F507}' : '\u{1F509}'}</button></td>`;
 
+        const segMutes = this.ccSegmentMute[channel]?.[ccNum];
         let cells;
         if (isDisabled) {
           cells = segs.map(() => `<td class="rs-cc-cell rs-cc-cell-disabled">\u2014</td>`).join('');
         } else {
           cells = segCCs.map((ccs, i) => {
-            if (ccs === null) return `<td class="rs-cc-cell rs-cc-cell-unknown" title="?">?</td>`;
-            if (ccs.includes(ccNum)) return `<td class="rs-cc-cell rs-cc-cell-ok">\u2713</td>`;
+            const isSegMuted = segMutes?.has(i);
+            const segToggleClass = isSegMuted ? ' rs-cc-seg-muted' : '';
+            const segToggleBtn = `<button class="rs-cc-seg-toggle${segToggleClass}" data-channel="${channel}" data-cc="${ccNum}" data-seg="${i}" title="${isSegMuted ? _t('routingSummary.ccEnable') || 'Enable this CC' : _t('routingSummary.ccDisable') || 'Disable this CC'}">${isSegMuted ? '\u{1F507}' : '\u{1F509}'}</button>`;
+
+            if (isSegMuted) {
+              return `<td class="rs-cc-cell rs-cc-cell-seg-muted">${segToggleBtn}</td>`;
+            }
+            if (ccs === null) return `<td class="rs-cc-cell rs-cc-cell-unknown">${segToggleBtn} ?</td>`;
+            if (ccs.includes(ccNum)) return `<td class="rs-cc-cell rs-cc-cell-ok">${segToggleBtn} \u2713</td>`;
             // Unsupported: show remap dropdown
             const currentTarget = currentRemap[ccNum];
             const remapOpts = (ccs || [])
@@ -2377,6 +2415,7 @@ class RoutingSummaryPage {
               .map(tc => `<option value="${tc}" ${currentTarget === tc ? 'selected' : ''}>${this._getCCName(tc)}</option>`)
               .join('');
             return `<td class="rs-cc-cell rs-cc-cell-no">
+              ${segToggleBtn}
               <select class="rs-cc-remap rs-cc-remap-split" data-channel="${ch}" data-source="${ccNum}">
                 <option value="">\u2717</option>
                 ${remapOpts}
@@ -2523,7 +2562,7 @@ class RoutingSummaryPage {
           <span class="rs-prev-icon">&#9654;</span> ${_t('routingSummary.previewAll') || 'Tout'}
         </button>
         <button class="btn btn-sm rs-prev-btn rs-prev-btn-label" id="rsPreviewChBtn" title="${_t('routingSummary.previewChannel')} ${chLabel}" ${ch === null ? 'disabled' : ''}>
-          <span class="rs-prev-icon">&#9654;</span> Canal ${chLabel}
+          <span class="rs-prev-icon">&#9654;</span> ${_t('routingSummary.previewChannel') || 'Channel'} ${chLabel}
         </button>
         <button class="btn btn-sm rs-prev-btn rs-prev-btn-label" id="rsPreviewOrigBtn" title="${_t('routingSummary.previewOriginal')}">
           <span class="rs-prev-icon">&#9835;</span> ${_t('routingSummary.previewOriginal') || 'Original'}
@@ -2826,11 +2865,16 @@ class RoutingSummaryPage {
           }
         }
         // Redistribute notes by range; duplicate for 'shared' overlap
+        // Also duplicate CC events to each segment channel, respecting per-segment mutes
         const overlapStrat = this.splitAssignments[sourceChannel]?.overlapStrategy;
+        const chRemap = this.ccRemapping[String(sourceChannel)] || {};
+        const chSegMute = this.ccSegmentMute[sourceChannel] || {};
         for (const track of (previewMidi.tracks || [])) {
           const dupes = [];
+          const evtsToRemove = [];
           let tick = 0;
-          for (const evt of track.events) {
+          for (let ei = 0; ei < track.events.length; ei++) {
+            const evt = track.events[ei];
             if (evt.deltaTime !== undefined) tick += evt.deltaTime;
             evt._absTick = tick;
             if ((evt.type === 'noteOn' || evt.type === 'noteOff') && (evt.channel ?? 0) === sourceChannel) {
@@ -2849,7 +2893,27 @@ class RoutingSummaryPage {
                   }
                 }
               }
+            } else if ((evt.type === 'controlChange' || evt.type === 'cc') && (evt.channel ?? 0) === sourceChannel) {
+              const cc = evt.controllerNumber ?? evt.controller ?? evt.cc;
+              // Global suppress: remove CC entirely
+              if (chRemap[cc] === -1) { evtsToRemove.push(ei); continue; }
+              // Duplicate CC to each non-muted segment channel
+              const mutedSegs = chSegMute[cc];
+              // Segment 0 keeps the original event (unless muted)
+              if (mutedSegs?.has(0)) {
+                evtsToRemove.push(ei);
+              } else {
+                evt.channel = segChannels[0];
+              }
+              for (let si = 1; si < segChannels.length; si++) {
+                if (mutedSegs?.has(si)) continue;
+                dupes.push({ ...evt, channel: segChannels[si], _absTick: tick });
+              }
             }
+          }
+          // Remove suppressed events (reverse order)
+          for (let ri = evtsToRemove.length - 1; ri >= 0; ri--) {
+            track.events.splice(evtsToRemove[ri], 1);
           }
           if (dupes.length > 0) {
             const allEvts = [...track.events, ...dupes];
@@ -2933,13 +2997,18 @@ class RoutingSummaryPage {
 
         // Build modified MIDI data: redistribute notes by range
         // In 'shared' mode, duplicate notes to all matching segments
+        // Also duplicate CC events to segment channels, respecting per-segment mutes
         const overlapStrategy = this.splitAssignments[channel]?.overlapStrategy;
+        const chRemap = this.ccRemapping[ch] || {};
+        const chSegMute = this.ccSegmentMute[channel] || {};
         const splitMidi = JSON.parse(JSON.stringify(this.midiData));
         for (const track of (splitMidi.tracks || [])) {
           // First pass: compute absolute ticks and redistribute
           const dupes = [];
+          const evtsToRemove = [];
           let tick = 0;
-          for (const evt of track.events) {
+          for (let ei = 0; ei < track.events.length; ei++) {
+            const evt = track.events[ei];
             if (evt.deltaTime !== undefined) tick += evt.deltaTime;
             evt._absTick = tick;
 
@@ -2960,7 +3029,24 @@ class RoutingSummaryPage {
                   }
                 }
               }
+            } else if ((evt.type === 'controlChange' || evt.type === 'cc') && (evt.channel ?? 0) === channel) {
+              const cc = evt.controllerNumber ?? evt.controller ?? evt.cc;
+              if (chRemap[cc] === -1) { evtsToRemove.push(ei); continue; }
+              const mutedSegs = chSegMute[cc];
+              if (mutedSegs?.has(0)) {
+                evtsToRemove.push(ei);
+              } else {
+                evt.channel = segChannels[0];
+              }
+              for (let si = 1; si < segChannels.length; si++) {
+                if (mutedSegs?.has(si)) continue;
+                dupes.push({ ...evt, channel: segChannels[si], _absTick: tick });
+              }
             }
+          }
+          // Remove suppressed events (reverse order)
+          for (let ri = evtsToRemove.length - 1; ri >= 0; ri--) {
+            track.events.splice(evtsToRemove[ri], 1);
           }
           // Second pass: merge duplicates back, re-sort by absolute tick, recompute deltas
           if (dupes.length > 0) {
