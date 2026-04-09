@@ -13,6 +13,9 @@
         done:           { label: 'Mise à jour terminée !', icon: '✅', progress: 100 },
     };
 
+    // Maximum time to wait for the update to complete (5 minutes)
+    const UPDATE_TIMEOUT_MS = 5 * 60 * 1000;
+
     /**
      * Trigger system update via backend
      */
@@ -39,16 +42,7 @@
 
         this._updateInProgress = true;
         this._updateCancelled = false;
-
-        // Capture current server uptime before update (used to detect restart)
-        try {
-            const healthResp = await fetch(window.location.origin + '/api/health', { cache: 'no-store' });
-            if (healthResp.ok) {
-                const healthData = await healthResp.json();
-                this._serverUptime = healthData.uptime || Infinity;
-                this._preUpdateGitHash = healthData.gitHash || null;
-            }
-        } catch (e) { this._serverUptime = Infinity; this._preUpdateGitHash = null; }
+        this._reloadTriggered = false;
 
         // Close the settings modal — update status will show in the confirm modal
         this.close();
@@ -76,15 +70,16 @@
             if (result && result.success === false) {
                 throw new Error(result.error || 'Update failed to start');
             }
-            this._showUpdateSuccessInModal();
+            // Backend accepted the update — status polling handles the rest
+            console.log('[SystemUpdate] Update command accepted, polling active');
         } catch (error) {
             console.error('[SystemUpdate] Error:', error.message);
-            // WebSocket disconnect or timeout during update means the server is restarting = success
             const msg = (error.message || '').toLowerCase();
+            // WebSocket disconnect or timeout during update = server is restarting, polling continues
             if (msg.includes('websocket') || msg.includes('connection') || msg.includes('closed') || msg.includes('disconnected') || msg.includes('timeout')) {
-                console.log('[SystemUpdate] Connection lost during update — treating as server restart');
-                this._showUpdateSuccessInModal();
+                console.log('[SystemUpdate] Connection lost during update — polling continues');
             } else {
+                // Real error — stop everything
                 console.error('[SystemUpdate] Real error, showing failure UI');
                 this._cleanupUpdatePolling();
                 this._showUpdateErrorInModal(error.message);
@@ -140,28 +135,51 @@
         // Store refs for status updates
         this._updateModalRefs = { modal, icon, title, messageEl, buttons };
 
-        // Start polling update status
-        this._pollUpdateStatusInModal();
+        // Start the single polling loop that handles the entire update lifecycle
+        this._startUpdatePolling();
     };
 
     /**
-     * Poll /api/update-status and update the confirm modal in real-time
+     * Single polling loop that handles the entire update lifecycle:
+     * - Shows step progress when server responds
+     * - Shows "waiting for restart" when server is down
+     * - Triggers reload when "done" is detected
+     * - Shows error when "failed" is detected
+     * - Times out after 5 minutes
      */
-    SettingsUpdate._pollUpdateStatusInModal = function() {
+    SettingsUpdate._startUpdatePolling = function() {
         this._cleanupUpdatePolling();
 
-        this._updateAbortController = new AbortController();
-        const signal = this._updateAbortController.signal;
+        const startTime = Date.now();
+        let serverDownSince = null;
+        let lastKnownStep = null;
 
         this._updateStatusInterval = setInterval(async () => {
-            if (signal.aborted || !this._updateModalRefs) return;
+            if (!this._updateModalRefs || this._reloadTriggered) return;
+
+            // Global timeout
+            if (Date.now() - startTime > UPDATE_TIMEOUT_MS) {
+                this._cleanupUpdatePolling();
+                this._updateInProgress = false;
+                this._showUpdateTimeoutInModal();
+                return;
+            }
+
             try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
                 const resp = await fetch(window.location.origin + '/api/update-status', {
                     cache: 'no-store',
-                    signal
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
+
                 if (!resp.ok) return;
                 const data = await resp.json();
+
+                // Server is responding again
+                serverDownSince = null;
+
                 if (!data.status) return;
 
                 const rawStatus = data.status;
@@ -171,6 +189,7 @@
                     step = 'script_started';
                 }
 
+                // Handle failure
                 if (step === 'failed') {
                     const reason = rawStatus.replace(/^failed:\s*/, '');
                     this._cleanupUpdatePolling();
@@ -185,6 +204,16 @@
                     return;
                 }
 
+                // Handle done — trigger reload
+                if (step === 'done') {
+                    console.log('[SystemUpdate] Status polling detected "done" — reloading');
+                    this._updateInProgress = false;
+                    this._doCacheClearAndReload();
+                    return;
+                }
+
+                // Show step progress
+                lastKnownStep = step;
                 const stepInfo = UPDATE_STEPS[step];
                 if (stepInfo && this._updateModalRefs) {
                     const { icon, messageEl } = this._updateModalRefs;
@@ -199,71 +228,28 @@
                         </div>
                         <div style="text-align: center; margin-top: 8px; font-size: 12px; opacity: 0.6;">${stepInfo.progress}%</div>
                     `;
-
-                    // 'done' means the update script finished and verified the server is running
-                    // → trigger cache clear + reload immediately
-                    if (step === 'done') {
-                        console.log('[SystemUpdate] Status polling detected "done" — reloading');
-                        this._updateInProgress = false;
-                        this._doCacheClearAndReload();
-                        return;
-                    }
                 }
             } catch (e) {
                 if (e.name === 'AbortError') return;
-            }
-        }, 2000);
-    };
 
-    /**
-     * Show update success in the confirm modal and wait for server restart
-     */
-    SettingsUpdate._showUpdateSuccessInModal = function() {
-        console.log('[SystemUpdate] Waiting for server restart (preUpdateUptime:', this._serverUptime, ')');
-
-        // NOTE: Do NOT call _cleanupUpdatePolling() here!
-        // The status polling must keep running — it detects "done" (written by update.sh
-        // after verifying the new server is up) and triggers the reload immediately.
-        // Health polling below is a fallback if status polling fails.
-
-        if (this._updateModalRefs) {
-            const { icon, title, messageEl } = this._updateModalRefs;
-            icon.textContent = '⏳';
-            title.textContent = i18n.t('settings.update.waitingRestart') || 'En attente du redémarrage...';
-            messageEl.innerHTML = `
-                <div style="margin-bottom: 16px; font-size: 14px; text-align: center;">
-                    ⏳ ${i18n.t('settings.update.waitingRestart') || 'En attente du redémarrage du serveur...'}
-                </div>
-                <div class="update-progress-bar-container">
-                    <div class="update-progress-bar" style="width: 85%"></div>
-                </div>
-                <div style="text-align: center; margin-top: 8px; font-size: 12px; opacity: 0.6;">85%</div>
-            `;
-        }
-
-        const preUpdateUptime = this._serverUptime || Infinity;
-
-        const waitForServer = async () => {
-            const maxAttempts = 120;
-            let serverWasDown = false;
-            const startTime = Date.now();
-
-            for (let i = 0; i < maxAttempts; i++) {
-                if (this._updateCancelled) {
-                    console.log('[SystemUpdate] Health polling cancelled');
-                    return;
+                // Server is down — expected during restart
+                if (!serverDownSince) {
+                    serverDownSince = Date.now();
+                    console.log('[SystemUpdate] Server unreachable — waiting for restart');
                 }
 
-                const elapsedSec = (i + 1) * 3;
-                const mins = Math.floor(elapsedSec / 60);
-                const secs = elapsedSec % 60;
-                const timeStr = mins > 0 ? `${mins}m${secs.toString().padStart(2, '0')}s` : `${elapsedSec}s`;
-
+                // Show "waiting for restart" with elapsed time
                 if (this._updateModalRefs) {
-                    const { messageEl } = this._updateModalRefs;
+                    const elapsedSec = Math.round((Date.now() - serverDownSince) / 1000);
+                    const mins = Math.floor(elapsedSec / 60);
+                    const secs = elapsedSec % 60;
+                    const timeStr = mins > 0 ? `${mins}m${secs.toString().padStart(2, '0')}s` : `${elapsedSec}s`;
+
+                    const { icon, messageEl } = this._updateModalRefs;
+                    icon.textContent = '🔄';
                     messageEl.innerHTML = `
                         <div style="margin-bottom: 16px; font-size: 14px; text-align: center;">
-                            ⏳ ${i18n.t('settings.update.waitingRestart') || 'En attente du redémarrage du serveur'}...
+                            🔄 ${i18n.t('settings.update.waitingRestart') || 'En attente du redémarrage du serveur'}...
                             <span style="opacity: 0.6;">(${timeStr})</span>
                         </div>
                         <div class="update-progress-bar-container">
@@ -272,81 +258,38 @@
                         <div style="text-align: center; margin-top: 8px; font-size: 12px; opacity: 0.6;">85%</div>
                     `;
                 }
-
-                await new Promise(r => setTimeout(r, 3000));
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 5000);
-                    const resp = await fetch(window.location.origin + '/api/health', {
-                        method: 'GET',
-                        cache: 'no-store',
-                        signal: controller.signal
-                    });
-                    clearTimeout(timeoutId);
-
-                    if (resp.ok) {
-                        const data = await resp.json().catch(() => null);
-                        if (!data) continue;
-
-                        const newUptime = data.uptime;
-                        const uptimeReset = typeof newUptime === 'number' && newUptime < preUpdateUptime;
-                        const hashChanged = this._preUpdateGitHash && data.gitHash && data.gitHash !== this._preUpdateGitHash;
-
-                        // Fallback: if server has been responding for 30s+, just reload
-                        // (handles case where restart was too fast to detect going down)
-                        const waitedLongEnough = (Date.now() - startTime) > 30000;
-
-                        if (!serverWasDown && !uptimeReset && !hashChanged && !waitedLongEnough) {
-                            continue;
-                        }
-
-                        console.log('[SystemUpdate] Restart detected — serverWasDown:', serverWasDown,
-                            'uptimeReset:', uptimeReset, 'hashChanged:', hashChanged,
-                            'waitedLongEnough:', waitedLongEnough);
-
-                        // Server restarted successfully!
-                        this._updateInProgress = false;
-                        this._doCacheClearAndReload();
-                        return;
-                    }
-                } catch (e) {
-                    serverWasDown = true;
-                }
             }
+        }, 2000);
+    };
 
-            // Timeout — server not responding
-            this._updateInProgress = false;
-            if (this._updateModalRefs) {
-                const { icon, title, messageEl, buttons } = this._updateModalRefs;
-                icon.textContent = '⚠️';
-                title.textContent = i18n.t('settings.update.restartTimeout') || 'Le serveur ne répond pas';
-                messageEl.innerHTML = `
-                    <div style="font-size: 14px; text-align: center; color: #a16207;">
-                        ${i18n.t('settings.update.restartTimeout') || 'Le serveur ne répond pas.'}
-                    </div>
-                `;
-                buttons.innerHTML = `
-                    <button class="btn" id="updateManualReloadBtn" style="flex:1;">🔄 ${i18n.t('settings.update.manualReload') || 'Recharger manuellement'}</button>
-                `;
-                const reloadBtn = document.getElementById('updateManualReloadBtn');
-                if (reloadBtn) {
-                    reloadBtn.addEventListener('click', () => {
-                        window.location.reload();
-                    });
-                }
-                // Allow closing modal now
-                this._removeUpdateModalBlockers();
-            }
-        };
+    /**
+     * Show timeout state in modal
+     */
+    SettingsUpdate._showUpdateTimeoutInModal = function() {
+        if (!this._updateModalRefs) return;
 
-        setTimeout(waitForServer, 2000);
+        const { icon, title, messageEl, buttons } = this._updateModalRefs;
+        icon.textContent = '⚠️';
+        title.textContent = i18n.t('settings.update.restartTimeout') || 'Le serveur ne répond pas';
+        messageEl.innerHTML = `
+            <div style="font-size: 14px; text-align: center; color: #a16207;">
+                ${i18n.t('settings.update.restartTimeout') || 'Le serveur ne répond pas.'}
+            </div>
+        `;
+        buttons.innerHTML = `
+            <button class="btn" id="updateManualReloadBtn" style="flex:1;">🔄 ${i18n.t('settings.update.manualReload') || 'Recharger manuellement'}</button>
+        `;
+        const reloadBtn = document.getElementById('updateManualReloadBtn');
+        if (reloadBtn) {
+            reloadBtn.addEventListener('click', () => window.location.reload());
+        }
+        this._removeUpdateModalBlockers();
     };
 
     /**
      * Show success in modal, clear caches, and reload the page
      */
     SettingsUpdate._doCacheClearAndReload = function() {
-        // Guard against double-reload (status polling + health polling can both trigger this)
         if (this._reloadTriggered) return;
         this._reloadTriggered = true;
 
@@ -401,11 +344,8 @@
         `;
         const closeBtn = document.getElementById('updateErrorCloseBtn');
         if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                this._cleanupUpdateModal();
-            });
+            closeBtn.addEventListener('click', () => this._cleanupUpdateModal());
         }
-        // Allow closing modal now
         this._removeUpdateModalBlockers();
     };
 
@@ -438,13 +378,11 @@
      * Check for available updates
      */
     SettingsUpdate.checkForUpdates = async function() {
-        // If an update is in progress, don't check — the confirm modal is handling status
         if (this._updateInProgress) return;
 
         const statusEl = this.modal.querySelector('#versionStatus');
         if (!statusEl) return;
 
-        // Reset to loading state
         statusEl.style.background = '#f3f4f6';
         statusEl.style.color = '#666';
         statusEl.innerHTML = `<span style="animation: pulse 1.5s infinite;">⏳</span><span>${i18n.t('settings.update.checking') || 'Vérification des mises à jour...'}</span>`;
@@ -489,13 +427,9 @@
     };
 
     /**
-     * Stop all update-related polling (status + health)
+     * Stop update polling
      */
     SettingsUpdate._cleanupUpdatePolling = function() {
-        if (this._updateAbortController) {
-            this._updateAbortController.abort();
-            this._updateAbortController = null;
-        }
         if (this._updateStatusInterval) {
             clearInterval(this._updateStatusInterval);
             this._updateStatusInterval = null;
