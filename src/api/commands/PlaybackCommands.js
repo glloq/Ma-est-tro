@@ -526,10 +526,48 @@ async function applyAssignments(app, data) {
       );
     }
 
+    // Inject CC7 (volume) events at tick 0 for channels with non-default volume
+    let volumeEventsInjected = 0;
+    for (const [channel, assignment] of Object.entries(data.assignments)) {
+      if (assignment.channelVolume === undefined || assignment.channelVolume === 100) continue;
+      const channelNum = parseInt(channel);
+      const volumeValue = Math.max(0, Math.min(127, assignment.channelVolume));
+
+      // Collect target channels: source channel + any resolved split segment channels
+      const targetChannels = [channelNum];
+      if (assignment.split && assignment.segments) {
+        for (const seg of assignment.segments) {
+          if (seg._resolvedChannel !== undefined && seg._resolvedChannel !== channelNum) {
+            targetChannels.push(seg._resolvedChannel);
+          }
+        }
+      }
+
+      for (const targetCh of targetChannels) {
+        // Find a track that has events for this channel, or fall back to track 0
+        let targetTrack = adaptedMidiData.tracks[0];
+        for (const track of adaptedMidiData.tracks) {
+          if (track.events?.some(e => (e.channel ?? -1) === targetCh)) {
+            targetTrack = track;
+            break;
+          }
+        }
+        // Prepend CC7 event at tick 0 (before any notes)
+        targetTrack.events.unshift({
+          type: 'controller',
+          channel: targetCh,
+          controller: 7,
+          value: volumeValue,
+          deltaTime: 0
+        });
+        volumeEventsInjected++;
+      }
+    }
+
     // Only create an adapted file if actual modifications were made
     // Otherwise, routings will be saved against the original file
     const hasModifications = (stats.notesChanged > 0 || stats.notesRemapped > 0 || stats.notesSuppressed > 0
-      || splitStats.channelsSplit > 0);
+      || splitStats.channelsSplit > 0 || volumeEventsInjected > 0);
 
     if (hasModifications) {
       // Convert back to MIDI binary

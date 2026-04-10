@@ -6140,4 +6140,62 @@ body.dark-mode .rs-cc-table td {
   flex-shrink: 0;
 }
 
+/* ============================================================================
+ * Per-channel volume slider (CC7)
+ * ============================================================================ */
+
+.rs-col-volume {
+  min-width: 90px;
+  max-width: 120px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* Click-isolation zone (mirrors .rs-select-zone pattern) */
+.rs-volume-zone {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: default;
+  background: rgba(30, 80, 180, 0.04);
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.rs-volume-zone:hover {
+  background: rgba(30, 80, 180, 0.08);
+  border-color: rgba(30, 80, 180, 0.15);
+}
+
+.rs-volume-slider {
+  width: 60px;
+  height: 14px;
+  accent-color: #4A90D9;
+  cursor: pointer;
+}
+
+.rs-volume-slider::-webkit-slider-runnable-track {
+  height: 4px;
+}
+
+.rs-volume-slider::-moz-range-track {
+  height: 4px;
+}
+
+.rs-volume-value {
+  font-size: 10px;
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--text-secondary, #6c757d);
+  min-width: 22px;
+  text-align: right;
+}
+
+.rs-row.skipped .rs-col-volume {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
 /* END OF FILE */
