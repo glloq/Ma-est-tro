@@ -128,6 +128,11 @@
             if (channelChip) {
                 e.preventDefault();
                 e.stopPropagation();
+    // Block channel toggle when a specialized editor is active
+                if (this._isSpecializedEditorActive()) {
+                    this.showNotification(this.t('midiEditor.closeEditorFirst') || 'Close the specialized editor first', 'info');
+                    return;
+                }
                 const channel = parseInt(channelChip.dataset.channel);
                 if (!isNaN(channel)) this.toggleChannel(channel);
                 return;
@@ -145,6 +150,11 @@
             if (showAllBtn) {
                 e.preventDefault();
                 e.stopPropagation();
+    // Block "Show All" when a specialized editor is active
+                if (this._isSpecializedEditorActive()) {
+                    this.showNotification(this.t('midiEditor.closeEditorFirst') || 'Close the specialized editor first', 'info');
+                    return;
+                }
                 const previousActiveChannels = new Set(this.activeChannels);
                 this.channels.forEach(ch => {
                     this.activeChannels.add(ch.channel);
@@ -196,6 +206,8 @@
             if (channelChip) {
                 e.preventDefault();
                 e.stopPropagation();
+    // Block solo when a specialized editor is active
+                if (this._isSpecializedEditorActive()) return;
                 const channel = parseInt(channelChip.dataset.channel);
                 if (!isNaN(channel)) {
                     const previousActiveChannels = new Set(this.activeChannels);
@@ -617,6 +629,14 @@
     * Zoom vertical
     */
     MidiEditorEventsMixin.zoomVertical = function(factor) {
+    // Dispatch to specialized editor if active
+        const specializedRenderer = this._getActiveSpecializedRenderer();
+        if (specializedRenderer && typeof specializedRenderer.setVerticalZoom === 'function') {
+            specializedRenderer.setVerticalZoom(factor);
+            this.syncAllEditors();
+            return;
+        }
+
         if (!this.pianoRoll) {
             this.log('warn', 'Cannot zoom: piano roll not initialized');
             return;

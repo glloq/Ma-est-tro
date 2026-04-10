@@ -288,7 +288,12 @@ class TablatureEditor {
             tuning: this.stringInstrument.tuning,
             numFrets: this.stringInstrument.num_frets,
             isFretless: this.stringInstrument.is_fretless,
-            capoFret: this.stringInstrument.capo_fret || 0
+            capoFret: this.stringInstrument.capo_fret || 0,
+            onScrollChange: () => {
+                if (this.modal && this.modal.syncAllEditors) {
+                    this.modal.syncAllEditors();
+                }
+            }
         });
 
         // Sync zoom/scroll with piano roll if available

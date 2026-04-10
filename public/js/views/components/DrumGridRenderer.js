@@ -126,6 +126,9 @@ class DrumGridRenderer {
         // Clipboard
         this._clipboard = [];
 
+        // Scroll change callback (notifies parent when scroll/zoom changes)
+        this.onScrollChange = options.onScrollChange || null;
+
         // Colors
         this.colors = {};
         this.categoryColors = {};
@@ -227,6 +230,7 @@ class DrumGridRenderer {
     setScrollX(tickOffset) {
         this.scrollX = Math.max(0, tickOffset);
         this.requestRedraw();
+        this._notifyScrollChange();
     }
 
     setScrollY(pixelOffset) {
@@ -236,6 +240,20 @@ class DrumGridRenderer {
 
     setZoom(ticksPerPixel) {
         this.ticksPerPixel = Math.max(0.5, Math.min(20, ticksPerPixel));
+        this.requestRedraw();
+        this._notifyScrollChange();
+    }
+
+    _notifyScrollChange() {
+        if (this.onScrollChange) this.onScrollChange();
+    }
+
+    /**
+     * Vertical zoom: adjust row height.
+     * factor < 1 = zoom in (taller rows), factor > 1 = zoom out (shorter rows)
+     */
+    setVerticalZoom(factor) {
+        this.rowHeight = Math.max(12, Math.min(40, Math.round(this.rowHeight / factor)));
         this.requestRedraw();
     }
 
@@ -833,6 +851,7 @@ class DrumGridRenderer {
                 this.scrollX = Math.max(0, this._dragStart.scrollX - dx);
                 this.scrollY = Math.max(0, this._dragStart.scrollY - dy);
                 this.requestRedraw();
+                this._notifyScrollChange();
             }
             return;
         }
@@ -923,6 +942,7 @@ class DrumGridRenderer {
         }
 
         this.requestRedraw();
+        this._notifyScrollChange();
     }
 
     // ========================================================================

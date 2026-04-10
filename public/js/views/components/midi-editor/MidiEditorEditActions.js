@@ -764,6 +764,26 @@
             }
         }
 
+    // Propager aux editeurs CC/Velocity/Tempo si la section est ouverte
+        if (this.ccSectionExpanded) {
+            const ccToolMap = { 'select': 'select', 'drag-notes': 'move', 'drag-view': 'select' };
+            const ccTool = ccToolMap[mode];
+            if (ccTool) {
+                if (this.currentCCType === 'tempo' && this.tempoEditor) {
+                    this.tempoEditor.setTool(ccTool);
+                } else if (this.currentCCType === 'velocity' && this.velocityEditor) {
+                    this.velocityEditor.setTool(ccTool);
+                } else if (this.ccEditor) {
+                    this.ccEditor.setTool(ccTool);
+                }
+            // Update CC tool button active states
+                const ccToolBtns = this.container?.querySelectorAll('.cc-tool-btn');
+                if (ccToolBtns) {
+                    ccToolBtns.forEach(b => b.classList.remove('active'));
+                }
+            }
+        }
+
     // Mettre à jour l'UI
         this.updateModeButtons();
 
@@ -938,6 +958,69 @@
         document.addEventListener('keydown', this.keyboardHandler);
     }
 
+
+    /**
+    * Retourne true si un editeur specialise (tablature, drum, wind) est actuellement actif
+    */
+    MidiEditorEditActionsMixin._isSpecializedEditorActive = function() {
+        return !!(
+            (this.tablatureEditor && this.tablatureEditor.isVisible) ||
+            (this.drumPatternEditor && this.drumPatternEditor.isVisible) ||
+            (this.windInstrumentEditor && this.windInstrumentEditor.isVisible)
+        );
+    }
+
+    /**
+    * Retourne l'etat du viewport de l'editeur actuellement actif.
+    * Cela permet a syncAllEditors, syncCCEditor, etc. de lire les bonnes
+    * valeurs de scroll/zoom meme quand un editeur specialise est actif
+    * (et que le piano roll est cache/stale).
+    * @returns {{ xoffset: number, xrange: number, ticksPerPixel: number }}
+    */
+    MidiEditorEditActionsMixin._getActiveViewportState = function() {
+        const containerWidth = this.container?.querySelector('#playback-timeline-container')?.clientWidth || 800;
+
+        // Tablature editor
+        if (this.tablatureEditor && this.tablatureEditor.isVisible && this.tablatureEditor.renderer) {
+            const r = this.tablatureEditor.renderer;
+            const headerWidth = r.headerWidth || 40;
+            const tpp = r.ticksPerPixel || 2;
+            const xoffset = r.scrollX || 0;
+            const xrange = (containerWidth - headerWidth) * tpp;
+            return { xoffset, xrange, ticksPerPixel: tpp };
+        }
+
+        // Drum pattern editor
+        if (this.drumPatternEditor && this.drumPatternEditor.isVisible && this.drumPatternEditor.gridRenderer) {
+            const r = this.drumPatternEditor.gridRenderer;
+            const headerWidth = r.headerWidth || 80;
+            const tpp = r.ticksPerPixel || 2;
+            const xoffset = r.scrollX || 0;
+            const xrange = (containerWidth - headerWidth) * tpp;
+            return { xoffset, xrange, ticksPerPixel: tpp };
+        }
+
+        // Wind instrument editor
+        if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible && this.windInstrumentEditor.renderer) {
+            const r = this.windInstrumentEditor.renderer;
+            const headerWidth = r.headerWidth || 50;
+            const tpp = r.ticksPerPixel || 2;
+            const xoffset = r.scrollX || 0;
+            const xrange = (containerWidth - headerWidth) * tpp;
+            return { xoffset, xrange, ticksPerPixel: tpp };
+        }
+
+        // Default: piano roll
+        if (this.pianoRoll) {
+            const xoffset = this.pianoRoll.xoffset || 0;
+            const xrange = this.pianoRoll.xrange || 1920;
+            const headerWidth = 64; // yruler 24 + kbwidth 40
+            const tpp = xrange / Math.max(1, containerWidth - headerWidth);
+            return { xoffset, xrange, ticksPerPixel: tpp };
+        }
+
+        return { xoffset: 0, xrange: 1920, ticksPerPixel: 2 };
+    }
 
     if (typeof window !== 'undefined') {
         window.MidiEditorEditActionsMixin = MidiEditorEditActionsMixin;

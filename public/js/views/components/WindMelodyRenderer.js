@@ -195,6 +195,21 @@ class WindMelodyRenderer {
         this._notifyScrollChange();
     }
 
+    /**
+     * Vertical zoom: adjust the visible pitch range.
+     * factor < 1 = zoom in (fewer notes visible), factor > 1 = zoom out (more notes visible)
+     */
+    setVerticalZoom(factor) {
+        const currentRange = this.displayNoteMax - this.displayNoteMin;
+        const newRange = Math.max(6, Math.min(127, Math.round(currentRange * factor)));
+        const center = Math.floor((this.displayNoteMin + this.displayNoteMax) / 2);
+        this.displayNoteMin = Math.max(0, center - Math.floor(newRange / 2));
+        this.displayNoteMax = Math.min(127, this.displayNoteMin + newRange);
+        this.scrollY = this.displayNoteMin - Math.max(0, this.noteMin - 5);
+        this.requestRedraw();
+        this._notifyScrollChange();
+    }
+
     setPlayhead(tick) {
         this.playheadTick = tick;
         this.requestRedraw();

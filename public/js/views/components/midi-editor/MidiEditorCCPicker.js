@@ -292,13 +292,14 @@
     * Synchroniser l'éditeur CC avec le piano roll
     */
     MidiEditorCCPickerMixin.syncCCEditor = function() {
-        if (!this.ccEditor || !this.pianoRoll) return;
+        if (!this.ccEditor) return;
 
+        const viewport = this._getActiveViewportState();
         this.ccEditor.syncWith({
-            xrange: this.pianoRoll.xrange,
-            xoffset: this.pianoRoll.xoffset,
+            xrange: viewport.xrange,
+            xoffset: viewport.xoffset,
             grid: this.snapValues[this.currentSnapIndex].ticks,
-            timebase: this.pianoRoll.timebase
+            timebase: this.pianoRoll?.timebase
         });
     }
 
@@ -328,15 +329,21 @@
         this.syncVelocityEditor();
         this.syncTempoEditor();
 
+        const viewport = this._getActiveViewportState();
+        const activeLeftOffset = this._getActiveEditorHeaderWidth();
+
     // Sync PlaybackTimelineBar with active editor scroll/zoom
-        if (this.timelineBar && this.pianoRoll) {
-            const xoffset = this.pianoRoll.xoffset || 0;
-            const xrange = this.pianoRoll.xrange || 1920;
+        if (this.timelineBar) {
             const containerWidth = this.container?.querySelector('#playback-timeline-container')?.clientWidth || 800;
-            const activeLeftOffset = this._getActiveEditorHeaderWidth();
             this.timelineBar.setLeftOffset(activeLeftOffset);
-            this.timelineBar.setScrollX(xoffset);
-            this.timelineBar.setZoom(xrange / Math.max(1, containerWidth - activeLeftOffset));
+            this.timelineBar.setScrollX(viewport.xoffset);
+            this.timelineBar.setZoom(viewport.xrange / Math.max(1, containerWidth - activeLeftOffset));
+        }
+
+    // Sync NavigationOverviewBar with active editor viewport
+        if (this.navigationBar) {
+            const maxTick = this.midiData?.maxTick || 0;
+            this.navigationBar.setViewport(viewport.xoffset, viewport.xrange, maxTick);
         }
     }
 
