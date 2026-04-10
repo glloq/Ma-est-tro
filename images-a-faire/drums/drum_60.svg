@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Bongo - Notes 60/61 -->
+
+    <!-- Petit bongo (gauche) -->
+    <rect x="10" y="40" width="44" height="50" rx="2" fill="#8B6914" stroke="#5C4A0E" stroke-width="2"/>
+    <ellipse cx="32" cy="40" rx="24" ry="10" fill="none" stroke="#D4A843" stroke-width="2"/>
+    <ellipse cx="32" cy="40" rx="22" ry="8" fill="#F5E6C8" stroke="#D4A843" stroke-width="1"/>
+    <ellipse cx="32" cy="90" rx="24" ry="10" fill="none" stroke="#5C4A0E" stroke-width="1.5"/>
+
+    <!-- Grand bongo (droite) -->
+    <rect x="58" y="34" width="52" height="56" rx="2" fill="#A0652F" stroke="#7A4E24" stroke-width="2"/>
+    <ellipse cx="84" cy="34" rx="28" ry="12" fill="none" stroke="#D4A843" stroke-width="2"/>
+    <ellipse cx="84" cy="34" rx="26" ry="10" fill="#F5E6C8" stroke="#D4A843" stroke-width="1"/>
+    <ellipse cx="84" cy="90" rx="28" ry="12" fill="none" stroke="#7A4E24" stroke-width="1.5"/>
+
+    <!-- Piece de liaison au centre -->
+    <rect x="48" y="50" width="16" height="12" rx="2" fill="#D4A843" stroke="#8B6914" stroke-width="1"/>
+
+</svg>

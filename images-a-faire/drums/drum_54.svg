@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Tambourine - Note 54 -->
+
+    <!-- Cadre circulaire -->
+    <circle cx="64" cy="64" r="40" fill="none" stroke="#8B6914" stroke-width="6"/>
+
+    <!-- Peau -->
+    <circle cx="64" cy="64" r="37" fill="#F5E6C8" stroke="#D4A843" stroke-width="1"/>
+
+    <!-- Cymbalettes (jingles, paires autour du cadre) -->
+    <circle cx="28" cy="50" r="5" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
+    <circle cx="24" cy="64" r="5" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
+    <circle cx="28" cy="78" r="5" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
+    <circle cx="40" cy="92" r="5" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
+    <circle cx="56" cy="100" r="5" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
+    <circle cx="72" cy="100" r="5" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
+    <circle cx="88" cy="92" r="5" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
+    <circle cx="100" cy="78" r="5" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
+    <circle cx="104" cy="64" r="5" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
+    <circle cx="100" cy="50" r="5" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
+
+</svg>
