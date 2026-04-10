@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Violoncelle - GM 42 -->
+  <g transform="rotate(45, 64, 64)">
+
+    <!-- Pique (endpin) -->
+    <line x1="64" y1="118" x2="64" y2="126" stroke="#5C4A0E" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- Manche -->
+    <rect x="60" y="10" width="8" height="42" rx="1" fill="#8B6914" stroke="#5C4A0E" stroke-width="1"/>
+
+    <!-- Volute -->
+    <path d="
+      M 64 10
+      C 64 6, 60 2, 56 2
+      C 52 2, 52 6, 54 8
+      C 56 10, 58 8, 58 6
+    " fill="none" stroke="#5C4A0E" stroke-width="2.5" stroke-linecap="round"/>
+
+    <!-- Chevilles -->
+    <line x1="54" y1="4" x2="50" y2="2" stroke="#5C4A0E" stroke-width="2" stroke-linecap="round"/>
+    <line x1="54" y1="8" x2="50" y2="10" stroke="#5C4A0E" stroke-width="2" stroke-linecap="round"/>
+    <line x1="72" y1="6" x2="76" y2="4" stroke="#5C4A0E" stroke-width="2" stroke-linecap="round"/>
+    <line x1="72" y1="10" x2="76" y2="12" stroke="#5C4A0E" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- Corps (plus large que le violon, epaules plus larges) -->
+    <path d="
+      M 64 48
+      C 80 48, 86 52, 86 60
+      L 84 68
+      C 78 70, 78 78, 84 80
+      L 86 84
+      C 90 90, 92 100, 90 108
+      C 88 114, 78 118, 64 118
+      C 50 118, 40 114, 38 108
+      C 36 100, 38 90, 42 84
+      L 44 80
+      C 50 78, 50 70, 44 68
+      L 42 60
+      C 42 52, 48 48, 64 48 Z
+    " fill="#C17D2F" stroke="#8B6914" stroke-width="2"/>
+
+    <!-- Ouie F gauche -->
+    <path d="M 50 74 C 48 78, 48 84, 50 88" fill="none" stroke="#3D300A" stroke-width="1.5" stroke-linecap="round"/>
+
+    <!-- Ouie F droite -->
+    <path d="M 78 74 C 80 78, 80 84, 78 88" fill="none" stroke="#3D300A" stroke-width="1.5" stroke-linecap="round"/>
+
+    <!-- Chevalet -->
+    <rect x="56" y="86" width="16" height="2" rx="0.5" fill="#5C4A0E"/>
+
+    <!-- Cordier -->
+    <path d="M 58 100 L 56 114 L 72 114 L 70 100 Z" fill="#1A1A1A" opacity="0.6"/>
+
+    <!-- Cordes (4) -->
+    <line x1="61" y1="10" x2="61" y2="100" stroke="#E8D5A3" stroke-width="0.5" opacity="0.7"/>
+    <line x1="63" y1="10" x2="63" y2="100" stroke="#E8D5A3" stroke-width="0.6" opacity="0.7"/>
+    <line x1="65" y1="10" x2="65" y2="100" stroke="#E8D5A3" stroke-width="0.7" opacity="0.7"/>
+    <line x1="67" y1="10" x2="67" y2="100" stroke="#E8D5A3" stroke-width="0.8" opacity="0.7"/>
+
+  </g>
+</svg>

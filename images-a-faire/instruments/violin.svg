@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Violon - GM 40 -->
+  <g transform="rotate(45, 64, 64)">
+
+    <!-- Manche (sans frettes) -->
+    <rect x="61" y="14" width="6" height="40" rx="1" fill="#8B6914" stroke="#5C4A0E" stroke-width="1"/>
+
+    <!-- Volute (scroll) -->
+    <path d="
+      M 64 14
+      C 64 10, 60 6, 56 6
+      C 52 6, 52 10, 54 12
+      C 56 14, 58 12, 58 10
+    " fill="none" stroke="#5C4A0E" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- Chevilles -->
+    <line x1="54" y1="8" x2="50" y2="6" stroke="#5C4A0E" stroke-width="2" stroke-linecap="round"/>
+    <line x1="54" y1="12" x2="50" y2="14" stroke="#5C4A0E" stroke-width="2" stroke-linecap="round"/>
+    <line x1="70" y1="10" x2="74" y2="8" stroke="#5C4A0E" stroke-width="2" stroke-linecap="round"/>
+    <line x1="70" y1="14" x2="74" y2="16" stroke="#5C4A0E" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- Corps du violon (avec coins en C) -->
+    <path d="
+      M 64 50
+      C 76 50, 82 54, 82 60
+      L 80 66
+      C 76 68, 76 74, 80 76
+      L 82 80
+      C 84 86, 86 94, 84 102
+      C 82 108, 74 112, 64 112
+      C 54 112, 46 108, 44 102
+      C 42 94, 44 86, 46 80
+      L 48 76
+      C 52 74, 52 68, 48 66
+      L 46 60
+      C 46 54, 52 50, 64 50 Z
+    " fill="#C17D2F" stroke="#8B6914" stroke-width="2"/>
+
+    <!-- Ouie F gauche -->
+    <path d="M 52 72 C 50 76, 50 80, 52 84" fill="none" stroke="#3D300A" stroke-width="1.5" stroke-linecap="round"/>
+
+    <!-- Ouie F droite -->
+    <path d="M 76 72 C 78 76, 78 80, 76 84" fill="none" stroke="#3D300A" stroke-width="1.5" stroke-linecap="round"/>
+
+    <!-- Chevalet -->
+    <rect x="58" y="82" width="12" height="2" rx="0.5" fill="#5C4A0E"/>
+
+    <!-- Cordier -->
+    <path d="M 60 98 L 58 108 L 70 108 L 68 98 Z" fill="#1A1A1A" opacity="0.6"/>
+
+    <!-- Mentonniere -->
+    <ellipse cx="54" cy="106" rx="6" ry="4" fill="#1A1A1A" opacity="0.3"/>
+
+    <!-- Cordes (4) -->
+    <line x1="61" y1="14" x2="61" y2="98" stroke="#E8D5A3" stroke-width="0.5" opacity="0.7"/>
+    <line x1="63" y1="14" x2="63" y2="98" stroke="#E8D5A3" stroke-width="0.5" opacity="0.7"/>
+    <line x1="65" y1="14" x2="65" y2="98" stroke="#E8D5A3" stroke-width="0.6" opacity="0.7"/>
+    <line x1="67" y1="14" x2="67" y2="98" stroke="#E8D5A3" stroke-width="0.7" opacity="0.7"/>
+
+  </g>
+</svg>
