@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Kit standard (drum set complet) -->
+
+    <!-- Grosse caisse (centre bas) -->
+    <ellipse cx="64" cy="88" rx="28" ry="28" fill="#1A1A1A" stroke="#333" stroke-width="1.5"/>
+    <ellipse cx="64" cy="88" rx="24" ry="24" fill="#F5E6C8" stroke="#D4A843" stroke-width="1"/>
+
+    <!-- Caisse claire (gauche devant) -->
+    <ellipse cx="32" cy="70" rx="16" ry="6" fill="#F5E6C8" stroke="#D4A843" stroke-width="1.5"/>
+    <rect x="16" y="70" width="32" height="10" rx="1" fill="#C0C0C0" stroke="#999" stroke-width="1"/>
+
+    <!-- Tom aigu (centre haut) -->
+    <ellipse cx="52" cy="48" rx="12" ry="5" fill="#F5E6C8" stroke="#D4A843" stroke-width="1"/>
+    <rect x="40" y="48" width="24" height="12" rx="1" fill="#CC3333" stroke="#A52828" stroke-width="1"/>
+
+    <!-- Tom medium (droite haut) -->
+    <ellipse cx="78" cy="48" rx="13" ry="5" fill="#F5E6C8" stroke="#D4A843" stroke-width="1"/>
+    <rect x="65" y="48" width="26" height="14" rx="1" fill="#CC3333" stroke="#A52828" stroke-width="1"/>
+
+    <!-- Floor tom (droite) -->
+    <ellipse cx="102" cy="72" rx="14" ry="5" fill="#F5E6C8" stroke="#D4A843" stroke-width="1"/>
+    <rect x="88" y="72" width="28" height="22" rx="1" fill="#CC3333" stroke="#A52828" stroke-width="1"/>
+
+    <!-- Hi-hat (extreme gauche) -->
+    <ellipse cx="12" cy="42" rx="12" ry="4" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
+    <ellipse cx="12" cy="44" rx="12" ry="4" fill="#B8960F" stroke="#8B6914" stroke-width="1"/>
+    <line x1="12" y1="48" x2="12" y2="90" stroke="#888" stroke-width="1.5"/>
+
+    <!-- Crash (gauche haut) -->
+    <ellipse cx="30" cy="28" rx="16" ry="5" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
+    <line x1="30" y1="33" x2="30" y2="60" stroke="#888" stroke-width="1.5"/>
+
+    <!-- Ride (droite haut) -->
+    <ellipse cx="104" cy="32" rx="18" ry="6" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
+    <line x1="104" y1="38" x2="104" y2="64" stroke="#888" stroke-width="1.5"/>
+
+    <!-- Baguettes croisees -->
+    <line x1="40" y1="6" x2="56" y2="44" stroke="#D4934A" stroke-width="2" stroke-linecap="round"/>
+    <line x1="80" y1="6" x2="68" y2="44" stroke="#D4934A" stroke-width="2" stroke-linecap="round"/>
+
+</svg>
