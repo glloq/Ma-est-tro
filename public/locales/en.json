@@ -90,6 +90,11 @@
             "buttons": "Interface Buttons",
             "system": "Hardware & System"
         },
+        "loadingAnimation": {
+            "title": "Loading Animation",
+            "enable": "Show animation on startup",
+            "description": "Displays an animation with a progress bar on launch. If disabled, the animation only shows on first load (cache cleared)."
+        },
         "midiClock": {
             "title": "MIDI Clock",
             "enable": "Enable MIDI Clock",

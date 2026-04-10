@@ -90,6 +90,11 @@
             "buttons": "Boutons d'interface",
             "system": "Matériel & Système"
         },
+        "loadingAnimation": {
+            "title": "Animation de chargement",
+            "enable": "Afficher l'animation au démarrage",
+            "description": "Affiche une animation avec barre de progression au lancement. Si désactivé, l'animation ne s'affiche qu'au premier chargement (cache vidé)."
+        },
         "midiClock": {
             "title": "Horloge MIDI",
             "enable": "Activer l'horloge MIDI",

@@ -53,7 +53,8 @@ class SettingsModal {
             showLightingButton: false,
             showPlaylistButton: true,
             midiClockEnabled: false,
-            serialMidiEnabled: false
+            serialMidiEnabled: false,
+            showLoadingAnimation: true
         };
 
         try {
@@ -266,6 +267,9 @@ class SettingsModal {
         const serialPortsSection = this.modal.querySelector('#serialMidiPortsSection');
         if (serialPortsSection) serialPortsSection.style.display = this.settings.serialMidiEnabled ? 'block' : 'none';
 
+        const loadingAnimationToggle = this.modal.querySelector('#showLoadingAnimationToggle');
+        if (loadingAnimationToggle) loadingAnimationToggle.checked = this.settings.showLoadingAnimation;
+
         this.logger?.info('Settings modal opened');
         this.checkForUpdates();
     }
@@ -306,6 +310,7 @@ class SettingsModal {
         const playlistButtonToggle = this.modal.querySelector('#showPlaylistButtonToggle');
         const serialMidiToggle = this.modal.querySelector('#serialMidiToggle');
         const midiClockToggle = this.modal.querySelector('#midiClockToggle');
+        const loadingAnimationToggle = this.modal.querySelector('#showLoadingAnimationToggle');
 
         const newSettings = {
             theme: darkModeToggle ? (darkModeToggle.checked ? 'dark' : 'colored') : this.settings.theme,
@@ -318,7 +323,8 @@ class SettingsModal {
             showLightingButton: lightingButtonToggle ? lightingButtonToggle.checked : this.settings.showLightingButton,
             showPlaylistButton: playlistButtonToggle ? playlistButtonToggle.checked : this.settings.showPlaylistButton,
             midiClockEnabled: midiClockToggle ? midiClockToggle.checked : this.settings.midiClockEnabled,
-            serialMidiEnabled: serialMidiToggle ? serialMidiToggle.checked : this.settings.serialMidiEnabled
+            serialMidiEnabled: serialMidiToggle ? serialMidiToggle.checked : this.settings.serialMidiEnabled,
+            showLoadingAnimation: loadingAnimationToggle ? loadingAnimationToggle.checked : this.settings.showLoadingAnimation
         };
 
         const themeChanged = newSettings.theme !== this.settings.theme;

@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="noteGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#667eea"/>
+      <stop offset="100%" stop-color="#764ba2"/>
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#667eea" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#764ba2" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <style>
+    .pulse-ring { animation: pulseRing 2s ease-out infinite; transform-origin: 60px 60px; }
+    .pulse-ring2 { animation: pulseRing 2s ease-out infinite 0.6s; transform-origin: 60px 60px; }
+    .note-body { animation: noteFloat 3s ease-in-out infinite; transform-origin: 60px 60px; }
+    .wave1 { animation: waveMove 2.5s ease-in-out infinite; }
+    .wave2 { animation: waveMove 2.5s ease-in-out infinite 0.4s; }
+    .wave3 { animation: waveMove 2.5s ease-in-out infinite 0.8s; }
+    .sparkle1 { animation: sparkle 2s ease-in-out infinite; }
+    .sparkle2 { animation: sparkle 2s ease-in-out infinite 0.7s; }
+    .sparkle3 { animation: sparkle 2s ease-in-out infinite 1.4s; }
+
+    @keyframes pulseRing {
+      0% { transform: scale(0.8); opacity: 0.6; }
+      100% { transform: scale(1.5); opacity: 0; }
+    }
+    @keyframes noteFloat {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      25% { transform: translateY(-3px) rotate(2deg); }
+      75% { transform: translateY(3px) rotate(-2deg); }
+    }
+    @keyframes waveMove {
+      0%, 100% { opacity: 0.3; transform: translateX(0); }
+      50% { opacity: 0.8; transform: translateX(3px); }
+    }
+    @keyframes sparkle {
+      0%, 100% { opacity: 0; transform: scale(0); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+  </style>
+
+  <!-- Pulse rings -->
+  <circle class="pulse-ring" cx="60" cy="60" r="35" fill="none" stroke="url(#noteGrad)" stroke-width="1.5" opacity="0"/>
+  <circle class="pulse-ring2" cx="60" cy="60" r="35" fill="none" stroke="url(#noteGrad)" stroke-width="1" opacity="0"/>
+
+  <!-- Main note group -->
+  <g class="note-body">
+    <!-- Note head (ellipse) -->
+    <ellipse cx="52" cy="72" rx="12" ry="9" fill="url(#noteGrad)" transform="rotate(-15, 52, 72)"/>
+
+    <!-- Note stem -->
+    <rect x="62" y="30" width="3.5" height="44" rx="1.75" fill="url(#noteGrad)"/>
+
+    <!-- Note flag -->
+    <path d="M65.5 30 C65.5 30, 80 36, 76 48 C73 56, 65.5 52, 65.5 52" fill="none" stroke="url(#noteGrad)" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M65.5 38 C65.5 38, 78 43, 75 53 C72 60, 65.5 57, 65.5 57" fill="none" stroke="url(#noteGrad)" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  </g>
+
+  <!-- Sound waves -->
+  <g opacity="0.5">
+    <path class="wave1" d="M82 50 C86 46, 86 40, 82 36" fill="none" stroke="#667eea" stroke-width="2" stroke-linecap="round"/>
+    <path class="wave2" d="M88 53 C94 47, 94 37, 88 31" fill="none" stroke="#667eea" stroke-width="1.8" stroke-linecap="round"/>
+    <path class="wave3" d="M94 56 C102 48, 102 34, 94 26" fill="none" stroke="#667eea" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Sparkles -->
+  <circle class="sparkle1" cx="30" cy="35" r="2" fill="#a78bfa"/>
+  <circle class="sparkle2" cx="90" cy="70" r="1.8" fill="#818cf8"/>
+  <circle class="sparkle3" cx="38" cy="90" r="1.5" fill="#c084fc"/>
+</svg>
