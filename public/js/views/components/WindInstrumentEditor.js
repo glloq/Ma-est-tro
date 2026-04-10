@@ -589,13 +589,9 @@ class WindInstrumentEditor {
     _syncScrollBars(_info) {
         if (!this.isVisible) return;
 
-        const maxTick = this.modal.midiData?.maxTick || 0;
-
-        // Update navigation overview bar
-        if (this.modal.navigationBar && maxTick > 0 && this.renderer) {
-            const canvasWidth = this.melodyCanvasEl?.width || 800;
-            const visibleTicks = (canvasWidth - this.renderer.headerWidth) * this.renderer.ticksPerPixel;
-            this.modal.navigationBar.setViewport(this.renderer.scrollX, visibleTicks, maxTick);
+        // Use the unified syncAllEditors which now reads from _getActiveViewportState()
+        if (this.modal && this.modal.syncAllEditors) {
+            this.modal.syncAllEditors();
         }
     }
 

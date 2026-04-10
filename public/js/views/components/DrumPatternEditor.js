@@ -306,7 +306,14 @@ class DrumPatternEditor {
             this.gridRenderer.destroy();
         }
 
-        this.gridRenderer = new DrumGridRenderer(this.gridCanvasEl, { tool: 'pan' });
+        this.gridRenderer = new DrumGridRenderer(this.gridCanvasEl, {
+            tool: 'pan',
+            onScrollChange: () => {
+                if (this.modal && this.modal.syncAllEditors) {
+                    this.modal.syncAllEditors();
+                }
+            }
+        });
 
         // Sync quantize division
         this.gridRenderer.quantizeDiv = this.quantizeDiv;

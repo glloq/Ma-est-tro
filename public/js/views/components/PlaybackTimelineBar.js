@@ -90,7 +90,7 @@ class PlaybackTimelineBar {
 
         // Mouse events
         this.canvas.addEventListener('mousedown', this._onMouseDown);
-        this.canvas.addEventListener('mousemove', this._onMouseMove);
+        window.addEventListener('mousemove', this._onMouseMove);
         window.addEventListener('mouseup', this._onMouseUp);
 
         // Double-click for seek
@@ -301,7 +301,7 @@ class PlaybackTimelineBar {
     _handleMouseMove(e) {
         const pos = this._getCanvasPos(e);
 
-        // Marker dragging (playhead, range markers)
+        // Marker dragging (playhead, range markers) — works even outside canvas
         if (this._isDragging && this._dragTarget) {
             const tick = Math.max(0, this._xToTick(pos.x));
             const snapped = this._snapToBeat(tick);
@@ -328,7 +328,7 @@ class PlaybackTimelineBar {
             return;
         }
 
-        // View panning (drag on empty area)
+        // View panning (drag on empty area) — works even outside canvas
         if (this._isPanning) {
             const dx = pos.x - this._panStartX;
             const tickDelta = dx * this.ticksPerPixel;
@@ -339,7 +339,13 @@ class PlaybackTimelineBar {
             return;
         }
 
-        // Hover cursor changes
+        // Hover cursor changes — only when mouse is inside canvas bounds
+        const rect = this.canvas.getBoundingClientRect();
+        if (e.clientX < rect.left || e.clientX > rect.right ||
+            e.clientY < rect.top || e.clientY > rect.bottom) {
+            return;
+        }
+
         const target = this._hitTest(pos.x, pos.y);
         if (target !== this._hoverTarget) {
             this._hoverTarget = target;
@@ -715,7 +721,7 @@ class PlaybackTimelineBar {
 
         // Remove event listeners
         this.canvas.removeEventListener('mousedown', this._onMouseDown);
-        this.canvas.removeEventListener('mousemove', this._onMouseMove);
+        window.removeEventListener('mousemove', this._onMouseMove);
         window.removeEventListener('mouseup', this._onMouseUp);
         this.canvas.removeEventListener('dblclick', this._onDblClick);
         this.canvas.removeEventListener('wheel', this._onWheel);

@@ -69,6 +69,9 @@ class TablatureRenderer {
         // Clipboard
         this._clipboard = [];
 
+        // Scroll change callback (notifies parent when scroll/zoom changes)
+        this.onScrollChange = options.onScrollChange || null;
+
         // Bind event handlers
         this._onMouseDown = this._handleMouseDown.bind(this);
         this._onMouseMove = this._handleMouseMove.bind(this);
@@ -147,11 +150,26 @@ class TablatureRenderer {
     setScrollX(tickOffset) {
         this.scrollX = Math.max(0, tickOffset);
         this.requestRedraw();
+        this._notifyScrollChange();
     }
 
     setZoom(ticksPerPixel) {
         this.ticksPerPixel = Math.max(0.5, Math.min(20, ticksPerPixel));
         this.requestRedraw();
+        this._notifyScrollChange();
+    }
+
+    /**
+     * Vertical zoom: adjust line spacing between strings.
+     * factor < 1 = zoom in (more spacing), factor > 1 = zoom out (less spacing)
+     */
+    setVerticalZoom(factor) {
+        this.lineSpacing = Math.max(12, Math.min(40, Math.round(this.lineSpacing / factor)));
+        this.requestRedraw();
+    }
+
+    _notifyScrollChange() {
+        if (this.onScrollChange) this.onScrollChange();
     }
 
     setPlayhead(tick) {
@@ -675,6 +693,7 @@ class TablatureRenderer {
                 const dx = (x - this._dragStart.x) * this.ticksPerPixel;
                 this.scrollX = Math.max(0, this._dragStart.scrollX - dx);
                 this.requestRedraw();
+                this._notifyScrollChange();
             }
             // For 'move' mode, visual feedback is deferred to mouseup (snap to grid)
             return;
@@ -801,6 +820,7 @@ class TablatureRenderer {
         }
 
         this.requestRedraw();
+        this._notifyScrollChange();
     }
 
     _handleDblClick(e) {

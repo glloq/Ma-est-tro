@@ -55,6 +55,8 @@
         const chips = this.container?.querySelectorAll('.channel-chip');
         if (!chips) return;
 
+        const specializedActive = this._isSpecializedEditorActive();
+
         chips.forEach(chip => {
             const channel = parseInt(chip.dataset.channel);
             const color = chip.dataset.color;
@@ -66,6 +68,13 @@
             } else {
                 chip.classList.remove('active');
                 chip.style.cssText = `--chip-color: ${color}; --chip-bg: transparent; --chip-border: ${color}4d;`;
+            }
+
+    // When a specialized editor is active, grey out non-active channel chips
+            if (specializedActive && !isActive) {
+                chip.classList.add('channel-locked');
+            } else {
+                chip.classList.remove('channel-locked');
             }
 
     // Update playable notes indicator
@@ -83,6 +92,18 @@
                     gear.style.setProperty('--chip-border', chip.style.getPropertyValue('--chip-border'));
                 }
             });
+        }
+
+    // Disable/enable "Show All" button based on specialized editor state
+        const showAllBtn = this.container?.querySelector('.btn-show-all-channels');
+        if (showAllBtn) {
+            if (specializedActive) {
+                showAllBtn.disabled = true;
+                showAllBtn.classList.add('channel-locked');
+            } else {
+                showAllBtn.disabled = false;
+                showAllBtn.classList.remove('channel-locked');
+            }
         }
 
     // Mettre à jour le compteur de notes
@@ -375,8 +396,6 @@
 
                                     <label class="cc-toolbar-label">${this.t('midiEditor.tools')}</label>
                                     <div class="cc-tool-buttons-horizontal">
-                                        <button class="cc-tool-btn active" data-tool="select" title="${this.t('midiEditor.selectTool')}">⬚</button>
-                                        <button class="cc-tool-btn" data-tool="move" title="${this.t('midiEditor.moveTool')}">✥</button>
                                         <button class="cc-tool-btn" data-tool="line" title="${this.t('midiEditor.lineTool')}">╱</button>
                                         <button class="cc-tool-btn" data-tool="draw" title="${this.t('midiEditor.drawTool')}">✎</button>
                                     </div>

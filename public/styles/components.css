@@ -1334,6 +1334,28 @@
     box-shadow: 0 0 12px color-mix(in srgb, var(--chip-color, #667eea) 35%, #b0bcd8);
 }
 
+/* Locked state: greyed out when a specialized editor is active */
+.midi-editor-modal .channel-chip.channel-locked {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: default;
+}
+
+.midi-editor-modal .channel-chip.channel-locked .chip-settings-btn,
+.midi-editor-modal .channel-chip.channel-locked .channel-tab-btn,
+.midi-editor-modal .channel-chip.channel-locked .channel-drum-btn,
+.midi-editor-modal .channel-chip.channel-locked .channel-wind-btn,
+.midi-editor-modal .channel-chip.channel-locked .channel-edit-btn {
+    pointer-events: auto;
+    opacity: 1;
+}
+
+.midi-editor-modal .btn-show-all-channels.channel-locked {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: default;
+}
+
 /* Chip content area */
 .midi-editor-modal .chip-content {
     display: flex;

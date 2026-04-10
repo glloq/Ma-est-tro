@@ -554,13 +554,14 @@ class MidiEditorCCPanel {
      */
     syncCCEditor() {
         const m = this.modal;
-        if (!m.ccEditor || !m.pianoRoll) return;
+        if (!m.ccEditor) return;
 
+        const viewport = m._getActiveViewportState();
         m.ccEditor.syncWith({
-            xrange: m.pianoRoll.xrange,
-            xoffset: m.pianoRoll.xoffset,
+            xrange: viewport.xrange,
+            xoffset: viewport.xoffset,
             grid: m.snapValues[m.currentSnapIndex].ticks,
-            timebase: m.pianoRoll.timebase
+            timebase: m.pianoRoll?.timebase
         });
     }
 
@@ -718,10 +719,11 @@ class MidiEditorCCPanel {
      */
     syncTempoEditor() {
         const m = this.modal;
-        if (!m.tempoEditor || !m.pianoRoll) return;
+        if (!m.tempoEditor) return;
 
-        m.tempoEditor.setXRange(m.pianoRoll.xrange);
-        m.tempoEditor.setXOffset(m.pianoRoll.xoffset);
+        const viewport = m._getActiveViewportState();
+        m.tempoEditor.setXRange(viewport.xrange);
+        m.tempoEditor.setXOffset(viewport.xoffset);
         m.tempoEditor.setGrid(m.snapValues[m.currentSnapIndex].ticks);
     }
 
@@ -877,13 +879,14 @@ class MidiEditorCCPanel {
      */
     syncVelocityEditor() {
         const m = this.modal;
-        if (!m.velocityEditor || !m.pianoRoll) return;
+        if (!m.velocityEditor) return;
 
+        const viewport = m._getActiveViewportState();
         m.velocityEditor.syncWith({
-            xrange: m.pianoRoll.xrange,
-            xoffset: m.pianoRoll.xoffset,
+            xrange: viewport.xrange,
+            xoffset: viewport.xoffset,
             grid: m.snapValues[m.currentSnapIndex].ticks,
-            timebase: m.pianoRoll.timebase
+            timebase: m.pianoRoll?.timebase
         });
     }
 
