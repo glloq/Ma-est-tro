@@ -19,17 +19,17 @@
   <circle cx="71" cy="5" r="2" fill="#D4A843"/>
   <circle cx="71" cy="9" r="2" fill="#D4A843"/>
 
-  <!-- Corps (forme de 8 symetrique, tangentes lissees a la taille) -->
+  <!-- Corps (forme de 8, transitions arrondies a la taille) -->
   <path d="
     M 64 62
-    C 78 62, 85 67, 85 73
-    C 85 80, 74 85, 74 88
-    C 74 91, 91 98, 91 108
+    C 78 62, 84 65, 84 72
+    C 84 80, 76 86, 76 90
+    C 76 94, 91 100, 91 108
     C 91 118, 78 124, 64 124
     C 50 124, 37 118, 37 108
-    C 37 98, 54 91, 54 88
-    C 54 85, 43 80, 43 73
-    C 43 67, 50 62, 64 62 Z
+    C 37 100, 52 94, 52 90
+    C 52 86, 44 80, 44 72
+    C 44 65, 50 62, 64 62 Z
   " fill="#D4934A" stroke="#8B6914" stroke-width="2"/>
 
   <!-- Rosace -->
