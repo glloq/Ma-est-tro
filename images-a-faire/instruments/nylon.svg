@@ -19,17 +19,17 @@
   <circle cx="71" cy="5" r="2" fill="#D4A843"/>
   <circle cx="71" cy="9" r="2" fill="#D4A843"/>
 
-  <!-- Corps complet (forme de 8 avec taille arrondie) -->
+  <!-- Corps (forme de 8 symetrique : upper bout, taille, lower bout) -->
   <path d="
     M 64 62
-    C 86 62, 86 78, 86 82
-    C 86 86, 80 90, 76 92
-    C 80 94, 92 100, 92 108
-    C 92 118, 78 124, 64 124
-    C 50 124, 36 118, 36 108
-    C 36 100, 48 94, 52 92
-    C 48 90, 42 86, 42 82
-    C 42 78, 42 62, 64 62 Z
+    C 78 62, 85 67, 85 73
+    C 85 79, 77 84, 74 88
+    C 80 91, 91 98, 91 108
+    C 91 118, 78 124, 64 124
+    C 50 124, 37 118, 37 108
+    C 37 98, 48 91, 54 88
+    C 51 84, 43 79, 43 73
+    C 43 67, 50 62, 64 62 Z
   " fill="#D4934A" stroke="#8B6914" stroke-width="2"/>
 
   <!-- Rosace -->
