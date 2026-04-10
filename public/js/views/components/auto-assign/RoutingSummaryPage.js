@@ -169,6 +169,7 @@ class RoutingSummaryPage {
     this.ccSegmentMute = {}; // Per-segment CC mute { [channel]: { [ccNum]: Set<segIndex> } }
     this.showLowScores = {}; // Per-channel toggle for low score instruments
     this.autoAdaptation = true; // Toggle for automatic MIDI channel adaptation
+    this.channelVolumes = {}; // Per-channel volume overrides (CC7, 0-127, default 100)
 
     // Preview state
     this.midiData = null;
@@ -846,6 +847,7 @@ class RoutingSummaryPage {
           <td class="rs-col-original">${escapeHtml(gmName)}</td>
           <td class="rs-col-type"><span class="rs-type-badge" style="color:${getTypeColor(analysis?.estimatedType)}" title="${analysis?.estimatedType ? (_t('autoAssign.type_' + analysis.estimatedType) || analysis.estimatedType) : ''}">${typeIcon} ${analysis?.estimatedType ? (_t('autoAssign.type_' + analysis.estimatedType) || analysis.estimatedType) : ''}</span></td>
           <td class="rs-col-assigned">${assignedHTML}</td>
+          <td class="rs-col-volume">${this._renderVolumeSlider(channel)}</td>
           <td class="rs-col-score">${scoreHTML}</td>
           <td class="rs-col-poly">${polyHTML}</td>
           <td class="rs-col-playable">${playableHTML}</td>
@@ -887,6 +889,7 @@ class RoutingSummaryPage {
               <th>${_t('autoAssign.overviewOriginal')}</th>
               <th>${_t('autoAssign.type') || 'Type'}</th>
               <th>${_t('autoAssign.overviewAssigned')}</th>
+              <th class="rs-th-compact">Vol</th>
               <th>${_t('routingSummary.score') || 'Score'}</th>
               <th class="rs-th-compact">${_t('autoAssign.polyphony') || 'Polyphonie'}<br><span class="rs-th-sub">${_t('autoAssign.polyphonyHint') || 'canal / instru.'}</span></th>
               <th class="rs-th-compact">Notes<br><span class="rs-th-sub">${_t('autoAssign.channelNotesHint') || 'total / jouables'}</span></th>
@@ -899,6 +902,17 @@ class RoutingSummaryPage {
         </table>
       </div>
     `;
+  }
+
+  /**
+   * Render a compact volume slider (CC7) for a channel row.
+   * Returns empty string if channel is skipped or instrument doesn't support CC7.
+   */
+  _renderVolumeSlider(channel) {
+    const isSkipped = this.skippedChannels.has(channel);
+    if (isSkipped || !this._supportsCC7(channel)) return '';
+    const vol = this._getChannelVolume(channel);
+    return `<div class="rs-volume-zone"><input type="range" class="rs-volume-slider" min="0" max="127" value="${vol}" data-channel="${channel}" title="Volume CC7: ${vol}"><span class="rs-volume-value">${vol}</span></div>`;
   }
 
   /**
@@ -1711,11 +1725,32 @@ class RoutingSummaryPage {
       });
     });
 
+    // Volume sliders (CC7) in summary table
+    modal.querySelectorAll('.rs-volume-slider').forEach(slider => {
+      slider.addEventListener('input', (e) => {
+        e.stopPropagation();
+        const ch = parseInt(slider.dataset.channel);
+        const vol = parseInt(slider.value);
+        this.channelVolumes[ch] = vol;
+        slider.title = `Volume CC7: ${vol}`;
+        const label = slider.closest('.rs-volume-zone')?.querySelector('.rs-volume-value');
+        if (label) label.textContent = vol;
+      });
+      slider.addEventListener('click', (e) => e.stopPropagation());
+      slider.addEventListener('mousedown', (e) => e.stopPropagation());
+    });
+
+    // Volume zone: prevent row click from triggering detail panel
+    modal.querySelectorAll('.rs-volume-zone').forEach(zone => {
+      zone.addEventListener('click', (e) => e.stopPropagation());
+      zone.addEventListener('mousedown', (e) => e.stopPropagation());
+    });
+
     // Row clicks — select channel for detail (replaces gear button)
     modal.querySelectorAll('.rs-row').forEach(row => {
       row.addEventListener('click', (e) => {
-        // Don't trigger on button/select/zone clicks
-        if (e.target.closest('.rs-btn-skip, .rs-btn-unskip, .rs-instrument-select, .rs-select-zone')) return;
+        // Don't trigger on button/select/zone/volume clicks
+        if (e.target.closest('.rs-btn-skip, .rs-btn-unskip, .rs-instrument-select, .rs-select-zone, .rs-volume-zone, .rs-volume-slider')) return;
         const ch = parseInt(row.dataset.channel);
         this._selectChannel(ch);
       });
@@ -2482,7 +2517,8 @@ class RoutingSummaryPage {
         ccRemapping: this.ccRemapping[ch] || null,
         polyReduction: polyEnabled,
         maxPolyphony: polyTarget,
-        polyStrategy: polyEnabled ? (adapt.polyStrategy || 'shorten') : null
+        polyStrategy: polyEnabled ? (adapt.polyStrategy || 'shorten') : null,
+        channelVolume: this._getChannelVolume(parseInt(ch))
       };
       hasAssignment = true;
     }
@@ -2511,6 +2547,7 @@ class RoutingSummaryPage {
         noteCompression: this.autoAdaptation ? (adapt.oorHandling === 'compress') : false,
         ccRemapping: this.ccRemapping[ch] || null,
         ccSegmentMute: ccSegMuteSerialized,
+        channelVolume: this._getChannelVolume(parseInt(ch)),
         segments: splitData.segments.map(seg => ({
           deviceId: seg.deviceId,
           instrumentId: seg.instrumentId,
@@ -2533,13 +2570,15 @@ class RoutingSummaryPage {
     let hasTransposition = false;
     let hasOorSuppression = false;
     let hasCCRemap = false;
+    let hasVolumeChange = false;
     for (const [ch, a] of Object.entries(assignments)) {
       if (a.transposition?.semitones && a.transposition.semitones !== 0) hasTransposition = true;
       if (a.suppressOutOfRange) hasOorSuppression = true;
       if (a.noteCompression) hasOorSuppression = true;
       if (a.ccRemapping && Object.keys(a.ccRemapping).length > 0) hasCCRemap = true;
+      if (a.channelVolume !== undefined && a.channelVolume !== 100) hasVolumeChange = true;
     }
-    const needsFileModification = hasSplit || hasTransposition || hasOorSuppression || hasCCRemap;
+    const needsFileModification = hasSplit || hasTransposition || hasOorSuppression || hasCCRemap || hasVolumeChange;
 
     // Ask user how to save if file modification is needed
     let overwriteOriginal = false;
@@ -2666,6 +2705,26 @@ class RoutingSummaryPage {
       }
     }
     return `CC ${ccNum}`;
+  }
+
+  /**
+   * Get channel volume (CC7) override, default 100.
+   */
+  _getChannelVolume(channel) {
+    return this.channelVolumes[channel] ?? 100;
+  }
+
+  /**
+   * Check if the assigned instrument for a channel supports CC7 (volume).
+   */
+  _supportsCC7(channel) {
+    const ch = String(channel);
+    const assignment = this.selectedAssignments[ch];
+    if (!assignment) return false;
+    let ccs = assignment.supportedCcs;
+    if (!ccs) return false;
+    if (typeof ccs === 'string') { try { ccs = JSON.parse(ccs); } catch { return false; } }
+    return Array.isArray(ccs) && ccs.includes(7);
   }
 
   /**
@@ -3132,6 +3191,16 @@ class RoutingSummaryPage {
   // Audio preview playback
   // ============================================================================
 
+  /**
+   * Apply per-channel volume overrides (CC7) to the preview synthesizer.
+   */
+  _applyPreviewVolumes() {
+    if (!this.audioPreview?.synthesizer) return;
+    for (let ch = 0; ch < 16; ch++) {
+      this.audioPreview.synthesizer.setChannelVolume(ch, this._getChannelVolume(ch));
+    }
+  }
+
   async _previewAll() {
     if (!this.audioPreview || !this.midiData) {
       console.warn('[Preview] No audioPreview or midiData available');
@@ -3284,6 +3353,8 @@ class RoutingSummaryPage {
 
     try {
       this._connectPreviewCallbacks();
+      await this.audioPreview.initSynthesizer();
+      this._applyPreviewVolumes();
       await this.audioPreview.previewAllChannels(previewMidi, channelConfigs, 0);
       this._previewState = 'playing';
       this._updatePreviewUI();
@@ -3422,6 +3493,8 @@ class RoutingSummaryPage {
 
         try {
           this._connectPreviewCallbacks();
+          await this.audioPreview.initSynthesizer();
+          this._applyPreviewVolumes();
           await this.audioPreview.previewAllChannels(splitMidi, channelConfigs, 0);
           this._previewState = 'playing';
           this._updatePreviewUI();
@@ -3447,6 +3520,8 @@ class RoutingSummaryPage {
 
     try {
       this._connectPreviewCallbacks();
+      await this.audioPreview.initSynthesizer();
+      this._applyPreviewVolumes();
       await this.audioPreview.previewSingleChannel(
         this.midiData, channel, transposition, constraints, 0, 0, true
       );
