@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Banjo - GM 105 -->
+
+  <!-- Manche (long et fin) -->
+  <rect x="60" y="6" width="9" height="62" rx="2" fill="#8B6914" stroke="#5C4A0E" stroke-width="1.5"/>
+
+  <!-- Frettes -->
+  <line x1="60" y1="16" x2="69" y2="16" stroke="#D4A843" stroke-width="1"/>
+  <line x1="60" y1="25" x2="69" y2="25" stroke="#D4A843" stroke-width="1"/>
+  <line x1="60" y1="33" x2="69" y2="33" stroke="#D4A843" stroke-width="1"/>
+  <line x1="60" y1="40" x2="69" y2="40" stroke="#D4A843" stroke-width="1"/>
+  <line x1="60" y1="46" x2="69" y2="46" stroke="#D4A843" stroke-width="1"/>
+  <line x1="60" y1="52" x2="69" y2="52" stroke="#D4A843" stroke-width="1"/>
+  <line x1="60" y1="57" x2="69" y2="57" stroke="#D4A843" stroke-width="1"/>
+
+  <!-- Tete avec pegbox -->
+  <rect x="58" y="0" width="13" height="10" rx="2" fill="#5C4A0E" stroke="#3D300A" stroke-width="1.5"/>
+  <!-- Mecaniques (4 + 1 laterale pour 5e corde) -->
+  <circle cx="60" cy="3" r="1.8" fill="#D4A843"/>
+  <circle cx="60" cy="7" r="1.8" fill="#D4A843"/>
+  <circle cx="69" cy="3" r="1.8" fill="#D4A843"/>
+  <circle cx="69" cy="7" r="1.8" fill="#D4A843"/>
+  <!-- 5e corde (cheville laterale sur le manche) -->
+  <circle cx="57" cy="28" r="1.5" fill="#D4A843"/>
+
+  <!-- Corps - cerceau (rim) -->
+  <circle cx="64" cy="96" r="30" fill="#8B6914" stroke="#5C4A0E" stroke-width="2.5"/>
+
+  <!-- Membrane (drum head) -->
+  <circle cx="64" cy="96" r="27" fill="#F5E6C8" stroke="#D4A843" stroke-width="1"/>
+
+  <!-- Chevalet -->
+  <rect x="60" y="88" width="9" height="3" rx="1" fill="#5C4A0E"/>
+
+  <!-- Cordier (tailpiece) -->
+  <rect x="58" y="118" width="13" height="4" rx="2" fill="#D4A843" stroke="#8B6914" stroke-width="0.8"/>
+
+  <!-- Cordes (5 cordes) -->
+  <line x1="61" y1="10" x2="61" y2="118" stroke="#E8D5A3" stroke-width="0.4" opacity="0.8"/>
+  <line x1="63" y1="10" x2="63" y2="118" stroke="#E8D5A3" stroke-width="0.5" opacity="0.8"/>
+  <line x1="65" y1="10" x2="65" y2="118" stroke="#E8D5A3" stroke-width="0.5" opacity="0.8"/>
+  <line x1="67" y1="10" x2="67" y2="118" stroke="#E8D5A3" stroke-width="0.6" opacity="0.8"/>
+  <!-- 5e corde courte (part du milieu du manche) -->
+  <line x1="59" y1="28" x2="59" y2="118" stroke="#E8D5A3" stroke-width="0.4" opacity="0.8"/>
+
+  <!-- Armrest (barre de renfort visible) -->
+  <path d="M 38 80 C 36 88, 36 104, 38 112" fill="none" stroke="#5C4A0E" stroke-width="1.5"/>
+</svg>
