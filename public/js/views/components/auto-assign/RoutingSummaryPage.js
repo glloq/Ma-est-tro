@@ -2140,9 +2140,10 @@ class RoutingSummaryPage {
         const delta = parseInt(transposeBtn.dataset.delta);
         if (ch && !isNaN(delta)) {
           if (!this.adaptationSettings[ch]) this.adaptationSettings[ch] = {};
-          const current = this.adaptationSettings[ch].transpositionSemitones || 0;
-          this.adaptationSettings[ch].transpositionSemitones = Math.max(-36, Math.min(36, current + delta));
-          this._reclampSplitRanges(parseInt(ch));
+          const oldSemi = this.adaptationSettings[ch].transpositionSemitones || 0;
+          const newSemi = Math.max(-36, Math.min(36, oldSemi + delta));
+          this.adaptationSettings[ch].transpositionSemitones = newSemi;
+          this._reclampSplitRanges(parseInt(ch), oldSemi, newSemi);
           this._refreshUI(channelKeys, 'both-panels');
         }
         return;
@@ -2290,6 +2291,7 @@ class RoutingSummaryPage {
           if (field === 'pitchShift') {
             const assignment = this.selectedAssignments[ch];
             const autoSemitones = assignment?.transposition?.semitones || 0;
+            const oldSemi = this.adaptationSettings[ch].transpositionSemitones || 0;
             if (target.value === 'manual') {
               if (!this.adaptationSettings[ch].transpositionSemitones) {
                 this.adaptationSettings[ch].transpositionSemitones = autoSemitones;
@@ -2299,7 +2301,8 @@ class RoutingSummaryPage {
             } else {
               this.adaptationSettings[ch].transpositionSemitones = 0;
             }
-            this._reclampSplitRanges(parseInt(ch));
+            const newSemi = this.adaptationSettings[ch].transpositionSemitones || 0;
+            this._reclampSplitRanges(parseInt(ch), oldSemi, newSemi);
           }
           this._refreshUI(channelKeys, 'both-panels');
         }
@@ -2586,25 +2589,29 @@ class RoutingSummaryPage {
   }
 
   /**
-   * Reclamp all split segment noteRanges to the current transposed channel range.
-   * Called when transposition changes to keep segments within visible bounds.
+   * Reclamp all split segment noteRanges when transposition changes.
+   * Shifts segment ranges by the transposition delta so they follow the channel notes,
+   * then clamps to the instrument's physical range and 0-127.
+   * @param {number} channel
+   * @param {number} oldSemitones - previous transposition value
+   * @param {number} newSemitones - new transposition value
    */
-  _reclampSplitRanges(channel) {
-    const ch = String(channel);
+  _reclampSplitRanges(channel, oldSemitones, newSemitones) {
     const data = this._getActiveSplitData(channel);
     if (!data?.segments?.length) return;
 
-    const analysis = this.channelAnalyses[channel];
-    const adaptSettings = this.adaptationSettings[ch] || {};
-    const semi = (this.autoAdaptation && adaptSettings.pitchShift !== 'none') ? (adaptSettings.transpositionSemitones || 0) : 0;
-    const tCh = safeNoteRange((analysis?.noteRange?.min ?? 0) + semi, (analysis?.noteRange?.max ?? 127) + semi);
+    const delta = (newSemitones || 0) - (oldSemitones || 0);
+    if (delta === 0) return;
 
     for (const seg of data.segments) {
       const physMin = seg.fullRange?.min ?? 0;
       const physMax = seg.fullRange?.max ?? 127;
-      // Reclamp: intersection of instrument physical range and transposed channel range
-      const clamped = safeNoteRange(Math.max(physMin, tCh.min), Math.min(physMax, tCh.max));
-      seg.noteRange = clamped;
+      // Shift the range by the transposition delta, clamp to instrument physical limits
+      const shifted = safeNoteRange(
+        Math.max(physMin, (seg.noteRange?.min ?? physMin) + delta),
+        Math.min(physMax, (seg.noteRange?.max ?? physMax) + delta)
+      );
+      seg.noteRange = shifted;
     }
   }
 
