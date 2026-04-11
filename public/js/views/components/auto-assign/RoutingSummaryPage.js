@@ -1861,10 +1861,16 @@ class RoutingSummaryPage {
 
   /**
    * Bind summary panel events using event delegation (3 listeners instead of ~50).
+   * Uses AbortController to clean up previous listeners on rebind.
    */
   _bindSummaryEvents(channelKeys) {
     const panel = this.modal.querySelector('#rsSummaryPanel');
     if (!panel) return;
+
+    // Abort previous listeners before rebinding
+    if (this._summaryAbort) this._summaryAbort.abort();
+    this._summaryAbort = new AbortController();
+    const opts = { signal: this._summaryAbort.signal };
 
     panel.addEventListener('click', (e) => {
       const target = e.target;
@@ -1917,7 +1923,7 @@ class RoutingSummaryPage {
         const ch = parseInt(row.dataset.channel);
         this._selectChannel(ch);
       }
-    });
+    }, opts);
 
     panel.addEventListener('change', (e) => {
       const target = e.target;
@@ -1926,7 +1932,7 @@ class RoutingSummaryPage {
         const ch = target.dataset.channel;
         if (target.value) this._selectInstrument(ch, target.value, channelKeys);
       }
-    });
+    }, opts);
 
     panel.addEventListener('input', (e) => {
       const target = e.target;
@@ -1939,7 +1945,7 @@ class RoutingSummaryPage {
         const label = target.closest('.rs-volume-zone')?.querySelector('.rs-volume-value');
         if (label) label.textContent = vol;
       }
-    });
+    }, opts);
 
     panel.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -1949,22 +1955,28 @@ class RoutingSummaryPage {
           this._selectChannel(ch);
         }
       }
-    });
+    }, opts);
 
     // mousedown on volume zone — stop propagation
     panel.addEventListener('mousedown', (e) => {
       if (e.target.closest('.rs-volume-zone, .rs-volume-slider')) {
         e.stopPropagation();
       }
-    });
+    }, opts);
   }
 
   /**
    * Bind detail panel events using event delegation (2 listeners instead of ~80).
+   * Uses AbortController to clean up previous listeners on rebind.
    */
   _bindDetailEvents(channelKeys) {
     const panel = this.modal.querySelector('#rsDetailPanel');
     if (!panel) return;
+
+    // Abort previous listeners before rebinding
+    if (this._detailAbort) this._detailAbort.abort();
+    this._detailAbort = new AbortController();
+    const opts = { signal: this._detailAbort.signal };
 
     panel.addEventListener('click', (e) => {
       const target = e.target;
@@ -2157,7 +2169,7 @@ class RoutingSummaryPage {
         this._refreshUI(channelKeys, 'detail');
         return;
       }
-    });
+    }, opts);
 
     // Delegated change handler for selects, radios, and inputs
     panel.addEventListener('change', (e) => {
@@ -2227,7 +2239,7 @@ class RoutingSummaryPage {
           if (Object.keys(this.ccRemapping[ch]).length === 0) delete this.ccRemapping[ch];
         }
       }
-    });
+    }, opts);
   }
 
   /**
@@ -4012,6 +4024,9 @@ class RoutingSummaryPage {
 
   close() {
     this._stopPreview();
+    // Abort all delegated event listeners
+    if (this._summaryAbort) { this._summaryAbort.abort(); this._summaryAbort = null; }
+    if (this._detailAbort) { this._detailAbort.abort(); this._detailAbort = null; }
     if (this._escHandler) {
       document.removeEventListener('keydown', this._escHandler);
       this._escHandler = null;
