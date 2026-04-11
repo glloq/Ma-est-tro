@@ -5650,12 +5650,53 @@ body.dark-mode .rs-overlap-zone-card {
   user-select: none;
 }
 
-.rs-split-viz-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 9px;
-  color: var(--text-muted, #bbb);
-  margin-bottom: 2px;
+/* Mini piano keyboard */
+.rs-kb-keyboard {
+  position: relative;
+  height: 18px;
+  margin-bottom: 1px;
+  overflow: visible;
+}
+
+.rs-kb-key {
+  position: absolute;
+  top: 0;
+  box-sizing: border-box;
+}
+
+.rs-kb-white {
+  height: 100%;
+  background: #f8f8f8;
+  border: 1px solid #ccc;
+  border-radius: 0 0 2px 2px;
+  z-index: 1;
+}
+
+.rs-kb-black {
+  height: 60%;
+  background: #333;
+  border-radius: 0 0 2px 2px;
+  z-index: 2;
+}
+
+.rs-kb-label {
+  position: absolute;
+  top: 100%;
+  font-size: 7px;
+  color: var(--text-muted, #aaa);
+  transform: translateX(-10%);
+  pointer-events: none;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+body.dark-mode .rs-kb-white {
+  background: #bbb;
+  border-color: #888;
+}
+
+body.dark-mode .rs-kb-black {
+  background: #222;
 }
 
 /* Channel notes reference track with distribution histogram */
