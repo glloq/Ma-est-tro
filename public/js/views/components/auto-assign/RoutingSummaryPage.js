@@ -718,7 +718,7 @@ class RoutingSummaryPage {
       const gmName = channel === 9 ? (_t('autoAssign.drums') || 'Drums') : (getGmProgramName(analysis?.primaryProgram) || '\u2014');
       const instName = isSkipped
         ? `<span class="rs-score-muted">${_t('routingSummary.muted') || 'Muté'}</span>`
-        : escapeHtml(assignment?.instrumentDisplayName || assignment?.customName || assignment?.instrumentName || '\u2014');
+        : escapeHtml(assignment?.instrumentDisplayName || assignment?.customName || getGmProgramName(assignment?.gmProgram) || assignment?.instrumentName || '\u2014');
 
       const breakdown = assignment?.scoreBreakdown;
       let breakdownHtml = '';
@@ -763,7 +763,7 @@ class RoutingSummaryPage {
       const score = assignment?.score || 0;
       const instName = isSkipped
         ? (_t('routingSummary.muted') || 'Muté')
-        : (assignment?.instrumentDisplayName || assignment?.customName || assignment?.instrumentName || '\u2014');
+        : (assignment?.instrumentDisplayName || assignment?.customName || getGmProgramName(assignment?.gmProgram) || assignment?.instrumentName || '\u2014');
       const displayName = instName.length > 12 ? instName.slice(0, 11) + '\u2026' : instName;
       return `<div class="rs-score-cell ${isSkipped ? 'rs-score-cell-skipped' : ''}" title="${escapeHtml(instName)}">
         <span class="rs-score-cell-ch">CH ${channel + 1}</span>
@@ -944,9 +944,12 @@ class RoutingSummaryPage {
           routedName = `<span class="rs-skipped-condensed">${_t('routingSummary.muted') || 'Muté'}</span>`;
         } else if (isSplit && this.splitAssignments[channel]) {
           const segments = this.splitAssignments[channel].segments || [];
-          routedName = segments.map(seg => seg.instrumentName || '?').join(' + ');
-        } else if (assignment?.instrumentName || assignment?.customName) {
-          routedName = assignment.customName || assignment.instrumentName;
+          routedName = segments.map(seg => {
+            const inst = seg.instrumentId ? (this.allInstruments || []).find(ii => ii.id === seg.instrumentId) : null;
+            return inst ? this._getInstrumentDisplayName(inst) : (seg.instrumentName || '?');
+          }).join(' + ');
+        } else if (assignment?.instrumentDisplayName || assignment?.customName || assignment?.instrumentName) {
+          routedName = assignment.instrumentDisplayName || assignment.customName || getGmProgramName(assignment.gmProgram) || assignment.instrumentName;
         } else {
           routedName = `<span class="rs-unassigned">\u2014</span>`;
         }
@@ -977,7 +980,8 @@ class RoutingSummaryPage {
         const segments = this.splitAssignments[channel].segments || [];
         const splitParts = segments.map((seg, i) => {
           const color = SPLIT_COLORS[i % SPLIT_COLORS.length];
-          const name = seg.instrumentName || getGmProgramName(seg.gmProgram) || 'Instrument';
+          const instRef = seg.instrumentId ? (this.allInstruments || []).find(ii => ii.id === seg.instrumentId) : null;
+          const name = instRef ? this._getInstrumentDisplayName(instRef) : (seg.instrumentName || getGmProgramName(seg.gmProgram) || 'Instrument');
           const displayName = name.length > 14 ? name.slice(0, 13) + '\u2026' : name;
           return `<span class="rs-split-inst-name" style="color:${color}" title="${escapeHtml(name)}">${escapeHtml(displayName)}</span>`;
         });
@@ -1696,8 +1700,10 @@ class RoutingSummaryPage {
       const overlapZonesHTML = overlaps.length > 0 ? overlaps.map(ov => {
         const oLeft = (ov.min / FULL_RANGE) * 100;
         const oWidth = Math.max(0.5, ((ov.max - ov.min) / FULL_RANGE) * 100);
-        const nameA = segs[ov.segA]?.instrumentName || `Inst ${ov.segA + 1}`;
-        const nameB = segs[ov.segB]?.instrumentName || `Inst ${ov.segB + 1}`;
+        const instA = segs[ov.segA]?.instrumentId ? (this.allInstruments || []).find(ii => ii.id === segs[ov.segA].instrumentId) : null;
+        const instB = segs[ov.segB]?.instrumentId ? (this.allInstruments || []).find(ii => ii.id === segs[ov.segB].instrumentId) : null;
+        const nameA = instA ? this._getInstrumentDisplayName(instA) : (segs[ov.segA]?.instrumentName || `Inst ${ov.segA + 1}`);
+        const nameB = instB ? this._getInstrumentDisplayName(instB) : (segs[ov.segB]?.instrumentName || `Inst ${ov.segB + 1}`);
         return `<div class="rs-range-overlap-zone" style="left:${oLeft}%;width:${oWidth}%" title="\u26A0 ${_t('routingSummary.overlap') || 'Superposition'}: ${midiNoteToName(ov.min)}-${midiNoteToName(ov.max)} (${escapeHtml(nameA)} / ${escapeHtml(nameB)})"></div>`;
       }).join('') : '';
 
@@ -3165,7 +3171,8 @@ class RoutingSummaryPage {
       // Table header: CC | Name | Inst1 | Inst2 | ...
       const headerCols = segs.map((seg, i) => {
         const color = splitColors[i % splitColors.length];
-        const name = (seg.instrumentName || '?');
+        const instRef = seg.instrumentId ? (this.allInstruments || []).find(ii => ii.id === seg.instrumentId) : null;
+        const name = instRef ? this._getInstrumentDisplayName(instRef) : (seg.instrumentName || '?');
         const short = name.length > 10 ? name.slice(0, 9) + '\u2026' : name;
         return `<th class="rs-cc-inst-col" style="color:${color}" title="${escapeHtml(name)}">${escapeHtml(short)}</th>`;
       }).join('');
@@ -3241,7 +3248,7 @@ class RoutingSummaryPage {
       instrumentCCs = this._getInstrumentCCs(assignment.instrumentId);
     }
 
-    const instName = assignment?.instrumentDisplayName || assignment?.customName || assignment?.instrumentName || _t('autoAssign.instrument');
+    const instName = assignment?.instrumentDisplayName || assignment?.customName || getGmProgramName(assignment?.gmProgram) || assignment?.instrumentName || _t('autoAssign.instrument');
     const instShort = instName.length > 10 ? instName.slice(0, 9) + '\u2026' : instName;
 
     const bodyRows = visibleCCs.map(ccNum => {
