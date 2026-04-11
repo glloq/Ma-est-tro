@@ -95,6 +95,9 @@ function midiNoteToName(note) {
   return NOTE_NAMES[note % 12] + Math.floor(note / 12);
 }
 
+// Module-level constants (avoid recreating per render)
+const SPLIT_COLORS = ['#4A90D9', '#E67E22', '#27AE60', '#9B59B6'];
+
 /**
  * Render a split visualization bar showing how instruments divide the note range
  */
@@ -105,7 +108,7 @@ function renderSplitBar(splitData, channelAnalysis) {
   const chMin = channelAnalysis.noteRange.min;
   const chMax = channelAnalysis.noteRange.max;
   const span = chMax - chMin || 1;
-  const colors = ['#4A90D9', '#E67E22', '#27AE60', '#9B59B6'];
+  const colors = SPLIT_COLORS;
   const mode = splitData.behaviorMode;
 
   // For overflow/alternate, both segments cover the full range — show stacked half-height bars
@@ -167,6 +170,11 @@ class RoutingSummaryPage {
     this.adaptationSettings = {}; // Per-channel adaptation overrides
     this.ccRemapping = {}; // Per-channel CC remapping { [channel]: { sourceCC: targetCC, ... } }
     this.ccSegmentMute = {}; // Per-segment CC mute { [channel]: { [ccNum]: Set<segIndex> } }
+    this.ccExpanded = {}; // Per-channel CC section collapse state
+    this.ccShowAll = {}; // Per-channel CC pagination (show all rows)
+    this._rafPending = false; // RAF debounce for _refreshUI
+    this._pendingHint = null; // Pending render hint for RAF coalescence
+    this._pendingChannelKeys = null;
     this.showLowScores = {}; // Per-channel toggle for low score instruments
     this.autoAdaptation = true; // Toggle for automatic MIDI channel adaptation
     this.channelVolumes = {}; // Per-channel volume overrides (CC7, 0-127, default 100)
@@ -424,7 +432,7 @@ class RoutingSummaryPage {
     this.modal.querySelector('#rsSummaryCloseBtn').addEventListener('click', () => this.close());
   }
 
-  _renderContent() {
+  _renderContent(hint = 'all') {
     // Guard against re-entrant calls: _bindEvents() can trigger synthetic change
     // events on pre-checked radios / pre-selected selects, whose handlers call
     // _refreshUI() → _renderContent() again → infinite loop → browser freeze.
@@ -432,84 +440,135 @@ class RoutingSummaryPage {
     if (this._isRendering) return;
     this._isRendering = true;
     try {
-      // Save scroll positions before re-render
-      const summaryPanel = this.modal.querySelector('#rsSummaryPanel');
-      const detailPanel = this.modal.querySelector('#rsDetailPanel');
-      const savedSummaryScroll = summaryPanel?.scrollTop || 0;
-      const savedDetailScroll = detailPanel?.scrollTop || 0;
-
       const channelKeys = Object.keys(this.suggestions).sort((a, b) => parseInt(a) - parseInt(b));
-      const activeCount = channelKeys.length - this.skippedChannels.size;
 
-      this.modal.innerHTML = `
-        <div class="rs-container ${this.selectedChannel !== null ? 'rs-with-detail' : ''}">
-          <div class="rs-header">
-            <div class="rs-header-row">
-              <div class="rs-header-left">
-                ${this.midiData ? this._renderHeaderButtons() : `<h2>${_t('routingSummary.title')}</h2>`}
+      if (hint === 'all') {
+        // Full rebuild — initial render or structural changes
+        const summaryPanel = this.modal.querySelector('#rsSummaryPanel');
+        const detailPanel = this.modal.querySelector('#rsDetailPanel');
+        const savedSummaryScroll = summaryPanel?.scrollTop || 0;
+        const savedDetailScroll = detailPanel?.scrollTop || 0;
+
+        const activeCount = channelKeys.length - this.skippedChannels.size;
+
+        this.modal.innerHTML = `
+          <div class="rs-container ${this.selectedChannel !== null ? 'rs-with-detail' : ''}">
+            <div class="rs-header">
+              <div class="rs-header-row">
+                <div class="rs-header-left">
+                  ${this.midiData ? this._renderHeaderButtons() : `<h2>${_t('routingSummary.title')}</h2>`}
+                </div>
+                <div class="rs-header-center">
+                  ${(() => {
+                    const displayScore = this._getDisplayScore();
+                    const scoreLabel = this.selectedChannel !== null
+                      ? `Ch ${this.selectedChannel + 1} : ${displayScore}/100`
+                      : `${displayScore}/100 — ${getScoreLabel(displayScore)}`;
+                    return `<div class="rs-score-wrapper">
+                      <button class="rs-score-btn ${getScoreBgClass(displayScore)}" id="rsScoreBtn" title="${_t('routingSummary.clickForDetails') || 'Cliquer pour voir le détail'}">
+                        ${scoreLabel}
+                      </button>
+                      <div class="rs-score-popup" id="rsScorePopup" style="display:none">
+                        ${this._renderScoreDetail()}
+                      </div>
+                    </div>`;
+                  })()}
+                  <button class="rs-adapt-toggle ${this.autoAdaptation ? 'active' : ''}" id="rsAutoAdaptToggle" title="${_t('routingSummary.autoAdaptation') || 'Adaptation automatique canal MIDI'}">
+                    ${this.autoAdaptation ? '&#9889; Auto' : '&#9889; Manuel'}
+                  </button>
+                  <span class="rs-channel-count">
+                    ${_t('autoAssign.channelsWillBeAssigned', { active: activeCount, total: channelKeys.length })}
+                  </span>
+                </div>
+                <div class="rs-header-right">
+                  <button class="rs-settings-btn ${this._isOverrideModified() ? 'modified' : ''}" id="rsSettingsBtn" title="${_t('routingSummary.settings')}">&#9881;</button>
+                  <button class="modal-close" id="rsSummaryClose">&times;</button>
+                </div>
               </div>
-              <div class="rs-header-center">
-                ${(() => {
-                  const displayScore = this._getDisplayScore();
-                  const scoreLabel = this.selectedChannel !== null
-                    ? `Ch ${this.selectedChannel + 1} : ${displayScore}/100`
-                    : `${displayScore}/100 — ${getScoreLabel(displayScore)}`;
-                  return `<div class="rs-score-wrapper">
-                    <button class="rs-score-btn ${getScoreBgClass(displayScore)}" id="rsScoreBtn" title="${_t('routingSummary.clickForDetails') || 'Cliquer pour voir le détail'}">
-                      ${scoreLabel}
-                    </button>
-                    <div class="rs-score-popup" id="rsScorePopup" style="display:none">
-                      ${this._renderScoreDetail()}
-                    </div>
-                  </div>`;
-                })()}
-                <button class="rs-adapt-toggle ${this.autoAdaptation ? 'active' : ''}" id="rsAutoAdaptToggle" title="${_t('routingSummary.autoAdaptation') || 'Adaptation automatique canal MIDI'}">
-                  ${this.autoAdaptation ? '&#9889; Auto' : '&#9889; Manuel'}
+              ${this.midiData ? '<div class="rs-header-minimap" id="rsMinimapContainer"></div>' : ''}
+            </div>
+
+            <div class="rs-layout">
+              <div class="rs-summary-panel" id="rsSummaryPanel">
+                ${this._renderSummaryTable(channelKeys)}
+              </div>
+              <div class="rs-detail-panel" id="rsDetailPanel">
+                ${this.selectedChannel !== null ? this._safeRenderDetailPanel(this.selectedChannel) : this._renderDetailPlaceholder()}
+              </div>
+            </div>
+
+            <div class="rs-footer">
+              <button class="btn" id="rsSummaryCancel">${_t('common.cancel')}</button>
+              <div class="rs-footer-center"></div>
+              <div class="rs-footer-right">
+                <button class="btn btn-primary" id="rsSummaryApply">
+                  ${_t('routingSummary.applyAll')}
                 </button>
-                <span class="rs-channel-count">
-                  ${_t('autoAssign.channelsWillBeAssigned', { active: activeCount, total: channelKeys.length })}
-                </span>
-              </div>
-              <div class="rs-header-right">
-                <button class="rs-settings-btn ${this._isOverrideModified() ? 'modified' : ''}" id="rsSettingsBtn" title="${_t('routingSummary.settings')}">&#9881;</button>
-                <button class="modal-close" id="rsSummaryClose">&times;</button>
               </div>
             </div>
-            ${this.midiData ? '<div class="rs-header-minimap" id="rsMinimapContainer"></div>' : ''}
           </div>
+        `;
 
-          <div class="rs-layout">
-            <div class="rs-summary-panel" id="rsSummaryPanel">
-              ${this._renderSummaryTable(channelKeys)}
-            </div>
-            <div class="rs-detail-panel" id="rsDetailPanel">
-              ${this.selectedChannel !== null ? this._safeRenderDetailPanel(this.selectedChannel) : this._renderDetailPlaceholder()}
-            </div>
-          </div>
+        this._bindGlobalEvents(channelKeys);
+        this._bindSummaryEvents(channelKeys);
+        this._bindDetailEvents(channelKeys);
+        this._bindPreviewEvents();
 
-          <div class="rs-footer">
-            <button class="btn" id="rsSummaryCancel">${_t('common.cancel')}</button>
-            <div class="rs-footer-center"></div>
-            <div class="rs-footer-right">
-              <button class="btn btn-primary" id="rsSummaryApply">
-                ${_t('routingSummary.applyAll')}
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-
-      this._bindEvents(channelKeys);
-
-      // Restore scroll positions after re-render
-      const newSummary = this.modal.querySelector('#rsSummaryPanel');
-      const newDetail = this.modal.querySelector('#rsDetailPanel');
-      if (newSummary) newSummary.scrollTop = savedSummaryScroll;
-      if (newDetail) newDetail.scrollTop = savedDetailScroll;
+        const newSummary = this.modal.querySelector('#rsSummaryPanel');
+        const newDetail = this.modal.querySelector('#rsDetailPanel');
+        if (newSummary) newSummary.scrollTop = savedSummaryScroll;
+        if (newDetail) newDetail.scrollTop = savedDetailScroll;
+      } else {
+        // Partial update — only rebuild the affected panel(s)
+        if (hint === 'summary' || hint === 'both-panels') {
+          const panel = this.modal.querySelector('#rsSummaryPanel');
+          if (panel) {
+            const saved = panel.scrollTop;
+            panel.innerHTML = this._renderSummaryTable(channelKeys);
+            panel.scrollTop = saved;
+            this._bindSummaryEvents(channelKeys);
+          }
+        }
+        if (hint === 'detail' || hint === 'both-panels') {
+          const panel = this.modal.querySelector('#rsDetailPanel');
+          if (panel) {
+            const saved = panel.scrollTop;
+            panel.innerHTML = this.selectedChannel !== null
+              ? this._safeRenderDetailPanel(this.selectedChannel)
+              : this._renderDetailPlaceholder();
+            panel.scrollTop = saved;
+            this._bindDetailEvents(channelKeys);
+          }
+        }
+        // Update header score display on any partial update
+        this._updateHeaderScore();
+      }
     } catch (error) {
       console.error('[RoutingSummary] Render failed:', error);
     } finally {
       this._isRendering = false;
+    }
+  }
+
+  /**
+   * Lightweight header score update without full re-render.
+   */
+  _updateHeaderScore() {
+    const scoreBtn = this.modal.querySelector('#rsScoreBtn');
+    if (!scoreBtn) return;
+    const displayScore = this._getDisplayScore();
+    const scoreLabel = this.selectedChannel !== null
+      ? `Ch ${this.selectedChannel + 1} : ${displayScore}/100`
+      : `${displayScore}/100 — ${getScoreLabel(displayScore)}`;
+    scoreBtn.textContent = scoreLabel;
+    scoreBtn.className = `rs-score-btn ${getScoreBgClass(displayScore)}`;
+
+    // Update channel count
+    const channelKeys = Object.keys(this.suggestions);
+    const activeCount = channelKeys.length - this.skippedChannels.size;
+    const countEl = this.modal.querySelector('.rs-channel-count');
+    if (countEl) {
+      countEl.textContent = _t('autoAssign.channelsWillBeAssigned', { active: activeCount, total: channelKeys.length });
     }
   }
 
@@ -802,7 +861,7 @@ class RoutingSummaryPage {
       } else if (isSplit && this.splitAssignments[channel]) {
         const segments = this.splitAssignments[channel].segments || [];
         const splitParts = segments.map((seg, i) => {
-          const color = ['#4A90D9', '#E67E22', '#27AE60', '#9B59B6'][i % 4];
+          const color = SPLIT_COLORS[i % SPLIT_COLORS.length];
           const name = seg.instrumentName || getGmProgramName(seg.gmProgram) || 'Instrument';
           const displayName = name.length > 14 ? name.slice(0, 13) + '\u2026' : name;
           return `<span class="rs-split-inst-name" style="color:${color}" title="${escapeHtml(name)}">${escapeHtml(displayName)}</span>`;
@@ -1073,7 +1132,7 @@ class RoutingSummaryPage {
     let splitHTML = '';
     if (isSplit && this.splitAssignments[channel]) {
       const expanded = this.splitExpanded[channel] ?? true;
-      const splitColors = ['#4A90D9', '#E67E22', '#27AE60', '#9B59B6'];
+      const splitColors = SPLIT_COLORS;
       const activeData = this.splitAssignments[channel];
       const segments = activeData.segments || [];
       const activeMode = activeData.type;
@@ -1282,7 +1341,7 @@ class RoutingSummaryPage {
     let routeHTML;
     if (isSplit && this.splitAssignments[channel]) {
       const segments = this.splitAssignments[channel].segments || [];
-      const splitColors = ['#4A90D9', '#E67E22', '#27AE60', '#9B59B6'];
+      const splitColors = SPLIT_COLORS;
       routeHTML = escapeHtml(gmName) + ' \u2192 ' + segments.map((seg, i) => {
         const color = splitColors[i % splitColors.length];
         const name = seg.instrumentName || getGmProgramName(seg.gmProgram) || 'Instrument';
@@ -1496,7 +1555,7 @@ class RoutingSummaryPage {
     const chBarTitle = `${_t('autoAssign.channelNotes')}: ${midiNoteToName(displayChMin)}-${midiNoteToName(displayChMax)}${transLabel}`;
 
     // Instrument bars (line 2) - one or multiple depending on split
-    const splitColors = ['#4A90D9', '#E67E22', '#27AE60', '#9B59B6'];
+    const splitColors = SPLIT_COLORS;
     let instBarsHTML = '';
     let legendItems = '';
 
@@ -1614,6 +1673,10 @@ class RoutingSummaryPage {
     const segMin = segNoteRange.min ?? 0;
     const segMax = segNoteRange.max ?? 127;
 
+    // Memoize: result only changes when segment range or instrument list changes
+    const cacheKey = `${ch}_${segMin}_${segMax}`;
+    if (this._segmentInstrumentCache?.[cacheKey]) return this._segmentInstrumentCache[cacheKey];
+
     // Collect all available instruments from suggestions + allInstruments
     const seen = new Set();
     const candidates = [];
@@ -1627,7 +1690,9 @@ class RoutingSummaryPage {
       const iMax = inst.note_range_max ?? 127;
       // Check intersection
       if (iMin <= segMax && iMax >= segMin) {
-        candidates.push({ ...inst, _score: opt.compatibility?.score || 0 });
+        const entry = Object.create(inst);
+        entry._score = opt.compatibility?.score || 0;
+        candidates.push(entry);
       }
     }
 
@@ -1638,12 +1703,17 @@ class RoutingSummaryPage {
       const iMin = inst.note_range_min ?? 0;
       const iMax = inst.note_range_max ?? 127;
       if (iMin <= segMax && iMax >= segMin) {
-        candidates.push({ ...inst, _score: 0 });
+        const entry = Object.create(inst);
+        entry._score = 0;
+        candidates.push(entry);
       }
     }
 
     // Sort by score descending
     candidates.sort((a, b) => b._score - a._score);
+
+    if (!this._segmentInstrumentCache) this._segmentInstrumentCache = {};
+    this._segmentInstrumentCache[cacheKey] = candidates;
     return candidates;
   }
 
@@ -1651,7 +1721,10 @@ class RoutingSummaryPage {
   // Event binding
   // ============================================================================
 
-  _bindEvents(channelKeys) {
+  /**
+   * Bind header/footer/global events (only on full re-render).
+   */
+  _bindGlobalEvents(channelKeys) {
     const modal = this.modal;
 
     // Close button
@@ -1701,352 +1774,277 @@ class RoutingSummaryPage {
         this._refreshUI(channelKeys);
       });
     }
+  }
 
-    // Instrument dropdown in summary table
-    modal.querySelectorAll('.rs-instrument-select').forEach(sel => {
-      sel.addEventListener('change', (e) => {
-        e.stopPropagation();
-        const ch = sel.dataset.channel;
-        const instId = sel.value;
-        if (instId) this._selectInstrument(ch, instId, channelKeys);
-      });
-      sel.addEventListener('click', (e) => e.stopPropagation());
-    });
+  /**
+   * Bind summary panel events using event delegation (3 listeners instead of ~50).
+   */
+  _bindSummaryEvents(channelKeys) {
+    const panel = this.modal.querySelector('#rsSummaryPanel');
+    if (!panel) return;
 
-    // Select zone: click anywhere in the zone opens the dropdown (not the detail panel)
-    modal.querySelectorAll('.rs-select-zone').forEach(zone => {
-      zone.addEventListener('click', (e) => {
+    panel.addEventListener('click', (e) => {
+      const target = e.target;
+
+      // Skip button
+      const skipBtn = target.closest('.rs-btn-skip');
+      if (skipBtn) {
+        const ch = parseInt(skipBtn.dataset.channel);
+        this.skippedChannels.add(ch);
+        this._refreshUI(channelKeys, 'both-panels');
+        return;
+      }
+
+      // Unskip button
+      const unskipBtn = target.closest('.rs-btn-unskip');
+      if (unskipBtn) {
+        const ch = parseInt(unskipBtn.dataset.channel);
+        this.skippedChannels.delete(ch);
+        this._refreshUI(channelKeys, 'both-panels');
+        return;
+      }
+
+      // Select zone: open dropdown
+      const selectZone = target.closest('.rs-select-zone');
+      if (selectZone) {
         e.stopPropagation();
-        const sel = zone.querySelector('.rs-instrument-select');
-        if (sel && e.target !== sel) {
+        const sel = selectZone.querySelector('.rs-instrument-select');
+        if (sel && target !== sel) {
           sel.focus();
           sel.showPicker?.();
         }
-      });
-    });
+        return;
+      }
 
-    // Volume sliders (CC7) in summary table
-    modal.querySelectorAll('.rs-volume-slider').forEach(slider => {
-      slider.addEventListener('input', (e) => {
+      // Instrument select click — just stop propagation
+      if (target.closest('.rs-instrument-select')) {
         e.stopPropagation();
-        const ch = parseInt(slider.dataset.channel);
-        const vol = parseInt(slider.value);
-        this.channelVolumes[ch] = vol;
-        slider.title = `Volume CC7: ${vol}`;
-        const label = slider.closest('.rs-volume-zone')?.querySelector('.rs-volume-value');
-        if (label) label.textContent = vol;
-      });
-      slider.addEventListener('click', (e) => e.stopPropagation());
-      slider.addEventListener('mousedown', (e) => e.stopPropagation());
-    });
+        return;
+      }
 
-    // Volume zone: prevent row click from triggering detail panel
-    modal.querySelectorAll('.rs-volume-zone').forEach(zone => {
-      zone.addEventListener('click', (e) => e.stopPropagation());
-      zone.addEventListener('mousedown', (e) => e.stopPropagation());
-    });
+      // Volume zone — stop propagation
+      if (target.closest('.rs-volume-zone')) {
+        e.stopPropagation();
+        return;
+      }
 
-    // Row clicks — select channel for detail (replaces gear button)
-    modal.querySelectorAll('.rs-row').forEach(row => {
-      row.addEventListener('click', (e) => {
-        // Don't trigger on button/select/zone/volume clicks
-        if (e.target.closest('.rs-btn-skip, .rs-btn-unskip, .rs-instrument-select, .rs-select-zone, .rs-volume-zone, .rs-volume-slider')) return;
+      // Row click — select channel for detail
+      const row = target.closest('.rs-row');
+      if (row && !target.closest('.rs-btn-skip, .rs-btn-unskip, .rs-instrument-select, .rs-select-zone, .rs-volume-zone, .rs-volume-slider')) {
         const ch = parseInt(row.dataset.channel);
         this._selectChannel(ch);
-      });
-      row.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
+      }
+    });
+
+    panel.addEventListener('change', (e) => {
+      const target = e.target;
+      if (target.matches('.rs-instrument-select')) {
+        e.stopPropagation();
+        const ch = target.dataset.channel;
+        if (target.value) this._selectInstrument(ch, target.value, channelKeys);
+      }
+    });
+
+    panel.addEventListener('input', (e) => {
+      const target = e.target;
+      if (target.matches('.rs-volume-slider')) {
+        e.stopPropagation();
+        const ch = parseInt(target.dataset.channel);
+        const vol = parseInt(target.value);
+        this.channelVolumes[ch] = vol;
+        target.title = `Volume CC7: ${vol}`;
+        const label = target.closest('.rs-volume-zone')?.querySelector('.rs-volume-value');
+        if (label) label.textContent = vol;
+      }
+    });
+
+    panel.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const row = e.target.closest('.rs-row');
+        if (row) {
           const ch = parseInt(row.dataset.channel);
           this._selectChannel(ch);
         }
-      });
+      }
     });
 
-    // Skip/Unskip buttons
-    modal.querySelectorAll('.rs-btn-skip').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ch = parseInt(btn.dataset.channel);
-        this.skippedChannels.add(ch);
-        this._refreshUI(channelKeys);
-      });
+    // mousedown on volume zone — stop propagation
+    panel.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.rs-volume-zone, .rs-volume-slider')) {
+        e.stopPropagation();
+      }
     });
-    modal.querySelectorAll('.rs-btn-unskip').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ch = parseInt(btn.dataset.channel);
-        this.skippedChannels.delete(ch);
-        this._refreshUI(channelKeys);
-      });
-    });
-
-    // Detail panel events
-    this._bindDetailEvents(channelKeys);
-
-    // Preview events
-    this._bindPreviewEvents();
   }
 
+  /**
+   * Bind detail panel events using event delegation (2 listeners instead of ~80).
+   */
   _bindDetailEvents(channelKeys) {
-    const modal = this.modal;
+    const panel = this.modal.querySelector('#rsDetailPanel');
+    if (!panel) return;
 
-    // Close detail
-    const closeBtn = modal.querySelector('#rsDetailClose');
-    if (closeBtn) {
-      closeBtn.addEventListener('click', () => {
+    panel.addEventListener('click', (e) => {
+      const target = e.target;
+
+      // Close detail
+      if (target.closest('#rsDetailClose')) {
         this.selectedChannel = null;
-        this._refreshUI(channelKeys);
-      });
-    }
+        this._refreshUI(channelKeys, 'both-panels');
+        return;
+      }
 
-    // Add instrument button (multi-instrument)
-    modal.querySelectorAll('.rs-btn-add-multi').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ch = parseInt(btn.dataset.channel);
-        this._addInstrumentToChannel(ch, channelKeys);
-      });
-    });
+      // Add multi-instrument
+      const addMulti = target.closest('.rs-btn-add-multi');
+      if (addMulti) {
+        this._addInstrumentToChannel(parseInt(addMulti.dataset.channel), channelKeys);
+        return;
+      }
 
-    // Smart split suggestion — "try split" button
-    modal.querySelectorAll('.rs-btn-try-split').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ch = parseInt(btn.dataset.channel);
+      // Try split suggestion
+      const trySplit = target.closest('.rs-btn-try-split');
+      if (trySplit) {
+        const ch = parseInt(trySplit.dataset.channel);
         const proposal = this.splitProposals[ch];
         if (proposal) {
           this.splitChannels.add(ch);
           this.splitAssignments[ch] = { ...proposal };
-          this._refreshUI(channelKeys);
+          this._refreshUI(channelKeys, 'both-panels');
         }
-      });
-    });
+        return;
+      }
 
-    // Instrument chip selection
-    modal.querySelectorAll('.aa-instbar-btn[data-instrument-id]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const instId = btn.dataset.instrumentId;
-        const ch = btn.dataset.channel;
-        this._selectInstrument(ch, instId, channelKeys);
-      });
-    });
+      // Instrument chip selection
+      const chip = target.closest('.aa-instbar-btn[data-instrument-id]');
+      if (chip) {
+        this._selectInstrument(chip.dataset.channel, chip.dataset.instrumentId, channelKeys);
+        return;
+      }
 
-    // Adaptation controls (radio buttons)
-    modal.querySelectorAll('.rs-adapt-radio input[type="radio"]').forEach(radio => {
-      radio.addEventListener('change', () => {
-        const ch = radio.dataset.channel;
-        const field = radio.dataset.field;
-        if (ch && field) {
-          // Skip if value hasn't actually changed (prevents re-render loop from
-          // synthetic change events fired by browser on pre-checked radios)
-          if (radio.value === this.adaptationSettings[ch]?.[field]) return;
+      // Low score toggle
+      const showAll = target.closest('.aa-instbar-show-all');
+      if (showAll) {
+        const ch = showAll.dataset.channel;
+        this.showLowScores[ch] = !this.showLowScores[ch];
+        this._refreshUI(channelKeys, 'detail');
+        return;
+      }
 
-          if (!this.adaptationSettings[ch]) this.adaptationSettings[ch] = {};
-          this.adaptationSettings[ch][field] = radio.value;
-
-          // When switching pitch mode, sync transposition value
-          if (field === 'pitchShift') {
-            const assignment = this.selectedAssignments[ch];
-            const autoSemitones = assignment?.transposition?.semitones || 0;
-            if (radio.value === 'manual') {
-              // Initialize manual value from auto suggestion (or keep current)
-              if (!this.adaptationSettings[ch].transpositionSemitones) {
-                this.adaptationSettings[ch].transpositionSemitones = autoSemitones;
-              }
-            } else if (radio.value === 'auto') {
-              // Restore auto value
-              this.adaptationSettings[ch].transpositionSemitones = autoSemitones;
-            } else {
-              // None: reset to 0
-              this.adaptationSettings[ch].transpositionSemitones = 0;
-            }
-          }
-
-          this._refreshUI(channelKeys);
-        }
-      });
-    });
-
-    // Transposition buttons
-    modal.querySelectorAll('.rs-transpose-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ch = btn.dataset.channel;
-        const delta = parseInt(btn.dataset.delta);
+      // Transposition buttons
+      const transposeBtn = target.closest('.rs-transpose-btn');
+      if (transposeBtn) {
+        const ch = transposeBtn.dataset.channel;
+        const delta = parseInt(transposeBtn.dataset.delta);
         if (ch && !isNaN(delta)) {
           if (!this.adaptationSettings[ch]) this.adaptationSettings[ch] = {};
           const current = this.adaptationSettings[ch].transpositionSemitones || 0;
           this.adaptationSettings[ch].transpositionSemitones = Math.max(-36, Math.min(36, current + delta));
-          this._refreshUI(channelKeys);
+          this._refreshUI(channelKeys, 'detail');
         }
-      });
-    });
+        return;
+      }
 
-    // Polyphony target buttons (+/-)
-    modal.querySelectorAll('.rs-poly-target-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ch = btn.dataset.channel;
-        const delta = parseInt(btn.dataset.delta);
+      // Polyphony target buttons
+      const polyBtn = target.closest('.rs-poly-target-btn');
+      if (polyBtn) {
+        const ch = polyBtn.dataset.channel;
+        const delta = parseInt(polyBtn.dataset.delta);
         if (ch && !isNaN(delta)) {
           if (!this.adaptationSettings[ch]) this.adaptationSettings[ch] = {};
           const current = this.adaptationSettings[ch].polyTarget || this._getInstrumentPolyphony(ch) || getGmDefaultPolyphony(this.selectedAssignments[ch]?.gmProgram) || 8;
           this.adaptationSettings[ch].polyTarget = Math.max(1, Math.min(128, current + delta));
-          this._refreshUI(channelKeys);
+          this._refreshUI(channelKeys, 'detail');
         }
-      });
-    });
+        return;
+      }
 
-    // Polyphony target input (direct value)
-    modal.querySelectorAll('.rs-poly-target-input').forEach(input => {
-      input.addEventListener('change', () => {
-        const ch = input.dataset.channel;
-        const val = parseInt(input.value);
-        if (ch && !isNaN(val) && val >= 1) {
-          if (!this.adaptationSettings[ch]) this.adaptationSettings[ch] = {};
-          this.adaptationSettings[ch].polyTarget = Math.max(1, Math.min(128, val));
-          this._refreshUI(channelKeys);
-        }
-      });
-    });
+      // Accept split
+      const acceptSplit = target.closest('.rs-btn-accept-split');
+      if (acceptSplit) {
+        this._acceptSplit(parseInt(acceptSplit.dataset.channel), channelKeys);
+        return;
+      }
 
-    // Low score toggle (show more chips)
-    modal.querySelectorAll('.aa-instbar-show-all').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ch = btn.dataset.channel;
-        this.showLowScores[ch] = !this.showLowScores[ch];
-        this._refreshUI(channelKeys);
-      });
-    });
+      // Behavior mode buttons
+      const behaviorBtn = target.closest('.rs-behavior-mode-btn');
+      if (behaviorBtn) {
+        const mode = behaviorBtn.dataset.behavior;
+        if (mode) this._updateBehaviorMode(parseInt(behaviorBtn.dataset.channel), mode, channelKeys);
+        return;
+      }
 
-    // Accept split button
-    modal.querySelectorAll('.rs-btn-accept-split').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ch = parseInt(btn.dataset.channel);
-        this._acceptSplit(ch, channelKeys);
-      });
-    });
+      // Split mode tabs
+      const splitModeBtn = target.closest('.rs-split-mode-btn');
+      if (splitModeBtn) {
+        const ch = parseInt(splitModeBtn.dataset.channel);
+        this.activeSplitMode[ch] = splitModeBtn.dataset.mode;
+        this._refreshUI(channelKeys, 'detail');
+        return;
+      }
 
-    // Behavior mode buttons (multi-instrument behavior selector)
-    modal.querySelectorAll('.rs-behavior-mode-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ch = parseInt(btn.dataset.channel);
-        const mode = btn.dataset.behavior;
-        if (mode) this._updateBehaviorMode(ch, mode, channelKeys);
-      });
-    });
-
-    // Split mode tabs
-    modal.querySelectorAll('.rs-split-mode-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ch = parseInt(btn.dataset.channel);
-        this.activeSplitMode[ch] = btn.dataset.mode;
-        this._refreshUI(channelKeys);
-      });
-    });
-
-    // Remove split
-    modal.querySelectorAll('.rs-btn-remove-split').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent bubble to .rs-split-header toggle handler
-        const ch = parseInt(btn.dataset.channel);
+      // Remove split (must check before split header since it's nested)
+      const removeSplit = target.closest('.rs-btn-remove-split');
+      if (removeSplit) {
+        e.stopPropagation();
+        const ch = parseInt(removeSplit.dataset.channel);
         this.splitChannels.delete(ch);
         delete this.splitAssignments[ch];
-        this._refreshUI(channelKeys);
-      });
-    });
+        this._refreshUI(channelKeys, 'both-panels');
+        return;
+      }
 
-    // Split section collapse/expand
-    modal.querySelectorAll('.rs-split-header').forEach(hdr => {
-      hdr.addEventListener('click', () => {
-        const ch = parseInt(hdr.dataset.channel);
+      // Split header collapse/expand
+      const splitHeader = target.closest('.rs-split-header');
+      if (splitHeader) {
+        const ch = parseInt(splitHeader.dataset.channel);
         this.splitExpanded[ch] = !this.splitExpanded[ch];
-        this._refreshUI(channelKeys);
-      });
-    });
+        this._refreshUI(channelKeys, 'detail');
+        return;
+      }
 
-    // Split segment instrument selection
-    modal.querySelectorAll('.rs-seg-instrument-select').forEach(sel => {
-      sel.addEventListener('change', () => {
-        const ch = parseInt(sel.dataset.channel);
-        const segIdx = parseInt(sel.dataset.seg);
-        const mode = sel.dataset.mode;
-        this._updateSegmentInstrument(ch, segIdx, sel.value, mode, channelKeys);
-      });
-    });
+      // Add segment
+      const addSeg = target.closest('.rs-btn-add-segment');
+      if (addSeg) {
+        this._addSplitSegment(parseInt(addSeg.dataset.channel), channelKeys);
+        return;
+      }
 
-    // Add segment
-    modal.querySelectorAll('.rs-btn-add-segment').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ch = parseInt(btn.dataset.channel);
-        this._addSplitSegment(ch, channelKeys);
-      });
-    });
+      // Remove segment
+      const removeSeg = target.closest('.rs-btn-remove-segment');
+      if (removeSeg) {
+        this._removeSplitSegment(parseInt(removeSeg.dataset.channel), parseInt(removeSeg.dataset.seg), channelKeys);
+        return;
+      }
 
-    // Remove segment
-    modal.querySelectorAll('.rs-btn-remove-segment').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ch = parseInt(btn.dataset.channel);
-        const segIdx = parseInt(btn.dataset.seg);
-        this._removeSplitSegment(ch, segIdx, channelKeys);
-      });
-    });
+      // Overlap resolution
+      const overlapBtn = target.closest('.rs-overlap-resolve-btn');
+      if (overlapBtn) {
+        this._resolveOverlap(parseInt(overlapBtn.dataset.channel), parseInt(overlapBtn.dataset.overlap), overlapBtn.dataset.strategy, channelKeys);
+        return;
+      }
 
-    // Segment range inputs
-    modal.querySelectorAll('.rs-seg-range-input').forEach(input => {
-      input.addEventListener('change', () => {
-        const ch = parseInt(input.dataset.channel);
-        const segIdx = parseInt(input.dataset.seg);
-        const bound = input.dataset.bound; // 'min' or 'max'
-        this._updateSegmentRange(ch, segIdx, bound, input.value, channelKeys);
-      });
-    });
-
-    // Overlap resolution
-    modal.querySelectorAll('.rs-overlap-resolve-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ch = parseInt(btn.dataset.channel);
-        const overlapIdx = parseInt(btn.dataset.overlap);
-        const strategy = btn.dataset.strategy;
-        this._resolveOverlap(ch, overlapIdx, strategy, channelKeys);
-      });
-    });
-
-    // CC remapping dropdowns
-    modal.querySelectorAll('.rs-cc-remap').forEach(sel => {
-      sel.addEventListener('change', () => {
-        const ch = sel.dataset.channel;
-        const sourceCC = parseInt(sel.dataset.source);
-        const targetCC = sel.value ? parseInt(sel.value) : null;
-        if (!this.ccRemapping[ch]) this.ccRemapping[ch] = {};
-        if (targetCC !== null) {
-          this.ccRemapping[ch][sourceCC] = targetCC;
-        } else {
-          delete this.ccRemapping[ch][sourceCC];
-          if (Object.keys(this.ccRemapping[ch]).length === 0) delete this.ccRemapping[ch];
-        }
-      });
-    });
-
-    // CC mute/unmute buttons
-    modal.querySelectorAll('.rs-cc-mute-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ch = btn.dataset.channel;
-        const ccNum = parseInt(btn.dataset.cc);
+      // CC mute/unmute
+      const muteBtn = target.closest('.rs-cc-mute-btn');
+      if (muteBtn) {
+        const ch = muteBtn.dataset.channel;
+        const ccNum = parseInt(muteBtn.dataset.cc);
         if (!this.ccRemapping[ch]) this.ccRemapping[ch] = {};
         if (this.ccRemapping[ch][ccNum] === -1) {
-          // Re-enable: remove the disable mapping
           delete this.ccRemapping[ch][ccNum];
           if (Object.keys(this.ccRemapping[ch]).length === 0) delete this.ccRemapping[ch];
         } else {
-          // Disable: set to -1 (suppress)
           this.ccRemapping[ch][ccNum] = -1;
         }
-        this._refreshUI(channelKeys);
-      });
-    });
+        this._refreshUI(channelKeys, 'detail');
+        return;
+      }
 
-    // Per-segment CC toggle buttons (split mode)
-    modal.querySelectorAll('.rs-cc-seg-toggle').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      // Per-segment CC toggle
+      const segToggle = target.closest('.rs-cc-seg-toggle');
+      if (segToggle) {
         e.stopPropagation();
-        const channel = parseInt(btn.dataset.channel);
-        const ccNum = parseInt(btn.dataset.cc);
-        const segIdx = parseInt(btn.dataset.seg);
+        const channel = parseInt(segToggle.dataset.channel);
+        const ccNum = parseInt(segToggle.dataset.cc);
+        const segIdx = parseInt(segToggle.dataset.seg);
         if (!this.ccSegmentMute[channel]) this.ccSegmentMute[channel] = {};
         if (!this.ccSegmentMute[channel][ccNum]) this.ccSegmentMute[channel][ccNum] = new Set();
         const muted = this.ccSegmentMute[channel][ccNum];
@@ -2057,8 +2055,96 @@ class RoutingSummaryPage {
         } else {
           muted.add(segIdx);
         }
-        this._refreshUI(channelKeys);
-      });
+        this._refreshUI(channelKeys, 'detail');
+        return;
+      }
+
+      // CC section collapse/expand
+      const ccToggle = target.closest('.rs-cc-toggle');
+      if (ccToggle) {
+        const ch = parseInt(ccToggle.dataset.channel);
+        this.ccExpanded[ch] = !this.ccExpanded[ch];
+        this._refreshUI(channelKeys, 'detail');
+        return;
+      }
+
+      // CC show more pagination
+      const ccShowMore = target.closest('.rs-cc-show-more');
+      if (ccShowMore) {
+        this.ccShowAll[parseInt(ccShowMore.dataset.channel)] = true;
+        this._refreshUI(channelKeys, 'detail');
+        return;
+      }
+    });
+
+    // Delegated change handler for selects, radios, and inputs
+    panel.addEventListener('change', (e) => {
+      const target = e.target;
+
+      // Adaptation radio buttons
+      if (target.matches('.rs-adapt-radio input[type="radio"]')) {
+        const ch = target.dataset.channel;
+        const field = target.dataset.field;
+        if (ch && field) {
+          if (target.value === this.adaptationSettings[ch]?.[field]) return;
+          if (!this.adaptationSettings[ch]) this.adaptationSettings[ch] = {};
+          this.adaptationSettings[ch][field] = target.value;
+
+          if (field === 'pitchShift') {
+            const assignment = this.selectedAssignments[ch];
+            const autoSemitones = assignment?.transposition?.semitones || 0;
+            if (target.value === 'manual') {
+              if (!this.adaptationSettings[ch].transpositionSemitones) {
+                this.adaptationSettings[ch].transpositionSemitones = autoSemitones;
+              }
+            } else if (target.value === 'auto') {
+              this.adaptationSettings[ch].transpositionSemitones = autoSemitones;
+            } else {
+              this.adaptationSettings[ch].transpositionSemitones = 0;
+            }
+          }
+          this._refreshUI(channelKeys, 'detail');
+        }
+        return;
+      }
+
+      // Polyphony target input
+      if (target.matches('.rs-poly-target-input')) {
+        const ch = target.dataset.channel;
+        const val = parseInt(target.value);
+        if (ch && !isNaN(val) && val >= 1) {
+          if (!this.adaptationSettings[ch]) this.adaptationSettings[ch] = {};
+          this.adaptationSettings[ch].polyTarget = Math.max(1, Math.min(128, val));
+          this._refreshUI(channelKeys, 'detail');
+        }
+        return;
+      }
+
+      // Segment instrument selection
+      if (target.matches('.rs-seg-instrument-select')) {
+        this._updateSegmentInstrument(parseInt(target.dataset.channel), parseInt(target.dataset.seg), target.value, target.dataset.mode, channelKeys);
+        return;
+      }
+
+      // Segment range inputs
+      if (target.matches('.rs-seg-range-input')) {
+        this._updateSegmentRange(parseInt(target.dataset.channel), parseInt(target.dataset.seg), target.dataset.bound, target.value, channelKeys);
+        return;
+      }
+
+      // CC remapping dropdowns
+      if (target.matches('.rs-cc-remap')) {
+        const ch = target.dataset.channel;
+        const sourceCC = parseInt(target.dataset.source);
+        const targetCC = target.value ? parseInt(target.value) : null;
+        if (!this.ccRemapping[ch]) this.ccRemapping[ch] = {};
+        if (targetCC !== null) {
+          this.ccRemapping[ch][sourceCC] = targetCC;
+        } else {
+          delete this.ccRemapping[ch][sourceCC];
+          if (Object.keys(this.ccRemapping[ch]).length === 0) delete this.ccRemapping[ch];
+        }
+      }
     });
   }
 
@@ -2104,7 +2190,7 @@ class RoutingSummaryPage {
       fullRange: { min: inst.note_range_min ?? 0, max: inst.note_range_max ?? 127 }
     };
 
-    this._refreshUI(channelKeys);
+    this._refreshUI(channelKeys, 'both-panels');
   }
 
   /**
@@ -2186,7 +2272,7 @@ class RoutingSummaryPage {
       polyphonyShare: newInst.polyphony || 16
     });
 
-    this._refreshUI(channelKeys);
+    this._refreshUI(channelKeys, 'both-panels');
   }
 
   /**
@@ -2213,7 +2299,7 @@ class RoutingSummaryPage {
       }
     }
 
-    this._refreshUI(channelKeys);
+    this._refreshUI(channelKeys, 'both-panels');
   }
 
   /**
@@ -2236,7 +2322,7 @@ class RoutingSummaryPage {
         data.segments[segIdx].noteRange.min = clamped;
       }
     }
-    this._refreshUI(channelKeys);
+    this._refreshUI(channelKeys, 'both-panels');
   }
 
   /**
@@ -2266,7 +2352,7 @@ class RoutingSummaryPage {
     data.overlapStrategy = strategy;
     this.splitEdited[channel] = true;
 
-    this._refreshUI(channelKeys);
+    this._refreshUI(channelKeys, 'both-panels');
   }
 
   // ============================================================================
@@ -2275,11 +2361,16 @@ class RoutingSummaryPage {
 
   _selectChannel(channel) {
     this.selectedChannel = channel;
+    // Toggle layout class directly to avoid full rebuild
+    const container = this.modal.querySelector('.rs-container');
+    if (container) container.classList.toggle('rs-with-detail', channel !== null);
     const channelKeys = Object.keys(this.suggestions).sort((a, b) => parseInt(a) - parseInt(b));
-    this._refreshUI(channelKeys);
+    this._refreshUI(channelKeys, 'both-panels');
   }
 
   _selectInstrument(ch, instrumentId, channelKeys) {
+    // Invalidate segment instrument cache when assignment changes
+    this._segmentInstrumentCache = null;
     const options = [...(this.suggestions[ch] || []), ...(this.lowScoreSuggestions[ch] || [])];
     const selected = options.find(o => o.instrument.id === instrumentId);
     if (!selected) return;
@@ -2315,7 +2406,7 @@ class RoutingSummaryPage {
     this.adaptationSettings[ch].transpositionSemitones = autoSemitones;
 
     this.skippedChannels.delete(parseInt(ch));
-    this._refreshUI(channelKeys);
+    this._refreshUI(channelKeys, 'both-panels');
   }
 
   _acceptSplit(channel, channelKeys) {
@@ -2327,7 +2418,7 @@ class RoutingSummaryPage {
     const chosen = allModes.find(m => m.type === activeMode) || proposal;
     this.splitChannels.add(channel);
     this.splitAssignments[channel] = JSON.parse(JSON.stringify(chosen));
-    this._refreshUI(channelKeys);
+    this._refreshUI(channelKeys, 'both-panels');
   }
 
   /**
@@ -2379,7 +2470,7 @@ class RoutingSummaryPage {
 
     // Apply the default behavior mode to configure segments properly
     this._applyBehaviorMode(channel, defaultMode);
-    this._refreshUI(channelKeys);
+    this._refreshUI(channelKeys, 'both-panels');
   }
 
   /**
@@ -2459,17 +2550,42 @@ class RoutingSummaryPage {
   _updateBehaviorMode(channel, mode, channelKeys) {
     this._applyBehaviorMode(channel, mode);
     this.splitEdited[channel] = false; // Reset edited flag when changing mode
-    this._refreshUI(channelKeys);
+    this._refreshUI(channelKeys, 'both-panels');
   }
 
-  _refreshUI(channelKeys) {
+  _refreshUI(channelKeys, hint = 'all') {
     // Stop any active preview since the view is changing
     this._safeStopPreview();
     // Invalidate canvas ref before re-render (prevents drawing to detached canvas)
     this._minimapCanvas = null;
-    // Re-render the content area (preserving modal shell)
-    // _renderContent() has its own re-entrancy guard and schedules minimap via _bindPreviewEvents()
-    this._renderContent();
+
+    // Merge hints: coalesce multiple rapid calls into one render per frame
+    this._pendingHint = this._mergeHints(this._pendingHint, hint);
+    this._pendingChannelKeys = channelKeys;
+
+    if (!this._rafPending) {
+      this._rafPending = true;
+      requestAnimationFrame(() => {
+        this._rafPending = false;
+        const h = this._pendingHint || 'all';
+        this._pendingHint = null;
+        this._renderContent(h);
+      });
+    }
+  }
+
+  /**
+   * Merge two render hints into the most inclusive one.
+   */
+  _mergeHints(a, b) {
+    if (!a) return b;
+    if (!b) return a;
+    if (a === 'all' || b === 'all') return 'all';
+    if (a === b) return a;
+    if (a === 'both-panels' || b === 'both-panels') return 'both-panels';
+    // summary + detail = both-panels
+    if ((a === 'summary' && b === 'detail') || (a === 'detail' && b === 'summary')) return 'both-panels';
+    return 'all';
   }
 
   /**
@@ -2697,14 +2813,20 @@ class RoutingSummaryPage {
    * Get CC name from InstrumentSettingsModal.CC_GROUPS lookup
    */
   _getCCName(ccNum) {
+    // Memoize: CC names are static per session
+    if (this._ccNameCache?.[ccNum] !== undefined) return this._ccNameCache[ccNum];
+    let name = `CC ${ccNum}`;
     if (typeof InstrumentSettingsModal !== 'undefined' && InstrumentSettingsModal.CC_GROUPS) {
       for (const group of Object.values(InstrumentSettingsModal.CC_GROUPS)) {
         if (group.ccs && group.ccs[ccNum]) {
-          return group.ccs[ccNum].name;
+          name = group.ccs[ccNum].name;
+          break;
         }
       }
     }
-    return `CC ${ccNum}`;
+    if (!this._ccNameCache) this._ccNameCache = {};
+    this._ccNameCache[ccNum] = name;
+    return name;
   }
 
   /**
@@ -2750,7 +2872,72 @@ class RoutingSummaryPage {
     return null;
   }
 
+  /**
+   * Compute CC summary counts (lightweight — no DOM generation).
+   * Returns { summaryHTML, supportedCount, unsupportedCount, allUnknown }.
+   */
+  _computeCCSummary(channel) {
+    const ch = String(channel);
+    const analysis = this.channelAnalyses[channel];
+    const channelCCs = analysis?.usedCCs || [];
+    const assignment = this.selectedAssignments[ch];
+    const isSplit = this.splitChannels.has(channel);
+    const currentRemap = this.ccRemapping[ch] || {};
+
+    if (isSplit && this.splitAssignments[channel]) {
+      const segs = this.splitAssignments[channel].segments || [];
+      const segCCs = segs.map(seg => this._getInstrumentCCs(seg.instrumentId));
+      const allUnknown = segCCs.every(ccs => ccs === null);
+
+      let supportedByAll = 0, unsupportedByAny = 0;
+      for (const ccNum of channelCCs) {
+        const isDisabled = currentRemap[ccNum] === -1;
+        const anyUnsupported = !isDisabled && segCCs.some(ccs => ccs !== null && !ccs.includes(ccNum));
+        if (isDisabled || anyUnsupported) unsupportedByAny++;
+        else supportedByAll++;
+      }
+
+      let summaryHTML;
+      if (allUnknown) {
+        summaryHTML = `<span class="rs-cc-summary rs-cc-unknown-summary">${_t('routingSummary.ccUnknown') || 'CC non configurés \u2014 supposés tous supportés'}</span>`;
+      } else if (unsupportedByAny === 0) {
+        summaryHTML = `<span class="rs-cc-summary rs-cc-ok-summary">\u2713 ${_t('routingSummary.ccAllSupported') || 'Tous les CC supportés'} (${supportedByAll})</span>`;
+      } else {
+        summaryHTML = `<span class="rs-cc-summary rs-cc-warn-summary">${supportedByAll}/${channelCCs.length} ${_t('routingSummary.ccSupported') || 'CC supportés'} \u2014 ${unsupportedByAny} ${_t('routingSummary.ccUnsupported') || 'non supportés'}</span>`;
+      }
+      return { summaryHTML, supportedCount: supportedByAll, unsupportedCount: unsupportedByAny, allUnknown };
+    }
+
+    // Single instrument mode
+    let instrumentCCs = assignment?.supportedCcs ?? null;
+    if (instrumentCCs && typeof instrumentCCs === 'string') {
+      try { instrumentCCs = JSON.parse(instrumentCCs); } catch { instrumentCCs = null; }
+    }
+    if (instrumentCCs == null && assignment?.instrumentId) {
+      instrumentCCs = this._getInstrumentCCs(assignment.instrumentId);
+    }
+
+    let supportedCount = 0, unsupportedCount = 0;
+    for (const ccNum of channelCCs) {
+      const isDisabled = currentRemap[ccNum] === -1;
+      if (isDisabled) { unsupportedCount++; }
+      else if (instrumentCCs === null || instrumentCCs.includes(ccNum)) { supportedCount++; }
+      else { unsupportedCount++; }
+    }
+
+    let summaryHTML;
+    if (instrumentCCs === null) {
+      summaryHTML = `<span class="rs-cc-summary rs-cc-unknown-summary">${_t('routingSummary.ccUnknown') || 'CC non configurés \u2014 supposés tous supportés'}</span>`;
+    } else if (unsupportedCount === 0) {
+      summaryHTML = `<span class="rs-cc-summary rs-cc-ok-summary">\u2713 ${_t('routingSummary.ccAllSupported') || 'Tous les CC supportés'} (${supportedCount})</span>`;
+    } else {
+      summaryHTML = `<span class="rs-cc-summary rs-cc-warn-summary">${supportedCount}/${channelCCs.length} ${_t('routingSummary.ccSupported') || 'CC supportés'} \u2014 ${unsupportedCount} ${_t('routingSummary.ccUnsupported') || 'non supportés'}</span>`;
+    }
+    return { summaryHTML, supportedCount, unsupportedCount, allUnknown: instrumentCCs === null };
+  }
+
   _renderCCSection(channel) {
+    const CC_PAGE_SIZE = 10;
     const ch = String(channel);
     const analysis = this.channelAnalyses[channel];
     const channelCCs = analysis?.usedCCs || [];
@@ -2761,8 +2948,28 @@ class RoutingSummaryPage {
     if (isSkipped || (!assignment && !isSplit)) return '';
     if (channelCCs.length === 0) return '';
 
-    const splitColors = ['#4A90D9', '#E67E22', '#27AE60', '#9B59B6'];
+    const isExpanded = this.ccExpanded[channel] ?? false;
+    const { summaryHTML } = this._computeCCSummary(channel);
+    const toggleIcon = isExpanded ? '\u25BE' : '\u25B8';
+
+    // ── Collapsed: show only title + summary (no heavy DOM) ──
+    if (!isExpanded) {
+      return `
+        <div class="rs-cc-section">
+          <h4 class="rs-cc-title rs-cc-toggle" data-channel="${channel}" style="cursor:pointer">\uD83C\uDF9B ${_t('routingSummary.ccTitle') || 'Contr\u00f4leurs MIDI (CC)'} ${toggleIcon} <small>(${channelCCs.length})</small></h4>
+          ${summaryHTML}
+        </div>`;
+    }
+
+    // ── Expanded: render rows with pagination ──
+    const showAll = this.ccShowAll[channel] ?? false;
+    const visibleCCs = showAll ? channelCCs : channelCCs.slice(0, CC_PAGE_SIZE);
+    const hasMore = !showAll && channelCCs.length > CC_PAGE_SIZE;
+
+    const splitColors = SPLIT_COLORS;
     const currentRemap = this.ccRemapping[ch] || {};
+    // Pre-compute Set for O(1) lookups instead of O(n) includes
+    const channelCCSet = new Set(channelCCs);
 
     // ── Split mode: per-instrument columns ──
     if (isSplit && this.splitAssignments[channel]) {
@@ -2771,7 +2978,6 @@ class RoutingSummaryPage {
 
       // Resolve CCs for each segment
       const segCCs = segs.map(seg => this._getInstrumentCCs(seg.instrumentId));
-      const allUnknown = segCCs.every(ccs => ccs === null);
 
       // Table header: CC | Name | Inst1 | Inst2 | ...
       const headerCols = segs.map((seg, i) => {
@@ -2781,11 +2987,8 @@ class RoutingSummaryPage {
         return `<th class="rs-cc-inst-col" style="color:${color}" title="${escapeHtml(name)}">${escapeHtml(short)}</th>`;
       }).join('');
 
-      // Table rows: one per CC used by channel, with remap for unsupported
-      const currentRemap = this.ccRemapping[ch] || {};
-      let supportedByAll = 0;
-      let unsupportedByAny = 0;
-      const bodyRows = channelCCs.map(ccNum => {
+      // Table rows: one per visible CC, with remap for unsupported
+      const bodyRows = visibleCCs.map(ccNum => {
         const name = this._getCCName(ccNum);
         const isDisabled = currentRemap[ccNum] === -1;
 
@@ -2813,7 +3016,7 @@ class RoutingSummaryPage {
             // Unsupported: show remap dropdown
             const currentTarget = currentRemap[ccNum];
             const remapOpts = (ccs || [])
-              .filter(tc => !channelCCs.includes(tc) || tc === ccNum)
+              .filter(tc => !channelCCSet.has(tc) || tc === ccNum)
               .map(tc => `<option value="${tc}" ${currentTarget === tc ? 'selected' : ''}>${this._getCCName(tc)}</option>`)
               .join('');
             return `<td class="rs-cc-cell rs-cc-cell-no">
@@ -2827,30 +3030,21 @@ class RoutingSummaryPage {
         }
 
         const anyUnsupported = !isDisabled && segCCs.some(ccs => ccs !== null && !ccs.includes(ccNum));
-        if (isDisabled || anyUnsupported) unsupportedByAny++;
-        else supportedByAll++;
-
         const rowClass = isDisabled ? 'rs-cc-row-disabled' : (anyUnsupported ? 'rs-cc-row-warn' : '');
         return `<tr class="${rowClass}">${muteBtn}<td class="rs-cc-num">CC${ccNum}</td><td class="rs-cc-name">${escapeHtml(name)}</td>${cells}</tr>`;
       }).join('');
 
-      // Summary
-      let summaryHTML;
-      if (allUnknown) {
-        summaryHTML = `<span class="rs-cc-summary rs-cc-unknown-summary">${_t('routingSummary.ccUnknown') || 'CC non configurés \u2014 supposés tous supportés'}</span>`;
-      } else if (unsupportedByAny === 0) {
-        summaryHTML = `<span class="rs-cc-summary rs-cc-ok-summary">\u2713 ${_t('routingSummary.ccAllSupported') || 'Tous les CC supportés'} (${supportedByAll})</span>`;
-      } else {
-        summaryHTML = `<span class="rs-cc-summary rs-cc-warn-summary">${supportedByAll}/${channelCCs.length} ${_t('routingSummary.ccSupported') || 'CC supportés'} \u2014 ${unsupportedByAny} ${_t('routingSummary.ccUnsupported') || 'non supportés'}</span>`;
-      }
+      const showMoreRow = hasMore
+        ? `<tr><td colspan="${3 + segs.length}" class="rs-cc-show-more" data-channel="${channel}" style="cursor:pointer;text-align:center;padding:6px">${_t('routingSummary.showAllCCs') || 'Voir tout'} (${channelCCs.length - CC_PAGE_SIZE} ${_t('routingSummary.more') || 'de plus'})</td></tr>`
+        : '';
 
       return `
         <div class="rs-cc-section">
-          <h4 class="rs-cc-title">\uD83C\uDF9B ${_t('routingSummary.ccTitle') || 'Contr\u00f4leurs MIDI (CC)'}</h4>
+          <h4 class="rs-cc-title rs-cc-toggle" data-channel="${channel}" style="cursor:pointer">\uD83C\uDF9B ${_t('routingSummary.ccTitle') || 'Contr\u00f4leurs MIDI (CC)'} ${toggleIcon} <small>(${channelCCs.length})</small></h4>
           ${summaryHTML}
           <table class="rs-cc-table">
             <thead><tr><th></th><th>CC</th><th>${_t('common.name') || 'Nom'}</th>${headerCols}</tr></thead>
-            <tbody>${bodyRows}</tbody>
+            <tbody>${bodyRows}${showMoreRow}</tbody>
           </table>
         </div>`;
     }
@@ -2864,22 +3058,19 @@ class RoutingSummaryPage {
       instrumentCCs = this._getInstrumentCCs(assignment.instrumentId);
     }
 
-    let supportedCount = 0;
-    let unsupportedCount = 0;
-
-    const rows = channelCCs.map(ccNum => {
+    const rows = visibleCCs.map(ccNum => {
       const name = this._getCCName(ccNum);
       const isDisabled = currentRemap[ccNum] === -1;
       let statusIcon, statusClass;
 
       if (isDisabled) {
-        statusIcon = '\u2717'; statusClass = 'rs-cc-disabled'; unsupportedCount++;
+        statusIcon = '\u2717'; statusClass = 'rs-cc-disabled';
       } else if (instrumentCCs === null) {
-        statusIcon = '?'; statusClass = 'rs-cc-unknown'; supportedCount++;
+        statusIcon = '?'; statusClass = 'rs-cc-unknown';
       } else if (instrumentCCs.includes(ccNum)) {
-        statusIcon = '\u2713'; statusClass = 'rs-cc-supported'; supportedCount++;
+        statusIcon = '\u2713'; statusClass = 'rs-cc-supported';
       } else {
-        statusIcon = '\u2717'; statusClass = 'rs-cc-unsupported'; unsupportedCount++;
+        statusIcon = '\u2717'; statusClass = 'rs-cc-unsupported';
       }
 
       // Disable toggle for all CCs
@@ -2893,7 +3084,7 @@ class RoutingSummaryPage {
       if (!isDisabled && statusClass === 'rs-cc-unsupported' && instrumentCCs) {
         const currentTarget = currentRemap[ccNum];
         const options = instrumentCCs
-          .filter(targetCC => !channelCCs.includes(targetCC) || targetCC === ccNum)
+          .filter(targetCC => !channelCCSet.has(targetCC) || targetCC === ccNum)
           .map(targetCC => {
             const selected = currentTarget === targetCC ? 'selected' : '';
             return `<option value="${targetCC}" ${selected}>${this._getCCName(targetCC)}</option>`;
@@ -2917,21 +3108,17 @@ class RoutingSummaryPage {
         </div>`;
     }).join('');
 
-    let summaryHTML;
-    if (instrumentCCs === null) {
-      summaryHTML = `<span class="rs-cc-summary rs-cc-unknown-summary">${_t('routingSummary.ccUnknown') || 'CC non configurés \u2014 supposés tous supportés'}</span>`;
-    } else if (unsupportedCount === 0) {
-      summaryHTML = `<span class="rs-cc-summary rs-cc-ok-summary">\u2713 ${_t('routingSummary.ccAllSupported') || 'Tous les CC supportés'} (${supportedCount})</span>`;
-    } else {
-      summaryHTML = `<span class="rs-cc-summary rs-cc-warn-summary">${supportedCount}/${channelCCs.length} ${_t('routingSummary.ccSupported') || 'CC supportés'} \u2014 ${unsupportedCount} ${_t('routingSummary.ccUnsupported') || 'non supportés'}</span>`;
-    }
+    const showMoreHTML = hasMore
+      ? `<div class="rs-cc-show-more" data-channel="${channel}" style="cursor:pointer;text-align:center;padding:6px">${_t('routingSummary.showAllCCs') || 'Voir tout'} (${channelCCs.length - CC_PAGE_SIZE} ${_t('routingSummary.more') || 'de plus'})</div>`
+      : '';
 
     return `
       <div class="rs-cc-section">
-        <h4 class="rs-cc-title">\uD83C\uDF9B ${_t('routingSummary.ccTitle') || 'Contr\u00f4leurs MIDI (CC)'}</h4>
+        <h4 class="rs-cc-title rs-cc-toggle" data-channel="${channel}" style="cursor:pointer">\uD83C\uDF9B ${_t('routingSummary.ccTitle') || 'Contr\u00f4leurs MIDI (CC)'} ${toggleIcon} <small>(${channelCCs.length})</small></h4>
         ${summaryHTML}
         <div class="rs-cc-list">
           ${rows}
+          ${showMoreHTML}
         </div>
       </div>`;
   }
@@ -3723,6 +3910,9 @@ class RoutingSummaryPage {
           polyTarget: null
         };
       }
+
+      // Invalidate memoization caches after data reload
+      this._segmentInstrumentCache = null;
 
       this.loading = false;
       this._renderContent();
