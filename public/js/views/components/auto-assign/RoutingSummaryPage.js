@@ -2324,6 +2324,17 @@ class RoutingSummaryPage {
 
     if (!target?.segments?.[segIdx]) return;
 
+    // Compute new noteRange clamped to the instrument's physical range AND channel range
+    const analysis = this.channelAnalyses[channel];
+    const chMin = analysis?.noteRange?.min ?? 0;
+    const chMax = analysis?.noteRange?.max ?? 127;
+    const instMin = inst.note_range_min ?? 0;
+    const instMax = inst.note_range_max ?? 127;
+    const newNoteRange = {
+      min: Math.max(instMin, chMin),
+      max: Math.min(instMax, chMax)
+    };
+
     // Update the segment with the new instrument
     target.segments[segIdx] = {
       ...target.segments[segIdx],
@@ -2332,7 +2343,8 @@ class RoutingSummaryPage {
       instrumentChannel: inst.channel,
       instrumentName: inst.custom_name || getGmProgramName(inst.gm_program) || inst.name,
       gmProgram: inst.gm_program,
-      fullRange: { min: inst.note_range_min ?? 0, max: inst.note_range_max ?? 127 }
+      fullRange: { min: instMin, max: instMax },
+      noteRange: newNoteRange
     };
 
     this._refreshUI(channelKeys, 'both-panels');
@@ -3751,8 +3763,8 @@ class RoutingSummaryPage {
               }
               if (matches.length > 0) {
                 evt.channel = segChannels[matches[0]];
-                // Shared overlap: duplicate to additional segments
-                if (overlapStrategy === 'shared' && matches.length > 1) {
+                // Shared/alternate/overflow overlap: duplicate to additional segments
+                if ((overlapStrategy === 'shared' || overlapStrategy === 'alternate' || overlapStrategy === 'overflow') && matches.length > 1) {
                   for (let mi = 1; mi < matches.length; mi++) {
                     dupes.push({ ...evt, channel: segChannels[matches[mi]], _absTick: tick });
                   }
@@ -3793,7 +3805,9 @@ class RoutingSummaryPage {
         }
 
         // Build configs: one per segment with its own gmProgram and range
+        // Mark all other channels as skipped so only segments are heard
         const channelConfigs = {};
+        for (let c = 0; c < 16; c++) channelConfigs[c] = { skipped: true };
         segs.forEach((seg, i) => {
           if (i >= segChannels.length) return;
           channelConfigs[segChannels[i]] = {
