@@ -3,6 +3,7 @@
 // Settings, capabilities, and routing persistence are delegated to sub-modules.
 import InstrumentSettingsDB from './InstrumentSettingsDB.js';
 import InstrumentCapabilitiesDB from './InstrumentCapabilitiesDB.js';
+import { buildDynamicUpdate } from './dbHelpers.js';
 import RoutingPersistenceDB from './RoutingPersistenceDB.js';
 import DeviceSettingsDB from './DeviceSettingsDB.js';
 
@@ -70,23 +71,12 @@ class InstrumentDatabase {
 
   updateInstrument(instrumentId, updates) {
     try {
-      const fields = [];
-      const values = [];
-
-      if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
-      if (updates.manufacturer !== undefined) { fields.push('manufacturer = ?'); values.push(updates.manufacturer); }
-      if (updates.model !== undefined) { fields.push('model = ?'); values.push(updates.model); }
-      if (updates.type !== undefined) { fields.push('type = ?'); values.push(updates.type); }
-      if (updates.midi_channel !== undefined) { fields.push('midi_channel = ?'); values.push(updates.midi_channel); }
-      if (updates.program_number !== undefined) { fields.push('program_number = ?'); values.push(updates.program_number); }
-      if (updates.bank_msb !== undefined) { fields.push('bank_msb = ?'); values.push(updates.bank_msb); }
-      if (updates.bank_lsb !== undefined) { fields.push('bank_lsb = ?'); values.push(updates.bank_lsb); }
-      if (updates.notes !== undefined) { fields.push('notes = ?'); values.push(updates.notes); }
-
-      if (fields.length === 0) return;
-
-      values.push(instrumentId);
-      this.db.prepare(`UPDATE instruments SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+      const result = buildDynamicUpdate('instruments', updates, [
+        'name', 'manufacturer', 'model', 'type', 'midi_channel',
+        'program_number', 'bank_msb', 'bank_lsb', 'notes'
+      ]);
+      if (!result) return;
+      this.db.prepare(result.sql).run(...result.values, instrumentId);
     } catch (error) {
       this.logger.error(`Failed to update instrument: ${error.message}`);
       throw error;
@@ -98,20 +88,6 @@ class InstrumentDatabase {
       this.db.prepare('DELETE FROM instruments WHERE id = ?').run(instrumentId);
     } catch (error) {
       this.logger.error(`Failed to delete instrument: ${error.message}`);
-      throw error;
-    }
-  }
-
-  searchInstruments(query) {
-    try {
-      const searchPattern = `%${query}%`;
-      return this.db.prepare(`
-        SELECT * FROM instruments
-        WHERE name LIKE ? OR manufacturer LIKE ? OR model LIKE ?
-        ORDER BY name
-      `).all(searchPattern, searchPattern, searchPattern);
-    } catch (error) {
-      this.logger.error(`Failed to search instruments: ${error.message}`);
       throw error;
     }
   }
@@ -225,14 +201,9 @@ class InstrumentDatabase {
 
   updatePreset(presetId, updates) {
     try {
-      const fields = [];
-      const values = [];
-      if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
-      if (updates.description !== undefined) { fields.push('description = ?'); values.push(updates.description); }
-      if (updates.data !== undefined) { fields.push('data = ?'); values.push(updates.data); }
-      if (fields.length === 0) return;
-      values.push(presetId);
-      this.db.prepare(`UPDATE presets SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+      const result = buildDynamicUpdate('presets', updates, ['name', 'description', 'data']);
+      if (!result) return;
+      this.db.prepare(result.sql).run(...result.values, presetId);
     } catch (error) {
       this.logger.error(`Failed to update preset: ${error.message}`);
       throw error;

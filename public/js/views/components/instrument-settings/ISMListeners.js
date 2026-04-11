@@ -205,7 +205,7 @@
                 if (isNaN(idx)) return;
                 const val = parseInt(input.value);
                 if (isNaN(val) || val < 0 || val > 127) return;
-                const NOTE_NAMES = (typeof MidiConstants !== 'undefined') ? MidiConstants.NOTE_NAMES : ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                const NOTE_NAMES = MidiConstants.NOTE_NAMES;
                 const badge = this.$(`#ismBadge${idx}`);
                 if (badge) badge.textContent = NOTE_NAMES[val % 12] + (Math.floor(val / 12) - 1);
                 if (this._neckDiagram && this._neckDiagram.tuning[idx] !== undefined) {

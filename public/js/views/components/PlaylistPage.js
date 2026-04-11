@@ -21,10 +21,7 @@ class PlaylistPage {
   }
 
   _escapeHtml(text) {
-    if (text == null) return '';
-    const div = document.createElement('div');
-    div.textContent = String(text);
-    return div.innerHTML;
+    return window.escapeHtml(text);
   }
 
   _isDark() {

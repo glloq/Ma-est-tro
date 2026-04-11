@@ -89,7 +89,7 @@ function getGmDefaultPolyphony(gmProgram) {
   return GM_DEFAULT_POLYPHONY[gmProgram] ?? 16;
 }
 
-const NOTE_NAMES = (typeof MidiConstants !== 'undefined') ? MidiConstants.NOTE_NAMES : ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const NOTE_NAMES = MidiConstants.NOTE_NAMES;
 
 function midiNoteToName(note) {
   return NOTE_NAMES[note % 12] + Math.floor(note / 12);

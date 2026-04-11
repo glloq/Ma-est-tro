@@ -14,6 +14,7 @@ import EventEmitter from 'events';
 import fs from 'fs';
 import path from 'path';
 import MidiUtils from '../utils/MidiUtils.js';
+import { SYSTEM_MESSAGE_LENGTH } from '../constants.js';
 
 // MIDI Serial constants
 const MIDI_BAUD_RATE = 31250;
@@ -30,20 +31,6 @@ const MIDI_MESSAGE_LENGTHS = {
   0xC0: 2, // Program Change
   0xD0: 2, // Channel Aftertouch
   0xE0: 3  // Pitch Bend
-};
-
-// System message lengths
-const SYSTEM_MESSAGE_LENGTHS = {
-  0xF1: 2, // MTC Quarter Frame
-  0xF2: 3, // Song Position Pointer
-  0xF3: 2, // Song Select
-  0xF6: 1, // Tune Request
-  0xF8: 1, // Timing Clock
-  0xFA: 1, // Start
-  0xFB: 1, // Continue
-  0xFC: 1, // Stop
-  0xFE: 1, // Active Sensing
-  0xFF: 1  // System Reset
 };
 
 // Status byte to easymidi type mapping
@@ -427,7 +414,7 @@ class SerialMidiManager extends EventEmitter {
     // System Common messages (F1-F6) cancel running status
     if (byte >= 0xF1 && byte <= 0xF6) {
       state.runningStatus = 0;
-      const length = SYSTEM_MESSAGE_LENGTHS[byte] || 1;
+      const length = SYSTEM_MESSAGE_LENGTH[byte] || 1;
       if (length === 1) {
         this._emitSystemCommon(portPath, byte, []);
       } else {

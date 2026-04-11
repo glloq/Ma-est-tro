@@ -1,3 +1,5 @@
+import { buildDynamicUpdate } from './dbHelpers.js';
+
 class DeviceSettingsDB {
   constructor(db, logger) {
     this.db = db;
@@ -27,29 +29,18 @@ class DeviceSettingsDB {
    * @param {Object} settings - { custom_name?, midi_clock_enabled?, message_rate_limit? }
    */
   updateDeviceSettings(deviceId, settings) {
-    const fields = [];
-    const values = [];
-
-    if (settings.custom_name !== undefined) {
-      fields.push('custom_name = ?');
-      values.push(settings.custom_name || null);
-    }
-    if (settings.midi_clock_enabled !== undefined) {
-      fields.push('midi_clock_enabled = ?');
-      values.push(settings.midi_clock_enabled ? 1 : 0);
-    }
-    if (settings.message_rate_limit !== undefined) {
-      fields.push('message_rate_limit = ?');
-      values.push(Math.max(0, parseInt(settings.message_rate_limit) || 0));
-    }
-
-    if (fields.length === 0) return;
-
-    values.push(deviceId);
-    const stmt = this.db.prepare(
-      `UPDATE devices SET ${fields.join(', ')} WHERE id = ?`
+    const result = buildDynamicUpdate('devices', settings,
+      ['custom_name', 'midi_clock_enabled', 'message_rate_limit'],
+      {
+        transforms: {
+          custom_name: v => v || null,
+          midi_clock_enabled: v => v ? 1 : 0,
+          message_rate_limit: v => Math.max(0, parseInt(v) || 0)
+        }
+      }
     );
-    stmt.run(...values);
+    if (!result) return;
+    this.db.prepare(result.sql).run(...result.values, deviceId);
   }
 
   /**

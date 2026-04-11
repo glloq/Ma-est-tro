@@ -53,47 +53,6 @@ class MidiUtils {
   }
 
   /**
-   * Convert note name to note number
-   * @param {string} name - Note name (e.g., "C4", "F#5")
-   * @returns {number} MIDI note number
-   */
-  static noteNameToNumber(name) {
-    const match = name.match(/^([A-G]#?)(-?\d+)$/);
-    if (!match) {
-      throw new Error(`Invalid note name: ${name}`);
-    }
-
-    const noteName = match[1];
-    const octave = parseInt(match[2]);
-    const noteIndex = this.NoteNames.indexOf(noteName);
-
-    if (noteIndex === -1) {
-      throw new Error(`Invalid note name: ${noteName}`);
-    }
-
-    return (octave + 1) * 12 + noteIndex;
-  }
-
-  /**
-   * Convert note number to frequency in Hz
-   * @param {number} note - MIDI note number
-   * @returns {number} Frequency in Hz
-   */
-  static noteToFrequency(note) {
-    return 440 * Math.pow(2, (note - 69) / 12);
-  }
-
-  /**
-   * Convert frequency to nearest note number
-   * @param {number} frequency - Frequency in Hz
-   * @returns {number} MIDI note number
-   */
-  static frequencyToNote(frequency) {
-    if (!frequency || frequency <= 0) return 0;
-    return Math.round(69 + 12 * Math.log2(frequency / 440));
-  }
-
-  /**
    * Check if value is valid MIDI data byte (0-127)
    * @param {number} value - Value to check
    * @returns {boolean} True if valid
@@ -121,47 +80,6 @@ class MidiUtils {
   }
 
   /**
-   * Clamp value to MIDI data byte range (0-127)
-   * @param {number} value - Value to clamp
-   * @returns {number} Clamped value
-   */
-  static clampDataByte(value) {
-    return Math.max(0, Math.min(127, Math.round(value)));
-  }
-
-  /**
-   * Clamp value to MIDI channel range (0-15)
-   * @param {number} channel - Channel to clamp
-   * @returns {number} Clamped channel
-   */
-  static clampChannel(channel) {
-    return Math.max(0, Math.min(15, Math.round(channel)));
-  }
-
-  /**
-   * Scale value from 0-127 to custom range
-   * @param {number} value - MIDI value (0-127)
-   * @param {number} min - Minimum output value
-   * @param {number} max - Maximum output value
-   * @returns {number} Scaled value
-   */
-  static scaleValue(value, min, max) {
-    return min + (value / 127) * (max - min);
-  }
-
-  /**
-   * Scale value from custom range to 0-127
-   * @param {number} value - Input value
-   * @param {number} min - Minimum input value
-   * @param {number} max - Maximum input value
-   * @returns {number} MIDI value (0-127)
-   */
-  static unscaleValue(value, min, max) {
-    const normalized = (value - min) / (max - min);
-    return this.clampDataByte(Math.round(normalized * 127));
-  }
-
-  /**
    * Decode 14-bit value from MSB and LSB
    * @param {number} msb - Most significant byte (0-127)
    * @param {number} lsb - Least significant byte (0-127)
@@ -181,26 +99,6 @@ class MidiUtils {
       msb: (value >> 7) & 0x7F,
       lsb: value & 0x7F
     };
-  }
-
-  /**
-   * Convert pitch bend value to semitones
-   * @param {number} value - Pitch bend value (-8192 to 8191)
-   * @param {number} range - Pitch bend range in semitones (default: 2)
-   * @returns {number} Pitch bend in semitones
-   */
-  static pitchBendToSemitones(value, range = 2) {
-    return (value / 8192) * range;
-  }
-
-  /**
-   * Convert semitones to pitch bend value
-   * @param {number} semitones - Pitch bend in semitones
-   * @param {number} range - Pitch bend range in semitones (default: 2)
-   * @returns {number} Pitch bend value (-8192 to 8191)
-   */
-  static semitonesToPitchBend(semitones, range = 2) {
-    return Math.round((semitones / range) * 8192);
   }
 
   /**
@@ -261,69 +159,6 @@ class MidiUtils {
     ];
 
     return instruments[program] || `Program ${program}`;
-  }
-
-  /**
-   * Create a Note On message object
-   * @param {number} channel - MIDI channel (0-15)
-   * @param {number} note - Note number (0-127)
-   * @param {number} velocity - Velocity (0-127)
-   * @returns {object} Message object
-   */
-  static createNoteOn(channel, note, velocity) {
-    return {
-      type: 'noteon',
-      channel: this.clampChannel(channel),
-      note: this.clampDataByte(note),
-      velocity: this.clampDataByte(velocity)
-    };
-  }
-
-  /**
-   * Create a Note Off message object
-   * @param {number} channel - MIDI channel (0-15)
-   * @param {number} note - Note number (0-127)
-   * @param {number} velocity - Velocity (0-127)
-   * @returns {object} Message object
-   */
-  static createNoteOff(channel, note, velocity = 0) {
-    return {
-      type: 'noteoff',
-      channel: this.clampChannel(channel),
-      note: this.clampDataByte(note),
-      velocity: this.clampDataByte(velocity)
-    };
-  }
-
-  /**
-   * Create a Control Change message object
-   * @param {number} channel - MIDI channel (0-15)
-   * @param {number} controller - Controller number (0-127)
-   * @param {number} value - Controller value (0-127)
-   * @returns {object} Message object
-   */
-  static createCC(channel, controller, value) {
-    return {
-      type: 'cc',
-      channel: this.clampChannel(channel),
-      controller: this.clampDataByte(controller),
-      value: this.clampDataByte(value)
-    };
-  }
-
-  /**
-   * Create a Program Change message object
-   * @param {number} channel - MIDI channel (0-15)
-   * @param {number} program - Program number (0-127)
-   * @returns {object} Message object
-   */
-  static createProgramChange(channel, program) {
-    return {
-      type: 'program',
-      channel: this.clampChannel(channel),
-      program: this.clampDataByte(program),
-      number: this.clampDataByte(program) // backward compat alias
-    };
   }
 
   /**
@@ -407,34 +242,6 @@ class MidiUtils {
     return this.GMCategories[Math.floor(program / 8)];
   }
 
-  /**
-   * Get all GM categories
-   * @returns {Array<string>} List of all GM categories
-   */
-  static getGMCategories() {
-    return [...this.GMCategories];
-  }
-
-  /**
-   * Get all GM instruments in a category
-   * @param {string} category - Category name
-   * @returns {Array<{program: number, name: string}>}
-   */
-  static getGMInstrumentsByCategory(category) {
-    const categoryIndex = this.GMCategories.indexOf(category);
-    if (categoryIndex === -1) return [];
-
-    const startProgram = categoryIndex * 8;
-    const instruments = [];
-    for (let i = 0; i < 8; i++) {
-      const program = startProgram + i;
-      instruments.push({
-        program,
-        name: this.getGMInstrumentName(program)
-      });
-    }
-    return instruments;
-  }
 }
 
 export default MidiUtils;

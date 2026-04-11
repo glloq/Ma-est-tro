@@ -13,12 +13,7 @@
 class LightingControlPage {
   constructor(apiClient) {
     this.apiClient = apiClient;
-    this._escapeHtml = window.escapeHtml || ((text) => {
-      if (text == null) return '';
-      const div = document.createElement('div');
-      div.textContent = String(text);
-      return div.innerHTML;
-    });
+    this._escapeHtml = window.escapeHtml;
     this.modal = null;
     this.devices = [];
     this.rules = [];

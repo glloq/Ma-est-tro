@@ -49,7 +49,7 @@ class NeckDiagramConfig {
         this.hoveredString = -1;
 
         // Note names for string labels
-        this.NOTE_NAMES = (typeof MidiConstants !== 'undefined') ? MidiConstants.NOTE_NAMES : ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        this.NOTE_NAMES = MidiConstants.NOTE_NAMES;
 
         // Colors
         this.colors = {};
