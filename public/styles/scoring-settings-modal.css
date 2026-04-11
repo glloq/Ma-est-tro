@@ -260,129 +260,112 @@
   line-height: 1.4;
 }
 
-/* ========== Drums Section: Substitution Chain Visualization ========== */
+/* ========== Drums Section: Compact Substitution Chain Visualization ========== */
 
 /* ---- Legend ---- */
 .ss-drum-legend {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
-  padding: 8px 12px;
+  margin-bottom: 10px;
+  padding: 5px 10px;
   background: var(--bg-secondary, #f9fafb);
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid var(--border-color, #e5e7eb);
 }
 
 .ss-legend-item {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 11px;
+  gap: 4px;
+  font-size: 10px;
   color: var(--text-secondary, #6b7280);
 }
 
 .ss-legend-dot {
   display: inline-block;
-  width: 12px;
-  height: 12px;
-  border-radius: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
   flex-shrink: 0;
 }
 
-/* ---- Categories list ---- */
+/* ---- Categories list (compact) ---- */
 .ss-drum-categories {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 3px;
 }
 
+/* Each category row: single-line flex layout */
 .ss-drum-cat-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 10px;
-  padding: 10px 12px;
+  border-radius: 6px;
+  padding: 4px 8px;
   transition: border-color 0.15s;
+  min-height: 28px;
 }
 
 .ss-drum-cat-row:hover {
   border-color: #cbd5e1;
 }
 
-/* ---- Category header ---- */
-.ss-drum-cat-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
+/* Icon and name inline */
 .ss-drum-cat-icon {
-  font-size: 16px;
+  font-size: 13px;
   flex-shrink: 0;
+  line-height: 1;
 }
 
 .ss-drum-cat-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary, #1f2937);
-  flex: 1;
-}
-
-.ss-drum-depth-badge {
   font-size: 11px;
   font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
+  color: var(--text-primary, #1f2937);
+  flex-shrink: 0;
+  min-width: 80px;
+  max-width: 100px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.ss-drum-depth-badge.ss-badge-exact {
-  background: rgba(16, 185, 129, 0.1);
-  color: #059669;
-}
-
-.ss-drum-depth-badge.ss-badge-sub {
-  background: rgba(245, 158, 11, 0.1);
-  color: #d97706;
-}
-
-.ss-drum-depth-badge.ss-badge-ignore {
-  background: rgba(220, 38, 38, 0.1);
-  color: #dc2626;
-}
-
-/* ---- Substitution chain visualization ---- */
+/* ---- Substitution chain visualization (compact inline) ---- */
 .ss-chain-container {
   display: flex;
   align-items: center;
-  gap: 2px;
-  flex-wrap: wrap;
-  padding: 4px 0;
+  gap: 1px;
+  flex-wrap: nowrap;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ss-chain-container::-webkit-scrollbar {
+  display: none;
 }
 
 .ss-chain-node {
   display: inline-flex;
   align-items: center;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 11px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 10px;
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.15s, opacity 0.15s, transform 0.1s, box-shadow 0.15s;
   user-select: none;
-  border: 1.5px solid transparent;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .ss-chain-node:hover {
   transform: scale(1.05);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
-
-.ss-chain-note-name {
-  white-space: nowrap;
-  max-width: 90px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Chain node level colors */
@@ -437,9 +420,10 @@
 
 /* Arrows between chain nodes */
 .ss-chain-arrow {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-muted, #9ca3af);
-  margin: 0 1px;
+  margin: 0;
+  flex-shrink: 0;
   transition: color 0.15s, opacity 0.15s;
 }
 
@@ -622,15 +606,21 @@
   }
 
   .ss-chain-container {
-    gap: 3px;
+    gap: 1px;
   }
 
   .ss-chain-node {
-    padding: 3px 6px;
+    padding: 2px 4px;
+    font-size: 9px;
+  }
+
+  .ss-drum-cat-name {
+    min-width: 60px;
+    max-width: 70px;
     font-size: 10px;
   }
 
   .ss-drum-legend {
-    gap: 8px;
+    gap: 6px;
   }
 }

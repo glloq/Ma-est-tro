@@ -405,7 +405,7 @@ class ScoringSettingsModal extends BaseModal {
       const migratedValue = ScoringSettingsModal._migrateDrumFallbackValue(rawValue, maxDepth);
       const currentDepth = migratedValue !== undefined ? migratedValue : maxDepth;
 
-      // Build the visual substitution chain
+      // Build the visual substitution chain (compact: abbreviated names)
       let chainHtml = '';
       for (let i = 0; i < cat.chain.length; i++) {
         const node = cat.chain[i];
@@ -415,11 +415,12 @@ class ScoringSettingsModal extends BaseModal {
                            i === 1 ? 'ss-chain-close' :
                            i === 2 ? 'ss-chain-similar' : 'ss-chain-distant';
         const stateClass = isAllowed ? 'ss-chain-allowed' : 'ss-chain-disabled';
+        // Short display name: first word only, or first 2 words if first is very short
+        const words = node.name.split(' ');
+        const shortName = words[0].length <= 3 && words.length > 1 ? words.slice(0, 2).join(' ') : words[0];
 
         chainHtml += `${i > 0 ? '<span class="ss-chain-arrow ' + stateClass + '">→</span>' : ''}`;
-        chainHtml += `<span class="ss-chain-node ${levelClass} ${stateClass}" data-cat="${cat.key}" data-depth="${i}" title="${node.name} (MIDI ${node.note})">
-          <span class="ss-chain-note-name">${node.name.split(' ').slice(0, 2).join(' ')}</span>
-        </span>`;
+        chainHtml += `<span class="ss-chain-node ${levelClass} ${stateClass}" data-cat="${cat.key}" data-depth="${i}" title="${node.name} (MIDI ${node.note})">${shortName}</span>`;
       }
 
       // Ignore indicator at the end
@@ -427,23 +428,11 @@ class ScoringSettingsModal extends BaseModal {
       chainHtml += `<span class="ss-chain-arrow ${isIgnored ? 'ss-chain-allowed' : 'ss-chain-disabled'}">|</span>`;
       chainHtml += `<span class="ss-chain-node ss-chain-ignore ${isIgnored ? 'ss-chain-allowed' : 'ss-chain-disabled'}" data-cat="${cat.key}" data-depth="-1" title="${this.t('scoringSettings.depthIgnoreDesc') || 'Ne pas jouer si indisponible'}">⛔</span>`;
 
-      // Depth indicator text
-      const depthLabel = currentDepth === -1
-        ? (this.t('scoringSettings.depthIgnore') || 'Ignorer')
-        : currentDepth === 0
-          ? (this.t('scoringSettings.depthExact') || 'Exact uniquement')
-          : (this.t('scoringSettings.depthUpTo') || 'Jusqu\'à') + ' ' + (cat.chain[currentDepth]?.name.split(' ').slice(0, 2).join(' ') || '');
-
       catsHtml += `
         <div class="ss-drum-cat-row" data-cat="${cat.key}">
-          <div class="ss-drum-cat-header">
-            <span class="ss-drum-cat-icon">${cat.icon}</span>
-            <span class="ss-drum-cat-name">${this.t(cat.labelKey) || cat.fallback}</span>
-            <span class="ss-drum-depth-badge" data-cat="${cat.key}">${depthLabel}</span>
-          </div>
-          <div class="ss-chain-container">
-            ${chainHtml}
-          </div>
+          <span class="ss-drum-cat-icon">${cat.icon}</span>
+          <span class="ss-drum-cat-name">${this.t(cat.labelKey) || cat.fallback}</span>
+          <div class="ss-chain-container">${chainHtml}</div>
           <input type="hidden" class="ss-drum-depth-input" data-cat="${cat.key}" value="${currentDepth}">
         </div>
       `;
@@ -454,7 +443,7 @@ class ScoringSettingsModal extends BaseModal {
       <p class="ss-section-desc">${this.t('scoringSettings.drumChainDesc') || 'Cliquez sur la chaîne de substitution pour définir la profondeur de remplacement autorisée. Les notes à gauche sont prioritaires.'}</p>
 
       <div class="ss-drum-legend">
-        <span class="ss-legend-item"><span class="ss-legend-dot ss-chain-primary ss-chain-allowed"></span> ${this.t('scoringSettings.legendPrimary') || 'Note principale'}</span>
+        <span class="ss-legend-item"><span class="ss-legend-dot ss-chain-primary ss-chain-allowed"></span> ${this.t('scoringSettings.legendPrimary') || 'Principale'}</span>
         <span class="ss-legend-item"><span class="ss-legend-dot ss-chain-close ss-chain-allowed"></span> ${this.t('scoringSettings.legendClose') || 'Proche'}</span>
         <span class="ss-legend-item"><span class="ss-legend-dot ss-chain-similar ss-chain-allowed"></span> ${this.t('scoringSettings.legendSimilar') || 'Similaire'}</span>
         <span class="ss-legend-item"><span class="ss-legend-dot ss-chain-distant ss-chain-allowed"></span> ${this.t('scoringSettings.legendDistant') || 'Éloigné'}</span>
@@ -728,24 +717,6 @@ class ScoringSettingsModal extends BaseModal {
     // Update hidden input
     const input = row.querySelector('.ss-drum-depth-input');
     if (input) input.value = depth;
-
-    // Update depth badge
-    const cat = ScoringSettingsModal.DRUM_CATEGORIES.find(c => c.key === catKey);
-    const badge = row.querySelector('.ss-drum-depth-badge');
-    if (badge && cat) {
-      if (depth === -1) {
-        badge.textContent = this.t('scoringSettings.depthIgnore') || 'Ignorer';
-        badge.className = 'ss-drum-depth-badge ss-badge-ignore';
-      } else if (depth === 0) {
-        badge.textContent = this.t('scoringSettings.depthExact') || 'Exact';
-        badge.className = 'ss-drum-depth-badge ss-badge-exact';
-      } else {
-        const chainEntry = (depth >= 0 && depth < cat.chain.length) ? cat.chain[depth] : null;
-        const nodeName = chainEntry ? chainEntry.name.split(' ').slice(0, 2).join(' ') : '';
-        badge.textContent = (this.t('scoringSettings.depthUpTo') || 'Jusqu\'à') + ' ' + nodeName;
-        badge.className = 'ss-drum-depth-badge ss-badge-sub';
-      }
-    }
   }
 
   // ============================================================================
