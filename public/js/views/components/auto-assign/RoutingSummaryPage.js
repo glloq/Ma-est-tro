@@ -98,6 +98,36 @@ function midiNoteToName(note) {
 // Module-level constants (avoid recreating per render)
 const SPLIT_COLORS = ['#4A90D9', '#E67E22', '#27AE60', '#9B59B6'];
 
+// Black key pattern within an octave (0-11): C#=1, D#=3, F#=6, G#=8, A#=10
+const BLACK_KEYS = new Set([1, 3, 6, 8, 10]);
+
+/**
+ * Render a mini piano keyboard aligned to the channel's note range.
+ * White keys are full-height, black keys are shorter and overlaid.
+ * C notes get a small label below.
+ */
+function renderMiniKeyboard(chMin, chMax) {
+  const span = chMax - chMin || 1;
+  const keyW = 100 / (span + 1); // width per note in %
+  let keysHTML = '';
+
+  for (let n = chMin; n <= chMax; n++) {
+    const semitone = n % 12;
+    const isBlack = BLACK_KEYS.has(semitone);
+    const leftPct = ((n - chMin) / (span + 1)) * 100;
+    const cls = isBlack ? 'rs-kb-key rs-kb-black' : 'rs-kb-key rs-kb-white';
+    keysHTML += `<div class="${cls}" style="left:${leftPct.toFixed(2)}%;width:${keyW.toFixed(2)}%"></div>`;
+
+    // Label on C notes (white key)
+    if (semitone === 0) {
+      const octave = Math.floor(n / 12);
+      keysHTML += `<span class="rs-kb-label" style="left:${leftPct.toFixed(2)}%">C${octave}</span>`;
+    }
+  }
+
+  return `<div class="rs-kb-keyboard">${keysHTML}</div>`;
+}
+
 /**
  * Render the channel note distribution histogram bar.
  * Used as reference scale at top of the split table.
@@ -1334,9 +1364,7 @@ class RoutingSummaryPage {
                   <div class="rs-split-table-chip-spacer"></div>
                   <div class="rs-split-table-select-spacer"></div>
                   <div class="rs-split-table-bar">
-                    <div class="rs-split-viz-labels">
-                      <span>${midiNoteToName(chMin)}</span><span>${midiNoteToName(chMax)}</span>
-                    </div>
+                    ${renderMiniKeyboard(chMin, chMax)}
                     ${renderChannelHistogram(analysis)}
                   </div>
                 </div>
