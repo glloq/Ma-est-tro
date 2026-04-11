@@ -1,4 +1,5 @@
 // src/storage/MidiDatabase.js
+import { buildDynamicUpdate } from './dbHelpers.js';
 
 // All columns except 'data' (large base64 BLOB) for listing queries
 const LIST_COLUMNS = `id, filename, size, tracks, duration, tempo, ppq, uploaded_at, folder,
@@ -129,97 +130,14 @@ class MidiDatabase {
 
   updateFile(fileId, updates) {
     try {
-      const fields = [];
-      const values = [];
-
-      if (updates.filename !== undefined) {
-        fields.push('filename = ?');
-        values.push(updates.filename);
-      }
-      if (updates.data !== undefined) {
-        fields.push('data = ?');
-        values.push(updates.data);
-      }
-      if (updates.data_blob !== undefined) {
-        fields.push('data_blob = ?');
-        values.push(updates.data_blob);
-      }
-      if (updates.size !== undefined) {
-        fields.push('size = ?');
-        values.push(updates.size);
-      }
-      if (updates.tracks !== undefined) {
-        fields.push('tracks = ?');
-        values.push(updates.tracks);
-      }
-      if (updates.duration !== undefined) {
-        fields.push('duration = ?');
-        values.push(updates.duration);
-      }
-      if (updates.tempo !== undefined) {
-        fields.push('tempo = ?');
-        values.push(updates.tempo);
-      }
-      if (updates.ppq !== undefined) {
-        fields.push('ppq = ?');
-        values.push(updates.ppq);
-      }
-      if (updates.folder !== undefined) {
-        fields.push('folder = ?');
-        values.push(updates.folder);
-      }
-      if (updates.is_original !== undefined) {
-        fields.push('is_original = ?');
-        values.push(updates.is_original);
-      }
-      if (updates.parent_file_id !== undefined) {
-        fields.push('parent_file_id = ?');
-        values.push(updates.parent_file_id);
-      }
-      if (updates.adaptation_metadata !== undefined) {
-        fields.push('adaptation_metadata = ?');
-        values.push(updates.adaptation_metadata);
-      }
-      if (updates.instrument_types !== undefined) {
-        fields.push('instrument_types = ?');
-        values.push(updates.instrument_types);
-      }
-      if (updates.channel_count !== undefined) {
-        fields.push('channel_count = ?');
-        values.push(updates.channel_count);
-      }
-      if (updates.note_range_min !== undefined) {
-        fields.push('note_range_min = ?');
-        values.push(updates.note_range_min);
-      }
-      if (updates.note_range_max !== undefined) {
-        fields.push('note_range_max = ?');
-        values.push(updates.note_range_max);
-      }
-      if (updates.has_drums !== undefined) {
-        fields.push('has_drums = ?');
-        values.push(updates.has_drums);
-      }
-      if (updates.has_melody !== undefined) {
-        fields.push('has_melody = ?');
-        values.push(updates.has_melody);
-      }
-      if (updates.has_bass !== undefined) {
-        fields.push('has_bass = ?');
-        values.push(updates.has_bass);
-      }
-
-      if (fields.length === 0) {
-        return;
-      }
-
-      values.push(fileId);
-
-      const stmt = this.db.prepare(`
-        UPDATE midi_files SET ${fields.join(', ')} WHERE id = ?
-      `);
-
-      stmt.run(...values);
+      const result = buildDynamicUpdate('midi_files', updates, [
+        'filename', 'data', 'data_blob', 'size', 'tracks', 'duration',
+        'tempo', 'ppq', 'folder', 'is_original', 'parent_file_id',
+        'adaptation_metadata', 'instrument_types', 'channel_count',
+        'note_range_min', 'note_range_max', 'has_drums', 'has_melody', 'has_bass'
+      ]);
+      if (!result) return;
+      this.db.prepare(result.sql).run(...result.values, fileId);
     } catch (error) {
       this.logger.error(`Failed to update file: ${error.message}`);
       throw error;

@@ -1,3 +1,5 @@
+import { buildDynamicUpdate } from './dbHelpers.js';
+
 class InstrumentSettingsDB {
   constructor(db, logger) {
     this.db = db;
@@ -30,60 +32,14 @@ class InstrumentSettingsDB {
 
       if (existing) {
         // Update existing entry
-        const fields = [];
-        const values = [];
+        const result = buildDynamicUpdate('instruments_latency', settings, [
+          'custom_name', 'sync_delay', 'mac_address', 'usb_serial_number',
+          'name', 'gm_program', 'octave_mode', 'comm_timeout',
+          'instrument_type', 'instrument_subtype'
+        ], { whereClause: 'device_id = ? AND channel = ?' });
 
-        if (settings.custom_name !== undefined) {
-          fields.push('custom_name = ?');
-          values.push(settings.custom_name);
-        }
-        if (settings.sync_delay !== undefined) {
-          fields.push('sync_delay = ?');
-          values.push(settings.sync_delay);
-        }
-        if (settings.mac_address !== undefined) {
-          fields.push('mac_address = ?');
-          values.push(settings.mac_address);
-        }
-        if (settings.usb_serial_number !== undefined) {
-          fields.push('usb_serial_number = ?');
-          values.push(settings.usb_serial_number);
-        }
-        if (settings.name !== undefined) {
-          fields.push('name = ?');
-          values.push(settings.name);
-        }
-        if (settings.gm_program !== undefined) {
-          fields.push('gm_program = ?');
-          values.push(settings.gm_program);
-        }
-        if (settings.octave_mode !== undefined) {
-          fields.push('octave_mode = ?');
-          values.push(settings.octave_mode);
-        }
-        if (settings.comm_timeout !== undefined) {
-          fields.push('comm_timeout = ?');
-          values.push(settings.comm_timeout);
-        }
-        if (settings.instrument_type !== undefined) {
-          fields.push('instrument_type = ?');
-          values.push(settings.instrument_type);
-        }
-        if (settings.instrument_subtype !== undefined) {
-          fields.push('instrument_subtype = ?');
-          values.push(settings.instrument_subtype);
-        }
-        if (fields.length === 0) {
-          return existing.id;
-        }
-
-        values.push(deviceId, channel);
-
-        const stmt = this.db.prepare(`
-          UPDATE instruments_latency SET ${fields.join(', ')} WHERE device_id = ? AND channel = ?
-        `);
-
-        stmt.run(...values);
+        if (!result) return existing.id;
+        this.db.prepare(result.sql).run(...result.values, deviceId, channel);
         return existing.id;
       } else {
         // Insert new entry with correct channel

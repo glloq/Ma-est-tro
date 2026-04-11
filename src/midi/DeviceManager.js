@@ -1,5 +1,6 @@
 // src/midi/DeviceManager.js
 import DeviceDiscovery from './DeviceDiscovery.js';
+import { DEVICE_STATUS } from '../constants.js';
 
 let easymidi;
 let midiAvailable = false;
@@ -17,13 +18,6 @@ try {
     Output: class { constructor() { throw new Error('MIDI not available'); } }
   };
 }
-
-// Device connection status constants
-const DEVICE_STATUS = {
-  DISCONNECTED: 0,
-  CONNECTING: 1,
-  CONNECTED: 2
-};
 
 class DeviceManager {
   constructor(app) {

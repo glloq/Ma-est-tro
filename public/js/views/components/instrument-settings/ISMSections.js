@@ -364,7 +364,7 @@
 
         const numStrings = config ? config.num_strings : 6;
         const tuning = config?.tuning || [40, 45, 50, 55, 59, 64];
-        const NOTE_NAMES = (typeof MidiConstants !== 'undefined') ? MidiConstants.NOTE_NAMES : ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const NOTE_NAMES = MidiConstants.NOTE_NAMES;
 
         // CC config values
         const ccEnabled = config ? (config.cc_enabled !== false) : true;

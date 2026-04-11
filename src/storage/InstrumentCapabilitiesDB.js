@@ -2,6 +2,8 @@
  * InstrumentCapabilitiesDB - Manages instrument capabilities data
  * Extracted from InstrumentDatabase.js
  */
+import { buildDynamicUpdate } from './dbHelpers.js';
+
 class InstrumentCapabilitiesDB {
   constructor(db, logger) {
     this.db = db;
@@ -100,54 +102,23 @@ class InstrumentCapabilitiesDB {
       }
 
       if (existing) {
-        // Update existing entry
-        const fields = [];
-        const values = [];
+        // Build update with timestamp always included
+        const capWithTimestamp = { ...capabilities, capabilities_updated_at: now };
+        const result = buildDynamicUpdate('instruments_latency', capWithTimestamp, [
+          'note_range_min', 'note_range_max', 'supported_ccs',
+          'note_selection_mode', 'selected_notes', 'polyphony',
+          'capabilities_source', 'capabilities_updated_at'
+        ], {
+          whereClause: 'device_id = ? AND channel = ?',
+          transforms: {
+            supported_ccs: () => supportedCcsJson,
+            selected_notes: () => selectedNotesJson,
+            polyphony: v => v !== null ? parseInt(v) : null
+          }
+        });
 
-        if (capabilities.note_range_min !== undefined) {
-          fields.push('note_range_min = ?');
-          values.push(capabilities.note_range_min);
-        }
-        if (capabilities.note_range_max !== undefined) {
-          fields.push('note_range_max = ?');
-          values.push(capabilities.note_range_max);
-        }
-        if (capabilities.supported_ccs !== undefined) {
-          fields.push('supported_ccs = ?');
-          values.push(supportedCcsJson);
-        }
-        if (capabilities.note_selection_mode !== undefined) {
-          fields.push('note_selection_mode = ?');
-          values.push(capabilities.note_selection_mode);
-        }
-        if (capabilities.selected_notes !== undefined) {
-          fields.push('selected_notes = ?');
-          values.push(selectedNotesJson);
-        }
-        if (capabilities.polyphony !== undefined) {
-          fields.push('polyphony = ?');
-          values.push(capabilities.polyphony !== null ? parseInt(capabilities.polyphony) : null);
-        }
-        if (capabilities.capabilities_source !== undefined) {
-          fields.push('capabilities_source = ?');
-          values.push(capabilities.capabilities_source);
-        }
-
-        // Always update timestamp
-        fields.push('capabilities_updated_at = ?');
-        values.push(now);
-
-        if (fields.length === 0) {
-          return existing.id;
-        }
-
-        values.push(deviceId, channel);
-
-        const stmt = this.db.prepare(`
-          UPDATE instruments_latency SET ${fields.join(', ')} WHERE device_id = ? AND channel = ?
-        `);
-
-        stmt.run(...values);
+        if (!result) return existing.id;
+        this.db.prepare(result.sql).run(...result.values, deviceId, channel);
         return existing.id;
       } else {
         // Insert new entry with correct channel

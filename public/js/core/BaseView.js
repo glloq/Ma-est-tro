@@ -514,16 +514,7 @@ class BaseView {
      * @returns {string} Chaîne échappée
      */
     escapeHtml(unsafe) {
-        if (typeof unsafe !== 'string') {
-            return String(unsafe);
-        }
-        
-        return unsafe
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+        return window.escapeHtml(unsafe);
     }
     
     /**

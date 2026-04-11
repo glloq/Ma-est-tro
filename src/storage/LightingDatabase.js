@@ -1,4 +1,5 @@
 // src/storage/LightingDatabase.js
+import { buildDynamicUpdate } from './dbHelpers.js';
 
 class LightingDatabase {
   constructor(db, logger) {
@@ -54,36 +55,18 @@ class LightingDatabase {
 
   updateDevice(id, updates) {
     try {
-      const fields = [];
-      const values = [];
-
-      if (updates.name !== undefined) {
-        fields.push('name = ?');
-        values.push(updates.name);
-      }
-      if (updates.type !== undefined) {
-        fields.push('type = ?');
-        values.push(updates.type);
-      }
-      if (updates.connection_config !== undefined) {
-        fields.push('connection_config = ?');
-        values.push(typeof updates.connection_config === 'string'
-          ? updates.connection_config
-          : JSON.stringify(updates.connection_config));
-      }
-      if (updates.led_count !== undefined) {
-        fields.push('led_count = ?');
-        values.push(updates.led_count);
-      }
-      if (updates.enabled !== undefined) {
-        fields.push('enabled = ?');
-        values.push(updates.enabled ? 1 : 0);
-      }
-
-      if (fields.length === 0) return;
-
-      values.push(id);
-      this.db.prepare(`UPDATE lighting_devices SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+      const jsonify = v => typeof v === 'string' ? v : JSON.stringify(v);
+      const result = buildDynamicUpdate('lighting_devices', updates,
+        ['name', 'type', 'connection_config', 'led_count', 'enabled'],
+        {
+          transforms: {
+            connection_config: jsonify,
+            enabled: v => v ? 1 : 0
+          }
+        }
+      );
+      if (!result) return;
+      this.db.prepare(result.sql).run(...result.values, id);
     } catch (error) {
       this.logger.error(`Failed to update lighting device: ${error.message}`);
       throw error;
@@ -175,46 +158,19 @@ class LightingDatabase {
 
   updateRule(id, updates) {
     try {
-      const fields = [];
-      const values = [];
-
-      if (updates.name !== undefined) {
-        fields.push('name = ?');
-        values.push(updates.name);
-      }
-      if (updates.device_id !== undefined) {
-        fields.push('device_id = ?');
-        values.push(updates.device_id);
-      }
-      if (updates.instrument_id !== undefined) {
-        fields.push('instrument_id = ?');
-        values.push(updates.instrument_id);
-      }
-      if (updates.priority !== undefined) {
-        fields.push('priority = ?');
-        values.push(updates.priority);
-      }
-      if (updates.enabled !== undefined) {
-        fields.push('enabled = ?');
-        values.push(updates.enabled ? 1 : 0);
-      }
-      if (updates.condition_config !== undefined) {
-        fields.push('condition_config = ?');
-        values.push(typeof updates.condition_config === 'string'
-          ? updates.condition_config
-          : JSON.stringify(updates.condition_config));
-      }
-      if (updates.action_config !== undefined) {
-        fields.push('action_config = ?');
-        values.push(typeof updates.action_config === 'string'
-          ? updates.action_config
-          : JSON.stringify(updates.action_config));
-      }
-
-      if (fields.length === 0) return;
-
-      values.push(id);
-      this.db.prepare(`UPDATE lighting_rules SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+      const jsonify = v => typeof v === 'string' ? v : JSON.stringify(v);
+      const result = buildDynamicUpdate('lighting_rules', updates,
+        ['name', 'device_id', 'instrument_id', 'priority', 'enabled', 'condition_config', 'action_config'],
+        {
+          transforms: {
+            enabled: v => v ? 1 : 0,
+            condition_config: jsonify,
+            action_config: jsonify
+          }
+        }
+      );
+      if (!result) return;
+      this.db.prepare(result.sql).run(...result.values, id);
     } catch (error) {
       this.logger.error(`Failed to update lighting rule: ${error.message}`);
       throw error;
