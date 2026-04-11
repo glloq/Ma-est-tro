@@ -129,13 +129,14 @@ function renderMiniKeyboard(chMin, chMax) {
 
 /**
  * Render the channel note distribution histogram bar.
- * Used as reference scale at top of the split table.
+ * @param {Object} channelAnalysis
+ * @param {number} transposition - semitones to shift display (default 0)
  */
-function renderChannelHistogram(channelAnalysis) {
+function renderChannelHistogram(channelAnalysis, transposition = 0) {
   if (!channelAnalysis?.noteRange || channelAnalysis.noteRange.min == null) return '';
-  const chMin = channelAnalysis.noteRange.min;
-  const chMax = channelAnalysis.noteRange.max;
-  const noteCount = chMax - chMin + 1; // inclusive
+  const chMin = Math.max(0, Math.min(127, channelAnalysis.noteRange.min + transposition));
+  const chMax = Math.max(0, Math.min(127, channelAnalysis.noteRange.max + transposition));
+  const noteCount = chMax - chMin + 1;
   const dist = channelAnalysis.noteDistribution;
   let histoBarsHTML = '';
   if (dist && typeof dist === 'object') {
@@ -143,7 +144,7 @@ function renderChannelHistogram(channelAnalysis) {
     if (entries.length > 0) {
       const maxCount = Math.max(...entries.map(([, c]) => c));
       histoBarsHTML = entries.map(([note, count]) => {
-        const n = parseInt(note);
+        const n = parseInt(note) + transposition;
         if (n < chMin || n > chMax) return '';
         const leftPct = ((n - chMin) / noteCount) * 100;
         const barW = Math.max(0.8, 100 / noteCount);
@@ -1238,8 +1239,11 @@ class RoutingSummaryPage {
       const activeData = this.splitAssignments[channel];
       const segments = activeData.segments || [];
       const activeMode = activeData.type;
-      const chMin = analysis?.noteRange?.min ?? 0;
-      const chMax = analysis?.noteRange?.max ?? 127;
+      // Apply transposition to channel range (shift displayed note positions)
+      const adapt = this.adaptationSettings[ch] || {};
+      const semitones = (this.autoAdaptation && adapt.pitchShift !== 'none') ? (adapt.transpositionSemitones || 0) : 0;
+      const chMin = Math.max(0, Math.min(127, (analysis?.noteRange?.min ?? 0) + semitones));
+      const chMax = Math.max(0, Math.min(127, (analysis?.noteRange?.max ?? 127) + semitones));
       const noteCount = chMax - chMin + 1; // inclusive, same base as keyboard/histogram
 
       // Build table rows: one per instrument (color+remove | select | slider)
@@ -1362,7 +1366,7 @@ class RoutingSummaryPage {
                   <div class="rs-split-table-badge-spacer"></div>
                   <div class="rs-split-table-bar">
                     ${renderMiniKeyboard(chMin, chMax)}
-                    ${renderChannelHistogram(analysis)}
+                    ${renderChannelHistogram(analysis, semitones)}
                   </div>
                 </div>
                 ${instRowsHTML}
@@ -2324,10 +2328,12 @@ class RoutingSummaryPage {
 
     if (!target?.segments?.[segIdx]) return;
 
-    // Compute new noteRange clamped to the instrument's physical range AND channel range
+    // Compute new noteRange clamped to instrument's physical range AND transposed channel range
     const analysis = this.channelAnalyses[channel];
-    const chMin = analysis?.noteRange?.min ?? 0;
-    const chMax = analysis?.noteRange?.max ?? 127;
+    const adaptSettings = this.adaptationSettings[String(channel)] || {};
+    const semi = (this.autoAdaptation && adaptSettings.pitchShift !== 'none') ? (adaptSettings.transpositionSemitones || 0) : 0;
+    const chMin = Math.max(0, (analysis?.noteRange?.min ?? 0) + semi);
+    const chMax = Math.min(127, (analysis?.noteRange?.max ?? 127) + semi);
     const instMin = inst.note_range_min ?? 0;
     const instMax = inst.note_range_max ?? 127;
     const newNoteRange = {
