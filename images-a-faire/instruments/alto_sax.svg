@@ -1,17 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- Sax alto - refait depuis zéro -->
+  <!-- GM Alto Sax -->
   <rect x="44" y="4" width="6" height="12" rx="1" fill="#1a1a1a" stroke="#111"/>
   <rect x="42" y="1" width="4" height="6" rx="1" fill="#5d4720"/>
-
-  <path d="M47 16 C48 22,53 26,58 26" fill="none" stroke="#d6b247" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M47 16 C48 22 53 26 58 26" fill="none" stroke="#d6b247" stroke-width="4.5" stroke-linecap="round"/>
   <rect x="56" y="26" width="11" height="56" rx="4" fill="#d6b247" stroke="#886a0f" stroke-width="1.5"/>
-
-  <path d="M61 82 C61 97,68 105,79 105 C88 105,92 99,92 90" fill="none" stroke="#d6b247" stroke-width="12"/>
-  <path d="M86 90 C82 82,76 73,76 67 C76 61,81 56,89 56 C98 56,103 61,103 67 C103 73,98 82,94 90 Z" fill="#d6b247" stroke="#886a0f" stroke-width="1.5"/>
-
+  <path d="M61 82 C61 97 68 105 79 105 C88 105 92 99 92 90" fill="none" stroke="#d6b247" stroke-width="12"/>
+  <path d="M86 90 C82 82 76 73 76 67 C76 61 81 56 89 56 C98 56 103 61 103 67 C103 73 98 82 94 90 Z" fill="#d6b247" stroke="#886a0f" stroke-width="1.5"/>
   <g fill="#edcf73" stroke="#886a0f" stroke-width="0.8">
-    <circle cx="54" cy="33" r="2.9"/><circle cx="54" cy="43" r="2.9"/><circle cx="54" cy="53" r="2.9"/>
-    <circle cx="54" cy="63" r="2.9"/><circle cx="54" cy="73" r="2.9"/>
+    <circle cx="54" cy="33" r="2.9"/><circle cx="54" cy="43" r="2.9"/><circle cx="54" cy="53" r="2.9"/><circle cx="54" cy="63" r="2.9"/><circle cx="54" cy="73" r="2.9"/>
     <circle cx="70" cy="38" r="2.4"/><circle cx="70" cy="50" r="2.4"/>
   </g>
 </svg>

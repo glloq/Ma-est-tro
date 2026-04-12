@@ -1,21 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- Basse électrique finger - refaite depuis zéro -->
-  <rect x="58" y="8" width="9" height="56" rx="2" fill="#8c6632" stroke="#5f4220" stroke-width="1.5"/>
-  <rect x="55" y="0" width="15" height="11" rx="3" fill="#6f4c27" stroke="#4a3218" stroke-width="1.2"/>
-  <circle cx="57" cy="3" r="1.7" fill="#d5b14d"/><circle cx="57" cy="8" r="1.7" fill="#d5b14d"/>
-  <circle cx="68" cy="3" r="1.7" fill="#d5b14d"/><circle cx="68" cy="8" r="1.7" fill="#d5b14d"/>
-
-  <path d="M62 62 C48 62,35 67,35 78 C35 85,41 89,47 88 C43 94,40 102,40 108 C40 118,49 124,60 124 C73 124,84 116,86 105 C88 96,84 88,78 84 C84 84,92 81,92 74 C92 66,78 62,62 62 Z" fill="#2d6d88" stroke="#1e4c61" stroke-width="2"/>
-  <path d="M47 88 C43 94,42 100,42 106 C42 112,47 116,54 116 H66 V94 C66 90,59 88,47 88 Z" fill="#111" opacity="0.22"/>
-
+  <!-- GM Electric Bass (finger) -->
+  <rect x="58" y="8" width="9" height="56" rx="2" fill="#8b6633" stroke="#5f421f" stroke-width="1.4"/>
+  <rect x="55" y="0" width="15" height="11" rx="3" fill="#6f4d28" stroke="#4b3319" stroke-width="1.2"/>
+  <path d="M62 62 C48 62 35 67 35 78 C35 85 41 89 47 88 C43 94 40 101 40 108 C40 118 49 124 60 124 C73 124 84 116 86 105 C88 96 84 88 78 84 C84 84 92 81 92 74 C92 66 78 62 62 62 Z" fill="#2f6e89" stroke="#1f4d62" stroke-width="2"/>
   <rect x="48" y="92" width="20" height="6" rx="2" fill="#2a2a2a"/>
   <rect x="48" y="104" width="20" height="6" rx="2" fill="#2a2a2a"/>
-  <rect x="50" y="114" width="16" height="5" rx="1" fill="#d5b14d" stroke="#8b6a10"/>
-  <circle cx="80" cy="96" r="2.5" fill="#d5b14d" stroke="#8b6a10"/>
-  <circle cx="80" cy="106" r="2.5" fill="#d5b14d" stroke="#8b6a10"/>
-
-  <line x1="60" y1="2" x2="54" y2="114" stroke="#eddcb1" stroke-width="0.6"/>
-  <line x1="62" y1="2" x2="58" y2="114" stroke="#eddcb1" stroke-width="0.7"/>
-  <line x1="64" y1="2" x2="62" y2="114" stroke="#eddcb1" stroke-width="0.85"/>
-  <line x1="66" y1="2" x2="66" y2="114" stroke="#eddcb1" stroke-width="1"/>
+  <rect x="50" y="114" width="16" height="5" rx="1" fill="#d3af4b" stroke="#876a12"/>
+  <circle cx="80" cy="96" r="2.4" fill="#d3af4b" stroke="#876a12"/>
+  <circle cx="80" cy="106" r="2.4" fill="#d3af4b" stroke="#876a12"/>
+  <line x1="60" y1="2" x2="54" y2="114" stroke="#eddcb2" stroke-width="0.6"/>
+  <line x1="62" y1="2" x2="58" y2="114" stroke="#eddcb2" stroke-width="0.7"/>
+  <line x1="64" y1="2" x2="62" y2="114" stroke="#eddcb2" stroke-width="0.85"/>
+  <line x1="66" y1="2" x2="66" y2="114" stroke="#eddcb2" stroke-width="1"/>
 </svg>

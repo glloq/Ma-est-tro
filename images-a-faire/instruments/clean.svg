@@ -1,23 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- Guitare électrique clean - refaite depuis zéro -->
+  <!-- GM Electric Guitar (clean) -->
   <rect x="57" y="8" width="10" height="46" rx="2" fill="#c79c50" stroke="#895f22" stroke-width="1.4"/>
   <rect x="54" y="0" width="16" height="10" rx="3" fill="#c79c50" stroke="#895f22" stroke-width="1.4"/>
-
-  <path d="M62 52 C56 47,46 40,39 43 C33 46,35 54,41 60 C35 69,32 80,32 93 C32 112,46 124,62 124 C78 124,94 112,94 93 C94 80,89 69,83 60 C89 54,91 46,85 43 C78 40,68 47,62 52 Z" fill="#c92f2f" stroke="#8f1f1f" stroke-width="2"/>
-
-  <path d="M42 60 C37 67,35 78,35 89 C35 101,42 110,53 113 L72 113 L72 82 C72 71,60 60,42 60 Z" fill="#f7f7f7" stroke="#dddddd" stroke-width="0.8"/>
+  <path d="M62 52 C56 47 46 40 39 43 C33 46 35 54 41 60 C35 69 32 80 32 93 C32 112 46 124 62 124 C78 124 94 112 94 93 C94 80 89 69 83 60 C89 54 91 46 85 43 C78 40 68 47 62 52 Z" fill="#c92f2f" stroke="#8f1f1f" stroke-width="2"/>
+  <path d="M42 60 C37 67 35 78 35 89 C35 101 42 110 53 113 L72 113 L72 82 C72 71 60 60 42 60 Z" fill="#f7f7f7" stroke="#dddddd" stroke-width="0.8"/>
   <rect x="48" y="76" width="22" height="3.2" rx="1.6" fill="#fff" stroke="#cfcfcf" stroke-width="0.6"/>
   <rect x="48" y="87" width="22" height="3.2" rx="1.6" fill="#fff" stroke="#cfcfcf" stroke-width="0.6"/>
   <rect x="48" y="98" width="22" height="3.2" rx="1.6" fill="#fff" stroke="#cfcfcf" stroke-width="0.6"/>
-
   <rect x="52" y="113" width="18" height="6" rx="1" fill="#d7b043" stroke="#8a6a10" stroke-width="0.8"/>
   <circle cx="82" cy="95" r="2.5" fill="#f6f6f6" stroke="#bfbfbf"/>
   <circle cx="84" cy="105" r="2.5" fill="#f6f6f6" stroke="#bfbfbf"/>
-
-  <line x1="58" y1="2" x2="55" y2="113" stroke="#ead8a3" stroke-width="0.45"/>
-  <line x1="60" y1="2" x2="58" y2="113" stroke="#ead8a3" stroke-width="0.5"/>
-  <line x1="62" y1="2" x2="61" y2="113" stroke="#ead8a3" stroke-width="0.55"/>
-  <line x1="64" y1="2" x2="64" y2="113" stroke="#ead8a3" stroke-width="0.6"/>
-  <line x1="66" y1="2" x2="67" y2="113" stroke="#ead8a3" stroke-width="0.65"/>
-  <line x1="68" y1="2" x2="70" y2="113" stroke="#ead8a3" stroke-width="0.7"/>
 </svg>

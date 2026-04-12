@@ -1,17 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- Trompette - refaite depuis zéro -->
-  <rect x="18" y="58" width="62" height="8" rx="4" fill="#d4af3f" stroke="#886a0e" stroke-width="1.5"/>
-  <rect x="12" y="59" width="6" height="6" rx="1" fill="#d4af3f" stroke="#886a0e"/>
-  <ellipse cx="11" cy="62" rx="3.2" ry="2" fill="#d4af3f" stroke="#886a0e"/>
-
-  <rect x="34" y="46" width="6" height="12" rx="1" fill="#ebcf73" stroke="#886a0e"/>
-  <rect x="44" y="46" width="6" height="12" rx="1" fill="#ebcf73" stroke="#886a0e"/>
-  <rect x="54" y="46" width="6" height="12" rx="1" fill="#ebcf73" stroke="#886a0e"/>
-
-  <rect x="38" y="66" width="3" height="11" rx="1" fill="#d4af3f"/>
-  <rect x="48" y="66" width="3" height="14" rx="1" fill="#d4af3f"/>
-  <rect x="58" y="66" width="3" height="12" rx="1" fill="#d4af3f"/>
-
-  <path d="M80 62 C90 52,102 46,112 46 L118 46 L118 78 L112 78 C102 78,90 72,80 62 Z" fill="#d4af3f" stroke="#886a0e" stroke-width="1.5"/>
-  <ellipse cx="112" cy="62" rx="8" ry="16" fill="#8b6f19" opacity="0.25"/>
+  <!-- GM Trumpet -->
+  <rect x="16" y="58" width="64" height="8" rx="4" fill="#d3ad40" stroke="#866a12" stroke-width="1.5"/>
+  <rect x="10" y="59" width="6" height="6" rx="1" fill="#d3ad40" stroke="#866a12"/>
+  <ellipse cx="9" cy="62" rx="2.8" ry="1.8" fill="#d3ad40" stroke="#866a12"/>
+  <rect x="34" y="45" width="6" height="12" rx="1" fill="#ecd178" stroke="#866a12"/>
+  <rect x="44" y="45" width="6" height="12" rx="1" fill="#ecd178" stroke="#866a12"/>
+  <rect x="54" y="45" width="6" height="12" rx="1" fill="#ecd178" stroke="#866a12"/>
+  <path d="M80 62 C92 52 104 46 116 46 L120 46 L120 78 L116 78 C104 78 92 72 80 62 Z" fill="#d3ad40" stroke="#866a12" stroke-width="1.5"/>
+  <ellipse cx="115" cy="62" rx="7" ry="15" fill="#8a6e16" opacity="0.2"/>
 </svg>

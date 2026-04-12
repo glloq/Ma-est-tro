@@ -1,19 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- Tuba - refait depuis zéro -->
-  <path d="M38 92 V34" stroke="#cfaa3b" stroke-width="10" stroke-linecap="round" fill="none"/>
-  <path d="M38 34 H78" stroke="#cfaa3b" stroke-width="10" stroke-linecap="round" fill="none"/>
-  <path d="M78 34 V72" stroke="#cfaa3b" stroke-width="10" stroke-linecap="round" fill="none"/>
-  <path d="M78 72 H52" stroke="#cfaa3b" stroke-width="10" stroke-linecap="round" fill="none"/>
-  <path d="M52 72 V46" stroke="#cfaa3b" stroke-width="10" stroke-linecap="round" fill="none"/>
-  <path d="M52 46 H92" stroke="#cfaa3b" stroke-width="10" stroke-linecap="round" fill="none"/>
-
-  <rect x="30" y="26" width="6" height="10" rx="1" fill="#dfc170" stroke="#8b6f19"/>
-  <ellipse cx="33" cy="24" rx="5" ry="2.6" fill="#dfc170" stroke="#8b6f19"/>
-
-  <rect x="57" y="50" width="6" height="12" rx="1" fill="#efd57c" stroke="#8b6f19"/>
-  <rect x="66" y="50" width="6" height="12" rx="1" fill="#efd57c" stroke="#8b6f19"/>
-  <rect x="75" y="50" width="6" height="12" rx="1" fill="#efd57c" stroke="#8b6f19"/>
-
-  <path d="M92 46 C106 58,114 74,114 88 C114 103,103 112,89 112 C75 112,64 103,64 88 C64 74,76 58,92 46 Z" fill="#d8b44d" stroke="#8b6f19" stroke-width="2"/>
-  <ellipse cx="90" cy="90" rx="17" ry="10" fill="#8b6f19" opacity="0.25"/>
+  <!-- GM Tuba -->
+  <g fill="none" stroke="#c9a236" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M38 92 V34 H76 V70 H54 V46 H90"/>
+  </g>
+  <rect x="31" y="24" width="5" height="10" rx="1" fill="#d8bb69" stroke="#866912"/>
+  <ellipse cx="33.5" cy="22" rx="4.5" ry="2.2" fill="#d8bb69" stroke="#866912"/>
+  <rect x="58" y="49" width="6" height="11" rx="1" fill="#ecd177" stroke="#866912"/>
+  <rect x="67" y="49" width="6" height="11" rx="1" fill="#ecd177" stroke="#866912"/>
+  <rect x="76" y="49" width="6" height="11" rx="1" fill="#ecd177" stroke="#866912"/>
+  <path d="M90 46 C106 56 114 72 114 88 C114 102 104 112 90 112 C76 112 66 102 66 88 C66 72 76 56 90 46 Z" fill="#d8b44d" stroke="#866912" stroke-width="2"/>
 </svg>

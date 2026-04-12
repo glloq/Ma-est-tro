@@ -1,31 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- Accordéon - refait depuis zéro -->
-  <rect x="10" y="24" width="28" height="80" rx="5" fill="#b32121" stroke="#741414" stroke-width="2"/>
-  <rect x="90" y="24" width="28" height="80" rx="5" fill="#b32121" stroke="#741414" stroke-width="2"/>
-
-  <rect x="38" y="24" width="52" height="80" fill="#222" stroke="#4b4b4b" stroke-width="1.8"/>
-  <g stroke="#666" stroke-width="1.2">
-    <line x1="40" y1="28" x2="88" y2="28"/><line x1="40" y1="36" x2="88" y2="36"/>
-    <line x1="40" y1="44" x2="88" y2="44"/><line x1="40" y1="52" x2="88" y2="52"/>
-    <line x1="40" y1="60" x2="88" y2="60"/><line x1="40" y1="68" x2="88" y2="68"/>
-    <line x1="40" y1="76" x2="88" y2="76"/><line x1="40" y1="84" x2="88" y2="84"/>
-    <line x1="40" y1="92" x2="88" y2="92"/><line x1="40" y1="100" x2="88" y2="100"/>
+  <!-- GM Accordion -->
+  <rect x="10" y="24" width="26" height="80" rx="5" fill="#b82b2b" stroke="#741919" stroke-width="2"/>
+  <rect x="92" y="24" width="26" height="80" rx="5" fill="#b82b2b" stroke="#741919" stroke-width="2"/>
+  <rect x="36" y="24" width="56" height="80" fill="#212121" stroke="#4a4a4a" stroke-width="1.6"/>
+  <g stroke="#666" stroke-width="1.1">
+    <line x1="38" y1="28" x2="90" y2="28"/><line x1="38" y1="36" x2="90" y2="36"/><line x1="38" y1="44" x2="90" y2="44"/>
+    <line x1="38" y1="52" x2="90" y2="52"/><line x1="38" y1="60" x2="90" y2="60"/><line x1="38" y1="68" x2="90" y2="68"/>
+    <line x1="38" y1="76" x2="90" y2="76"/><line x1="38" y1="84" x2="90" y2="84"/><line x1="38" y1="92" x2="90" y2="92"/>
+    <line x1="38" y1="100" x2="90" y2="100"/>
   </g>
-
-  <g fill="#efefef" stroke="#c7c7c7" stroke-width="0.5">
-    <circle cx="19" cy="38" r="2.5"/><circle cx="29" cy="38" r="2.5"/>
-    <circle cx="19" cy="50" r="2.5"/><circle cx="29" cy="50" r="2.5"/>
-    <circle cx="19" cy="62" r="2.5"/><circle cx="29" cy="62" r="2.5"/>
-    <circle cx="19" cy="74" r="2.5"/><circle cx="29" cy="74" r="2.5"/>
-    <circle cx="19" cy="86" r="2.5"/><circle cx="29" cy="86" r="2.5"/>
+  <g fill="#f0f0f0" stroke="#c8c8c8" stroke-width="0.5">
+    <circle cx="18" cy="38" r="2.4"/><circle cx="28" cy="38" r="2.4"/><circle cx="18" cy="50" r="2.4"/><circle cx="28" cy="50" r="2.4"/>
+    <circle cx="18" cy="62" r="2.4"/><circle cx="28" cy="62" r="2.4"/><circle cx="18" cy="74" r="2.4"/><circle cx="28" cy="74" r="2.4"/>
+    <circle cx="18" cy="86" r="2.4"/><circle cx="28" cy="86" r="2.4"/>
   </g>
-
-  <g>
-    <rect x="95" y="32" width="7" height="9" fill="#f6f6f6" stroke="#bdbdbd" stroke-width="0.5"/>
-    <rect x="103" y="32" width="7" height="9" fill="#f6f6f6" stroke="#bdbdbd" stroke-width="0.5"/>
-    <rect x="95" y="43" width="7" height="9" fill="#f6f6f6" stroke="#bdbdbd" stroke-width="0.5"/>
-    <rect x="103" y="43" width="7" height="9" fill="#f6f6f6" stroke="#bdbdbd" stroke-width="0.5"/>
-    <rect x="96" y="36" width="4" height="4" fill="#111"/>
-    <rect x="104" y="47" width="4" height="4" fill="#111"/>
-  </g>
+  <rect x="98" y="32" width="7" height="9" fill="#f8f8f8" stroke="#bcbcbc" stroke-width="0.5"/>
+  <rect x="106" y="32" width="7" height="9" fill="#f8f8f8" stroke="#bcbcbc" stroke-width="0.5"/>
+  <rect x="98" y="43" width="7" height="9" fill="#f8f8f8" stroke="#bcbcbc" stroke-width="0.5"/>
+  <rect x="106" y="43" width="7" height="9" fill="#f8f8f8" stroke="#bcbcbc" stroke-width="0.5"/>
 </svg>
