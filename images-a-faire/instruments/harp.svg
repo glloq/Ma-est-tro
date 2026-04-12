@@ -1,12 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- GM Harp: simple, recognizable silhouette -->
-  <path d="M30 112 C30 72 34 36 42 14" fill="none" stroke="#6e4a22" stroke-width="8" stroke-linecap="round"/>
-  <path d="M42 14 C58 4 84 4 96 18" fill="none" stroke="#6e4a22" stroke-width="7" stroke-linecap="round"/>
-  <path d="M96 18 C95 44 89 72 78 94 C66 116 49 121 34 116" fill="#cf914f" stroke="#6e4a22" stroke-width="2"/>
-  <g stroke="#f0ddb0" stroke-width="1" opacity="0.9">
-    <line x1="50" y1="11" x2="38" y2="112"/><line x1="58" y1="9" x2="44" y2="110"/>
-    <line x1="66" y1="8" x2="50" y2="104"/><line x1="74" y1="8" x2="57" y2="95"/>
-    <line x1="82" y1="10" x2="65" y2="82"/><line x1="90" y1="14" x2="74" y2="64"/>
+  <defs>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d8a15a"/>
+      <stop offset="1" stop-color="#bb7d3f"/>
+    </linearGradient>
+  </defs>
+  <path d="M34 112 C34 70,38 34,46 16" fill="none" stroke="#6d4520" stroke-width="8" stroke-linecap="round"/>
+  <path d="M46 16 C60 6,82 7,94 20" fill="none" stroke="#6d4520" stroke-width="7" stroke-linecap="round"/>
+  <path d="M94 20 C93 45,87 74,76 94 C64 115,49 121,36 116" fill="url(#wood)" stroke="#6d4520" stroke-width="2.2"/>
+  <g stroke="#f6e8c2" stroke-linecap="round" opacity="0.95">
+    <line x1="52" y1="13" x2="39" y2="112" stroke-width="0.9"/>
+    <line x1="59" y1="11" x2="45" y2="110" stroke-width="0.9"/>
+    <line x1="66" y1="10" x2="51" y2="105" stroke-width="1"/>
+    <line x1="73" y1="10" x2="58" y2="96" stroke-width="1"/>
+    <line x1="80" y1="12" x2="66" y2="84" stroke-width="1.1"/>
+    <line x1="87" y1="15" x2="74" y2="66" stroke-width="1.2"/>
   </g>
-  <rect x="20" y="113" width="20" height="8" rx="2" fill="#4b3317"/>
+  <rect x="20" y="112" width="21" height="8" rx="2" fill="#4b3014"/>
 </svg>

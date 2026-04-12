@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- GM French Horn -->
-  <circle cx="56" cy="64" r="30" fill="none" stroke="#d0aa3a" stroke-width="8"/>
-  <circle cx="56" cy="64" r="18" fill="none" stroke="#d0aa3a" stroke-width="5"/>
-  <path d="M18 48 H31 C36 48 40 53 40 58" fill="none" stroke="#d0aa3a" stroke-width="6" stroke-linecap="round"/>
-  <ellipse cx="16" cy="48" rx="3" ry="2" fill="#d0aa3a" stroke="#876a12"/>
-  <rect x="42" y="44" width="5" height="10" rx="1" fill="#eacb71" stroke="#876a12"/>
-  <rect x="51" y="40" width="5" height="10" rx="1" fill="#eacb71" stroke="#876a12"/>
-  <rect x="60" y="44" width="5" height="10" rx="1" fill="#eacb71" stroke="#876a12"/>
-  <path d="M88 74 C98 84 106 96 108 106 C110 116 101 121 92 117 C83 113 78 107 80 99 C82 90 86 80 88 74 Z" fill="#d0aa3a" stroke="#876a12" stroke-width="1.6"/>
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e2c86f"/><stop offset="1" stop-color="#c89931"/></linearGradient></defs>
+  <circle cx="56" cy="64" r="30" fill="none" stroke="url(#g)" stroke-width="8"/>
+  <circle cx="56" cy="64" r="18" fill="none" stroke="url(#g)" stroke-width="5"/>
+  <path d="M18 48 H31 C36 48,40 53,40 58" fill="none" stroke="url(#g)" stroke-width="6" stroke-linecap="round"/>
+  <ellipse cx="16" cy="48" rx="3" ry="2" fill="url(#g)" stroke="#86690f"/>
+  <rect x="42" y="44" width="5" height="10" rx="1" fill="#f0dc8c" stroke="#86690f"/>
+  <rect x="51" y="40" width="5" height="10" rx="1" fill="#f0dc8c" stroke="#86690f"/>
+  <rect x="60" y="44" width="5" height="10" rx="1" fill="#f0dc8c" stroke="#86690f"/>
+  <path d="M88 74 C98 84,106 96,108 106 C110 116,101 121,92 117 C83 113,78 107,80 99 C82 90,86 80,88 74 Z" fill="url(#g)" stroke="#86690f" stroke-width="1.6"/>
 </svg>

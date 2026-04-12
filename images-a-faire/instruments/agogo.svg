@@ -1,9 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- GM Agogo -->
-  <path d="M44 30 C44 48 62 50 62 34 C62 50 84 52 86 66" fill="none" stroke="#8c8c8c" stroke-width="4" stroke-linecap="round"/>
-  <path d="M34 30 L31 58 C31 67 40 72 51 72 C62 72 66 67 64 58 L53 30 Z" fill="#9a9a9a" stroke="#686868" stroke-width="2"/>
+  <path d="M44 30 C44 48,62 50,62 34 C62 50,84 52,86 66" fill="none" stroke="#8d8d8d" stroke-width="4" stroke-linecap="round"/>
+  <path d="M34 30 L31 58 C31 67,40 72,51 72 C62 72,66 67,64 58 L53 30 Z" fill="#9b9b9b" stroke="#686868" stroke-width="2"/>
   <ellipse cx="49" cy="70" rx="10" ry="4" fill="#7d7d7d" stroke="#686868"/>
-  <path d="M74 54 L69 90 C69 101 80 108 94 108 C108 108 116 101 114 90 L99 54 Z" fill="#9a9a9a" stroke="#686868" stroke-width="2"/>
+  <path d="M74 54 L69 90 C69 101,80 108,94 108 C108 108,116 101,114 90 L99 54 Z" fill="#9b9b9b" stroke="#686868" stroke-width="2"/>
   <ellipse cx="92" cy="106" rx="14" ry="5" fill="#7d7d7d" stroke="#686868"/>
   <line x1="16" y1="14" x2="43" y2="46" stroke="#8b6914" stroke-width="3" stroke-linecap="round"/>
   <circle cx="43" cy="46" r="3.2" fill="#8b6914"/>

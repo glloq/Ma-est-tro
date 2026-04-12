@@ -1,15 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- GM Electric Bass (finger) -->
-  <rect x="58" y="8" width="9" height="56" rx="2" fill="#8b6633" stroke="#5f421f" stroke-width="1.4"/>
-  <rect x="55" y="0" width="15" height="11" rx="3" fill="#6f4d28" stroke="#4b3319" stroke-width="1.2"/>
-  <path d="M62 62 C48 62 35 67 35 78 C35 85 41 89 47 88 C43 94 40 101 40 108 C40 118 49 124 60 124 C73 124 84 116 86 105 C88 96 84 88 78 84 C84 84 92 81 92 74 C92 66 78 62 62 62 Z" fill="#2f6e89" stroke="#1f4d62" stroke-width="2"/>
-  <rect x="48" y="92" width="20" height="6" rx="2" fill="#2a2a2a"/>
-  <rect x="48" y="104" width="20" height="6" rx="2" fill="#2a2a2a"/>
-  <rect x="50" y="114" width="16" height="5" rx="1" fill="#d3af4b" stroke="#876a12"/>
-  <circle cx="80" cy="96" r="2.4" fill="#d3af4b" stroke="#876a12"/>
-  <circle cx="80" cy="106" r="2.4" fill="#d3af4b" stroke="#876a12"/>
-  <line x1="60" y1="2" x2="54" y2="114" stroke="#eddcb2" stroke-width="0.6"/>
-  <line x1="62" y1="2" x2="58" y2="114" stroke="#eddcb2" stroke-width="0.7"/>
-  <line x1="64" y1="2" x2="62" y2="114" stroke="#eddcb2" stroke-width="0.85"/>
-  <line x1="66" y1="2" x2="66" y2="114" stroke="#eddcb2" stroke-width="1"/>
+  <rect x="58" y="8" width="9" height="56" rx="2" fill="#8a6532" stroke="#5e411e" stroke-width="1.4"/>
+  <rect x="55" y="0" width="15" height="11" rx="3" fill="#6e4b27" stroke="#4b3218" stroke-width="1.2"/>
+  <path d="M62 62 C48 62,35 67,35 78 C35 85,41 89,47 88 C43 94,40 101,40 108 C40 118,49 124,60 124 C73 124,84 116,86 105 C88 96,84 88,78 84 C84 84,92 81,92 74 C92 66,78 62,62 62 Z" fill="#2f6f8a" stroke="#1f4d62" stroke-width="2"/>
+  <rect x="48" y="92" width="20" height="6" rx="2" fill="#2b2b2b"/>
+  <rect x="48" y="104" width="20" height="6" rx="2" fill="#2b2b2b"/>
+  <rect x="50" y="114" width="16" height="5" rx="1" fill="#d5b04c" stroke="#86690f"/>
+  <circle cx="80" cy="96" r="2.4" fill="#d5b04c" stroke="#86690f"/>
+  <circle cx="80" cy="106" r="2.4" fill="#d5b04c" stroke="#86690f"/>
+  <line x1="60" y1="2" x2="54" y2="114" stroke="#f0deb4" stroke-width="0.6"/>
+  <line x1="62" y1="2" x2="58" y2="114" stroke="#f0deb4" stroke-width="0.7"/>
+  <line x1="64" y1="2" x2="62" y2="114" stroke="#f0deb4" stroke-width="0.85"/>
+  <line x1="66" y1="2" x2="66" y2="114" stroke="#f0deb4" stroke-width="1"/>
 </svg>

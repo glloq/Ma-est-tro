@@ -1,21 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- GM Accordion -->
-  <rect x="10" y="24" width="26" height="80" rx="5" fill="#b82b2b" stroke="#741919" stroke-width="2"/>
-  <rect x="92" y="24" width="26" height="80" rx="5" fill="#b82b2b" stroke="#741919" stroke-width="2"/>
-  <rect x="36" y="24" width="56" height="80" fill="#212121" stroke="#4a4a4a" stroke-width="1.6"/>
+  <rect x="10" y="24" width="26" height="80" rx="5" fill="#bf2f2f" stroke="#771919" stroke-width="2"/>
+  <rect x="92" y="24" width="26" height="80" rx="5" fill="#bf2f2f" stroke="#771919" stroke-width="2"/>
+  <rect x="36" y="24" width="56" height="80" fill="#1f1f1f" stroke="#4e4e4e" stroke-width="1.6"/>
   <g stroke="#666" stroke-width="1.1">
     <line x1="38" y1="28" x2="90" y2="28"/><line x1="38" y1="36" x2="90" y2="36"/><line x1="38" y1="44" x2="90" y2="44"/>
     <line x1="38" y1="52" x2="90" y2="52"/><line x1="38" y1="60" x2="90" y2="60"/><line x1="38" y1="68" x2="90" y2="68"/>
-    <line x1="38" y1="76" x2="90" y2="76"/><line x1="38" y1="84" x2="90" y2="84"/><line x1="38" y1="92" x2="90" y2="92"/>
-    <line x1="38" y1="100" x2="90" y2="100"/>
+    <line x1="38" y1="76" x2="90" y2="76"/><line x1="38" y1="84" x2="90" y2="84"/><line x1="38" y1="92" x2="90" y2="92"/><line x1="38" y1="100" x2="90" y2="100"/>
   </g>
-  <g fill="#f0f0f0" stroke="#c8c8c8" stroke-width="0.5">
+  <g fill="#f2f2f2" stroke="#cacaca" stroke-width="0.5">
     <circle cx="18" cy="38" r="2.4"/><circle cx="28" cy="38" r="2.4"/><circle cx="18" cy="50" r="2.4"/><circle cx="28" cy="50" r="2.4"/>
     <circle cx="18" cy="62" r="2.4"/><circle cx="28" cy="62" r="2.4"/><circle cx="18" cy="74" r="2.4"/><circle cx="28" cy="74" r="2.4"/>
     <circle cx="18" cy="86" r="2.4"/><circle cx="28" cy="86" r="2.4"/>
   </g>
-  <rect x="98" y="32" width="7" height="9" fill="#f8f8f8" stroke="#bcbcbc" stroke-width="0.5"/>
-  <rect x="106" y="32" width="7" height="9" fill="#f8f8f8" stroke="#bcbcbc" stroke-width="0.5"/>
-  <rect x="98" y="43" width="7" height="9" fill="#f8f8f8" stroke="#bcbcbc" stroke-width="0.5"/>
-  <rect x="106" y="43" width="7" height="9" fill="#f8f8f8" stroke="#bcbcbc" stroke-width="0.5"/>
+  <rect x="98" y="32" width="7" height="9" fill="#fafafa" stroke="#bebebe" stroke-width="0.5"/>
+  <rect x="106" y="32" width="7" height="9" fill="#fafafa" stroke="#bebebe" stroke-width="0.5"/>
+  <rect x="98" y="43" width="7" height="9" fill="#fafafa" stroke="#bebebe" stroke-width="0.5"/>
+  <rect x="106" y="43" width="7" height="9" fill="#fafafa" stroke="#bebebe" stroke-width="0.5"/>
 </svg>
