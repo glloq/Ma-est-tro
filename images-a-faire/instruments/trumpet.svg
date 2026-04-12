@@ -1,17 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- Trompette -->
-  <g transform="rotate(45,64,64)">
-    <rect x="60" y="16" width="8" height="52" rx="4" fill="#D7B043" stroke="#8A6B10" stroke-width="1.5"/>
-    <rect x="52" y="28" width="4" height="24" rx="2" fill="#D7B043" stroke="#8A6B10"/>
-    <rect x="72" y="28" width="4" height="24" rx="2" fill="#D7B043" stroke="#8A6B10"/>
+  <!-- Trompette - refaite depuis zéro -->
+  <rect x="18" y="58" width="62" height="8" rx="4" fill="#d4af3f" stroke="#886a0e" stroke-width="1.5"/>
+  <rect x="12" y="59" width="6" height="6" rx="1" fill="#d4af3f" stroke="#886a0e"/>
+  <ellipse cx="11" cy="62" rx="3.2" ry="2" fill="#d4af3f" stroke="#886a0e"/>
 
-    <rect x="56" y="30" width="4" height="9" rx="1" fill="#ECD27A" stroke="#8A6B10"/>
-    <rect x="62" y="30" width="4" height="9" rx="1" fill="#ECD27A" stroke="#8A6B10"/>
-    <rect x="68" y="30" width="4" height="9" rx="1" fill="#ECD27A" stroke="#8A6B10"/>
+  <rect x="34" y="46" width="6" height="12" rx="1" fill="#ebcf73" stroke="#886a0e"/>
+  <rect x="44" y="46" width="6" height="12" rx="1" fill="#ebcf73" stroke="#886a0e"/>
+  <rect x="54" y="46" width="6" height="12" rx="1" fill="#ebcf73" stroke="#886a0e"/>
 
-    <rect x="62" y="9" width="4" height="7" rx="1" fill="#D7B043" stroke="#8A6B10"/>
-    <ellipse cx="64" cy="8" rx="4" ry="2" fill="#D7B043" stroke="#8A6B10"/>
+  <rect x="38" y="66" width="3" height="11" rx="1" fill="#d4af3f"/>
+  <rect x="48" y="66" width="3" height="14" rx="1" fill="#d4af3f"/>
+  <rect x="58" y="66" width="3" height="12" rx="1" fill="#d4af3f"/>
 
-    <path d="M60 68 C53 77,45 90,43 98 C41 108,52 113,64 113 C76 113,87 108,85 98 C83 90,75 77,68 68 Z" fill="#D7B043" stroke="#8A6B10" stroke-width="1.6"/>
-  </g>
+  <path d="M80 62 C90 52,102 46,112 46 L118 46 L118 78 L112 78 C102 78,90 72,80 62 Z" fill="#d4af3f" stroke="#886a0e" stroke-width="1.5"/>
+  <ellipse cx="112" cy="62" rx="8" ry="16" fill="#8b6f19" opacity="0.25"/>
 </svg>

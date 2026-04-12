@@ -1,24 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- Basse électrique (finger) -->
-  <g transform="rotate(45,64,64)">
-    <rect x="60" y="7" width="8" height="52" rx="2" fill="#8A6330" stroke="#5D411D" stroke-width="1.4"/>
-    <rect x="57" y="0" width="14" height="10" rx="3" fill="#6B4A24" stroke="#4A3219" stroke-width="1.2"/>
-    <circle cx="59" cy="2.5" r="1.5" fill="#D5B24F"/><circle cx="59" cy="7" r="1.5" fill="#D5B24F"/>
-    <circle cx="69" cy="2.5" r="1.5" fill="#D5B24F"/><circle cx="69" cy="7" r="1.5" fill="#D5B24F"/>
+  <!-- Basse électrique finger - refaite depuis zéro -->
+  <rect x="58" y="8" width="9" height="56" rx="2" fill="#8c6632" stroke="#5f4220" stroke-width="1.5"/>
+  <rect x="55" y="0" width="15" height="11" rx="3" fill="#6f4c27" stroke="#4a3218" stroke-width="1.2"/>
+  <circle cx="57" cy="3" r="1.7" fill="#d5b14d"/><circle cx="57" cy="8" r="1.7" fill="#d5b14d"/>
+  <circle cx="68" cy="3" r="1.7" fill="#d5b14d"/><circle cx="68" cy="8" r="1.7" fill="#d5b14d"/>
 
-    <path d="M64 56 C53 56,42 60,41 68 C40 74,46 77,52 75 C47 82,40 91,40 102 C40 114,50 122,61 122 C74 122,85 115,87 103 C89 92,84 82,78 75 C84 76,89 73,88 67 C86 59,74 56,64 56 Z" fill="#2F6A84" stroke="#1E4D61" stroke-width="2"/>
-    <path d="M50 75 C46 81,43 87,43 95 C43 103,49 108,56 108 L67 108 L67 89 C67 81,60 76,50 75 Z" fill="#111" opacity="0.22"/>
+  <path d="M62 62 C48 62,35 67,35 78 C35 85,41 89,47 88 C43 94,40 102,40 108 C40 118,49 124,60 124 C73 124,84 116,86 105 C88 96,84 88,78 84 C84 84,92 81,92 74 C92 66,78 62,62 62 Z" fill="#2d6d88" stroke="#1e4c61" stroke-width="2"/>
+  <path d="M47 88 C43 94,42 100,42 106 C42 112,47 116,54 116 H66 V94 C66 90,59 88,47 88 Z" fill="#111" opacity="0.22"/>
 
-    <rect x="47" y="86" width="18" height="5" rx="2" fill="#2C2C2C"/>
-    <rect x="47" y="97" width="18" height="5" rx="2" fill="#2C2C2C"/>
-    <rect x="49" y="109" width="15" height="4" rx="1" fill="#D5B24F" stroke="#8A6A10"/>
+  <rect x="48" y="92" width="20" height="6" rx="2" fill="#2a2a2a"/>
+  <rect x="48" y="104" width="20" height="6" rx="2" fill="#2a2a2a"/>
+  <rect x="50" y="114" width="16" height="5" rx="1" fill="#d5b14d" stroke="#8b6a10"/>
+  <circle cx="80" cy="96" r="2.5" fill="#d5b14d" stroke="#8b6a10"/>
+  <circle cx="80" cy="106" r="2.5" fill="#d5b14d" stroke="#8b6a10"/>
 
-    <circle cx="78" cy="95" r="2.3" fill="#D5B24F" stroke="#8A6A10"/>
-    <circle cx="78" cy="104" r="2.3" fill="#D5B24F" stroke="#8A6A10"/>
-
-    <line x1="61" y1="1" x2="53" y2="109" stroke="#EBDCB0" stroke-width="0.55"/>
-    <line x1="63" y1="1" x2="56" y2="109" stroke="#EBDCB0" stroke-width="0.65"/>
-    <line x1="65" y1="1" x2="59" y2="109" stroke="#EBDCB0" stroke-width="0.8"/>
-    <line x1="67" y1="1" x2="62" y2="109" stroke="#EBDCB0" stroke-width="1"/>
-  </g>
+  <line x1="60" y1="2" x2="54" y2="114" stroke="#eddcb1" stroke-width="0.6"/>
+  <line x1="62" y1="2" x2="58" y2="114" stroke="#eddcb1" stroke-width="0.7"/>
+  <line x1="64" y1="2" x2="62" y2="114" stroke="#eddcb1" stroke-width="0.85"/>
+  <line x1="66" y1="2" x2="66" y2="114" stroke="#eddcb1" stroke-width="1"/>
 </svg>

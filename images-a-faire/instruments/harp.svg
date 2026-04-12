@@ -1,31 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- Harpe de concert -->
-  <g transform="rotate(45, 64, 64)">
-    <path d="M34 110 C34 58, 36 28, 40 12" fill="none" stroke="#6D4B1F" stroke-width="7" stroke-linecap="round"/>
-    <path d="M40 12 C54 0, 78 0, 90 10" fill="none" stroke="#6D4B1F" stroke-width="6" stroke-linecap="round"/>
-    <path d="M90 10 C93 34, 89 58, 80 82 C73 100, 58 114, 40 114" fill="#C98A47" stroke="#6D4B1F" stroke-width="2"/>
-    <path d="M89 12 C89 34, 85 55, 78 77 C71 97, 59 109, 44 112" fill="none" stroke="#8B5A2B" stroke-width="2"/>
+  <!-- Harpe - refaite depuis zéro -->
+  <path d="M30 116 C30 72,34 36,42 14" fill="none" stroke="#5c3b16" stroke-width="8" stroke-linecap="round"/>
+  <path d="M42 14 C58 2,84 2,98 16" fill="none" stroke="#5c3b16" stroke-width="7" stroke-linecap="round"/>
+  <path d="M98 16 C98 44,90 74,78 96 C66 116,50 122,34 118" fill="#d0914f" stroke="#70461b" stroke-width="2"/>
+  <path d="M96 18 C96 42,89 70,78 90 C66 109,52 115,40 116" fill="none" stroke="#8e5a2c" stroke-width="2"/>
 
-    <g stroke="#EAD7A2" stroke-linecap="round" opacity="0.8">
-      <line x1="46" y1="10" x2="39" y2="111" stroke-width="0.7"/>
-      <line x1="53" y1="8" x2="43" y2="108" stroke-width="0.7"/>
-      <line x1="60" y1="7" x2="48" y2="103" stroke-width="0.8"/>
-      <line x1="67" y1="7" x2="54" y2="96" stroke-width="0.9"/>
-      <line x1="74" y1="8" x2="60" y2="87" stroke-width="1"/>
-      <line x1="81" y1="10" x2="67" y2="76" stroke-width="1"/>
-      <line x1="87" y1="13" x2="74" y2="62" stroke-width="1.1"/>
-    </g>
-
-    <g fill="#D8B35A" stroke="#7A5A24" stroke-width="0.6">
-      <circle cx="47" cy="9" r="1.4"/>
-      <circle cx="54" cy="8" r="1.4"/>
-      <circle cx="61" cy="7" r="1.4"/>
-      <circle cx="68" cy="7" r="1.4"/>
-      <circle cx="75" cy="8" r="1.4"/>
-      <circle cx="82" cy="10" r="1.4"/>
-      <circle cx="88" cy="13" r="1.4"/>
-    </g>
-
-    <rect x="26" y="110" width="18" height="7" rx="2" fill="#4E3718"/>
+  <g stroke="#ecd7a4" stroke-linecap="round" opacity="0.9">
+    <line x1="50" y1="10" x2="37" y2="114" stroke-width="0.8"/>
+    <line x1="57" y1="8" x2="42" y2="112" stroke-width="0.8"/>
+    <line x1="64" y1="7" x2="48" y2="108" stroke-width="0.9"/>
+    <line x1="71" y1="7" x2="54" y2="100" stroke-width="1"/>
+    <line x1="78" y1="8" x2="60" y2="90" stroke-width="1"/>
+    <line x1="85" y1="10" x2="67" y2="76" stroke-width="1.1"/>
+    <line x1="92" y1="14" x2="75" y2="58" stroke-width="1.2"/>
   </g>
+
+  <g fill="#d9b35d" stroke="#7a5a23" stroke-width="0.6">
+    <circle cx="50" cy="10" r="1.5"/><circle cx="57" cy="8" r="1.5"/><circle cx="64" cy="7" r="1.5"/>
+    <circle cx="71" cy="7" r="1.5"/><circle cx="78" cy="8" r="1.5"/><circle cx="85" cy="10" r="1.5"/><circle cx="92" cy="14" r="1.5"/>
+  </g>
+
+  <rect x="20" y="114" width="20" height="8" rx="2" fill="#4a3215"/>
 </svg>

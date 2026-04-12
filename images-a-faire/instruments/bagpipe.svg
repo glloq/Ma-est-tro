@@ -1,27 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- Cornemuse -->
-  <g transform="rotate(20,64,64)">
-    <path d="M34 64 C34 49,47 38,62 38 C78 38,90 49,90 64 C90 79,78 90,62 90 C47 90,34 79,34 64 Z" fill="#8B6A2F" stroke="#5A431D" stroke-width="2"/>
+  <!-- Cornemuse - refaite depuis zéro -->
+  <path d="M28 72 C28 52,44 38,64 38 C84 38,100 52,100 72 C100 92,84 106,64 106 C44 106,28 92,28 72 Z" fill="#8b6b31" stroke="#5a431d" stroke-width="2"/>
 
-    <rect x="72" y="58" width="6" height="54" rx="2" fill="#191919" stroke="#333"/>
-    <circle cx="75" cy="70" r="1.3" fill="#555"/><circle cx="75" cy="77" r="1.3" fill="#555"/>
-    <circle cx="75" cy="84" r="1.3" fill="#555"/><circle cx="75" cy="91" r="1.3" fill="#555"/>
-    <circle cx="75" cy="98" r="1.3" fill="#555"/><circle cx="75" cy="105" r="1.3" fill="#555"/>
-    <path d="M72 112 L70 119 C70 123,80 123,80 119 L78 112" fill="#1A1A1A" stroke="#333"/>
+  <rect x="74" y="62" width="7" height="50" rx="2" fill="#191919" stroke="#333"/>
+  <circle cx="77.5" cy="74" r="1.4" fill="#555"/><circle cx="77.5" cy="82" r="1.4" fill="#555"/>
+  <circle cx="77.5" cy="90" r="1.4" fill="#555"/><circle cx="77.5" cy="98" r="1.4" fill="#555"/>
+  <path d="M74 112 L72 121 C72 125,83 125,83 121 L81 112" fill="#1a1a1a" stroke="#333"/>
 
-    <rect x="45" y="8" width="5" height="49" rx="2" fill="#1A1A1A" stroke="#333"/>
-    <rect x="53" y="4" width="5" height="53" rx="2" fill="#1A1A1A" stroke="#333"/>
-    <rect x="61" y="8" width="5" height="49" rx="2" fill="#1A1A1A" stroke="#333"/>
+  <rect x="44" y="8" width="6" height="52" rx="2" fill="#1a1a1a" stroke="#333"/>
+  <rect x="54" y="4" width="6" height="56" rx="2" fill="#1a1a1a" stroke="#333"/>
+  <rect x="64" y="8" width="6" height="52" rx="2" fill="#1a1a1a" stroke="#333"/>
 
-    <g fill="#EEE0C2">
-      <rect x="44" y="16" width="7" height="3" rx="1"/>
-      <rect x="44" y="30" width="7" height="3" rx="1"/>
-      <rect x="52" y="12" width="7" height="3" rx="1"/>
-      <rect x="52" y="26" width="7" height="3" rx="1"/>
-      <rect x="60" y="16" width="7" height="3" rx="1"/>
-      <rect x="60" y="30" width="7" height="3" rx="1"/>
-    </g>
-
-    <rect x="31" y="42" width="4" height="20" rx="1" fill="#1A1A1A" stroke="#333" transform="rotate(-30,33,52)"/>
+  <g fill="#efe0c2">
+    <rect x="43" y="16" width="8" height="3" rx="1"/><rect x="43" y="31" width="8" height="3" rx="1"/>
+    <rect x="53" y="12" width="8" height="3" rx="1"/><rect x="53" y="27" width="8" height="3" rx="1"/>
+    <rect x="63" y="16" width="8" height="3" rx="1"/><rect x="63" y="31" width="8" height="3" rx="1"/>
   </g>
+
+  <rect x="20" y="52" width="5" height="22" rx="1" fill="#1a1a1a" stroke="#333" transform="rotate(-30,22.5,63)"/>
 </svg>
