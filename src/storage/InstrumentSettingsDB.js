@@ -35,7 +35,8 @@ class InstrumentSettingsDB {
         const result = buildDynamicUpdate('instruments_latency', settings, [
           'custom_name', 'sync_delay', 'mac_address', 'usb_serial_number',
           'name', 'gm_program', 'octave_mode', 'comm_timeout',
-          'instrument_type', 'instrument_subtype'
+          'instrument_type', 'instrument_subtype',
+          'min_note_interval', 'min_note_duration'
         ], { whereClause: 'device_id = ? AND channel = ?' });
 
         if (!result) return existing.id;
@@ -45,8 +46,9 @@ class InstrumentSettingsDB {
         // Insert new entry with correct channel
         const stmt = this.db.prepare(`
           INSERT INTO instruments_latency (
-            id, device_id, channel, name, custom_name, sync_delay, mac_address, usb_serial_number, gm_program, octave_mode, comm_timeout, instrument_type, instrument_subtype
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            id, device_id, channel, name, custom_name, sync_delay, mac_address, usb_serial_number, gm_program, octave_mode, comm_timeout, instrument_type, instrument_subtype,
+            min_note_interval, min_note_duration
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
         const id = `${deviceId}_${channel}`;
@@ -63,7 +65,9 @@ class InstrumentSettingsDB {
           settings.octave_mode || 'chromatic',
           settings.comm_timeout !== undefined ? settings.comm_timeout : 5000,
           settings.instrument_type || 'unknown',
-          settings.instrument_subtype || null
+          settings.instrument_subtype || null,
+          settings.min_note_interval !== undefined ? settings.min_note_interval : null,
+          settings.min_note_duration !== undefined ? settings.min_note_duration : null
         );
 
         return id;

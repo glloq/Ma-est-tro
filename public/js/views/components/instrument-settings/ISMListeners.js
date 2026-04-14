@@ -159,7 +159,7 @@
 
         requestAnimationFrame(function() {
             const wrapper = canvas.parentElement;
-            const w = wrapper?.clientWidth || 400;
+            const w = Math.min(wrapper?.clientWidth || 400, 280);
             canvas.width = w;
             canvas.height = Math.max(300, numFrets * 14 + 64);
 
@@ -389,37 +389,69 @@
 
 
     ISMListeners._wireGmProgramChange = function() {
+        const self = this;
+
+        // Step 1: Category select
+        const catSelect = this.$('#gmCategorySelect');
+        if (catSelect) {
+            catSelect.addEventListener('change', function() {
+                const categoryKey = catSelect.value;
+                const gmProgramGroup = self.$('#gmProgramGroup');
+                const gmSelect = self.$('#gmProgramSelect');
+
+                if (!categoryKey) {
+                    // No category selected - hide program select
+                    if (gmProgramGroup) gmProgramGroup.style.display = 'none';
+                    return;
+                }
+
+                // Show and populate program select for the chosen category
+                if (gmProgramGroup) gmProgramGroup.style.display = '';
+                if (gmSelect && typeof renderGMProgramOptionsForCategory === 'function') {
+                    const tab = self._getActiveTab();
+                    const channel = tab ? tab.channel : 0;
+                    gmSelect.innerHTML = renderGMProgramOptionsForCategory(categoryKey, null, channel);
+                    // Auto-select first program
+                    if (gmSelect.options.length > 0) {
+                        gmSelect.selectedIndex = 0;
+                        gmSelect.dispatchEvent(new Event('change'));
+                    }
+                }
+            });
+        }
+
+        // Step 2: Program select
         const gmSelect = this.$('#gmProgramSelect');
         if (gmSelect) {
             gmSelect.addEventListener('change', function() {
-                const tab = this._getActiveTab();
+                const tab = self._getActiveTab();
                 if (tab) {
                     const rawVal = parseInt(gmSelect.value);
                     const decoded = typeof selectValueToGmProgram === 'function'
                         ? selectValueToGmProgram(rawVal) : { program: rawVal, isDrumKit: false };
                     tab.settings.gm_program = decoded.program;
-                    this._syncGlobalState();
+                    self._syncGlobalState();
                 }
                 if (typeof onGmProgramChanged === 'function') onGmProgramChanged(gmSelect);
 
                 // Refresh notes section (strings/drums subsections depend on GM)
-                const notesSection = this.$('.ism-section[data-section="notes"]');
+                const notesSection = self.$('.ism-section[data-section="notes"]');
                 if (notesSection) {
-                    notesSection.innerHTML = this._renderNotesSection();
-                    this._attachNotesSectionListeners();
+                    notesSection.innerHTML = self._renderNotesSection();
+                    self._attachNotesSectionListeners();
                     // Re-init piano if notes section is currently visible
-                    if (this.activeSection === 'notes') {
-                        this._initPianoForActiveTab();
+                    if (self.activeSection === 'notes') {
+                        self._initPianoForActiveTab();
                     }
                 }
 
-                // Refresh identity section (emoji changes)
-                const identitySection = this.$('.ism-section[data-section="identity"]');
-                if (identitySection) {
-                    identitySection.innerHTML = this._renderIdentitySection();
-                    this._attachIdentitySectionListeners();
-                }
-            }.bind(this));
+                // Refresh identity section emoji only (not full re-render to avoid losing category state)
+                const gmProgram = tab ? tab.settings.gm_program : null;
+                const catKey = self._getGmCategoryKey(gmProgram);
+                const gmEmoji = catKey ? (InstrumentSettingsModal.GM_CATEGORY_EMOJIS[catKey] || '🎵') : '🎵';
+                const titleIcon = self.$('.ism-section[data-section="identity"] .ism-section-title-icon');
+                if (titleIcon) titleIcon.textContent = gmEmoji;
+            });
         }
     };
 
