@@ -175,12 +175,12 @@
             background: #566880;
         }
 
-        /* Dark theme: routing status strip + gradient */
-        body.theme-dark .file-item::before {
+        /* Dark theme: routing status badge + gradient */
+        body.theme-dark .file-badge {
             background: #4b5563;
         }
-        body.theme-dark .file-item.routed::before,
-        body.theme-dark .file-item.routing-playable::before {
+        body.theme-dark .file-item.routed .file-badge,
+        body.theme-dark .file-item.routing-playable .file-badge {
             background: #10b981;
             box-shadow: 2px 0 8px rgba(16, 185, 129, 0.4);
         }
@@ -188,14 +188,14 @@
         body.theme-dark .file-item.routing-playable {
             background: linear-gradient(90deg, rgba(16, 185, 129, 0.15) 0%, transparent 40%), #4a5568;
         }
-        body.theme-dark .file-item.routing-partial::before {
+        body.theme-dark .file-item.routing-partial .file-badge {
             background: #f59e0b;
             box-shadow: 2px 0 8px rgba(245, 158, 11, 0.4);
         }
         body.theme-dark .file-item.routing-partial {
             background: linear-gradient(90deg, rgba(245, 158, 11, 0.15) 0%, transparent 40%), #4a5568;
         }
-        body.theme-dark .file-item.routing-routed-incomplete::before {
+        body.theme-dark .file-item.routing-routed-incomplete .file-badge {
             background: #3b82f6;
             box-shadow: 2px 0 8px rgba(59, 130, 246, 0.4);
         }
@@ -1595,7 +1595,7 @@
 
         .file-item {
             padding: 4px;
-            padding-left: 36px;
+            padding-left: 42px;
             background: #f9fafb;
             border: 1px solid #9ca3af;
             border-radius: 6px;
@@ -1784,25 +1784,38 @@
         }
 
         /* ========================================================================
-         * ROUTING STATUS STRIP (pseudo-element left indicator)
+         * ROUTING STATUS BADGE (real DOM element left indicator)
          * ======================================================================== */
 
-        .file-item::before {
-            content: '';
+        .file-badge {
             position: absolute;
             left: 0;
             top: 0;
             bottom: 0;
-            width: 30px;
+            width: 36px;
             border-radius: 6px 0 0 6px;
             background: #d1d5db;
             transition: background 0.3s, box-shadow 0.3s;
             z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .badge-indicator {
+            color: #fff;
+            font-weight: bold;
+            font-size: 16px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            line-height: 1;
+            pointer-events: none;
         }
 
         /* Green: routed / playable */
-        .file-item.routed::before,
-        .file-item.routing-playable::before {
+        .file-item.routed .file-badge,
+        .file-item.routing-playable .file-badge {
             background: #10b981;
             box-shadow: 2px 0 8px rgba(16, 185, 129, 0.35);
         }
@@ -1812,7 +1825,7 @@
         }
 
         /* Orange/Amber: partial */
-        .file-item.routing-partial::before {
+        .file-item.routing-partial .file-badge {
             background: #f59e0b;
             box-shadow: 2px 0 8px rgba(245, 158, 11, 0.35);
         }
@@ -1821,7 +1834,7 @@
         }
 
         /* Blue: routed-incomplete */
-        .file-item.routing-routed-incomplete::before {
+        .file-item.routing-routed-incomplete .file-badge {
             background: #3b82f6;
             box-shadow: 2px 0 8px rgba(59, 130, 246, 0.35);
         }
@@ -1840,22 +1853,38 @@
             border-color: rgba(96, 165, 250, 0.6);
         }
 
-        .file-checkbox {
+        /* Checkbox inside badge */
+        .file-badge .file-checkbox {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            margin: 0;
             width: 18px;
             height: 18px;
-            cursor: pointer;
-            flex-shrink: 0;
             opacity: 0;
-            position: relative;
-            z-index: 2;
-            margin-left: -30px;
-            margin-right: 12px;
+            z-index: 3;
+            cursor: pointer;
             transition: opacity 0.2s;
         }
 
-        .file-item:hover .file-checkbox,
-        .file-checkbox:checked {
+        /* Hover: show checkbox, hide indicator */
+        .file-item:hover .badge-indicator {
+            display: none;
+        }
+        .file-item:hover .file-badge .file-checkbox {
             opacity: 1;
+        }
+
+        /* When checked: always show checkbox, hide indicator */
+        .file-checkbox:checked {
+            opacity: 1 !important;
+        }
+        .file-item.batch-selected .badge-indicator {
+            display: none;
+        }
+        .file-item.batch-selected .file-checkbox {
+            opacity: 1 !important;
         }
 
         .file-item.batch-selected {
@@ -1863,9 +1892,7 @@
             border-color: #93c5fd;
         }
 
-        .file-item.batch-selected .file-checkbox {
-            opacity: 1;
-        }
+        /* .file-item.batch-selected .file-checkbox handled in badge rules above */
 
         body.theme-dark .file-item.batch-selected {
             background: rgba(59, 130, 246, 0.22);
@@ -2109,24 +2136,7 @@
             color: #9ca3af;
         }
 
-        .routed-badge {
-            display: inline-block;
-            color: #10b981;
-            font-weight: bold;
-            font-size: 16px;
-            animation: fadeIn 0.3s ease-in;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: scale(0.8);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
+        /* .routed-badge removed - indicator now inside .file-badge */
 
         .file-actions {
             display: flex;
@@ -2333,7 +2343,7 @@
 
         .file-list.view-compact .file-item {
             padding: 3px 8px;
-            padding-left: 38px;
+            padding-left: 42px;
             margin-bottom: 0;
             border-radius: 3px;
             background: transparent;
@@ -2342,9 +2352,9 @@
             overflow: hidden;
         }
 
-        .file-list.view-compact .file-item::before {
-            width: 30px;
-            border-radius: 6px 0 0 6px;
+        .file-list.view-compact .file-badge {
+            width: 36px;
+            border-radius: 3px 0 0 3px;
         }
 
         /* Compact: routing background tints (aligned with blocks mode) */
@@ -2369,9 +2379,13 @@
             box-shadow: none;
         }
 
-        .file-list.view-compact .file-checkbox {
+        .file-list.view-compact .file-badge .file-checkbox {
             width: 14px;
             height: 14px;
+        }
+
+        .file-list.view-compact .badge-indicator {
+            font-size: 13px;
         }
 
         .file-list.view-compact .file-name {
@@ -2449,9 +2463,7 @@
             background: #451a03;
         }
 
-        .file-list.view-compact .routed-badge {
-            font-size: 12px;
-        }
+        /* .routed-badge removed - indicator now inside .file-badge */
 
         /* Dark compact: routing background tints (aligned with grid dark mode) */
         body.theme-dark .file-list.view-compact .file-item.routed,
@@ -2489,7 +2501,7 @@
             flex-direction: column;
             align-items: stretch;
             padding: 8px;
-            padding-left: 34px;
+            padding-left: 42px;
             margin-bottom: 0;
             border-radius: 8px;
             background: #ffffff;
@@ -2501,9 +2513,9 @@
             overflow: hidden;
         }
 
-        .file-list.view-grid .file-item::before {
-            width: 30px;
-            border-radius: 6px 0 0 6px;
+        .file-list.view-grid .file-badge {
+            width: 36px;
+            border-radius: 8px 0 0 8px;
         }
 
         .file-list.view-grid .file-item:hover {
@@ -2535,12 +2547,8 @@
             box-shadow: none;
         }
 
-        .file-list.view-grid .file-checkbox {
-            position: absolute;
-            top: 8px;
-            left: 6px;
-            z-index: 3;
-            margin-left: 0;
+        .file-list.view-grid .file-badge .file-checkbox {
+            /* Inherits centered positioning from base .file-badge .file-checkbox */
         }
 
         .file-list.view-grid .file-name {
@@ -7570,19 +7578,18 @@
                         gridBadge.textContent = gridLabels[metadata.routingStatus] || '○ Non routé';
                     }
 
-                    // Update routed badge next to filename
+                    // Update badge indicator inside color badge
+                    const badgeIndicator = fileItem.querySelector('.badge-indicator');
+                    if (badgeIndicator) {
+                        const indicatorMap = { partial: '~', routed_incomplete: '≈', playable: '✓' };
+                        badgeIndicator.textContent = (metadata.routingStatus !== 'unrouted')
+                            ? (indicatorMap[metadata.routingStatus] || '✓')
+                            : '';
+                    }
+
+                    // Auto-assigned / adapted file badge (blue circle)
                     const nameText = fileItem.querySelector('.file-name-text');
                     if (nameText) {
-                        const existingBadge = nameText.querySelector('.routed-badge');
-                        if (metadata.routingStatus === 'playable') {
-                            if (!existingBadge) {
-                                nameText.insertAdjacentHTML('beforeend', '<span class="routed-badge">✓</span>');
-                            }
-                        } else if (existingBadge) {
-                            existingBadge.remove();
-                        }
-
-                        // Auto-assigned / adapted file badge (blue circle)
                         if (metadata.isAdapted && !nameText.querySelector('.auto-assigned-badge')) {
                             const badge = document.createElement('span');
                             badge.className = 'auto-assigned-badge';
@@ -7602,6 +7609,29 @@
         }
 
 
+
+        // Wrapper anti-double-clic : désactive le bouton pendant l'exécution async
+        function guardedClickHandler(handler) {
+            let busy = false;
+            return async function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                if (busy) return;
+                busy = true;
+                const btn = e.currentTarget;
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.pointerEvents = 'none';
+                try {
+                    await handler();
+                } finally {
+                    busy = false;
+                    btn.disabled = false;
+                    btn.style.opacity = '';
+                    btn.style.pointerEvents = '';
+                }
+            };
+        }
 
         // Créer l'élément HTML pour un fichier
         function createFileElement(file) {
@@ -7636,7 +7666,7 @@
             li.addEventListener('pointerdown', (e) => {
                 if (e.button !== 0) return; // bouton gauche uniquement
                 if (e.target.tagName === 'BUTTON' || e.target.closest('button') ||
-                    e.target.tagName === 'INPUT') return;
+                    e.target.tagName === 'INPUT' || e.target.closest('.file-badge')) return;
 
                 if (e.shiftKey && selectedFileId != null) {
                     // Shift+Clic : sélectionner la plage entre l'ancre et ce fichier
@@ -7663,17 +7693,37 @@
             li.addEventListener('click', (e) => {
                 if (e.shiftKey) return; // déjà géré par pointerdown
                 if (e.target.tagName === 'BUTTON' || e.target.closest('button') ||
-                    e.target.tagName === 'INPUT') return;
+                    e.target.tagName === 'INPUT' || e.target.closest('.file-badge')) return;
                 selectFile(file.id);
             });
 
-            // Checkbox pour sélection multiple
+            // Badge coloré (pastille de routage) avec indicateur et checkbox
+            const badge = document.createElement('div');
+            badge.className = 'file-badge';
+            const indicator = document.createElement('span');
+            indicator.className = 'badge-indicator';
+            const indicatorMap = { partial: '~', routed_incomplete: '≈', playable: '✓' };
+            if (initialStatus !== 'unrouted') {
+                indicator.textContent = indicatorMap[initialStatus] || '✓';
+            }
+            badge.appendChild(indicator);
+
+            // Checkbox pour sélection multiple (dans le badge)
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.className = 'file-checkbox';
-            checkbox.addEventListener('change', (e) => {
+            checkbox.addEventListener('click', (e) => {
                 e.stopPropagation();
-                toggleFileSelection(file.id, e.target.checked);
+                toggleFileSelection(file.id, checkbox.checked);
+            });
+            badge.appendChild(checkbox);
+
+            // Clic sur le badge = toggle sélection
+            badge.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (e.target === checkbox) return;
+                checkbox.checked = !checkbox.checked;
+                toggleFileSelection(file.id, checkbox.checked);
             });
 
             // State dot for compact/grid modes
@@ -7682,8 +7732,6 @@
             stateDot.className = `file-state-dot ${stateClass}`;
             stateDot.dataset.fileId = file.id;
 
-            const routedBadgeMap = { partial: '~', routed_incomplete: '≈', playable: '✓' };
-            const routedBadge = initialStatus !== 'unrouted' ? `<span class="routed-badge">${routedBadgeMap[initialStatus] || '✓'}</span>` : '';
             const fileNameSpan = document.createElement('span');
             fileNameSpan.className = 'file-name';
             const metadataHtml = file.durationFormatted
@@ -7694,7 +7742,7 @@
             const displayName = file.filename.replace(/\.(midi|mid)$/i, '');
             fileNameSpan.innerHTML = `
                 <div class="file-name-text" style="cursor: pointer;" title="Double-cliquer pour renommer (ou F2)">
-                    ${displayName}${routedBadge}
+                    ${displayName}
                 </div>
                 <div class="file-metadata" id="metadata-${file.id}">
                     ${metadataHtml}
@@ -7728,51 +7776,35 @@
             editBtn.className = 'btn btn-secondary btn-sm';
             editBtn.title = i18n.t('fileOperations.edit');
             editBtn.textContent = '✏️';
-            editBtn.onclick = (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                editFile(file.id, file.filename);
-            };
+            editBtn.onclick = guardedClickHandler(() => editFile(file.id, file.filename));
 
             // Bouton Router
             const routeBtn = document.createElement('button');
             routeBtn.className = `btn ${routed ? 'btn-success' : 'btn-secondary'} btn-sm`;
             routeBtn.title = i18n.t('fileOperations.configureRouting');
             routeBtn.textContent = '🔀';
-            routeBtn.onclick = (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                configureRouting(file.id, file.filename);
-            };
+            routeBtn.onclick = guardedClickHandler(() => configureRouting(file.id, file.filename));
 
             // Bouton Play
             const playBtn = document.createElement('button');
             playBtn.className = `btn ${routed ? 'btn-success' : 'btn-warning'} btn-sm`;
             playBtn.title = routed ? i18n.t('fileOperations.playFile') : i18n.t('fileOperations.playWarning');
             playBtn.textContent = routed ? '▶️' : '⚠️▶️';
-            playBtn.onclick = (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                playFile(file.id, file.filename);
-            };
+            playBtn.onclick = guardedClickHandler(() => playFile(file.id, file.filename));
 
             // Bouton Supprimer
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'btn btn-danger btn-sm';
             deleteBtn.title = i18n.t('fileOperations.delete');
             deleteBtn.textContent = '🗑️';
-            deleteBtn.onclick = (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                deleteFile(file.id);
-            };
+            deleteBtn.onclick = guardedClickHandler(() => deleteFile(file.id));
 
             actionsDiv.appendChild(editBtn);
             actionsDiv.appendChild(routeBtn);
             actionsDiv.appendChild(playBtn);
             actionsDiv.appendChild(deleteBtn);
 
-            li.appendChild(checkbox);
+            li.appendChild(badge);
             li.appendChild(stateDot);
             li.appendChild(fileNameSpan);
             li.appendChild(gridState);
