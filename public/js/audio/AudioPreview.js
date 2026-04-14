@@ -314,6 +314,9 @@ class AudioPreview {
             }
           }
 
+          // Skip suppressed notes (e.g. muted drum notes mapped to -1)
+          if (note < 0) continue;
+
           // Filter by instrument playable range
           if (chConfig.noteFilter && !chConfig.noteFilter(note)) continue;
 
@@ -469,6 +472,9 @@ class AudioPreview {
               note = transposition.noteRemapping[note];
             }
           }
+
+          // Skip suppressed notes (e.g. muted drum notes mapped to -1)
+          if (note < 0) continue;
 
           // Filter by instrument's playable note range
           if (noteFilter && !noteFilter(note)) {
