@@ -215,7 +215,7 @@ class DrumNoteMapper {
     for (const event of noteEvents) {
       if (event.type !== 'noteOn') continue;
       if (event.velocity === 0) continue; // noteOn with vel=0 is noteOff
-      if (event.note >= 27 && event.note <= 87) { // Valid drum range
+      if (event.note >= 35 && event.note <= 81) { // GM drum range (Acoustic Bass Drum to Open Triangle)
         usage[event.note] = (usage[event.note] || 0) + 1;
       }
     }

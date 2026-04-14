@@ -817,38 +817,87 @@ class MidiPlayer {
             if (strategy === 'shared' || strategy === 'round_robin') {
               // Round-robin: alternate between matching segments using a per-channel counter
               if (!this._overlapCounters) this._overlapCounters = new Map();
+              if (!this._overlapNoteAssign) this._overlapNoteAssign = new Map();
+
+              if (eventType === 'noteOff') {
+                // Route noteOff to whichever segment got the corresponding noteOn (FIFO for re-triggers)
+                const noteKey = `${channel}_${note}_seg`;
+                const assignQueue = this._overlapNoteAssign.get(noteKey);
+                if (assignQueue && assignQueue.length > 0) {
+                  const assignedIdx = assignQueue.shift();
+                  if (assignQueue.length === 0) this._overlapNoteAssign.delete(noteKey);
+                  if (matching[assignedIdx]) {
+                    const seg = matching[assignedIdx];
+                    return { device: seg.device, targetChannel: seg.targetChannel };
+                  }
+                }
+                // Untracked noteOff — route to first matching
+                return { device: matching[0].device, targetChannel: matching[0].targetChannel };
+              }
+
+              // noteOn: increment counter and record assignment (FIFO queue for re-triggers)
               const key = `${channel}_${note}`;
               const counter = (this._overlapCounters.get(key) || 0);
               this._overlapCounters.set(key, counter + 1);
-              const seg = matching[counter % matching.length];
+              const segIdx = counter % matching.length;
+              const seg = matching[segIdx];
+              const noteKey = `${channel}_${note}_seg`;
+              if (!this._overlapNoteAssign.has(noteKey)) this._overlapNoteAssign.set(noteKey, []);
+              this._overlapNoteAssign.get(noteKey).push(segIdx);
               return { device: seg.device, targetChannel: seg.targetChannel };
             }
 
             if (strategy === 'second') {
-              // Prefer last matching segment
-              const seg = matching[matching.length - 1];
+              // Prefer last matching segment (deterministic: both noteOn and noteOff
+              // always route to the same segment since matching.length is stable)
+              if (!this._overlapNoteAssign) this._overlapNoteAssign = new Map();
+
+              if (eventType === 'noteOff') {
+                const noteKey = `${channel}_${note}_seg`;
+                const assignQueue = this._overlapNoteAssign.get(noteKey);
+                if (assignQueue && assignQueue.length > 0) {
+                  const assignedIdx = assignQueue.shift();
+                  if (assignQueue.length === 0) this._overlapNoteAssign.delete(noteKey);
+                  if (matching[assignedIdx]) {
+                    const seg = matching[assignedIdx];
+                    return { device: seg.device, targetChannel: seg.targetChannel };
+                  }
+                }
+              }
+
+              const segIdx = matching.length - 1;
+              const seg = matching[segIdx];
+              if (eventType === 'noteOn') {
+                const noteKey = `${channel}_${note}_seg`;
+                if (!this._overlapNoteAssign.has(noteKey)) this._overlapNoteAssign.set(noteKey, []);
+                this._overlapNoteAssign.get(noteKey).push(segIdx);
+              }
               return { device: seg.device, targetChannel: seg.targetChannel };
             }
 
             if (strategy === 'least_loaded') {
               // Route to segment with fewer active notes
               if (!this._segmentNoteCounts) this._segmentNoteCounts = new Map();
-              // On noteOff: decrement and route to same segment as the noteOn did
+              if (!this._overlapNoteAssign) this._overlapNoteAssign = new Map();
+              // On noteOff: decrement and route to same segment as the noteOn did (FIFO for re-triggers)
               if (eventType === 'noteOff') {
                 const noteKey = `${channel}_${note}_seg`;
-                const assignedIdx = this._overlapNoteAssign?.get(noteKey);
-                if (assignedIdx !== undefined && matching[assignedIdx]) {
-                  const seg = matching[assignedIdx];
-                  const segKey = `${seg.device}_${seg.targetChannel}`;
-                  const count = this._segmentNoteCounts.get(segKey) || 0;
-                  if (count > 0) this._segmentNoteCounts.set(segKey, count - 1);
-                  this._overlapNoteAssign.delete(noteKey);
-                  return { device: seg.device, targetChannel: seg.targetChannel };
+                const assignQueue = this._overlapNoteAssign.get(noteKey);
+                if (assignQueue && assignQueue.length > 0) {
+                  const assignedIdx = assignQueue.shift();
+                  if (assignQueue.length === 0) this._overlapNoteAssign.delete(noteKey);
+                  if (matching[assignedIdx]) {
+                    const seg = matching[assignedIdx];
+                    const segKey = `${seg.device}_${seg.targetChannel}`;
+                    const count = this._segmentNoteCounts.get(segKey) || 0;
+                    if (count > 0) this._segmentNoteCounts.set(segKey, count - 1);
+                    return { device: seg.device, targetChannel: seg.targetChannel };
+                  }
                 }
                 // Untracked noteOff — route to first matching without modifying counters
                 return { device: matching[0].device, targetChannel: matching[0].targetChannel };
               }
-              // On noteOn: pick least loaded and track assignment
+              // On noteOn: pick least loaded and track assignment (FIFO queue for re-triggers)
               let bestSeg = matching[0];
               let bestIdx = 0;
               let bestCount = Infinity;
@@ -859,8 +908,9 @@ class MidiPlayer {
               }
               const segKey = `${bestSeg.device}_${bestSeg.targetChannel}`;
               this._segmentNoteCounts.set(segKey, (this._segmentNoteCounts.get(segKey) || 0) + 1);
-              if (!this._overlapNoteAssign) this._overlapNoteAssign = new Map();
-              this._overlapNoteAssign.set(`${channel}_${note}_seg`, bestIdx);
+              const noteKey = `${channel}_${note}_seg`;
+              if (!this._overlapNoteAssign.has(noteKey)) this._overlapNoteAssign.set(noteKey, []);
+              this._overlapNoteAssign.get(noteKey).push(bestIdx);
               return { device: bestSeg.device, targetChannel: bestSeg.targetChannel };
             }
 
@@ -873,34 +923,41 @@ class MidiPlayer {
               const primaryKey = `${primarySeg.device}_${primarySeg.targetChannel}`;
 
               if (eventType === 'noteOff') {
-                // Route noteOff to whichever segment got the corresponding noteOn
+                // Route noteOff to whichever segment got the corresponding noteOn (FIFO for re-triggers)
                 const noteKey = `${channel}_${note}_seg`;
-                const assignedIdx = this._overlapNoteAssign.get(noteKey);
-                if (assignedIdx !== undefined && matching[assignedIdx]) {
-                  const seg = matching[assignedIdx];
-                  const sKey = `${seg.device}_${seg.targetChannel}`;
-                  const count = this._segmentNoteCounts.get(sKey) || 0;
-                  if (count > 0) this._segmentNoteCounts.set(sKey, count - 1);
-                  this._overlapNoteAssign.delete(noteKey);
-                  return { device: seg.device, targetChannel: seg.targetChannel };
+                const assignQueue = this._overlapNoteAssign.get(noteKey);
+                if (assignQueue && assignQueue.length > 0) {
+                  const assignedIdx = assignQueue.shift();
+                  if (assignQueue.length === 0) this._overlapNoteAssign.delete(noteKey);
+                  if (matching[assignedIdx]) {
+                    const seg = matching[assignedIdx];
+                    const sKey = `${seg.device}_${seg.targetChannel}`;
+                    const count = this._segmentNoteCounts.get(sKey) || 0;
+                    if (count > 0) this._segmentNoteCounts.set(sKey, count - 1);
+                    return { device: seg.device, targetChannel: seg.targetChannel };
+                  }
                 }
                 return { device: primarySeg.device, targetChannel: primarySeg.targetChannel };
               }
 
               // noteOn: check if primary has capacity
               const activeCount = this._segmentNoteCounts.get(primaryKey) || 0;
-              const primaryPolyLimit = primarySeg.polyphonyShare || 16;
+              const primaryPolyLimit = primarySeg.polyphonyShare ?? 16;
               if (activeCount >= primaryPolyLimit && matching.length > 1) {
                 // Overflow to secondary
                 const overflowSeg = matching[1];
                 const oKey = `${overflowSeg.device}_${overflowSeg.targetChannel}`;
                 this._segmentNoteCounts.set(oKey, (this._segmentNoteCounts.get(oKey) || 0) + 1);
-                this._overlapNoteAssign.set(`${channel}_${note}_seg`, 1);
+                const noteKey = `${channel}_${note}_seg`;
+                if (!this._overlapNoteAssign.has(noteKey)) this._overlapNoteAssign.set(noteKey, []);
+                this._overlapNoteAssign.get(noteKey).push(1);
                 return { device: overflowSeg.device, targetChannel: overflowSeg.targetChannel };
               }
               // Route to primary
               this._segmentNoteCounts.set(primaryKey, activeCount + 1);
-              this._overlapNoteAssign.set(`${channel}_${note}_seg`, 0);
+              const noteKeyPrimary = `${channel}_${note}_seg`;
+              if (!this._overlapNoteAssign.has(noteKeyPrimary)) this._overlapNoteAssign.set(noteKeyPrimary, []);
+              this._overlapNoteAssign.get(noteKeyPrimary).push(0);
               return { device: primarySeg.device, targetChannel: primarySeg.targetChannel };
             }
 
@@ -911,23 +968,28 @@ class MidiPlayer {
               if (!this._overlapNoteAssign) this._overlapNoteAssign = new Map();
 
               if (eventType === 'noteOff') {
-                // Route noteOff to whichever segment got the corresponding noteOn
+                // Route noteOff to whichever segment got the corresponding noteOn (FIFO for re-triggers)
                 const noteKey = `${channel}_${note}_seg`;
-                const assignedIdx = this._overlapNoteAssign.get(noteKey);
-                if (assignedIdx !== undefined && matching[assignedIdx]) {
-                  const seg = matching[assignedIdx];
-                  this._overlapNoteAssign.delete(noteKey);
-                  return { device: seg.device, targetChannel: seg.targetChannel };
+                const assignQueue = this._overlapNoteAssign.get(noteKey);
+                if (assignQueue && assignQueue.length > 0) {
+                  const assignedIdx = assignQueue.shift();
+                  if (assignQueue.length === 0) this._overlapNoteAssign.delete(noteKey);
+                  if (matching[assignedIdx]) {
+                    const seg = matching[assignedIdx];
+                    return { device: seg.device, targetChannel: seg.targetChannel };
+                  }
                 }
                 return { device: matching[0].device, targetChannel: matching[0].targetChannel };
               }
 
-              // noteOn: increment global channel counter
+              // noteOn: increment global channel counter and record assignment (FIFO queue for re-triggers)
               const counter = this._alternateCounters.get(channel) || 0;
               this._alternateCounters.set(channel, counter + 1);
               const segIdx = counter % matching.length;
               const seg = matching[segIdx];
-              this._overlapNoteAssign.set(`${channel}_${note}_seg`, segIdx);
+              const noteKey = `${channel}_${note}_seg`;
+              if (!this._overlapNoteAssign.has(noteKey)) this._overlapNoteAssign.set(noteKey, []);
+              this._overlapNoteAssign.get(noteKey).push(segIdx);
               return { device: seg.device, targetChannel: seg.targetChannel };
             }
 

@@ -28,10 +28,17 @@ class PlaybackScheduler {
     this._unroutedChannels = new Set(); // Track channels with no routing (notify once per playback)
     this._maxCompensationMs = 0; // Cached max compensation across all active routings
 
+    // Timing constraint enforcement: track last noteOn timestamp per (device:channel)
+    this._lastNoteOnTime = new Map(); // key: "device:channel" -> timestamp (ms)
+    this._timingConstraintCache = new Map(); // key: "device:channel" -> { minNoteInterval, minNoteDuration, polyphony }
+    // Polyphony enforcement: track active notes per (device:channel)
+    this._activeNotes = new Map(); // key: "device:channel" -> Set of active note numbers
+
     // Invalidate sync_delay cache immediately when instrument settings change
     this._onSettingsChanged = () => {
       this._syncDelayCache.clear();
       this._stringCCCache.clear();
+      this._timingConstraintCache.clear();
       this._maxCompensationMs = 0;
     };
     this.app.eventBus?.on('instrument_settings_changed', this._onSettingsChanged);
@@ -69,6 +76,9 @@ class PlaybackScheduler {
     this._failedDevices.clear();
     this._unroutedChannels.clear();
     this._maxCompensationMs = 0;
+    this._lastNoteOnTime.clear();
+    this._timingConstraintCache.clear();
+    this._activeNotes.clear();
   }
 
   /**
@@ -89,6 +99,85 @@ class PlaybackScheduler {
     }
     this._stringCCCache.set(cacheKey, allowed);
     return allowed;
+  }
+
+  /**
+   * Get timing and polyphony constraints for a given device+channel.
+   * Cached per playback session to avoid DB queries per event.
+   * @param {string} deviceId
+   * @param {number} channel
+   * @returns {{ minNoteInterval: number|null, minNoteDuration: number|null, polyphony: number|null }}
+   */
+  _getTimingConstraints(deviceId, channel) {
+    const cacheKey = `${deviceId}:${channel}`;
+    if (this._timingConstraintCache.has(cacheKey)) {
+      return this._timingConstraintCache.get(cacheKey);
+    }
+    let constraints = { minNoteInterval: null, minNoteDuration: null, polyphony: null };
+    try {
+      const capDB = this.app.database?.instrumentCapabilitiesDB;
+      if (capDB) {
+        const instrument = capDB.getInstrumentCapabilities(deviceId, channel);
+        if (instrument) {
+          constraints = {
+            minNoteInterval: instrument.min_note_interval || null,
+            minNoteDuration: instrument.min_note_duration || null,
+            polyphony: instrument.polyphony || null
+          };
+        }
+      }
+    } catch (e) {
+      // Silently ignore — no constraints applied
+    }
+    this._timingConstraintCache.set(cacheKey, constraints);
+    return constraints;
+  }
+
+  /**
+   * Check if a noteOn should be gated (dropped) due to timing or polyphony constraints.
+   * Also tracks active notes for polyphony enforcement.
+   * @param {string} deviceId
+   * @param {number} channel - Target channel on the device
+   * @param {number} note - MIDI note number
+   * @param {string} eventType - 'noteOn' or 'noteOff'
+   * @returns {boolean} true if the event should be dropped/gated
+   */
+  _shouldGateNote(deviceId, channel, note, eventType) {
+    const cacheKey = `${deviceId}:${channel}`;
+    const constraints = this._getTimingConstraints(deviceId, channel);
+
+    if (eventType === 'noteOff') {
+      // Track noteOff for polyphony counting
+      const activeSet = this._activeNotes.get(cacheKey);
+      if (activeSet) activeSet.delete(note);
+      return false; // Never gate noteOff
+    }
+
+    // eventType === 'noteOn'
+    const now = performance.now();
+
+    // Check min_note_interval: if the last noteOn on this device:channel was too recent, drop
+    if (constraints.minNoteInterval) {
+      const lastTime = this._lastNoteOnTime.get(cacheKey) || 0;
+      if (lastTime > 0 && (now - lastTime) < constraints.minNoteInterval) {
+        return true; // Gate: too fast for this instrument
+      }
+    }
+
+    // Check polyphony limit: if active notes on this device:channel exceed the limit, drop
+    if (constraints.polyphony) {
+      if (!this._activeNotes.has(cacheKey)) this._activeNotes.set(cacheKey, new Set());
+      const activeSet = this._activeNotes.get(cacheKey);
+      if (activeSet.size >= constraints.polyphony && !activeSet.has(note)) {
+        return true; // Gate: polyphony limit reached
+      }
+      activeSet.add(note);
+    }
+
+    // Update last noteOn timestamp
+    this._lastNoteOnTime.set(cacheKey, now);
+
+    return false; // Allow
   }
 
   /**
@@ -283,8 +372,19 @@ class PlaybackScheduler {
     const device = this.app.deviceManager;
     let sendResult = true;
 
+    // Enforce timing and polyphony constraints for note events
+    if (event.type === 'noteOn' || event.type === 'noteOff') {
+      const isNoteOn = event.type === 'noteOn' && (event.velocity ?? 0) > 0;
+      const evtType = isNoteOn ? 'noteOn' : 'noteOff';
+      if (this._shouldGateNote(routing.device, outChannel, event.note, evtType)) {
+        return; // Gated: note dropped due to timing or polyphony constraint
+      }
+    }
+
     if (event.type === 'noteOn') {
       if (event.velocity === 0) {
+        // velocity 0 noteOn = noteOff, track for polyphony
+        this._shouldGateNote(routing.device, outChannel, event.note, 'noteOff');
         sendResult = device.sendMessage(routing.device, 'noteoff', {
           channel: outChannel,
           note: event.note,
@@ -397,8 +497,18 @@ class PlaybackScheduler {
     const device = this.app.deviceManager;
     const outChannel = routing.targetChannel;
 
+    // Enforce timing and polyphony constraints for note events
+    if (event.type === 'noteOn' || event.type === 'noteOff') {
+      const isNoteOn = event.type === 'noteOn' && (event.velocity ?? 0) > 0;
+      const evtType = isNoteOn ? 'noteOn' : 'noteOff';
+      if (this._shouldGateNote(routing.device, outChannel, event.note, evtType)) {
+        return; // Gated: note dropped due to timing or polyphony constraint
+      }
+    }
+
     if (event.type === 'noteOn') {
       if (event.velocity === 0) {
+        this._shouldGateNote(routing.device, outChannel, event.note, 'noteOff');
         device.sendMessage(routing.device, 'noteoff', { channel: outChannel, note: event.note, velocity: 0 });
       } else {
         device.sendMessage(routing.device, 'noteon', { channel: outChannel, note: event.note, velocity: event.velocity });

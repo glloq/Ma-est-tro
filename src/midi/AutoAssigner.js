@@ -93,8 +93,9 @@ class AutoAssigner {
 
         for (const instrument of availableInstruments) {
           // Hard filter: drums only to drums, non-drums never to drums
-          const isDrumInstrument = instrument.instrument_type === 'drums'
-            || (instrument.note_selection_mode === 'discrete' && instrument.instrument_type !== 'chromatic_percussion');
+          // Only use instrument_type for the filter — 'discrete' mode alone is too broad
+          // (it would incorrectly classify discrete pad controllers as drums)
+          const isDrumInstrument = instrument.instrument_type === 'drums';
 
           if ((isDrumChannel && !isDrumInstrument) || (!isDrumChannel && isDrumInstrument)) {
             // Marquer incompatible dans la matrice
@@ -369,7 +370,8 @@ class AutoAssigner {
       this.logger.info(`Auto-assign summary: ${Object.keys(assignments).length} assigned (${sharedChannels.size} shared), 0 auto-skipped`);
     }
 
-    // Attach autoSkipped info so the frontend can use it
+    // Return autoSkipped as a separate property (not on the assignments dictionary
+    // to avoid issues with Object.entries() iteration seeing it as a channel key)
     assignments._autoSkipped = Array.from(autoSkipped);
 
     return assignments;
@@ -465,7 +467,11 @@ class AutoAssigner {
 
     // Pour chaque canal candidat, chercher un split possible
     for (const analysis of candidateChannels) {
-      const channelCategory = analysis.estimatedCategory;
+      // Force drums category for channel 9 (drums often have no program change, leading to 'unknown')
+      let channelCategory = analysis.estimatedCategory;
+      if ((analysis.channel === 9 || analysis.estimatedType === 'drums') && (!channelCategory || channelCategory === 'unknown')) {
+        channelCategory = 'drums';
+      }
       if (!channelCategory || channelCategory === 'unknown') continue;
 
       // Chercher les instruments du même type
