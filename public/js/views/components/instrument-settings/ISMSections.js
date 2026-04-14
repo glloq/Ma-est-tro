@@ -27,9 +27,13 @@
         const catKey = this._getGmCategoryKey(gmProgram);
         const gmEmoji = catKey ? (InstrumentSettingsModal.GM_CATEGORY_EMOJIS[catKey] || '🎵') : '🎵';
 
-        // GM Program dropdown (reuse global helper)
-        const gmOptions = typeof renderGMInstrumentOptions === 'function'
-            ? renderGMInstrumentOptions(settings.gm_program, channel) : '';
+        // GM 2-step selection: category + program
+        const gmCategoryOptions = typeof renderGMCategoryOptions === 'function'
+            ? renderGMCategoryOptions(settings.gm_program, channel) : '';
+        const detectedCategory = typeof getGmCategoryForProgram === 'function'
+            ? getGmCategoryForProgram(settings.gm_program, channel) : null;
+        const gmProgramOptions = (detectedCategory && typeof renderGMProgramOptionsForCategory === 'function')
+            ? renderGMProgramOptionsForCategory(detectedCategory, settings.gm_program, channel) : '';
 
         // SysEx identity
         const sysexIdentity = settings.sysex_identity || (this._sysexIdentityCache && this._sysexIdentityCache[this.device.id]) || null;
@@ -87,9 +91,15 @@
             <h3 class="ism-section-title"><span class="ism-section-title-icon">${gmEmoji}</span> ${this.t('instrumentSettings.sectionIdentity') || 'Identité'}</h3>
 
             <div class="ism-form-group">
-                <label>${this.t('instrumentSettings.gmInstrument') || 'Type d\'instrument (General MIDI)'}</label>
-                <select id="gmProgramSelect">${gmOptions}</select>
-                <span class="ism-form-hint">${this.t('instrumentSettings.gmInstrumentHelp') || 'Sélectionnez le type d\'instrument pour le routage MIDI'}</span>
+                <label>${this.t('instrumentSettings.gmCategory') || 'Instrument'}</label>
+                <select id="gmCategorySelect">${gmCategoryOptions}</select>
+                <span class="ism-form-hint">${this.t('instrumentSettings.gmCategoryHelp') || 'Sélectionnez le type d\'instrument'}</span>
+            </div>
+
+            <div class="ism-form-group" id="gmProgramGroup" style="${detectedCategory ? '' : 'display: none;'}">
+                <label>${this.t('instrumentSettings.gmProgram') || 'Banque son (GM)'}</label>
+                <select id="gmProgramSelect">${gmProgramOptions}</select>
+                <span class="ism-form-hint">${this.t('instrumentSettings.gmProgramHelp') || 'Sélectionnez la banque son à associer'}</span>
                 <div id="drumKitDesc" class="ism-drum-kit-desc" style="display: none;"></div>
                 <div id="drumKitNotice" class="ism-drum-notice" style="display: none;">
                     ${this.t('instrumentSettings.drumKitNotice') || 'Les kits de batterie utilisent le canal MIDI 10 et le mode notes individuelles.'}
@@ -248,7 +258,7 @@
                 <span class="ism-form-hint">${this.t('instrumentSettings.polyphonyHelp') || 'Nombre maximum de notes simultanées (1-128)'}</span>
             </div>
 
-            ${isString ? `<div class="ism-subsection" id="stringsSubsection">
+            ${(isString && !isDrum) ? `<div class="ism-subsection" id="stringsSubsection">
                 <h4 class="ism-subsection-title">🎸 ${this.t('instrumentSettings.sectionStrings') || 'Instrument à cordes'}</h4>
                 ${this._renderStringsContent()}
             </div>` : ''}
@@ -391,7 +401,7 @@
         for (let i = 0; i < numStrings; i++) {
             const note = tuning[i] || 40;
             const noteName = NOTE_NAMES[note % 12] + (Math.floor(note / 12) - 1);
-            stringNumCells += `<span class="si-string-num">${i + 1}</span>`;
+            stringNumCells += `<span class="si-string-num">${numStrings - i}</span>`;
             noteBadgeCells += `<span class="si-string-note-badge" id="ismBadge${i}">${noteName}</span>`;
             midiInputCells += `<input type="number" class="si-input si-input-xs si-tuning-val" id="siTuning${i}"
                            data-string="${i}" value="${note}" min="0" max="127"
@@ -606,6 +616,18 @@
                 <label>${this.t('instrumentSettings.commTimeout') || 'Timeout de communication (ms)'}</label>
                 <input type="number" id="commTimeout" value="${commTimeout}" min="100" max="30000" step="100">
                 <span class="ism-form-hint">${this.t('instrumentSettings.commTimeoutHelp') || 'Délai d\'attente maximal pour une réponse (en ms)'}</span>
+            </div>
+
+            <div class="ism-form-group">
+                <label>${this.t('instrumentSettings.minNoteInterval') || 'Temps minimum entre 2 notes (ms)'}</label>
+                <input type="number" id="minNoteInterval" value="${settings.min_note_interval != null ? settings.min_note_interval : ''}" min="0" max="5000" step="1" placeholder="0">
+                <span class="ism-form-hint">${this.t('instrumentSettings.minNoteIntervalHelp') || 'Délai minimum entre deux note-on consécutifs (en ms)'}</span>
+            </div>
+
+            <div class="ism-form-group">
+                <label>${this.t('instrumentSettings.minNoteDuration') || 'Temps note actif minimum (ms)'}</label>
+                <input type="number" id="minNoteDuration" value="${settings.min_note_duration != null ? settings.min_note_duration : ''}" min="0" max="5000" step="1" placeholder="0">
+                <span class="ism-form-hint">${this.t('instrumentSettings.minNoteDurationHelp') || 'Durée minimum pendant laquelle une note reste active (en ms)'}</span>
             </div>
 
         `;

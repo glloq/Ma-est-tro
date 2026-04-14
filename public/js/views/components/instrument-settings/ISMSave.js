@@ -74,6 +74,12 @@
             const octaveMode = (this.$('#octaveModeInput')?.value || '').trim() || 'chromatic';
             const commTimeout = parseInt(this.$('#commTimeout')?.value) || null;
 
+            // Timing fields
+            const minNoteIntervalVal = this.$('#minNoteInterval')?.value?.trim();
+            const minNoteInterval = minNoteIntervalVal !== '' && minNoteIntervalVal != null ? parseInt(minNoteIntervalVal) : null;
+            const minNoteDurationVal = this.$('#minNoteDuration')?.value?.trim();
+            const minNoteDuration = minNoteDurationVal !== '' && minNoteDurationVal != null ? parseInt(minNoteDurationVal) : null;
+
             // Save base settings
             await this.api.sendCommand('instrument_update_settings', {
                 deviceId: this.device.id,
@@ -84,7 +90,9 @@
                 name: this.device.name,
                 gm_program: gmProgram,
                 octave_mode: octaveMode,
-                comm_timeout: commTimeout
+                comm_timeout: commTimeout,
+                min_note_interval: minNoteInterval,
+                min_note_duration: minNoteDuration
             });
 
             // String instrument path

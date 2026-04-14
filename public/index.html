@@ -9603,6 +9603,71 @@
             return options;
         }
 
+        // ========== 2-STEP GM SELECTION HELPERS ==========
+
+        // Determine GM category key for a given program number
+        function getGmCategoryForProgram(program, channel) {
+            if (channel === 9) return 'drumKits';
+            if (program === null || program === undefined) return null;
+            for (const group of GM_INSTRUMENT_GROUPS) {
+                if (program >= group.start && program < group.start + group.count) {
+                    return group.key;
+                }
+            }
+            return null;
+        }
+
+        // Render category dropdown options (step 1)
+        function renderGMCategoryOptions(selectedProgram, channel) {
+            const selectedCat = getGmCategoryForProgram(selectedProgram, channel);
+
+            let options = '<option value="">-- ' + (i18n.t('instrumentSettings.selectCategory') || 'Sélectionner un instrument') + ' --</option>';
+
+            // Drum kits option
+            const drumCatName = getGMCategoryName('drumKits');
+            const drumSelected = selectedCat === 'drumKits' ? 'selected' : '';
+            options += `<option value="drumKits" ${drumSelected}>${drumCatName}</option>`;
+
+            // Standard GM categories
+            for (const group of GM_INSTRUMENT_GROUPS) {
+                const catName = getGMCategoryName(group.key);
+                const selected = group.key === selectedCat ? 'selected' : '';
+                options += `<option value="${group.key}" ${selected}>${catName}</option>`;
+            }
+            return options;
+        }
+
+        // Render program options for a specific category (step 2)
+        function renderGMProgramOptionsForCategory(categoryKey, selectedProgram, channel) {
+            if (!categoryKey) return '';
+
+            const selectValue = gmProgramToSelectValue(selectedProgram, channel);
+
+            if (categoryKey === 'drumKits') {
+                let options = '';
+                for (const kit of GM_DRUM_KITS) {
+                    const encodedValue = kit.program + GM_DRUM_KIT_OFFSET;
+                    const selected = encodedValue === selectValue ? 'selected' : '';
+                    const nameKey = `instruments.drumKits.${kit.program}`;
+                    const kitName = i18n.t(nameKey);
+                    const displayName = (kitName && kitName !== nameKey) ? kitName : kit.name;
+                    options += `<option value="${encodedValue}" data-drum-kit="true" ${selected}>${kit.program}: ${displayName}</option>`;
+                }
+                return options;
+            }
+
+            const group = GM_INSTRUMENT_GROUPS.find(function(g) { return g.key === categoryKey; });
+            if (!group) return '';
+
+            let options = '';
+            for (let i = 0; i < group.count; i++) {
+                const programNum = group.start + i;
+                const selected = programNum === selectValue ? 'selected' : '';
+                options += `<option value="${programNum}" ${selected}>${programNum}: ${getGMInstrumentName(programNum)}</option>`;
+            }
+            return options;
+        }
+
         // ========== RÉGLAGES D'INSTRUMENTS ==========
 
         // String instrument GM program ranges (matching MidiEditorChannelPanel)

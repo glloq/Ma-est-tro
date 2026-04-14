@@ -745,6 +745,8 @@ body.dark-mode .tab-fret-input {
     padding: 6px 8px;
     border-bottom: 1px solid var(--border-color, #ddd);
     background: var(--bg-secondary, #fafafa);
+    max-width: 280px;
+    margin: 0 auto;
 }
 
 .si-neck-header-row {
@@ -793,6 +795,8 @@ body.dark-mode .tab-fret-input {
 
 .si-neck-canvas-panel {
     width: 100%;
+    max-width: 280px;
+    margin: 0 auto;
     overflow: hidden;
     background: var(--bg-secondary, #f5f0e8);
 }
