@@ -31,14 +31,41 @@ async function playbackStart(app, data) {
     const savedRoutings = app.database.getRoutingsByFile(data.fileId);
     if (savedRoutings.length > 0) {
       app.midiPlayer.clearChannelRouting();
+
+      // Group routings by channel to detect split routings (multiple rows per channel)
+      const routingsByChannel = new Map();
       for (const routing of savedRoutings) {
-        if (routing.channel !== null && routing.channel !== undefined && routing.device_id) {
-          // Use persisted target_channel (instrument's actual MIDI channel) from routing record
-          const targetChannel = routing.target_channel !== undefined ? routing.target_channel : routing.channel;
-          app.midiPlayer.setChannelRouting(routing.channel, routing.device_id, targetChannel);
+        if (routing.channel === null || routing.channel === undefined || !routing.device_id) continue;
+        if (!routingsByChannel.has(routing.channel)) routingsByChannel.set(routing.channel, []);
+        routingsByChannel.get(routing.channel).push(routing);
+      }
+
+      for (const [channel, channelRoutings] of routingsByChannel) {
+        // Check if this channel has split routing (multiple rows with split_mode)
+        const hasSplit = channelRoutings.length > 1 && channelRoutings.some(r => r.split_mode);
+
+        if (hasSplit) {
+          // Restore split routing: build segments for setChannelSplitRouting()
+          const segments = channelRoutings.map(r => ({
+            device_id: r.device_id,
+            target_channel: r.target_channel !== undefined ? r.target_channel : channel,
+            split_note_min: r.split_note_min ?? 0,
+            split_note_max: r.split_note_max ?? 127,
+            split_polyphony_share: r.split_polyphony_share ?? null,
+            overlap_strategy: r.overlap_strategy || 'first'
+          }));
+          app.midiPlayer.setChannelSplitRouting(channel, segments);
+          loadedRoutings += channelRoutings.length;
+          app.logger.info(`Auto-loaded split routing for channel ${channel + 1} with ${segments.length} segments`);
+        } else {
+          // Simple single-instrument routing
+          const routing = channelRoutings[0];
+          const targetChannel = routing.target_channel !== undefined ? routing.target_channel : channel;
+          app.midiPlayer.setChannelRouting(channel, routing.device_id, targetChannel);
           loadedRoutings++;
         }
       }
+
       app.logger.info(`Auto-loaded ${loadedRoutings} channel routings from database for file ${data.fileId}`);
     }
   } catch (routingError) {

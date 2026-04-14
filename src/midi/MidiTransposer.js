@@ -88,6 +88,15 @@ class MidiTransposer {
               }
               currentNote = remappedNote;
               notesRemapped++;
+
+              // Apply optional velocity scaling for remapped notes (e.g., drum substitutions)
+              if (transposition.velocityScale && transposition.velocityScale[remappedNote] !== undefined) {
+                const scale = transposition.velocityScale[remappedNote];
+                const velocity = newEvent.velocity ?? event.velocity;
+                if (velocity !== undefined && velocity > 0) {
+                  newEvent.velocity = Math.max(1, Math.min(127, Math.round(velocity * scale)));
+                }
+              }
             }
           }
 
@@ -756,6 +765,29 @@ class MidiTransposer {
       if (!usedChannels.has(ch)) free.push(ch);
     }
     return free;
+  }
+
+  /**
+   * Invert a note remapping (forward mapping -> reverse mapping).
+   * Used to convert recorded MIDI notes back to GM standard after drum remapping.
+   * For many-to-one mappings (multiple source notes mapped to same target),
+   * the reverse mapping picks the source note with the highest priority (lowest GM note).
+   * @param {Object} mapping - Forward mapping { sourceNote: targetNote }
+   * @returns {Object} Inverse mapping { targetNote: sourceNote }
+   */
+  static invertMapping(mapping) {
+    if (!mapping || typeof mapping !== 'object') return {};
+    const inverse = {};
+    for (const [source, target] of Object.entries(mapping)) {
+      const sourceNum = parseInt(source);
+      const targetNum = parseInt(target);
+      if (isNaN(sourceNum) || isNaN(targetNum)) continue;
+      // For many-to-one: keep the lowest source note (most "standard" in GM)
+      if (inverse[targetNum] === undefined || sourceNum < inverse[targetNum]) {
+        inverse[targetNum] = sourceNum;
+      }
+    }
+    return inverse;
   }
 }
 

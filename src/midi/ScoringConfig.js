@@ -121,7 +121,20 @@ const ScoringConfig = {
     autoSplitAvoidTransposition: false,
     preferSingleInstrument: true,
     preferSimilarGMType: true,
-    drumFallback: {} // per-category depth: { kicks: 3, snares: -1, ... }
+    drumFallback: {
+      kicks: 2,        // Essential: tight substitution (kick -> kick only)
+      snares: 3,       // Essential: allow rim shot, clap substitution
+      hiHats: 3,       // Important: allow pedal/open/tambourine
+      toms: 5,         // Optional: allow more distant toms, congas
+      crashes: 4,      // Important: allow splash, china, ride
+      rides: 4,        // Important: allow bell, crash
+      latin: -1,       // Nice-to-have: unlimited substitution
+      shakers: -1,     // Nice-to-have: unlimited substitution
+      woodsMetal: -1,  // Nice-to-have: unlimited substitution
+      pitched: -1,     // Nice-to-have: unlimited substitution
+      cuicas: -1,      // Nice-to-have: unlimited substitution
+      triangles: -1    // Nice-to-have: unlimited substitution
+    }
   },
 
   /**

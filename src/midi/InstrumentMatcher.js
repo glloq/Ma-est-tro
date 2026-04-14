@@ -222,7 +222,8 @@ class InstrumentMatcher {
         polyphony: { score: Math.round(safeRatioBreakdown(polyScore.score, std.polyphony, drum.polyphony)), max: drum.polyphony },
         ccSupport: { score: Math.round(safeRatioBreakdown(ccScore.score, std.ccSupport, drum.ccSupport)), max: drum.ccSupport },
         instrumentType: { score: Math.round(safeRatioBreakdown(typeScore.score, std.instrumentType, drum.instrumentType)), max: drum.instrumentType },
-        percussion: { score: Math.round(percussionPenalty), max: this.config.getPercussionValue('drumChannelDrumBonus') }
+        percussion: { score: Math.round(percussionPenalty), max: this.config.getPercussionValue('drumChannelDrumBonus') },
+        timing: { score: Math.round(timingResult.penalty), max: 0 }
       };
     } else {
       scoreBreakdown = {
@@ -231,7 +232,8 @@ class InstrumentMatcher {
         polyphony: { score: Math.round(polyScore.score), max: this.config.getWeight('polyphony') },
         ccSupport: { score: Math.round(ccScore.score), max: this.config.getWeight('ccSupport') },
         instrumentType: { score: Math.round(typeScore.score), max: this.config.getWeight('instrumentType') },
-        percussion: { score: 0, max: 0 }
+        percussion: { score: 0, max: 0 },
+        timing: { score: Math.round(timingResult.penalty), max: 0 }
       };
     }
 
@@ -802,11 +804,11 @@ class InstrumentMatcher {
     const maxScore = this.config.getWeight('polyphony'); // 13
     const margin = instrumentPoly - channelMaxPoly;
 
-    // Polyphonie non configuree : score max mais prudent
+    // Polyphonie non configuree : score reduit (70%) car non verifiee
     if (isDefault && margin >= 0) {
       return {
-        score: maxScore,
-        info: `Polyphony not configured (default ${instrumentPoly}), likely sufficient for ${channelMaxPoly} needed`
+        score: Math.round(maxScore * 0.7),
+        info: `Polyphony not configured (default ${instrumentPoly}), assumed sufficient for ${channelMaxPoly} needed`
       };
     }
 
