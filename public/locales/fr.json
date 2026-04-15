@@ -25,7 +25,8 @@
         "unknown": "Inconnu",
         "unknownError": "Erreur inconnue",
         "delete": "Supprimer",
-        "apply": "Appliquer"
+        "apply": "Appliquer",
+        "name": "Nom"
     },
     "app": {
         "title": "MidiMind 5.0 - MIDI Orchestration System",
@@ -1244,7 +1245,12 @@
         "showRoutedToggle": "Routés uniquement",
         "unscored": "Non évalué",
         "splitAccepted": "Découpe appliquée",
-        "removeSplit": "Retirer la découpe"
+        "removeSplit": "Retirer la découpe",
+        "splitFullCoverage": "Couverture complète",
+        "drumSource": "Source",
+        "drumDest": "Destination",
+        "drumType": "Type",
+        "drumEnabled": "Actif"
     },
     "instrumentCapabilities": {
         "title": "Compléter les capacités des instruments",
@@ -1875,7 +1881,9 @@
         "noteCoverage": "Couverture notes",
         "overlapPlay": "Jouer",
         "overlapAlternate": "Alterner",
-        "overlapOverflow": "Débordement"
+        "overlapOverflow": "Débordement",
+        "showAllCCs": "Voir tout",
+        "more": "de plus"
     },
     "scoringSettings": {
         "title": "Réglages d'auto-assignation",
