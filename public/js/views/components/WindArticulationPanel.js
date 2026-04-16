@@ -11,13 +11,9 @@ class WindArticulationPanel {
         this.renderer = null;          // Set by WindInstrumentEditor after renderer init
         this.onChanged = options.onChanged || null;
         this.onArticulationSelected = options.onArticulationSelected || null;
-        this.onAutoBreathToggled = options.onAutoBreathToggled || null;
-        this.onRangeCheckToggled = options.onRangeCheckToggled || null;
 
         // State
         this.currentArticulation = 'normal';
-        this.autoBreathEnabled = true;
-        this.rangeCheckEnabled = true;
 
         this._createDOM();
         this._attachEvents();
@@ -55,22 +51,6 @@ class WindArticulationPanel {
                         <button class="wind-tools-btn wind-art-btn" data-articulation="accent" title="${this.t('windEditor.accent')}">
                             ${this.t('windEditor.accent')} >
                         </button>
-                    </div>
-                </div>
-
-                <div class="wind-tools-section">
-                    <div class="wind-tools-section-title">${this.t('windEditor.optionsSection')}</div>
-                    <div class="wind-tools-row">
-                        <label class="wind-tools-toggle">
-                            <input type="checkbox" id="wind-auto-breath" checked>
-                            <span>${this.t('windEditor.autoBreath')}</span>
-                        </label>
-                    </div>
-                    <div class="wind-tools-row">
-                        <label class="wind-tools-toggle">
-                            <input type="checkbox" id="wind-range-check" checked>
-                            <span>${this.t('windEditor.rangeCheck')}</span>
-                        </label>
                     </div>
                 </div>
 
@@ -117,30 +97,6 @@ class WindArticulationPanel {
             }
         });
 
-        // Auto-breath toggle
-        const breathCheck = this.containerEl.querySelector('#wind-auto-breath');
-        if (breathCheck) {
-            breathCheck.addEventListener('change', () => {
-                this.autoBreathEnabled = breathCheck.checked;
-                if (this.onAutoBreathToggled) {
-                    this.onAutoBreathToggled(this.autoBreathEnabled);
-                }
-            });
-        }
-
-        // Range check toggle
-        const rangeCheck = this.containerEl.querySelector('#wind-range-check');
-        if (rangeCheck) {
-            rangeCheck.addEventListener('change', () => {
-                this.rangeCheckEnabled = rangeCheck.checked;
-                if (this.onRangeCheckToggled) {
-                    this.onRangeCheckToggled(this.rangeCheckEnabled);
-                }
-                if (this.onChanged) {
-                    this.onChanged();
-                }
-            });
-        }
     }
 
     // ========================================================================
