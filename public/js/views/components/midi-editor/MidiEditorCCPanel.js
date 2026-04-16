@@ -271,6 +271,17 @@ class MidiEditorCCPanel {
                     } else {
                         this.waitForCCEditorLayout();
                     }
+
+                    // Resize specialized editors after CC section expanded
+                    if (m.tablatureEditor && m.tablatureEditor.isVisible) {
+                        m.tablatureEditor.handleResize();
+                    }
+                    if (m.windInstrumentEditor && m.windInstrumentEditor.isVisible && m.windInstrumentEditor.renderer) {
+                        m.windInstrumentEditor.renderer.requestRedraw();
+                    }
+                    if (m.drumPatternEditor && m.drumPatternEditor.isVisible && m.drumPatternEditor.gridRenderer) {
+                        m.drumPatternEditor.gridRenderer.redraw();
+                    }
                 };
 
                 ccSection.addEventListener('transitionend', onTransitionEnd);
@@ -305,6 +316,15 @@ class MidiEditorCCPanel {
                 requestAnimationFrame(() => {
                     if (m.pianoRoll && typeof m.pianoRoll.redraw === 'function') {
                         m.pianoRoll.redraw();
+                    }
+                    if (m.tablatureEditor && m.tablatureEditor.isVisible) {
+                        m.tablatureEditor.handleResize();
+                    }
+                    if (m.windInstrumentEditor && m.windInstrumentEditor.isVisible && m.windInstrumentEditor.renderer) {
+                        m.windInstrumentEditor.renderer.requestRedraw();
+                    }
+                    if (m.drumPatternEditor && m.drumPatternEditor.isVisible && m.drumPatternEditor.gridRenderer) {
+                        m.drumPatternEditor.gridRenderer.redraw();
                     }
                 });
             }
