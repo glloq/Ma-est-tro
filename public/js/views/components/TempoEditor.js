@@ -492,6 +492,7 @@ class TempoEditor {
                 this.viewMaxTempo = this.options.maxTempo;
                 this.viewMinTempo = this.viewMaxTempo - range;
             }
+            this.gridDirty = true;
             this.renderThrottled();
         }
     }
@@ -518,6 +519,7 @@ class TempoEditor {
                 this.viewMaxTempo = Math.min(this.options.maxTempo, center + 10);
             }
         }
+        this.gridDirty = true;
         this.renderThrottled();
     }
 
