@@ -48,6 +48,7 @@ class WindMelodyRenderer {
         // Selection
         this.selectedEvents = new Set();
         this.selectionRect = null;
+        this._lastClickedKey = undefined;
 
         // Playback
         this.playheadTick = 0;
@@ -596,7 +597,36 @@ class WindMelodyRenderer {
 
         if (mx < this.headerWidth) {
             const note = this._yToNote(my);
-            if (note >= 0 && note <= 127) {
+            if (note < 0 || note > 127) return;
+
+            if (e.shiftKey && this._lastClickedKey !== undefined) {
+                // Shift+click: select notes in pitch range
+                const minN = Math.min(this._lastClickedKey, note);
+                const maxN = Math.max(this._lastClickedKey, note);
+                this.selectedEvents.clear();
+                for (let i = 0; i < this.melodyEvents.length; i++) {
+                    if (this.melodyEvents[i].note >= minN && this.melodyEvents[i].note <= maxN) {
+                        this.selectedEvents.add(i);
+                    }
+                }
+                this.requestRedraw();
+                this._dispatchSelectionChange();
+            } else if (e.ctrlKey || e.metaKey) {
+                // Ctrl+click: toggle selection for this pitch
+                this._lastClickedKey = note;
+                for (let i = 0; i < this.melodyEvents.length; i++) {
+                    if (this.melodyEvents[i].note === note) {
+                        if (this.selectedEvents.has(i)) {
+                            this.selectedEvents.delete(i);
+                        } else {
+                            this.selectedEvents.add(i);
+                        }
+                    }
+                }
+                this.requestRedraw();
+                this._dispatchSelectionChange();
+            } else {
+                // Plain click: play the note
                 this.canvas.dispatchEvent(new CustomEvent('wind:pianokey', {
                     detail: { note }, bubbles: false
                 }));
