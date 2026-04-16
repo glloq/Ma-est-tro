@@ -30,6 +30,11 @@ class NavigationOverviewBar {
         this.xrange = 1920;
         this.maxTick = 0;
 
+        // Minimap state (optional overlay of channel notes)
+        this.minimapNotes = null;
+        this.minimapColor = null;
+        this.minimapPitchRange = null;
+
         // Callbacks
         this.onNavigate = options.onNavigate || null;
         this.onZoom = options.onZoom || null;
@@ -123,6 +128,26 @@ class NavigationOverviewBar {
         this._scheduleRender();
     }
 
+    setMinimap(notes, color) {
+        if (!notes || notes.length === 0) {
+            this.minimapNotes = null;
+            this.minimapColor = null;
+            this.minimapPitchRange = null;
+        } else {
+            this.minimapNotes = notes;
+            this.minimapColor = color || '#888';
+            let min = Infinity;
+            let max = -Infinity;
+            for (const n of notes) {
+                if (n.n < min) min = n.n;
+                if (n.n > max) max = n.n;
+            }
+            this.minimapPitchRange = { min, max };
+        }
+        this._dirty = true;
+        this._scheduleRender();
+    }
+
     resize() {
         const dpr = window.devicePixelRatio || 1;
         const rect = this.container.getBoundingClientRect();
@@ -184,6 +209,9 @@ class NavigationOverviewBar {
         // Tick marks (light graduation)
         this._renderTickMarks(ctx, w, h);
 
+        // Channel minimap (only drawn if set, e.g. single-channel edit mode)
+        this._renderMinimap(ctx, w, h);
+
         // Viewport rectangle
         const vpRect = this._getViewportRect(w, h);
         ctx.fillStyle = this.colors.viewportFill;
@@ -225,6 +253,40 @@ class NavigationOverviewBar {
             ctx.lineTo(x, h);
         }
         ctx.stroke();
+    }
+
+    _renderMinimap(ctx, w, h) {
+        if (!this.minimapNotes || this.maxTick <= 0) return;
+
+        const effectiveMax = Math.max(this.maxTick, this.xoffset + this.xrange);
+        if (effectiveMax <= 0) return;
+
+        const padTop = 1;
+        const padBottom = 1;
+        const usableH = Math.max(0, h - padTop - padBottom);
+        const barH = 2;
+        const range = this.minimapPitchRange;
+        const spread = range ? Math.max(0, range.max - range.min) : 0;
+        const centerY = padTop + (usableH - barH) / 2;
+
+        ctx.save();
+        ctx.globalAlpha = 0.45;
+        ctx.fillStyle = this.minimapColor;
+
+        for (const note of this.minimapNotes) {
+            const x = (note.t / effectiveMax) * w;
+            const barW = Math.max(1, (note.g / effectiveMax) * w);
+            let y;
+            if (spread === 0) {
+                y = centerY;
+            } else {
+                const norm = (note.n - range.min) / spread;
+                y = padTop + (1 - norm) * (usableH - barH);
+            }
+            ctx.fillRect(x, y, barW, barH);
+        }
+
+        ctx.restore();
     }
 
     _getViewportRect(w, h) {
