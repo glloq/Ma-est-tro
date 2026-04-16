@@ -17,7 +17,6 @@ class WindInstrumentEditor {
         this.channel = 0;
         this.windPreset = null;         // WindInstrumentDatabase preset
         this.melodyEvents = [];         // {tick, note, velocity, duration, channel, articulation}
-        this.breathMarks = [];          // {tick, type, duration}
         this.isSyncing = false;
 
         // Sub-components
@@ -345,20 +344,6 @@ class WindInstrumentEditor {
                     this._syncToMidi();
                 }
             },
-            onAutoBreathToggled: (enabled) => {
-                if (enabled) {
-                    this._computeBreathMarks();
-                } else {
-                    this.breathMarks = [];
-                    if (this.renderer) this.renderer.setBreathMarks([]);
-                }
-            },
-            onRangeCheckToggled: (enabled) => {
-                if (this.renderer) {
-                    this.renderer.rangeCheckEnabled = enabled;
-                    this.renderer.redraw();
-                }
-            }
         });
 
         if (this.renderer) {
@@ -398,11 +383,6 @@ class WindInstrumentEditor {
 
         // Enforce monophony after loading
         this._enforceMonophony();
-
-        // Compute breath marks
-        if (this.articulationPanel?.autoBreathEnabled) {
-            this._computeBreathMarks();
-        }
 
         this._updateInfo();
     }
@@ -516,66 +496,6 @@ class WindInstrumentEditor {
         }
 
         this.renderer.redraw();
-    }
-
-    // ========================================================================
-    // BREATHING DETECTION
-    // ========================================================================
-
-    _computeBreathMarks() {
-        if (!this.windPreset || !this.melodyEvents.length) {
-            this.breathMarks = [];
-            if (this.renderer) this.renderer.setBreathMarks([]);
-            return;
-        }
-
-        const breathCapacity = this.windPreset.breathCapacity;
-        if (breathCapacity === Infinity) {
-            this.breathMarks = [];
-            if (this.renderer) this.renderer.setBreathMarks([]);
-            return;
-        }
-
-        // Read tempo from modal or DOM, fallback to 120 BPM
-        const ticksPerBeat = this.renderer?.ticksPerBeat || 480;
-        const bpm = this.modal?.tempo || parseInt(document.getElementById('tempo-input')?.value) || 120;
-        const secondsPerTick = 60.0 / (bpm * ticksPerBeat);
-
-        const marks = [];
-        let playingDuration = 0;
-
-        for (let i = 0; i < this.melodyEvents.length - 1; i++) {
-            const evt = this.melodyEvents[i];
-            const nextEvt = this.melodyEvents[i + 1];
-
-            const noteEndTick = evt.tick + evt.duration;
-            const gapTicks = nextEvt.tick - noteEndTick;
-            const gapSeconds = gapTicks * secondsPerTick;
-            const noteDuration = evt.duration * secondsPerTick;
-
-            playingDuration += noteDuration;
-
-            if (gapSeconds >= 0.25) {
-                // Natural rest — reset
-                playingDuration = 0;
-            } else if (playingDuration >= breathCapacity * 0.8) {
-                marks.push({
-                    tick: noteEndTick,
-                    type: 'required',
-                    duration: Math.round(0.25 / secondsPerTick)
-                });
-                playingDuration = 0;
-            } else if (playingDuration >= breathCapacity * 0.6) {
-                marks.push({
-                    tick: noteEndTick,
-                    type: 'suggested',
-                    duration: Math.round(0.2 / secondsPerTick)
-                });
-            }
-        }
-
-        this.breathMarks = marks;
-        if (this.renderer) this.renderer.setBreathMarks(marks);
     }
 
     // ========================================================================
@@ -694,11 +614,6 @@ class WindInstrumentEditor {
 
         this._enforceMonophony();
 
-        if (this.articulationPanel?.autoBreathEnabled) {
-            this.melodyEvents = this.renderer.melodyEvents;
-            this._computeBreathMarks();
-        }
-
         this.renderer.redraw();
         this._syncToMidi();
     }
@@ -707,12 +622,6 @@ class WindInstrumentEditor {
         if (!this.renderer) return;
 
         this._enforceMonophony();
-
-        if (this.articulationPanel?.autoBreathEnabled) {
-            this.melodyEvents = this.renderer.melodyEvents;
-            this._computeBreathMarks();
-        }
-
         this._syncToMidi();
     }
 

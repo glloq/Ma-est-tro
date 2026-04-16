@@ -44,7 +44,6 @@ class WindMelodyRenderer {
 
         // Data
         this.melodyEvents = [];     // {tick, note, velocity, duration, channel, articulation}
-        this.breathMarks = [];      // {tick, type, duration}
 
         // Selection
         this.selectedEvents = new Set();
@@ -60,6 +59,7 @@ class WindMelodyRenderer {
         this._hoverIndex = -1;
         this._moveOffset = null;
         this._resizeIndex = -1;
+        this._selectAdditive = false;
 
         // Undo/Redo
         this._undoStack = [];
@@ -155,11 +155,6 @@ class WindMelodyRenderer {
     setMelodyEvents(events) {
         this.melodyEvents = events || [];
         this.selectedEvents.clear();
-        this.requestRedraw();
-    }
-
-    setBreathMarks(marks) {
-        this.breathMarks = marks || [];
         this.requestRedraw();
     }
 
@@ -327,7 +322,6 @@ class WindMelodyRenderer {
 
         this._renderRangeZones(ctx, w, h);
         this._renderGrid(ctx, w, h);
-        this._renderBreathMarks(ctx, w, h);
         this._renderNotes(ctx, w, h);
         this._renderSelectionRect(ctx);
         this._renderPlayhead(ctx, w, h);
@@ -436,17 +430,25 @@ class WindMelodyRenderer {
 
     _renderNotes(ctx, w, _h) {
         const noteH = this._getNoteHeight();
+        const isDragMoving = this._isDragging && this._dragMode === 'move' && this._moveOffset;
 
         for (let i = 0; i < this.melodyEvents.length; i++) {
             const evt = this.melodyEvents[i];
-            const x = this._tickToX(evt.tick);
+            let x = this._tickToX(evt.tick);
             const noteW = evt.duration / this.ticksPerPixel;
-            const y = this._noteToY(evt.note);
+            let y = this._noteToY(evt.note);
+
+            const isSelected = this.selectedEvents.has(i);
+
+            // Preview move offset for selected notes during drag
+            if (isSelected && isDragMoving) {
+                x += this._moveOffset.tick / this.ticksPerPixel;
+                y = this._noteToY(evt.note + this._moveOffset.note);
+            }
 
             // Skip if off-screen
             if (x + noteW < this.headerWidth || x > w) continue;
 
-            const isSelected = this.selectedEvents.has(i);
             const isOutOfRange = this.rangeCheckEnabled && (evt.note < this.noteMin || evt.note > this.noteMax);
 
             // Note body
@@ -507,19 +509,6 @@ class WindMelodyRenderer {
             }
         } else {
             ctx.fillText(artDef.symbol, x + noteW / 2, y - noteH / 2 - 2);
-        }
-    }
-
-    _renderBreathMarks(ctx, w, _h) {
-        for (const mark of this.breathMarks) {
-            const x = this._tickToX(mark.tick);
-            if (x < this.headerWidth || x > w) continue;
-
-            ctx.fillStyle = mark.type === 'required' ? this.colors.breathRequired : this.colors.breathSuggested;
-            ctx.font = 'bold 14px serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText(',', x, this.topMargin + 14);
         }
     }
 
@@ -615,16 +604,16 @@ class WindMelodyRenderer {
                         this._dispatchSelectionChange();
                     }
                 } else {
-                    if (e.shiftKey) {
-                        this._isDragging = true;
-                        this._dragMode = 'select';
-                        this._dragStart = { x: mx, y: my };
-                        this.selectionRect = { x: mx, y: my, w: 0, h: 0 };
-                    } else {
+                    // In select mode: always start rectangle selection
+                    // Shift = additive (keep existing selection)
+                    this._selectAdditive = e.shiftKey;
+                    if (!e.shiftKey) {
                         this.selectedEvents.clear();
-                        this.requestRedraw();
-                        this._dispatchSelectionChange();
                     }
+                    this._isDragging = true;
+                    this._dragMode = 'select';
+                    this._dragStart = { x: mx, y: my };
+                    this.selectionRect = { x: mx, y: my, w: 0, h: 0 };
                 }
             }
         }
@@ -671,7 +660,11 @@ class WindMelodyRenderer {
                 if (this.tool === 'pan') {
                     this.canvas.style.cursor = newHover >= 0 ? 'pointer' : 'grab';
                 } else {
-                    this.canvas.style.cursor = newHover >= 0 ? 'pointer' : 'crosshair';
+                    if (newHover >= 0 && this.selectedEvents.has(newHover)) {
+                        this.canvas.style.cursor = 'move';
+                    } else {
+                        this.canvas.style.cursor = newHover >= 0 ? 'pointer' : 'crosshair';
+                    }
                 }
             }
         }
@@ -681,7 +674,7 @@ class WindMelodyRenderer {
         if (this._isDragging && this._dragMode === 'pan') {
             this.canvas.style.cursor = 'grab';
         } else if (this._isDragging && this._dragMode === 'select') {
-            this._selectInRect(this.selectionRect);
+            this._selectInRect(this.selectionRect, this._selectAdditive);
             this.selectionRect = null;
             this.requestRedraw();
             this._dispatchSelectionChange();
@@ -706,6 +699,7 @@ class WindMelodyRenderer {
         this._dragStart = null;
         this._dragMode = null;
         this._moveOffset = null;
+        this._selectAdditive = false;
         this.requestRedraw();
     }
 
@@ -775,9 +769,11 @@ class WindMelodyRenderer {
         return -1;
     }
 
-    _selectInRect(rect) {
+    _selectInRect(rect, additive = false) {
         if (!rect) return;
-        this.selectedEvents.clear();
+        if (!additive) {
+            this.selectedEvents.clear();
+        }
         const noteH = this._getNoteHeight();
         for (let i = 0; i < this.melodyEvents.length; i++) {
             const evt = this.melodyEvents[i];
@@ -793,8 +789,20 @@ class WindMelodyRenderer {
     }
 
     _rebuildSelectionAfterSort() {
-        // After sort, indices change — clear selection for simplicity
+        // Save references to selected event objects before clearing
+        const selectedObjects = new Set();
+        for (const idx of this.selectedEvents) {
+            if (this.melodyEvents[idx]) {
+                selectedObjects.add(this.melodyEvents[idx]);
+            }
+        }
+        // Rebuild indices after sort
         this.selectedEvents.clear();
+        for (let i = 0; i < this.melodyEvents.length; i++) {
+            if (selectedObjects.has(this.melodyEvents[i])) {
+                this.selectedEvents.add(i);
+            }
+        }
     }
 
     // ========================================================================
