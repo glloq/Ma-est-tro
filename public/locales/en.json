@@ -433,6 +433,11 @@
             "1/32": "1/32"
         },
         "settingsPopover": "Settings",
+        "settingsPopoverTitle": "Settings",
+        "settingsGroupActions": "Actions",
+        "settingsGroupDisplay": "Display",
+        "settingsGroupInterface": "Interface",
+        "settingsGroupPlayback": "Playback",
         "ccChannelFilter": "CC Ch:",
         "channelSettings": "Channel settings",
         "channelSettingsTitle": "Channel {channel}",

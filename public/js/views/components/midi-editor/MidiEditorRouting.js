@@ -261,61 +261,88 @@
 
                         <!-- Popover Paramètres (Canal, Instrument, Device connecté) -->
                         <div class="settings-popover" id="settings-popover" style="display: none;">
-                            <div class="settings-popover-section">
-                                <label class="settings-label">🔀 ${this.t('midiEditor.moveToChannelTitle')}</label>
-                                <span class="settings-popover-hint">${this.t('midiEditor.moveToChannelHint')}</span>
-                                <div class="settings-row">
-                                    <select class="snap-select" id="channel-selector" title="${this.t('midiEditor.changeChannelTip')}">
-                                        ${this.renderChannelOptions()}
-                                    </select>
-                                    <button class="tool-btn-apply" data-action="change-channel" id="change-channel-btn" title="${this.t('midiEditor.applyChannel')}" disabled>${this.t('midiEditor.applyBtn')}</button>
+                            <div class="settings-popover-header">
+                                <span class="settings-popover-title">⚙️ ${this.t('midiEditor.settingsPopoverTitle')}</span>
+                            </div>
+
+                            <div class="settings-group" data-group="actions">
+                                <div class="settings-group-header">${this.t('midiEditor.settingsGroupActions')}</div>
+                                <div class="settings-popover-section">
+                                    <label class="settings-label">🔀 ${this.t('midiEditor.moveToChannelTitle')}</label>
+                                    <span class="settings-popover-hint">${this.t('midiEditor.moveToChannelHint')}</span>
+                                    <div class="settings-row">
+                                        <select class="snap-select" id="channel-selector" title="${this.t('midiEditor.changeChannelTip')}">
+                                            ${this.renderChannelOptions()}
+                                        </select>
+                                        <button class="tool-btn-apply" data-action="change-channel" id="change-channel-btn" title="${this.t('midiEditor.applyChannel')}" disabled>${this.t('midiEditor.applyBtn')}</button>
+                                    </div>
+                                </div>
+                                <div class="settings-popover-section">
+                                    <label class="settings-label" id="instrument-label">🎵 ${this.t('midiEditor.changeInstrumentTitle')}</label>
+                                    <span class="settings-popover-hint">${this.t('midiEditor.changeInstrumentHint')}</span>
+                                    <div class="settings-row">
+                                        <select class="snap-select" id="instrument-selector" title="${this.t('midiEditor.selectInstrument')}">
+                                            ${this.renderInstrumentOptions()}
+                                        </select>
+                                        <button class="tool-btn-apply" data-action="apply-instrument" id="apply-instrument-btn" title="${this.t('midiEditor.applyInstrument')}">${this.t('midiEditor.applyBtn')}</button>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="settings-popover-section">
-                                <label class="settings-label" id="instrument-label">🎵 ${this.t('midiEditor.changeInstrumentTitle')}</label>
-                                <span class="settings-popover-hint">${this.t('midiEditor.changeInstrumentHint')}</span>
-                                <div class="settings-row">
-                                    <select class="snap-select" id="instrument-selector" title="${this.t('midiEditor.selectInstrument')}">
-                                        ${this.renderInstrumentOptions()}
-                                    </select>
-                                    <button class="tool-btn-apply" data-action="apply-instrument" id="apply-instrument-btn" title="${this.t('midiEditor.applyInstrument')}">${this.t('midiEditor.applyBtn')}</button>
+
+                            <div class="settings-group" data-group="display">
+                                <div class="settings-group-header">${this.t('midiEditor.settingsGroupDisplay')}</div>
+                                <div class="settings-switch-row" title="${this.t('midiEditor.playableNotesHint')}">
+                                    <div class="settings-switch-info">
+                                        <span class="settings-switch-label">🎹 ${this.t('midiEditor.playableNotesTitle')}</span>
+                                    </div>
+                                    <button class="settings-switch playable-notes-toggle" id="playable-notes-toggle"
+                                        data-active="false"
+                                        aria-label="${this.t('midiEditor.playableNotesTitle')}"
+                                        title="${this.t('midiEditor.playableNotesHint')}">
+                                        <span class="sr-only">OFF</span>
+                                    </button>
                                 </div>
                             </div>
-                            <div class="settings-popover-section">
-                                <label class="settings-label">🎹 ${this.t('midiEditor.playableNotesTitle')}</label>
-                                <span class="settings-popover-hint">${this.t('midiEditor.playableNotesHint')}</span>
-                                <button class="tool-btn-compact playable-notes-toggle" id="playable-notes-toggle"
-                                    data-active="false"
-                                    title="${this.t('midiEditor.playableNotesHint')}">
-                                    OFF
-                                </button>
+
+                            <div class="settings-group" data-group="interface">
+                                <div class="settings-group-header">${this.t('midiEditor.settingsGroupInterface')}</div>
+                                <div class="settings-switch-row" title="${this.t('midiEditor.touchModeHint')}">
+                                    <div class="settings-switch-info">
+                                        <span class="settings-switch-label">👆 ${this.t('midiEditor.touchModeTitle')}</span>
+                                    </div>
+                                    <button class="settings-switch touch-mode-toggle" id="touch-mode-toggle"
+                                        data-active="${this.touchMode ? 'true' : 'false'}"
+                                        aria-label="${this.t('midiEditor.touchModeTitle')}"
+                                        title="${this.t('midiEditor.touchModeHint')}">
+                                        <span class="sr-only">${this.touchMode ? 'ON' : 'OFF'}</span>
+                                    </button>
+                                </div>
                             </div>
-                            <div class="settings-popover-section">
-                                <label class="settings-label">👆 ${this.t('midiEditor.touchModeTitle')}</label>
-                                <span class="settings-popover-hint">${this.t('midiEditor.touchModeHint')}</span>
-                                <button class="tool-btn-compact touch-mode-toggle" id="touch-mode-toggle"
-                                    data-active="${this.touchMode ? 'true' : 'false'}"
-                                    title="${this.t('midiEditor.touchModeHint')}">
-                                    ${this.touchMode ? 'ON' : 'OFF'}
-                                </button>
-                            </div>
-                            <div class="settings-popover-section">
-                                <label class="settings-label">🎹 ${this.t('midiEditor.keyboardPlaybackTitle')}</label>
-                                <span class="settings-popover-hint">${this.t('midiEditor.keyboardPlaybackHint')}</span>
-                                <button class="tool-btn-compact" id="keyboard-playback-toggle"
-                                    data-active="${this.keyboardPlaybackEnabled ? 'true' : 'false'}"
-                                    title="${this.t('midiEditor.keyboardPlaybackHint')}">
-                                    ${this.keyboardPlaybackEnabled ? 'ON' : 'OFF'}
-                                </button>
-                            </div>
-                            <div class="settings-popover-section">
-                                <label class="settings-label">🔊 ${this.t('midiEditor.dragPlaybackTitle')}</label>
-                                <span class="settings-popover-hint">${this.t('midiEditor.dragPlaybackHint')}</span>
-                                <button class="tool-btn-compact" id="drag-playback-toggle"
-                                    data-active="${this.dragPlaybackEnabled ? 'true' : 'false'}"
-                                    title="${this.t('midiEditor.dragPlaybackHint')}">
-                                    ${this.dragPlaybackEnabled ? 'ON' : 'OFF'}
-                                </button>
+
+                            <div class="settings-group" data-group="playback">
+                                <div class="settings-group-header">${this.t('midiEditor.settingsGroupPlayback')}</div>
+                                <div class="settings-switch-row" title="${this.t('midiEditor.keyboardPlaybackHint')}">
+                                    <div class="settings-switch-info">
+                                        <span class="settings-switch-label">🎹 ${this.t('midiEditor.keyboardPlaybackTitle')}</span>
+                                    </div>
+                                    <button class="settings-switch" id="keyboard-playback-toggle"
+                                        data-active="${this.keyboardPlaybackEnabled ? 'true' : 'false'}"
+                                        aria-label="${this.t('midiEditor.keyboardPlaybackTitle')}"
+                                        title="${this.t('midiEditor.keyboardPlaybackHint')}">
+                                        <span class="sr-only">${this.keyboardPlaybackEnabled ? 'ON' : 'OFF'}</span>
+                                    </button>
+                                </div>
+                                <div class="settings-switch-row" title="${this.t('midiEditor.dragPlaybackHint')}">
+                                    <div class="settings-switch-info">
+                                        <span class="settings-switch-label">🔊 ${this.t('midiEditor.dragPlaybackTitle')}</span>
+                                    </div>
+                                    <button class="settings-switch" id="drag-playback-toggle"
+                                        data-active="${this.dragPlaybackEnabled ? 'true' : 'false'}"
+                                        aria-label="${this.t('midiEditor.dragPlaybackTitle')}"
+                                        title="${this.t('midiEditor.dragPlaybackHint')}">
+                                        <span class="sr-only">${this.dragPlaybackEnabled ? 'ON' : 'OFF'}</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -806,7 +833,14 @@
         const btn = this.container?.querySelector('#playable-notes-toggle');
         if (btn) {
             btn.dataset.active = String(this.showPlayableNotes);
-            btn.textContent = this.showPlayableNotes ? (this.t('midiEditor.playableOn') || 'ON') : (this.t('midiEditor.playableOff') || 'OFF');
+            const onLabel = this.t('midiEditor.playableOn') || 'ON';
+            const offLabel = this.t('midiEditor.playableOff') || 'OFF';
+            const srLabel = btn.querySelector('.sr-only');
+            if (srLabel) {
+                srLabel.textContent = this.showPlayableNotes ? onLabel : offLabel;
+            } else {
+                btn.textContent = this.showPlayableNotes ? onLabel : offLabel;
+            }
         }
 
         if (this.showPlayableNotes) {
