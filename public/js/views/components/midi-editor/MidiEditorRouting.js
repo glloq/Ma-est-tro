@@ -198,7 +198,7 @@
 
                         <div class="toolbar-divider"></div>
 
-                        <!-- Section Modes d'édition (tous les modes regroupés) -->
+                        <!-- Section Modes d'édition -->
                         <div class="toolbar-section edit-modes-section">
                             <button class="tool-btn active" data-action="mode-drag-view" data-mode="drag-view" title="${this.t('midiEditor.viewModeTip')}">
                                 <span class="icon">👁️</span>
@@ -206,13 +206,18 @@
                             <button class="tool-btn" data-action="mode-select" data-mode="select" title="${this.t('midiEditor.selectModeTip')}">
                                 <span class="icon">◻</span>
                             </button>
-                            <button class="tool-btn" data-action="mode-drag-notes" data-mode="drag-notes" title="${this.t('midiEditor.moveNotesTip')}">
+                            <!-- Bouton Edit unifié (visible hors mode tactile) -->
+                            <button class="tool-btn edit-unified-btn${this.touchMode ? ' hidden' : ''}" data-action="mode-edit" data-mode="edit" title="${this.t('midiEditor.editModeTip')}">
+                                <span class="icon">✏️</span>
+                            </button>
+                            <!-- Boutons tactiles (visibles en mode tactile uniquement) -->
+                            <button class="tool-btn touch-edit-btn${this.touchMode ? '' : ' hidden'}" data-action="mode-drag-notes" data-mode="drag-notes" title="${this.t('midiEditor.moveNotesTip')}">
                                 <span class="icon">✋</span>
                             </button>
-                            <button class="tool-btn" data-action="mode-add-note" data-mode="add-note" title="${this.t('midiEditor.addNoteTip')}">
+                            <button class="tool-btn touch-edit-btn${this.touchMode ? '' : ' hidden'}" data-action="mode-add-note" data-mode="add-note" title="${this.t('midiEditor.addNoteTip')}">
                                 <span class="icon">➕</span>
                             </button>
-                            <button class="tool-btn" data-action="mode-resize-note" data-mode="resize-note" title="${this.t('midiEditor.durationTip')}">
+                            <button class="tool-btn touch-edit-btn${this.touchMode ? '' : ' hidden'}" data-action="mode-resize-note" data-mode="resize-note" title="${this.t('midiEditor.durationTip')}">
                                 <span class="icon">↔</span>
                             </button>
                         </div>
@@ -287,6 +292,15 @@
                                     data-active="false"
                                     title="${this.t('midiEditor.playableNotesHint')}">
                                     OFF
+                                </button>
+                            </div>
+                            <div class="settings-popover-section">
+                                <label class="settings-label">👆 ${this.t('midiEditor.touchModeTitle')}</label>
+                                <span class="settings-popover-hint">${this.t('midiEditor.touchModeHint')}</span>
+                                <button class="tool-btn-compact touch-mode-toggle" id="touch-mode-toggle"
+                                    data-active="${this.touchMode ? 'true' : 'false'}"
+                                    title="${this.t('midiEditor.touchModeHint')}">
+                                    ${this.touchMode ? 'ON' : 'OFF'}
                                 </button>
                             </div>
                         </div>

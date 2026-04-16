@@ -33,7 +33,10 @@ class MidiEditorModal {
         this.clipboard = [];
 
         // Mode d'édition actuel
-        this.editMode = 'drag-view'; // 'select', 'drag-notes', 'drag-view' - drag-view par défaut pour navigation
+        this.editMode = 'drag-view'; // 'select', 'drag-notes', 'drag-view', 'edit' - drag-view par défaut pour navigation
+
+        // Mode tactile : affiche les boutons séparés (déplacer, ajouter, agrandir) au lieu du bouton crayon unifié
+        this.touchMode = this._loadTouchModePref();
 
         // Instrument sélectionné pour les nouveaux canaux (program MIDI GM)
         this.selectedInstrument = 0; // Piano par défaut
@@ -283,6 +286,27 @@ if (typeof window !== 'undefined') {
     window.MidiEditorModal = MidiEditorModal;
 
 }
+
+// ============================================================================
+// Touch Mode Preference (localStorage via maestro_settings)
+// ============================================================================
+
+MidiEditorModal.prototype._loadTouchModePref = function() {
+    try {
+        const saved = localStorage.getItem('maestro_settings');
+        if (saved) { return JSON.parse(saved).midiEditorTouchMode === true; }
+    } catch (e) {}
+    return false;
+};
+
+MidiEditorModal.prototype._saveTouchModePref = function(value) {
+    try {
+        const saved = localStorage.getItem('maestro_settings');
+        const settings = saved ? JSON.parse(saved) : {};
+        settings.midiEditorTouchMode = value;
+        localStorage.setItem('maestro_settings', JSON.stringify(settings));
+    } catch (e) {}
+};
 
 // ============================================================================
 // APPLY MIXINS - Methods extracted to separate files for maintainability

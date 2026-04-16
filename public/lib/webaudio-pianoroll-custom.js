@@ -328,6 +328,9 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                 case 'resize-note':
                     canvas.style.cursor = 'col-resize';
                     break;
+                case 'edit':
+                    canvas.style.cursor = 'crosshair';
+                    break;
                 default:
                     canvas.style.cursor = 'default';
             }
@@ -822,7 +825,7 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
             }
             else if(ht.m=="s"&&ht.t>=0){
                 // Ne créer des notes QUE en mode 'select', 'add-note' ou si uiMode n'est pas défini
-                if(this.uiMode === 'select' || this.uiMode === 'add-note' || !this.uiMode) {
+                if(this.uiMode === 'select' || this.uiMode === 'add-note' || this.uiMode === 'edit' || !this.uiMode) {
                     // Sauvegarder snapshot avant d'ajouter une note
                     this.saveSnapshot();
 
@@ -1247,6 +1250,12 @@ customElements.define("webaudio-pianoroll", class Pianoroll extends HTMLElement 
                         // Clic dans le vide : ne rien faire
                         break;
                     }
+                }
+            }
+            else if(this.uiMode === 'edit') {
+                // MODE EDIT UNIFIÉ : déplacer/redimensionner/ajouter selon le contexte du clic
+                if(this.editmode=="dragmono"||this.editmode=="dragpoly") {
+                    this.editDragDown(this.downpos);
                 }
             }
             else {
