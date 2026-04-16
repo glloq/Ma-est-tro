@@ -223,13 +223,17 @@ class VelocityEditor {
     }
 
     velocityToY(velocity) {
-        // 0-127 → bottom to top
+        // 0-127 → bottom to top with small margins
+        const margin = 6;
+        const drawH = this.canvas.height - margin * 2;
         const normalized = velocity / 127;
-        return this.canvas.height - (normalized * this.canvas.height);
+        return margin + drawH - (normalized * drawH);
     }
 
     yToVelocity(y) {
-        const normalized = 1 - (y / this.canvas.height);
+        const margin = 6;
+        const drawH = this.canvas.height - margin * 2;
+        const normalized = 1 - ((y - margin) / drawH);
         return Math.round(Math.max(1, Math.min(127, normalized * 127)));
     }
 

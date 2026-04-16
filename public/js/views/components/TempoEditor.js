@@ -25,6 +25,11 @@ class TempoEditor {
             ...options
         };
 
+        // Visible vertical range (scrollable subset of min/max)
+        this.viewMinTempo = this.options.minTempo;
+        this.viewMaxTempo = this.options.maxTempo;
+        this.viewRange = 80; // BPM visible at once (scrollable window)
+
         // État de l'éditeur
         this.events = []; // Événements de tempo {ticks, tempo}
         this.selectedEvents = new Set();
@@ -114,6 +119,10 @@ class TempoEditor {
         this.canvas.addEventListener('mousemove', this._boundMouseMove);
         this.canvas.addEventListener('mouseup', this._boundMouseUp);
         this.canvas.addEventListener('mouseleave', this._boundMouseLeave);
+
+        // Scroll vertical pour la plage de tempo
+        this._boundWheel = this._handleWheel.bind(this);
+        this.canvas.addEventListener('wheel', this._boundWheel, { passive: false });
 
         // Événements clavier
         document.addEventListener('keydown', this._boundKeyDown);
@@ -273,13 +282,17 @@ class TempoEditor {
     }
 
     tempoToY(tempo) {
-        const normalized = (tempo - this.options.minTempo) / (this.options.maxTempo - this.options.minTempo);
-        return this.canvas.height - (normalized * this.canvas.height);
+        const margin = 6;
+        const drawH = this.canvas.height - margin * 2;
+        const normalized = (tempo - this.viewMinTempo) / (this.viewMaxTempo - this.viewMinTempo);
+        return margin + drawH - (normalized * drawH);
     }
 
     yToTempo(y) {
-        const normalized = 1 - (y / this.canvas.height);
-        return Math.round(normalized * (this.options.maxTempo - this.options.minTempo) + this.options.minTempo);
+        const margin = 6;
+        const drawH = this.canvas.height - margin * 2;
+        const normalized = 1 - ((y - margin) / drawH);
+        return Math.round(normalized * (this.viewMaxTempo - this.viewMinTempo) + this.viewMinTempo);
     }
 
     snapToGrid(ticks) {
@@ -465,6 +478,47 @@ class TempoEditor {
 
     handleMouseLeave(e) {
         this.handleMouseUp(e);
+    }
+
+    _handleWheel(e) {
+        if (!e.shiftKey) {
+            // Vertical scroll: shift the tempo view range
+            e.preventDefault();
+            const step = e.deltaY > 0 ? -5 : 5;
+            const range = this.viewMaxTempo - this.viewMinTempo;
+            this.viewMinTempo = Math.max(this.options.minTempo, this.viewMinTempo + step);
+            this.viewMaxTempo = this.viewMinTempo + range;
+            if (this.viewMaxTempo > this.options.maxTempo) {
+                this.viewMaxTempo = this.options.maxTempo;
+                this.viewMinTempo = this.viewMaxTempo - range;
+            }
+            this.renderThrottled();
+        }
+    }
+
+    /**
+     * Auto-fit the view to show all tempo events with some padding
+     */
+    autoFitView() {
+        if (this.events.length === 0) {
+            this.viewMinTempo = 80;
+            this.viewMaxTempo = 160;
+        } else {
+            let min = Infinity, max = -Infinity;
+            for (const ev of this.events) {
+                if (ev.tempo < min) min = ev.tempo;
+                if (ev.tempo > max) max = ev.tempo;
+            }
+            const padding = Math.max(10, (max - min) * 0.2);
+            this.viewMinTempo = Math.max(this.options.minTempo, Math.floor(min - padding));
+            this.viewMaxTempo = Math.min(this.options.maxTempo, Math.ceil(max + padding));
+            if (this.viewMaxTempo - this.viewMinTempo < 20) {
+                const center = (this.viewMinTempo + this.viewMaxTempo) / 2;
+                this.viewMinTempo = Math.max(this.options.minTempo, center - 10);
+                this.viewMaxTempo = Math.min(this.options.maxTempo, center + 10);
+            }
+        }
+        this.renderThrottled();
     }
 
     handleKeyDown(e) {
@@ -669,11 +723,12 @@ class TempoEditor {
 
         // Grille horizontale (tempo) — labels avec marge
         const tempoStep = 20; // 20 BPM par ligne
-        const numLines = Math.ceil((this.options.maxTempo - this.options.minTempo) / tempoStep);
+        const firstLine = Math.floor(this.viewMinTempo / tempoStep) * tempoStep;
+        const lastLine = Math.ceil(this.viewMaxTempo / tempoStep) * tempoStep;
 
-        for (let i = 0; i <= numLines; i++) {
-            const tempo = this.options.minTempo + i * tempoStep;
+        for (let tempo = firstLine; tempo <= lastLine; tempo += tempoStep) {
             const y = this.tempoToY(tempo);
+            if (y < 0 || y > this.gridCanvas.height) continue;
 
             // Ligne plus marquée à 120 BPM (tempo standard)
             const isDefault = tempo === 120;
@@ -772,7 +827,7 @@ class TempoEditor {
     setEvents(events) {
         this.events = events || [];
         this.selectedEvents.clear();
-        this.renderThrottled();
+        this.autoFitView();
     }
 
     getEvents() {
@@ -789,6 +844,7 @@ class TempoEditor {
             this.canvas.removeEventListener('mousemove', this._boundMouseMove);
             this.canvas.removeEventListener('mouseup', this._boundMouseUp);
             this.canvas.removeEventListener('mouseleave', this._boundMouseLeave);
+            this.canvas.removeEventListener('wheel', this._boundWheel);
         }
         document.removeEventListener('keydown', this._boundKeyDown);
         window.removeEventListener('resize', this._boundResize);
