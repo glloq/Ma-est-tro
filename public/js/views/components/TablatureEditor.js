@@ -107,9 +107,13 @@ class TablatureEditor {
                 if (this.modal.syncAllEditors) this.modal.syncAllEditors();
             });
         });
+
+        // Watch for container size changes (e.g. CC section open/close)
+        this._startResizeObserver();
     }
 
     hide() {
+        this._stopResizeObserver();
         if (this.containerEl) {
             this.containerEl.style.display = 'none';
         }
@@ -146,6 +150,7 @@ class TablatureEditor {
     }
 
     destroy() {
+        this._stopResizeObserver();
         if (this._autoSaveTimer) clearTimeout(this._autoSaveTimer);
         document.removeEventListener('keydown', this._onKeyDown);
         this._detachCanvasEvents();
@@ -986,8 +991,10 @@ class TablatureEditor {
             if (wrapper) {
                 const w = wrapper.clientWidth || 800;
                 const h = wrapper.clientHeight || (this.stringInstrument?.num_strings || 6) * 20 + 40;
-                this.tabCanvasEl.width = w;
-                this.tabCanvasEl.height = h;
+                if (this.tabCanvasEl.width !== w || this.tabCanvasEl.height !== h) {
+                    this.tabCanvasEl.width = w;
+                    this.tabCanvasEl.height = h;
+                }
             }
             if (this.renderer) this.renderer.redraw();
         }
@@ -997,10 +1004,44 @@ class TablatureEditor {
             if (wrapper) {
                 const w = wrapper.clientWidth || 180;
                 const h = wrapper.clientHeight || 200;
-                this.fretboardCanvasEl.width = w;
-                this.fretboardCanvasEl.height = h;
+                if (this.fretboardCanvasEl.width !== w || this.fretboardCanvasEl.height !== h) {
+                    this.fretboardCanvasEl.width = w;
+                    this.fretboardCanvasEl.height = h;
+                }
             }
             if (this.fretboard) this.fretboard.redraw();
+        }
+    }
+
+    _startResizeObserver() {
+        this._stopResizeObserver();
+        if (typeof ResizeObserver === 'undefined') return;
+
+        this._resizeObserver = new ResizeObserver(() => {
+            if (!this._resizeRAF) {
+                this._resizeRAF = requestAnimationFrame(() => {
+                    this._resizeRAF = null;
+                    this.handleResize();
+                });
+            }
+        });
+
+        if (this.tabCanvasEl?.parentElement) {
+            this._resizeObserver.observe(this.tabCanvasEl.parentElement);
+        }
+        if (this.fretboardCanvasEl?.parentElement) {
+            this._resizeObserver.observe(this.fretboardCanvasEl.parentElement);
+        }
+    }
+
+    _stopResizeObserver() {
+        if (this._resizeObserver) {
+            this._resizeObserver.disconnect();
+            this._resizeObserver = null;
+        }
+        if (this._resizeRAF) {
+            cancelAnimationFrame(this._resizeRAF);
+            this._resizeRAF = null;
         }
     }
 
