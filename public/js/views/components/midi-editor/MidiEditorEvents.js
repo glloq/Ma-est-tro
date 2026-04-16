@@ -151,11 +151,10 @@
             if (showAllBtn) {
                 e.preventDefault();
                 e.stopPropagation();
-    // Block "Show All" when a specialized editor is active
-                if (this._isSpecializedEditorActive()) {
-                    this.showNotification(this.t('midiEditor.closeEditorFirst') || 'Close the specialized editor first', 'info');
-                    return;
-                }
+    // Close any active specialized editor first so we truly show all channels
+                if (this.tablatureEditor?.isVisible) this.tablatureEditor.hide();
+                if (this.drumPatternEditor?.isVisible) this.drumPatternEditor.hide();
+                if (this.windInstrumentEditor?.isVisible) this.windInstrumentEditor.hide();
                 const previousActiveChannels = new Set(this.activeChannels);
                 this.channels.forEach(ch => {
                     this.activeChannels.add(ch.channel);

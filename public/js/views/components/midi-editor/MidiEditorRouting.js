@@ -94,16 +94,12 @@
             });
         }
 
-    // Disable/enable "Show All" button based on specialized editor state
+    // "Show All" stays enabled even during specialized editing — it closes
+    // the specialized editor and restores the full channel view.
         const showAllBtn = this.container?.querySelector('.btn-show-all-channels');
         if (showAllBtn) {
-            if (specializedActive) {
-                showAllBtn.disabled = true;
-                showAllBtn.classList.add('channel-locked');
-            } else {
-                showAllBtn.disabled = false;
-                showAllBtn.classList.remove('channel-locked');
-            }
+            showAllBtn.disabled = false;
+            showAllBtn.classList.remove('channel-locked');
         }
 
     // Mettre à jour le compteur de notes
