@@ -858,7 +858,12 @@
         const toggleBtn = this.container?.querySelector('#touch-mode-toggle');
         if (toggleBtn) {
             toggleBtn.dataset.active = String(this.touchMode);
-            toggleBtn.textContent = this.touchMode ? 'ON' : 'OFF';
+            const srLabel = toggleBtn.querySelector('.sr-only');
+            if (srLabel) {
+                srLabel.textContent = this.touchMode ? 'ON' : 'OFF';
+            } else {
+                toggleBtn.textContent = this.touchMode ? 'ON' : 'OFF';
+            }
         }
 
         // Show/hide pencil button vs touch edit buttons
@@ -1075,7 +1080,12 @@
         const btn = document.getElementById('keyboard-playback-toggle');
         if (btn) {
             btn.dataset.active = String(this.keyboardPlaybackEnabled);
-            btn.textContent = this.keyboardPlaybackEnabled ? 'ON' : 'OFF';
+            const srLabel = btn.querySelector('.sr-only');
+            if (srLabel) {
+                srLabel.textContent = this.keyboardPlaybackEnabled ? 'ON' : 'OFF';
+            } else {
+                btn.textContent = this.keyboardPlaybackEnabled ? 'ON' : 'OFF';
+            }
         }
         this.log('info', `Keyboard playback: ${this.keyboardPlaybackEnabled ? 'ON' : 'OFF'}`);
     }
@@ -1089,7 +1099,12 @@
         const btn = document.getElementById('drag-playback-toggle');
         if (btn) {
             btn.dataset.active = String(this.dragPlaybackEnabled);
-            btn.textContent = this.dragPlaybackEnabled ? 'ON' : 'OFF';
+            const srLabel = btn.querySelector('.sr-only');
+            if (srLabel) {
+                srLabel.textContent = this.dragPlaybackEnabled ? 'ON' : 'OFF';
+            } else {
+                btn.textContent = this.dragPlaybackEnabled ? 'ON' : 'OFF';
+            }
         }
         this.log('info', `Drag playback: ${this.dragPlaybackEnabled ? 'ON' : 'OFF'}`);
     }
