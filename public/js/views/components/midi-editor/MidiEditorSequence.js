@@ -284,6 +284,10 @@
                     this.updateEditorChannelSelector();
                 }
             }
+
+            if (typeof this._updateNavigationMinimap === 'function') {
+                this._updateNavigationMinimap();
+            }
         },
 
         /**

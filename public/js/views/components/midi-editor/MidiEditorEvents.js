@@ -704,7 +704,24 @@
         });
 
         this.navigationBar.setViewport(0, xrange, maxTick);
+        this._updateNavigationMinimap();
         this.log('info', `Navigation overview bar initialized: maxTick=${maxTick}, xrange=${xrange}`);
+    }
+
+    /**
+    * Mettre a jour la minimap de la barre de navigation (mode single-channel uniquement)
+    */
+    MidiEditorEventsMixin._updateNavigationMinimap = function() {
+        if (!this.navigationBar) return;
+        if (this.activeChannels && this.activeChannels.size === 1) {
+            const ch = Array.from(this.activeChannels)[0];
+            const source = this.fullSequence || this.sequence || [];
+            const notes = source.filter(n => n.c === ch);
+            const color = (this.channelColors && this.channelColors[ch]) || '#888';
+            this.navigationBar.setMinimap(notes, color);
+        } else {
+            this.navigationBar.setMinimap(null);
+        }
     }
 
     /**
