@@ -282,17 +282,21 @@ class CCPitchbendEditor {
     valueToY(value) {
         // Pour CC: 0-127 → bottom to top
         // Pour pitchbend: -8192 to 8191 → bottom to top (16384 valeurs)
+        const margin = 6;
+        const drawH = this.canvas.height - margin * 2;
         let normalized;
         if (this.currentCC === 'pitchbend') {
-            normalized = (value + 8192) / 16384; // -8192..8191 → 0..~1
+            normalized = (value + 8192) / 16384;
         } else {
-            normalized = value / 127; // 0..127 → 0..1
+            normalized = value / 127;
         }
-        return this.canvas.height - (normalized * this.canvas.height);
+        return margin + drawH - (normalized * drawH);
     }
 
     yToValue(y) {
-        const normalized = 1 - (y / this.canvas.height);
+        const margin = 6;
+        const drawH = this.canvas.height - margin * 2;
+        const normalized = 1 - ((y - margin) / drawH);
         if (this.currentCC === 'pitchbend') {
             return Math.max(-8192, Math.min(8191, Math.round(normalized * 16384 - 8192)));
         } else {
