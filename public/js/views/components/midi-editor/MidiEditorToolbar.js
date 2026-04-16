@@ -43,6 +43,9 @@ class MidiEditorToolbar {
         if (!modeButtons) return;
 
         modeButtons.forEach(btn => {
+            // Skip hidden buttons (touch mode toggle)
+            if (btn.classList.contains('hidden')) return;
+
             const btnMode = btn.dataset.mode;
             if (btnMode === m.editMode) {
                 btn.classList.add('active');

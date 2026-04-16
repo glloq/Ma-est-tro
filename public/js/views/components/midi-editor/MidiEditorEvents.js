@@ -107,7 +107,8 @@
                 case 'mode-drag-notes':
                 case 'mode-drag-view':
                 case 'mode-add-note':
-                case 'mode-resize-note': {
+                case 'mode-resize-note':
+                case 'mode-edit': {
                     const mode = btn.dataset.mode;
                     if (mode) {
                         this.setEditMode(mode);
@@ -239,6 +240,12 @@
         const playableToggle = document.getElementById('playable-notes-toggle');
         if (playableToggle) {
             playableToggle.addEventListener('click', () => this.togglePlayableNotesGlobal());
+        }
+
+    // Toggle touch mode
+        const touchModeToggle = document.getElementById('touch-mode-toggle');
+        if (touchModeToggle) {
+            touchModeToggle.addEventListener('click', () => this.toggleTouchMode());
         }
 
     // Input de tempo

@@ -766,7 +766,7 @@
 
     // Propager aux editeurs CC/Velocity/Tempo si la section est ouverte
         if (this.ccSectionExpanded) {
-            const ccToolMap = { 'select': 'select', 'drag-notes': 'move', 'drag-view': 'select' };
+            const ccToolMap = { 'select': 'select', 'drag-notes': 'move', 'edit': 'move', 'drag-view': 'select' };
             const ccTool = ccToolMap[mode];
             if (ccTool) {
                 if (this.currentCCType === 'tempo' && this.tempoEditor) {
@@ -801,6 +801,9 @@
         const supportedModes = this._getSupportedModes();
 
         modeButtons.forEach(btn => {
+            // Skip hidden buttons (touch mode toggle)
+            if (btn.classList.contains('hidden')) return;
+
             const btnMode = btn.dataset.mode;
             const isSupported = supportedModes.includes(btnMode);
 
@@ -827,7 +830,7 @@
         const editor = this._getActiveSpecializedEditor();
         if (!editor) {
     // Piano roll: all modes
-            return ['drag-view', 'select', 'drag-notes', 'add-note', 'resize-note'];
+            return ['drag-view', 'select', 'edit', 'drag-notes', 'add-note', 'resize-note'];
         }
         if (editor === this.drumPatternEditor) {
             return ['drag-view', 'select'];
@@ -839,6 +842,44 @@
             return ['drag-view', 'select'];
         }
         return ['drag-view', 'select'];
+    }
+
+    /**
+    * Basculer le mode tactile (boutons séparés vs bouton crayon unifié)
+    */
+    MidiEditorEditActionsMixin.toggleTouchMode = function() {
+        this.touchMode = !this.touchMode;
+        this._saveTouchModePref(this.touchMode);
+
+        // Update the toggle button
+        const toggleBtn = this.container?.querySelector('#touch-mode-toggle');
+        if (toggleBtn) {
+            toggleBtn.dataset.active = String(this.touchMode);
+            toggleBtn.textContent = this.touchMode ? 'ON' : 'OFF';
+        }
+
+        // Show/hide pencil button vs touch edit buttons
+        const pencilBtn = this.container?.querySelector('.edit-unified-btn');
+        const touchBtns = this.container?.querySelectorAll('.touch-edit-btn');
+
+        if (pencilBtn) {
+            pencilBtn.classList.toggle('hidden', this.touchMode);
+        }
+        if (touchBtns) {
+            touchBtns.forEach(b => b.classList.toggle('hidden', !this.touchMode));
+        }
+
+        // Ajuster le mode d'édition actuel si nécessaire
+        if (!this.touchMode && (this.editMode === 'drag-notes' || this.editMode === 'add-note' || this.editMode === 'resize-note')) {
+            // Quitte le mode tactile : basculer vers le mode edit unifié
+            this.setEditMode('edit');
+        } else if (this.touchMode && this.editMode === 'edit') {
+            // Active le mode tactile : basculer vers drag-notes
+            this.setEditMode('drag-notes');
+        }
+
+        this.updateModeButtons();
+        this.log('info', `Touch mode: ${this.touchMode ? 'ON' : 'OFF'}`);
     }
 
     /**
