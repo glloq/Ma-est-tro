@@ -728,7 +728,7 @@ class VelocityEditor {
             const x = this.ticksToX(note.t);
             const y = this.velocityToY(velocity);
             const barWidth = Math.max(2, this.ticksToX(note.t + note.g) - x);
-            const barHeight = this.canvas.height - y;
+            const barHeight = this.velocityToY(0) - y;
 
             // Couleur basée sur la vélocité
             const intensityRatio = velocity / 127;
