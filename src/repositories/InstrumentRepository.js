@@ -34,6 +34,10 @@ export default class InstrumentRepository {
     return this.database.getInstrumentCapabilities(deviceId, channel);
   }
 
+  getAllCapabilities() {
+    return this.database.getAllInstrumentCapabilities();
+  }
+
   updateCapabilities(deviceId, channel, fields) {
     return this.database.updateInstrumentCapabilities(deviceId, channel, fields);
   }

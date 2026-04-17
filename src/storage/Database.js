@@ -831,6 +831,9 @@ class DatabaseManager {
   deleteRoutingsByFile(fileId) {
     return this.instrumentDB.deleteRoutingsByFile(fileId);
   }
+  deleteRoutingsByDevice(...args) {
+    return this.instrumentDB.deleteRoutingsByDevice(...args);
+  }
   getInstrumentsByDevice(deviceId) {
     return this.instrumentDB.getInstrumentsByDevice(deviceId);
   }

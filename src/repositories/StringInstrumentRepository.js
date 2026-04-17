@@ -28,6 +28,10 @@ export default class StringInstrumentRepository {
     return this._sub.deleteStringInstrumentByDeviceChannel(deviceId, channel);
   }
 
+  deleteByDevice(deviceId, channel) {
+    return this._sub.deleteByDevice(deviceId, channel);
+  }
+
   findById(id) {
     return this._sub.getStringInstrumentById(id);
   }
