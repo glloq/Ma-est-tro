@@ -340,6 +340,155 @@
     `;
   }
 
+  /**
+   * Full 0-127 MIDI range visualisation with two-line display :
+   *   line 1 = channel notes (transposition applied),
+   *   line 2 = instrument playable range(s) with labels + connectors.
+   *
+   * @param {Object} opts
+   * @param {number} opts.channel
+   * @param {Object} opts.analysis     - { noteRange, noteDistribution }
+   * @param {Object|null} opts.assignment
+   * @param {Object} opts.adaptSettings - per-channel adaptation settings
+   * @param {boolean} opts.autoAdaptation
+   * @param {Object|null} opts.splitData - from getActiveSplitData(channel)
+   * @param {Array<Object>} opts.allInstruments
+   * @param {(segs: Array) => Array} opts.detectOverlaps
+   * @param {(inst:Object) => string} opts.getDisplayName
+   * @param {(s:string) => string} opts.escape
+   */
+  function renderRangeBars(opts) {
+    const {
+      channel, analysis, assignment,
+      adaptSettings, autoAdaptation,
+      splitData, allInstruments = [],
+      detectOverlaps, getDisplayName, escape
+    } = opts;
+    const {
+      SPLIT_COLORS, FULL_RANGE, getGmProgramName, midiNoteToName
+    } = window.RoutingSummaryConstants;
+
+    if (!analysis?.noteRange || analysis.noteRange.min == null) return '';
+
+    const ch = String(channel);
+    const chMin = analysis.noteRange.min;
+    const chMax = analysis.noteRange.max;
+
+    const adapt = adaptSettings[ch] || {};
+    const semitones = (autoAdaptation && adapt.pitchShift !== 'none') ? (adapt.transpositionSemitones || 0) : 0;
+    const displayChMin = Math.max(0, Math.min(127, chMin + semitones));
+    const displayChMax = Math.max(0, Math.min(127, chMax + semitones));
+
+    const chLeft = (displayChMin / FULL_RANGE) * 100;
+    const chWidth = Math.max(1, ((displayChMax - displayChMin) / FULL_RANGE) * 100);
+
+    const transLabel = semitones !== 0 ? ` (${semitones > 0 ? '+' : ''}${semitones}st)` : '';
+    const chBarTitle = `${_t('autoAssign.channelNotes')}: ${midiNoteToName(displayChMin)}-${midiNoteToName(displayChMax)}${transLabel}`;
+
+    const splitColors = SPLIT_COLORS;
+    let instBarsHTML = '';
+    let legendItems = '';
+
+    if (splitData?.segments?.length > 0) {
+      const segs = splitData.segments;
+      instBarsHTML = segs.map((seg, i) => {
+        const sMin = seg.fullRange?.min ?? seg.noteRange?.min ?? 0;
+        const sMax = seg.fullRange?.max ?? seg.noteRange?.max ?? 127;
+        const left = (sMin / FULL_RANGE) * 100;
+        const width = Math.max(1, ((sMax - sMin) / FULL_RANGE) * 100);
+        const color = splitColors[i % splitColors.length];
+        const instLookup = seg.instrumentId ? allInstruments.find(ii => ii.id === seg.instrumentId) : null;
+        const name = instLookup ? getDisplayName(instLookup) : (seg.instrumentName || `Inst ${i + 1}`);
+
+        let dottedCSS = '';
+        if (analysis?.noteDistribution) {
+          const usedNotes = Object.keys(analysis.noteDistribution).map(Number);
+          const shiftedNotes = usedNotes.map(n => n + semitones);
+          const hasNotesInRange = shiftedNotes.some(n => n >= sMin && n <= sMax);
+          if (!hasNotesInRange) dottedCSS = 'rs-range-dotted';
+        }
+
+        const connLeftPct = (sMin / FULL_RANGE) * 100;
+        const connRightPct = (sMax / FULL_RANGE) * 100;
+
+        return `
+          <div class="rs-range-inst-line">
+            <div class="rs-range-connector" style="left:${connLeftPct}%"></div>
+            <div class="rs-range-connector" style="left:${connRightPct}%"></div>
+            <div class="rs-range-bar rs-range-inst-bar ${dottedCSS}" style="left:${left}%;width:${width}%;background:${color}33;border:1px solid ${color}" title="${escape(name)}: ${midiNoteToName(sMin)}-${midiNoteToName(sMax)}"></div>
+            <span class="rs-range-inst-label" style="left:${left}%;color:${color}">${escape(name)}</span>
+          </div>
+        `;
+      }).join('');
+
+      const behaviorMode = splitData.behaviorMode;
+      const skipOverlapViz = (behaviorMode === 'overflow' || behaviorMode === 'alternate');
+      const overlaps = skipOverlapViz ? [] : (detectOverlaps ? detectOverlaps(segs) : []);
+      const overlapZonesHTML = overlaps.length > 0 ? overlaps.map(ov => {
+        const oLeft = (ov.min / FULL_RANGE) * 100;
+        const oWidth = Math.max(0.5, ((ov.max - ov.min) / FULL_RANGE) * 100);
+        const instA = segs[ov.segA]?.instrumentId ? allInstruments.find(ii => ii.id === segs[ov.segA].instrumentId) : null;
+        const instB = segs[ov.segB]?.instrumentId ? allInstruments.find(ii => ii.id === segs[ov.segB].instrumentId) : null;
+        const nameA = instA ? getDisplayName(instA) : (segs[ov.segA]?.instrumentName || `Inst ${ov.segA + 1}`);
+        const nameB = instB ? getDisplayName(instB) : (segs[ov.segB]?.instrumentName || `Inst ${ov.segB + 1}`);
+        return `<div class="rs-range-overlap-zone" style="left:${oLeft}%;width:${oWidth}%" title="\u26A0 ${_t('routingSummary.overlap') || 'Superposition'}: ${midiNoteToName(ov.min)}-${midiNoteToName(ov.max)} (${escape(nameA)} / ${escape(nameB)})"></div>`;
+      }).join('') : '';
+
+      instBarsHTML = `<div class="rs-range-inst-area">${instBarsHTML}${overlapZonesHTML}</div>`;
+
+      legendItems = segs.map((seg, i) => {
+        const color = splitColors[i % splitColors.length];
+        const instL = seg.instrumentId ? allInstruments.find(ii => ii.id === seg.instrumentId) : null;
+        const name = instL ? getDisplayName(instL) : (seg.instrumentName || `Inst ${i + 1}`);
+        return `<span class="rs-range-legend-item"><span class="rs-range-legend-key" style="background:${color}80;border:1px solid ${color}"></span>${escape(name)}</span>`;
+      }).join('');
+      if (overlaps.length > 0) {
+        legendItems += `<span class="rs-range-legend-item"><span class="rs-range-legend-key" style="background:repeating-linear-gradient(45deg,rgba(245,158,11,0.3),rgba(245,158,11,0.3) 2px,transparent 2px,transparent 4px);border:1px dashed #f59e0b"></span>${_t('routingSummary.overlap') || 'Superposition'}</span>`;
+      }
+    } else if (assignment?.noteRangeMin != null) {
+      const iMin = assignment.noteRangeMin;
+      const iMax = assignment.noteRangeMax;
+      const left = (iMin / FULL_RANGE) * 100;
+      const width = Math.max(1, ((iMax - iMin) / FULL_RANGE) * 100);
+      const color = '#4A90D9';
+      const instName = assignment?.instrumentDisplayName || assignment?.customName || getGmProgramName(assignment?.gmProgram) || assignment?.instrumentName || _t('autoAssign.instrumentRange');
+      const connLeftPct = (iMin / FULL_RANGE) * 100;
+      const connRightPct = (iMax / FULL_RANGE) * 100;
+
+      instBarsHTML = `
+        <div class="rs-range-inst-line">
+          <div class="rs-range-connector" style="left:${connLeftPct}%"></div>
+          <div class="rs-range-connector" style="left:${connRightPct}%"></div>
+          <div class="rs-range-bar rs-range-inst-bar" style="left:${left}%;width:${width}%;background:${color}33;border:1px solid ${color}" title="${escape(instName)}: ${midiNoteToName(iMin)}-${midiNoteToName(iMax)}"></div>
+          <span class="rs-range-inst-label" style="left:${left}%;color:${color}">${escape(instName)}</span>
+        </div>
+      `;
+      legendItems = `<span class="rs-range-legend-item"><span class="rs-range-legend-key rs-range-legend-inst"></span>${escape(instName)}</span>`;
+    }
+
+    const octaveMarkers = [];
+    for (let oct = 0; oct <= 10; oct++) {
+      const note = oct * 12;
+      if (note <= 127) {
+        const pct = (note / FULL_RANGE) * 100;
+        octaveMarkers.push(`<span class="rs-range-octave-mark" style="left:${pct}%">C${oct}</span>`);
+      }
+    }
+
+    return `
+      <div class="rs-range-full">
+        <div class="rs-range-labels-full">
+          <span class="rs-range-label-ch" style="color:var(--accent-color, #4285f4)">${_t('autoAssign.channelNotes') || 'Notes canal'}: ${midiNoteToName(displayChMin)}-${midiNoteToName(displayChMax)}${transLabel}</span>
+        </div>
+        <div class="rs-range-octaves">${octaveMarkers.join('')}</div>
+        <div class="rs-range-track-line" title="${chBarTitle}">
+          <div class="rs-range-bar rs-range-ch-bar" style="left:${chLeft}%;width:${chWidth}%"></div>
+        </div>
+        ${instBarsHTML}
+      </div>
+    `;
+  }
+
   window.RoutingSummaryRenderers = Object.freeze({
     renderMiniKeyboard,
     renderChannelHistogram,
@@ -349,6 +498,7 @@
     renderLoadingScreen,
     renderErrorScreen,
     renderInstrumentChips,
-    renderPolyReductionSection
+    renderPolyReductionSection,
+    renderRangeBars
   });
 })();
