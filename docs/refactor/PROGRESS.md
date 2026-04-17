@@ -9,7 +9,7 @@
 |---|---|
 | Phase active | **Phase 2 — Persistance (migration handlers)** |
 | Branche de travail | `claude/refactor-maestro-project-L6ptg` |
-| Dernier lot terminé | P2-F.4g (bucket-building extrait + tests) |
+| Dernier lot terminé | P2-F.4h (constantes function-local → Constants) |
 | Prochain lot suggéré | **P2-F.5** (orchestrateur léger) ou **P1-4.5c**. |
 | Date dernière mise à jour | 2026-04-17 |
 | Agent ayant mis à jour | Claude (agent refactoring) |
@@ -135,6 +135,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 
 | Date | Agent | Lot | Résumé | Fichiers touchés | Commit | Notes |
 |---|---|---|---|---|---|---|
+| 2026-04-17 | Claude (refactoring) | P2-F.4h | 3 constantes function-local déplacées vers `RoutingSummaryConstants` : `DRUM_NAMES` (47 entrées GM drums), `FULL_RANGE` (128), `CC_PAGE_SIZE` (10). Permet réutilisation inter-méthodes et élimine les recréations à chaque render. | `public/js/views/components/auto-assign/RoutingSummaryConstants.js` (+25 LOC), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-15 LOC) | (ce commit) | 437/437 tests verts. **Cumul F.1→F.4h : -479 LOC (-10.1%)** — premier quart du KPI -40% atteint. |
 | 2026-04-17 | Claude (refactoring) | P2-F.4g | Extraction de la logique bucket-building du minimap (~40 LOC) vers `RoutingSummaryMinimapNotes.buildMinimapBuckets({ notes, width, isSplitView, splitSegmentCount })`. Retourne un état structuré `{ totalTicks, splitMode, segments, channels, multiChannel, buckets }` directement consommable par `drawMinimapFrame`. La page instancie les propriétés `_minimap*` à partir du retour. 9 tests ajoutés : single-channel, empty notes, multi-channel (plusieurs canaux actifs), split view (un row par segment, filtre seg<0). | `public/js/views/components/auto-assign/RoutingSummaryMinimapNotes.js` (+70 LOC : bucket helper), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-35 LOC), `tests/frontend/routing-summary-minimap-notes.test.js` (+9 tests) | (ce commit) | 437/437 backend verts. Cumul F.1→F.4g : 4748→4284 (-464, -9.8%). |
 | 2026-04-17 | Claude (refactoring) | P2-F.4f | Extraction de `_drawMinimapFrame` (~70 LOC canvas drawing) vers `RoutingSummaryMinimapRenderer.drawMinimapFrame({ canvas, width, height, splitMode, segments, channels, multiChannel, buckets, playheadPct, splitColors, bgColor })`. `CHANNEL_COLORS` (16-palette) inline à la page → dans le module frozen. Constant `SPLIT_COLORS` toujours importé de RoutingSummaryConstants. `_drawMinimapFrame` de la classe devient un délégateur de 12 lignes. | `public/js/views/components/auto-assign/RoutingSummaryMinimapRenderer.js` (créé, 117 LOC), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-55 LOC), `public/index.html` | (ce commit) | 437/437 backend verts. Cumul F.1→F.4f : RoutingSummaryPage 4748→4319 (-429, -9.0%). 7 modules extraits au total (Constants, Api, AssignmentBuilder, Renderers, SaveDialog, MinimapNotes, MinimapRenderer). |
 | 2026-04-17 | Claude (refactoring) | P2-F.4e | Extraction de `_extractNotesForMinimap` (pure algorithmique, 95 LOC) vers `RoutingSummaryMinimapNotes.extractNotesForMinimap({ midiData, selectedAssignments, splitChannels, splitAssignments, adaptationSettings, channelFilter, skipRangeFilter })` (124 LOC, tout l'état passé en paramètres). `_extractNotesForMinimap` de la classe devient un délégateur de 10 lignes. 19 tests Vitest ajoutés : guards, channel filter, range filter + transposition, skipRangeFilter, split segments (no split, in-range, closest-segment fallback, overlap = duplicates), tri par tick. | `public/js/views/components/auto-assign/RoutingSummaryMinimapNotes.js` (créé), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-82 LOC), `public/index.html`, `tests/frontend/routing-summary-minimap-notes.test.js` (créé) | (ce commit) | 437/437 backend verts. Cumul F.1→F.4e : RoutingSummaryPage 4748→4374 (-374, -7.9%). |
@@ -241,7 +242,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 | `MidiPlayer.js` LOC | 1312 | < 790 (-40 %) | 1312 |
 | `InstrumentMatcher.js` LOC | 1178 | < 710 (-40 %) | 1178 |
 | `TablatureConverter.js` LOC | 1250 | < 750 (-40 %) | 1250 |
-| `RoutingSummaryPage.js` LOC | 4748 | < 2850 (-40 %) | 4284 (-9.8%, F.1→F.4g cumul) |
+| `RoutingSummaryPage.js` LOC | 4748 | < 2850 (-40 %) | **4269 (-10.1%, F.1→F.4h cumul)** — 1er quart du KPI -40% franchi |
 | `MidiSynthesizer.js` LOC | 1192 | < 720 (-40 %) | 1116 (-6.4%, P2-F.8) |
 | Couverture tests P0/P1 | ~20 % | ≥ 35 % | **backend 437/437** ; nouveautés session : schema-compiler×30, repository-delegations×94, domain services×47 (routing-plan-channel×14, routing-status×11, device-reconciliation×10, file-routing-sync×12), contract×40+ (playback+routing), correlation-id×3, command-metrics×4, routing-integration×7, bluetooth-port×11, transaction-helper×3 |
 | Commandes WS critiques sous contrat | 0 % | ≥ 90 % | ~70 % (42 commandes : 23 playback + 19 routing — snapshots complets pour PlaybackCommands.js et RoutingCommands.js) |
