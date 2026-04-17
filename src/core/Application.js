@@ -29,6 +29,7 @@ import PlaylistRepository from '../repositories/PlaylistRepository.js';
 import DeviceSettingsRepository from '../repositories/DeviceSettingsRepository.js';
 import LightingRepository from '../repositories/LightingRepository.js';
 import StringInstrumentRepository from '../repositories/StringInstrumentRepository.js';
+import FileRoutingSyncService from '../midi/domain/routing/FileRoutingSyncService.js';
 import MidiClockGenerator from '../midi/MidiClockGenerator.js';
 import BackupScheduler from '../storage/BackupScheduler.js';
 
@@ -223,6 +224,14 @@ class Application {
       this._registerService('deviceSettingsRepository', new DeviceSettingsRepository(this.database));
       this._registerService('lightingRepository', new LightingRepository(this.database));
       this._registerService('stringInstrumentRepository', new StringInstrumentRepository(this.database));
+
+      // Initialize domain services (Phase 4 — P1-4.1+)
+      this._registerService('fileRoutingSyncService', new FileRoutingSyncService({
+        routingRepository: this.routingRepository,
+        fileRepository: this.fileRepository,
+        deviceManager: this.deviceManager,
+        logger: this.logger
+      }));
 
       // Initialize API
       this._registerService('commandHandler', new CommandHandler(deps));

@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import CommandRegistry from '../../src/api/CommandRegistry.js';
 import { register as registerRoutingCommands } from '../../src/api/commands/RoutingCommands.js';
+import FileRoutingSyncService from '../../src/midi/domain/routing/FileRoutingSyncService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -36,7 +37,7 @@ function createMockApp({
   const insertRouting = jest.fn();
   const getFileChannels = jest.fn().mockReturnValue(fileChannels);
 
-  return {
+  const app = {
     logger: {
       info: jest.fn(),
       warn: jest.fn(),
@@ -79,6 +80,17 @@ function createMockApp({
       save: insertRouting
     }
   };
+
+  // Wire the real FileRoutingSyncService over the spy-backed repositories
+  // so the contract still exercises the genuine domain logic (P1-4.1).
+  app.fileRoutingSyncService = new FileRoutingSyncService({
+    routingRepository: app.routingRepository,
+    fileRepository: app.fileRepository,
+    deviceManager: app.deviceManager,
+    logger: app.logger
+  });
+
+  return app;
 }
 
 function createMockWs() {
