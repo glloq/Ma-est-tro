@@ -9,8 +9,8 @@
 |---|---|
 | Phase active | **Phase 2 — Persistance (migration handlers)** |
 | Branche de travail | `claude/refactor-maestro-project-L6ptg` |
-| Dernier lot terminé | P1-3.2a |
-| Prochain lot suggéré | **P1-3.2b** : créer `src/api/commands/schemas/routing.schemas.js` et migrer `validateRoutingCommand`. |
+| Dernier lot terminé | P1-3.2b |
+| Prochain lot suggéré | **P1-3.2c** : créer les autres `*.schemas.js` (file, instrument, session, device, latency, midi) et migrer leurs validateurs respectifs. |
 | Date dernière mise à jour | 2026-04-17 |
 | Agent ayant mis à jour | Claude (agent refactoring) |
 
@@ -90,7 +90,7 @@ Un lot = **2–5 jours max de travail**, **une PR cohérente**, **pas de changem
 - [x] **P1-3.1** Concevoir le format de schéma déclaratif pour `JsonValidator` → [`ADR-004`](../adr/ADR-004-declarative-command-schemas.md).
 - [x] **P1-3.1b** Implémenter `src/utils/SchemaCompiler.js` + intégration `JsonValidator.validateBySchema` + tests unitaires (30 tests couvrent types, ranges, enums, lengths, custom, schema-integrity, wrapper).
 - [x] **P1-3.2a** Migrer les schémas playback — 3 schémas (`playback_start`, `playback_seek`, `playback_set_loop`) dans `src/api/commands/schemas/playback.schemas.js`. `JsonValidator.validatePlaybackCommand` consulte désormais le map compilé ; le switch legacy est retiré (plus aucune commande n'y reste). Snapshots verts.
-- [ ] **P1-3.2b** Migrer les schémas routing.
+- [x] **P1-3.2b** Migrer les schémas routing — 8 schémas dans `src/api/commands/schemas/routing.schemas.js` (route_create/delete/enable/filter_set/filter_clear/channel_map/monitor_start/monitor_stop). `validateRoutingCommand` consulte la map. Snapshots routing verts.
 - [ ] **P1-3.2c** Migrer les autres domaines (file, instrument, session, playlist, lighting, stringInstrument, device, devices settings, preset, virtual instrument).
 - [x] **P1-3.3** Normaliser les erreurs sur `src/core/errors/index.js` — **déjà respecté** : 0 occurrence de `throw new Error` dans `src/api/commands/**` après la Phase 2.
 - [ ] **P1-3.4** Vérifier uniformité des payloads d'erreur côté client (re-jeu des snapshots + audit de `BackendAPIClient`).
@@ -130,6 +130,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 
 | Date | Agent | Lot | Résumé | Fichiers touchés | Commit | Notes |
 |---|---|---|---|---|---|---|
+| 2026-04-17 | Claude (refactoring) | P1-3.2b | Nouveau `src/api/commands/schemas/routing.schemas.js` : 8 schémas (route_create/delete/enable/filter_set/filter_clear/channel_map/monitor_start/monitor_stop). Partages de schéma pour les groupes homogènes (requireRouteId, requireDeviceId). `validateRoutingCommand` délègue au map compilé. | `src/api/commands/schemas/routing.schemas.js` (créé), `src/utils/JsonValidator.js` | (ce commit) | 278/278 tests verts. Snapshots routing verts. |
 | 2026-04-17 | Claude (refactoring) | P1-3.2a | Nouveau `src/api/commands/schemas/playback.schemas.js` : 3 schémas `playback_start`, `playback_seek`, `playback_set_loop`. `JsonValidator.validatePlaybackCommand` remplace son switch legacy par un lookup dans la map compilée. Les messages d'erreur (y compris le pattern double-erreur «X is required, X must be Y» capturé en P0-0.6) sont préservés exactement via `custom`. Snapshots playback verts. | `src/api/commands/schemas/playback.schemas.js` (créé), `src/utils/JsonValidator.js` | (ce commit) | 278/278 tests verts. Première migration par domaine en Phase 3. |
 | 2026-04-17 | Claude (refactoring) | P1-3.1b | Nouveau `src/utils/SchemaCompiler.js` : compilateur de schémas déclaratifs (types `id/string/number/integer/boolean/object/array` + min/max/length/enum + custom cross-champ). `JsonValidator.validateBySchema(schema, data)` expose l'API. 30 tests unitaires. Aucune dépendance npm. | `src/utils/SchemaCompiler.js` (créé), `src/utils/JsonValidator.js` (+import + méthode statique), `tests/schema-compiler.test.js` (créé) | (ce commit) | 278/278 tests verts. Base prête pour migration P1-3.2a (playback). |
 | 2026-04-17 | Claude (refactoring) | P1-3.1 | Rédaction ADR-004 : schémas déclaratifs maison (Option B) pour la validation des commandes WS. 3 options comparées (Ajv/Zod externe, compilateur maison, typage TS). Format retenu documenté (types id/string/number/integer/boolean/object/array + custom cross-champ). Plan de migration phasé P1-3.1b→P1-3.2c. P1-3.3 déjà clôturé implicitement par la Phase 2. | `docs/adr/ADR-004-declarative-command-schemas.md` (créé) | (ce commit) | Aucune nouvelle dépendance npm (respect plan §10.1). Snapshots WS gardiens. |

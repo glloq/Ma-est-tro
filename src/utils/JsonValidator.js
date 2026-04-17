@@ -1,12 +1,15 @@
 // src/utils/JsonValidator.js
 import { compileSchema } from './SchemaCompiler.js';
 import playbackSchemas from '../api/commands/schemas/playback.schemas.js';
+import routingSchemas from '../api/commands/schemas/routing.schemas.js';
 
 // Compile schema maps once at module load (ADR-004 §Plan de migration).
 // Key : command name, Value : compiled validator (data => string[]).
 const COMPILED_SCHEMAS = {};
-for (const [cmd, schema] of Object.entries(playbackSchemas)) {
-  COMPILED_SCHEMAS[cmd] = compileSchema(schema);
+for (const schemas of [playbackSchemas, routingSchemas]) {
+  for (const [cmd, schema] of Object.entries(schemas)) {
+    COMPILED_SCHEMAS[cmd] = compileSchema(schema);
+  }
 }
 
 class JsonValidator {
@@ -109,40 +112,13 @@ class JsonValidator {
    * Validate routing command data
    */
   static validateRoutingCommand(command, data) {
-    const errors = [];
-
-    switch (command) {
-      case 'route_create':
-        if (!data.source) {
-          errors.push('source is required');
-        }
-        if (!data.destination) {
-          errors.push('destination is required');
-        }
-        break;
-
-      case 'route_delete':
-      case 'route_enable':
-      case 'filter_set':
-      case 'filter_clear':
-      case 'channel_map':
-        if (!data.routeId) {
-          errors.push('routeId is required');
-        }
-        break;
-
-      case 'monitor_start':
-      case 'monitor_stop':
-        if (!data.deviceId) {
-          errors.push('deviceId is required');
-        }
-        break;
+    // ADR-004 migration (P1-3.2b) : lookup in declarative schema map.
+    const compiled = COMPILED_SCHEMAS[command];
+    if (compiled) {
+      const errors = compiled(data || {});
+      return { valid: errors.length === 0, errors };
     }
-
-    return {
-      valid: errors.length === 0,
-      errors: errors
-    };
+    return { valid: true, errors: [] };
   }
 
   /**
