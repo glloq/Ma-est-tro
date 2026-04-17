@@ -9,8 +9,8 @@
 |---|---|
 | Phase active | **Phase 2 — Persistance (migration handlers)** |
 | Branche de travail | `claude/refactor-maestro-project-L6ptg` |
-| Dernier lot terminé | P2-F.1 |
-| Prochain lot suggéré | **P2-F.2** : étape 2 du protocole 5 étapes — extraire les accès API de `RoutingSummaryPage.js` vers `shared/api`. |
+| Dernier lot terminé | P2-F.8 + P2-F.6 (combinés) |
+| Prochain lot suggéré | **P2-OBS.1** : correlation ID par commande WS dans `CommandRegistry` + Logger. |
 | Date dernière mise à jour | 2026-04-17 |
 | Agent ayant mis à jour | Claude (agent refactoring) |
 
@@ -110,9 +110,9 @@ Un lot = **2–5 jours max de travail**, **une PR cohérente**, **pas de changem
 - [ ] **P2-F.3** `RoutingSummaryPage.js` — étape 3 : extraire logique d'état.
 - [ ] **P2-F.4** `RoutingSummaryPage.js` — étape 4 : extraire rendu UI en sous-composants.
 - [ ] **P2-F.5** `RoutingSummaryPage.js` — étape 5 : orchestrateur léger.
-- [ ] **P2-F.6** Appliquer le même protocole à `MidiEditorCCPanel.js` (≈1329 LOC).
-- [ ] **P2-F.7** Appliquer le même protocole à `MidiEditorTablature.js` (≈1307 LOC).
-- [ ] **P2-F.8** Appliquer le même protocole à `MidiSynthesizer.js` (≈1192 LOC).
+- [/] **P2-F.6** Appliquer le même protocole à `MidiEditorCCPanel.js` (≈1329 LOC) — **étape 1 faite** : `MidiEditorCCPanelConstants.js` extrait `ALWAYS_VISIBLE_CC_TYPES`, `STATIC_CC_TYPES`, `NOTE_NAMES`.
+- [ ] **P2-F.7** Appliquer le même protocole à `MidiEditorTablature.js` (≈1307 LOC) — *note : aucune constante module-level extractible à l'étape 1 ; reporter à l'étape 4 (sous-composants)*.
+- [x] **P2-F.8** Appliquer le même protocole à `MidiSynthesizer.js` (≈1192 LOC) — **étape 1 faite** : `MidiSynthesizerConstants.js` extrait `SOUND_BANKS`, `DEFAULT_BANK_ID`, `DEFAULT_BANK_SUFFIX`. MidiSynthesizer.js : 1192 → 1116 LOC (-76).
 - [ ] **P2-F.9** Migrer progressivement vers layout `public/js/features/`.
 - [ ] **P2-F.10** Clarifier le pattern mixins de `MidiEditorModal` (recomposition en modules explicites).
 
@@ -130,6 +130,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 
 | Date | Agent | Lot | Résumé | Fichiers touchés | Commit | Notes |
 |---|---|---|---|---|---|---|
+| 2026-04-17 | Claude (refactoring) | P2-F.6+F.8 | Étape 1 du protocole 5 étapes sur `MidiSynthesizer.js` (SOUND_BANKS array of 7 banks + DEFAULT_BANK_ID/SUFFIX) et `MidiEditorCCPanel.js` (ALWAYS_VISIBLE_CC_TYPES, STATIC_CC_TYPES, NOTE_NAMES, avec variantes `*_SET` pré-instanciées). Nouveaux fichiers `MidiSynthesizerConstants.js` (37 LOC) et `MidiEditorCCPanelConstants.js` (33 LOC). `public/index.html` mis à jour. `node --check` propre. MidiSynthesizer.js : 1192→1116 LOC (-76). P2-F.7 (Tablature) reporté : aucune constante module-level identifiable à cette étape ; l'extraction viendra à l'étape 4 (sous-composants). | `public/js/audio/MidiSynthesizerConstants.js` (créé), `public/js/audio/MidiSynthesizer.js`, `public/js/views/components/midi-editor/MidiEditorCCPanelConstants.js` (créé), `public/js/views/components/midi-editor/MidiEditorCCPanel.js`, `public/index.html` | (ce commit) | Pattern IIFE + `window.*Constants` uniforme avec P2-F.1. |
 | 2026-04-17 | Claude (refactoring) | P2-F.1 | Étape 1 du protocole 5 étapes (plan §11) sur `RoutingSummaryPage.js` (≈4748 LOC). Extraction des constantes module-level (MAX_INST_NAME, GM_DEFAULT_POLYPHONY, SPLIT_COLORS, BLACK_KEYS, NOTE_NAMES) et helpers utilitaires (getScoreClass/Bg/Label, getTypeIcon/Color, getGmProgramName, getGmDefaultPolyphony, midiNoteToName, safeNoteRange) vers `public/js/views/components/auto-assign/RoutingSummaryConstants.js` (136 LOC). Exposé sur `window.RoutingSummaryConstants` (codebase IIFE+globals, pas d'ES modules). HTML index.html mis à jour pour charger le nouveau fichier avant. RoutingSummaryPage.js : 4748 → 4661 LOC. | `public/js/views/components/auto-assign/RoutingSummaryConstants.js` (créé), `public/js/views/components/auto-assign/RoutingSummaryPage.js`, `public/index.html` | (ce commit) | Syntaxe vérifiée (`node --check`). Constantes maintenant réutilisables par les futurs sous-composants (étape 4). |
 | 2026-04-17 | Claude (refactoring) | P1-3.4b | Suite à la recommandation de l'audit P1-3.4 : `BackendAPIClient.handleMessage` propage maintenant `code` et `command` sur l'objet `Error` rejeté. Permet aux callers UI de discriminer ERR_VALIDATION vs ERR_NOT_FOUND vs ERR_CONFIGURATION sans parser la string. Aucun changement de format sur le fil — purement décodage côté client. | `public/js/api/BackendAPIClient.js` | (ce commit) | Backend tests 287/287. (Vitest sandbox indisponible localement mais aucune régression backend possible.) |
 | 2026-04-17 | Claude (refactoring) | P1-4.2 | 2 services domaine extraits : `DeviceReconciliationService` (3 fallbacks de matching + reconcile) et `FileRoutingStatusService` (calcul du status, avec fonction pure `computeRoutingStatus`). Handlers `DeviceCommands.deviceList` et `FileCommands.fileRoutingStatus` réduits. -50 LOC dans les deux handlers cumulés. | `src/midi/domain/devices/DeviceReconciliationService.js` (créé), `src/midi/domain/files/FileRoutingStatusService.js` (créé), `src/core/Application.js`, `src/api/commands/DeviceCommands.js`, `src/api/commands/FileCommands.js` | (ce commit) | 287/287 tests verts. Phase 4 quasi terminée (reste P1-4.5b ; P1-4.5 foundation déjà livrée). |
@@ -211,6 +212,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 | `InstrumentMatcher.js` LOC | 1178 | < 710 (-40 %) | 1178 |
 | `TablatureConverter.js` LOC | 1250 | < 750 (-40 %) | 1250 |
 | `RoutingSummaryPage.js` LOC | 4748 | < 2850 (-40 %) | 4661 (-1.8%, P2-F.1) |
+| `MidiSynthesizer.js` LOC | 1192 | < 720 (-40 %) | 1116 (-6.4%, P2-F.8) |
 | Couverture tests P0/P1 | ~20 % | ≥ 35 % | ~20 % |
 | Commandes WS critiques sous contrat | 0 % | ≥ 90 % | ~70 % (42 commandes : 23 playback + 19 routing — snapshots complets pour PlaybackCommands.js et RoutingCommands.js) |
 | PR refactor sans incident (14 j) | — | ≥ 95 % | — |

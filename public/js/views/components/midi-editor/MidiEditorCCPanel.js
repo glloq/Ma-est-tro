@@ -7,6 +7,10 @@
 //   - CC/Velocity/Tempo editor initialization and synchronization
 // ============================================================================
 
+// Constants extracted to MidiEditorCCPanelConstants.js (P2-F.6).
+// Loaded earlier in index.html so window.MidiEditorCCPanelConstants is available.
+const _MECCP = window.MidiEditorCCPanelConstants;
+
 class MidiEditorCCPanel {
     constructor(modal) {
         this.modal = modal;
@@ -65,7 +69,7 @@ class MidiEditorCCPanel {
 
         const usedTypesOnChannel = this.getUsedCCTypesForChannel(activeChannel);
         const allUsedTypes = this.getAllUsedCCTypes();
-        const alwaysVisible = new Set(['velocity', 'tempo']);
+        const alwaysVisible = _MECCP.ALWAYS_VISIBLE_CC_TYPES_SET;
 
         m.container.querySelectorAll('.cc-type-btn').forEach(btn => {
             const ccType = btn.dataset.ccType;
@@ -1060,7 +1064,7 @@ class MidiEditorCCPanel {
         const dynamicGroup = m.container?.querySelector('.cc-dynamic-group');
         if (!dynamicContainer || !dynamicGroup) return;
 
-        const staticCCs = new Set(['cc1', 'cc2', 'cc5', 'cc7', 'cc10', 'cc11', 'cc74', 'cc76', 'cc77', 'cc78', 'cc91', 'pitchbend', 'aftertouch', 'polyAftertouch']);
+        const staticCCs = _MECCP.STATIC_CC_TYPES_SET;
 
         // Detecter tous les CC dynamiques dans le fichier (tous canaux)
         const detectedCCs = new Set();
@@ -1284,7 +1288,7 @@ class MidiEditorCCPanel {
         }
 
         // Noms de notes MIDI
-        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const noteNames = _MECCP.NOTE_NAMES;
         const currentNote = m.ccEditor ? m.ccEditor.currentNote : null;
 
         container.innerHTML = notes.map(note => {
