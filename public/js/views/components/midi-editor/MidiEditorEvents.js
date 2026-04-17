@@ -297,7 +297,7 @@
                 ccDrawSettingsBtn.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    this.toggleDrawSettingsPopover();
+                    this.drawSettings.toggleDrawSettingsPopover();
                 });
             }
         }

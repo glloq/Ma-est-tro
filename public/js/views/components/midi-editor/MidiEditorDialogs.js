@@ -204,15 +204,5 @@
 
     if (typeof window !== 'undefined') {
         window.MidiEditorDialogs = MidiEditorDialogs;
-
-        // Backward-compatible mixin export for MidiEditorModal's mixin loop.
-        // Forwards each method to `this.dialogs` (instantiated in the modal
-        // constructor). Once all callers migrate to `modal.dialogs.*`, the
-        // mixin export can be dropped.
-        window.MidiEditorDialogsMixin = {
-            showConfirmModal(options) { return this.dialogs.showConfirmModal(options); },
-            showChangeChannelModal(n, c, nc) { return this.dialogs.showChangeChannelModal(n, c, nc); },
-            showChangeInstrumentModal(o) { return this.dialogs.showChangeInstrumentModal(o); }
-        };
     }
 })();

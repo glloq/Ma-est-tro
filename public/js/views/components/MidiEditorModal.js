@@ -349,13 +349,13 @@ if (typeof MidiEditorCCMixin !== 'undefined') {
 const _mixins = [
     typeof MidiEditorSequenceMixin !== 'undefined' ? MidiEditorSequenceMixin : null,
     typeof MidiEditorCCMixin !== 'undefined' ? MidiEditorCCMixin : null,
-    typeof MidiEditorDrawSettingsMixin !== 'undefined' ? MidiEditorDrawSettingsMixin : null,
+    // MidiEditorDrawSettingsMixin retiré — remplacé par this.drawSettings (P2-F.10b-cleanup).
     typeof MidiEditorCCPickerMixin !== 'undefined' ? MidiEditorCCPickerMixin : null,
     typeof MidiEditorFileOpsMixin !== 'undefined' ? MidiEditorFileOpsMixin : null,
     typeof MidiEditorRendererMixin !== 'undefined' ? MidiEditorRendererMixin : null,
     typeof MidiEditorRoutingMixin !== 'undefined' ? MidiEditorRoutingMixin : null,
     typeof MidiEditorEditActionsMixin !== 'undefined' ? MidiEditorEditActionsMixin : null,
-    typeof MidiEditorDialogsMixin !== 'undefined' ? MidiEditorDialogsMixin : null,
+    // MidiEditorDialogsMixin retiré — remplacé par this.dialogs (P2-F.10a-cleanup).
     typeof MidiEditorEventsMixin !== 'undefined' ? MidiEditorEventsMixin : null,
     typeof MidiEditorTablatureMixin !== 'undefined' ? MidiEditorTablatureMixin : null,
     typeof MidiEditorLifecycleMixin !== 'undefined' ? MidiEditorLifecycleMixin : null,

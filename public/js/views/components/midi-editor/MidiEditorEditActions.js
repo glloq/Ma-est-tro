@@ -375,7 +375,7 @@
         }
 
     // Afficher le modal de confirmation
-        const confirmed = await this.showChangeChannelModal(count, currentChannel, newChannel);
+        const confirmed = await this.dialogs.showChangeChannelModal(count, currentChannel, newChannel);
         if (!confirmed) {
             this.log('info', 'Channel change cancelled by user');
             return;
@@ -521,7 +521,7 @@
         const hasSelection = selectionCount > 0;
 
     // Afficher le modal de confirmation
-        const result = await this.showChangeInstrumentModal({
+        const result = await this.dialogs.showChangeInstrumentModal({
             noteCount: selectionCount,
             channelNoteCount: channelInfo.noteCount,
             channel: targetChannel,

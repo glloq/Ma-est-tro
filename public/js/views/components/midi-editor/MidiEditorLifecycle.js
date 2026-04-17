@@ -361,7 +361,7 @@
     MidiEditorLifecycleMixin.showErrorModal = function(message, title = null) {
         title = title || this.t('common.error');
         this.log('error', message);
-        this.showConfirmModal({
+        this.dialogs.showConfirmModal({
             title: title,
             message: message,
             icon: '❌',

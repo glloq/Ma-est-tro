@@ -241,7 +241,7 @@ class MidiEditorToolbar {
             return;
         }
 
-        const confirmed = await m.showChangeChannelModal(count, currentChannel, newChannel);
+        const confirmed = await m.dialogs.showChangeChannelModal(count, currentChannel, newChannel);
         if (!confirmed) {
             m.log('info', 'Channel change cancelled by user');
             return;
@@ -331,7 +331,7 @@ class MidiEditorToolbar {
         const selectionCount = m.getSelectionCount();
         const hasSelection = selectionCount > 0;
 
-        const result = await m.showChangeInstrumentModal({
+        const result = await m.dialogs.showChangeInstrumentModal({
             noteCount: selectionCount,
             channelNoteCount: channelInfo.noteCount,
             channel: targetChannel,

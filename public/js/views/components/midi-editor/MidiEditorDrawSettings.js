@@ -100,12 +100,5 @@
 
     if (typeof window !== 'undefined') {
         window.MidiEditorDrawSettings = MidiEditorDrawSettings;
-
-        // Backward-compatible mixin export (P2-F.10b).
-        window.MidiEditorDrawSettingsMixin = {
-            toggleDrawSettingsPopover() { return this.drawSettings.toggleDrawSettingsPopover(); },
-            createDrawSettingsPopover() { return this.drawSettings.createDrawSettingsPopover(); },
-            applyDrawDensity(m) { return this.drawSettings.applyDrawDensity(m); }
-        };
     }
 })();
