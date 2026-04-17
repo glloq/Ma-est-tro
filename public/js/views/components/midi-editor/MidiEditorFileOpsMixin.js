@@ -27,6 +27,18 @@
 
         this.log('info', `Converting ${fullSequenceToSave.length} notes to MIDI`);
 
+    // Clamp MIDI values to their valid ranges and count any corrections for the log.
+    // The MIDI standard enforces 7-bit values (0-127) for note/velocity/CC,
+    // 4-bit (0-15) for channel, and 14-bit signed (-8192..8191) for pitch bend.
+        const clampStats = { note: 0, channel: 0, velocity: 0, cc: 0, pitchBend: 0, ticks: 0 };
+        const clamp = (value, min, max, kind) => {
+            const n = Number(value);
+            if (!Number.isFinite(n)) { clampStats[kind]++; return min; }
+            if (n < min) { clampStats[kind]++; return min; }
+            if (n > max) { clampStats[kind]++; return max; }
+            return n;
+        };
+
     // Convertir la sequence en événements MIDI
         const events = [];
 
@@ -80,11 +92,11 @@
 
     // Ajouter les événements de note
         fullSequenceToSave.forEach(note => {
-            const tick = note.t;
-            const noteNumber = note.n;
-            const gate = note.g;
-            const channel = note.c !== undefined ? note.c : 0;
-            const velocity = note.v || 100; // velocity par défaut si non présente
+            const tick = clamp(note.t, 0, Number.MAX_SAFE_INTEGER, 'ticks');
+            const noteNumber = clamp(note.n, 0, 127, 'note');
+            const gate = Math.max(1, clamp(note.g, 1, Number.MAX_SAFE_INTEGER, 'ticks'));
+            const channel = clamp(note.c !== undefined ? note.c : 0, 0, 15, 'channel');
+            const velocity = clamp(note.v || 100, 1, 127, 'velocity');
 
     // Note On
             events.push({
@@ -111,41 +123,43 @@
 
             let ccCount = 0, pbCount = 0, atCount = 0;
             this.ccEvents.forEach(ccEvent => {
+                const ccTick = clamp(ccEvent.ticks ?? ccEvent.tick ?? 0, 0, Number.MAX_SAFE_INTEGER, 'ticks');
+                const ccChannel = clamp(ccEvent.channel, 0, 15, 'channel');
     // Convertir le type de l'éditeur (cc1, cc2, cc5, cc7, cc10, cc11, cc74) en numéro de contrôleur
                 if (ccEvent.type.startsWith('cc')) {
     // Extraire le numéro du type (cc1 -> 1, cc7 -> 7, etc.)
                     const controllerNumber = parseInt(ccEvent.type.replace('cc', ''));
                     events.push({
-                        absoluteTime: ccEvent.ticks || ccEvent.tick,
+                        absoluteTime: ccTick,
                         type: 'controller',
-                        channel: ccEvent.channel,
+                        channel: ccChannel,
                         controllerType: controllerNumber,
-                        value: ccEvent.value
+                        value: clamp(ccEvent.value, 0, 127, 'cc')
                     });
                     ccCount++;
                 } else if (ccEvent.type === 'pitchbend') {
                     events.push({
-                        absoluteTime: ccEvent.ticks || ccEvent.tick,
+                        absoluteTime: ccTick,
                         type: 'pitchBend',
-                        channel: ccEvent.channel,
-                        value: ccEvent.value
+                        channel: ccChannel,
+                        value: clamp(ccEvent.value, -8192, 8191, 'pitchBend')
                     });
                     pbCount++;
                 } else if (ccEvent.type === 'aftertouch') {
                     events.push({
-                        absoluteTime: ccEvent.ticks || ccEvent.tick,
+                        absoluteTime: ccTick,
                         type: 'channelAftertouch',
-                        channel: ccEvent.channel,
-                        amount: ccEvent.value
+                        channel: ccChannel,
+                        amount: clamp(ccEvent.value, 0, 127, 'cc')
                     });
                     atCount++;
                 } else if (ccEvent.type === 'polyAftertouch') {
                     events.push({
-                        absoluteTime: ccEvent.ticks || ccEvent.tick,
+                        absoluteTime: ccTick,
                         type: 'polyAftertouch',
-                        channel: ccEvent.channel,
-                        noteNumber: ccEvent.note || 0,
-                        pressure: ccEvent.value
+                        channel: ccChannel,
+                        noteNumber: clamp(ccEvent.note || 0, 0, 127, 'note'),
+                        pressure: clamp(ccEvent.value, 0, 127, 'cc')
                     });
                     atCount++;
                 }
@@ -198,6 +212,12 @@
         });
 
     // Structure MIDI compatible avec midi-file
+    // Report any clamped values so data corruption shows up in the log instead of silently
+        const totalClamped = Object.values(clampStats).reduce((a, b) => a + b, 0);
+        if (totalClamped > 0) {
+            this.log('warn', `Clamped ${totalClamped} out-of-range MIDI values: ${JSON.stringify(clampStats)}`);
+        }
+
         return {
             header: {
                 format: this.midiData?.header?.format || 1,

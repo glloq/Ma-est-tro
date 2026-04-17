@@ -47,7 +47,7 @@
                             this.tempoEvents.push({
                                 ticks: currentTick,
                                 tempo: bpm,
-                                id: Date.now() + Math.random() + this.tempoEvents.length
+                                id: `tempo_${currentTick}_${this.tempoEvents.length}`
                             });
                         }
                     }
