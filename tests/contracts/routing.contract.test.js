@@ -29,6 +29,13 @@ function createMockApp({
   const routeMap = new Map(routes.map(r => [r.id, r]));
   let nextRouteId = 1;
 
+  // Shared spies so existing `app.database.*` assertions keep working after
+  // handlers migrated to `app.fileRepository.*` / `app.routingRepository.*` (P0-2.5b).
+  const getRoutingsByFile = jest.fn().mockReturnValue(existingRoutings);
+  const deleteRoutingsByFile = jest.fn();
+  const insertRouting = jest.fn();
+  const getFileChannels = jest.fn().mockReturnValue(fileChannels);
+
   return {
     logger: {
       info: jest.fn(),
@@ -58,10 +65,18 @@ function createMockApp({
       sendMessage: jest.fn().mockReturnValue(sendMessageResult)
     },
     database: {
-      getRoutingsByFile: jest.fn().mockReturnValue(existingRoutings),
-      deleteRoutingsByFile: jest.fn(),
-      insertRouting: jest.fn(),
-      getFileChannels: jest.fn().mockReturnValue(fileChannels)
+      getRoutingsByFile,
+      deleteRoutingsByFile,
+      insertRouting,
+      getFileChannels
+    },
+    fileRepository: {
+      getChannels: getFileChannels
+    },
+    routingRepository: {
+      findByFileId: getRoutingsByFile,
+      deleteByFileId: deleteRoutingsByFile,
+      save: insertRouting
     }
   };
 }

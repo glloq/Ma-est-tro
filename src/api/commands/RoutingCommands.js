@@ -142,12 +142,12 @@ async function fileRoutingSync(app, data) {
   }
 
   if (!data.channels || Object.keys(data.channels).length === 0) {
-    app.database.deleteRoutingsByFile(data.fileId);
+    app.routingRepository.deleteByFileId(data.fileId);
     return { success: true, synced: 0, invalidDevices: [] };
   }
 
   // Read existing routings to preserve auto-assign metadata when device hasn't changed
-  const existingRoutings = app.database.getRoutingsByFile(data.fileId, true);
+  const existingRoutings = app.routingRepository.findByFileId(data.fileId, true);
   const existingByChannel = new Map();
   for (const r of existingRoutings) {
     if (r.channel != null && !r.split_mode) {
@@ -156,7 +156,7 @@ async function fileRoutingSync(app, data) {
   }
 
   // Delete existing non-split routings for this file (preserve splits managed by auto-assign)
-  app.database.deleteRoutingsByFile(data.fileId);
+  app.routingRepository.deleteByFileId(data.fileId);
 
   // Build set of known device IDs for validation
   const knownDevices = new Set();
@@ -171,7 +171,7 @@ async function fileRoutingSync(app, data) {
   // If the file hasn't been analysed yet, midi_file_channels is empty → skip this check.
   const knownChannels = new Set();
   try {
-    const fileChannels = app.database.getFileChannels(data.fileId) || [];
+    const fileChannels = app.fileRepository.getChannels(data.fileId) || [];
     for (const c of fileChannels) {
       if (c.channel != null) knownChannels.add(c.channel);
     }
@@ -207,7 +207,7 @@ async function fileRoutingSync(app, data) {
     const sameDevice = existing && existing.device_id === deviceId;
 
     try {
-      app.database.insertRouting({
+      app.routingRepository.save({
         midi_file_id: data.fileId,
         channel: channel,
         target_channel: isNaN(targetChannel) ? channel : targetChannel,
@@ -273,7 +273,7 @@ async function fileRoutingBulkSync(app, data) {
     const parsedFileId = parseInt(fileId, 10);
 
     // Read existing routings to preserve auto-assign metadata
-    const existingRoutings = app.database.getRoutingsByFile(parsedFileId, true);
+    const existingRoutings = app.routingRepository.findByFileId(parsedFileId, true);
     const existingByChannel = new Map();
     for (const r of existingRoutings) {
       if (r.channel != null && !r.split_mode) {
@@ -282,7 +282,7 @@ async function fileRoutingBulkSync(app, data) {
     }
 
     // Delete existing routings for this file
-    app.database.deleteRoutingsByFile(parsedFileId);
+    app.routingRepository.deleteByFileId(parsedFileId);
 
     let hasValidRouting = false;
     for (const [channelStr, routingValue] of Object.entries(config.channels)) {
@@ -306,7 +306,7 @@ async function fileRoutingBulkSync(app, data) {
         const parts = routingValue.split('::');
         const targetChannel = parts.length > 1 ? parseInt(parts[1], 10) : channel;
 
-        app.database.insertRouting({
+        app.routingRepository.save({
           midi_file_id: parsedFileId,
           channel: channel,
           target_channel: isNaN(targetChannel) ? channel : targetChannel,
