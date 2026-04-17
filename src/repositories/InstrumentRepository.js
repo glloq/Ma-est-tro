@@ -62,6 +62,30 @@ export default class InstrumentRepository {
     return this.database.deleteInstrumentSettingsByDevice(deviceId, channel);
   }
 
+  findByUsbSerial(serial) {
+    return this.database.findInstrumentByUsbSerial(serial);
+  }
+
+  findByMac(mac) {
+    return this.database.findInstrumentByMac(mac);
+  }
+
+  findByNormalizedName(deviceId) {
+    return this.database.findInstrumentByNormalizedName(deviceId);
+  }
+
+  reconcileDeviceId(oldDeviceId, newDeviceId) {
+    return this.database.reconcileDeviceId(oldDeviceId, newDeviceId);
+  }
+
+  deduplicateByUsbSerial() {
+    return this.database.deduplicateByUsbSerial();
+  }
+
+  saveSysExIdentity(deviceId, channel, identity) {
+    return this.database.saveSysExIdentity(deviceId, channel, identity);
+  }
+
   // Wrap a synchronous function in a SQLite transaction. Returns the
   // better-sqlite3 wrapper so callers can invoke it with their own arguments
   // (ADR-002 §Conventions — composite writes belong in the Repository layer).
