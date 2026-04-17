@@ -9,8 +9,8 @@
 |---|---|
 | Phase active | **Phase 0 — Baseline sécurité** (en cours) |
 | Branche de travail | `claude/dazzling-ptolemy-rXsBU` |
-| Dernier lot terminé | P0-0.5 |
-| Prochain lot suggéré | Lot P0-0.6 (tests Jest de contrat sur 5 commandes playback) |
+| Dernier lot terminé | P0-0.6 |
+| Prochain lot suggéré | Lot P0-0.7 (tests Jest de contrat sur commandes routing critiques) |
 | Date dernière mise à jour | 2026-04-17 |
 | Agent ayant mis à jour | Claude (agent refactoring) |
 
@@ -46,7 +46,7 @@ Un lot = **2–5 jours max de travail**, **une PR cohérente**, **pas de changem
 - [x] **P0-0.3** Capturer les snapshots de contrats WS pour `routing.*` et assignations.
 - [x] **P0-0.4** Produire `docs/adr/ADR-001-refactor-strategy.md` (décision hybride V2→V3).
 - [x] **P0-0.5** Produire `docs/refactor/dependency-matrix.md` v1 pour les 5 modules backend + 4 frontend cités au plan §12.
-- [ ] **P0-0.6** Ajouter tests Jest de contrat sur les 5 commandes playback les plus utilisées.
+- [x] **P0-0.6** Ajouter tests Jest de contrat sur les 5 commandes playback les plus utilisées.
 - [ ] **P0-0.7** Ajouter tests Jest de contrat sur les commandes routing critiques.
 - [ ] **P0-0.8** Documenter la checklist de refactor (no behavior change, payload stable, logs stables) dans `docs/refactor/CHECKLIST.md`.
 
@@ -119,7 +119,8 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 | 2026-04-17 | Claude (refactoring) | P0-0.2 | Capture snapshots contrats `playback.*` core : start (4 cas), stop, pause, resume, seek (2 cas), status (2 cas), set_loop (2 cas), set_tempo/transpose/set_volume (stubs, 2 cas chacun) | `docs/refactor/contracts/playback/*.contract.json` (10 fichiers) | `81359d0` | Snapshots couvrent le scope P0-1.1 (playback control). Couvre aussi les stubs set_tempo/transpose/set_volume pour figer leur no-op actuel. |
 | 2026-04-17 | Claude (refactoring) | P0-0.3 | Capture snapshots contrats routing : CRUD (create/delete/list/enable/info), filtres (filter_set/clear/channel_map), monitors (start/stop/start_all/stop_all), avancées (route_test/duplicate/export/import/clear_all), sync (file_routing_sync avec 5 cas, file_routing_bulk_sync avec 4 cas) | `docs/refactor/contracts/routing/*.contract.json` (19 fichiers) | `be4d677` | Couvre la totalité des handlers de RoutingCommands.js. Les règles de validation CommandRegistry (source+destination pour route_create, routeId pour delete/enable/filter/map, deviceId pour monitor) sont documentées dans chaque snapshot. |
 | 2026-04-17 | Claude (refactoring) | P0-0.4 | Rédaction ADR-001 : décision officielle hybride V2→V3 avec ports/adapters V4 ciblés (4 options comparées, impacts, compromis, plan de rollback, critères de réussite) | `docs/adr/ADR-001-refactor-strategy.md` | `a9bfaeb` | Premier ADR du chantier ; ADR-002 (Repository) prévu avant Phase 2, ADR-003 (versionnement WS) prévu en Phase 4 |
-| 2026-04-17 | Claude (refactoring) | P0-0.5 | Rédaction matrice dépendances v1 : 5 modules backend (PlaybackCommands, MidiPlayer, InstrumentMatcher, Database, MidiRouter) + 4 frontend (RoutingSummaryPage, MidiEditorCCPanel, MidiEditorTablature, MidiSynthesizer) avec imports statiques, runtime deps, cibles par phase | `docs/refactor/dependency-matrix.md` | (ce commit) | Chiffres : PlaybackCommands a 74 accès `app.*`, MidiPlayer 49 accès `this.*`, MidiRouter n'a que 1 import statique (le plus découplé). Frontend utilise IIFE+globals, pas de ES modules. |
+| 2026-04-17 | Claude (refactoring) | P0-0.5 | Rédaction matrice dépendances v1 : 5 modules backend (PlaybackCommands, MidiPlayer, InstrumentMatcher, Database, MidiRouter) + 4 frontend (RoutingSummaryPage, MidiEditorCCPanel, MidiEditorTablature, MidiSynthesizer) avec imports statiques, runtime deps, cibles par phase | `docs/refactor/dependency-matrix.md` | `633264b` | Chiffres : PlaybackCommands a 74 accès `app.*`, MidiPlayer 49 accès `this.*`, MidiRouter n'a que 1 import statique (le plus découplé). Frontend utilise IIFE+globals, pas de ES modules. |
+| 2026-04-17 | Claude (refactoring) | P0-0.6 | Tests Jest de contrat pour 5 commandes playback (start, stop, seek, status, set_loop) + correction de 3 snapshots où l'erreur observable ne correspondait pas au réel (validator CommandRegistry vs. handler) | `tests/contracts/playback.contract.test.js`, `docs/refactor/contracts/playback/{playback_start,playback_seek,playback_set_loop}.contract.json` | (ce commit) | 5 commandes × 17 cas = 17 tests nominaux+erreurs. Correction des contrats : la validation CommandRegistry pré-handler préfixe les erreurs avec `Invalid <cmd> data: ` et peut concaténer plusieurs erreurs. |
 
 ---
 
@@ -129,6 +130,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 - **2026-04-17** — Décision : consolider les sub-DBs existantes en Repositories, **ne pas** introduire une couche neuve parallèle.
 - **2026-04-17** — Freeze SQL actif : aucune nouvelle migration tant que Phase 4 n'est pas terminée (sauf exception ADR).
 - **2026-04-17** — Interprétation du scope P0-0.2 (« start, stop, seek, loop, transpose, adapt ») : les commandes de contrôle playback core (playback_start/stop/pause/resume/seek/status/set_loop/set_tempo/transpose/set_volume). Les commandes playback « lourdes » (analyze_channel, generate_assignment_suggestions, apply_assignments, validate_routing, etc.) sont déplacées vers un nouveau lot P0-0.2b afin de garder les lots courts (2-5j). Justification : apply_assignments seul fait ~400 LOC avec multiples cas (split physique/playback, overwrite, cc7 injection, persistance), il nécessite son propre lot focalisé.
+- **2026-04-17** — Correction de 3 snapshots lors de P0-0.6 : `playback_start`, `playback_seek`, `playback_set_loop`. La validation `JsonValidator.validatePlaybackCommand` s'exécute **avant** le handler et préfixe les erreurs par `Invalid <command> data: `. De plus, elle peut concaténer plusieurs erreurs (ex. position manquante → deux erreurs jointes). Les snapshots V1 présumaient le message brut du handler, ce qui est incorrect pour les cas où la validator bloque en amont. Les snapshots corrigés distinguent maintenant les cas bloqués par le validator vs. ceux bloqués par le handler.
 
 ---
 

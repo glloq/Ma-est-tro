@@ -2,7 +2,7 @@
   "command": "playback_seek",
   "module": "PlaybackCommands.js",
   "criticality": "high",
-  "description": "Seek playback to a specific position (seconds). Handler does not validate `position` — current behavior forwards the value as-is to `midiPlayer.seek()`.",
+  "description": "Seek playback to a specific position (seconds). The CommandRegistry validator (JsonValidator.validatePlaybackCommand) requires `position` to be a positive number before the handler runs. The handler forwards the value to `midiPlayer.seek()`.",
   "cases": [
     {
       "name": "nominal — seek to position",
@@ -24,10 +24,11 @@
       }
     },
     {
-      "name": "edge — seek with no data (position undefined, forwarded as-is)",
+      "name": "nominal — seek to position 0",
       "type": "success",
-      "input": {},
-      "notes": "Current handler does not validate position. Calling seek(undefined) is the current observable behavior. Any refactor MUST preserve this (or explicitly add validation via ADR).",
+      "input": {
+        "position": 0
+      },
       "output_shape": {
         "type": "response",
         "data": {
@@ -39,6 +40,39 @@
         "data": {
           "success": true
         }
+      }
+    },
+    {
+      "name": "error — missing position (validator)",
+      "type": "error",
+      "input": {},
+      "notes": "Validator emits both 'position is required' AND 'position must be a positive number' because typeof undefined !== 'number'. Both errors are joined by the CommandRegistry.",
+      "output_shape": {
+        "type": "error",
+        "code": "string",
+        "error": "string"
+      },
+      "output_snapshot": {
+        "type": "error",
+        "code": "ERR_VALIDATION",
+        "error": "Invalid playback_seek data: position is required, position must be a positive number"
+      }
+    },
+    {
+      "name": "error — negative position (validator)",
+      "type": "error",
+      "input": {
+        "position": -5
+      },
+      "output_shape": {
+        "type": "error",
+        "code": "string",
+        "error": "string"
+      },
+      "output_snapshot": {
+        "type": "error",
+        "code": "ERR_VALIDATION",
+        "error": "Invalid playback_seek data: position must be a positive number"
       }
     }
   ]

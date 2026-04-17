@@ -70,9 +70,28 @@
       }
     },
     {
-      "name": "error — missing fileId",
+      "name": "error — missing fileId AND missing outputDevice (validator)",
       "type": "error",
       "input": {},
+      "notes": "Blocked at CommandRegistry validator (validatePlaybackCommand) which requires fileId OR outputDevice. Error message is prefixed with 'Invalid playback_start data: '.",
+      "output_shape": {
+        "type": "error",
+        "code": "string",
+        "error": "string"
+      },
+      "output_snapshot": {
+        "type": "error",
+        "code": "ERR_VALIDATION",
+        "error": "Invalid playback_start data: fileId or outputDevice is required"
+      }
+    },
+    {
+      "name": "error — missing fileId with outputDevice provided (handler)",
+      "type": "error",
+      "input": {
+        "outputDevice": "out-1"
+      },
+      "notes": "Passes validator (outputDevice satisfies it), but the handler dereferences fileId first and throws.",
       "output_shape": {
         "type": "error",
         "code": "string",
