@@ -9,7 +9,7 @@
 |---|---|
 | Phase active | **Phase 2 — Persistance (migration handlers)** |
 | Branche de travail | `claude/refactor-maestro-project-L6ptg` |
-| Dernier lot terminé | P2-F.4i (loading + error screens) |
+| Dernier lot terminé | P2-F.4j (instrument chips extraits) |
 | Prochain lot suggéré | **P2-F.5** (orchestrateur léger) ou **P1-4.5c**. |
 | Date dernière mise à jour | 2026-04-17 |
 | Agent ayant mis à jour | Claude (agent refactoring) |
@@ -135,6 +135,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 
 | Date | Agent | Lot | Résumé | Fichiers touchés | Commit | Notes |
 |---|---|---|---|---|---|---|
+| 2026-04-17 | Claude (refactoring) | P2-F.4j | Extraction de `_renderInstrumentChips` (~66 LOC) vers `RoutingSummaryRenderers.renderInstrumentChips({ channel, options, lowOptions, assignment, isSkipped, isSplit, showLow, getDisplayName, escape })`. Inversion de contrôle : `getDisplayName` callback (méthode de la page) + `escape` (escapeHtml) passés en paramètres. Helper interne `chipHTML` factorise les 2 chemins (normal + low-score). `_renderInstrumentChips` de la classe réduit à un appel de 12 lignes. | `public/js/views/components/auto-assign/RoutingSummaryRenderers.js` (+78 LOC), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-52 LOC) | (ce commit) | 437/437 tests verts. Cumul F.1→F.4j : 4748→4199 (-549, -11.6%). |
 | 2026-04-17 | Claude (refactoring) | P2-F.4i | Extraction des écrans loading + error de RoutingSummary. Nouvelles fonctions pures `renderLoadingScreen()` et `renderErrorScreen(message, escape)` dans `RoutingSummaryRenderers.js`. `_showLoading` et `_showError` de la classe deviennent 1-liner pour l'HTML + les 2 addEventListener pour les close buttons. | `public/js/views/components/auto-assign/RoutingSummaryRenderers.js` (+40 LOC), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-18 LOC) | (ce commit) | 437/437 tests verts. Cumul F.1→F.4i : 4748→4251 (-497, -10.5%). |
 | 2026-04-17 | Claude (refactoring) | P2-F.4h | 3 constantes function-local déplacées vers `RoutingSummaryConstants` : `DRUM_NAMES` (47 entrées GM drums), `FULL_RANGE` (128), `CC_PAGE_SIZE` (10). Permet réutilisation inter-méthodes et élimine les recréations à chaque render. | `public/js/views/components/auto-assign/RoutingSummaryConstants.js` (+25 LOC), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-15 LOC) | (ce commit) | 437/437 tests verts. **Cumul F.1→F.4h : -479 LOC (-10.1%)** — premier quart du KPI -40% atteint. |
 | 2026-04-17 | Claude (refactoring) | P2-F.4g | Extraction de la logique bucket-building du minimap (~40 LOC) vers `RoutingSummaryMinimapNotes.buildMinimapBuckets({ notes, width, isSplitView, splitSegmentCount })`. Retourne un état structuré `{ totalTicks, splitMode, segments, channels, multiChannel, buckets }` directement consommable par `drawMinimapFrame`. La page instancie les propriétés `_minimap*` à partir du retour. 9 tests ajoutés : single-channel, empty notes, multi-channel (plusieurs canaux actifs), split view (un row par segment, filtre seg<0). | `public/js/views/components/auto-assign/RoutingSummaryMinimapNotes.js` (+70 LOC : bucket helper), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-35 LOC), `tests/frontend/routing-summary-minimap-notes.test.js` (+9 tests) | (ce commit) | 437/437 backend verts. Cumul F.1→F.4g : 4748→4284 (-464, -9.8%). |
@@ -243,7 +244,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 | `MidiPlayer.js` LOC | 1312 | < 790 (-40 %) | 1312 |
 | `InstrumentMatcher.js` LOC | 1178 | < 710 (-40 %) | 1178 |
 | `TablatureConverter.js` LOC | 1250 | < 750 (-40 %) | 1250 |
-| `RoutingSummaryPage.js` LOC | 4748 | < 2850 (-40 %) | **4251 (-10.5%, F.1→F.4i cumul)** — 1er quart du KPI -40% franchi |
+| `RoutingSummaryPage.js` LOC | 4748 | < 2850 (-40 %) | **4199 (-11.6%, F.1→F.4j cumul)** — 1er quart du KPI -40% franchi |
 | `MidiSynthesizer.js` LOC | 1192 | < 720 (-40 %) | 1116 (-6.4%, P2-F.8) |
 | Couverture tests P0/P1 | ~20 % | ≥ 35 % | **backend 437/437** ; nouveautés session : schema-compiler×30, repository-delegations×94, domain services×47 (routing-plan-channel×14, routing-status×11, device-reconciliation×10, file-routing-sync×12), contract×40+ (playback+routing), correlation-id×3, command-metrics×4, routing-integration×7, bluetooth-port×11, transaction-helper×3 |
 | Commandes WS critiques sous contrat | 0 % | ≥ 90 % | ~70 % (42 commandes : 23 playback + 19 routing — snapshots complets pour PlaybackCommands.js et RoutingCommands.js) |

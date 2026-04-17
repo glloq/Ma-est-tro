@@ -33,11 +33,12 @@ const _t = (key, params) => typeof i18n !== 'undefined' ? i18n.t(key, params) : 
  * White keys are full-height, black keys are shorter and overlaid.
  * C notes get a small label below.
  */
-// Pure HTML renderers extracted to RoutingSummaryRenderers.js (P2-F.4/F.4b/F.4c/F.4d/F.4i).
+// Pure HTML renderers extracted to RoutingSummaryRenderers.js (P2-F.4/F.4b..F.4j).
 const {
   renderMiniKeyboard, renderChannelHistogram, renderMiniRange,
   renderDetailPlaceholder, renderHeaderButtons,
-  renderLoadingScreen, renderErrorScreen
+  renderLoadingScreen, renderErrorScreen,
+  renderInstrumentChips
 } = window.RoutingSummaryRenderers;
 
 // ============================================================================
@@ -1436,74 +1437,21 @@ class RoutingSummaryPage {
   }
 
   /**
-   * Render instrument selection as horizontal scrollable chips
+   * Render instrument selection as horizontal scrollable chips.
+   * Delegates to RoutingSummaryRenderers.renderInstrumentChips (P2-F.4j).
    */
   _renderInstrumentChips(channel, options, lowOptions, assignment, isSkipped = false) {
-    const ch = String(channel);
-    const isSplit = this.splitChannels.has(channel);
-    const showLow = this.showLowScores[ch];
-
-    // For split channels, don't show chips — the split section handles segment display
-    if (isSplit) return '';
-
-    // Normal: show top options as chips
-    const chips = options.map(opt => {
-      const inst = opt.instrument;
-      const score = opt.compatibility.score;
-      const isSelected = assignment?.instrumentId === inst.id;
-      const instType = inst.instrument_type || '';
-      const typeColor = getTypeColor(instType);
-      const name = this._getInstrumentDisplayName(inst);
-      const displayName = name.length > MAX_INST_NAME ? name.slice(0, MAX_INST_NAME - 1) + '\u2026' : name;
-
-      return `
-        <button class="aa-instbar-btn ${isSelected ? 'assigned' : ''}" style="border-left: 3px solid ${typeColor}"
-                data-instrument-id="${inst.id}" data-channel="${ch}"
-                title="${escapeHtml(name)} \u2014 ${score}/100">
-          <span class="aa-instbar-dot" style="background:${typeColor}"></span>
-          <span class="aa-instbar-name">${escapeHtml(displayName)}</span>
-          <span class="aa-instbar-score ${getScoreClass(score)}">${score}</span>
-          ${isSelected ? '<span class="aa-instbar-check">\u2713</span>' : ''}
-        </button>
-      `;
-    }).join('');
-
-    // Low-score chips: always visible when no high-score options exist, otherwise toggle
-    const showLowChips = showLow || options.length === 0;
-    let lowChips = '';
-    if (showLowChips && lowOptions.length > 0) {
-      lowChips = lowOptions.map(opt => {
-        const inst = opt.instrument;
-        const score = opt.compatibility.score;
-        const isSelected = assignment?.instrumentId === inst.id;
-        const typeColor = getTypeColor(inst.instrument_type || '');
-        const name = inst.custom_name || inst.name || '?';
-        const displayName = name.length > MAX_INST_NAME ? name.slice(0, MAX_INST_NAME - 1) + '\u2026' : name;
-        return `
-          <button class="aa-instbar-btn unrouted ${isSelected ? 'assigned' : ''}" style="border-left: 3px solid ${typeColor}"
-                  data-instrument-id="${inst.id}" data-channel="${ch}"
-                  title="${escapeHtml(name)} \u2014 ${score}/100">
-            <span class="aa-instbar-dot" style="background:${typeColor}"></span>
-            <span class="aa-instbar-name">${escapeHtml(displayName)}</span>
-            <span class="aa-instbar-score ${getScoreClass(score)}">${score}</span>
-            ${isSelected ? '<span class="aa-instbar-check">\u2713</span>' : ''}
-          </button>
-        `;
-      }).join('');
-    }
-
-    // Show "more" toggle only when there are high-score options (low chips are behind toggle)
-    const showMoreBtn = (lowOptions.length > 0 && options.length > 0) ? `
-      <button class="aa-instbar-btn aa-instbar-show-all ${showLow ? 'active' : ''}" data-channel="${ch}">
-        ${showLow ? '\u25C9' : '\u25CB'} ${showLow ? _t('autoAssign.hideDetails') : `+${lowOptions.length}`}
-      </button>
-    ` : '';
-
-    return `
-      <div class="aa-instbar-content ${isSkipped ? 'rs-chips-skipped' : ''}">
-        <div class="aa-instbar-list">${chips}${lowChips}${showMoreBtn}</div>
-      </div>
-    `;
+    return renderInstrumentChips({
+      channel,
+      options,
+      lowOptions,
+      assignment,
+      isSkipped,
+      isSplit: this.splitChannels.has(channel),
+      showLow: this.showLowScores[String(channel)],
+      getDisplayName: (inst) => this._getInstrumentDisplayName(inst),
+      escape: escapeHtml
+    });
   }
 
   /**

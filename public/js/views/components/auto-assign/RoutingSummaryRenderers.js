@@ -181,6 +181,83 @@
     `;
   }
 
+  /**
+   * Render the horizontal scrollable list of instrument chips for a channel.
+   * Returns empty string for split channels (handled elsewhere).
+   *
+   * @param {Object} opts
+   * @param {number} opts.channel
+   * @param {Array<Object>} opts.options      - high-score suggestions
+   * @param {Array<Object>} opts.lowOptions   - low-score suggestions (hidden behind toggle)
+   * @param {Object|null} opts.assignment     - currently assigned instrument (or null)
+   * @param {boolean} [opts.isSkipped]
+   * @param {boolean} [opts.isSplit]
+   * @param {boolean} [opts.showLow]          - whether to display low-score chips
+   * @param {(inst:Object) => string} opts.getDisplayName
+   * @param {(html:string) => string} opts.escape
+   */
+  function renderInstrumentChips(opts) {
+    const {
+      channel,
+      options = [],
+      lowOptions = [],
+      assignment,
+      isSkipped = false,
+      isSplit = false,
+      showLow = false,
+      getDisplayName,
+      escape
+    } = opts;
+    const {
+      MAX_INST_NAME,
+      getTypeColor,
+      getScoreClass
+    } = window.RoutingSummaryConstants;
+
+    // For split channels, the dedicated split section handles segment display.
+    if (isSplit) return '';
+
+    const ch = String(channel);
+
+    const chipHTML = (opt, extraClass = '') => {
+      const inst = opt.instrument;
+      const score = opt.compatibility?.score ?? 0;
+      const isSelected = assignment?.instrumentId === inst.id;
+      const typeColor = getTypeColor(inst.instrument_type || '');
+      const name = getDisplayName ? getDisplayName(inst) : (inst.custom_name || inst.name || '?');
+      const displayName = name.length > MAX_INST_NAME ? name.slice(0, MAX_INST_NAME - 1) + '\u2026' : name;
+      return `
+        <button class="aa-instbar-btn ${extraClass} ${isSelected ? 'assigned' : ''}" style="border-left: 3px solid ${typeColor}"
+                data-instrument-id="${inst.id}" data-channel="${ch}"
+                title="${escape(name)} \u2014 ${score}/100">
+          <span class="aa-instbar-dot" style="background:${typeColor}"></span>
+          <span class="aa-instbar-name">${escape(displayName)}</span>
+          <span class="aa-instbar-score ${getScoreClass(score)}">${score}</span>
+          ${isSelected ? '<span class="aa-instbar-check">\u2713</span>' : ''}
+        </button>
+      `;
+    };
+
+    const chips = options.map((opt) => chipHTML(opt)).join('');
+
+    const showLowChips = showLow || options.length === 0;
+    const lowChips = (showLowChips && lowOptions.length > 0)
+      ? lowOptions.map((opt) => chipHTML(opt, 'unrouted')).join('')
+      : '';
+
+    const showMoreBtn = (lowOptions.length > 0 && options.length > 0) ? `
+      <button class="aa-instbar-btn aa-instbar-show-all ${showLow ? 'active' : ''}" data-channel="${ch}">
+        ${showLow ? '\u25C9' : '\u25CB'} ${showLow ? _t('autoAssign.hideDetails') : `+${lowOptions.length}`}
+      </button>
+    ` : '';
+
+    return `
+      <div class="aa-instbar-content ${isSkipped ? 'rs-chips-skipped' : ''}">
+        <div class="aa-instbar-list">${chips}${lowChips}${showMoreBtn}</div>
+      </div>
+    `;
+  }
+
   window.RoutingSummaryRenderers = Object.freeze({
     renderMiniKeyboard,
     renderChannelHistogram,
@@ -188,6 +265,7 @@
     renderDetailPlaceholder,
     renderHeaderButtons,
     renderLoadingScreen,
-    renderErrorScreen
+    renderErrorScreen,
+    renderInstrumentChips
   });
 })();
