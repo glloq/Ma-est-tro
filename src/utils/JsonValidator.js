@@ -2,11 +2,20 @@
 import { compileSchema } from './SchemaCompiler.js';
 import playbackSchemas from '../api/commands/schemas/playback.schemas.js';
 import routingSchemas from '../api/commands/schemas/routing.schemas.js';
+import deviceSchemas from '../api/commands/schemas/device.schemas.js';
+import fileSchemas from '../api/commands/schemas/file.schemas.js';
+import latencySchemas from '../api/commands/schemas/latency.schemas.js';
 
 // Compile schema maps once at module load (ADR-004 §Plan de migration).
 // Key : command name, Value : compiled validator (data => string[]).
 const COMPILED_SCHEMAS = {};
-for (const schemas of [playbackSchemas, routingSchemas]) {
+for (const schemas of [
+  playbackSchemas,
+  routingSchemas,
+  deviceSchemas,
+  fileSchemas,
+  latencySchemas
+]) {
   for (const [cmd, schema] of Object.entries(schemas)) {
     COMPILED_SCHEMAS[cmd] = compileSchema(schema);
   }
@@ -58,54 +67,13 @@ class JsonValidator {
    * Validate device command data
    */
   static validateDeviceCommand(command, data) {
-    const errors = [];
-
-    switch (command) {
-      case 'device_info':
-      case 'device_enable':
-        if (!data.deviceId) {
-          errors.push('deviceId is required');
-        }
-        break;
-
-      case 'device_set_properties':
-        if (!data.deviceId) {
-          errors.push('deviceId is required');
-        }
-        if (!data.properties || typeof data.properties !== 'object') {
-          errors.push('properties must be an object');
-        }
-        break;
-
-      case 'virtual_create':
-        if (!data.name || typeof data.name !== 'string') {
-          errors.push('name is required and must be a string');
-        }
-        break;
-
-      case 'virtual_delete':
-        if (!data.deviceId) {
-          errors.push('deviceId is required');
-        }
-        break;
-
-      case 'ble_connect':
-        if (!data.address) {
-          errors.push('address is required');
-        }
-        break;
-
-      case 'ble_disconnect':
-        if (!data.deviceId) {
-          errors.push('deviceId is required');
-        }
-        break;
+    // ADR-004 migration (P1-3.2c) : lookup in declarative schema map.
+    const compiled = COMPILED_SCHEMAS[command];
+    if (compiled) {
+      const errors = compiled(data || {});
+      return { valid: errors.length === 0, errors };
     }
-
-    return {
-      valid: errors.length === 0,
-      errors: errors
-    };
+    return { valid: true, errors: [] };
   }
 
   /**
@@ -125,52 +93,13 @@ class JsonValidator {
    * Validate file command data
    */
   static validateFileCommand(command, data) {
-    const errors = [];
-
-    switch (command) {
-      case 'file_upload':
-        if (!data.filename) {
-          errors.push('filename is required');
-        }
-        if (!data.data) {
-          errors.push('data is required');
-        }
-        // Validate base64
-        if (data.data && !this.isValidBase64(data.data)) {
-          errors.push('data must be valid base64 string');
-        }
-        break;
-
-      case 'file_delete':
-      case 'file_export':
-        if (!data.fileId) {
-          errors.push('fileId is required');
-        }
-        break;
-
-      case 'file_rename':
-        if (!data.fileId) {
-          errors.push('fileId is required');
-        }
-        if (!data.newFilename) {
-          errors.push('newFilename is required');
-        }
-        break;
-
-      case 'file_move':
-        if (!data.fileId) {
-          errors.push('fileId is required');
-        }
-        if (!data.folder) {
-          errors.push('folder is required');
-        }
-        break;
+    // ADR-004 migration (P1-3.2c) : lookup in declarative schema map.
+    const compiled = COMPILED_SCHEMAS[command];
+    if (compiled) {
+      const errors = compiled(data || {});
+      return { valid: errors.length === 0, errors };
     }
-
-    return {
-      valid: errors.length === 0,
-      errors: errors
-    };
+    return { valid: true, errors: [] };
   }
 
   /**
@@ -193,32 +122,13 @@ class JsonValidator {
    * Validate latency command data
    */
   static validateLatencyCommand(command, data) {
-    const errors = [];
-
-    switch (command) {
-      case 'latency_measure':
-      case 'latency_set':
-      case 'latency_get':
-      case 'latency_delete':
-        if (!data.deviceId) {
-          errors.push('deviceId is required');
-        }
-        break;
+    // ADR-004 migration (P1-3.2c) : lookup in declarative schema map.
+    const compiled = COMPILED_SCHEMAS[command];
+    if (compiled) {
+      const errors = compiled(data || {});
+      return { valid: errors.length === 0, errors };
     }
-
-    // Additional validation for latency_set
-    if (command === 'latency_set') {
-      if (data.latency === undefined) {
-        errors.push('latency is required');
-      } else if (typeof data.latency !== 'number' || data.latency < 0) {
-        errors.push('latency must be a positive number');
-      }
-    }
-
-    return {
-      valid: errors.length === 0,
-      errors: errors
-    };
+    return { valid: true, errors: [] };
   }
 
   /**
