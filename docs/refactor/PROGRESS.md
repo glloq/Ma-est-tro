@@ -9,8 +9,8 @@
 |---|---|
 | Phase active | **Phase 2 — Persistance (migration handlers)** |
 | Branche de travail | `claude/refactor-maestro-project-L6ptg` |
-| Dernier lot terminé | P2-F.10 (roadmap) |
-| Prochain lot suggéré | **P2-F.10a** (convertir `MidiEditorDialogsMixin` en sous-composant — plus simple et auto-contenu) ou **P2-F.4** (étape 4 RoutingSummary). |
+| Dernier lot terminé | P2-F.10a |
+| Prochain lot suggéré | **P2-F.10b** (convertir `MidiEditorDrawSettingsMixin`) ou **P2-F.10c** (`MidiEditorCCPickerMixin`). |
 | Date dernière mise à jour | 2026-04-17 |
 | Agent ayant mis à jour | Claude (agent refactoring) |
 
@@ -115,6 +115,7 @@ Un lot = **2–5 jours max de travail**, **une PR cohérente**, **pas de changem
 - [x] **P2-F.8** Appliquer le même protocole à `MidiSynthesizer.js` (≈1192 LOC) — **étape 1 faite** : `MidiSynthesizerConstants.js` extrait `SOUND_BANKS`, `DEFAULT_BANK_ID`, `DEFAULT_BANK_SUFFIX`. MidiSynthesizer.js : 1192 → 1116 LOC (-76).
 - [ ] **P2-F.9** Migrer progressivement vers layout `public/js/features/`.
 - [x] **P2-F.10** Clarifier le pattern mixins de `MidiEditorModal` — cartographie livrée dans [`docs/refactor/midi-editor-mixins.md`](./midi-editor-mixins.md). 12 mixins inventoriés, roadmap 4 phases (A→D) avec lots suivants P2-F.10a/b/c/d. Aucune conversion dans ce lot (risque) — juste l'analyse et le plan.
+- [x] **P2-F.10a** Convertir `MidiEditorDialogsMixin` en sous-composant `MidiEditorDialogs` (classe instanciée dans le constructeur de MidiEditorModal). L'ancien mixin `window.MidiEditorDialogsMixin` devient un forwarder qui délègue à `this.dialogs.*` — callsites inchangés, migration progressive des 5 appels vers `modal.dialogs.*` viendra en P2-F.10a-cleanup.
 
 ### Observabilité (P2)
 
@@ -130,6 +131,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 
 | Date | Agent | Lot | Résumé | Fichiers touchés | Commit | Notes |
 |---|---|---|---|---|---|---|
+| 2026-04-17 | Claude (refactoring) | P2-F.10a | Première conversion de mixin en sous-composant instancié. `MidiEditorDialogs` devient une classe avec `constructor(modal)`. `MidiEditorModal` l'instancie dans son constructeur (`this.dialogs = new MidiEditorDialogs(this)`). L'export mixin legacy `window.MidiEditorDialogsMixin` est conservé en forwarder `this.dialogs.*` — **aucun callsite modifié** (5 appels dans EditActions/Lifecycle/Toolbar restent valides tels quels). Le rename callsites → `modal.dialogs.*` sera P2-F.10a-cleanup. | `public/js/views/components/midi-editor/MidiEditorDialogs.js`, `public/js/views/components/MidiEditorModal.js` | (ce commit) | 296/296 tests verts. Syntaxe `node --check` propre. Démontre le pattern de conversion safe pour les 3 lots suivants (P2-F.10b/c/d). |
 | 2026-04-17 | Claude (refactoring) | P2-F.10 | Cartographie du pattern mixins de `MidiEditorModal` (360 LOC + 12 mixins globaux fusionnés dans le prototype au runtime). Inventaire : 12 mixins classés par priorité (🔴 FileOps / Renderer / Events ; 🟡 Sequence / CC / Routing / Tablature ; 🟢 Dialogs / CCPicker / DrawSettings / Lifecycle). Constat : aucune frontière de dépendance explicite, 2 patterns cohabitent (mixins vs sous-composants instanciés). Roadmap 4 phases (A convertir les mixins 🟢 en sous-composants, B services pur-état, C Renderer+FileOps, D doc des shared state). Aucune modif de code. | `docs/refactor/midi-editor-mixins.md` (créé) | (ce commit) | Prépare 4 lots suivants P2-F.10a/b/c/d. |
 | 2026-04-17 | Claude (refactoring) | P2-F.3 | Étape 3 du protocole 5 étapes sur `RoutingSummaryPage.js`. Nouveau `RoutingSummaryAssignmentBuilder.js` (163 LOC) extrait la transformation state → apply_assignments payload. 2 fonctions pures : `buildAssignmentsPayload(state)` (retourne `{assignments, hasAssignment, hasSplit}`) et `computeModificationFlags(assignments, hasSplit)`. Dépendances de la page passées par callbacks (inversion de contrôle) → unit-testable sans DOM. `_applyRouting` ramené de ~105 à ~20 lignes de logique métier avant le dialog. RoutingSummaryPage.js : 4658→4573 (-85). | `public/js/views/components/auto-assign/RoutingSummaryAssignmentBuilder.js` (créé), `public/js/views/components/auto-assign/RoutingSummaryPage.js`, `public/index.html` | (ce commit) | Syntaxe `node --check` propre. Cumul P2-F.1+F.2+F.3 : -175 LOC dans le fichier page, +236 LOC répartis sur 3 modules extraits. |
 | 2026-04-17 | Claude (refactoring) | P1-4.5b | Nouveau `src/midi/adapters/NobleBleAdapter.js` (~170 LOC) : implémentation production du `BluetoothPort`, wrap `node-ble` (BlueZ/DBus). Lazy import du package pour permettre le load en environnement sans node-ble compilé. `scanOnce(durationMs)` répliqué de BluetoothManager pour démarrage aisé. 2 tests ajoutés (surface, rejet Uint8Array). Rewire de `BluetoothManager` non livré ici (P1-4.5c — lot dédié). | `src/midi/adapters/NobleBleAdapter.js` (créé), `tests/ports/bluetooth-port.contract.test.js` (+2 tests) | (ce commit) | 296/296 tests verts. `BluetoothManager` inchangé — production BLE continue de fonctionner. |

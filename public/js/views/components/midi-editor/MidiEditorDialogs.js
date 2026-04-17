@@ -1,215 +1,185 @@
 // ============================================================================
 // File: public/js/views/components/midi-editor/MidiEditorDialogs.js
-// Description: Modern confirmation dialogs
-//   Mixin: methods added to MidiEditorModal.prototype
+// Description: Modern confirmation dialogs — sub-component instantiated by
+//   MidiEditorModal (converted from mixin in P2-F.10a). Keeps the mixin
+//   export for backward compatibility during the transition.
 // ============================================================================
 
 (function() {
     'use strict';
 
-    const MidiEditorDialogsMixin = {};
+    class MidiEditorDialogs {
+        constructor(modal) {
+            this.modal = modal;
+        }
 
-    // ========================================================================
-    // MODERN CONFIRMATION MODAL
-    // ========================================================================
+        // ====================================================================
+        // MODERN CONFIRMATION MODAL
+        // ====================================================================
 
-    /**
-    * Afficher un modal de confirmation moderne
-    * @param {Object} options - Options du modal
-    * @param {string} options.title - Titre du modal
-    * @param {string} options.message - Message principal
-    * @param {string} options.details - Détails supplémentaires (optionnel)
-    * @param {string} options.icon - Icône emoji (optionnel, défaut: ⚠️)
-    * @param {string} options.confirmText - Texte du bouton de confirmation
-    * @param {string} options.cancelText - Texte du bouton d'annulation
-    * @param {string} options.confirmClass - Classe CSS pour le bouton de confirmation (primary, danger, success)
-    * @param {Array} options.extraButtons - Boutons supplémentaires [{text, class, value}]
-    * @returns {Promise<string|boolean>} - Résultat de la confirmation
-    */
-    MidiEditorDialogsMixin.showConfirmModal = function(options) {
-        return new Promise((resolve) => {
-            const {
-                title = this.t('common.confirm'),
-                message = '',
-                details = '',
-                icon = '⚠️',
-                confirmText = this.t('common.confirm'),
-                cancelText = this.t('common.cancel'),
-                confirmClass = 'primary',
-                extraButtons = []
-            } = options;
+        /**
+         * @param {Object} options
+         * @param {string} [options.title]
+         * @param {string} [options.message]
+         * @param {string} [options.details]
+         * @param {string} [options.icon]
+         * @param {string} [options.confirmText]
+         * @param {string} [options.cancelText]
+         * @param {string} [options.confirmClass]
+         * @param {Array}  [options.extraButtons]
+         * @returns {Promise<string|boolean>}
+         */
+        showConfirmModal(options) {
+            return new Promise((resolve) => {
+                const t = (k) => this.modal.t(k);
+                const {
+                    title = t('common.confirm'),
+                    message = '',
+                    details = '',
+                    icon = '⚠️',
+                    confirmText = t('common.confirm'),
+                    cancelText = t('common.cancel'),
+                    confirmClass = 'primary',
+                    extraButtons = []
+                } = options;
 
-    // Create the modal
-            const modal = document.createElement('div');
-            modal.className = 'confirm-modal-overlay';
-            modal.innerHTML = `
-                <div class="confirm-modal">
-                    <div class="confirm-modal-header">
-                        <span class="confirm-modal-icon">${icon}</span>
-                        <h3 class="confirm-modal-title">${title}</h3>
+                const modal = document.createElement('div');
+                modal.className = 'confirm-modal-overlay';
+                modal.innerHTML = `
+                    <div class="confirm-modal">
+                        <div class="confirm-modal-header">
+                            <span class="confirm-modal-icon">${icon}</span>
+                            <h3 class="confirm-modal-title">${title}</h3>
+                        </div>
+                        <div class="confirm-modal-body">
+                            <p class="confirm-modal-message">${message}</p>
+                            ${details ? `<div class="confirm-modal-details">${details}</div>` : ''}
+                        </div>
+                        <div class="confirm-modal-footer">
+                            ${cancelText ? `<button class="confirm-modal-btn cancel" data-action="cancel">${cancelText}</button>` : ''}
+                            ${extraButtons.map(btn => `
+                                <button class="confirm-modal-btn ${btn.class || 'secondary'}" data-action="extra" data-value="${btn.value}">${btn.text}</button>
+                            `).join('')}
+                            <button class="confirm-modal-btn ${confirmClass}" data-action="confirm">${confirmText}</button>
+                        </div>
                     </div>
-                    <div class="confirm-modal-body">
-                        <p class="confirm-modal-message">${message}</p>
-                        ${details ? `<div class="confirm-modal-details">${details}</div>` : ''}
-                    </div>
-                    <div class="confirm-modal-footer">
-                        ${cancelText ? `<button class="confirm-modal-btn cancel" data-action="cancel">${cancelText}</button>` : ''}
-                        ${extraButtons.map(btn => `
-                            <button class="confirm-modal-btn ${btn.class || 'secondary'}" data-action="extra" data-value="${btn.value}">${btn.text}</button>
-                        `).join('')}
-                        <button class="confirm-modal-btn ${confirmClass}" data-action="confirm">${confirmText}</button>
-                    </div>
-                </div>
-            `;
+                `;
 
-    // Ajouter au DOM
-            document.body.appendChild(modal);
+                document.body.appendChild(modal);
 
-    // Single centralized close function
-            const closeModal = (result) => {
-    // Supprimer les listeners AVANT de fermer
-                modal.removeEventListener('click', handleClick);
-                document.removeEventListener('keydown', handleKeydown);
+                const closeModal = (result) => {
+                    modal.removeEventListener('click', handleClick);
+                    document.removeEventListener('keydown', handleKeydown);
+                    modal.classList.remove('visible');
+                    setTimeout(() => {
+                        if (modal.parentNode) modal.remove();
+                        resolve(result);
+                    }, 200);
+                };
 
-    // Animation de sortie
-                modal.classList.remove('visible');
+                requestAnimationFrame(() => modal.classList.add('visible'));
+
+                const handleClick = (e) => {
+                    if (e.target === modal) { closeModal(false); return; }
+                    const btn = e.target.closest('.confirm-modal-btn');
+                    if (!btn) return;
+                    const action = btn.dataset.action;
+                    let result;
+                    if (action === 'confirm') result = true;
+                    else if (action === 'cancel') result = false;
+                    else if (action === 'extra') result = btn.dataset.value;
+                    closeModal(result);
+                };
+                modal.addEventListener('click', handleClick);
+
+                const handleKeydown = (e) => {
+                    if (e.key === 'Escape') closeModal(false);
+                };
+                document.addEventListener('keydown', handleKeydown);
+
                 setTimeout(() => {
-                    if (modal.parentNode) {
-                        modal.remove();
-                    }
-                    resolve(result);
-                }, 200);
-            };
-
-    // Entry animation
-            requestAnimationFrame(() => {
-                modal.classList.add('visible');
+                    const confirmBtn = modal.querySelector('.confirm-modal-btn.primary, .confirm-modal-btn.success, .confirm-modal-btn.danger');
+                    if (confirmBtn) confirmBtn.focus();
+                }, 50);
             });
+        }
 
-    // Gestionnaire de clic
-            const handleClick = (e) => {
-    // Clic sur l'overlay (fond) = annuler
-                if (e.target === modal) {
-                    closeModal(false);
-                    return;
-                }
+        /**
+         * @returns {Promise<boolean>}
+         */
+        async showChangeChannelModal(noteCount, currentChannel, newChannel) {
+            const m = this.modal;
+            const currentChannelText = currentChannel >= 0
+                ? `Canal ${currentChannel + 1}`
+                : 'Canaux mixtes';
 
-                const btn = e.target.closest('.confirm-modal-btn');
-                if (!btn) return;
+            const channelInfo = m.channels.find(ch => ch.channel === newChannel);
+            const newChannelInstrument = channelInfo
+                ? channelInfo.instrument
+                : m.getInstrumentName(m.selectedInstrument);
 
-                const action = btn.dataset.action;
-                let result;
-
-                if (action === 'confirm') {
-                    result = true;
-                } else if (action === 'cancel') {
-                    result = false;
-                } else if (action === 'extra') {
-                    result = btn.dataset.value;
-                }
-
-                closeModal(result);
-            };
-
-            modal.addEventListener('click', handleClick);
-
-    // Fermer avec Escape
-            const handleKeydown = (e) => {
-                if (e.key === 'Escape') {
-                    closeModal(false);
-                }
-            };
-            document.addEventListener('keydown', handleKeydown);
-
-    // Focus sur le bouton de confirmation
-            setTimeout(() => {
-                const confirmBtn = modal.querySelector('.confirm-modal-btn.primary, .confirm-modal-btn.success, .confirm-modal-btn.danger');
-                if (confirmBtn) confirmBtn.focus();
-            }, 50);
-        });
-    }
-
-    /**
-    * Modal de changement de canal avec options
-    * @param {number} noteCount - Nombre de notes sélectionnées
-    * @param {number} currentChannel - Canal actuel (ou -1 si mixte)
-    * @param {number} newChannel - Nouveau canal
-    * @returns {Promise<boolean>}
-    */
-    MidiEditorDialogsMixin.showChangeChannelModal = async function(noteCount, currentChannel, newChannel) {
-        const currentChannelText = currentChannel >= 0
-            ? `Canal ${currentChannel + 1}`
-            : 'Canaux mixtes';
-
-        const channelInfo = this.channels.find(ch => ch.channel === newChannel);
-        const newChannelInstrument = channelInfo
-            ? channelInfo.instrument
-            : this.getInstrumentName(this.selectedInstrument);
-
-        return this.showConfirmModal({
-            title: this.t('midiEditor.changeChannelTitle'),
-            icon: '🎹',
-            message: `Déplacer <strong>${noteCount}</strong> note(s) vers le <strong>Canal ${newChannel + 1}</strong> ?`,
-            details: `
-                <div class="confirm-detail-row">
-                    <span class="confirm-detail-label">Depuis :</span>
-                    <span class="confirm-detail-value">${currentChannelText}</span>
-                </div>
-                <div class="confirm-detail-row">
-                    <span class="confirm-detail-label">Vers :</span>
-                    <span class="confirm-detail-value">Canal ${newChannel + 1} (${newChannelInstrument})</span>
-                </div>
-            `,
-            confirmText: this.t('midiEditor.apply'),
-            confirmClass: 'primary'
-        });
-    }
-
-    /**
-    * Modal de changement d'instrument avec choix
-    * @param {Object} options
-    * @returns {Promise<string|boolean>} - 'selection', 'channel', ou false
-    */
-    MidiEditorDialogsMixin.showChangeInstrumentModal = async function(options) {
-        const {
-            noteCount = 0,
-            channelNoteCount = 0,
-            channel,
-            currentInstrument,
-            newInstrument,
-            hasSelection
-        } = options;
-
-        if (hasSelection && noteCount > 0) {
-    // Offer the choice: selection or entire channel
             return this.showConfirmModal({
-                title: this.t('midiEditor.changeInstrumentTitle'),
-                icon: '🎵',
-                message: `Changer l'instrument vers <strong>${newInstrument}</strong> ?`,
+                title: m.t('midiEditor.changeChannelTitle'),
+                icon: '🎹',
+                message: `Déplacer <strong>${noteCount}</strong> note(s) vers le <strong>Canal ${newChannel + 1}</strong> ?`,
                 details: `
                     <div class="confirm-detail-row">
-                        <span class="confirm-detail-label">Instrument actuel :</span>
-                        <span class="confirm-detail-value">${currentInstrument}</span>
+                        <span class="confirm-detail-label">Depuis :</span>
+                        <span class="confirm-detail-value">${currentChannelText}</span>
                     </div>
                     <div class="confirm-detail-row">
-                        <span class="confirm-detail-label">Nouvel instrument :</span>
-                        <span class="confirm-detail-value">${newInstrument}</span>
-                    </div>
-                    <div class="confirm-choice-info">
-                        <p>📌 <strong>${noteCount}</strong> note(s) sélectionnée(s)</p>
-                        <p>📋 Canal ${channel + 1} contient <strong>${channelNoteCount}</strong> note(s) au total</p>
+                        <span class="confirm-detail-label">Vers :</span>
+                        <span class="confirm-detail-value">Canal ${newChannel + 1} (${newChannelInstrument})</span>
                     </div>
                 `,
-                confirmText: `Sélection (${noteCount})`,
-                confirmClass: 'success',
-                extraButtons: [
-                    { text: `Tout le canal (${channelNoteCount})`, class: 'primary', value: 'channel' }
-                ]
+                confirmText: m.t('midiEditor.apply'),
+                confirmClass: 'primary'
             });
-        } else {
-    // No selection — change the entire channel
+        }
+
+        /**
+         * @returns {Promise<string|boolean>} 'channel' | true | false
+         */
+        async showChangeInstrumentModal(options) {
+            const m = this.modal;
+            const {
+                noteCount = 0,
+                channelNoteCount = 0,
+                channel,
+                currentInstrument,
+                newInstrument,
+                hasSelection
+            } = options;
+
+            if (hasSelection && noteCount > 0) {
+                return this.showConfirmModal({
+                    title: m.t('midiEditor.changeInstrumentTitle'),
+                    icon: '🎵',
+                    message: `Changer l'instrument vers <strong>${newInstrument}</strong> ?`,
+                    details: `
+                        <div class="confirm-detail-row">
+                            <span class="confirm-detail-label">Instrument actuel :</span>
+                            <span class="confirm-detail-value">${currentInstrument}</span>
+                        </div>
+                        <div class="confirm-detail-row">
+                            <span class="confirm-detail-label">Nouvel instrument :</span>
+                            <span class="confirm-detail-value">${newInstrument}</span>
+                        </div>
+                        <div class="confirm-choice-info">
+                            <p>📌 <strong>${noteCount}</strong> note(s) sélectionnée(s)</p>
+                            <p>📋 Canal ${channel + 1} contient <strong>${channelNoteCount}</strong> note(s) au total</p>
+                        </div>
+                    `,
+                    confirmText: `Sélection (${noteCount})`,
+                    confirmClass: 'success',
+                    extraButtons: [
+                        { text: `Tout le canal (${channelNoteCount})`, class: 'primary', value: 'channel' }
+                    ]
+                });
+            }
+
             return this.showConfirmModal({
-                title: this.t('midiEditor.changeInstrumentTitle'),
+                title: m.t('midiEditor.changeInstrumentTitle'),
                 icon: '🎵',
                 message: `Changer l'instrument du <strong>Canal ${channel + 1}</strong> ?`,
                 details: `
@@ -226,14 +196,23 @@
                         <span class="confirm-detail-value">${channelNoteCount} note(s)</span>
                     </div>
                 `,
-                confirmText: this.t('midiEditor.apply'),
+                confirmText: m.t('midiEditor.apply'),
                 confirmClass: 'primary'
             });
         }
     }
 
-
     if (typeof window !== 'undefined') {
-        window.MidiEditorDialogsMixin = MidiEditorDialogsMixin;
+        window.MidiEditorDialogs = MidiEditorDialogs;
+
+        // Backward-compatible mixin export for MidiEditorModal's mixin loop.
+        // Forwards each method to `this.dialogs` (instantiated in the modal
+        // constructor). Once all callers migrate to `modal.dialogs.*`, the
+        // mixin export can be dropped.
+        window.MidiEditorDialogsMixin = {
+            showConfirmModal(options) { return this.dialogs.showConfirmModal(options); },
+            showChangeChannelModal(n, c, nc) { return this.dialogs.showChangeChannelModal(n, c, nc); },
+            showChangeInstrumentModal(o) { return this.dialogs.showChangeInstrumentModal(o); }
+        };
     }
 })();

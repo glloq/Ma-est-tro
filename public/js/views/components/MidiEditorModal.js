@@ -77,6 +77,10 @@ class MidiEditorModal {
         // Channel panel (manages tablature buttons, device selector, instrument selector)
         this.channelPanel = typeof MidiEditorChannelPanel !== 'undefined' ? new MidiEditorChannelPanel(this) : null;
 
+        // Confirmation dialogs sub-component (P2-F.10a — replaces mixin).
+        // Instantiated before the mixin loop so the mixin forwarders find it.
+        this.dialogs = typeof MidiEditorDialogs !== 'undefined' ? new MidiEditorDialogs(this) : null;
+
         // Tablature editor (for string instruments)
         this.tablatureEditor = null;
 
