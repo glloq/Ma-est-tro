@@ -239,6 +239,11 @@ Règles :
 - **Règle migration / freeze schéma** : pendant toute la durée du refactor, **pas de nouvelle migration SQL** (`migrations/001…040` existants) sauf justification explicite documentée en PR. Les repositories s'adaptent au schéma actuel.
 - **Règle comportement** : pas de changement de comportement observable sans feature flag ou décision explicite et documentée.
 - **Règle réutilisation** : avant d'introduire un nouveau helper, vérifier l'absence d'équivalent dans `src/core/`, `src/utils/`, `src/storage/`.
+- **Règle de versions des contrats WS** :
+  - compatibilité backward par défaut ;
+  - en cas de rupture nécessaire, introduire une commande/route `v2` de manière **additive** ;
+  - dépréciation annoncée dans le changelog avec date cible de retrait.
+- **Règle ADR** : toute décision structurante (choix Repository, frontières de service, ports/adapters ciblés, introduction d'un pattern) fait l'objet d'une note `docs/adr/ADR-00X-<titre>.md` (voir §12).
 
 ## 8. Risques et mitigation
 
@@ -255,3 +260,137 @@ Le plan est considéré réussi si, à l'issue des phases 0–4 :
 - les commandes WS gardent les mêmes comportements observables (snapshots de contrats verts) ;
 - la couverture de tests sur les zones P0/P1 dépasse nettement l'état initial (~15–20 %) ;
 - ajouter une feature playback/routing demande moins de temps et comporte moins de risque qu'avant le chantier.
+
+## 10. Garde-fous d'exécution
+
+### 10.1 Périmètre IN / OUT par phase (anti-dérive)
+
+Chaque PR de refactor doit expliciter ce qui est autorisé et ce qui est interdit :
+
+- **IN (autorisé)**
+  - extraction, déplacement, renommage de modules ;
+  - factorisation de logique existante ;
+  - ajout de tests de contrat / non-régression ;
+  - amélioration de la documentation technique.
+- **OUT (interdit)**
+  - changement fonctionnel observable ;
+  - changement de schéma SQL (sauf exception validée, voir §7) ;
+  - changement de protocole WebSocket côté client sans versionnement explicite ;
+  - introduction d'une dépendance npm / d'un nouveau pattern sans ADR.
+
+### 10.2 Definition of Ready / Definition of Done
+
+**DoR (avant de commencer un lot)** :
+- contrats d'API concernés identifiés (snapshot payload existant) ;
+- cas nominaux et cas d'erreur listés ;
+- stratégie de test minimale définie (contrat + intégration si persistance touchée).
+
+**DoD (lot considéré terminé)** :
+- snapshots de contrats WS inchangés (ou changement documenté et approuvé) ;
+- logs opérationnels inchangés sur le parcours critique ;
+- rollback simple possible (revert PR sans migration) ;
+- ADR mise à jour si la décision a bougé.
+
+### 10.3 Stratégie de test par niveaux
+
+Hiérarchie des tests à couvrir, dans l'ordre de priorité :
+
+1. **Tests de contrat WS** (payload in/out) — priorité absolue, bloquant P0.
+2. **Tests de services domaine** — sans WS ni DB réelle, via mocks/stubs (Jest).
+3. **Tests d'intégration persistence** — SQLite réel sur scénarios split / no-split / overwrite.
+4. **Tests de performance ciblés** — temps de traitement, mémoire, latence sur les flux playback/adaptation (s'appuyer sur `tests/performance/benchmark.js`).
+
+### 10.4 KPI chiffrés de pilotage
+
+Cibles mesurables pour suivre la valeur produite :
+
+| KPI | Cible | Source |
+|---|---|---|
+| Réduction taille des god files P0 | **-40 % minimum** | `wc -l` sur fichiers §2 |
+| Couverture zones P0/P1 | **+15 points** (baseline ~20 %) | `npm run test:coverage` |
+| Commandes WS critiques couvertes par tests de contrat | **≥ 90 %** | Inventaire `docs/refactor/contracts/` |
+| PR refactor sans incident post-merge (14 j) | **≥ 95 %** | Suivi incidents |
+
+## 11. Protocole de découpage des modules frontend massifs
+
+Pour éviter les refactors frontend « esthétiques » sans gain structurel, appliquer systématiquement ce protocole en 5 étapes aux composants > 1000 LOC (`RoutingSummaryPage.js`, `MidiEditorCCPanel.js`, `MidiEditorTablature.js`, `MidiSynthesizer.js`, `CCPitchbendEditor.js`) :
+
+1. extraire les constantes / configuration ;
+2. extraire les accès API (vers `shared/api`) ;
+3. extraire la logique d'état ;
+4. extraire le rendu UI en sous-composants ;
+5. conserver un orchestrateur léger au-dessus.
+
+## 12. Matrice des dépendances critiques
+
+À produire en Phase 0 puis mettre à jour à chaque sprint. Objectif : objectiver la baisse de couplage.
+
+Modules à tracer :
+
+**Backend** — `PlaybackCommands`, `MidiPlayer`, `InstrumentMatcher`, `Database`, `MidiRouter`.
+**Frontend** — `RoutingSummaryPage`, `MidiEditorCCPanel`, `MidiEditorTablature`, `MidiSynthesizer`.
+
+Format (par module) : *dépendances directes* → *dépendances à réduire* → *cible en fin de phase*.
+
+Livré sous `docs/refactor/dependency-matrix.md`.
+
+## 13. Architecture Decision Records (ADR)
+
+Chaque décision structurante produit une note ADR courte sous `docs/adr/ADR-00X-<titre>.md`, format :
+
+- **Contexte** — pourquoi la décision se pose maintenant ;
+- **Options considérées** — 2 à 4 alternatives réalistes ;
+- **Décision** — l'option retenue ;
+- **Impacts / compromis** — ce qu'on gagne, ce qu'on sacrifie ;
+- **Plan de rollback** — comment revenir en arrière si besoin.
+
+ADR attendus dès le début du chantier :
+- `ADR-001-refactor-strategy.md` — décision officielle hybride V2→V3.
+- `ADR-002-repository-layer.md` — choix du pattern Repository au-dessus des sub-DBs existantes.
+- `ADR-003-ws-contract-versioning.md` — règles de versionnement des contrats WebSocket.
+
+## 14. Ordonnancement opérationnel indicatif (12 semaines)
+
+| Semaines | Phase | Contenu |
+|---|---|---|
+| S1–S2 | Phase 0 | Baseline contrats WS, checklist, instrumentation minimale, matrice dépendances v1 |
+| S3–S5 | Phase 1 | Playback + cluster MIDI adaptation (Tablature, Drum, Channel, Matcher, Transposer) |
+| S6–S7 | Phase 2 | Repositories au-dessus des sub-DBs existantes (pas de migration SQL) |
+| S8–S9 | Phase 3 | Validation déclarative + erreurs normalisées |
+| S10–S12 | Phase 4 | Domaines étendus + ports/adapters ciblés (drivers hardware, transport WS) |
+
+Cadence : lots de **2–5 jours max**, PR petites et auditées. Ne **pas lancer deux lots à haut risque production en parallèle**.
+
+## 15. Priorisation des lots
+
+Quand plusieurs lots sont candidats, prioriser selon :
+
+```
+Priorité = (Risque production × Impact utilisateur × Fréquence de changement) / Effort
+```
+
+Chaque facteur noté 1–5. Le lot avec le score le plus élevé passe en premier, sauf si le backlog contient déjà un lot à haut risque actif.
+
+## 16. Plan de rollback type par lot
+
+Chaque PR de refactor inclut, dans la description :
+
+1. **Commande(s) / parcours à surveiller post-merge** (ex. `playback.start`, assignations).
+2. **Indicateurs d'alerte** : erreurs WS, temps de réponse, logs d'exception via `src/core/Logger.js`.
+3. **Procédure de rollback en une étape** : `git revert <sha>` + redéploiement ; aucune migration à défaire.
+4. **Vérification post-rollback** : re-jouer les tests de contrat critiques concernés.
+
+## 17. Livrables documentaires de la prochaine itération
+
+Une fois ce plan validé comme référence d'équipe, les trois livrables suivants sont produits avant la Phase 0 :
+
+1. `docs/refactor/contracts/README.md` — méthode de génération des snapshots WS (outil, format, revue).
+2. `docs/refactor/batch-plan.md` — backlog priorisé des lots S1→S12, avec owner estimé par lot.
+3. `docs/adr/ADR-001-refactor-strategy.md` — décision officielle : hybride V2→V3, principes V4 sur zones à couplage infra fort.
+
+## 18. Prochaines actions immédiates
+
+1. Valider ce document comme référence d'équipe.
+2. Ouvrir une issue *« Phase 0 — Baseline sécurité »* (contrats WS + tests + checklist).
+3. Produire `ADR-001-refactor-strategy.md`.
+4. Préparer un premier lot *« Playback : découpage par sous-modules »* — **sans changement fonctionnel**.
