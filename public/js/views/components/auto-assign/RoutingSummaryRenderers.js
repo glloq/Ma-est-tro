@@ -9,6 +9,8 @@
   const RSC = window.RoutingSummaryConstants;
   const { BLACK_KEYS, safeNoteRange, midiNoteToName } = RSC;
 
+  const _t = (key, params) => (typeof i18n !== 'undefined' ? i18n.t(key, params) : key);
+
   /**
    * Render a mini piano keyboard aligned to the channel's note range.
    * White keys are full-height, black keys are shorter and overlaid.
@@ -68,8 +70,48 @@
     return `<div class="rs-split-viz-ch-track" title="${midiNoteToName(chMin)}\u2013${midiNoteToName(chMax)}">${histoBarsHTML}</div>`;
   }
 
+  /**
+   * Mini note range visualisation bar for the summary table.
+   * @param {Object|null} analysis - channel analysis ({ noteRange: { min, max } })
+   * @param {Object|null} [assignment] - optional instrument assignment
+   *   ({ noteRangeMin, noteRangeMax }) — shown as an overlaid instrument range.
+   */
+  function renderMiniRange(analysis, assignment) {
+    if (!analysis || !analysis.noteRange || analysis.noteRange.min == null) return '';
+
+    const chMin = analysis.noteRange.min;
+    const chMax = analysis.noteRange.max;
+    const left = Math.round((chMin / 127) * 100);
+    const width = Math.max(2, Math.round(((chMax - chMin) / 127) * 100));
+
+    let instBar = '';
+    if (assignment && assignment.noteRangeMin != null) {
+      const iLeft = Math.round((assignment.noteRangeMin / 127) * 100);
+      const iWidth = Math.max(2, Math.round(((assignment.noteRangeMax - assignment.noteRangeMin) / 127) * 100));
+      instBar = `<div class="rs-range-inst" style="left: ${iLeft}%; width: ${iWidth}%" title="${_t('autoAssign.instrumentRange')}: ${midiNoteToName(assignment.noteRangeMin)}-${midiNoteToName(assignment.noteRangeMax)}"></div>`;
+    }
+
+    return `
+      <div class="rs-mini-range" title="${midiNoteToName(chMin)}-${midiNoteToName(chMax)}">
+        ${instBar}
+        <div class="rs-range-channel" style="left: ${left}%; width: ${width}%"></div>
+      </div>
+    `;
+  }
+
+  /** Placeholder shown in the right-side detail panel when no channel is selected. */
+  function renderDetailPlaceholder() {
+    return `
+      <div class="rs-detail-placeholder">
+        <p>${_t('routingSummary.selectChannelHint')}</p>
+      </div>
+    `;
+  }
+
   window.RoutingSummaryRenderers = Object.freeze({
     renderMiniKeyboard,
-    renderChannelHistogram
+    renderChannelHistogram,
+    renderMiniRange,
+    renderDetailPlaceholder
   });
 })();

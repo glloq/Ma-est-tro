@@ -30,8 +30,8 @@ const _t = (key, params) => typeof i18n !== 'undefined' ? i18n.t(key, params) : 
  * White keys are full-height, black keys are shorter and overlaid.
  * C notes get a small label below.
  */
-// Pure HTML renderers extracted to RoutingSummaryRenderers.js (P2-F.4).
-const { renderMiniKeyboard, renderChannelHistogram } = window.RoutingSummaryRenderers;
+// Pure HTML renderers extracted to RoutingSummaryRenderers.js (P2-F.4/F.4b/F.4c).
+const { renderMiniKeyboard, renderChannelHistogram, renderMiniRange, renderDetailPlaceholder } = window.RoutingSummaryRenderers;
 
 // ============================================================================
 // RoutingSummaryPage class
@@ -1083,31 +1083,11 @@ class RoutingSummaryPage {
     return `<div class="rs-volume-zone"><input type="range" class="rs-volume-slider" min="0" max="127" value="${vol}" data-channel="${channel}" title="Volume CC7: ${vol}"><span class="rs-volume-value">${vol}</span></div>`;
   }
 
-  /**
-   * Mini note range visualization bar for summary table
-   */
+  // _renderMiniRange / _renderDetailPlaceholder extracted to
+  // RoutingSummaryRenderers (P2-F.4c). Delegators kept for legacy call
+  // sites within this class.
   _renderMiniRange(channel, analysis, assignment) {
-    if (!analysis || !analysis.noteRange || analysis.noteRange.min == null) return '';
-
-    const chMin = analysis.noteRange.min;
-    const chMax = analysis.noteRange.max;
-    // Normalize to 0-127 range for display
-    const left = Math.round((chMin / 127) * 100);
-    const width = Math.max(2, Math.round(((chMax - chMin) / 127) * 100));
-
-    let instBar = '';
-    if (assignment && assignment.noteRangeMin != null) {
-      const iLeft = Math.round((assignment.noteRangeMin / 127) * 100);
-      const iWidth = Math.max(2, Math.round(((assignment.noteRangeMax - assignment.noteRangeMin) / 127) * 100));
-      instBar = `<div class="rs-range-inst" style="left: ${iLeft}%; width: ${iWidth}%" title="${_t('autoAssign.instrumentRange')}: ${midiNoteToName(assignment.noteRangeMin)}-${midiNoteToName(assignment.noteRangeMax)}"></div>`;
-    }
-
-    return `
-      <div class="rs-mini-range" title="${midiNoteToName(chMin)}-${midiNoteToName(chMax)}">
-        ${instBar}
-        <div class="rs-range-channel" style="left: ${left}%; width: ${width}%"></div>
-      </div>
-    `;
+    return renderMiniRange(analysis, assignment);
   }
 
   // ============================================================================
@@ -1115,11 +1095,7 @@ class RoutingSummaryPage {
   // ============================================================================
 
   _renderDetailPlaceholder() {
-    return `
-      <div class="rs-detail-placeholder">
-        <p>${_t('routingSummary.selectChannelHint')}</p>
-      </div>
-    `;
+    return renderDetailPlaceholder();
   }
 
   _safeRenderDetailPanel(channel) {
