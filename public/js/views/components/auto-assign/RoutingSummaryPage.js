@@ -33,12 +33,12 @@ const _t = (key, params) => typeof i18n !== 'undefined' ? i18n.t(key, params) : 
  * White keys are full-height, black keys are shorter and overlaid.
  * C notes get a small label below.
  */
-// Pure HTML renderers extracted to RoutingSummaryRenderers.js (P2-F.4/F.4b..F.4j).
+// Pure HTML renderers extracted to RoutingSummaryRenderers.js (P2-F.4/F.4b..F.4k).
 const {
   renderMiniKeyboard, renderChannelHistogram, renderMiniRange,
   renderDetailPlaceholder, renderHeaderButtons,
   renderLoadingScreen, renderErrorScreen,
-  renderInstrumentChips
+  renderInstrumentChips, renderPolyReductionSection
 } = window.RoutingSummaryRenderers;
 
 // ============================================================================
@@ -1459,74 +1459,13 @@ class RoutingSummaryPage {
    * Shows controls only when channel polyphony exceeds instrument capacity.
    */
   _renderPolyReductionSection(channel, adaptation, analysis, assignment) {
-    const channelPoly = this._getChannelPolyphony(channel);
-    const instPoly = this._getInstrumentPolyphony(channel);
-    const gmPoly = getGmDefaultPolyphony(assignment?.gmProgram);
-
-    // Determine effective instrument polyphony (routed instrument first, then GM default)
-    const effectivePoly = instPoly || gmPoly;
-
-    // Don't show if polyphony is sufficient or no data
-    if (!channelPoly || !effectivePoly || channelPoly <= effectivePoly) {
-      return '';
-    }
-
-    const polyReduction = adaptation.polyReduction || 'none';
-    const polyStrategy = adaptation.polyStrategy || 'shorten';
-    const polyTarget = polyReduction === 'manual' && adaptation.polyTarget != null
-      ? adaptation.polyTarget
-      : effectivePoly;
-
-    // Info line: channel poly vs instrument poly
-    const polyExcess = channelPoly - polyTarget;
-    const impactKey = polyStrategy === 'shorten' ? 'autoAssign.polyImpactShorten' : 'autoAssign.polyImpactDrop';
-
-    return `
-      <div class="rs-adapt-row rs-poly-section">
-        <span class="rs-adapt-label">${_t('autoAssign.polyReductionTitle')}</span>
-        <div class="rs-adapt-options">
-          <label class="rs-adapt-radio ${polyReduction === 'none' ? 'selected' : ''}">
-            <input type="radio" name="rs_poly_${channel}" value="none" ${polyReduction === 'none' ? 'checked' : ''} data-channel="${channel}" data-field="polyReduction">
-            ${_t('autoAssign.polyNone')}
-          </label>
-          <label class="rs-adapt-radio ${polyReduction === 'auto' ? 'selected' : ''}">
-            <input type="radio" name="rs_poly_${channel}" value="auto" ${polyReduction === 'auto' ? 'checked' : ''} data-channel="${channel}" data-field="polyReduction">
-            ${_t('autoAssign.polyAuto')} <span class="rs-adapt-auto-info">(${effectivePoly})</span>
-          </label>
-          <label class="rs-adapt-radio ${polyReduction === 'manual' ? 'selected' : ''}">
-            <input type="radio" name="rs_poly_${channel}" value="manual" ${polyReduction === 'manual' ? 'checked' : ''} data-channel="${channel}" data-field="polyReduction">
-            ${_t('autoAssign.polyManual')}
-          </label>
-        </div>
-      </div>
-      ${polyReduction === 'manual' ? `
-      <div class="rs-adapt-row rs-poly-target-row">
-        <span class="rs-adapt-label">${_t('autoAssign.polyTargetLabel')}</span>
-        <div class="rs-transpose-controls">
-          <button class="btn btn-sm rs-poly-target-btn" data-channel="${channel}" data-delta="-1">-1</button>
-          <input type="number" class="rs-poly-target-input" data-channel="${channel}" value="${polyTarget}" min="1" max="${channelPoly}">
-          <button class="btn btn-sm rs-poly-target-btn" data-channel="${channel}" data-delta="1">+1</button>
-        </div>
-      </div>` : ''}
-      ${polyReduction !== 'none' ? `
-      <div class="rs-adapt-row rs-poly-strategy-row">
-        <span class="rs-adapt-label">${_t('autoAssign.polyStrategyTitle')}</span>
-        <div class="rs-adapt-options">
-          <label class="rs-adapt-radio ${polyStrategy === 'shorten' ? 'selected' : ''}" title="${_t('autoAssign.polyStrategyShortenDesc')}">
-            <input type="radio" name="rs_polystrat_${channel}" value="shorten" ${polyStrategy === 'shorten' ? 'checked' : ''} data-channel="${channel}" data-field="polyStrategy">
-            ${_t('autoAssign.polyStrategyShorten')}
-          </label>
-          <label class="rs-adapt-radio ${polyStrategy === 'drop' ? 'selected' : ''}" title="${_t('autoAssign.polyStrategyDropDesc')}">
-            <input type="radio" name="rs_polystrat_${channel}" value="drop" ${polyStrategy === 'drop' ? 'checked' : ''} data-channel="${channel}" data-field="polyStrategy">
-            ${_t('autoAssign.polyStrategyDrop')}
-          </label>
-        </div>
-      </div>
-      <div class="rs-poly-info">
-        <span class="rs-poly-info-detail">\u266B ${_t('autoAssign.channelPolyphony')}: ${channelPoly} | ${_t('autoAssign.instrumentPolyphony')}: ${effectivePoly}${polyReduction === 'manual' ? ` | ${_t('autoAssign.polyTargetLabel')}: ${polyTarget}` : ''}</span>
-        ${polyExcess > 0 ? `<span class="rs-poly-info-impact">\u2248 ${polyExcess} ${_t(impactKey)}</span>` : ''}
-      </div>` : ''}
-    `;
+    return renderPolyReductionSection({
+      channel,
+      adaptation,
+      assignment,
+      channelPolyphony: this._getChannelPolyphony(channel),
+      instrumentPolyphony: this._getInstrumentPolyphony(channel)
+    });
   }
 
   /**
