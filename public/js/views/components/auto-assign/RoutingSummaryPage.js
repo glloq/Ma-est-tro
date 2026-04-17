@@ -3530,58 +3530,23 @@ class RoutingSummaryPage {
 
     const skipRangeFilter = this._previewMode === 'original';
     const notes = this._extractNotesForMinimap(channelFilter, skipRangeFilter);
-    const totalTicks = notes.length > 0 ? notes[notes.length - 1].t + 1 : 1;
+
+    // Bucket aggregation delegated to RoutingSummaryMinimapNotes (P2-F.4g).
+    const bucketState = window.RoutingSummaryMinimapNotes.buildMinimapBuckets({
+      notes,
+      width: w,
+      isSplitView,
+      splitSegmentCount: isSplitView ? this.splitAssignments[channelFilter].segments.length : 0
+    });
 
     this._minimapWidth = w;
     this._minimapHeight = h;
-    this._minimapTotalTicks = totalTicks;
-
-    if (isSplitView) {
-      // Split mode: one row per instrument segment, colored by SPLIT_COLORS
-      // Use declared segments so every instrument gets a row even if it has no notes yet
-      const numSegs = this.splitAssignments[channelFilter].segments.length;
-      this._minimapSegments = Array.from({ length: numSegs }, (_, i) => i);
-      this._minimapSplitMode = true;
-      this._minimapMultiChannel = false;
-
-      const bucketMap = new Map();
-      for (const seg of this._minimapSegments) bucketMap.set(seg, new Array(w).fill(false));
-      for (const note of notes) {
-        const col = Math.floor((note.t / totalTicks) * w);
-        if (col >= 0 && col < w && note.seg >= 0 && bucketMap.has(note.seg)) {
-          bucketMap.get(note.seg)[col] = true;
-        }
-      }
-      this._minimapBuckets = bucketMap;
-    } else {
-      this._minimapSplitMode = false;
-      this._minimapSegments = null;
-
-      // Detect unique channels in notes
-      const channelSet = new Set();
-      for (const note of notes) channelSet.add(note.ch);
-      this._minimapChannels = Array.from(channelSet).sort((a, b) => a - b);
-      this._minimapMultiChannel = this._minimapChannels.length > 1;
-
-      if (this._minimapMultiChannel) {
-        // Multi-channel: per-channel boolean buckets
-        const bucketMap = new Map();
-        for (const ch of this._minimapChannels) bucketMap.set(ch, new Array(w).fill(false));
-        for (const note of notes) {
-          const col = Math.floor((note.t / totalTicks) * w);
-          if (col >= 0 && col < w) bucketMap.get(note.ch)[col] = true;
-        }
-        this._minimapBuckets = bucketMap;
-      } else {
-        // Single channel: simple boolean buckets
-        const buckets = new Array(w).fill(false);
-        for (const note of notes) {
-          const col = Math.floor((note.t / totalTicks) * w);
-          if (col >= 0 && col < w) buckets[col] = true;
-        }
-        this._minimapBuckets = buckets;
-      }
-    }
+    this._minimapTotalTicks = bucketState.totalTicks;
+    this._minimapSplitMode = bucketState.splitMode;
+    this._minimapSegments = bucketState.segments;
+    this._minimapChannels = bucketState.channels;
+    this._minimapMultiChannel = bucketState.multiChannel;
+    this._minimapBuckets = bucketState.buckets;
 
     this._drawMinimapFrame(0);
   }

@@ -162,3 +162,75 @@ describe('extractNotesForMinimap — ordering', () => {
     expect(out.map((n) => n.t)).toEqual([0, 5, 15]);
   });
 });
+
+// --------------------------------------------------------------------------
+// buildMinimapBuckets (P2-F.4g)
+// --------------------------------------------------------------------------
+
+const build = (args) => win.RoutingSummaryMinimapNotes.buildMinimapBuckets(args);
+
+describe('buildMinimapBuckets — single-channel', () => {
+  it('returns a flat boolean array for a single channel', () => {
+    const notes = [
+      { t: 0, n: 60, ch: 0, seg: -1 },
+      { t: 50, n: 62, ch: 0, seg: -1 },
+      { t: 99, n: 64, ch: 0, seg: -1 }
+    ];
+    const out = build({ notes, width: 10, isSplitView: false });
+    expect(out.splitMode).toBe(false);
+    expect(out.multiChannel).toBe(false);
+    expect(Array.isArray(out.buckets)).toBe(true);
+    expect(out.buckets).toHaveLength(10);
+    // totalTicks = last_tick + 1 = 100
+    expect(out.totalTicks).toBe(100);
+    // Column assignment : 0→0, 50→5, 99→9
+    expect(out.buckets[0]).toBe(true);
+    expect(out.buckets[5]).toBe(true);
+    expect(out.buckets[9]).toBe(true);
+    expect(out.buckets[1]).toBe(false);
+  });
+
+  it('uses totalTicks=1 when notes is empty', () => {
+    const out = build({ notes: [], width: 4, isSplitView: false });
+    expect(out.totalTicks).toBe(1);
+    expect(out.buckets).toEqual([false, false, false, false]);
+  });
+});
+
+describe('buildMinimapBuckets — multi-channel', () => {
+  it('builds one row per active channel', () => {
+    const notes = [
+      { t: 0, n: 60, ch: 0, seg: -1 },
+      { t: 50, n: 62, ch: 3, seg: -1 }
+    ];
+    const out = build({ notes, width: 10, isSplitView: false });
+    expect(out.multiChannel).toBe(true);
+    expect(out.channels).toEqual([0, 3]);
+    expect(out.buckets.get(0)[0]).toBe(true);
+    expect(out.buckets.get(3)[4]).toBe(true); // totalTicks = 51, 50/51*10 = 9.8 → 9
+  });
+});
+
+describe('buildMinimapBuckets — split view', () => {
+  it('creates one row per segment, indexed by seg number', () => {
+    const notes = [
+      { t: 0, n: 30, ch: 0, seg: 0 },
+      { t: 99, n: 80, ch: 0, seg: 1 }
+    ];
+    const out = build({ notes, width: 10, isSplitView: true, splitSegmentCount: 2 });
+    expect(out.splitMode).toBe(true);
+    expect(out.segments).toEqual([0, 1]);
+    expect(out.multiChannel).toBe(false);
+    expect(out.buckets.get(0)[0]).toBe(true);
+    expect(out.buckets.get(1)[9]).toBe(true);
+  });
+
+  it('ignores notes with seg < 0 in split mode', () => {
+    const notes = [
+      { t: 0, n: 60, ch: 0, seg: -1 },
+      { t: 50, n: 62, ch: 0, seg: 0 }
+    ];
+    const out = build({ notes, width: 10, isSplitView: true, splitSegmentCount: 1 });
+    expect(out.buckets.get(0).filter(Boolean)).toHaveLength(1);
+  });
+});

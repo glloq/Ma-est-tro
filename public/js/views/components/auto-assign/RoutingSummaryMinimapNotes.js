@@ -120,5 +120,75 @@
     return notes;
   }
 
-  window.RoutingSummaryMinimapNotes = Object.freeze({ extractNotesForMinimap });
+  /**
+   * Aggregate a flat note list into display buckets for the minimap
+   * rendering (P2-F.4g). Returns the shape expected by
+   * `RoutingSummaryMinimapRenderer.drawMinimapFrame` :
+   *
+   *   {
+   *     totalTicks: number,
+   *     splitMode: boolean,
+   *     segments: number[]|null,
+   *     channels: number[]|null,
+   *     multiChannel: boolean,
+   *     buckets: Array<boolean> | Map<number, Array<boolean>>
+   *   }
+   *
+   * @param {Object} params
+   * @param {Array<{t,n,ch,seg}>} params.notes - output of extractNotesForMinimap
+   * @param {number} params.width - target column count
+   * @param {boolean} params.isSplitView
+   * @param {number} [params.splitSegmentCount] - used when isSplitView=true
+   */
+  function buildMinimapBuckets(params) {
+    const { notes, width, isSplitView, splitSegmentCount = 0 } = params;
+    const totalTicks = notes.length > 0 ? notes[notes.length - 1].t + 1 : 1;
+
+    if (isSplitView && splitSegmentCount > 0) {
+      const segments = Array.from({ length: splitSegmentCount }, (_, i) => i);
+      const bucketMap = new Map();
+      for (const seg of segments) bucketMap.set(seg, new Array(width).fill(false));
+      for (const note of notes) {
+        const col = Math.floor((note.t / totalTicks) * width);
+        if (col >= 0 && col < width && note.seg >= 0 && bucketMap.has(note.seg)) {
+          bucketMap.get(note.seg)[col] = true;
+        }
+      }
+      return {
+        totalTicks,
+        splitMode: true,
+        segments,
+        channels: null,
+        multiChannel: false,
+        buckets: bucketMap
+      };
+    }
+
+    const channelSet = new Set();
+    for (const note of notes) channelSet.add(note.ch);
+    const channels = Array.from(channelSet).sort((a, b) => a - b);
+    const multiChannel = channels.length > 1;
+
+    if (multiChannel) {
+      const bucketMap = new Map();
+      for (const ch of channels) bucketMap.set(ch, new Array(width).fill(false));
+      for (const note of notes) {
+        const col = Math.floor((note.t / totalTicks) * width);
+        if (col >= 0 && col < width) bucketMap.get(note.ch)[col] = true;
+      }
+      return { totalTicks, splitMode: false, segments: null, channels, multiChannel: true, buckets: bucketMap };
+    }
+
+    const buckets = new Array(width).fill(false);
+    for (const note of notes) {
+      const col = Math.floor((note.t / totalTicks) * width);
+      if (col >= 0 && col < width) buckets[col] = true;
+    }
+    return { totalTicks, splitMode: false, segments: null, channels, multiChannel: false, buckets };
+  }
+
+  window.RoutingSummaryMinimapNotes = Object.freeze({
+    extractNotesForMinimap,
+    buildMinimapBuckets
+  });
 })();
