@@ -33,13 +33,13 @@ const _t = (key, params) => typeof i18n !== 'undefined' ? i18n.t(key, params) : 
  * White keys are full-height, black keys are shorter and overlaid.
  * C notes get a small label below.
  */
-// Pure HTML renderers extracted to RoutingSummaryRenderers.js (P2-F.4/F.4b..F.4l).
+// Pure HTML renderers extracted to RoutingSummaryRenderers.js (P2-F.4/F.4b..F.4m).
 const {
   renderMiniKeyboard, renderChannelHistogram, renderMiniRange,
   renderDetailPlaceholder, renderHeaderButtons,
   renderLoadingScreen, renderErrorScreen,
   renderInstrumentChips, renderPolyReductionSection,
-  renderRangeBars
+  renderRangeBars, renderDrumMappingSection
 } = window.RoutingSummaryRenderers;
 
 // ============================================================================
@@ -1486,32 +1486,17 @@ class RoutingSummaryPage {
     const ch = String(channel);
     const assignment = this.selectedAssignments[ch];
     const analysis = this.channelAnalyses[channel];
-    if (!assignment || !analysis?.noteEvents) return '';
 
-    const isExpanded = this.drumMappingExpanded[channel] ?? false;
-
-    // Collapsed: show only title with note count (no heavy DOM generation)
-    if (!isExpanded) {
-      const noteCount = Object.keys(analysis.noteDistribution || {}).filter(n => +n >= 35 && +n <= 81).length;
-      if (noteCount === 0) return '';
-      return `
-        <div class="rs-drum-mapping">
-          <h4 class="rs-drum-mapping-toggle" data-channel="${channel}" style="cursor:pointer">
-            ${_t('autoAssign.drumMapping') || 'Drum Mapping'} \u25B8 <small>(${noteCount} notes)</small>
-          </h4>
-        </div>`;
-    }
-
-    // Get instrument's available notes
+    // Resolve the instrument's available notes (may come from assignment
+    // or from the allInstruments catalog).
     let instrumentNotes = null;
-    if (assignment.selectedNotes) {
+    if (assignment?.selectedNotes) {
       try {
         instrumentNotes = typeof assignment.selectedNotes === 'string'
           ? JSON.parse(assignment.selectedNotes) : assignment.selectedNotes;
       } catch (e) { instrumentNotes = null; }
     }
-    if (!instrumentNotes) {
-      // Lookup from allInstruments
+    if (!instrumentNotes && assignment) {
       const inst = (this.allInstruments || []).find(i => i.id === assignment.instrumentId);
       if (inst?.selected_notes) {
         try {
@@ -1520,104 +1505,18 @@ class RoutingSummaryPage {
         } catch (e) { instrumentNotes = null; }
       }
     }
-    if (!instrumentNotes || instrumentNotes.length === 0) return '';
 
-    // Get the base note remapping from scoring (auto-generated mapping)
-    const baseMapping = assignment.noteRemapping || {};
-
-    // Get custom overrides
-    const customMap = this.customDrumMappings[channel] || {};
-    const mutedNotes = this.mutedDrumNotes[channel] || new Set();
-
-    // Get unique channel drum notes (sorted, with usage counts)
-    const noteDistribution = analysis.noteDistribution || {};
-    const channelNotes = Object.keys(noteDistribution)
-      .map(Number)
-      .filter(n => n >= 35 && n <= 81) // GM drum range
-      .sort((a, b) => a - b);
-
-    if (channelNotes.length === 0) return '';
-
-    const rows = channelNotes.map(srcNote => {
-      const count = noteDistribution[srcNote] || 0;
-      const srcName = DRUM_NAMES[srcNote] || `Note ${srcNote}`;
-
-      // Effective destination: custom override > base mapping > same note
-      let destNote;
-      if (customMap[srcNote] !== undefined) {
-        destNote = customMap[srcNote];
-      } else if (baseMapping[srcNote] !== undefined) {
-        destNote = baseMapping[srcNote];
-      } else {
-        destNote = srcNote;
-      }
-
-      const isExact = destNote === srcNote && !customMap[srcNote] && !baseMapping[srcNote];
-      const isSubstitution = !isExact && destNote !== srcNote;
-      const isCustom = customMap[srcNote] !== undefined;
-      const isMuted = mutedNotes.has(srcNote);
-      const isAvailable = instrumentNotes.includes(srcNote);
-
-      // Type label
-      let typeLabel, typeClass;
-      if (isMuted) {
-        typeLabel = 'Muté'; typeClass = 'rs-drum-type-muted';
-      } else if (isCustom) {
-        typeLabel = 'Manuel'; typeClass = 'rs-drum-type-custom';
-      } else if (isExact && isAvailable) {
-        typeLabel = 'Exact'; typeClass = 'rs-drum-type-exact';
-      } else if (isSubstitution) {
-        typeLabel = 'Subst.'; typeClass = 'rs-drum-type-subst';
-      } else {
-        typeLabel = 'N/A'; typeClass = 'rs-drum-type-na';
-      }
-
-      const destName = DRUM_NAMES[destNote] || `Note ${destNote}`;
-
-      // Build destination dropdown options
-      const destOptions = instrumentNotes.sort((a, b) => a - b).map(n => {
-        const name = DRUM_NAMES[n] || `Note ${n}`;
-        const sel = n === destNote ? 'selected' : '';
-        return `<option value="${n}" ${sel}>${n}: ${escapeHtml(name)}</option>`;
-      }).join('');
-
-      return `<tr class="rs-drum-row${isMuted ? ' rs-drum-row-muted' : ''}">
-        <td class="rs-drum-src" title="${escapeHtml(srcName)}">${srcNote}: ${escapeHtml(srcName.length > 14 ? srcName.slice(0, 13) + '\u2026' : srcName)}</td>
-        <td class="rs-drum-count">${count}</td>
-        <td class="rs-drum-arrow">\u2192</td>
-        <td class="rs-drum-dest">
-          <select class="rs-drum-dest-select" data-channel="${channel}" data-src="${srcNote}" ${isMuted ? 'disabled' : ''}>
-            ${destOptions}
-          </select>
-        </td>
-        <td class="rs-drum-type ${typeClass}">${typeLabel}</td>
-        <td class="rs-drum-toggle">
-          <label class="rs-drum-toggle-label">
-            <input type="checkbox" class="rs-drum-note-toggle" data-channel="${channel}" data-note="${srcNote}" ${isMuted ? '' : 'checked'}>
-            <span class="rs-drum-toggle-slider"></span>
-          </label>
-        </td>
-      </tr>`;
-    }).join('');
-
-    return `
-      <div class="rs-drum-mapping">
-        <h4 class="rs-drum-mapping-toggle" data-channel="${channel}" style="cursor:pointer">${_t('autoAssign.drumMapping') || 'Drum Mapping'} \u25BE <small>(${channelNotes.length} notes)</small></h4>
-        <table class="rs-drum-mapping-table">
-          <thead>
-            <tr>
-              <th>${_t('autoAssign.drumSource') || 'Source'}</th>
-              <th>#</th>
-              <th></th>
-              <th>${_t('autoAssign.drumDest') || 'Destination'}</th>
-              <th>${_t('autoAssign.drumType') || 'Type'}</th>
-              <th>${_t('autoAssign.drumEnabled') || 'On'}</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-    `;
+    return renderDrumMappingSection({
+      channel,
+      assignment,
+      analysis,
+      isExpanded: this.drumMappingExpanded[channel] ?? false,
+      instrumentNotes,
+      baseMapping: assignment?.noteRemapping || {},
+      customMap: this.customDrumMappings[channel] || {},
+      mutedNotes: this.mutedDrumNotes[channel] || new Set(),
+      escape: escapeHtml
+    });
   }
 
   _renderRangeBars(channel, analysis, assignment) {

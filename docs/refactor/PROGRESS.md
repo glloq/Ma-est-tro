@@ -9,8 +9,8 @@
 |---|---|
 | Phase active | **Phase 2 — Persistance (migration handlers)** |
 | Branche de travail | `claude/refactor-maestro-project-L6ptg` |
-| Dernier lot terminé | P2-F.4l (range bars extraits, -119 LOC) |
-| Prochain lot suggéré | **P2-F.4m** (`_renderDrumMappingSection`) ou **P2-F.5** (orchestrateur léger). |
+| Dernier lot terminé | P2-F.4m (drum mapping section, -101 LOC) |
+| Prochain lot suggéré | **P2-F.5** (orchestrateur léger) ou **P1-4.5c**. |
 | Date dernière mise à jour | 2026-04-17 |
 | Agent ayant mis à jour | Claude (agent refactoring) |
 
@@ -135,6 +135,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 
 | Date | Agent | Lot | Résumé | Fichiers touchés | Commit | Notes |
 |---|---|---|---|---|---|---|
+| 2026-04-17 | Claude (refactoring) | P2-F.4m | Extraction de `_renderDrumMappingSection` (~140 LOC) vers `RoutingSummaryRenderers.renderDrumMappingSection({ channel, assignment, analysis, isExpanded, instrumentNotes, baseMapping, customMap, mutedNotes, escape })`. Résolution des `instrumentNotes` (parse JSON, fallback allInstruments) conservée dans la page ; le renderer reçoit la liste déjà normalisée. Table GM drum avec dropdown par source, type label (Muté/Manuel/Exact/Subst./N/A), toggle mute. | `public/js/views/components/auto-assign/RoutingSummaryRenderers.js` (+118 LOC), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-101 LOC) | (ce commit) | 437/437 tests verts. Cumul F.1→F.4m : 4748→3918 (-830, -17.5%) → 44% du chemin vers KPI -40%. |
 | 2026-04-17 | Claude (refactoring) | P2-F.4l | Extraction de `_renderRangeBars` (~135 LOC) vers `RoutingSummaryRenderers.renderRangeBars({ channel, analysis, assignment, adaptSettings, autoAdaptation, splitData, allInstruments, detectOverlaps, getDisplayName, escape })`. Zone la plus complexe extraite : rendu double (split multi-segment vs single instrument) + overlap zones + legend + octave markers. Inversion de contrôle pour les 3 callbacks méthode (detectOverlaps, getDisplayName, escape). | `public/js/views/components/auto-assign/RoutingSummaryRenderers.js` (+150 LOC), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-119 LOC) | (ce commit) | 437/437 tests verts. Cumul F.1→F.4l : 4748→4019 (-729, -15.4%). |
 | 2026-04-17 | Claude (refactoring) | P2-F.4k | Extraction de `_renderPolyReductionSection` (~70 LOC) vers `RoutingSummaryRenderers.renderPolyReductionSection({ channel, adaptation, assignment, channelPolyphony, instrumentPolyphony })`. Inversion de contrôle : `channelPolyphony` et `instrumentPolyphony` passés en paramètres (retournés par les méthodes de la classe). Génère 3 sections : radios (none/auto/manual), optional target input, strategy radios + info. | `public/js/views/components/auto-assign/RoutingSummaryRenderers.js` (+80 LOC), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-61 LOC) | (ce commit) | 437/437 tests verts. Cumul F.1→F.4k : 4748→4138 (-610, -12.8%). |
 | 2026-04-17 | Claude (refactoring) | P2-F.4j | Extraction de `_renderInstrumentChips` (~66 LOC) vers `RoutingSummaryRenderers.renderInstrumentChips({ channel, options, lowOptions, assignment, isSkipped, isSplit, showLow, getDisplayName, escape })`. Inversion de contrôle : `getDisplayName` callback (méthode de la page) + `escape` (escapeHtml) passés en paramètres. Helper interne `chipHTML` factorise les 2 chemins (normal + low-score). `_renderInstrumentChips` de la classe réduit à un appel de 12 lignes. | `public/js/views/components/auto-assign/RoutingSummaryRenderers.js` (+78 LOC), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-52 LOC) | (ce commit) | 437/437 tests verts. Cumul F.1→F.4j : 4748→4199 (-549, -11.6%). |
@@ -246,7 +247,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 | `MidiPlayer.js` LOC | 1312 | < 790 (-40 %) | 1312 |
 | `InstrumentMatcher.js` LOC | 1178 | < 710 (-40 %) | 1178 |
 | `TablatureConverter.js` LOC | 1250 | < 750 (-40 %) | 1250 |
-| `RoutingSummaryPage.js` LOC | 4748 | < 2850 (-40 %) | **4019 (-15.4%, F.1→F.4l cumul)** — 38% du chemin vers -40% |
+| `RoutingSummaryPage.js` LOC | 4748 | < 2850 (-40 %) | **3918 (-17.5%, F.1→F.4m cumul)** — 44% du chemin vers -40% |
 | `MidiSynthesizer.js` LOC | 1192 | < 720 (-40 %) | 1116 (-6.4%, P2-F.8) |
 | Couverture tests P0/P1 | ~20 % | ≥ 35 % | **backend 437/437** ; nouveautés session : schema-compiler×30, repository-delegations×94, domain services×47 (routing-plan-channel×14, routing-status×11, device-reconciliation×10, file-routing-sync×12), contract×40+ (playback+routing), correlation-id×3, command-metrics×4, routing-integration×7, bluetooth-port×11, transaction-helper×3 |
 | Commandes WS critiques sous contrat | 0 % | ≥ 90 % | ~70 % (42 commandes : 23 playback + 19 routing — snapshots complets pour PlaybackCommands.js et RoutingCommands.js) |
