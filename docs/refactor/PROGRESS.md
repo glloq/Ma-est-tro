@@ -9,8 +9,8 @@
 |---|---|
 | Phase active | **Phase 2 — Persistance (migration handlers)** |
 | Branche de travail | `claude/refactor-maestro-project-L6ptg` |
-| Dernier lot terminé | P0-2.4 |
-| Prochain lot suggéré | P0-2.5c (migrer `PlaybackAssignmentCommands.js` — 15 appels, peut maintenant utiliser `repo.transaction(fn)` pour les splits) ou P0-2.5d (migrer `FileCommands.js` — nécessite d'étendre `FileRepository`) |
+| Dernier lot terminé | P0-2.5d |
+| Prochain lot suggéré | P0-2.5c (migrer `PlaybackAssignmentCommands.js` — 15 appels, utiliser `repo.transaction(fn)` pour les splits) ou P0-2.5e (encapsuler SQL inline de `InstrumentSettingsCommands`/`VirtualInstrumentCommands` dans `InstrumentSettingsDB.deleteByDeviceChannel()`) |
 | Date dernière mise à jour | 2026-04-17 |
 | Agent ayant mis à jour | Claude (agent refactoring) |
 
@@ -71,7 +71,7 @@ Un lot = **2–5 jours max de travail**, **une PR cohérente**, **pas de changem
   - [x] **P0-2.5a** Migrer les 3 handlers playback read-only (`PlaybackAnalysisCommands`, `PlaybackRoutingCommands`, `PlaybackControlCommands`) vers `fileRepository`/`routingRepository` — 5 call sites.
   - [x] **P0-2.5b** Migrer `RoutingCommands.js` (8 appels, tous couverts par `FileRepository` + `RoutingRepository` existants).
   - [ ] **P0-2.5c** Migrer `PlaybackAssignmentCommands.js` (15 appels ; attention aux transactions split/overwrite → dépend de P0-2.4).
-  - [ ] **P0-2.5d** Migrer `FileCommands.js` (nécessite d'étendre `FileRepository` avec `searchFiles`, `filterFiles`, `countFilesNeedingReanalysis`, `getDistinctInstruments`, `getDistinctCategories`).
+  - [x] **P0-2.5d** Migrer `FileCommands.js` (8 appels ; `FileRepository` étendu de 5 méthodes : `search`, `filter`, `countNeedingReanalysis`, `getDistinctInstruments`, `getDistinctCategories`).
   - [ ] **P0-2.5e** Encapsuler le SQL inline de `InstrumentSettingsCommands.js` L292-316 et `VirtualInstrumentCommands.js` L133 dans une méthode `InstrumentSettingsDB.deleteByDeviceChannel()`.
 - [ ] **P0-2.6** Tests d'intégration DB : split / no-split / overwrite.
 
@@ -117,6 +117,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 
 | Date | Agent | Lot | Résumé | Fichiers touchés | Commit | Notes |
 |---|---|---|---|---|---|---|
+| 2026-04-17 | Claude (refactoring) | P0-2.5d | Migration de `FileCommands.js` (8 appels). `FileRepository` étendu de 5 méthodes : `search`, `filter`, `countNeedingReanalysis`, `getDistinctInstruments`, `getDistinctCategories` (délégations triviales). 3 appels déjà couverts utilisent `findInfoById`, `getChannels`, et `routingRepository.findByFileId`. | `src/repositories/FileRepository.js`, `src/api/commands/FileCommands.js` | (ce commit) | 241/241 tests verts. Aucun `app.database.*` restant dans `FileCommands.js`. Handlers migrés à ce stade : `PlaybackAnalysisCommands`, `PlaybackRoutingCommands`, `PlaybackControlCommands`, `RoutingCommands`, `FileCommands` (5/13 handlers à accès DB). |
 | 2026-04-17 | Claude (refactoring) | P0-2.4 | Ajout d'un helper `transaction(fn)` sur les 3 Repositories (`FileRepository`, `RoutingRepository`, `InstrumentRepository`). Chaque helper délègue à `Database.transaction()` (qui expose `db.transaction()` de better-sqlite3). Nouveau test `tests/repositories/transaction-helper.test.js` (3 tests, un par repo). | `src/repositories/FileRepository.js`, `src/repositories/RoutingRepository.js`, `src/repositories/InstrumentRepository.js`, `tests/repositories/transaction-helper.test.js` (créé) | (ce commit) | Débloque P0-2.5c (PlaybackAssignmentCommands utilise des transactions pour les splits). ADR-002 §Conventions 3 confirmé en implémentation. 241/241 tests verts. |
 | 2026-04-17 | Claude (refactoring) | P0-2.5b | Migration de `RoutingCommands.js` (8 appels : `deleteRoutingsByFile` ×3 → `routingRepository.deleteByFileId` ; `getRoutingsByFile` ×2 → `findByFileId` ; `getFileChannels` → `fileRepository.getChannels` ; `insertRouting` ×2 → `routingRepository.save`). Mock du contract test routing étendu : spies partagés entre `database.*` et `fileRepository`/`routingRepository` pour préserver les assertions existantes. | `src/api/commands/RoutingCommands.js`, `tests/contracts/routing.contract.test.js` | (ce commit) | 238/238 tests verts. Aucun `app.database.*` restant dans `RoutingCommands.js`. |
 | 2026-04-17 | Claude (refactoring) | P0-2.5a | Migration des 3 handlers playback read-only vers `fileRepository`/`routingRepository` (5 call sites). Mock du contract test playback étendu avec `fileRepository`/`routingRepository`. Nouveau test de wiring `tests/api/playback-repository-wiring.test.js` (3 tests) qui prouve la délégation. Première utilisation effective des Repositories créés en P0-2.1→P0-2.3. | `src/api/commands/playback/PlaybackAnalysisCommands.js`, `src/api/commands/playback/PlaybackRoutingCommands.js`, `src/api/commands/playback/PlaybackControlCommands.js`, `tests/contracts/playback.contract.test.js`, `tests/api/playback-repository-wiring.test.js` (créé) | (ce commit) | 238/238 tests verts. Aucun appel `app.database.*` restant dans les 3 handlers touchés. Lint propre. |

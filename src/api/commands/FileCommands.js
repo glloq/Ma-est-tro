@@ -71,7 +71,7 @@ async function fileExport(app, data) {
 }
 
 async function fileSearch(app, data) {
-  const files = app.database.searchFiles(data.query);
+  const files = app.fileRepository.search(data.query);
   return { files: files };
 }
 
@@ -144,7 +144,7 @@ async function fileFilter(app, data) {
     }
   });
 
-  const rawFiles = app.database.filterFiles(filters);
+  const rawFiles = app.fileRepository.filter(filters);
 
   // Batch-fetch routing status for all filtered files (same as FileManager.listFiles)
   const fileIds = rawFiles.map(f => f.id);
@@ -215,7 +215,7 @@ async function fileChannels(app, data) {
     throw new ValidationError('fileId is required', 'fileId');
   }
 
-  const channels = app.database.getFileChannels(data.fileId);
+  const channels = app.fileRepository.getChannels(data.fileId);
   return {
     success: true,
     fileId: data.fileId,
@@ -233,7 +233,7 @@ async function fileReanalyzeAll(app) {
 }
 
 function fileReanalyzeCheck(app) {
-  const count = app.database.countFilesNeedingReanalysis();
+  const count = app.fileRepository.countNeedingReanalysis();
   return {
     success: true,
     needsReanalysis: count
@@ -244,10 +244,10 @@ async function fileRoutingStatus(app, data) {
   const fileId = data.fileId;
   if (!fileId) throw new ValidationError('fileId is required', 'fileId');
 
-  const file = app.database.getFileInfo(fileId);
+  const file = app.fileRepository.findInfoById(fileId);
   if (!file) throw new NotFoundError('File', fileId);
 
-  const routings = app.database.getRoutingsByFile(fileId);
+  const routings = app.routingRepository.findByFileId(fileId);
   // Use channel_count (actual MIDI channels), NOT file.tracks (SMF track count)
   const channelCount = file.channel_count || 1;
 
@@ -284,7 +284,7 @@ async function fileRoutingStatus(app, data) {
 }
 
 async function midiInstrumentsList(app) {
-  const instruments = app.database.getDistinctInstruments();
+  const instruments = app.fileRepository.getDistinctInstruments();
   return {
     success: true,
     instruments: instruments,
@@ -293,7 +293,7 @@ async function midiInstrumentsList(app) {
 }
 
 async function midiCategoriesList(app) {
-  const categories = app.database.getDistinctCategories();
+  const categories = app.fileRepository.getDistinctCategories();
   return {
     success: true,
     categories: categories,
