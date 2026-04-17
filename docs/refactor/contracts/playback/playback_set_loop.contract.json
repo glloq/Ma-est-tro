@@ -1,0 +1,79 @@
+{
+  "command": "playback_set_loop",
+  "module": "PlaybackCommands.js",
+  "criticality": "high",
+  "description": "Enable or disable loop playback. The CommandRegistry validator requires `enabled` to be a boolean. Handler forwards `data.enabled` to `midiPlayer.setLoop()`.",
+  "cases": [
+    {
+      "name": "nominal — enable loop",
+      "type": "success",
+      "input": {
+        "enabled": true
+      },
+      "output_shape": {
+        "type": "response",
+        "data": {
+          "success": "boolean"
+        }
+      },
+      "output_snapshot": {
+        "type": "response",
+        "data": {
+          "success": true
+        }
+      }
+    },
+    {
+      "name": "nominal — disable loop",
+      "type": "success",
+      "input": {
+        "enabled": false
+      },
+      "output_shape": {
+        "type": "response",
+        "data": {
+          "success": "boolean"
+        }
+      },
+      "output_snapshot": {
+        "type": "response",
+        "data": {
+          "success": true
+        }
+      }
+    },
+    {
+      "name": "error — missing enabled (validator)",
+      "type": "error",
+      "input": {},
+      "notes": "Validator emits both 'enabled is required' AND 'enabled must be a boolean' because typeof undefined !== 'boolean'.",
+      "output_shape": {
+        "type": "error",
+        "code": "string",
+        "error": "string"
+      },
+      "output_snapshot": {
+        "type": "error",
+        "code": "ERR_VALIDATION",
+        "error": "Invalid playback_set_loop data: enabled is required, enabled must be a boolean"
+      }
+    },
+    {
+      "name": "error — non-boolean enabled (validator)",
+      "type": "error",
+      "input": {
+        "enabled": "true"
+      },
+      "output_shape": {
+        "type": "error",
+        "code": "string",
+        "error": "string"
+      },
+      "output_snapshot": {
+        "type": "error",
+        "code": "ERR_VALIDATION",
+        "error": "Invalid playback_set_loop data: enabled must be a boolean"
+      }
+    }
+  ]
+}

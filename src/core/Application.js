@@ -19,6 +19,10 @@ import WebSocketServer from '../api/WebSocketServer.js';
 import HttpServer from '../api/HttpServer.js';
 import CommandHandler from '../api/CommandHandler.js';
 import AutoAssigner from '../midi/AutoAssigner.js';
+import MidiAdaptationService from '../midi/MidiAdaptationService.js';
+import FileRepository from '../repositories/FileRepository.js';
+import RoutingRepository from '../repositories/RoutingRepository.js';
+import InstrumentRepository from '../repositories/InstrumentRepository.js';
 import MidiClockGenerator from '../midi/MidiClockGenerator.js';
 import BackupScheduler from '../storage/BackupScheduler.js';
 
@@ -199,6 +203,14 @@ class Application {
 
       // Initialize auto-assigner (singleton with cache)
       this._registerService('autoAssigner', new AutoAssigner(this.database, this.logger));
+
+      // Initialize MIDI adaptation service (facade over MidiTransposer + AutoAssigner)
+      this._registerService('adaptationService', new MidiAdaptationService(this.logger, this.autoAssigner));
+
+      // Initialize repositories (ADR-002: wrappers over existing sub-DBs)
+      this._registerService('fileRepository', new FileRepository(this.database));
+      this._registerService('routingRepository', new RoutingRepository(this.database));
+      this._registerService('instrumentRepository', new InstrumentRepository(this.database));
 
       // Initialize API
       this._registerService('commandHandler', new CommandHandler(deps));
