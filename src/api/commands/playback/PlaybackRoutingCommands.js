@@ -72,7 +72,7 @@ async function playbackValidateRouting(app, data) {
     throw new ValidationError('fileId is required', 'fileId');
   }
 
-  const file = app.database.getFile(data.fileId);
+  const file = app.fileRepository.findById(data.fileId);
   if (!file) {
     throw new NotFoundError('File', data.fileId);
   }
@@ -98,7 +98,7 @@ async function playbackValidateRouting(app, data) {
     }
   }
 
-  const savedRoutings = app.database.getRoutingsByFile(data.fileId);
+  const savedRoutings = app.routingRepository.findByFileId(data.fileId);
   const routingMap = new Map();
   for (const r of savedRoutings) {
     if (r.channel !== null && r.channel !== undefined) {

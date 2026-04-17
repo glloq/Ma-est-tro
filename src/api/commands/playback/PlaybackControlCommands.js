@@ -12,7 +12,7 @@ async function playbackStart(app, data) {
 
   let loadedRoutings = 0;
   try {
-    const savedRoutings = app.database.getRoutingsByFile(data.fileId);
+    const savedRoutings = app.routingRepository.findByFileId(data.fileId);
     if (savedRoutings.length > 0) {
       app.midiPlayer.clearChannelRouting();
 

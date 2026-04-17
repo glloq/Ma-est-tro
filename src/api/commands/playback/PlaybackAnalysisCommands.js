@@ -12,7 +12,7 @@ async function analyzeChannel(app, data) {
     throw new ValidationError('channel is required', 'channel');
   }
 
-  const file = app.database.getFile(data.fileId);
+  const file = app.fileRepository.findById(data.fileId);
   if (!file) {
     throw new NotFoundError('File', data.fileId);
   }
@@ -136,7 +136,7 @@ async function generateAssignmentSuggestions(app, data) {
     includeMatrix: data.includeMatrix || false
   };
 
-  const file = app.database.getFile(data.fileId);
+  const file = app.fileRepository.findById(data.fileId);
   if (!file) {
     throw new NotFoundError('File', data.fileId);
   }

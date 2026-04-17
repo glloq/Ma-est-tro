@@ -7,10 +7,10 @@
 
 | Champ | Valeur |
 |---|---|
-| Phase active | **Phase 0 terminée** → **Phase 1 — Stabilisation Playback** |
-| Branche de travail | `claude/dazzling-ptolemy-rXsBU` |
-| Dernier lot terminé | P0-2.3 |
-| Prochain lot suggéré | P0-2.4 (centraliser transactions/rollbacks) ou P0-2.5 (retirer accès SQL directs depuis handlers) |
+| Phase active | **Phase 2 — Persistance (migration handlers)** |
+| Branche de travail | `claude/refactor-maestro-project-L6ptg` |
+| Dernier lot terminé | P0-2.5a |
+| Prochain lot suggéré | P0-2.5b (migrer `RoutingCommands.js` — 8 appels tous couverts) ou P0-2.4 (helper `transaction(fn)` dans les Repositories) |
 | Date dernière mise à jour | 2026-04-17 |
 | Agent ayant mis à jour | Claude (agent refactoring) |
 
@@ -67,7 +67,12 @@ Un lot = **2–5 jours max de travail**, **une PR cohérente**, **pas de changem
 - [x] **P0-2.2** Introduire `RoutingRepository` au-dessus de `RoutingPersistenceDB` + `MidiRouter`.
 - [x] **P0-2.3** Introduire `InstrumentRepository` au-dessus de `InstrumentDatabase` + `InstrumentSettingsDB`.
 - [ ] **P0-2.4** Centraliser transactions/rollbacks dans la couche Repository.
-- [ ] **P0-2.5** Retirer tous les accès SQL directs depuis `src/api/commands/**`.
+- [/] **P0-2.5** Retirer tous les accès SQL directs depuis `src/api/commands/**`. *(en cours — découpage en sous-lots a/b/c/d/e)*
+  - [x] **P0-2.5a** Migrer les 3 handlers playback read-only (`PlaybackAnalysisCommands`, `PlaybackRoutingCommands`, `PlaybackControlCommands`) vers `fileRepository`/`routingRepository` — 5 call sites.
+  - [ ] **P0-2.5b** Migrer `RoutingCommands.js` (8 appels, tous couverts par `FileRepository` + `RoutingRepository` existants).
+  - [ ] **P0-2.5c** Migrer `PlaybackAssignmentCommands.js` (15 appels ; attention aux transactions split/overwrite → dépend de P0-2.4).
+  - [ ] **P0-2.5d** Migrer `FileCommands.js` (nécessite d'étendre `FileRepository` avec `searchFiles`, `filterFiles`, `countFilesNeedingReanalysis`, `getDistinctInstruments`, `getDistinctCategories`).
+  - [ ] **P0-2.5e** Encapsuler le SQL inline de `InstrumentSettingsCommands.js` L292-316 et `VirtualInstrumentCommands.js` L133 dans une méthode `InstrumentSettingsDB.deleteByDeviceChannel()`.
 - [ ] **P0-2.6** Tests d'intégration DB : split / no-split / overwrite.
 
 ### Phase 3 — Validation et erreurs
@@ -112,6 +117,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 
 | Date | Agent | Lot | Résumé | Fichiers touchés | Commit | Notes |
 |---|---|---|---|---|---|---|
+| 2026-04-17 | Claude (refactoring) | P0-2.5a | Migration des 3 handlers playback read-only vers `fileRepository`/`routingRepository` (5 call sites). Mock du contract test playback étendu avec `fileRepository`/`routingRepository`. Nouveau test de wiring `tests/api/playback-repository-wiring.test.js` (3 tests) qui prouve la délégation. Première utilisation effective des Repositories créés en P0-2.1→P0-2.3. | `src/api/commands/playback/PlaybackAnalysisCommands.js`, `src/api/commands/playback/PlaybackRoutingCommands.js`, `src/api/commands/playback/PlaybackControlCommands.js`, `tests/contracts/playback.contract.test.js`, `tests/api/playback-repository-wiring.test.js` (créé) | (ce commit) | 238/238 tests verts. Aucun appel `app.database.*` restant dans les 3 handlers touchés. Lint propre. |
 | 2026-04-17 | Claude (init) | — | Création plan de référence `REFACTORING_PLAN.md` | `docs/REFACTORING_PLAN.md` | `264ac1a` | Plan initial hybride V2→V3 |
 | 2026-04-17 | Claude (init) | — | Enrichissement plan (garde-fous, KPI, ADR, rollback, ordonnancement) | `docs/REFACTORING_PLAN.md` | `5f08f3e` | +139 lignes |
 | 2026-04-17 | Claude (init) | — | Création fichiers de suivi et routine agent | `docs/refactor/PROGRESS.md`, `docs/refactor/AGENT_ROUTINE.md` | (ce commit) | Seed initial des todos |
@@ -143,6 +149,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 - **2026-04-17** — Freeze SQL actif : aucune nouvelle migration tant que Phase 4 n'est pas terminée (sauf exception ADR).
 - **2026-04-17** — Interprétation du scope P0-0.2 (« start, stop, seek, loop, transpose, adapt ») : les commandes de contrôle playback core (playback_start/stop/pause/resume/seek/status/set_loop/set_tempo/transpose/set_volume). Les commandes playback « lourdes » (analyze_channel, generate_assignment_suggestions, apply_assignments, validate_routing, etc.) sont déplacées vers un nouveau lot P0-0.2b afin de garder les lots courts (2-5j). Justification : apply_assignments seul fait ~400 LOC avec multiples cas (split physique/playback, overwrite, cc7 injection, persistance), il nécessite son propre lot focalisé.
 - **2026-04-17** — Correction de 3 snapshots lors de P0-0.6 : `playback_start`, `playback_seek`, `playback_set_loop`. La validation `JsonValidator.validatePlaybackCommand` s'exécute **avant** le handler et préfixe les erreurs par `Invalid <command> data: `. De plus, elle peut concaténer plusieurs erreurs (ex. position manquante → deux erreurs jointes). Les snapshots V1 présumaient le message brut du handler, ce qui est incorrect pour les cas où la validator bloque en amont. Les snapshots corrigés distinguent maintenant les cas bloqués par le validator vs. ceux bloqués par le handler.
+- **2026-04-17** — Découpage de P0-2.5 en sous-lots (a/b/c/d/e) pour respecter la règle « 2-5 j par lot » (plan §14). Ordre recommandé : 2.5a (playback read-only, fait) → 2.5b (RoutingCommands, tout couvert) → 2.5c (PlaybackAssignmentCommands — attend 2.4 pour les transactions) → 2.5d (FileCommands — nécessite extension FileRepository) → 2.5e (SQL inline instrument-settings). Le lot 2.4 (helper `transaction(fn)` sur Repositories) reste à traiter quand 2.5c devient prioritaire.
 
 ---
 
