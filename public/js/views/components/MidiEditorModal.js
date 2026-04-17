@@ -81,6 +81,9 @@ class MidiEditorModal {
         // Instantiated before the mixin loop so the mixin forwarders find it.
         this.dialogs = typeof MidiEditorDialogs !== 'undefined' ? new MidiEditorDialogs(this) : null;
 
+        // Draw settings popover sub-component (P2-F.10b).
+        this.drawSettings = typeof MidiEditorDrawSettings !== 'undefined' ? new MidiEditorDrawSettings(this) : null;
+
         // Tablature editor (for string instruments)
         this.tablatureEditor = null;
 
