@@ -9,8 +9,8 @@
 |---|---|
 | Phase active | **Phase 0 — Baseline sécurité** (en cours) |
 | Branche de travail | `claude/dazzling-ptolemy-rXsBU` |
-| Dernier lot terminé | P0-0.4 |
-| Prochain lot suggéré | Lot P0-0.5 (`docs/refactor/dependency-matrix.md` v1) |
+| Dernier lot terminé | P0-0.5 |
+| Prochain lot suggéré | Lot P0-0.6 (tests Jest de contrat sur 5 commandes playback) |
 | Date dernière mise à jour | 2026-04-17 |
 | Agent ayant mis à jour | Claude (agent refactoring) |
 
@@ -45,7 +45,7 @@ Un lot = **2–5 jours max de travail**, **une PR cohérente**, **pas de changem
 - [ ] **P0-0.2b** Capturer snapshots des commandes playback avancées : `analyze_channel`, `generate_assignment_suggestions`, `apply_assignments`, `validate_instrument_capabilities`, `get_instrument_defaults`, `update_instrument_capabilities`, `get_file_routings`, `playback_validate_routing`, `playback_set_disconnect_policy`, `playback_get_channels`, `playback_set_channel_routing`, `playback_clear_channel_routing`, `playback_mute_channel`.
 - [x] **P0-0.3** Capturer les snapshots de contrats WS pour `routing.*` et assignations.
 - [x] **P0-0.4** Produire `docs/adr/ADR-001-refactor-strategy.md` (décision hybride V2→V3).
-- [ ] **P0-0.5** Produire `docs/refactor/dependency-matrix.md` v1 pour les 5 modules backend + 4 frontend cités au plan §12.
+- [x] **P0-0.5** Produire `docs/refactor/dependency-matrix.md` v1 pour les 5 modules backend + 4 frontend cités au plan §12.
 - [ ] **P0-0.6** Ajouter tests Jest de contrat sur les 5 commandes playback les plus utilisées.
 - [ ] **P0-0.7** Ajouter tests Jest de contrat sur les commandes routing critiques.
 - [ ] **P0-0.8** Documenter la checklist de refactor (no behavior change, payload stable, logs stables) dans `docs/refactor/CHECKLIST.md`.
@@ -118,7 +118,8 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 | 2026-04-17 | Claude (refactoring) | P0-0.1 | Création méthode de capture snapshots WS : protocole, format `.contract.json`, patron de test Jest, inventaire 146+ commandes avec criticité, processus de revue | `docs/refactor/contracts/README.md` | `d3d6d67` | Inventaire complet des commandes WS produit |
 | 2026-04-17 | Claude (refactoring) | P0-0.2 | Capture snapshots contrats `playback.*` core : start (4 cas), stop, pause, resume, seek (2 cas), status (2 cas), set_loop (2 cas), set_tempo/transpose/set_volume (stubs, 2 cas chacun) | `docs/refactor/contracts/playback/*.contract.json` (10 fichiers) | `81359d0` | Snapshots couvrent le scope P0-1.1 (playback control). Couvre aussi les stubs set_tempo/transpose/set_volume pour figer leur no-op actuel. |
 | 2026-04-17 | Claude (refactoring) | P0-0.3 | Capture snapshots contrats routing : CRUD (create/delete/list/enable/info), filtres (filter_set/clear/channel_map), monitors (start/stop/start_all/stop_all), avancées (route_test/duplicate/export/import/clear_all), sync (file_routing_sync avec 5 cas, file_routing_bulk_sync avec 4 cas) | `docs/refactor/contracts/routing/*.contract.json` (19 fichiers) | `be4d677` | Couvre la totalité des handlers de RoutingCommands.js. Les règles de validation CommandRegistry (source+destination pour route_create, routeId pour delete/enable/filter/map, deviceId pour monitor) sont documentées dans chaque snapshot. |
-| 2026-04-17 | Claude (refactoring) | P0-0.4 | Rédaction ADR-001 : décision officielle hybride V2→V3 avec ports/adapters V4 ciblés (4 options comparées, impacts, compromis, plan de rollback, critères de réussite) | `docs/adr/ADR-001-refactor-strategy.md` | (ce commit) | Premier ADR du chantier ; ADR-002 (Repository) prévu avant Phase 2, ADR-003 (versionnement WS) prévu en Phase 4 |
+| 2026-04-17 | Claude (refactoring) | P0-0.4 | Rédaction ADR-001 : décision officielle hybride V2→V3 avec ports/adapters V4 ciblés (4 options comparées, impacts, compromis, plan de rollback, critères de réussite) | `docs/adr/ADR-001-refactor-strategy.md` | `a9bfaeb` | Premier ADR du chantier ; ADR-002 (Repository) prévu avant Phase 2, ADR-003 (versionnement WS) prévu en Phase 4 |
+| 2026-04-17 | Claude (refactoring) | P0-0.5 | Rédaction matrice dépendances v1 : 5 modules backend (PlaybackCommands, MidiPlayer, InstrumentMatcher, Database, MidiRouter) + 4 frontend (RoutingSummaryPage, MidiEditorCCPanel, MidiEditorTablature, MidiSynthesizer) avec imports statiques, runtime deps, cibles par phase | `docs/refactor/dependency-matrix.md` | (ce commit) | Chiffres : PlaybackCommands a 74 accès `app.*`, MidiPlayer 49 accès `this.*`, MidiRouter n'a que 1 import statique (le plus découplé). Frontend utilise IIFE+globals, pas de ES modules. |
 
 ---
 
