@@ -167,12 +167,29 @@ async function fileRoutingSync(app, data) {
     }
   } catch (e) { /* ignore — skip validation if device list unavailable */ }
 
+  // Build set of channels actually present in this MIDI file to avoid orphan routings.
+  // If the file hasn't been analysed yet, midi_file_channels is empty → skip this check.
+  const knownChannels = new Set();
+  try {
+    const fileChannels = app.database.getFileChannels(data.fileId) || [];
+    for (const c of fileChannels) {
+      if (c.channel != null) knownChannels.add(c.channel);
+    }
+  } catch (e) { /* ignore — skip validation if channel list unavailable */ }
+
   let synced = 0;
   const invalidDeviceIds = new Set();
+  const invalidChannels = new Set();
 
   for (const [channelStr, routingValue] of Object.entries(data.channels)) {
     const channel = parseInt(channelStr, 10);
     if (isNaN(channel) || !routingValue) continue;
+
+    // Skip routings for channels that don't exist in this MIDI file (avoid orphans)
+    if (knownChannels.size > 0 && !knownChannels.has(channel)) {
+      invalidChannels.add(channel);
+      continue;
+    }
 
     // routingValue may be "deviceId::targetChannel" for multi-instrument devices
     const parts = routingValue.split('::');
@@ -213,8 +230,16 @@ async function fileRoutingSync(app, data) {
   if (invalidDeviceIds.size > 0) {
     app.logger.info(`[fileRoutingSync] Skipped invalid device(s): ${[...invalidDeviceIds].join(', ')}`);
   }
+  if (invalidChannels.size > 0) {
+    app.logger.info(`[fileRoutingSync] Skipped channels not present in file: ${[...invalidChannels].join(', ')}`);
+  }
   app.logger.info(`[fileRoutingSync] Synced ${synced} channels for file ${data.fileId}`);
-  return { success: true, synced, invalidDevices: [...invalidDeviceIds] };
+  return {
+    success: true,
+    synced,
+    invalidDevices: [...invalidDeviceIds],
+    invalidChannels: [...invalidChannels]
+  };
 }
 
 /**

@@ -358,8 +358,9 @@
     */
     MidiEditorCCPickerMixin.syncCCEventsFromEditor = function() {
         if (!this.ccEditor) {
-    // Si l'éditeur CC n'a jamais été ouvert, garder les événements extraits du fichier original
-            this.log('info', `syncCCEventsFromEditor: CC editor not initialized, keeping ${this.ccEvents.length} original events`);
+    // L'éditeur CC n'a jamais été ouvert : ccEditor est la seule voie d'édition,
+    // donc les événements extraits du fichier original sont toujours à jour.
+            this.log('debug', `syncCCEventsFromEditor: editor not opened, preserving ${this.ccEvents.length} original events`);
             return;
         }
 
