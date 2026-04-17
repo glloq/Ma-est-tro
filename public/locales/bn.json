@@ -26,7 +26,9 @@
         "unknownError": "অজানা ত্রুটি",
         "delete": "Delete",
         "apply": "Apply",
-        "name": "Name"
+        "name": "Name",
+        "on": "চালু",
+        "off": "বন্ধ"
     },
     "app": {
         "title": "MidiMind 5.0 - MIDI অর্কেস্ট্রেশন সিস্টেম",

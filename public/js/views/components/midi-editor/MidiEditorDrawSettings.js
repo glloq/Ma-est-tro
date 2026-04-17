@@ -1,7 +1,7 @@
 // ============================================================================
-// Fichier: public/js/views/components/midi-editor/MidiEditorDrawSettings.js
+// File: public/js/views/components/midi-editor/MidiEditorDrawSettings.js
 // Description: Draw settings popover
-//   Mixin: methodes ajoutees au prototype de MidiEditorModal
+//   Mixin: methods added to MidiEditorModal.prototype
 // ============================================================================
 
 (function() {
@@ -72,7 +72,7 @@
         btn.parentElement.style.position = 'relative';
         btn.parentElement.appendChild(popover);
 
-    // Attacher les listeners de densité
+    // Attach density listeners
         popover.querySelectorAll('.cc-density-btn').forEach(densityBtn => {
             densityBtn.addEventListener('click', (e) => {
                 e.preventDefault();

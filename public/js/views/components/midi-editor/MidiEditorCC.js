@@ -1,7 +1,7 @@
 // ============================================================================
-// Fichier: public/js/views/components/midi-editor/MidiEditorCC.js
+// File: public/js/views/components/midi-editor/MidiEditorCC.js
 // Description: CC/Pitchbend extraction, channel selectors, and mode management
-//   Mixin: methodes ajoutees au prototype de MidiEditorModal
+//   Mixin: methods added to MidiEditorModal.prototype
 // ============================================================================
 
 (function() {
@@ -25,7 +25,7 @@
     MidiEditorCCMixin.getCCChannelsUsed = function() {
         const channels = new Set();
         this.ccEvents.forEach(event => {
-            // Filtrer uniquement les événements du type CC actuellement sélectionné
+            // Keep only the events of the currently selected CC type
             if (event.type === this.currentCCType && event.channel !== undefined) {
                 channels.add(event.channel);
             }
@@ -84,7 +84,7 @@
         // S'assurer que le canal actif est dans la liste, sinon prendre le premier
         if (!channelsToShow.includes(activeChannel)) {
             activeChannel = channelsToShow[0];
-            // Appliquer le canal dans l'éditeur
+            // Apply the channel to the editor
             if (this.currentCCType === 'velocity' && this.velocityEditor) {
                 this.velocityEditor.setChannel(activeChannel);
             } else if (this.ccEditor) {
@@ -92,10 +92,10 @@
             }
         }
 
-        // Déterminer quels canaux ont des données pour le CC actif
+        // Determine which channels have data for the active CC
         const channelsWithData = this.getCCChannelsUsed ? this.getCCChannelsUsed() : [];
 
-        // Générer les boutons uniquement pour les canaux présents
+        // Render buttons only for channels that are present
         channelSelector.innerHTML = channelsToShow.map(channel => {
             const classes = ['cc-channel-btn'];
             if (channel === activeChannel) classes.push('active');
@@ -103,7 +103,7 @@
             return `<button class="${classes.join(' ')}" data-channel="${channel}" title="${this.t('midiEditor.channelTip', { channel: channel + 1 })}">${channel + 1}</button>`;
         }).join('');
 
-        // Réattacher les event listeners
+        // Re-attach the event listeners
         this.attachEditorChannelListeners();
         this.highlightUsedCCButtons();
 
@@ -122,8 +122,8 @@
      */
     MidiEditorCCMixin.attachEditorChannelListeners = function() {
         // OPTIMISATION: Event delegation au lieu de listeners individuels
-        // Les boutons .cc-channel-btn sont recréés dynamiquement, l'event delegation
-        // sur le container parent évite de réattacher des listeners à chaque update
+        // The .cc-channel-btn buttons are recreated dynamically — event delegation
+        // on the parent container avoids rebinding listeners on every update
         if (this._ccChannelDelegationAttached) return;
 
         const channelSelector = document.getElementById('editor-channel-selector');
@@ -147,11 +147,11 @@
             } else if (this.ccEditor) {
                 this.ccEditor.setChannel(channel);
                 this.log('info', `Canal CC sélectionné: ${channel + 1}`);
-                // Auto-sélectionner un CC type avec données sur ce canal
+                // Auto-select a CC type that has data on this channel
                 this.selectBestCCTypeForChannel(channel);
             }
 
-            // Mettre à jour le highlight des CC et les boutons dynamiques
+            // Update CC highlighting and the dynamic buttons
             this.highlightUsedCCButtons();
             this.updateDynamicCCButtons();
         });
@@ -187,7 +187,7 @@
             track.events.forEach((event) => {
                 currentTick += event.deltaTime || 0;
 
-                // Control Change events — capturer TOUS les CC (0-127)
+                // Control Change events — capture every CC (0-127)
                 // Accepter 'controller' (midi-file lib) et 'controlChange' (MidiParser.js) pour robustesse
                 if (event.type === 'controller' || event.type === 'controlChange') {
                     const channel = event.channel !== undefined ? event.channel : 0;
@@ -261,7 +261,7 @@
             this.log('info', `  - ${summary}`);
         }
 
-        // Log des canaux utilisés
+        // Log the channels in use
         const usedChannels = this.getCCChannelsUsed();
         if (usedChannels.length > 0) {
             this.log('info', `  - Canaux utilisés: ${usedChannels.map(c => c + 1).join(', ')}`);
@@ -333,7 +333,7 @@
         // CC couverts par les boutons statiques
         const staticCCs = new Set(['cc1', 'cc2', 'cc5', 'cc7', 'cc10', 'cc11', 'cc74', 'cc76', 'cc77', 'cc78', 'cc91', 'pitchbend', 'aftertouch', 'polyAftertouch']);
 
-        // Trouver les CC présents dans le fichier mais pas en statique (tous canaux)
+        // Find CCs present in the file that are not in the static list (all channels)
         const detectedCCs = new Set();
         this.ccEvents.forEach(e => {
             if (!staticCCs.has(e.type) && e.type.startsWith('cc')) {
@@ -352,18 +352,18 @@
         // Afficher le groupe dynamique
         dynamicGroup.style.display = '';
 
-        // Déterminer le canal actif pour le filtrage visuel
+        // Determine the active channel for visual filtering
         const activeBtn = this.container.querySelector('#editor-channel-selector .cc-channel-btn.active');
         const activeChannel = activeBtn ? parseInt(activeBtn.dataset.channel) :
             (this.channels && this.channels.length > 0 ? this.channels[0].channel : 0);
         const usedTypesOnChannel = this.getUsedCCTypesForChannel(activeChannel);
 
-        // Trier les CC détectés numériquement
+        // Sort detected CCs numerically
         const sortedCCs = Array.from(detectedCCs).sort((a, b) => {
             return parseInt(a.replace('cc', '')) - parseInt(b.replace('cc', ''));
         });
 
-        // OPTIMISATION: Pré-calculer les counts en un seul passage au lieu de O(n) par CC type
+        // OPTIMIZATION: precompute counts in a single pass instead of O(n) per CC type
         const ccCounts = new Map();
         this.ccEvents.forEach(e => ccCounts.set(e.type, (ccCounts.get(e.type) || 0) + 1));
 
@@ -425,7 +425,7 @@
                     this.log('debug', 'Resize bar shown');
                 }
 
-                // Écouter la fin de la transition CSS
+                // Listen for the CSS transition to finish
                 const onTransitionEnd = (e) => {
                     // S'assurer que c'est bien la transition de la section CC
                     if (e.target !== ccSection) return;
@@ -434,18 +434,18 @@
 
                     this.log('debug', 'CC Section transition ended');
 
-                    // Initialiser l'éditeur CC s'il n'existe pas encore
+                    // Initialize the CC editor if it does not exist yet
                     if (!this.ccEditor) {
                         this.initCCEditor();
                     } else {
-                        // L'éditeur existe déjà, attendre que le layout soit prêt puis redimensionner
+                        // The editor already exists — wait for its layout then resize
                         this.waitForCCEditorLayout();
                     }
                 };
 
                 ccSection.addEventListener('transitionend', onTransitionEnd);
 
-                // Fallback si pas de transition (déjà expanded, etc.)
+                // Fallback when there is no transition (already expanded, etc.)
                 setTimeout(() => {
                     if (!this.ccEditor) {
                         this.initCCEditor();
@@ -457,8 +457,8 @@
                 ccHeader.classList.remove('expanded');
                 ccHeader.classList.add('collapsed');
 
-                // Nettoyer les styles inline posés par le drag resize
-                // pour que les classes CSS (flex, min-height) reprennent le contrôle
+                // Clean up inline styles set by the drag-resize handler
+                // so the CSS classes (flex, min-height) can take over
                 ccSection.style.removeProperty('height');
                 ccSection.style.removeProperty('flex');
                 ccSection.style.removeProperty('min-height');
@@ -511,7 +511,7 @@
         if (existingMsg) existingMsg.remove();
 
         if (ccTypes.length === 0) {
-            // Aucun CC sur ce canal — déselectionner tous les boutons CC
+            // No CC on this channel — deselect all CC buttons
             this.container?.querySelectorAll('.cc-type-btn').forEach(btn => {
                 const type = btn.dataset.ccType;
                 if (type && type !== 'velocity' && type !== 'tempo') {
@@ -519,7 +519,7 @@
                 }
             });
 
-            // Afficher un message dans l'éditeur
+            // Display a message inside the editor
             if (ccEditorContainer) {
                 const msg = document.createElement('div');
                 msg.className = 'cc-no-data-message';
@@ -530,10 +530,10 @@
             return;
         }
 
-        // Si le type actuel a des données sur ce canal, le garder
+        // Keep the current type if it has data on this channel
         if (usedTypes.has(this.currentCCType)) return;
 
-        // Sinon sélectionner le premier CC type avec données sur ce canal
+        // Otherwise pick the first CC type that has data on this channel
         this.selectCCType(ccTypes[0]);
     }
 
@@ -548,7 +548,7 @@
         const noDataMsg = document.querySelector('.cc-no-data-message');
         if (noDataMsg) noDataMsg.remove();
 
-        // Mettre à jour les boutons
+        // Update the buttons
         const ccTypeButtons = this.container?.querySelectorAll('.cc-type-btn');
         ccTypeButtons?.forEach(btn => {
             if (btn.dataset.ccType === ccType) {
@@ -563,18 +563,18 @@
         const tempoEditorContainer = document.getElementById('tempo-editor-container');
 
         if (ccType === 'tempo') {
-            // Afficher l'éditeur de tempo
+            // Show the tempo editor
             if (ccEditorContainer) ccEditorContainer.style.display = 'none';
             if (velocityEditorContainer) velocityEditorContainer.style.display = 'none';
             if (tempoEditorContainer) tempoEditorContainer.style.display = 'flex';
 
-            // Initialiser l'éditeur de tempo s'il n'existe pas
+            // Initialize the tempo editor if it does not exist
             if (!this.tempoEditor) {
                 this.initTempoEditor();
             } else {
                 // Synchroniser avec le piano roll actuel
                 this.syncTempoEditor();
-                // OPTIMISATION: Simple RAF au lieu de double RAF (-1 frame de délai)
+                // OPTIMIZATION: single RAF instead of double RAF (saves one frame)
                 requestAnimationFrame(() => {
                     if (this.tempoEditor && this.tempoEditor.resize) {
                         this.tempoEditor.resize();
@@ -585,19 +585,19 @@
             // Afficher les boutons de courbes pour tempo
             this.showCurveButtons();
         } else if (ccType === 'velocity') {
-            // Afficher l'éditeur de vélocité
+            // Show the velocity editor
             if (ccEditorContainer) ccEditorContainer.style.display = 'none';
             if (velocityEditorContainer) velocityEditorContainer.style.display = 'flex';
             if (tempoEditorContainer) tempoEditorContainer.style.display = 'none';
 
-            // Initialiser l'éditeur de vélocité s'il n'existe pas
+            // Initialize the velocity editor if it does not exist
             if (!this.velocityEditor) {
                 this.initVelocityEditor();
             } else {
-                // Recharger la séquence complète (le filtrage par canal se fait dans l'éditeur)
+                // Reload the full sequence (per-channel filtering happens inside the editor)
                 this.velocityEditor.setSequence(this.fullSequence);
                 this.syncVelocityEditor();
-                // OPTIMISATION: Simple RAF au lieu de double RAF (-1 frame de délai)
+                // OPTIMIZATION: single RAF instead of double RAF (saves one frame)
                 requestAnimationFrame(() => {
                     if (this.velocityEditor && this.velocityEditor.resize) {
                         this.velocityEditor.resize();
@@ -605,17 +605,17 @@
                 });
             }
 
-            // Mettre à jour le sélecteur de canal pour la vélocité
+            // Update the channel selector for the velocity editor
             this.updateEditorChannelSelector();
             // Masquer les boutons de courbes
             this.hideCurveButtons();
         } else {
-            // Afficher l'éditeur CC
+            // Show the CC editor
             if (ccEditorContainer) ccEditorContainer.style.display = 'flex';
             if (velocityEditorContainer) velocityEditorContainer.style.display = 'none';
             if (tempoEditorContainer) tempoEditorContainer.style.display = 'none';
 
-            // Initialiser l'éditeur CC s'il n'existe pas
+            // Initialize the CC editor if it does not exist
             if (!this.ccEditor) {
                 this.initCCEditor();
             } else {
@@ -626,7 +626,7 @@
                         this.ccEditor.resize();
                     }
                 });
-                // Mettre à jour le sélecteur de canal car les canaux utilisés peuvent varier selon le type CC
+                // Update the channel selector because used channels vary per CC type
                 this.updateEditorChannelSelector();
             }
 
@@ -634,7 +634,7 @@
             this.showCurveButtons();
         }
 
-        // Mettre à jour l'état du bouton de suppression après le changement de type
+        // Update the delete button state after the type change
         this.updateDeleteButtonState();
         this.highlightUsedCCButtons();
     }
@@ -676,7 +676,7 @@
     MidiEditorCCMixin.highlightUsedCCButtons = function() {
         if (!this.container) return;
 
-        // Source de vérité : le bouton canal actif dans le DOM
+        // Source of truth: the active channel button in the DOM
         const activeBtn = this.container.querySelector('#editor-channel-selector .cc-channel-btn.active');
         const activeChannel = activeBtn ? parseInt(activeBtn.dataset.channel) :
             (this.channels && this.channels.length > 0 ? this.channels[0].channel : 0);

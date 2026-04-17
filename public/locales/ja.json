@@ -26,7 +26,9 @@
         "unknownError": "不明なエラー",
         "delete": "Delete",
         "apply": "Apply",
-        "name": "名前"
+        "name": "名前",
+        "on": "オン",
+        "off": "オフ"
     },
     "app": {
         "title": "MidiMind 5.0 - MIDI Orchestration System",

@@ -1,7 +1,7 @@
 // ============================================================================
-// Fichier: public/js/views/components/midi-editor/MidiEditorSequence.js
-// Description: Gestion de la sequence MIDI (conversion, sync, canaux)
-//   Mixin: les methodes sont ajoutees au prototype de MidiEditorModal
+// File: public/js/views/components/midi-editor/MidiEditorSequence.js
+// Description: MIDI sequence management (conversion, sync, channels)
+//   Mixin: methods added to MidiEditorModal.prototype
 // ============================================================================
 
 (function() {

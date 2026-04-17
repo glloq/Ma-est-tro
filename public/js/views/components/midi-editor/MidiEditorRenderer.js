@@ -1,7 +1,7 @@
 // ============================================================================
-// Fichier: public/js/views/components/midi-editor/MidiEditorRenderer.js
+// File: public/js/views/components/midi-editor/MidiEditorRenderer.js
 // Description: HTML rendering for the editor modal
-//   Mixin: methodes ajoutees au prototype de MidiEditorModal
+//   Mixin: methods added to MidiEditorModal.prototype
 // ============================================================================
 
 (function() {
@@ -10,7 +10,7 @@
     const MidiEditorRendererMixin = {};
 
     // ========================================================================
-    // RENDU
+    // RENDERING
     // ========================================================================
 
     /**
@@ -190,7 +190,7 @@
         if (!instrumentSelector) return;
 
         if (this.activeChannels.size === 0) {
-    // Aucun canal actif : afficher "Instrument:" et désactiver
+    // No active channel: display "Instrument:" and disable
             if (instrumentLabel) instrumentLabel.textContent = this.t('midiEditor.instrument');
             if (applyBtn) applyBtn.disabled = true;
         } else if (this.activeChannels.size === 1) {
@@ -199,13 +199,13 @@
             const channelInfo = this.channels.find(ch => ch.channel === activeChannel);
 
             if (channelInfo) {
-    // Mettre à jour le label pour indiquer quel canal sera modifié
+    // Update the label to indicate which channel will be changed
                 if (instrumentLabel) {
                     instrumentLabel.textContent = `${this.t('midiEditor.instrument')} ${this.t('midiEditor.channelTip', { channel: activeChannel + 1 })}`;
                     instrumentLabel.title = '';
                 }
 
-    // Mettre à jour le sélecteur pour afficher l'instrument actuel
+    // Update the selector to show the current program
                 instrumentSelector.value = channelInfo.program.toString();
 
     // Activer le bouton
@@ -215,7 +215,7 @@
                 }
             }
         } else {
-    // Plusieurs canaux actifs : désactiver le bouton et afficher un message clair
+    // Multiple active channels: disable the button and show a clear message
             const firstActiveChannel = Array.from(this.activeChannels)[0];
             const channelInfo = this.channels.find(ch => ch.channel === firstActiveChannel);
 
@@ -229,7 +229,7 @@
                 instrumentSelector.value = channelInfo.program.toString();
             }
 
-    // Désactiver le bouton car plusieurs canaux actifs
+    // Disable the button because multiple channels are active
             if (applyBtn) {
                 applyBtn.disabled = true;
                 applyBtn.title = this.t('midiEditor.singleChannelRequired');

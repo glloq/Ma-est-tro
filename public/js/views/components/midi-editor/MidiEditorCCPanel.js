@@ -1,5 +1,5 @@
 // ============================================================================
-// Fichier: public/js/views/components/midi-editor/MidiEditorCCPanel.js
+// File: public/js/views/components/midi-editor/MidiEditorCCPanel.js
 // Description: CC/Pitchbend/Velocity/Tempo section for the MIDI Editor
 //   - CC type buttons
 //   - CC tool buttons (select, move, line, draw)
@@ -175,7 +175,7 @@ class MidiEditorCCPanel {
             }
         }
 
-        // Déterminer quels canaux ont des données pour le CC actif
+        // Determine which channels have data for the active CC
         const channelsWithData = this.getCCChannelsUsed();
 
         channelSelector.innerHTML = channelsToShow.map(channel => {
@@ -423,7 +423,7 @@ class MidiEditorCCPanel {
 
             this.showCurveButtons();
 
-            // Afficher/masquer le sélecteur de note pour poly aftertouch
+            // Show/hide the note selector for poly aftertouch
             this.updateNoteSelectorVisibility(ccType);
         }
 
@@ -636,7 +636,7 @@ class MidiEditorCCPanel {
                 value: e.value,
                 id: e.id
             };
-            // Préserver le champ note pour poly aftertouch
+            // Preserve the note field for poly aftertouch
             if (e.note !== undefined) {
                 evt.note = e.note;
             }
@@ -802,7 +802,7 @@ class MidiEditorCCPanel {
                         if (curveType) {
                             ccCurveButtons.forEach(b => b.classList.remove('active'));
                             btn.classList.add('active');
-                            // Appliquer au bon éditeur selon le type actif
+                            // Dispatch to the correct editor for the active type
                             if (m.currentCCType === 'tempo' && m.tempoEditor) {
                                 m.tempoEditor.setCurveType(curveType);
                             } else if (m.ccEditor) {
@@ -1259,7 +1259,7 @@ class MidiEditorCCPanel {
 
         if (ccType === 'polyAftertouch') {
             if (!noteSelector) {
-                // Créer le sélecteur de note
+                // Create the note selector
                 const channelSelector = document.getElementById('editor-channel-selector');
                 if (!channelSelector) return;
 
@@ -1321,7 +1321,7 @@ class MidiEditorCCPanel {
             });
         });
 
-        // Sélectionner la première note si aucune n'est sélectionnée
+        // Select the first note if nothing is selected yet
         if (currentNote === null && notes.length > 0 && m.ccEditor) {
             m.ccEditor.setNote(notes[0]);
             const firstBtn = container.querySelector('button');

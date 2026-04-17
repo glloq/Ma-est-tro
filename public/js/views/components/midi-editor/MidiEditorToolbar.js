@@ -1,5 +1,5 @@
 // ============================================================================
-// Fichier: public/js/views/components/midi-editor/MidiEditorToolbar.js
+// File: public/js/views/components/midi-editor/MidiEditorToolbar.js
 // Description: Toolbar section for the MIDI Editor
 //   - Playback controls (play, pause, stop)
 //   - Undo/Redo buttons

@@ -1,7 +1,7 @@
 // ============================================================================
-// Fichier: public/js/views/components/midi-editor/MidiEditorDialogs.js
+// File: public/js/views/components/midi-editor/MidiEditorDialogs.js
 // Description: Modern confirmation dialogs
-//   Mixin: methodes ajoutees au prototype de MidiEditorModal
+//   Mixin: methods added to MidiEditorModal.prototype
 // ============================================================================
 
 (function() {
@@ -10,7 +10,7 @@
     const MidiEditorDialogsMixin = {};
 
     // ========================================================================
-    // MODAL DE CONFIRMATION MODERNE
+    // MODERN CONFIRMATION MODAL
     // ========================================================================
 
     /**
@@ -39,7 +39,7 @@
                 extraButtons = []
             } = options;
 
-    // Créer le modal
+    // Create the modal
             const modal = document.createElement('div');
             modal.className = 'confirm-modal-overlay';
             modal.innerHTML = `
@@ -65,7 +65,7 @@
     // Ajouter au DOM
             document.body.appendChild(modal);
 
-    // Fonction de fermeture centralisée
+    // Single centralized close function
             const closeModal = (result) => {
     // Supprimer les listeners AVANT de fermer
                 modal.removeEventListener('click', handleClick);
@@ -81,7 +81,7 @@
                 }, 200);
             };
 
-    // Animation d'entrée
+    // Entry animation
             requestAnimationFrame(() => {
                 modal.classList.add('visible');
             });
@@ -181,7 +181,7 @@
         } = options;
 
         if (hasSelection && noteCount > 0) {
-    // Proposer le choix : sélection ou tout le canal
+    // Offer the choice: selection or entire channel
             return this.showConfirmModal({
                 title: this.t('midiEditor.changeInstrumentTitle'),
                 icon: '🎵',
@@ -207,7 +207,7 @@
                 ]
             });
         } else {
-    // Pas de sélection, changer tout le canal
+    // No selection — change the entire channel
             return this.showConfirmModal({
                 title: this.t('midiEditor.changeInstrumentTitle'),
                 icon: '🎵',

@@ -409,36 +409,51 @@ automatically.
 
 ---
 
+## Logging convention
+
+`this.log(level, message, …details)` is the single entry point used by every
+module. The levels in use follow a simple four-step scale:
+
+| Level | When to use | Example |
+|-------|-------------|---------|
+| `debug` | Verbose traces useful while investigating a bug. Off in production. | `First 3 notes: …`, `Layout attempt 3, height=220` |
+| `info` | High-level lifecycle milestones. | `Opening MIDI editor for song.mid`, `Saved 412 notes across 4 channels` |
+| `warn` | Recoverable misuse or unexpected-but-handled state. | `Modal already open`, `Clamped 3 out-of-range MIDI values: …` |
+| `error` | Genuine failure of a user-visible operation. | `Failed to save file: …`, `Cannot save: no file or piano roll` |
+
+Shortcuts like `console.log(…)` / `console.error(…)` should not appear inside
+the editor modules — go through `this.log` so the logs can be routed, filtered,
+or rotated uniformly by the host app.
+
+---
+
 ## Known limitations and future work
 
 These are tracked here rather than fixed ad hoc, so the editor evolves cleanly.
 
-- **Four modules over 900 lines** mix several concerns and would benefit from being
-  split further:
-  - `MidiEditorCCPanel.js` (1 343 l.) — CC toolbar, channel selector, velocity/tempo
-    editor init
-  - `MidiEditorTablature.js` (1 307 l.) — tab / wind / drum bridges in one file
-  - `MidiEditorEditActions.js` (1 115 l.) — undo/redo, clipboard, keyboard shortcuts,
-    preference toggles
-  - `MidiEditorEvents.js` (968 l.) — a single click dispatcher with ~80 `data-action`
-    branches
-- **Inline code comments / file headers are in French** (`// Fichier: …`,
-  `// Description: …`). The rest of the codebase is standardising on English
-  ([`docs/AUDIT.md`](AUDIT.md)).
-- **Hard-coded `'ON'` / `'OFF'` labels** remain in `MidiEditorEditActions.js`
-  (six toggle labels around line 920) and should go through `this.t('common.on')` /
-  `this.t('common.off')`.
-- **No frontend tests for the editor.** A `tests/frontend/midi-editor.test.js`
-  (Vitest + jsdom) covering lifecycle, sequence conversion, MIDI clamping, undo/redo,
-  and routing persistence would meaningfully reduce regressions.
-- **Missing defensive null-checks** in a few DOM-centric paths: `initVelocityEditor`
-  / `initTempoEditor` in `MidiEditorCCPanel.js`, `initPianoRoll` dimension validation,
-  and synthesiser init have no `try/catch`. Failures are currently silent.
-- **Logging is inconsistent**: ~200 `log/error/notification` calls mix levels without a
-  documented convention.
-- **CC events are not persisted in the database** — they are serialised into the MIDI
-  file at save time. That is an intentional design choice (the MIDI file is the
-  canonical representation), but it means queries like "which files use CC 7" still
-  require parsing the file.
+- **Four modules over 900 lines** still mix several concerns and would benefit
+  from being split further:
+  - `MidiEditorCCPanel.js` (1 343 l.) — CC toolbar, channel selector, velocity /
+    tempo editor initialisation.
+  - `MidiEditorTablature.js` (1 307 l.) — tab / wind / drum bridges in one
+    file.
+  - `MidiEditorEditActions.js` (1 115 l.) — undo/redo, clipboard, keyboard
+    shortcuts, preference toggles.
+  - `MidiEditorEvents.js` (968 l.) — a single click dispatcher with ~80
+    `data-action` branches.
+- **`channelAftertouch` / `polyAftertouch` fields are dropped** on the second
+  pass of `convertSequenceToMidi` (`MidiEditorFileOpsMixin.js:182-203`). The
+  events are created with the right payload (`amount`, `pressure`,
+  `noteNumber`) but the map-into-deltaTime step does not copy those fields
+  across, so aftertouch data does not survive a save. The clamping on the
+  values themselves is correct; only the field forwarding is missing.
+- **CC events are not persisted in the database** — they are serialised into
+  the MIDI file at save time. That is an intentional design choice (the MIDI
+  file is the canonical representation), but it means queries like "which
+  files use CC 7" still require parsing the file.
+- **Frontend test surface is still small.** `tests/frontend/midi-editor-clamp.test.js`
+  covers the save-time clamping logic (10 cases) but the rest of the editor —
+  lifecycle, undo/redo stack, routing persistence, CC sync — has no coverage
+  yet.
 
 See `git log --follow docs/MIDI_EDITOR.md` for the incremental cleanup history.

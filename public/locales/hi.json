@@ -26,7 +26,9 @@
         "unknownError": "अज्ञात त्रुटि",
         "delete": "Delete",
         "apply": "Apply",
-        "name": "Name"
+        "name": "Name",
+        "on": "चालू",
+        "off": "बंद"
     },
     "app": {
         "title": "MidiMind 5.0 - MIDI ऑर्केस्ट्रेशन सिस्टम",

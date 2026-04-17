@@ -26,7 +26,9 @@
         "unknownError": "알 수 없는 오류",
         "delete": "Delete",
         "apply": "Apply",
-        "name": "이름"
+        "name": "이름",
+        "on": "켜짐",
+        "off": "꺼짐"
     },
     "app": {
         "title": "MidiMind 5.0 - MIDI 오케스트레이션 시스템",
