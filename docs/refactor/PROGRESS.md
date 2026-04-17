@@ -9,8 +9,8 @@
 |---|---|
 | Phase active | **Phase 2 — Persistance (migration handlers)** |
 | Branche de travail | `claude/refactor-maestro-project-L6ptg` |
-| Dernier lot terminé | P0-2.5d |
-| Prochain lot suggéré | P0-2.5c (migrer `PlaybackAssignmentCommands.js` — 15 appels, utiliser `repo.transaction(fn)` pour les splits) ou P0-2.5e (encapsuler SQL inline de `InstrumentSettingsCommands`/`VirtualInstrumentCommands` dans `InstrumentSettingsDB.deleteByDeviceChannel()`) |
+| Dernier lot terminé | P0-2.5f |
+| Prochain lot suggéré | P0-2.5g (SessionCommands + SessionRepository, 6 calls) |
 | Date dernière mise à jour | 2026-04-17 |
 | Agent ayant mis à jour | Claude (agent refactoring) |
 
@@ -73,6 +73,16 @@ Un lot = **2–5 jours max de travail**, **une PR cohérente**, **pas de changem
   - [ ] **P0-2.5c** Migrer `PlaybackAssignmentCommands.js` (15 appels ; attention aux transactions split/overwrite → dépend de P0-2.4).
   - [x] **P0-2.5d** Migrer `FileCommands.js` (8 appels ; `FileRepository` étendu de 5 méthodes : `search`, `filter`, `countNeedingReanalysis`, `getDistinctInstruments`, `getDistinctCategories`).
   - [ ] **P0-2.5e** Encapsuler le SQL inline de `InstrumentSettingsCommands.js` L292-316 et `VirtualInstrumentCommands.js` L133 dans une méthode `InstrumentSettingsDB.deleteByDeviceChannel()`.
+  - [x] **P0-2.5f** `PresetCommands.js` + nouveau `PresetRepository` (6 appels).
+  - [ ] **P0-2.5g** `SessionCommands.js` + nouveau `SessionRepository` (6 appels).
+  - [ ] **P0-2.5h** `PlaylistCommands.js` + nouveau `PlaylistRepository` (14 appels).
+  - [ ] **P0-2.5i** `LightingCommands.js` + nouveau `LightingRepository` (25 appels, sub-DB `LightingDatabase`).
+  - [ ] **P0-2.5j** `StringInstrumentCommands.js` + nouveau `StringInstrumentRepository` (38 appels via sous-module).
+  - [ ] **P0-2.5k** `DeviceSettingsCommands.js` + nouveau `DeviceSettingsRepository` (3 appels, sub-DB `DeviceSettingsDB`).
+  - [ ] **P0-2.5l** `DeviceCommands.js` (14 appels, majoritairement instrument-settings).
+  - [ ] **P0-2.5m** `VirtualInstrumentCommands.js` (11 appels, mixe SQL inline).
+  - [ ] **P0-2.5n** `InstrumentSettingsCommands.js` (33 appels, le plus lourd).
+  - [ ] **P0-2.5o** `SystemCommands.js` (2 appels — `getFiles('/')` → `fileRepository.findByFolder`, `database.backup()` à conserver car op admin).
 - [ ] **P0-2.6** Tests d'intégration DB : split / no-split / overwrite.
 
 ### Phase 3 — Validation et erreurs
@@ -117,6 +127,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 
 | Date | Agent | Lot | Résumé | Fichiers touchés | Commit | Notes |
 |---|---|---|---|---|---|---|
+| 2026-04-17 | Claude (refactoring) | P0-2.5f | Nouveau `PresetRepository` (25 LOC) : save, findById, findByType, delete, update. Enregistré dans Application.js. `PresetCommands.js` migré : 6 appels `app.database.*` → `app.presetRepository.*`. | `src/repositories/PresetRepository.js` (créé), `src/core/Application.js`, `src/api/commands/PresetCommands.js` | (ce commit) | 241/241 tests verts. Pas d'appels `app.database.*` restants dans PresetCommands.js. Extension de l'ADR-002 (les 3 repos cités ne sont pas exhaustifs — ce pattern s'applique à toutes les entités métier). |
 | 2026-04-17 | Claude (refactoring) | P0-2.5d | Migration de `FileCommands.js` (8 appels). `FileRepository` étendu de 5 méthodes : `search`, `filter`, `countNeedingReanalysis`, `getDistinctInstruments`, `getDistinctCategories` (délégations triviales). 3 appels déjà couverts utilisent `findInfoById`, `getChannels`, et `routingRepository.findByFileId`. | `src/repositories/FileRepository.js`, `src/api/commands/FileCommands.js` | (ce commit) | 241/241 tests verts. Aucun `app.database.*` restant dans `FileCommands.js`. Handlers migrés à ce stade : `PlaybackAnalysisCommands`, `PlaybackRoutingCommands`, `PlaybackControlCommands`, `RoutingCommands`, `FileCommands` (5/13 handlers à accès DB). |
 | 2026-04-17 | Claude (refactoring) | P0-2.4 | Ajout d'un helper `transaction(fn)` sur les 3 Repositories (`FileRepository`, `RoutingRepository`, `InstrumentRepository`). Chaque helper délègue à `Database.transaction()` (qui expose `db.transaction()` de better-sqlite3). Nouveau test `tests/repositories/transaction-helper.test.js` (3 tests, un par repo). | `src/repositories/FileRepository.js`, `src/repositories/RoutingRepository.js`, `src/repositories/InstrumentRepository.js`, `tests/repositories/transaction-helper.test.js` (créé) | (ce commit) | Débloque P0-2.5c (PlaybackAssignmentCommands utilise des transactions pour les splits). ADR-002 §Conventions 3 confirmé en implémentation. 241/241 tests verts. |
 | 2026-04-17 | Claude (refactoring) | P0-2.5b | Migration de `RoutingCommands.js` (8 appels : `deleteRoutingsByFile` ×3 → `routingRepository.deleteByFileId` ; `getRoutingsByFile` ×2 → `findByFileId` ; `getFileChannels` → `fileRepository.getChannels` ; `insertRouting` ×2 → `routingRepository.save`). Mock du contract test routing étendu : spies partagés entre `database.*` et `fileRepository`/`routingRepository` pour préserver les assertions existantes. | `src/api/commands/RoutingCommands.js`, `tests/contracts/routing.contract.test.js` | (ce commit) | 238/238 tests verts. Aucun `app.database.*` restant dans `RoutingCommands.js`. |
@@ -152,6 +163,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 - **2026-04-17** — Freeze SQL actif : aucune nouvelle migration tant que Phase 4 n'est pas terminée (sauf exception ADR).
 - **2026-04-17** — Interprétation du scope P0-0.2 (« start, stop, seek, loop, transpose, adapt ») : les commandes de contrôle playback core (playback_start/stop/pause/resume/seek/status/set_loop/set_tempo/transpose/set_volume). Les commandes playback « lourdes » (analyze_channel, generate_assignment_suggestions, apply_assignments, validate_routing, etc.) sont déplacées vers un nouveau lot P0-0.2b afin de garder les lots courts (2-5j). Justification : apply_assignments seul fait ~400 LOC avec multiples cas (split physique/playback, overwrite, cc7 injection, persistance), il nécessite son propre lot focalisé.
 - **2026-04-17** — Correction de 3 snapshots lors de P0-0.6 : `playback_start`, `playback_seek`, `playback_set_loop`. La validation `JsonValidator.validatePlaybackCommand` s'exécute **avant** le handler et préfixe les erreurs par `Invalid <command> data: `. De plus, elle peut concaténer plusieurs erreurs (ex. position manquante → deux erreurs jointes). Les snapshots V1 présumaient le message brut du handler, ce qui est incorrect pour les cas où la validator bloque en amont. Les snapshots corrigés distinguent maintenant les cas bloqués par le validator vs. ceux bloqués par le handler.
+- **2026-04-17** — Extension implicite d'ADR-002 : les 3 repos initialement cités (File/Routing/Instrument) ne sont pas exhaustifs. Le pattern Repository s'applique à toutes les entités métier. Nouveaux repos créés à la volée : PresetRepository (2.5f). À venir : Session, Playlist, Lighting, StringInstrument, DeviceSettings. Conventions ADR-002 inchangées (thin wrappers au-dessus des sub-DBs, injection via constructor, API métier).
 - **2026-04-17** — Découpage de P0-2.5 en sous-lots (a/b/c/d/e) pour respecter la règle « 2-5 j par lot » (plan §14). Ordre recommandé : 2.5a (playback read-only, fait) → 2.5b (RoutingCommands, tout couvert) → 2.5c (PlaybackAssignmentCommands — attend 2.4 pour les transactions) → 2.5d (FileCommands — nécessite extension FileRepository) → 2.5e (SQL inline instrument-settings). Le lot 2.4 (helper `transaction(fn)` sur Repositories) reste à traiter quand 2.5c devient prioritaire.
 
 ---
