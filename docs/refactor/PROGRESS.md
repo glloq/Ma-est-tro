@@ -9,8 +9,8 @@
 |---|---|
 | Phase active | **Phase 2 — Persistance (migration handlers)** |
 | Branche de travail | `claude/refactor-maestro-project-L6ptg` |
-| Dernier lot terminé | P1-3.4 |
-| Prochain lot suggéré | **Phase 4 — P1-4.1** : étendre le découpage domaine à `routing` (hors playback). |
+| Dernier lot terminé | P1-4.4 |
+| Prochain lot suggéré | **P1-4.3** : identifier les ports/adapters prioritaires (drivers MIDI série/BLE, LightingManager, NetworkManager) — produire `docs/refactor/ports-adapters-inventory.md`. |
 | Date dernière mise à jour | 2026-04-17 |
 | Agent ayant mis à jour | Claude (agent refactoring) |
 
@@ -100,7 +100,7 @@ Un lot = **2–5 jours max de travail**, **une PR cohérente**, **pas de changem
 - [ ] **P1-4.1** Étendre le découpage domaine à `routing` (hors playback).
 - [ ] **P1-4.2** Étendre le découpage domaine à `devices` et `files`.
 - [ ] **P1-4.3** Identifier ports/adapters prioritaires (drivers MIDI série/BLE, LightingManager, NetworkManager).
-- [ ] **P1-4.4** Produire `ADR-003-ws-contract-versioning.md`.
+- [x] **P1-4.4** Produire [`ADR-003-ws-contract-versioning.md`](../adr/ADR-003-ws-contract-versioning.md) — convention de versionnement par suffixe `_vN`, additif uniquement, dépréciation annoncée par changelog.
 - [ ] **P1-4.5** Appliquer le pattern ports/adapters sur au moins un driver hardware pilote.
 
 ### Phase 2-frontend (P2)
@@ -130,6 +130,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 
 | Date | Agent | Lot | Résumé | Fichiers touchés | Commit | Notes |
 |---|---|---|---|---|---|---|
+| 2026-04-17 | Claude (refactoring) | P1-4.4 | Rédaction ADR-003 : versionnement par suffixe `_vN` (Option B). 3 options comparées. Conventions opérationnelles documentées (quand introduire v2, cohabitation, dépréciation, suppression, cas additif). Aucun code modifié — l'ADR sert de référence pour toute évolution future du protocole. | `docs/adr/ADR-003-ws-contract-versioning.md` (créé) | (ce commit) | Tous les ADRs prévus par le plan §13 sont désormais produits (001, 002, 003, 004). |
 | 2026-04-17 | Claude (refactoring) | P1-3.4 | Audit d'uniformité des payloads d'erreur (CommandRegistry sérialisation + BackendAPIClient consommation + 26 snapshots avec cas d'erreur). Synthèse dans `docs/refactor/error-payload-audit.md`. Format canonique vérifié. Trouvaille : le client ne propage pas le champ `code` aux callers — recommandation listée pour Phase 4 (non bloquant pour Phase 3). | `docs/refactor/error-payload-audit.md` (créé) | (ce commit) | Aucune modif de code. Phase 3 entièrement clôturée. |
 | 2026-04-17 | Claude (refactoring) | P1-3.2c | Schémas déclaratifs pour les 3 autres validateurs historiques : `device.schemas.js` (7), `file.schemas.js` (5, avec base64 check local pour éviter l'import circulaire), `latency.schemas.js` (4). `JsonValidator.validateDeviceCommand`, `validateFileCommand`, `validateLatencyCommand` ne contiennent plus de switch : délégation pure à `COMPILED_SCHEMAS`. -130 LOC dans JsonValidator.js. | `src/api/commands/schemas/{device,file,latency}.schemas.js` (créés), `src/utils/JsonValidator.js` | (ce commit) | 278/278 tests verts. |
 | 2026-04-17 | Claude (refactoring) | P1-3.2b | Nouveau `src/api/commands/schemas/routing.schemas.js` : 8 schémas (route_create/delete/enable/filter_set/filter_clear/channel_map/monitor_start/monitor_stop). Partages de schéma pour les groupes homogènes (requireRouteId, requireDeviceId). `validateRoutingCommand` délègue au map compilé. | `src/api/commands/schemas/routing.schemas.js` (créé), `src/utils/JsonValidator.js` | (ce commit) | 278/278 tests verts. Snapshots routing verts. |
