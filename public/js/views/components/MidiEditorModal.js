@@ -89,6 +89,20 @@ class MidiEditorModal {
         // The mixin remains attached to the prototype for legacy callers.
         this.ccPicker = typeof MidiEditorCCPicker !== 'undefined' ? new MidiEditorCCPicker(this) : null;
 
+        // Remaining 9 facades (P2-F.10-wire). Thin auto-generated facades
+        // around the legacy mixins ; callsites migrate progressively from
+        // `this.<method>()` to `this.<facade>.<method>()`. Property names
+        // chosen to avoid collisions with existing state.
+        this.sequenceOps  = typeof MidiEditorSequence        !== 'undefined' ? new MidiEditorSequence(this)        : null;
+        this.ccOps        = typeof MidiEditorCC              !== 'undefined' ? new MidiEditorCC(this)              : null;
+        this.fileOps      = typeof MidiEditorFileOps         !== 'undefined' ? new MidiEditorFileOps(this)         : null;
+        this.renderer     = typeof MidiEditorRenderer        !== 'undefined' ? new MidiEditorRenderer(this)        : null;
+        this.routingOps   = typeof MidiEditorRouting         !== 'undefined' ? new MidiEditorRouting(this)         : null;
+        this.editActions  = typeof MidiEditorEditActions     !== 'undefined' ? new MidiEditorEditActions(this)     : null;
+        this.events       = typeof MidiEditorEvents          !== 'undefined' ? new MidiEditorEvents(this)          : null;
+        this.tablatureOps = typeof MidiEditorTablatureFacade !== 'undefined' ? new MidiEditorTablatureFacade(this) : null;
+        this.lifecycle    = typeof MidiEditorLifecycle       !== 'undefined' ? new MidiEditorLifecycle(this)       : null;
+
         // Tablature editor (for string instruments)
         this.tablatureEditor = null;
 
