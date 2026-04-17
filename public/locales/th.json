@@ -26,7 +26,9 @@
         "unknownError": "ข้อผิดพลาดที่ไม่ทราบ",
         "delete": "Delete",
         "apply": "Apply",
-        "name": "Name"
+        "name": "Name",
+        "on": "เปิด",
+        "off": "ปิด"
     },
     "app": {
         "title": "MidiMind 5.0 - ระบบออร์เคสตร้า MIDI",

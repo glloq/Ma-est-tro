@@ -1,7 +1,7 @@
 // ============================================================================
-// Fichier: public/js/views/components/midi-editor/MidiEditorTablature.js
+// File: public/js/views/components/midi-editor/MidiEditorTablature.js
 // Description: Tablature/Drum/Wind editor bridges
-//   Mixin: methodes ajoutees au prototype de MidiEditorModal
+//   Mixin: methods added to MidiEditorModal.prototype
 // ============================================================================
 
 (function() {

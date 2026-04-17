@@ -1,7 +1,7 @@
 // ============================================================================
-// Fichier: public/js/views/components/midi-editor/MidiEditorRouting.js
+// File: public/js/views/components/midi-editor/MidiEditorRouting.js
 // Description: Channel routing and connected instruments
-//   Mixin: methodes ajoutees au prototype de MidiEditorModal
+//   Mixin: methods added to MidiEditorModal.prototype
 // ============================================================================
 
 (function() {
@@ -10,20 +10,20 @@
     const MidiEditorRoutingMixin = {};
 
     // ========================================================================
-    // GESTION DES INSTRUMENTS CONNECTÉS (pour visualiser les notes jouables)
+    // CONNECTED INSTRUMENTS (pour visualiser les notes jouables)
     // ========================================================================
 
     /**
-    * Charger la liste des instruments MIDI connectés
+    * Load the list of connected MIDI devices
     */
     MidiEditorRoutingMixin.loadConnectedDevices = async function() {
         try {
             const result = await this.api.sendCommand('device_list');
             if (result && result.devices) {
-    // Filtrer uniquement les appareils qui ont une sortie (output: true)
+    // Keep only devices that expose an output (output: true)
                 const outputDevices = result.devices.filter(d => d.output === true);
 
-    // Éclater les devices multi-instruments en entrées individuelles
+    // Flatten multi-instrument devices into individual entries
                 const expandedDevices = [];
                 for (const device of outputDevices) {
                     if (device.instruments && device.instruments.length > 1) {
@@ -49,7 +49,7 @@
     }
 
     /**
-    * Mettre à jour l'état visuel des boutons de canal
+    * Update the channel buttons' visual state
     */
     MidiEditorRoutingMixin.updateChannelButtons = function() {
         const chips = this.container?.querySelectorAll('.channel-chip');
@@ -102,12 +102,12 @@
             showAllBtn.classList.remove('channel-locked');
         }
 
-    // Mettre à jour le compteur de notes
+    // Update the note counter
         this.updateStats();
     }
 
     MidiEditorRoutingMixin.render = function() {
-    // Créer le conteneur de la modale
+    // Create the modal container
         this.container = document.createElement('div');
         this.container.className = 'modal-overlay midi-editor-modal';
         this.container.innerHTML = `
@@ -138,7 +138,7 @@
                     <button class="modal-close" data-action="close">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <!-- Toolbar des canaux (juste sous le header) -->
+                    <!-- Channel toolbar (just below the header) -->
                     <div class="channels-toolbar-wrapper">
                         <div class="channels-toolbar">
                             ${this.renderChannelButtons()}
@@ -148,7 +148,7 @@
                         </div>
                     </div>
 
-                    <!-- Toolbar d'édition (compacte, icônes seules + tooltips) -->
+                    <!-- Edit toolbar (compact, icon-only buttons with tooltips) -->
                     <div class="editor-toolbar">
                         <!-- Section Playback -->
                         <div class="toolbar-section playback-section">
@@ -194,7 +194,7 @@
 
                         <div class="toolbar-divider"></div>
 
-                        <!-- Section Modes d'édition -->
+                        <!-- Edit-modes section -->
                         <div class="toolbar-section edit-modes-section">
                             <button class="tool-btn active" data-action="mode-drag-view" data-mode="drag-view" title="${this.t('midiEditor.viewModeTip')}">
                                 <span class="icon">👁️</span>
@@ -202,7 +202,7 @@
                             <button class="tool-btn" data-action="mode-select" data-mode="select" title="${this.t('midiEditor.selectModeTip')}">
                                 <span class="icon">◻</span>
                             </button>
-                            <!-- Bouton Edit unifié (visible hors mode tactile) -->
+                            <!-- Unified Edit button (visible outside touch mode) -->
                             <button class="tool-btn edit-unified-btn${this.touchMode ? ' hidden' : ''}" data-action="mode-edit" data-mode="edit" title="${this.t('midiEditor.editModeTip')}">
                                 <span class="icon">✏️</span>
                             </button>
@@ -220,7 +220,7 @@
 
                         <div class="toolbar-divider"></div>
 
-                        <!-- Section Édition (Copier/Coller/Supprimer) -->
+                        <!-- Edit section (Copy / Paste / Delete) -->
                         <div class="toolbar-section">
                             <button class="tool-btn" data-action="copy" id="copy-btn" title="${this.t('midiEditor.copy')} (Ctrl+C)" disabled>
                                 <span class="icon">📋</span>
@@ -252,14 +252,14 @@
 
                         <div class="toolbar-divider"></div>
 
-                        <!-- Bouton Paramètres (ouvre popover Canal/Instrument/Device) -->
+                        <!-- Settings button (opens Channel / Instrument / Device popover) -->
                         <div class="toolbar-section">
                             <button class="tool-btn" data-action="toggle-settings-popover" id="settings-popover-btn" title="${this.t('midiEditor.settingsPopover')}">
                                 <span class="icon">⚙️</span>
                             </button>
                         </div>
 
-                        <!-- Popover Paramètres (Canal, Instrument, Device connecté) -->
+                        <!-- Settings popover (Channel, Instrument, connected Device) -->
                         <div class="settings-popover" id="settings-popover" style="display: none;">
                             <div class="settings-popover-header">
                                 <span class="settings-popover-title">⚙️ ${this.t('midiEditor.settingsPopoverTitle')}</span>
@@ -357,7 +357,7 @@
                             <div class="playback-timeline-wrap" id="playback-timeline-container"></div>
                             <div class="piano-roll-wrapper">
                                 <div class="piano-roll-container" id="piano-roll-container">
-                                    <!-- webaudio-pianoroll sera inséré ici -->
+                                    <!-- webaudio-pianoroll will be inserted here -->
                                 </div>
                             </div>
                         </div>
@@ -369,21 +369,21 @@
 
                         <!-- Section CC/Pitchbend/Velocity (collapsible) -->
                         <div class="midi-editor-section cc-section collapsed" id="cc-section">
-                            <!-- Header collapsible avec sélecteur de canal -->
+                            <!-- Collapsible header with channel selector -->
                             <div class="cc-section-header collapsed" id="cc-section-header">
                                 <div class="cc-section-title">
                                     <span class="cc-collapse-icon">▼</span>
                                     <span>${this.t('midiEditor.ccSection')}</span>
                                 </div>
                                 <div class="cc-header-channels" id="editor-channel-selector">
-                                    <!-- Les canaux seront ajoutés dynamiquement -->
+                                    <!-- Channels are added dynamically -->
                                 </div>
                                 <button class="cc-settings-btn" id="cc-draw-settings-btn" title="${this.t('midiEditor.drawSettings') || 'Réglages de dessin'}">⚙</button>
                             </div>
 
-                            <!-- Contenu de l'éditeur CC/Velocity -->
+                            <!-- CC/Velocity editor content -->
                             <div class="cc-section-content" id="cc-section-content">
-                                <!-- Toolbar horizontal pour sélection du type (CC/PB/VEL) -->
+                                <!-- Horizontal toolbar to pick the type (CC / PB / Velocity) -->
                                 <div class="cc-type-toolbar">
                                     <label class="cc-toolbar-label">${this.t('midiEditor.type')}</label>
                                     <div class="cc-type-buttons-horizontal">
@@ -422,7 +422,7 @@
                                                 <button class="cc-type-btn" data-cc-type="cc5" title="${this.t('midiEditor.ccPortamentoTime')}">CC5</button>
                                             </div>
                                         </div>
-                                        <!-- Groupe dynamique (CC détectés non-statiques) -->
+                                        <!-- Dynamic group (detected non-static CCs) -->
                                         <div class="cc-btn-group cc-dynamic-group" data-group="other" style="display:none;">
                                             <span class="cc-group-label">+</span>
                                             <div class="cc-btn-group-buttons" id="cc-dynamic-buttons"></div>
@@ -463,9 +463,9 @@
 
                                 </div>
 
-                                <!-- Layout de l'éditeur (pleine hauteur sans sidebar) -->
+                                <!-- Editor layout (full height, no sidebar) -->
                                 <div class="cc-editor-layout">
-                                    <!-- Conteneur pour les éditeurs (CC, Velocity ou Tempo) -->
+                                    <!-- Container for the editors (CC, Velocity or Tempo) -->
                                     <div id="cc-editor-container" class="cc-editor-main"></div>
                                     <div id="velocity-editor-container" class="cc-editor-main" style="display: none;"></div>
                                     <div id="tempo-editor-container" class="cc-editor-main" style="display: none;"></div>
@@ -480,7 +480,7 @@
 
         document.body.appendChild(this.container);
 
-    // Attacher les événements
+    // Attach events
         this.attachEvents();
 
     // Fermer avec Escape
@@ -503,20 +503,20 @@
             return;
         }
 
-    // Vérifier que webaudio-pianoroll est chargé
+    // Ensure webaudio-pianoroll is loaded
         if (typeof customElements.get('webaudio-pianoroll') === 'undefined') {
             this.showError(this.t('midiEditor.libraryNotLoaded'));
             return;
         }
 
-    // Créer l'élément webaudio-pianoroll
+    // Create the webaudio-pianoroll element
         this.pianoRoll = document.createElement('webaudio-pianoroll');
 
     // Configuration
         const width = container.clientWidth || 1000;
         const height = container.clientHeight || 400;
 
-    // Calculer la plage de ticks depuis la séquence
+    // Compute the tick range from the sequence
         let maxTick = 0;
         let minNote = 127;
         let maxNote = 0;
@@ -532,17 +532,17 @@
             this.log('info', `Sequence range: ticks 0-${maxTick}, notes ${minNote}-${maxNote}`);
         }
 
-    // Stocker maxTick pour les sliders
+    // Store maxTick for the sliders
         if (!this.midiData) this.midiData = {};
         this.midiData.maxTick = maxTick;
 
-    // Zoom par défaut pour afficher ~20 secondes
-    // Avec 480 ticks/beat et 120 BPM standard: 20s = 9600 ticks
+    // Default zoom that shows ~20 seconds
+    // At 480 ticks/beat and 120 BPM: 20s = 9600 ticks
         const ticksPerBeat = this.midiData.header?.ticksPerBeat || 480;
         const twentySeconds = ticksPerBeat * 40; // ~20 secondes à 120 BPM
         const xrange = Math.max(twentySeconds, Math.min(maxTick, twentySeconds)); // Vue sur 20 premières secondes
 
-    // Vue centrée verticalement pour voir toutes les notes des canaux visibles
+    // Vertically centered view that keeps every note of visible channels onscreen
         const noteRange = Math.max(24, maxNote - minNote + 4); // +4 notes de marge au lieu de +24
         const centerNote = Math.floor((minNote + maxNote) / 2);
         const yoffset = Math.max(0, centerNote - Math.floor(noteRange / 2)); // Centrer verticalement
@@ -556,9 +556,9 @@
         this.pianoRoll.setAttribute('wheelzoom', '1');
         this.pianoRoll.setAttribute('xscroll', '1');
         this.pianoRoll.setAttribute('yscroll', '1');
-    // Désactiver le xruler natif du piano roll (remplacé par PlaybackTimelineBar)
+    // Disable the piano roll's native xruler (replaced by PlaybackTimelineBar)
         this.pianoRoll.setAttribute('xruler', '0');
-    // Marqueurs de lecture - gardés en interne pour le state mais masqués visuellement
+    // Playback markers — kept internal for state but hidden visually
         this.pianoRoll.setAttribute('markstart', '0');
         this.pianoRoll.setAttribute('markend', maxTick.toString());
         this.pianoRoll.setAttribute('cursor', '0');
@@ -571,7 +571,7 @@
     // Ajouter au conteneur AVANT de charger la sequence
         container.appendChild(this.pianoRoll);
 
-    // Masquer les marqueurs SVG natifs du piano roll (remplacés par PlaybackTimelineBar)
+    // Hide the piano roll's native SVG markers (replaced by PlaybackTimelineBar)
         const cursorImg = this.pianoRoll.querySelector('#wac-cursor');
         const markStartImg = this.pianoRoll.querySelector('#wac-markstart');
         const markEndImg = this.pianoRoll.querySelector('#wac-markend');
@@ -579,9 +579,9 @@
         if (markStartImg) markStartImg.style.display = 'none';
         if (markEndImg) markEndImg.style.display = 'none';
 
-    // OPTIMISATION: Batch les assignations de propriétés pour éviter les redraws multiples
-    // Chaque propriété avec observer 'layout' déclenche layout() → redraw()
-    // Sans batch: 3+ redraws inutiles. Avec batch: 1 seul redraw à la fin.
+    // OPTIMIZATION: batch property assignments to avoid multiple redraws
+    // Each property with a 'layout' observer triggers layout() → redraw()
+    // Without batching: 3+ unnecessary redraws. With batching: a single redraw at the end.
         this.pianoRoll.beginBatchUpdate();
 
         this.pianoRoll.tempo = this.tempo || 120;
@@ -596,13 +596,13 @@
         this.log('info', `Piano roll grid/snap: grid=${this.pianoRoll.grid} ticks, snap=${this.pianoRoll.snap} ticks (${currentSnap.label})`);
 
     // OPTIMISATION: Remplacer setTimeout(100ms) par un seul RAF
-    // Le composant est déjà monté après appendChild, pas besoin d'attendre 100ms
+    // The component is already mounted after appendChild — no 100ms wait needed
         await new Promise(resolve => requestAnimationFrame(resolve));
 
-    // Définir les couleurs des canaux MIDI sur le piano roll AVANT de charger la séquence
+    // Set the MIDI channel colors on the piano roll BEFORE loading the sequence
         this.pianoRoll.channelColors = this.channelColors;
 
-    // Définir le canal par défaut pour les nouvelles notes (premier canal actif)
+    // Pick the default channel for new notes (first active channel)
         if (this.activeChannels.size > 0) {
             this.pianoRoll.defaultChannel = Array.from(this.activeChannels)[0];
         }
@@ -616,14 +616,12 @@
     // Initialize PlaybackTimelineBar
         this._initTimelineBar(maxTick, ticksPerBeat, xrange);
 
-    // Charger la sequence SI elle existe et n'est pas vide
+        // Load the sequence only when it exists and is non-empty
         if (this.sequence && this.sequence.length > 0) {
             this.log('info', `Loading ${this.sequence.length} notes into piano roll`);
-
-    // DEBUG: Afficher les premières notes
             this.log('debug', 'First 3 notes:', JSON.stringify(this.sequence.slice(0, 3)));
 
-    // Assigner la sequence au piano roll
+        // Assign the sequence to the piano roll
             this.pianoRoll.sequence = this.sequence;
 
     // OPTIMISATION: redraw direct via RAF au lieu de setTimeout(50ms)
@@ -632,12 +630,12 @@
                 this.log('info', 'Piano roll redrawn with channel colors');
             }
 
-    // Vérifier que la sequence a bien été assignée
+    // Verify the sequence was correctly assigned
             this.log('debug', `Piano roll sequence length: ${this.pianoRoll.sequence?.length || 0}`);
         } else {
             this.log('warn', 'No notes to display in piano roll - adding test notes');
 
-    // Ajouter quelques notes de test pour vérifier que le piano roll fonctionne
+    // Add a few test notes to confirm the piano roll works
             this.pianoRoll.sequence = [
                 { t: 0, g: 480, n: 60 },   // C4
                 { t: 480, g: 480, n: 64 }, // E4
@@ -649,13 +647,13 @@
             }
         }
 
-    // Stocker une copie de la séquence pour détecter les changements
+    // Store a sequence copy to detect changes
         let previousSequence = [];
 
-    // Optimisation : utiliser un debounce pour éviter les appels multiples
+    // Optimization: debounce to avoid multiple calls
         let changeTimeout = null;
         const handleChange = () => {
-    // Feedback audio instantané avant le debounce
+    // Instant audio feedback before the debounce
             this.handleNoteFeedback(previousSequence);
 
             if (changeTimeout) clearTimeout(changeTimeout);
@@ -666,15 +664,15 @@
                 this.updateUndoRedoButtonsState(); // Mettre à jour undo/redo quand la séquence change
                 this.updateEditButtons(); // Mettre à jour copy/paste/delete quand la sélection change
 
-    // Mettre à jour la copie de la séquence après la synchronisation
+    // Update the sequence copy after the sync
                 previousSequence = this.copySequence(this.pianoRoll.sequence);
             }, 100); // Debounce de 100ms
         };
 
-    // Initialiser la copie de la séquence
+    // Initialize the sequence copy
         previousSequence = this.copySequence(this.pianoRoll.sequence);
 
-    // Écouter les changements avec debounce
+    // Listen for changes with a debounce
         this.pianoRoll.addEventListener('change', handleChange);
         this.pianoRoll.addEventListener('selectionchange', () => {
             this.updateEditButtons();
@@ -704,19 +702,19 @@
         this.updateUndoRedoButtonsState(); // État initial undo/redo
         this.updateInstrumentSelector(); // État initial sélecteur d'instrument
 
-    // Définir le mode par défaut (drag-view pour navigation)
+    // Pick the default mode (drag-view for navigation)
         if (this.pianoRoll && typeof this.pianoRoll.setUIMode === 'function') {
             this.pianoRoll.setUIMode(this.editMode); // 'drag-view' par défaut
             this.log('info', `Piano roll UI mode set to: ${this.editMode}`);
         }
 
-    // L'éditeur CC/Pitchbend sera initialisé lors de l'ouverture de la section
+    // The CC/pitch-bend editor is initialized when the section opens
     // via toggleCCSection()
 
-    // Charger la liste des instruments connectés pour le filtrage des notes jouables
+    // Load connected devices so playable notes can be filtered
         await this.loadConnectedDevices();
 
-    // Restaurer les routages sauvegardés en DB pour ce fichier
+    // Restore the routings saved in DB for this file
         await this._loadSavedRoutings();
 
     // Update tablature button visibility for initial channel selection
@@ -730,7 +728,7 @@
     * Note: Fonction simplifiée - l'élément note-count a été retiré pour plus d'espace
     */
     MidiEditorRoutingMixin.updateStats = function() {
-    // Anciennement affichait le nombre de notes, retiré pour optimiser l'espace
+    // Previously showed the note count — removed to save space
     // L'information est toujours visible dans le tooltip des boutons de canal
     }
 

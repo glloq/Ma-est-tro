@@ -1,6 +1,6 @@
 // ============================================================================
-// Fichier: public/js/views/components/midi-editor/MidiEditorConstants.js
-// Description: Constantes partagees par tous les modules de l'editeur MIDI
+// File: public/js/views/components/midi-editor/MidiEditorConstants.js
+// Description: Constants shared by all MIDI editor modules
 // ============================================================================
 
 const MidiEditorConstants = {

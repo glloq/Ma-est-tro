@@ -1,5 +1,5 @@
 // ============================================================================
-// Fichier: public/js/views/components/midi-editor/MidiEditorPlayback.js
+// File: public/js/views/components/midi-editor/MidiEditorPlayback.js
 // Description: Playback/Synthesizer management for the MIDI Editor
 //   - loadSequenceForPlayback()
 //   - togglePlayback(), playbackPause(), playbackStop()
@@ -26,7 +26,7 @@ class MidiEditorPlayback {
     async initSynthesizer() {
         const m = this.modal;
         if (m.synthesizer) {
-            // Synchroniser la banque son avec le réglage courant
+            // Sync the sound bank with the current setting
             if (m.synthesizer.setSoundBank) {
                 const savedBank = MidiSynthesizer.getSavedBank();
                 m.synthesizer.setSoundBank(savedBank);

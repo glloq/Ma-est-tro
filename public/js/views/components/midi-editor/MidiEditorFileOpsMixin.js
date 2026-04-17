@@ -1,8 +1,8 @@
 // ============================================================================
-// Fichier: public/js/views/components/midi-editor/MidiEditorFileOpsMixin.js
+// File: public/js/views/components/midi-editor/MidiEditorFileOpsMixin.js
 // Description: File operations for the MIDI Editor (save / save-as / rename /
 //              convert sequence → MIDI / auto-assign modal).
-//   Mixin: methodes ajoutees au prototype de MidiEditorModal
+//   Mixin: methods added to MidiEditorModal.prototype
 // ============================================================================
 
 (function() {
@@ -15,7 +15,7 @@
     * Format compatible avec la bibliothèque 'midi-file'
     */
     MidiEditorFileOpsMixin.convertSequenceToMidi = function() {
-    // Utiliser fullSequence qui contient toutes les notes à jour
+    // Use fullSequence which holds every up-to-date note
         const fullSequenceToSave = this.fullSequence;
 
         if (!fullSequenceToSave || fullSequenceToSave.length === 0) {
@@ -39,10 +39,10 @@
             return n;
         };
 
-    // Convertir la sequence en événements MIDI
+    // Convert the sequence into MIDI events
         const events = [];
 
-    // Ajouter les événements de tempo (tempo map complète ou tempo global)
+    // Add tempo events (full tempo map or global tempo)
         if (this.tempoEvents && this.tempoEvents.length > 0) {
             this.tempoEvents.forEach(tempoEvent => {
                 const usPerBeat = Math.round(60000000 / tempoEvent.tempo);
@@ -65,7 +65,7 @@
             this.log('debug', `Added single tempo event: ${tempo} BPM (${microsecondsPerBeat} μs/beat)`);
         }
 
-    // Déterminer quels canaux sont utilisés et leurs instruments
+    // Determine which channels are in use and their programs
         const usedChannels = new Map(); // canal -> program
         fullSequenceToSave.forEach(note => {
             const channel = note.c !== undefined ? note.c : 0;
@@ -77,7 +77,7 @@
             }
         });
 
-    // Ajouter les événements programChange au début (tick 0) pour chaque canal
+    // Add programChange events at tick 0 for each channel
         usedChannels.forEach((program, channel) => {
             if (channel !== 9) { // Canal 10 (index 9) est pour drums, pas de programChange
                 events.push({
@@ -90,7 +90,7 @@
             }
         });
 
-    // Ajouter les événements de note
+    // Add note events
         fullSequenceToSave.forEach(note => {
             const tick = clamp(note.t, 0, Number.MAX_SAFE_INTEGER, 'ticks');
             const noteNumber = clamp(note.n, 0, 127, 'note');
@@ -117,7 +117,7 @@
             });
         });
 
-    // Ajouter les événements CC et pitchbend
+    // Add CC and pitch-bend events
         if (this.ccEvents && this.ccEvents.length > 0) {
             this.log('info', `Adding ${this.ccEvents.length} CC/pitchbend events to MIDI file`);
 
@@ -125,9 +125,9 @@
             this.ccEvents.forEach(ccEvent => {
                 const ccTick = clamp(ccEvent.ticks ?? ccEvent.tick ?? 0, 0, Number.MAX_SAFE_INTEGER, 'ticks');
                 const ccChannel = clamp(ccEvent.channel, 0, 15, 'channel');
-    // Convertir le type de l'éditeur (cc1, cc2, cc5, cc7, cc10, cc11, cc74) en numéro de contrôleur
+    // Translate the editor type (cc1, cc2, cc5, cc7, cc10, cc11, cc74) into a controller number
                 if (ccEvent.type.startsWith('cc')) {
-    // Extraire le numéro du type (cc1 -> 1, cc7 -> 7, etc.)
+    // Extract the numeric type (cc1 -> 1, cc7 -> 7, etc.)
                     const controllerNumber = parseInt(ccEvent.type.replace('cc', ''));
                     events.push({
                         absoluteTime: ccTick,
@@ -185,7 +185,7 @@
                 channel: event.channel
             };
 
-    // Ajouter les champs spécifiques selon le type d'événement
+    // Add event-type-specific fields
             if (event.type === 'programChange') {
                 trackEvent.programNumber = event.programNumber;
             } else if (event.type === 'noteOn' || event.type === 'noteOff') {
@@ -198,7 +198,7 @@
                 trackEvent.value = event.value;
             } else if (event.type === 'setTempo') {
                 trackEvent.microsecondsPerBeat = event.microsecondsPerBeat;
-    // Les événements setTempo n'ont pas de channel
+    // setTempo events have no channel
                 delete trackEvent.channel;
             }
 
@@ -229,7 +229,7 @@
     }
 
     /**
-    * Sauvegarder le fichier MIDI
+    * Save the MIDI file
     */
     MidiEditorFileOpsMixin.saveMidiFile = async function() {
         if (!this.currentFile || !this.pianoRoll) {
@@ -241,16 +241,16 @@
         try {
             this.log('info', `Saving MIDI file: ${this.currentFile}`);
 
-    // Synchroniser fullSequence avec le piano roll actuel (gère les canaux, ajouts, suppressions, etc.)
+    // Sync fullSequence with the current piano roll (handles channels, additions, deletions, etc.)
             this.syncFullSequenceFromPianoRoll();
 
-    // Synchroniser les événements CC/Pitchbend depuis l'éditeur
+    // Sync CC/pitch-bend events from the editor
             this.syncCCEventsFromEditor();
 
-    // Synchroniser les événements de tempo depuis l'éditeur
+    // Sync tempo events from the editor
             this.syncTempoEventsFromEditor();
 
-    // Mettre à jour la liste des canaux pour refléter la séquence actuelle
+    // Update the channel list to reflect the current sequence
             this.updateChannelsFromSequence();
 
             this.log('info', `Saving ${this.fullSequence.length} notes across ${this.channels.length} channels`);
@@ -264,7 +264,7 @@
 
             this.log('debug', `MIDI data to save: ${midiData.tracks.length} tracks`);
 
-    // Envoyer au backend
+    // Send to the backend
             const response = await this.api.writeMidiFile(this.currentFile, midiData);
 
             if (response && response.success) {
@@ -272,7 +272,7 @@
                 this.updateSaveButton();
                 this.showNotification(this.t('midiEditor.saveSuccess'), 'success');
 
-    // Émettre événement
+    // Emit event
                 if (this.eventBus) {
                     this.eventBus.emit('midi_editor:saved', {
                         filePath: this.currentFile
@@ -491,7 +491,7 @@
         const baseName = currentName.replace(/\.(mid|midi)$/i, '');
         const extension = currentName.match(/\.(mid|midi)$/i)?.[0] || '.mid';
 
-    // Créer le dialogue de renommage (modal centré)
+    // Create the rename dialog (centered modal)
         const dialog = document.createElement('div');
         dialog.className = 'rename-dialog-overlay';
         dialog.innerHTML = `
@@ -512,14 +512,14 @@
             </div>
         `;
 
-    // Ajouter au body pour être au premier plan de tout
+    // Append to <body> so it sits on top of everything
         document.body.appendChild(dialog);
 
         const input = dialog.querySelector('.rename-input');
         const cancelBtn = dialog.querySelector('.rename-cancel');
         const confirmBtn = dialog.querySelector('.rename-confirm');
 
-    // Focus et sélection du texte
+    // Focus and select the text
         input.focus();
         input.select();
 
@@ -546,7 +546,7 @@
                 });
 
                 if (response && response.success) {
-    // Mettre à jour le nom affiché
+    // Update the displayed name
                     this.currentFilename = newFilename;
                     const fileNameSpan = this.container.querySelector('#editor-file-name');
                     if (fileNameSpan) {
@@ -555,7 +555,7 @@
 
                     this.showNotification(this.t('midiEditor.renameSuccess'), 'success');
 
-    // Émettre événement pour rafraîchir la liste des fichiers
+    // Emit event to refresh the file list
                     if (this.eventBus) {
                         this.eventBus.emit('midi_editor:file_renamed', {
                             fileId: this.currentFile,
@@ -574,7 +574,7 @@
             closeDialog();
         };
 
-    // Événements
+    // Events
         cancelBtn.addEventListener('click', closeDialog);
         confirmBtn.addEventListener('click', confirmRename);
         dialog.addEventListener('click', (e) => {

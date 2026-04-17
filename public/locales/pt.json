@@ -26,7 +26,9 @@
         "unknownError": "Erro desconhecido",
         "delete": "Delete",
         "apply": "Apply",
-        "name": "Nome"
+        "name": "Nome",
+        "on": "Ligado",
+        "off": "Desligado"
     },
     "app": {
         "title": "MidiMind 5.0 - MIDI Orchestration System",

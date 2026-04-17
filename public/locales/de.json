@@ -26,7 +26,9 @@
         "unknownError": "Unbekannter Fehler",
         "delete": "Löschen",
         "apply": "Anwenden",
-        "name": "Name"
+        "name": "Name",
+        "on": "Ein",
+        "off": "Aus"
     },
     "app": {
         "title": "MidiMind 5.0 - MIDI-Orchestrierungssystem",

@@ -1,7 +1,7 @@
 // ============================================================================
-// Fichier: public/js/views/components/MidiEditorModal.js
-// Version: v2.1.0 - Utilise webaudio-pianoroll (g200kg) + i18n support
-// Description: Modale d'édition MIDI avec piano roll webaudio-pianoroll
+// File: public/js/views/components/MidiEditorModal.js
+// Built on the vendored webaudio-pianoroll (g200kg) element with project i18n
+// Description: MIDI editor modal built on webaudio-pianoroll
 // ============================================================================
 
 class MidiEditorModal {
@@ -17,32 +17,32 @@ class MidiEditorModal {
         // i18n support
         this.localeUnsubscribe = null;
 
-        // État
+        // State
         this.currentFile = null;  // fileId
         this.currentFilename = null;  // nom du fichier pour affichage
         this.midiData = null;
         this.isDirty = false;
 
-        // Sequence de notes pour webaudio-pianoroll
+        // Note sequence for webaudio-pianoroll
         this.sequence = [];
         this.fullSequence = []; // Toutes les notes (tous canaux)
         this.activeChannels = new Set(); // Canaux actifs à afficher
         this.channels = []; // Informations sur les canaux disponibles
 
-        // Clipboard pour copy/paste
+        // Clipboard for copy/paste
         this.clipboard = [];
 
-        // Mode d'édition actuel
+        // Current edit mode
         this.editMode = 'drag-view'; // 'select', 'drag-notes', 'drag-view', 'edit' - drag-view par défaut pour navigation
 
-        // Mode tactile : affiche les boutons séparés (déplacer, ajouter, agrandir) au lieu du bouton crayon unifié
+        // Touch mode: shows separate Move/Add/Resize buttons instead of the unified pencil button
         this.touchMode = this._loadTouchModePref();
 
         // Playback feedback preferences
         this.keyboardPlaybackEnabled = this._loadKeyboardPlaybackPref();
         this.dragPlaybackEnabled = this._loadDragPlaybackPref();
 
-        // Instrument sélectionné pour les nouveaux canaux (program MIDI GM)
+        // Instrument selected for new channels (GM MIDI program)
         this.selectedInstrument = 0; // Piano par défaut
 
         // CC/Pitchbend/Velocity/Tempo Editor
@@ -54,7 +54,7 @@ class MidiEditorModal {
         this.tempoEvents = []; // Événements de tempo
         this.ccSectionExpanded = false; // État du collapse de la section CC
 
-        // Instrument connecté pour le routage
+        // Connected instrument used for routing
         this.connectedDevices = []; // Liste des appareils MIDI connectés
 
         // Per-channel routing: Map<channel, deviceValue> (e.g. "deviceId" or "deviceId::channel")
@@ -86,7 +86,7 @@ class MidiEditorModal {
         // Wind instrument editor (for brass/reed/pipe channels)
         this.windInstrumentEditor = null;
 
-        // Playback (synthétiseur intégré)
+        // Playback (embedded synthesizer)
         this.synthesizer = null;
         this.isPlaying = false;
         this.isPaused = false;
@@ -96,7 +96,7 @@ class MidiEditorModal {
         // Playback manager (delegate)
         this._playback = typeof MidiEditorPlayback !== 'undefined' ? new MidiEditorPlayback(this) : null;
 
-        // Constantes partagees depuis MidiEditorConstants
+        // Constants shared from MidiEditorConstants
         const constants = (typeof MidiEditorConstants !== 'undefined') ? MidiEditorConstants : {};
         this.snapValues = constants.snapValues || [
             { ticks: 120, label: '1/1' }, { ticks: 60, label: '1/2' },
@@ -138,13 +138,13 @@ class MidiEditorModal {
     }
 
     // ========================================================================
-    // AFFICHAGE DE LA MODALE
+    // DISPLAY THE MODAL
     // ========================================================================
 
     /**
-     * Afficher la modale d'édition MIDI
-     * @param {string} fileId - ID du fichier dans la base de données
-     * @param {string} filename - Nom du fichier (optionnel, pour l'affichage)
+     * Display the MIDI editor modal
+     * @param {string} fileId - File id in the database
+     * @param {string} filename - File name (optional, used for display)
      */
     async show(fileId, filename = null) {
         if (this.isOpen) {
@@ -156,13 +156,13 @@ class MidiEditorModal {
         this.currentFilename = filename || fileId;
         this.isDirty = false;
 
-        // Réinitialiser l'état de routage/désactivation du fichier précédent
+        // Reset routing/disabled state from the previous file
         this.channelRouting.clear();
         this.channelDisabled.clear();
         this.channelPlayableHighlights.clear();
 
         try {
-            // Charger le fichier MIDI
+            // Load the MIDI file
             await this.loadMidiFile(fileId);
 
             // Afficher la modale
@@ -186,18 +186,18 @@ class MidiEditorModal {
                 this.eventBus.on('routing:changed', this._onExternalRoutingChanged);
             }
 
-            // Installer le gestionnaire beforeunload pour empêcher la fermeture avec des modifications non sauvegardées
+            // Install the beforeunload handler to prevent closing with unsaved changes
             this.setupBeforeUnloadHandler();
 
             // Subscribe to locale changes
             if (typeof i18n !== 'undefined') {
                 this.localeUnsubscribe = i18n.onLocaleChange(() => {
-                    // Note: le piano roll est déjà rendu, on ne peut pas facilement re-traduire
-                    // mais on garde la souscription pour cohérence
+                    // Note: the piano roll is already rendered, we cannot easily re-translate
+                    // but keep the subscription for consistency
                 });
             }
 
-            // Émettre événement
+            // Emit event
             if (this.eventBus) {
                 this.eventBus.emit('midi_editor:opened', { fileId, filename: this.currentFilename });
             }
@@ -209,13 +209,13 @@ class MidiEditorModal {
     }
 
     /**
-     * Charger le fichier MIDI depuis le backend
+     * Load the MIDI file depuis le backend
      */
     async loadMidiFile(fileId) {
         try {
             this.log('info', `Loading MIDI file: ${this.currentFilename || fileId}`);
 
-            // Utiliser la nouvelle méthode readMidiFile du BackendAPIClient
+            // Use BackendAPIClient.readMidiFile
             const response = await this.api.readMidiFile(fileId);
 
             if (!response || !response.midiData) {
@@ -223,7 +223,7 @@ class MidiEditorModal {
             }
 
             // Le backend renvoie un objet avec : { id, filename, midi: {...}, size, tracks, duration, tempo }
-            // Extraire les données MIDI proprement dites
+            // Extract the raw MIDI data
             const fileData = response.midiData;
             this.midiData = fileData.midi || fileData;
 

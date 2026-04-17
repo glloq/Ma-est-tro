@@ -1,7 +1,7 @@
 // ============================================================================
-// Fichier: public/js/views/components/midi-editor/MidiEditorLifecycle.js
+// File: public/js/views/components/midi-editor/MidiEditorLifecycle.js
 // Description: Close, cleanup, and lifecycle management
-//   Mixin: methodes ajoutees au prototype de MidiEditorModal
+//   Mixin: methods added to MidiEditorModal.prototype
 // ============================================================================
 
 (function() {
@@ -10,7 +10,7 @@
     const MidiEditorLifecycleMixin = {};
 
     // ========================================================================
-    // FERMETURE
+    // CLOSING
     // ========================================================================
 
     /**
@@ -19,7 +19,7 @@
     MidiEditorLifecycleMixin.close = function() {
         this.log('debug', `close() called, isDirty: ${this.isDirty}`);
 
-    // Vérifier les modifications non sauvegardées
+    // Check for unsaved changes
         if (this.isDirty) {
             this.log('debug', 'Has unsaved changes, showing modal');
             this.showUnsavedChangesModal();
@@ -36,7 +36,7 @@
     MidiEditorLifecycleMixin.showUnsavedChangesModal = function() {
         this.log('debug', 'Showing unsaved changes modal');
 
-    // Créer la modal de confirmation
+    // Create the confirmation modal
         const confirmModal = document.createElement('div');
         confirmModal.className = 'modal-overlay unsaved-changes-modal';
         confirmModal.style.cssText = `
@@ -159,7 +159,7 @@
             document.removeEventListener('keydown', escHandler);
             confirmModal.remove();
             await this.saveMidiFile();
-    // Fermer après la sauvegarde
+    // Close after saving
             this.doClose();
         });
 
@@ -186,7 +186,7 @@
             this.localeUnsubscribe = null;
         }
 
-    // Arrêter la synchronisation viewport
+    // Stop viewport synchronization
         if (this.pianoRoll && this._viewportChangeHandler) {
             this.pianoRoll.removeEventListener('viewportchange', this._viewportChangeHandler);
             this._viewportChangeHandler = null;
@@ -215,7 +215,7 @@
             this.timelineBar = null;
         }
 
-    // Nettoyer l'éditeur CC/Pitchbend
+    // Clean up the CC/pitch-bend editor
         if (this.ccEditor) {
             this.ccEditor.destroy();
             this.ccEditor = null;
@@ -225,38 +225,38 @@
         this.currentCCType = 'cc1';
         this._ccChannelDelegationAttached = false;
 
-    // Nettoyer l'éditeur de vélocité
+    // Clean up the velocity editor
         if (this.velocityEditor) {
             this.velocityEditor.destroy();
             this.velocityEditor = null;
         }
 
-    // Nettoyer l'éditeur de tempo
+    // Clean up the tempo editor
         if (this.tempoEditor) {
             this.tempoEditor.destroy();
             this.tempoEditor = null;
         }
         this.tempoEvents = [];
 
-    // Nettoyer l'éditeur de tablature
+    // Clean up the tablature editor
         if (this.tablatureEditor) {
             this.tablatureEditor.destroy();
             this.tablatureEditor = null;
         }
 
-    // Nettoyer l'éditeur de pattern percussion
+    // Clean up the drum-pattern editor
         if (this.drumPatternEditor) {
             this.drumPatternEditor.destroy();
             this.drumPatternEditor = null;
         }
 
-    // Nettoyer l'éditeur d'instruments à vent
+    // Clean up the wind-instrument editor
         if (this.windInstrumentEditor) {
             this.windInstrumentEditor.destroy();
             this.windInstrumentEditor = null;
         }
 
-    // Nettoyer le synthétiseur
+    // Clean up the synthesizer
         this.disposeSynthesizer();
 
     // Retirer les listeners de resize drag
@@ -267,7 +267,7 @@
             this._resizeStopResize = null;
         }
 
-    // Retirer l'événement escape
+    // Remove the escape listener
         if (this.escapeHandler) {
             document.removeEventListener('keydown', this.escapeHandler);
             this.escapeHandler = null;
@@ -310,7 +310,7 @@
         this.channels = [];
         this.clipboard = [];
 
-    // Émettre événement
+    // Emit event
         if (this.eventBus) {
             this.eventBus.emit('midi_editor:closed', {});
         }
@@ -343,7 +343,7 @@
     }
 
     // ========================================================================
-    // UTILITAIRES
+    // UTILITIES
     // ========================================================================
 
     MidiEditorLifecycleMixin.showNotification = function(message, type = 'info') {

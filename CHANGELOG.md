@@ -2,6 +2,60 @@
 
 All notable changes to Ma-est-tro are documented in this file.
 
+## [Unreleased]
+
+### Added
+- `docs/MIDI_EDITOR.md` — technical documentation for the MIDI editor modal
+  (architecture, module map, public API, state model, load/save data flow,
+  MIDI value validation, keyboard shortcuts, event bus contract, extension
+  points, logging convention, known limitations).
+- Expanded README "MIDI Editor" section with feature table, CC list,
+  keyboard shortcuts, and preferences reference.
+- Cross-links from `docs/ARCHITECTURE.md` and `docs/TABLATURE_IMPLEMENTATION.md`
+  to the new editor documentation.
+- `tests/frontend/midi-editor-clamp.test.js` — 10 Vitest cases that pin the
+  save-time MIDI clamping contract (note/channel/velocity/CC/pitch-bend
+  ranges, tempo-map emission, drum-channel programChange skip).
+- `common.on` / `common.off` translation keys across the 28 locale files, so
+  the touch-mode / keyboard-playback / drag-playback toggle labels can be
+  localised.
+
+### Changed
+- Migration 040 drops the unused `adaptation_metadata` column on `midi_files`
+  (the JSON it carried was never read; the per-channel transposition data it
+  duplicated is already stored on `midi_instrument_routings`).
+- MIDI editor toggle labels (Touch mode, Keyboard playback, Drag playback)
+  now go through `this.t('common.on') / this.t('common.off')` instead of the
+  hard-coded English literals `'ON'` / `'OFF'`.
+- File headers and inline comments across the MIDI editor modules
+  (`public/js/views/components/MidiEditorModal.js` and the 19 files in
+  `public/js/views/components/midi-editor/`) were translated from French to
+  English, including JSDoc blocks, section separators, and HTML comments in
+  template literals. About 300 comment lines touched; no executable code
+  altered.
+
+### Fixed
+- Clamp out-of-range MIDI values in `convertSequenceToMidi` (note 0–127,
+  channel 0–15, velocity 1–127, CC 0–127, pitch bend −8192…8191) so a corrupt
+  in-memory sequence can no longer silently produce an invalid `.mid`.
+- `file_routing_sync` now skips routings targeting channels absent from
+  `midi_file_channels`, preventing orphan routings after a file edit that
+  removed a channel.
+- Deterministic tempo event ids (`tempo_<ticks>_<index>`) replace the previous
+  `Date.now() + Math.random()` scheme so external references survive a reload.
+
+### Removed
+- Dead `MidiEditorState.js` (441 l.) and `MidiEditorFileOps.js` (798 l.)
+  classes (loaded but never instantiated; their methods had been
+  re-implemented as mixins).
+- Orphan `copySequence` on `MidiEditorModal`, unused
+  `_autoActivateTablature` stub, and redundant `localStorage` preference
+  helpers (folded into `_getPreference` / `_setPreference`).
+- File operations (`saveMidiFile`, `saveAsFile`, `showSaveAsDialog`,
+  `showRenameDialog`, `convertSequenceToMidi`, …) moved out of
+  `MidiEditorCCPicker.js` into a dedicated `MidiEditorFileOpsMixin.js`.
+- `MidiTransposer.generateAdaptationMetadata()` (unused after migration 040).
+
 ## [5.0.0] - 2026-03-24
 
 ### Added

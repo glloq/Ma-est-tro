@@ -1,7 +1,7 @@
 // ============================================================================
-// Fichier: public/js/views/components/midi-editor/MidiEditorCCPicker.js
+// File: public/js/views/components/midi-editor/MidiEditorCCPicker.js
 // Description: CC picker modal
-//   Mixin: methodes ajoutees au prototype de MidiEditorModal
+//   Mixin: methods added to MidiEditorModal.prototype
 // ============================================================================
 
 (function() {
@@ -17,7 +17,7 @@
     * Ouvrir le picker de CC pour ajouter un CC à la liste
     */
     MidiEditorCCPickerMixin.openCCPicker = function() {
-    // Fermer si déjà ouvert
+    // Close if already open
         let existing = this.container?.querySelector('#cc-picker-modal');
         if (existing) {
             existing.remove();
@@ -27,11 +27,11 @@
         const addBtn = this.container?.querySelector('#cc-add-btn');
         if (!addBtn) return;
 
-    // Déterminer quels CC sont déjà visibles (ont des données ou sont des boutons statiques)
+    // Determine which CCs are already visible (have data or are static buttons)
         const allUsedTypes = this.getAllUsedCCTypes();
         const staticCCNums = new Set([1, 2, 5, 7, 10, 11, 74, 76, 77, 78, 91]);
 
-    // Construire le contenu HTML du picker par catégories
+    // Build the picker's HTML content, grouped by category
         let categoriesHTML = '';
         MidiEditorModal.CC_CATEGORIES.forEach(cat => {
             const buttonsHTML = cat.ccs.map(ccNum => {
@@ -146,7 +146,7 @@
     MidiEditorCCPickerMixin.updateCCEditorChannel = function() {
         if (!this.ccEditor) return;
 
-    // Utiliser le premier canal actif comme canal pour l'édition CC
+    // Use the first active channel as the CC editor's channel
         const activeChannel = this.activeChannels.size > 0
             ? Array.from(this.activeChannels)[0]
             : 0;
@@ -168,12 +168,12 @@
             this.ccEditor.deleteSelected();
         }
 
-    // Mettre à jour l'état du bouton de suppression
+    // Update the delete button state
         this.updateDeleteButtonState();
     }
 
     /**
-    * Mettre à jour l'état du bouton de suppression
+    * Update the delete button state
     */
     MidiEditorCCPickerMixin.updateDeleteButtonState = function() {
         const deleteBtn = this.container?.querySelector('#cc-delete-btn');
@@ -208,30 +208,30 @@
 
         this.log('info', `Initializing CC Editor with ${this.ccEvents.length} total CC events`);
 
-    // Obtenir les paramètres du piano roll
+    // Read the piano-roll parameters
         const options = {
             timebase: this.pianoRoll?.timebase || 480,
             xrange: this.pianoRoll?.xrange || 1920,
             xoffset: this.pianoRoll?.xoffset || 0,
             grid: this.snapValues[this.currentSnapIndex].ticks,
             onChange: () => {
-    // Marquer comme modifié lors des changements CC/Pitchbend
+    // Mark as dirty on CC/pitch-bend changes
                 this.isDirty = true;
                 this.updateSaveButton();
             }
         };
 
-    // Créer l'éditeur
+    // Create the editor
         this.ccEditor = new CCPitchbendEditor(container, options);
         this.ccEditor.setCC(this.currentCCType);
 
-    // Charger les événements existants AVANT de mettre à jour le sélecteur
+    // Load existing events BEFORE refreshing the selector
         if (this.ccEvents.length > 0) {
             this.ccEditor.loadEvents(this.ccEvents);
             this.log('info', `Loaded ${this.ccEvents.length} CC events into editor`);
         }
 
-    // Mettre à jour le sélecteur de canal pour afficher uniquement les canaux utilisés
+    // Update the channel selector to show only used channels
         this.updateCCChannelSelector();
 
     // When editing a single channel, use that channel; otherwise fall back to first channel
@@ -245,21 +245,21 @@
         }
         this.ccEditor.setChannel(activeChannel);
 
-    // Auto-sélectionner un CC type qui a des données sur ce canal
+    // Auto-select a CC type that has data on this channel
         this.selectBestCCTypeForChannel(activeChannel);
 
         this.highlightUsedCCButtons();
 
         this.log('info', `CC Editor initialized - Type: ${this.currentCCType}, Channel: ${activeChannel + 1}, File channels: [${fileChannels.map(c => c + 1).join(', ')}]`);
 
-    // Ajouter un écouteur pour mettre à jour le bouton de suppression lors des interactions
+    // Add a listener that refreshes the delete button on interactions
         container.addEventListener('mouseup', () => {
-    // Utiliser setTimeout pour laisser la sélection se mettre à jour d'abord
+    // Use setTimeout so the selection updates first
             setTimeout(() => this.updateDeleteButtonState(), 0);
         });
 
-    // Attendre que le layout flex soit complètement calculé avant de resize
-    // Utiliser requestAnimationFrame en boucle jusqu'à ce que l'élément ait une hauteur valide
+    // Wait for the flex layout to settle before resizing
+    // Use requestAnimationFrame in a loop until the element has a valid height
         this.waitForCCEditorLayout();
     }
 
@@ -276,7 +276,7 @@
         this.log('debug', `waitForCCEditorLayout attempt ${attempts}: height=${height}`);
 
         if (height > 100) {
-    // Le layout est prêt, on peut resize
+    // Layout is ready, we can resize
             this.ccEditor.resize();
     // Resume rendering for the active sub-editor
             if (typeof this.ccEditor.resume === 'function') this.ccEditor.resume();
@@ -284,7 +284,7 @@
             if (this.tempoEditor && typeof this.tempoEditor.resume === 'function') this.tempoEditor.resume();
             this.log('info', `CC Editor layout ready after ${attempts} attempts (height=${height})`);
         } else if (attempts < maxAttempts) {
-    // Le layout n'est pas encore prêt, réessayer au prochain frame
+    // Layout is not ready yet, retry on the next frame
             requestAnimationFrame(() => {
                 this.waitForCCEditorLayout(attempts + 1, maxAttempts);
             });
@@ -309,7 +309,7 @@
     }
 
     /**
-    * Synchroniser tous les éditeurs (CC et Velocity) avec le piano roll
+    * Sync every editor (CC et Velocity) avec le piano roll
     */
     /**
     * Get the header width (left offset) of the currently active editor view.
@@ -358,13 +358,13 @@
     */
     MidiEditorCCPickerMixin.syncCCEventsFromEditor = function() {
         if (!this.ccEditor) {
-    // L'éditeur CC n'a jamais été ouvert : ccEditor est la seule voie d'édition,
-    // donc les événements extraits du fichier original sont toujours à jour.
+    // The CC editor was never opened — ccEditor is the only editing path,
+    // so events extracted from the original file remain up to date.
             this.log('debug', `syncCCEventsFromEditor: editor not opened, preserving ${this.ccEvents.length} original events`);
             return;
         }
 
-    // Récupérer tous les événements depuis l'éditeur
+    // Grab every event from the editor
         const editorEvents = this.ccEditor.getEvents();
 
         if (!editorEvents || editorEvents.length === 0) {
@@ -373,7 +373,7 @@
             return;
         }
 
-    // Les événements de l'éditeur sont déjà au bon format
+    // Editor events are already in the correct format
     // { type: 'cc1'|'cc7'|'cc10'|'cc11'|'pitchbend', ticks: number, value: number, channel: number }
         this.ccEvents = editorEvents.map(e => ({
             type: e.type,
@@ -385,7 +385,7 @@
 
         this.log('info', `Synchronized ${this.ccEvents.length} CC/pitchbend events from editor`);
 
-    // Log d'échantillon pour debugging
+    // Sample log for debugging
         if (this.ccEvents.length > 0) {
             const sample = this.ccEvents.slice(0, 3);
             this.log('debug', 'Sample synchronized events:', sample);
@@ -393,7 +393,7 @@
     }
 
     /**
-    * Synchroniser les événements de tempo depuis l'éditeur de tempo
+    * Sync tempo events from the editor de tempo
     */
     MidiEditorCCPickerMixin.syncTempoEventsFromEditor = function() {
         if (!this.tempoEditor) {
@@ -415,7 +415,7 @@
             id: e.id
         }));
 
-    // Mettre à jour le tempo global avec le premier événement
+    // Update the global tempo with the first event
         if (this.tempoEvents.length > 0) {
             this.tempo = this.tempoEvents[0].tempo;
         }
@@ -440,14 +440,14 @@
 
         this.log('info', `Initializing Velocity Editor with ${this.sequence.length} notes`);
 
-    // Obtenir les paramètres du piano roll
+    // Read the piano-roll parameters
         const options = {
             timebase: this.pianoRoll?.timebase || 480,
             xrange: this.pianoRoll?.xrange || 1920,
             xoffset: this.pianoRoll?.xoffset || 0,
             grid: this.snapValues[this.currentSnapIndex].ticks,
             onChange: (sequence) => {
-    // Marquer comme modifié lors des changements de vélocité
+    // Mark as dirty on velocity changes
                 this.isDirty = true;
                 this.updateSaveButton();
     // Synchroniser vers fullSequence et sequence
@@ -455,10 +455,10 @@
             }
         };
 
-    // Créer l'éditeur
+    // Create the editor
         this.velocityEditor = new VelocityEditor(container, options);
 
-    // Charger la séquence complète (non filtrée) pour la vélocité
+    // Load the full (unfiltered) sequence for the velocity editor
         this.velocityEditor.setSequence(this.fullSequence);
 
     // When editing a single channel, use that channel; otherwise first channel
@@ -471,16 +471,16 @@
 
         this.log('info', `Velocity Editor initialized with ${this.fullSequence.length} notes, default channel: ${firstChannel + 1}`);
 
-    // Mettre à jour le sélecteur de canal
+    // Update the channel selector
         this.updateEditorChannelSelector();
 
-    // Ajouter un écouteur pour mettre à jour le bouton de suppression lors des interactions
+    // Add a listener that refreshes the delete button on interactions
         container.addEventListener('mouseup', () => {
-    // Utiliser setTimeout pour laisser la sélection se mettre à jour d'abord
+    // Use setTimeout so the selection updates first
             setTimeout(() => this.updateDeleteButtonState(), 0);
         });
 
-    // Attendre que le layout soit prêt
+    // Wait for the layout to be ready
         this.waitForVelocityEditorLayout();
     }
 
@@ -497,11 +497,11 @@
         this.log('debug', `waitForVelocityEditorLayout attempt ${attempts}: height=${height}`);
 
         if (height > 100) {
-    // Le layout est prêt, on peut resize
+    // Layout is ready, we can resize
             this.velocityEditor.resize();
             this.log('info', `Velocity Editor layout ready after ${attempts} attempts (height=${height})`);
         } else if (attempts < maxAttempts) {
-    // Le layout n'est pas encore prêt, réessayer au prochain frame
+    // Layout is not ready yet, retry on the next frame
             requestAnimationFrame(() => {
                 this.waitForVelocityEditorLayout(attempts + 1, maxAttempts);
             });
@@ -527,7 +527,7 @@
 
         this.log('info', 'Initializing Tempo Editor');
 
-    // Obtenir les paramètres du piano roll
+    // Read the piano-roll parameters
         const options = {
             timebase: this.pianoRoll?.timebase || 480,
             xrange: this.pianoRoll?.xrange || 1920,
@@ -536,21 +536,21 @@
             minTempo: 20,
             maxTempo: 300,
             onChange: () => {
-    // Marquer comme modifié lors des changements de tempo
+    // Mark as dirty on tempo changes
                 this.isDirty = true;
                 this.updateSaveButton();
             }
         };
 
-    // Créer l'éditeur
+    // Create the editor
         this.tempoEditor = new TempoEditor(container, options);
 
-    // Charger les événements de tempo existants
+    // Load existing tempo events
         this.tempoEditor.setEvents(this.tempoEvents);
 
         this.log('info', `Tempo Editor initialized with ${this.tempoEvents.length} events`);
 
-    // Attendre que le layout soit prêt
+    // Wait for the layout to be ready
         this.waitForTempoEditorLayout();
     }
 
@@ -567,11 +567,11 @@
         this.log('debug', `waitForTempoEditorLayout attempt ${attempts}: height=${height}`);
 
         if (height > 100) {
-    // Le layout est prêt, on peut resize
+    // Layout is ready, we can resize
             this.tempoEditor.resize();
             this.log('info', `Tempo Editor layout ready after ${attempts} attempts (height=${height})`);
         } else if (attempts < maxAttempts) {
-    // Le layout n'est pas encore prêt, réessayer au prochain frame
+    // Layout is not ready yet, retry on the next frame
             requestAnimationFrame(() => {
                 this.waitForTempoEditorLayout(attempts + 1, maxAttempts);
             });
@@ -595,14 +595,14 @@
     * Afficher les boutons de courbes
     */
     MidiEditorCCPickerMixin.showCurveButtons = function() {
-    // Créer les boutons s'ils n'existent pas (une seule fois)
+    // Create the buttons once if they do not exist
         let curveSection = this.container.querySelector('.curve-section');
         if (!curveSection) {
     // Trouver la toolbar
             const toolbar = this.container.querySelector('.cc-type-toolbar');
             if (!toolbar) return;
 
-    // Créer la section de boutons de courbes
+    // Create the curve-buttons section
             const curveHTML = `
                 <div class="cc-toolbar-divider"></div>
                 <div class="curve-section">
@@ -616,23 +616,23 @@
                 </div>
             `;
 
-    // Insérer avant le divider qui précède le bouton de suppression
+    // Insert before the divider preceding the delete button
             const deleteBtn = this.container.querySelector('#cc-delete-btn');
             if (deleteBtn && deleteBtn.previousElementSibling) {
                 deleteBtn.previousElementSibling.insertAdjacentHTML('beforebegin', curveHTML);
 
-    // Attacher les événements
+    // Attach events
                 const ccCurveButtons = this.container.querySelectorAll('.cc-curve-btn');
                 ccCurveButtons.forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         e.preventDefault();
                         const curveType = btn.dataset.curve;
                         if (curveType) {
-    // Désactiver tous les boutons
+    // Disable all buttons
                             ccCurveButtons.forEach(b => b.classList.remove('active'));
-    // Activer le bouton cliqué
+    // Enable the clicked button
                             btn.classList.add('active');
-    // Changer le type de courbe pour l'éditeur actif
+    // Change the curve type for the active editor
                             if (this.currentCCType === 'tempo' && this.tempoEditor) {
                                 this.tempoEditor.setCurveType(curveType);
                             } else if (this.ccEditor) {
@@ -643,7 +643,7 @@
                 });
             }
         } else {
-    // Les boutons existent déjà, les afficher
+    // The buttons already exist — show them
             curveSection.style.display = 'flex';
             curveSection.previousElementSibling.style.display = 'block'; // divider
         }
@@ -682,7 +682,7 @@
     MidiEditorCCPickerMixin.syncSequenceFromVelocityEditor = function(velocitySequence) {
         if (!velocitySequence) return;
 
-    // Mettre à jour fullSequence et sequence avec les nouvelles vélocités
+    // Update fullSequence and sequence with the new velocities
         this.fullSequence.forEach(note => {
             const velocityNote = velocitySequence.find(vn =>
                 vn.t === note.t && vn.n === note.n && vn.c === note.c
@@ -692,10 +692,10 @@
             }
         });
 
-    // Reconstruire la sequence filtrée
+    // Rebuild the filtered sequence
         this.sequence = this.fullSequence.filter(note => this.activeChannels.has(note.c));
 
-    // Mettre à jour le piano roll
+    // Update the piano roll
         if (this.pianoRoll) {
             this.pianoRoll.sequence = this.sequence;
             if (typeof this.pianoRoll.redraw === 'function') {
@@ -713,7 +713,7 @@
         const channelNoteCount = new Map();
         const channelPrograms = new Map();
 
-    // Compter les notes par canal et préserver les programmes existants
+    // Count notes per channel and preserve existing programs
         this.fullSequence.forEach(note => {
             const channel = note.c !== undefined ? note.c : 0;
             channelNoteCount.set(channel, (channelNoteCount.get(channel) || 0) + 1);
@@ -724,7 +724,7 @@
                 if (existingChannel) {
                     channelPrograms.set(channel, existingChannel.program);
                 } else {
-    // Nouveau canal : utiliser l'instrument sélectionné
+    // New channel: use the selected program
                     channelPrograms.set(channel, this.selectedInstrument || 0);
                 }
             }
@@ -744,7 +744,7 @@
             });
         });
 
-    // Trier par numéro de canal
+    // Sort by channel number
         this.channels.sort((a, b) => a.channel - b.channel);
 
         this.log('debug', `Updated channels: ${this.channels.length} channels found`);

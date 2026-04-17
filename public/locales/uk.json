@@ -26,7 +26,9 @@
         "unknownError": "Невідома помилка",
         "delete": "Delete",
         "apply": "Apply",
-        "name": "Назва"
+        "name": "Назва",
+        "on": "Увімк.",
+        "off": "Вимк."
     },
     "app": {
         "title": "MidiMind 5.0 - Система оркестрації MIDI",

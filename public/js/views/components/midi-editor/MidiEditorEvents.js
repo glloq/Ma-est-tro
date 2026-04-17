@@ -1,7 +1,7 @@
 // ============================================================================
-// Fichier: public/js/views/components/midi-editor/MidiEditorEvents.js
+// File: public/js/views/components/midi-editor/MidiEditorEvents.js
 // Description: Event handlers and resize management
-//   Mixin: methodes ajoutees au prototype de MidiEditorModal
+//   Mixin: methods added to MidiEditorModal.prototype
 // ============================================================================
 
 (function() {
@@ -10,16 +10,16 @@
     const MidiEditorEventsMixin = {};
 
     // ========================================================================
-    // ÉVÉNEMENTS
+    // EVENTS
     // ========================================================================
 
     MidiEditorEventsMixin.attachEvents = function() {
         if (!this.container) return;
 
-    // Pas de fermeture au clic sur le fond pour l'éditeur MIDI
-    // (évite les fermetures accidentelles pendant l'édition)
+    // No backdrop click-to-close for the MIDI editor
+    // (prevents accidental dismissals during editing)
 
-    // Boutons d'action
+    // Action buttons
         this.container.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-action]');
             if (!btn) return;
@@ -52,7 +52,7 @@
                     this.zoomVertical(1.25);
                     break;
 
-    // Nouveaux boutons d'édition
+    // New edit buttons
                 case 'undo':
                     this.undo();
                     break;
@@ -102,7 +102,7 @@
                     this.playbackStop();
                     break;
 
-    // Modes d'édition
+    // Edit modes
                 case 'mode-select':
                 case 'mode-drag-notes':
                 case 'mode-drag-view':
@@ -123,7 +123,7 @@
     // _closeChannelSettingsPopover — no capture-phase container listener needed.
 
     // OPTIMISATION: Event delegation pour tous les boutons de canal
-    // Remplace 4 boucles forEach × 16 boutons = ~64 listeners par 1 seul listener
+    // Replaces 4 forEach loops × 16 buttons = ~64 listeners with a single listener
         this.container.addEventListener('click', (e) => {
             const channelChip = e.target.closest('.channel-chip');
             if (channelChip) {
@@ -229,7 +229,7 @@
             }
         });
 
-    // Toggle preview source (GM / Routé)
+    // Toggle preview source (GM / Routed)
         const previewToggle = document.getElementById('preview-source-toggle');
         if (previewToggle) {
             previewToggle.addEventListener('click', () => this.togglePreviewSource());
@@ -267,21 +267,21 @@
                 if (!isNaN(newTempo) && newTempo >= 20 && newTempo <= 300) {
                     this.setTempo(newTempo);
                 } else {
-    // Restaurer la valeur précédente si invalide
+    // Restore the previous value when invalid
                     e.target.value = this.tempo || 120;
                 }
             });
-    // Aussi gérer le changement pendant la saisie (input event)
+    // Also react to changes made while typing (input event)
             tempoInput.addEventListener('input', (e) => {
                 const newTempo = parseInt(e.target.value);
                 if (!isNaN(newTempo) && newTempo >= 20 && newTempo <= 300) {
-    // Mise à jour en temps réel (optionnel, peut être retiré si trop de mises à jour)
+    // Real-time update (optional — can be removed if too chatty)
                     this.setTempo(newTempo);
                 }
             });
         }
 
-    // Header de la section CC (collapse/expand) — uniquement sur le titre, pas les onglets canal
+    // CC section header (collapse/expand) — only on the title, not the channel tabs
         const ccSectionHeader = document.getElementById('cc-section-header');
         if (ccSectionHeader) {
             const ccTitle = ccSectionHeader.querySelector('.cc-section-title');
@@ -291,7 +291,7 @@
                     this.toggleCCSection();
                 });
             }
-    // Bouton engrenage pour réglages de dessin CC
+    // Gear button for CC drawing settings
             const ccDrawSettingsBtn = ccSectionHeader.querySelector('#cc-draw-settings-btn');
             if (ccDrawSettingsBtn) {
                 ccDrawSettingsBtn.addEventListener('click', (e) => {
@@ -304,7 +304,7 @@
 
     // Boutons de type CC (horizontaux)
     // OPTIMISATION: Event delegation pour boutons CC type, outils et suppression
-    // Remplace ~20+ listeners individuels par 1 seul listener délégué
+    // Replaces ~20+ individual listeners with a single delegated listener
         this.container.addEventListener('click', (e) => {
             const ccTypeBtn = e.target.closest('.cc-type-btn');
             if (ccTypeBtn) {
@@ -347,12 +347,12 @@
             });
         }
 
-    // Les event listeners pour les boutons de canal sont attachés
-    // dans attachEditorChannelListeners() appelé depuis updateEditorChannelSelector()
-    // pour éviter les conflits lors de la mise à jour dynamique des canaux
+    // Event listeners for channel buttons are attached
+    // in attachEditorChannelListeners() called from updateEditorChannelSelector()
+    // to avoid conflicts during dynamic channel updates
 
 
-    // Sélecteur d'instrument pour nouveaux canaux
+    // Instrument selector for new channels
         const instrumentSelector = document.getElementById('instrument-selector');
         if (instrumentSelector) {
             instrumentSelector.addEventListener('change', (e) => {
@@ -369,7 +369,7 @@
         if (resizeBar && notesSection && ccSection) {
             this.log('info', 'Resize bar found, attaching drag events');
 
-    // Log quand on survole la barre pour vérifier qu'elle est accessible
+    // Log on hover to verify the bar is accessible
             resizeBar.addEventListener('mouseenter', () => {
                 this.log('debug', 'Mouse entered resize bar');
             });
@@ -396,7 +396,7 @@
                 startY = e.clientY;
                 startNotesHeight = notesSection.clientHeight;
 
-    // Capturer l'espace disponible RÉEL depuis modal-dialog (hauteur fixe 95vh)
+    // Capture the REAL available space from modal-dialog (fixed 95vh height)
                 const modalDialog = this.container.querySelector('.modal-dialog');  // ENFANT, pas parent !
                 const modalHeader = this.container.querySelector('.modal-header');
                 const toolbarHeight = this.container.querySelector('.editor-toolbar')?.clientHeight || 0;
@@ -418,15 +418,15 @@
 
                 this.log('info', `Initial flex: notes=${startNotesFlex}, cc=${startCCFlex}`);
 
-    // Désactiver les transitions pendant le resize pour éviter les animations
+    // Disable transitions during the resize to avoid animations
                 notesSection.style.transition = 'none';
                 ccSection.style.transition = 'none';
 
-    // Désactiver les min-height CSS qui bloquent le resize à ~50%
+    // Disable the CSS min-height rules that cap the resize to ~50%
                 notesSection.style.setProperty('min-height', '0px', 'important');
                 ccSection.style.setProperty('min-height', '0px', 'important');
 
-    // Empêcher le contenu de déborder au-dessus de la section CC
+    // Prevent content from overflowing above the CC section
                 notesSection.style.setProperty('overflow', 'hidden', 'important');
 
                 document.body.style.cursor = 'ns-resize';
@@ -439,10 +439,10 @@
                 const deltaY = e.clientY - startY;
                 const resizeBarHeight = 12; // Hauteur de la barre
 
-    // Utiliser l'espace disponible RÉEL capturé au début
+    // Use the REAL available space captured at the start
                 const totalFlexHeight = availableHeight - resizeBarHeight;
 
-    // Contraintes très assouplies: notes min 20px (permet à CC d'atteindre ~98%), cc min 100px
+    // Very loose constraints: notes >= 20px (lets CC reach ~98%), cc >= 100px
                 const minNotesHeight = 20;
                 const minCCHeight = 100;
                 const newNotesHeight = Math.max(minNotesHeight, Math.min(totalFlexHeight - minCCHeight, startNotesHeight + deltaY));
@@ -451,7 +451,7 @@
                 this.log('debug', `Resize: deltaY=${deltaY}, availableH=${availableHeight}px, notesH=${newNotesHeight}px, ccH=${newCCHeight}px`);
 
     // Appliquer les hauteurs directement en pixels
-    // Désactiver les min-height CSS qui bloquent le resize
+    // Disable the CSS min-height rules that block the resize
                 notesSection.style.setProperty('min-height', '0px', 'important');
                 notesSection.style.setProperty('height', `${newNotesHeight}px`, 'important');
                 notesSection.style.setProperty('flex', 'none', 'important');
@@ -460,12 +460,12 @@
                 ccSection.style.setProperty('height', `${newCCHeight}px`, 'important');
                 ccSection.style.setProperty('flex', 'none', 'important');
 
-    // Vérifier si les styles sont réellement appliqués
+    // Check whether the styles actually applied
                 const actualNotesHeight = notesSection.clientHeight;
                 const actualCCHeight = ccSection.clientHeight;
                 this.log('debug', `Applied styles - Expected: notes=${newNotesHeight}px cc=${newCCHeight}px, Actual: notes=${actualNotesHeight}px cc=${actualCCHeight}px`);
 
-    // Redimensionner les éditeurs pendant le drag pour que la grille soit visible
+    // Resize the editors during drag so the grid stays visible
                 requestAnimationFrame(() => {
     // SOLUTION 2.2: Forcer recalcul de TOUTE la cascade flex (5 niveaux)
                     void ccSection.offsetHeight;
@@ -482,7 +482,7 @@
                     }
 
                     if (this.ccEditor && typeof this.ccEditor.resize === 'function') {
-    // SOLUTION 2.1: Corriger le bug du sélecteur (.cc-pitchbend-editor, pas -container)
+    // SOLUTION 2.1: fix the selector bug (.cc-pitchbend-editor, not -container)
                         const ccContainer = ccSection.querySelector('.cc-pitchbend-editor');
                         const ccHeight = ccContainer?.clientHeight || 0;
                         this.log('debug', `CC editor resize called - container height: ${ccHeight}px`);
@@ -490,7 +490,7 @@
     // Premier appel resize
                         this.ccEditor.resize();
 
-    // SOLUTION 2.3: Double appel après 2 frames pour stabilisation layout
+    // SOLUTION 2.3: double call after 2 frames for layout stabilization
                         setTimeout(() => {
                             if (this.ccEditor && typeof this.ccEditor.resize === 'function') {
                                 this.ccEditor.resize();
@@ -521,14 +521,14 @@
                     document.body.style.cursor = '';
                     resizeBar.classList.remove('dragging');
 
-    // Réactiver les transitions
+    // Re-enable transitions
                     notesSection.style.transition = '';
                     ccSection.style.transition = '';
 
     // GARDER overflow: hidden pour que le slider reste au-dessus
-    // Ne pas réinitialiser: notesSection.style.overflow = '';
+    // Do not reset notesSection.style.overflow = '';
 
-    // Redimensionner les éditeurs après le resize
+    // Resize the editors after the resize
                     requestAnimationFrame(() => {
                         if (this.pianoRoll && typeof this.pianoRoll.redraw === 'function') {
                             this.pianoRoll.redraw();
@@ -565,7 +565,7 @@
 
         this.log('info', `Reloading piano roll with ${this.sequence.length} notes`);
 
-    // Calculer la plage de ticks depuis la séquence
+    // Compute the tick range from the sequence
         let maxTick = 0;
         let minNote = 127;
         let maxNote = 0;
@@ -579,17 +579,17 @@
             });
         }
 
-    // Mettre à jour les attributs du piano roll
+    // Update the piano-roll attributes
         const xrange = Math.max(128, Math.ceil(maxTick / 128) * 128);
         const noteRange = Math.max(36, maxNote - minNote + 12);
 
         this.pianoRoll.setAttribute('xrange', xrange.toString());
         this.pianoRoll.setAttribute('yrange', noteRange.toString());
 
-    // Recharger la séquence
+    // Reload the sequence
         this.pianoRoll.sequence = this.sequence;
 
-    // S'assurer que les couleurs sont toujours définies
+    // Ensure colors are always defined
         this.pianoRoll.channelColors = this.channelColors;
 
     // Forcer le redraw
@@ -597,7 +597,7 @@
             this.pianoRoll.redraw();
         }
 
-    // Mettre à jour les stats
+    // Update the stats
         this.updateStats();
 
         this.log('info', `Piano roll reloaded: ${this.sequence.length} notes, xrange=${xrange}, yrange=${noteRange}`);
@@ -622,17 +622,17 @@
             return;
         }
 
-    // Essayer d'accéder à la propriété directement
+    // Try to read the property directly
         const currentRange = this.pianoRoll.xrange || parseInt(this.pianoRoll.getAttribute('xrange')) || 128;
         const newRange = Math.max(16, Math.min(100000, Math.round(currentRange * factor)));
 
-    // Essayer les deux méthodes
+    // Try both methods
         this.pianoRoll.setAttribute('xrange', newRange.toString());
         if (this.pianoRoll.xrange !== undefined) {
             this.pianoRoll.xrange = newRange;
         }
 
-    // Forcer le redraw avec un court délai, puis synchroniser les éditeurs
+    // Force a redraw after a short delay, then sync the editors
         setTimeout(() => {
             if (typeof this.pianoRoll.redraw === 'function') {
                 this.pianoRoll.redraw();
@@ -660,17 +660,17 @@
             return;
         }
 
-    // Essayer d'accéder à la propriété directement
+    // Try to read the property directly
         const currentRange = this.pianoRoll.yrange || parseInt(this.pianoRoll.getAttribute('yrange')) || 36;
         const newRange = Math.max(12, Math.min(88, Math.round(currentRange * factor)));
 
-    // Essayer les deux méthodes
+    // Try both methods
         this.pianoRoll.setAttribute('yrange', newRange.toString());
         if (this.pianoRoll.yrange !== undefined) {
             this.pianoRoll.yrange = newRange;
         }
 
-    // Forcer le redraw avec un court délai
+    // Force a redraw after a short delay
         setTimeout(() => {
             if (typeof this.pianoRoll.redraw === 'function') {
                 this.pianoRoll.redraw();
@@ -771,7 +771,7 @@
             this.pianoRoll.xoffset = newOffset;
             this.pianoRoll.setAttribute('xoffset', newOffset.toString());
 
-    // Ne pas redraw le piano roll s'il est caché (wind editor actif)
+    // Do not redraw the piano roll while it is hidden (wind editor active)
             if (typeof this.pianoRoll.redraw === 'function' &&
                 !(this.windInstrumentEditor && this.windInstrumentEditor.isVisible)) {
                 this.pianoRoll.redraw();
@@ -788,7 +788,7 @@
             renderer.setScrollX(newOffset);
         }
 
-    // Synchroniser l'éditeur drum
+    // Sync the drum editor
         if (this.drumPatternEditor && this.drumPatternEditor.isVisible && this.drumPatternEditor.gridRenderer) {
             const renderer = this.drumPatternEditor.gridRenderer;
             const canvasWidth = this.drumPatternEditor.gridCanvasEl?.width || 800;
@@ -798,12 +798,12 @@
             renderer.setScrollX(newOffset);
         }
 
-    // Synchroniser l'éditeur vent
+    // Sync the wind editor
         if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) {
             this.windInstrumentEditor.scrollHorizontal(percentage);
         }
 
-    // Synchroniser l'éditeur CC
+    // Sync the CC editor
         this.syncCCEditor();
     }
 
@@ -814,7 +814,7 @@
         if (this.pianoRoll) {
             const yrange = this.pianoRoll.yrange || parseInt(this.pianoRoll.getAttribute('yrange')) || 36;
 
-    // Plage complète MIDI: 0-127 notes
+    // Full MIDI range: notes 0-127
             const totalMidiRange = 128;
             const maxOffset = Math.max(0, totalMidiRange - yrange);
             const newOffset = Math.round((percentage / 100) * maxOffset);
@@ -822,14 +822,14 @@
             this.pianoRoll.yoffset = newOffset;
             this.pianoRoll.setAttribute('yoffset', newOffset.toString());
 
-    // Ne pas redraw le piano roll s'il est caché (wind editor actif)
+    // Do not redraw the piano roll while it is hidden (wind editor active)
             if (typeof this.pianoRoll.redraw === 'function' &&
                 !(this.windInstrumentEditor && this.windInstrumentEditor.isVisible)) {
                 this.pianoRoll.redraw();
             }
         }
 
-    // Synchroniser l'éditeur vent
+    // Sync the wind editor
         if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) {
             this.windInstrumentEditor.scrollVertical(percentage);
         }

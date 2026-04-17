@@ -1,5 +1,5 @@
 // ============================================================================
-// Fichier: public/js/views/components/midi-editor/MidiEditorChannelPanel.js
+// File: public/js/views/components/midi-editor/MidiEditorChannelPanel.js
 // Description: Channel management for the MIDI Editor
 //   - Channel toggle buttons rendering
 //   - Channel selector dropdown
@@ -366,7 +366,7 @@ class MidiEditorChannelPanel {
             if (result && result.devices) {
                 const outputDevices = result.devices.filter(d => d.output === true);
 
-                // Éclater les devices multi-instruments en entrées individuelles
+                // Flatten multi-instrument devices into individual entries
                 const expandedDevices = [];
                 for (const device of outputDevices) {
                     if (device.instruments && device.instruments.length > 1) {
