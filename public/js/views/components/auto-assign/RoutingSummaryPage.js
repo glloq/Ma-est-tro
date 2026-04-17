@@ -33,14 +33,14 @@ const _t = (key, params) => typeof i18n !== 'undefined' ? i18n.t(key, params) : 
  * White keys are full-height, black keys are shorter and overlaid.
  * C notes get a small label below.
  */
-// Pure HTML renderers extracted to RoutingSummaryRenderers.js (P2-F.4/F.4b..F.4p).
+// Pure HTML renderers extracted to RoutingSummaryRenderers.js (P2-F.4/F.4b..F.4q).
 const {
   renderMiniKeyboard, renderChannelHistogram, renderMiniRange,
   renderDetailPlaceholder, renderHeaderButtons,
   renderLoadingScreen, renderErrorScreen,
   renderInstrumentChips, renderPolyReductionSection,
   renderRangeBars, renderDrumMappingSection, renderCCSection,
-  renderScoreDetail, renderSummaryTable
+  renderScoreDetail, renderSummaryTable, renderAdaptationBlock
 } = window.RoutingSummaryRenderers;
 
 // ============================================================================
@@ -829,76 +829,17 @@ class RoutingSummaryPage {
     const playableData = this._computePlayableNotes(ch);
     const playableInfo = playableData ? `(${playableData.playable}/${playableData.total})` : '';
 
-    // Adaptation controls (pitch shift + OOR handling)
-    let adaptHTML = '';
-    if (!isSkipped && assignment?.instrumentId && !isDrumChannel) {
-      const pitchShift = adaptation.pitchShift || 'none';
-      const semitones = adaptation.transpositionSemitones || 0;
-      const oorHandling = adaptation.oorHandling || 'passThrough';
-
-      // Show transposition info for auto mode
-      const autoInfo = (pitchShift === 'auto' && semitones !== 0)
-        ? ` <span class="rs-adapt-auto-info">(${semitones > 0 ? '+' : ''}${semitones}st)</span>`
-        : '';
-
-      adaptHTML = `
-        <div class="rs-adaptation">
-          <h4>${_t('autoAssign.adaptationTitle')}</h4>
-          <div class="rs-adapt-row">
-            <span class="rs-adapt-label">${_t('autoAssign.pitchShiftTitle')}</span>
-            <div class="rs-adapt-options">
-              <label class="rs-adapt-radio ${pitchShift === 'none' ? 'selected' : ''}">
-                <input type="radio" name="rs_pitch_${channel}" value="none" ${pitchShift === 'none' ? 'checked' : ''} data-channel="${channel}" data-field="pitchShift">
-                ${_t('autoAssign.pitchNone')}
-              </label>
-              <label class="rs-adapt-radio ${pitchShift === 'auto' ? 'selected' : ''}">
-                <input type="radio" name="rs_pitch_${channel}" value="auto" ${pitchShift === 'auto' ? 'checked' : ''} data-channel="${channel}" data-field="pitchShift">
-                ${_t('autoAssign.pitchAuto')}${autoInfo}
-              </label>
-              <label class="rs-adapt-radio ${pitchShift === 'manual' ? 'selected' : ''}">
-                <input type="radio" name="rs_pitch_${channel}" value="manual" ${pitchShift === 'manual' ? 'checked' : ''} data-channel="${channel}" data-field="pitchShift">
-                ${_t('autoAssign.pitchManual')}
-              </label>
-            </div>
-          </div>
-          ${pitchShift === 'manual' ? (() => {
-            const playableWithTranspose = this._computePlayableNotes(ch);
-            const playableLabel = playableWithTranspose
-              ? `<span class="rs-transpose-playable">${playableWithTranspose.playable}/${playableWithTranspose.total}</span>`
-              : '';
-            return `
-            <div class="rs-adapt-row rs-transpose-row">
-              <span class="rs-adapt-label">${_t('autoAssign.transposition')}</span>
-              <div class="rs-transpose-controls">
-                <button class="btn btn-sm rs-transpose-btn" data-channel="${channel}" data-delta="-12">-12</button>
-                <button class="btn btn-sm rs-transpose-btn" data-channel="${channel}" data-delta="-1">-1</button>
-                <span class="rs-transpose-value">${semitones > 0 ? '+' : ''}${semitones}st ${playableLabel}</span>
-                <button class="btn btn-sm rs-transpose-btn" data-channel="${channel}" data-delta="1">+1</button>
-                <button class="btn btn-sm rs-transpose-btn" data-channel="${channel}" data-delta="12">+12</button>
-              </div>
-            </div>`;
-          })() : ''}
-          <div class="rs-adapt-row">
-            <span class="rs-adapt-label">${_t('autoAssign.oorTitle')}</span>
-            <div class="rs-adapt-options">
-              <label class="rs-adapt-radio ${oorHandling === 'passThrough' ? 'selected' : ''}">
-                <input type="radio" name="rs_oor_${channel}" value="passThrough" ${oorHandling === 'passThrough' ? 'checked' : ''} data-channel="${channel}" data-field="oorHandling">
-                ${_t('autoAssign.oorPassThrough')}
-              </label>
-              <label class="rs-adapt-radio ${oorHandling === 'octaveWrap' ? 'selected' : ''}">
-                <input type="radio" name="rs_oor_${channel}" value="octaveWrap" ${oorHandling === 'octaveWrap' ? 'checked' : ''} data-channel="${channel}" data-field="oorHandling">
-                ${_t('autoAssign.oorOctaveWrap')}
-              </label>
-              <label class="rs-adapt-radio ${oorHandling === 'suppress' ? 'selected' : ''}">
-                <input type="radio" name="rs_oor_${channel}" value="suppress" ${oorHandling === 'suppress' ? 'checked' : ''} data-channel="${channel}" data-field="oorHandling">
-                ${_t('autoAssign.oorSuppress')}
-              </label>
-            </div>
-          </div>
-          ${this._renderPolyReductionSection(channel, adaptation, analysis, assignment)}
-        </div>
-      `;
-    }
+    // Adaptation controls (pitch shift + OOR handling) — P2-F.4q
+    const adaptHTML = renderAdaptationBlock({
+      channel,
+      adaptation,
+      analysis,
+      assignment,
+      isSkipped,
+      isDrumChannel,
+      playableWithTranspose: (adaptation.pitchShift === 'manual') ? this._computePlayableNotes(ch) : null,
+      polyReductionHTML: this._renderPolyReductionSection(channel, adaptation, analysis, assignment)
+    });
 
     // Instrument chips (horizontal bar) — always show, even on skipped channels
     const instrumentChipsHTML = (options.length > 0 || lowOptions.length > 0)

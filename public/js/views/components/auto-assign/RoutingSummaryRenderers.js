@@ -1163,6 +1163,98 @@
     `;
   }
 
+  /**
+   * Adaptation controls block (pitch shift + OOR handling + embedded
+   * polyphony section). Shown for non-skipped, non-drum assigned channels.
+   *
+   * @param {Object} opts
+   * @param {number} opts.channel
+   * @param {Object} opts.adaptation
+   * @param {Object|null} opts.analysis
+   * @param {Object|null} opts.assignment
+   * @param {boolean} opts.isSkipped
+   * @param {boolean} opts.isDrumChannel
+   * @param {{total:number, playable:number}|null} opts.playableWithTranspose
+   * @param {string} opts.polyReductionHTML - pre-rendered by renderPolyReductionSection
+   */
+  function renderAdaptationBlock(opts) {
+    const {
+      channel, adaptation, assignment,
+      isSkipped, isDrumChannel,
+      playableWithTranspose,
+      polyReductionHTML
+    } = opts;
+
+    if (isSkipped || !assignment?.instrumentId || isDrumChannel) return '';
+
+    const pitchShift = adaptation.pitchShift || 'none';
+    const semitones = adaptation.transpositionSemitones || 0;
+    const oorHandling = adaptation.oorHandling || 'passThrough';
+
+    const autoInfo = (pitchShift === 'auto' && semitones !== 0)
+      ? ` <span class="rs-adapt-auto-info">(${semitones > 0 ? '+' : ''}${semitones}st)</span>`
+      : '';
+
+    const manualRowHTML = pitchShift === 'manual' ? (() => {
+      const playableLabel = playableWithTranspose
+        ? `<span class="rs-transpose-playable">${playableWithTranspose.playable}/${playableWithTranspose.total}</span>`
+        : '';
+      return `
+      <div class="rs-adapt-row rs-transpose-row">
+        <span class="rs-adapt-label">${_t('autoAssign.transposition')}</span>
+        <div class="rs-transpose-controls">
+          <button class="btn btn-sm rs-transpose-btn" data-channel="${channel}" data-delta="-12">-12</button>
+          <button class="btn btn-sm rs-transpose-btn" data-channel="${channel}" data-delta="-1">-1</button>
+          <span class="rs-transpose-value">${semitones > 0 ? '+' : ''}${semitones}st ${playableLabel}</span>
+          <button class="btn btn-sm rs-transpose-btn" data-channel="${channel}" data-delta="1">+1</button>
+          <button class="btn btn-sm rs-transpose-btn" data-channel="${channel}" data-delta="12">+12</button>
+        </div>
+      </div>`;
+    })() : '';
+
+    return `
+      <div class="rs-adaptation">
+        <h4>${_t('autoAssign.adaptationTitle')}</h4>
+        <div class="rs-adapt-row">
+          <span class="rs-adapt-label">${_t('autoAssign.pitchShiftTitle')}</span>
+          <div class="rs-adapt-options">
+            <label class="rs-adapt-radio ${pitchShift === 'none' ? 'selected' : ''}">
+              <input type="radio" name="rs_pitch_${channel}" value="none" ${pitchShift === 'none' ? 'checked' : ''} data-channel="${channel}" data-field="pitchShift">
+              ${_t('autoAssign.pitchNone')}
+            </label>
+            <label class="rs-adapt-radio ${pitchShift === 'auto' ? 'selected' : ''}">
+              <input type="radio" name="rs_pitch_${channel}" value="auto" ${pitchShift === 'auto' ? 'checked' : ''} data-channel="${channel}" data-field="pitchShift">
+              ${_t('autoAssign.pitchAuto')}${autoInfo}
+            </label>
+            <label class="rs-adapt-radio ${pitchShift === 'manual' ? 'selected' : ''}">
+              <input type="radio" name="rs_pitch_${channel}" value="manual" ${pitchShift === 'manual' ? 'checked' : ''} data-channel="${channel}" data-field="pitchShift">
+              ${_t('autoAssign.pitchManual')}
+            </label>
+          </div>
+        </div>
+        ${manualRowHTML}
+        <div class="rs-adapt-row">
+          <span class="rs-adapt-label">${_t('autoAssign.oorTitle')}</span>
+          <div class="rs-adapt-options">
+            <label class="rs-adapt-radio ${oorHandling === 'passThrough' ? 'selected' : ''}">
+              <input type="radio" name="rs_oor_${channel}" value="passThrough" ${oorHandling === 'passThrough' ? 'checked' : ''} data-channel="${channel}" data-field="oorHandling">
+              ${_t('autoAssign.oorPassThrough')}
+            </label>
+            <label class="rs-adapt-radio ${oorHandling === 'octaveWrap' ? 'selected' : ''}">
+              <input type="radio" name="rs_oor_${channel}" value="octaveWrap" ${oorHandling === 'octaveWrap' ? 'checked' : ''} data-channel="${channel}" data-field="oorHandling">
+              ${_t('autoAssign.oorOctaveWrap')}
+            </label>
+            <label class="rs-adapt-radio ${oorHandling === 'suppress' ? 'selected' : ''}">
+              <input type="radio" name="rs_oor_${channel}" value="suppress" ${oorHandling === 'suppress' ? 'checked' : ''} data-channel="${channel}" data-field="oorHandling">
+              ${_t('autoAssign.oorSuppress')}
+            </label>
+          </div>
+        </div>
+        ${polyReductionHTML}
+      </div>
+    `;
+  }
+
   window.RoutingSummaryRenderers = Object.freeze({
     renderMiniKeyboard,
     renderChannelHistogram,
@@ -1177,6 +1269,7 @@
     renderDrumMappingSection,
     renderCCSection,
     renderScoreDetail,
-    renderSummaryTable
+    renderSummaryTable,
+    renderAdaptationBlock
   });
 })();
