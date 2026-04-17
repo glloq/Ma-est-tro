@@ -9,8 +9,8 @@
 |---|---|
 | Phase active | **Phase 2 — Persistance (migration handlers)** |
 | Branche de travail | `claude/refactor-maestro-project-L6ptg` |
-| Dernier lot terminé | P2-F.1-tests (constants helpers) |
-| Prochain lot suggéré | **P2-F.4e** (extraire `_renderMinimap`) ou **P1-4.5c**. |
+| Dernier lot terminé | P2-F.4e (extractNotesForMinimap + tests) |
+| Prochain lot suggéré | **P2-F.5** (orchestrateur léger) ou **P1-4.5c** (rewire BluetoothManager). |
 | Date dernière mise à jour | 2026-04-17 |
 | Agent ayant mis à jour | Claude (agent refactoring) |
 
@@ -135,6 +135,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 
 | Date | Agent | Lot | Résumé | Fichiers touchés | Commit | Notes |
 |---|---|---|---|---|---|---|
+| 2026-04-17 | Claude (refactoring) | P2-F.4e | Extraction de `_extractNotesForMinimap` (pure algorithmique, 95 LOC) vers `RoutingSummaryMinimapNotes.extractNotesForMinimap({ midiData, selectedAssignments, splitChannels, splitAssignments, adaptationSettings, channelFilter, skipRangeFilter })` (124 LOC, tout l'état passé en paramètres). `_extractNotesForMinimap` de la classe devient un délégateur de 10 lignes. 19 tests Vitest ajoutés : guards, channel filter, range filter + transposition, skipRangeFilter, split segments (no split, in-range, closest-segment fallback, overlap = duplicates), tri par tick. | `public/js/views/components/auto-assign/RoutingSummaryMinimapNotes.js` (créé), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-82 LOC), `public/index.html`, `tests/frontend/routing-summary-minimap-notes.test.js` (créé) | (ce commit) | 437/437 backend verts. Cumul F.1→F.4e : RoutingSummaryPage 4748→4374 (-374, -7.9%). |
 | 2026-04-17 | Claude (refactoring) | P2-F.1-tests | Tests Vitest pour les helpers purs de `RoutingSummaryConstants` (P2-F.1). 25 tests : getGmDefaultPolyphony (3 groupes), midiNoteToName (4), safeNoteRange (4), getScoreClass (8), getScoreBgClass (4), getTypeIcon/Color (3), getGmProgramName (2), frozen constants (3 : SPLIT_COLORS, BLACK_KEYS, NOTE_NAMES). | `tests/frontend/routing-summary-constants.test.js` (créé) | (ce commit) | Syntaxe validée. Cumul frontend vitest : 55 tests (clamp+assignment-builder+renderers+constants). |
 | 2026-04-17 | Claude (refactoring) | P2-F.4-tests | Tests Vitest pour `RoutingSummaryRenderers` (5 fonctions pures). 15 tests : renderMiniKeyboard (2), renderChannelHistogram (3), renderMiniRange (3), renderDetailPlaceholder (1), renderHeaderButtons (5 : boutons, disabled quand null, label 1-based, truncation, escape injection). Pattern IIFE via `new Function(src)(window)`. | `tests/frontend/routing-summary-renderers.test.js` (créé) | (ce commit) | Syntaxe `node --check` propre. Vitest sandbox indisponible localement mais tests tourneront en CI ; syntaxe alignée avec les 2 autres tests frontend existants. |
 | 2026-04-17 | Claude (refactoring) | P2-F.4d | Extraction de `_renderHeaderButtons` vers `RoutingSummaryRenderers.renderHeaderButtons({ selectedChannel, filename, escape })` (34 LOC d'HTML pour les boutons Play all / Play channel / Play original / Pause / Stop + filename tag). Inversion de contrôle : l'escape HTML helper est injecté en paramètre (pas d'accès global depuis le renderer). `_renderHeaderButtons` de la classe devient un délégateur. | `public/js/views/components/auto-assign/RoutingSummaryRenderers.js` (+34 LOC), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-16 LOC) | (ce commit) | 437/437 tests verts. Cumul F.1→F.4d : 4748→4456 LOC (-292, -6.1%). |
@@ -238,7 +239,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 | `MidiPlayer.js` LOC | 1312 | < 790 (-40 %) | 1312 |
 | `InstrumentMatcher.js` LOC | 1178 | < 710 (-40 %) | 1178 |
 | `TablatureConverter.js` LOC | 1250 | < 750 (-40 %) | 1250 |
-| `RoutingSummaryPage.js` LOC | 4748 | < 2850 (-40 %) | 4456 (-6.1%, F.1→F.4d cumul) |
+| `RoutingSummaryPage.js` LOC | 4748 | < 2850 (-40 %) | 4374 (-7.9%, F.1→F.4e cumul) |
 | `MidiSynthesizer.js` LOC | 1192 | < 720 (-40 %) | 1116 (-6.4%, P2-F.8) |
 | Couverture tests P0/P1 | ~20 % | ≥ 35 % | **backend 437/437** ; nouveautés session : schema-compiler×30, repository-delegations×94, domain services×47 (routing-plan-channel×14, routing-status×11, device-reconciliation×10, file-routing-sync×12), contract×40+ (playback+routing), correlation-id×3, command-metrics×4, routing-integration×7, bluetooth-port×11, transaction-helper×3 |
 | Commandes WS critiques sous contrat | 0 % | ≥ 90 % | ~70 % (42 commandes : 23 playback + 19 routing — snapshots complets pour PlaybackCommands.js et RoutingCommands.js) |

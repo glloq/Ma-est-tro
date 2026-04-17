@@ -3658,98 +3658,16 @@ class RoutingSummaryPage {
   }
 
   _extractNotesForMinimap(channelFilter, skipRangeFilter = false) {
-    const notes = [];
-    if (!this.midiData?.tracks) return notes;
-
-    // Determine playable range for filtering (per-channel instrument ranges)
-    const getRange = (ch) => {
-      if (skipRangeFilter) return null;
-      const chStr = String(ch);
-      const assignment = this.selectedAssignments[chStr];
-      if (!assignment) return null;
-      // For splits, use combined range
-      if (this.splitChannels.has(ch) && this.splitAssignments[ch]) {
-        const segs = this.splitAssignments[ch].segments || [];
-        if (segs.length > 0) {
-          return {
-            min: Math.min(...segs.map(s => s.fullRange?.min ?? s.noteRange?.min ?? 0)),
-            max: Math.max(...segs.map(s => s.fullRange?.max ?? s.noteRange?.max ?? 127))
-          };
-        }
-      }
-      if (assignment.noteRangeMin != null && assignment.noteRangeMax != null) {
-        return { min: assignment.noteRangeMin, max: assignment.noteRangeMax };
-      }
-      return null;
-    };
-
-    // Get transposition semitones for a channel (matches preview behaviour)
-    const getTransposition = (ch) => {
-      if (skipRangeFilter) return 0;
-      const chStr = String(ch);
-      const adapt = this.adaptationSettings[chStr] || {};
-      return adapt.transpositionSemitones || 0;
-    };
-
-    // Build segment ranges for split channels (for per-segment coloring)
-    const getSplitSegments = (ch) => {
-      if (this.splitChannels.has(ch) && this.splitAssignments[ch]) {
-        const segs = this.splitAssignments[ch].segments || [];
-        if (segs.length > 1) return segs;
-      }
-      return null;
-    };
-
-    for (const track of this.midiData.tracks) {
-      if (!track.events) continue;
-      let tick = 0;
-      for (const event of track.events) {
-        if (event.deltaTime !== undefined) tick += event.deltaTime;
-        if (event.type === 'noteOn' && event.velocity > 0) {
-          const ch = event.channel ?? 0;
-          if (channelFilter !== null && ch !== channelFilter) continue;
-          const note = event.note ?? event.noteNumber ?? 60;
-
-          // Filter: apply transposition then check instrument range (same as preview)
-          const range = getRange(ch);
-          if (range) {
-            const transposed = Math.max(0, Math.min(127, note + getTransposition(ch)));
-            if (transposed < range.min || transposed > range.max) continue;
-          }
-
-          // Determine segment index(es) for split channels (for per-instrument coloring)
-          // A note can belong to multiple segments in overlap zones
-          const splitSegs = getSplitSegments(ch);
-          if (splitSegs) {
-            let matched = false;
-            for (let si = 0; si < splitSegs.length; si++) {
-              const rMin = splitSegs[si].noteRange?.min ?? 0;
-              const rMax = splitSegs[si].noteRange?.max ?? 127;
-              if (note >= rMin && note <= rMax) {
-                notes.push({ t: tick, n: note, ch: ch, seg: si });
-                matched = true;
-              }
-            }
-            // Notes outside all segment ranges: assign to closest segment
-            if (!matched && splitSegs.length > 0) {
-              let bestSeg = 0;
-              let bestDist = Infinity;
-              for (let si = 0; si < splitSegs.length; si++) {
-                const rMin = splitSegs[si].noteRange?.min ?? 0;
-                const rMax = splitSegs[si].noteRange?.max ?? 127;
-                const dist = note < rMin ? rMin - note : note - rMax;
-                if (dist < bestDist) { bestDist = dist; bestSeg = si; }
-              }
-              notes.push({ t: tick, n: note, ch: ch, seg: bestSeg });
-            }
-          } else {
-            notes.push({ t: tick, n: note, ch: ch, seg: -1 });
-          }
-        }
-      }
-    }
-    notes.sort((a, b) => a.t - b.t);
-    return notes;
+    // Pure extraction delegated to RoutingSummaryMinimapNotes (P2-F.4e).
+    return window.RoutingSummaryMinimapNotes.extractNotesForMinimap({
+      midiData: this.midiData,
+      selectedAssignments: this.selectedAssignments,
+      splitChannels: this.splitChannels,
+      splitAssignments: this.splitAssignments,
+      adaptationSettings: this.adaptationSettings,
+      channelFilter,
+      skipRangeFilter
+    });
   }
 
   // ============================================================================
