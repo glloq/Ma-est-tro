@@ -763,7 +763,26 @@
     }
 
 
+    // ========================================================================
+    // Sub-component wrapper (P2-F.10c)
+    // ------------------------------------------------------------------------
+    // Thin class facade : binds the existing mixin methods to the modal
+    // instance so callers can write `modal.ccPicker.openCCPicker()` instead
+    // of relying on prototype merging. Keeps the 769 LOC of method bodies
+    // untouched ; a body rewrite (substituting `this.modal.*` for state)
+    // can follow in a later cleanup once callsites have migrated.
+    // ========================================================================
+    class MidiEditorCCPicker {
+        constructor(modal) { this.modal = modal; }
+    }
+    Object.keys(MidiEditorCCPickerMixin).forEach((key) => {
+        MidiEditorCCPicker.prototype[key] = function(...args) {
+            return MidiEditorCCPickerMixin[key].apply(this.modal, args);
+        };
+    });
+
     if (typeof window !== 'undefined') {
         window.MidiEditorCCPickerMixin = MidiEditorCCPickerMixin;
+        window.MidiEditorCCPicker = MidiEditorCCPicker;
     }
 })();

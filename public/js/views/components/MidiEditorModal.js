@@ -84,6 +84,11 @@ class MidiEditorModal {
         // Draw settings popover sub-component (P2-F.10b).
         this.drawSettings = typeof MidiEditorDrawSettings !== 'undefined' ? new MidiEditorDrawSettings(this) : null;
 
+        // CC picker sub-component (P2-F.10c). Thin facade over the mixin
+        // prototype — callsites can now use `modal.ccPicker.<method>(...)`.
+        // The mixin remains attached to the prototype for legacy callers.
+        this.ccPicker = typeof MidiEditorCCPicker !== 'undefined' ? new MidiEditorCCPicker(this) : null;
+
         // Tablature editor (for string instruments)
         this.tablatureEditor = null;
 
