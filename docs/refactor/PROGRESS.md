@@ -9,8 +9,8 @@
 |---|---|
 | Phase active | **Phase 0 terminée** → **Phase 1 — Stabilisation Playback** |
 | Branche de travail | `claude/dazzling-ptolemy-rXsBU` |
-| Dernier lot terminé | P0-1.6 |
-| Prochain lot suggéré | P0-1.7 (déplacer logique métier Playback vers src/midi/domain/playback/) ou passer à Phase 2 (P0-2.1 FileRepository) |
+| Dernier lot terminé | P0-2.1 |
+| Prochain lot suggéré | P0-2.2 (RoutingRepository) |
 | Date dernière mise à jour | 2026-04-17 |
 | Agent ayant mis à jour | Claude (agent refactoring) |
 
@@ -58,12 +58,12 @@ Un lot = **2–5 jours max de travail**, **une PR cohérente**, **pas de changem
 - [x] **P0-1.4** Découper `PlaybackCommands.js` — extraire sous-module *routing validation*.
 - [x] **P0-1.5** Produire `ADR-002-repository-layer.md` avant Phase 2.
 - [x] **P0-1.6** Extraire `MidiAdaptationService` regroupant les interfaces de `TablatureConverter`, `DrumNoteMapper`, `ChannelSplitter`, `InstrumentMatcher`, `Transposer`.
-- [ ] **P0-1.7** Déplacer la logique métier Playback vers `src/midi/domain/playback/`.
+- [ ] **P0-1.7** Déplacer la logique métier Playback vers `src/midi/domain/playback/`. *(reporté — le découpage est effectif via les 4 sous-modules playback/; le déplacement physique vers domain/ attendra Phase 4 pour éviter un rename massif prématuré)*
 - [x] **P0-1.8** Vérifier réduction de taille `PlaybackCommands.js` > 40 %. → **-99 % (1124 → 13 LOC orchestrateur)**
 
 ### Phase 2 — Persistance (consolidation Repositories)
 
-- [ ] **P0-2.1** Introduire `FileRepository` au-dessus de `MidiDatabase`.
+- [x] **P0-2.1** Introduire `FileRepository` au-dessus de `MidiDatabase`.
 - [ ] **P0-2.2** Introduire `RoutingRepository` au-dessus de `RoutingPersistenceDB` + `MidiRouter`.
 - [ ] **P0-2.3** Introduire `InstrumentRepository` au-dessus de `InstrumentDatabase` + `InstrumentSettingsDB`.
 - [ ] **P0-2.4** Centraliser transactions/rollbacks dans la couche Repository.
@@ -123,6 +123,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 | 2026-04-17 | Claude (refactoring) | P0-0.6 | Tests Jest de contrat pour 5 commandes playback (start, stop, seek, status, set_loop) + correction de 3 snapshots où l'erreur observable ne correspondait pas au réel (validator CommandRegistry vs. handler) | `tests/contracts/playback.contract.test.js`, `docs/refactor/contracts/playback/{playback_start,playback_seek,playback_set_loop}.contract.json` | `176a29a` | 5 commandes × 17 cas = 17 tests nominaux+erreurs. Correction des contrats : la validation CommandRegistry pré-handler préfixe les erreurs avec `Invalid <cmd> data: ` et peut concaténer plusieurs erreurs. |
 | 2026-04-17 | Claude (refactoring) | P0-0.7 | Tests Jest de contrat pour 8 commandes routing critiques : route_create, route_delete, route_list, route_info, route_enable, route_test, file_routing_sync, file_routing_bulk_sync | `tests/contracts/routing.contract.test.js` | `3a41c6b` | 8 commandes × 22 tests couvrent CRUD, NotFoundError, validation (source/destination/routeId), parsing `deviceId::targetChannel`, virtual-instrument exception, bulk sync multi-fichiers. |
 | 2026-04-17 | Claude (refactoring) | P0-0.8 | Rédaction checklist refactor en 8 sections (DoR, IN/OUT, tests, payload, doc, PROGRESS, commit, DoD) + tableau de navigation vers les autres documents | `docs/refactor/CHECKLIST.md` | `d8bc510` | Clôture la Phase 0 baseline sécurité. Tous les garde-fous du plan §10 sont maintenant opérationnels en documentation ET en tests. |
+| 2026-04-17 | Claude (refactoring) | P0-2.1 | Création FileRepository (wrapper ADR-002 option B, 38 LOC) : findById, findInfoById, findByFolder, save, update, delete, getChannels. Enregistré dans Application.js. | `src/repositories/FileRepository.js` (créé), `src/core/Application.js` | (ce commit) | Début Phase 2. La migration des handlers vers fileRepository se fera incrémentalement dans les lots suivants. |
 | 2026-04-17 | Claude (refactoring) | P0-1.6 | Création MidiAdaptationService (facade sur MidiTransposer + AutoAssigner, 37 LOC). Intégré dans Application.js via _registerService. PlaybackAssignmentCommands utilise app.adaptationService au lieu de new MidiTransposer. PlaybackAnalysisCommands utilise app.adaptationService au lieu de app.autoAssigner. | `src/midi/MidiAdaptationService.js` (créé), `src/core/Application.js`, `src/api/commands/playback/PlaybackAssignmentCommands.js`, `src/api/commands/playback/PlaybackAnalysisCommands.js` | (ce commit) | Import direct MidiTransposer retiré des handlers. Les handlers dépendent d'une interface unifiée, pas d'implémentations concrètes. |
 | 2026-04-17 | Claude (refactoring) | P0-1.5 | ADR-002 : Repositories wrappers au-dessus des sub-DBs existantes. 3 options comparées, option B retenue (consolidation), conventions et architecture cible documentées. | `docs/adr/ADR-002-repository-layer.md` | (ce commit) | Prérequis Phase 2 (P0-2.x). Définit FileRepository, RoutingRepository, InstrumentRepository. |
 | 2026-04-17 | Claude (refactoring) | P0-1.4 | Extraction finale : 6 handlers routing/channel → PlaybackRoutingCommands.js. PlaybackCommands.js réduit à 13 LOC (orchestrateur pur 4 imports + 4 register()). | `src/api/commands/playback/PlaybackRoutingCommands.js` (créé, 168 LOC), `src/api/commands/PlaybackCommands.js` (189→13 LOC) | (ce commit) | Découpage complet en 4 sous-modules + cache partagé : Control(131), Analysis(200), Assignment(484), Routing(168), midiConverterCache(12). Total = 1008 LOC vs 1124 baseline (la « croissance » est la structure modulaire). |
