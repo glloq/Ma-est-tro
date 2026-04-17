@@ -9,8 +9,8 @@
 |---|---|
 | Phase active | **Phase 2 — Persistance (migration handlers)** |
 | Branche de travail | `claude/refactor-maestro-project-L6ptg` |
-| Dernier lot terminé | P0-2.5c |
-| Prochain lot suggéré | P0-2.6 (tests d'intégration DB : split / no-split / overwrite) — Phase 2 Repositories quasi terminée. |
+| Dernier lot terminé | P0-2.6 |
+| Prochain lot suggéré | **Phase 3 — P1-3.1** : concevoir le format de schéma déclaratif pour `JsonValidator` (ADR). |
 | Date dernière mise à jour | 2026-04-17 |
 | Agent ayant mis à jour | Claude (agent refactoring) |
 
@@ -83,7 +83,7 @@ Un lot = **2–5 jours max de travail**, **une PR cohérente**, **pas de changem
   - [x] **P0-2.5m** `VirtualInstrumentCommands.js` (11 appels, y compris 1 SQL inline `DELETE FROM instruments_latency` encapsulé dans nouvelle méthode `InstrumentSettingsDB.deleteByDevice(deviceId, channel?)`).
   - [x] **P0-2.5n** `InstrumentSettingsCommands.js` (tous les appels migrés, y compris les 6 SQL inline — encapsulés dans `StringInstrumentDatabase.deleteByDevice` et `RoutingPersistenceDB.deleteRoutingsByDevice` + déjà fait pour `instruments_latency` en P0-2.5m).
   - [x] **P0-2.5o** `SystemCommands.js` (`getFiles('/')` → `fileRepository.findByFolder` ; `database.backup()` conservé car op admin du fichier DB, pas du domaine).
-- [ ] **P0-2.6** Tests d'intégration DB : split / no-split / overwrite.
+- [x] **P0-2.6** Tests d'intégration DB : split / no-split / overwrite (7 tests sur SQLite réel via `tests/repositories/routing-integration.test.js`).
 
 ### Phase 3 — Validation et erreurs
 
@@ -127,6 +127,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 
 | Date | Agent | Lot | Résumé | Fichiers touchés | Commit | Notes |
 |---|---|---|---|---|---|---|
+| 2026-04-17 | Claude (refactoring) | P0-2.6 | 7 tests d'intégration SQLite : no-split, overwrite, split (multi-segments), split replaces non-split, rollback transactionnel, deleteByFileId, deleteByDevice. Découverte d'un bug latent : `Database.insertSplitRoutings` n'était pas exposé sur la façade (ajouté). Découverte d'une contrainte legacy `UNIQUE(midi_file_id, track_id)` de migration 006 jamais droppée : les splits requièrent des `target_channel` distincts pour coexister (documenté dans le test). | `tests/repositories/routing-integration.test.js` (créé), `src/storage/Database.js` (+délégation `insertSplitRoutings`) | (ce commit) | 248/248 tests verts (241 existants + 7 nouveaux). Note : `tests/midi-filter.test.js` a 18 échecs pré-existants mais reste volontairement skip via `jest.config.cjs` quand better-sqlite3 est absent (cas CI). |
 | 2026-04-17 | Claude (refactoring) | P0-2.5c | `PlaybackAssignmentCommands.js` (15 appels migrés vers `fileRepository`/`routingRepository`/`instrumentRepository`). Dernier handler à accès DB direct. | `src/api/commands/playback/PlaybackAssignmentCommands.js` | (ce commit) | 241/241 tests verts. **Fin de P0-2.5** : seul `app.database.backup()` conservé (exception admin documentée). |
 | 2026-04-17 | Claude (refactoring) | P0-2.5n | `InstrumentSettingsCommands.js` (33 appels migrés, y compris 6 SQL inline encapsulés). `InstrumentRepository.getAllCapabilities` ajouté. Nouvelles méthodes sub-DB : `StringInstrumentDatabase.deleteByDevice(deviceId, channel?)`, `RoutingPersistenceDB.deleteRoutingsByDevice(deviceId, channel?)`. Exposées via `Database` façade et repositories (`stringInstrumentRepository.deleteByDevice`, `routingRepository.deleteByDevice`). Clôt P0-2.5e. | `src/api/commands/InstrumentSettingsCommands.js`, `src/storage/StringInstrumentDatabase.js`, `src/storage/RoutingPersistenceDB.js`, `src/storage/InstrumentDatabase.js`, `src/storage/Database.js`, `src/repositories/InstrumentRepository.js`, `src/repositories/StringInstrumentRepository.js`, `src/repositories/RoutingRepository.js` | (ce commit) | 241/241 tests verts. |
 | 2026-04-17 | Claude (refactoring) | P0-2.5l | `DeviceCommands.js` (14 appels migrés). `InstrumentRepository` étendu : findByUsbSerial, findByMac, findByNormalizedName, reconcileDeviceId, deduplicateByUsbSerial, saveSysExIdentity. Usage de `deviceSettingsRepository` pour getDeviceSettings. | `src/repositories/InstrumentRepository.js`, `src/api/commands/DeviceCommands.js` | (ce commit) | 241/241 tests verts. |
@@ -180,7 +181,8 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 
 ## Blocages actifs
 
-Aucun.
+- **tests/midi-filter.test.js — 18 échecs pré-existants** (2026-04-17) : ce fichier de test est skippé par `jest.config.cjs` quand better-sqlite3 n'est pas compilé (cas CI actuel). Les échecs existaient avant les lots Phase 2 (dernière modification du fichier en `a668ae5`, avant Phase 2). Pas bloquant pour le refactor mais à corriger dans un lot dédié hors Phase 2 (scope FilterManager / défauts de tri).
+- **Schéma legacy `UNIQUE(midi_file_id, track_id)` sur `midi_instrument_routings`** (2026-04-17) : migration 006 impose cette contrainte jamais droppée par 020/032. Les splits coexistent uniquement si les segments ont des `target_channel` distincts (multi-channel devices). Si des utilisateurs attendent des splits 100 % virtuels (même target), le comportement actuel les rejette. **Hors scope P0-2.6** — freeze SQL actif. À traiter via ADR Phase 4 (migration 041 + script de backfill).
 
 ---
 

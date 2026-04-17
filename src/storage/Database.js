@@ -822,6 +822,9 @@ class DatabaseManager {
   insertRouting(routing) {
     return this.instrumentDB.insertRouting(routing);
   }
+  insertSplitRoutings(...args) {
+    return this.instrumentDB.insertSplitRoutings(...args);
+  }
   getRoutingsByFile(fileId, includeDisabled) {
     return this.instrumentDB.getRoutingsByFile(fileId, includeDisabled);
   }
