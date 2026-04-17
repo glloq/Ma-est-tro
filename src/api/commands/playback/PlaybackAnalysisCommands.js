@@ -26,7 +26,7 @@ async function analyzeChannel(app, data) {
     throw new MidiError(`Failed to parse MIDI file: ${error.message}`);
   }
 
-  const analysis = app.autoAssigner.analyzeChannel(midiData, data.channel, data.fileId);
+  const analysis = app.adaptationService.analyzeChannel(midiData, data.channel, data.fileId);
 
   return {
     success: true,
@@ -158,7 +158,7 @@ async function generateAssignmentSuggestions(app, data) {
 
   let result;
   try {
-    result = await app.autoAssigner.generateSuggestions(midiData, options);
+    result = await app.adaptationService.generateSuggestions(midiData, options);
   } finally {
     if (originalConfig) {
       restoreScoringConfig(originalConfig);

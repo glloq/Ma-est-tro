@@ -19,6 +19,7 @@ import WebSocketServer from '../api/WebSocketServer.js';
 import HttpServer from '../api/HttpServer.js';
 import CommandHandler from '../api/CommandHandler.js';
 import AutoAssigner from '../midi/AutoAssigner.js';
+import MidiAdaptationService from '../midi/MidiAdaptationService.js';
 import MidiClockGenerator from '../midi/MidiClockGenerator.js';
 import BackupScheduler from '../storage/BackupScheduler.js';
 
@@ -199,6 +200,9 @@ class Application {
 
       // Initialize auto-assigner (singleton with cache)
       this._registerService('autoAssigner', new AutoAssigner(this.database, this.logger));
+
+      // Initialize MIDI adaptation service (facade over MidiTransposer + AutoAssigner)
+      this._registerService('adaptationService', new MidiAdaptationService(this.logger, this.autoAssigner));
 
       // Initialize API
       this._registerService('commandHandler', new CommandHandler(deps));

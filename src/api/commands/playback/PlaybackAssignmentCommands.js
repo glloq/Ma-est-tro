@@ -1,7 +1,6 @@
 // src/api/commands/playback/PlaybackAssignmentCommands.js
 // Extracted from PlaybackCommands.js — assignment apply + instrument capabilities (P0-1.3).
 import { parseMidi } from 'midi-file';
-import MidiTransposer from '../../../midi/MidiTransposer.js';
 import InstrumentCapabilitiesValidator from '../../../midi/InstrumentCapabilitiesValidator.js';
 import { ValidationError, NotFoundError, MidiError } from '../../../core/errors/index.js';
 import { getMidiConverter } from './midiConverterCache.js';
@@ -55,14 +54,14 @@ async function applyAssignments(app, data) {
       }
     }
 
-    const transposer = new MidiTransposer(app.logger);
-    let result = transposer.transposeChannels(midiData, transpositions);
+    const adaptation = app.adaptationService;
+    let result = adaptation.transposeChannels(midiData, transpositions);
     let adaptedMidiData = result.midiData;
     stats = result.stats;
 
     for (const step of postProcessing) {
       if (step.type === 'compression') {
-        const compResult = transposer.compressChannel(adaptedMidiData, step.channel, step.min, step.max);
+        const compResult = adaptation.compressChannel(adaptedMidiData, step.channel, step.min, step.max);
         adaptedMidiData = compResult.midiData;
         stats.notesRemapped += (compResult.stats?.notesRemapped || 0);
       }
@@ -75,7 +74,7 @@ async function applyAssignments(app, data) {
 
       if (assignment.behaviorMode === 'overflow' || assignment.behaviorMode === 'alternate') continue;
 
-      const freeChannels = transposer.findFreeChannels(adaptedMidiData);
+      const freeChannels = adaptation.findFreeChannels(adaptedMidiData);
       const neededChannels = assignment.segments.length - 1;
 
       if (freeChannels.length < neededChannels) {
@@ -93,7 +92,7 @@ async function applyAssignments(app, data) {
         gmProgram: seg.gmProgram ?? null
       }));
 
-      const splitResult = transposer.splitChannelInFile(adaptedMidiData, channelNum, splitSegments);
+      const splitResult = adaptation.splitChannelInFile(adaptedMidiData, channelNum, splitSegments);
       adaptedMidiData = splitResult.midiData;
       splitStats.channelsSplit++;
       splitStats.notesMoved += splitResult.stats.notesMoved;
