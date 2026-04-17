@@ -28,6 +28,7 @@ import SessionRepository from '../repositories/SessionRepository.js';
 import PlaylistRepository from '../repositories/PlaylistRepository.js';
 import DeviceSettingsRepository from '../repositories/DeviceSettingsRepository.js';
 import LightingRepository from '../repositories/LightingRepository.js';
+import StringInstrumentRepository from '../repositories/StringInstrumentRepository.js';
 import MidiClockGenerator from '../midi/MidiClockGenerator.js';
 import BackupScheduler from '../storage/BackupScheduler.js';
 
@@ -221,6 +222,7 @@ class Application {
       this._registerService('playlistRepository', new PlaylistRepository(this.database));
       this._registerService('deviceSettingsRepository', new DeviceSettingsRepository(this.database));
       this._registerService('lightingRepository', new LightingRepository(this.database));
+      this._registerService('stringInstrumentRepository', new StringInstrumentRepository(this.database));
 
       // Initialize API
       this._registerService('commandHandler', new CommandHandler(deps));
