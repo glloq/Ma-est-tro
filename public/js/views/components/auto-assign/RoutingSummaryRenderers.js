@@ -1255,6 +1255,171 @@
     `;
   }
 
+  /**
+   * Split section of the detail panel : multi-instrument table with
+   * per-segment range slider, overlap zones, and uncovered notes warning.
+   *
+   * @param {Object} opts
+   * @param {number} opts.channel
+   * @param {Object|null} opts.analysis
+   * @param {Object|null} opts.splitData - activeData.splitAssignments[channel]
+   * @param {boolean} opts.expanded
+   * @param {number} opts.semitones - transposition applied to channel range
+   * @param {Array<Object>} opts.allInstruments
+   * @param {(ch:string, segNoteRange:Object) => Array<Object>} opts.getCompatibleInstrumentsForSegment
+   * @param {(inst:Object) => string} opts.getDisplayName
+   * @param {(segments:Array) => Array<{segA:number,segB:number,min:number,max:number}>} opts.detectOverlaps
+   * @param {(s:string) => string} opts.escape
+   */
+  function renderSplitSection(opts) {
+    const {
+      channel, analysis, splitData, expanded, semitones,
+      allInstruments = [],
+      getCompatibleInstrumentsForSegment, getDisplayName,
+      detectOverlaps, escape
+    } = opts;
+    const { MAX_INST_NAME, SPLIT_COLORS, safeNoteRange, midiNoteToName } = window.RoutingSummaryConstants;
+
+    if (!splitData) return '';
+
+    const segments = splitData.segments || [];
+    const activeMode = splitData.type;
+    const chRange = safeNoteRange((analysis?.noteRange?.min ?? 0) + semitones, (analysis?.noteRange?.max ?? 127) + semitones);
+    const chMin = chRange.min;
+    const chMax = chRange.max;
+    const noteCount = chMax - chMin + 1;
+    const ch = String(channel);
+
+    const instRowsHTML = segments.map((seg, i) => {
+      const color = SPLIT_COLORS[i % SPLIT_COLORS.length];
+
+      const compatInstruments = getCompatibleInstrumentsForSegment(ch, seg.noteRange);
+      const seen = new Set(compatInstruments.map(inst => inst.id));
+      if (seg.instrumentId && !seen.has(seg.instrumentId)) {
+        const currentInst = allInstruments.find(ii => ii.id === seg.instrumentId);
+        if (currentInst) compatInstruments.unshift({ ...currentInst, _score: -1 });
+      }
+      const selectOptions = compatInstruments.map(inst => {
+        const selected = inst.id === seg.instrumentId ? 'selected' : '';
+        const name = getDisplayName(inst);
+        const label = name.length > MAX_INST_NAME ? name.slice(0, MAX_INST_NAME - 1) + '\u2026' : name;
+        return `<option value="${inst.id}" ${selected}>${escape(label)}</option>`;
+      }).join('');
+      const canRemove = segments.length > 1;
+
+      const physMin = seg.fullRange?.min ?? 0;
+      const physMax = seg.fullRange?.max ?? 127;
+      const displayPhysMin = Math.max(physMin, chMin);
+      const displayPhysMax = Math.min(physMax, chMax);
+      const physLeft = Math.round(((displayPhysMin - chMin) / noteCount) * 100);
+      const physWidth = Math.max(1, Math.round(((displayPhysMax - displayPhysMin + 1) / noteCount) * 100));
+      const rMin = Math.max(chMin, seg.noteRange?.min ?? physMin);
+      const rMax = Math.min(chMax, seg.noteRange?.max ?? physMax);
+      const segLeft = Math.round(((rMin - chMin) / noteCount) * 100);
+      const segWidth = Math.max(2, Math.round(((rMax - rMin + 1) / noteCount) * 100));
+      const sliderTitle = `${midiNoteToName(rMin)}\u2013${midiNoteToName(rMax)}`;
+
+      return `<div class="rs-split-table-row" data-channel="${channel}" data-seg="${i}">
+        <div class="rs-split-table-badge" style="background:${color}20;border-color:${color}">
+          <span class="rs-split-badge-dot" style="background:${color}"></span>
+          <select class="rs-seg-instrument-select" data-channel="${channel}" data-seg="${i}" data-mode="${activeMode}">
+            ${selectOptions}
+          </select>
+          ${canRemove ? `<button class="rs-split-badge-remove rs-btn-remove-segment" data-channel="${channel}" data-seg="${i}" title="${_t('common.delete')}">&times;</button>` : ''}
+        </div>
+        <div class="rs-split-table-bar">
+          <div class="rs-split-viz-inst-row" data-channel="${channel}" data-seg="${i}">
+            <div class="rs-split-viz-phys" style="left:${physLeft}%;width:${physWidth}%" title="${midiNoteToName(physMin)}\u2013${midiNoteToName(physMax)}"></div>
+            <div class="rs-split-viz-slider" style="left:${segLeft}%;width:${segWidth}%;background:${color}"
+                 title="${sliderTitle}" data-channel="${channel}" data-seg="${i}"
+                 data-phys-min="${physMin}" data-phys-max="${physMax}">
+              <div class="rs-split-viz-handle rs-split-viz-handle-l" data-bound="min"></div>
+              <div class="rs-split-viz-handle rs-split-viz-handle-r" data-bound="max"></div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    let overlapsHTML = '';
+    const overlaps = detectOverlaps ? detectOverlaps(segments) : [];
+    if (overlaps.length > 0) {
+      const currentStrategy = splitData?.overlapStrategy || 'shared';
+      overlapsHTML = overlaps.map((ov, idx) => {
+        const colorA = SPLIT_COLORS[ov.segA % SPLIT_COLORS.length];
+        const colorB = SPLIT_COLORS[ov.segB % SPLIT_COLORS.length];
+        return `
+          <div class="rs-overlap-zone-card">
+            <div class="rs-overlap-zone-colors">
+              <span class="rs-overlap-zone-chip" style="background:${colorA}"></span>
+              <span class="rs-overlap-zone-chip" style="background:${colorB}"></span>
+              <span class="rs-overlap-zone-range">${midiNoteToName(ov.min)}\u2013${midiNoteToName(ov.max)}</span>
+            </div>
+            <div class="rs-overlap-zone-btns">
+              <button class="btn btn-sm rs-overlap-resolve-btn${currentStrategy === 'shared' ? ' rs-overlap-btn-active' : ''}" data-channel="${channel}" data-overlap="${idx}" data-strategy="shared">${_t('routingSummary.overlapPlay') || 'Jouer'}</button>
+              <button class="btn btn-sm rs-overlap-resolve-btn${currentStrategy === 'alternate' ? ' rs-overlap-btn-active' : ''}" data-channel="${channel}" data-overlap="${idx}" data-strategy="alternate">${_t('routingSummary.overlapAlternate') || 'Alterner'}</button>
+              <button class="btn btn-sm rs-overlap-resolve-btn${currentStrategy === 'overflow' ? ' rs-overlap-btn-active' : ''}" data-channel="${channel}" data-overlap="${idx}" data-strategy="overflow">${_t('routingSummary.overlapOverflow') || 'D\u00e9bordement'}</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    let uncoveredHTML = '';
+    if (analysis?.noteDistribution && segments.length > 0) {
+      const usedNotes = Object.keys(analysis.noteDistribution).map(Number);
+      const uncoveredNotes = usedNotes.filter(n => {
+        const shifted = n + semitones;
+        return !segments.some(seg => {
+          const sMin = seg.noteRange?.min ?? 0;
+          const sMax = seg.noteRange?.max ?? 127;
+          return shifted >= sMin && shifted <= sMax;
+        });
+      });
+      if (uncoveredNotes.length > 0) {
+        const uncMin = Math.min(...uncoveredNotes);
+        const uncMax = Math.max(...uncoveredNotes);
+        uncoveredHTML = `
+          <div class="rs-uncovered-warning">
+            <span>\u26A0 ${uncoveredNotes.length} ${_t('routingSummary.uncoveredNotes') || 'notes non couvertes'} (${midiNoteToName(uncMin)}-${midiNoteToName(uncMax)})</span>
+          </div>
+        `;
+      }
+    }
+
+    return `
+      <div class="rs-split-section active">
+        <div class="rs-split-header" data-channel="${channel}">
+          <span class="rs-split-toggle">${expanded ? '\u25BE' : '\u25B8'}</span>
+          <span>${_t('routingSummary.multiInstrument') || 'Multi-instrument'} (${segments.length})</span>
+          <button class="btn btn-sm rs-btn-remove-split rs-split-toggle-btn" data-channel="${channel}" title="${_t('routingSummary.removeMulti') || 'Retirer multi-instrument'}">\u2716</button>
+        </div>
+        <div class="rs-split-body ${expanded ? '' : 'collapsed'}">
+          <div class="rs-split-viz-v2" data-channel="${channel}" data-ch-min="${chMin}" data-ch-max="${chMax}">
+            <div class="rs-split-table">
+              <div class="rs-split-table-row rs-split-table-header">
+                <div class="rs-split-table-badge-spacer"></div>
+                <div class="rs-split-table-bar">
+                  ${renderMiniKeyboard(chMin, chMax)}
+                  ${renderChannelHistogram(analysis, semitones)}
+                </div>
+              </div>
+              ${instRowsHTML}
+              <div class="rs-split-table-row rs-split-table-add">
+                <div class="rs-split-table-badge-spacer"></div>
+                <div class="rs-split-table-bar" style="text-align:center">
+                  <button class="btn btn-sm rs-btn-add-segment" data-channel="${channel}">+ ${_t('routingSummary.addInstrument') || 'Ajouter instrument'}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          ${overlapsHTML}
+          ${uncoveredHTML}
+        </div>
+      </div>
+    `;
+  }
+
   window.RoutingSummaryRenderers = Object.freeze({
     renderMiniKeyboard,
     renderChannelHistogram,
@@ -1270,6 +1435,7 @@
     renderCCSection,
     renderScoreDetail,
     renderSummaryTable,
-    renderAdaptationBlock
+    renderAdaptationBlock,
+    renderSplitSection
   });
 })();
