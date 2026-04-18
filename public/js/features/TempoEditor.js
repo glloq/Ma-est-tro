@@ -1,12 +1,12 @@
 /**
- * TempoEditor - Éditeur de courbes de tempo synchronisé avec le piano roll
+ * TempoEditor - Tempo curve editor synchronized with the piano roll
  *
- * Fonctionnalités :
- * - Édition des changements de tempo au fil du temps (tempo map)
- * - Outils : sélection, déplacement, ligne avec courbes, dessin continu
- * - Types de courbes : linéaire, exponentielle, logarithmique, sinusoïdale
- * - Synchronisation horizontale avec le piano roll
- * - Respect de la grille temporelle et du zoom
+ * Features:
+ * - Edit tempo changes over time (tempo map)
+ * - Tools: select, move, curved line, continuous draw
+ * - Curve types: linear, exponential, logarithmic, sinusoidal
+ * - Horizontal synchronization with the piano roll
+ * - Honors the time grid and zoom
  */
 
 // eslint-disable-next-line no-unused-vars
@@ -21,7 +21,7 @@ class TempoEditor {
             grid: options.grid || 15,
             minTempo: options.minTempo || 20,
             maxTempo: options.maxTempo || 300,
-            onChange: options.onChange || null, // Callback appelé lors des changements
+            onChange: options.onChange || null, // Callback invoked on changes
             ...options
         };
 
@@ -30,30 +30,30 @@ class TempoEditor {
         this.viewMaxTempo = this.options.maxTempo;
         this.viewRange = 80; // BPM visible at once (scrollable window)
 
-        // État de l'éditeur
-        this.events = []; // Événements de tempo {ticks, tempo}
+        // Editor state
+        this.events = []; // Tempo events {ticks, tempo}
         this.selectedEvents = new Set();
         this.currentTool = 'select'; // 'select', 'move', 'line', 'draw'
-        this.curveType = 'linear'; // Type de courbe : 'linear', 'exponential', 'logarithmic', 'sine'
+        this.curveType = 'linear'; // Curve type: 'linear', 'exponential', 'logarithmic', 'sine'
         this.isDrawing = false;
         this.lastDrawPosition = null;
         this.lastDrawTicks = null;
 
-        // Historique pour undo/redo
+        // History for undo/redo
         this.history = [];
         this.historyIndex = -1;
 
-        // OPTIMISATION: Système de throttling pour le rendu
+        // OPTIMIZATION: Render throttling system
         this.pendingRender = false;
         this.renderScheduled = false;
         this.isDirty = false;
 
-        // Canvas de buffer pour la grille (statique)
+        // Buffer canvas for the grid (static)
         this.gridCanvas = null;
         this.gridCtx = null;
         this.gridDirty = true;
 
-        // Initialisation
+        // Initialization
         this.init();
     }
 
@@ -94,12 +94,12 @@ class TempoEditor {
         this.element.appendChild(this.canvas);
         this.container.appendChild(this.element);
 
-        // Redimensionner le canvas
+        // Resize the canvas
         this.resize();
     }
 
     setupEventListeners() {
-        // Stocker les références bindées pour pouvoir les retirer dans destroy()
+        // Store bound references so we can remove them in destroy()
         this._boundMouseDown = this.handleMouseDown.bind(this);
         this._boundMouseMove = (e) => {
             if (this._mouseMoveRAF) return;
@@ -114,23 +114,23 @@ class TempoEditor {
         this._boundResize = this.resize.bind(this);
         this._boundThemeChanged = () => this._onThemeChanged();
 
-        // Événements souris (mousemove throttlé via rAF)
+        // Mouse events (mousemove throttled via rAF)
         this.canvas.addEventListener('mousedown', this._boundMouseDown);
         this.canvas.addEventListener('mousemove', this._boundMouseMove);
         this.canvas.addEventListener('mouseup', this._boundMouseUp);
         this.canvas.addEventListener('mouseleave', this._boundMouseLeave);
 
-        // Scroll vertical pour la plage de tempo
+        // Vertical scroll for the tempo range
         this._boundWheel = this._handleWheel.bind(this);
         this.canvas.addEventListener('wheel', this._boundWheel, { passive: false });
 
-        // Événements clavier
+        // Keyboard events
         document.addEventListener('keydown', this._boundKeyDown);
 
-        // Redimensionnement
+        // Resize
         window.addEventListener('resize', this._boundResize);
 
-        // Changement de thème
+        // Theme change
         document.addEventListener('theme-changed', this._boundThemeChanged);
     }
 
@@ -161,7 +161,7 @@ class TempoEditor {
             this.canvas.width = width;
             this.canvas.height = height;
 
-            // Créer le canvas de buffer pour la grille
+            // Create the grid buffer canvas
             if (!this.gridCanvas) {
                 this.gridCanvas = document.createElement('canvas');
                 this.gridCanvas.width = width;
@@ -177,10 +177,10 @@ class TempoEditor {
         }
     }
 
-    // === Gestion de l'état ===
+    // === State management ===
 
     saveState() {
-        // Debounce: max 1 sauvegarde par 100ms pour éviter le lag en dessin continu
+        // Debounce: max 1 save per 100ms to avoid lag during continuous drawing
         if (this._saveStateTimer) clearTimeout(this._saveStateTimer);
         this._saveStateTimer = setTimeout(() => {
             this._doSaveState();
@@ -190,7 +190,7 @@ class TempoEditor {
     _doSaveState() {
         const state = JSON.stringify(this.events);
 
-        // Supprimer les états futurs si on est au milieu de l'historique
+        // Drop future states if we are in the middle of the history
         if (this.historyIndex < this.history.length - 1) {
             this.history = this.history.slice(0, this.historyIndex + 1);
         }
@@ -198,7 +198,7 @@ class TempoEditor {
         this.history.push(state);
         this.historyIndex++;
 
-        // Limiter l'historique à 20 états (reduced for memory efficiency)
+        // Limit history to 20 states (reduced for memory efficiency)
         if (this.history.length > 20) {
             this.history.shift();
             this.historyIndex--;
@@ -249,7 +249,7 @@ class TempoEditor {
         }
     }
 
-    // === Gestion des outils ===
+    // === Tool management ===
 
     setTool(tool) {
         this.currentTool = tool;
@@ -271,7 +271,7 @@ class TempoEditor {
         this.lastDrawTicks = null;
     }
 
-    // === Conversion coordonnées ===
+    // === Coordinate conversion ===
 
     ticksToX(ticks) {
         return ((ticks - this.options.xoffset) / this.options.xrange) * this.canvas.width;
@@ -304,12 +304,12 @@ class TempoEditor {
         return Math.max(this.options.minTempo, Math.min(this.options.maxTempo, tempo));
     }
 
-    // === Gestion des événements ===
+    // === Event management ===
 
     addEvent(ticks, tempo, autoSave = true) {
         const snappedTicks = this.snapToGrid(ticks);
 
-        // Vérifier si un événement existe déjà à ce tick
+        // Check whether an event already exists at this tick
         const existingEvent = this.events.find(e => e.ticks === snappedTicks);
 
         if (existingEvent) {
@@ -328,7 +328,7 @@ class TempoEditor {
         };
         this.events.push(event);
 
-        // Trier par ticks
+        // Sort by ticks
         this.events.sort((a, b) => a.ticks - b.ticks);
 
         if (autoSave) {
@@ -354,13 +354,13 @@ class TempoEditor {
                 event.tempo = this.clampTempo(event.tempo + deltaTempo);
             }
         });
-        // Trier par ticks après déplacement
+        // Sort by ticks after the move
         this.events.sort((a, b) => a.ticks - b.ticks);
         this.saveState();
         this.renderThrottled();
     }
 
-    // === Outils d'édition ===
+    // === Editing tools ===
 
     handleMouseDown(e) {
         const rect = this.canvas.getBoundingClientRect();
@@ -388,7 +388,7 @@ class TempoEditor {
                 break;
 
             case 'select': {
-                // Chercher un événement proche
+                // Look for a nearby event
                 const clickedEvent = this.findEventAt(ticks, tempo);
                 if (clickedEvent) {
                     if (e.shiftKey) {
@@ -405,7 +405,7 @@ class TempoEditor {
                     if (!e.shiftKey) {
                         this.selectedEvents.clear();
                     }
-                    // Démarrer une sélection par rectangle
+                    // Start a rectangle selection
                     this.selectionRect = { x, y };
                 }
                 this.renderThrottled();
@@ -449,7 +449,7 @@ class TempoEditor {
                 this.dragStart = { ticks, tempo };
             }
         } else if (this.selectionRect) {
-            // Rectangle de sélection en cours - stocker les coordonnées courantes
+            // Selection rectangle in progress - store the current coordinates
             this.selectionRect.currentX = x;
             this.selectionRect.currentY = y;
             this.renderThrottled();
@@ -524,7 +524,7 @@ class TempoEditor {
     }
 
     handleKeyDown(e) {
-        // Ne traiter les raccourcis que si l'éditeur est visible
+        // Only process shortcuts if the editor is visible
         if (!this.element || this.element.offsetParent === null) return;
 
         if ((e.key === 'Delete' || e.key === 'Backspace') && this.selectedEvents.size > 0) {
@@ -586,9 +586,9 @@ class TempoEditor {
         this.renderThrottled();
     }
 
-    // renderSelectionRect est désormais intégré dans render()
+    // renderSelectionRect is now integrated into render()
 
-    // === Création de ligne avec courbes ===
+    // === Line creation with curves ===
 
     createLine(startTicks, startTempo, endTicks, endTempo) {
         const minTicks = Math.min(startTicks, endTicks);
@@ -596,7 +596,7 @@ class TempoEditor {
         const ticksRange = maxTicks - minTicks;
         const tempoRange = endTempo - startTempo;
 
-        // Créer des points le long de la ligne selon la grille
+        // Create points along the line according to the grid
         for (let t = minTicks; t <= maxTicks; t += this.options.grid) {
             const progress = ticksRange > 0 ? (t - minTicks) / ticksRange : 0;
             const curveProgress = this.applyCurve(progress);
@@ -609,9 +609,9 @@ class TempoEditor {
     }
 
     /**
-     * Applique une courbe d'interpolation sur un progrès linéaire [0..1]
-     * @param {number} t - Progrès linéaire (0 à 1)
-     * @returns {number} - Progrès avec courbe appliquée (0 à 1)
+     * Applies an interpolation curve to linear progress [0..1]
+     * @param {number} t - Linear progress (0 to 1)
+     * @returns {number} - Progress with curve applied (0 to 1)
      */
     applyCurve(t) {
         switch (this.curveType) {
@@ -619,15 +619,15 @@ class TempoEditor {
                 return t;
 
             case 'exponential':
-                // Courbe exponentielle (ease-in) : démarrage lent, fin rapide
+                // Exponential curve (ease-in): slow start, fast end
                 return t * t;
 
             case 'logarithmic':
-                // Courbe logarithmique (ease-out) : démarrage rapide, fin lente
+                // Logarithmic curve (ease-out): fast start, slow end
                 return Math.sqrt(t);
 
             case 'sine':
-                // Courbe sinusoïdale (ease-in-out) : démarrage et fin en douceur
+                // Sinusoidal curve (ease-in-out): smooth start and end
                 return (1 - Math.cos(t * Math.PI)) / 2;
 
             default:
@@ -635,7 +635,7 @@ class TempoEditor {
         }
     }
 
-    // === Rendu ===
+    // === Rendering ===
 
     renderThrottled() {
         if (!this.renderScheduled) {
@@ -657,16 +657,16 @@ class TempoEditor {
 
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Grille de fond
+        // Background grid
         this.renderGrid();
 
-        // Ligne de tempo par défaut (120 BPM)
+        // Default tempo line (120 BPM)
         this.renderDefaultTempoLine();
 
-        // Événements
+        // Events
         this.renderEvents();
 
-        // Rectangle de sélection
+        // Selection rectangle
         if (this.selectionRect && this.selectionRect.currentX !== undefined) {
             this.ctx.strokeStyle = '#2196F3';
             this.ctx.lineWidth = 1;
@@ -698,12 +698,12 @@ class TempoEditor {
         const labelMargin = 50;
         ctx.clearRect(0, 0, this.gridCanvas.width, this.gridCanvas.height);
 
-        // Fond de la zone de labels
+        // Background of the label area
         const isDark = document.body.classList.contains('dark-mode');
         ctx.fillStyle = isDark ? '#1e1e1e' : '#e0e4f8';
         ctx.fillRect(0, 0, labelMargin, this.gridCanvas.height);
 
-        // Grille verticale (temps) — synchronisée avec xoffset
+        // Vertical grid (time) — synced with xoffset
         const ticksPerBeat = this.options.timebase;
         const gridSize = this.options.grid || ticksPerBeat;
         const startTick = Math.floor(this.options.xoffset / ticksPerBeat) * ticksPerBeat;
@@ -713,7 +713,7 @@ class TempoEditor {
             const x = this.ticksToX(t);
             if (x < labelMargin || x > this.gridCanvas.width) continue;
 
-            // Trait plus marqué sur les temps forts (noire)
+            // Stronger stroke on strong beats (quarter)
             const isBeat = (t % ticksPerBeat) === 0;
             ctx.strokeStyle = isDark ? (isBeat ? '#383838' : '#2a2a2a') : (isBeat ? '#d4daff' : '#e8ecff');
             ctx.lineWidth = 1;
@@ -723,8 +723,8 @@ class TempoEditor {
             ctx.stroke();
         }
 
-        // Grille horizontale (tempo) — labels avec marge
-        const tempoStep = 20; // 20 BPM par ligne
+        // Horizontal grid (tempo) — labels with margin
+        const tempoStep = 20; // 20 BPM per line
         const firstLine = Math.floor(this.viewMinTempo / tempoStep) * tempoStep;
         const lastLine = Math.ceil(this.viewMaxTempo / tempoStep) * tempoStep;
 
@@ -732,7 +732,7 @@ class TempoEditor {
             const y = this.tempoToY(tempo);
             if (y < 0 || y > this.gridCanvas.height) continue;
 
-            // Ligne plus marquée à 120 BPM (tempo standard)
+            // Stronger line at 120 BPM (standard tempo)
             const isDefault = tempo === 120;
             ctx.strokeStyle = isDark ? (isDefault ? '#444' : '#2a2a2a') : (isDefault ? '#b0b8e8' : '#e8ecff');
             ctx.lineWidth = 1;
@@ -741,7 +741,7 @@ class TempoEditor {
             ctx.lineTo(this.gridCanvas.width, y);
             ctx.stroke();
 
-            // Label dans la marge
+            // Label in the margin
             ctx.fillStyle = isDark ? (isDefault ? '#aaa' : '#666') : (isDefault ? '#5a6089' : '#9498b8');
             ctx.font = '10px monospace';
             ctx.textAlign = 'right';
@@ -768,7 +768,7 @@ class TempoEditor {
     renderEvents() {
         if (this.events.length === 0) return;
 
-        // Dessiner les lignes entre les événements
+        // Draw the lines between events
         this.ctx.strokeStyle = '#00bfff';
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
@@ -786,7 +786,7 @@ class TempoEditor {
 
         this.ctx.stroke();
 
-        // Dessiner les points
+        // Draw the points
         this.events.forEach(event => {
             const x = this.ticksToX(event.ticks);
             const y = this.tempoToY(event.tempo);
@@ -797,7 +797,7 @@ class TempoEditor {
             this.ctx.arc(x, y, isSelected ? 6 : 4, 0, Math.PI * 2);
             this.ctx.fill();
 
-            // Border pour les points sélectionnés
+            // Border for selected points
             if (isSelected) {
                 this.ctx.strokeStyle = '#ffffff';
                 this.ctx.lineWidth = 2;
@@ -806,7 +806,7 @@ class TempoEditor {
         });
     }
 
-    // === Synchronisation ===
+    // === Synchronization ===
 
     setXRange(xrange) {
         this.options.xrange = xrange;

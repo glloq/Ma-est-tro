@@ -1,17 +1,17 @@
 // ============================================================================
-// Fichier: js/features/CalibrationModal.js
+// File: js/features/CalibrationModal.js
 // Version: v1.0.0
 // Description:
-//   Modal de calibration des délais audio via microphone.
-//   Fonctionnalités:
-//   - Mode simple/avancé avec toggle
-//   - VU-mètre temps réel du niveau micro
-//   - Indicateurs de statut par instrument (waiting/running/success/error)
-//   - Bouton preview note (test MIDI)
-//   - Graphique Canvas des résultats de calibration
-//   - Support i18n et thèmes (dark, colored)
+//   Modal for audio delay calibration via microphone.
+//   Features:
+//   - Simple/advanced mode with toggle
+//   - Real-time VU-meter of mic level
+//   - Per-instrument status indicators (waiting/running/success/error)
+//   - Preview note button (MIDI test)
+//   - Canvas chart of calibration results
+//   - i18n and theme support (dark, colored)
 //
-// Dépendances: BaseModal.js, BackendAPIClient, EventBus, i18n
+// Dependencies: BaseModal.js, BackendAPIClient, EventBus, i18n
 // ============================================================================
 
 class CalibrationModal extends BaseModal {

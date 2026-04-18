@@ -1,5 +1,5 @@
 // public/js/features/auto-assign/RoutingSummaryPage.js
-// RoutingSummaryPage — Page résumé du routage automatique avec layout deux panneaux
+// RoutingSummaryPage — Automatic routing summary page with two-panel layout
 (function() {
 'use strict';
 

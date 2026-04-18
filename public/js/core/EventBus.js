@@ -1,13 +1,13 @@
 // ============================================================================
-// Fichier: frontend/js/core/EventBus.js
-// Chemin réel: frontend/js/core/EventBus.js
+// File: frontend/js/core/EventBus.js
+// Actual path: frontend/js/core/EventBus.js
 // Version: v3.2.0 - FIXED GLOBAL INITIALIZATION
 // Date: 2025-10-31
 // ============================================================================
-// CORRECTIONS v3.2.0:
-// ✓ CRITIQUE: Création automatique d'une instance globale
-// ✓ Exposition immédiate dans window.eventBus
-// ✓ Protection contre double initialisation
+// FIXES v3.2.0:
+// ✓ CRITICAL: Automatic creation of a global instance
+// ✓ Immediate exposure via window.eventBus
+// ✓ Protection against double initialization
 // ============================================================================
 
 const EventPriority = {
@@ -18,10 +18,10 @@ const EventPriority = {
 
 class EventBus {
     constructor() {
-        // Listeners organisés par événement
+        // Listeners organized by event
         this.listeners = new Map();
-        
-        // Files d'attente par priorité
+
+        // Queues by priority
         this.queues = {
             [EventPriority.HIGH]: [],
             [EventPriority.NORMAL]: [],
@@ -37,7 +37,7 @@ class EventBus {
             processingInterval: 10
         };
 
-        // Métriques
+        // Metrics
         this.metrics = {
             eventsEmitted: 0,
             eventsProcessed: 0,
@@ -55,18 +55,18 @@ class EventBus {
         // Debounce timers
         this.debounceTimers = new Map();
         
-        // Traitement asynchrone
+        // Asynchronous processing
         this.processingTimer = null;
         this._lastCacheClean = null;
         
-        // Documentation des événements
+        // Event documentation
         this.eventDocumentation = this.initEventDocumentation();
         
         this.init();
     }
     
     init() {
-        // Mode event-driven : traitement déclenché par emit() au lieu d'un timer à 10ms
+        // Event-driven mode: processing triggered by emit() instead of a 10ms timer
         this._processingScheduled = false;
 
         // Cache cleanup is now on-demand (triggered when cache exceeds threshold)
@@ -76,7 +76,7 @@ class EventBus {
     }
     
     // ========================================================================
-    // MÉTHODES PRINCIPALES
+    // MAIN METHODS
     // ========================================================================
     
     on(event, callback, options = {}) {
@@ -108,7 +108,7 @@ class EventBus {
             console.warn(`EventBus: possible memory leak — ${list.length} listeners for "${event}" (max 50)`);
         }
 
-        // Retourner fonction de désabonnement
+        // Return unsubscribe function
         return () => this.off(event, callback);
     }
     
@@ -120,7 +120,7 @@ class EventBus {
         if (!this.listeners.has(event)) return;
         
         if (!callback) {
-            // Retirer tous les listeners pour cet événement
+            // Remove all listeners for this event
             this.listeners.delete(event);
             return;
         }
@@ -155,10 +155,10 @@ class EventBus {
         };
 
         if (this.config.enablePriorities && priority === EventPriority.HIGH) {
-            // Traiter immédiatement les événements HIGH priority
+            // Process HIGH priority events immediately
             this.processEvent(eventData);
         } else {
-            // Ajouter à la queue appropriée
+            // Add to the appropriate queue
             const queue = this.queues[priority] || this.queues[EventPriority.NORMAL];
 
             if (queue.length >= this.config.maxQueueSize) {
@@ -169,14 +169,14 @@ class EventBus {
 
             queue.push(eventData);
 
-            // Déclencher le traitement via microtask (remplace le timer 10ms)
+            // Trigger processing via microtask (replaces the 10ms timer)
             this._scheduleProcessing();
         }
     }
 
     /**
-     * Planifier le traitement des queues via microtask (event-driven)
-     * Remplace le setInterval à 10ms qui consommait du CPU en permanence
+     * Schedule queue processing via microtask (event-driven)
+     * Replaces the 10ms setInterval that consumed CPU continuously
      */
     _scheduleProcessing() {
         if (this._processingScheduled) return;
@@ -189,25 +189,25 @@ class EventBus {
     }
 
     /**
-     * Vider les queues par priorité
+     * Drain queues by priority
      */
     _drainQueues() {
-        // HIGH: traiter tout
+        // HIGH: process all
         while (this.queues[EventPriority.HIGH].length > 0) {
             this.processEvent(this.queues[EventPriority.HIGH].shift());
         }
-        // NORMAL: traiter tout (batché dans la même microtask)
+        // NORMAL: process all (batched in the same microtask)
         while (this.queues[EventPriority.NORMAL].length > 0) {
             this.processEvent(this.queues[EventPriority.NORMAL].shift());
         }
-        // LOW: traiter tout
+        // LOW: process all
         while (this.queues[EventPriority.LOW].length > 0) {
             this.processEvent(this.queues[EventPriority.LOW].shift());
         }
     }
     
     // ========================================================================
-    // TRAITEMENT
+    // PROCESSING
     // ========================================================================
     
     processEvent(eventData) {
@@ -222,7 +222,7 @@ class EventBus {
             const listener = listeners[i];
             
             try {
-                // Filtrage
+                // Filtering
                 if (listener.filter && !listener.filter(data)) {
                     continue;
                 }
@@ -261,10 +261,10 @@ class EventBus {
                     continue;
                 }
                 
-                // Exécution normale
+                // Normal execution
                 this.executeCallback(listener, data);
                 
-                // Marquer pour suppression si once
+                // Mark for removal if once
                 if (listener.once) {
                     toRemove.push(i);
                 }
@@ -274,7 +274,7 @@ class EventBus {
             }
         }
         
-        // Supprimer les listeners "once"
+        // Remove the "once" listeners
         for (let i = toRemove.length - 1; i >= 0; i--) {
             listeners.splice(toRemove[i], 1);
         }
@@ -283,7 +283,7 @@ class EventBus {
             this.listeners.delete(event);
         }
         
-        // Métriques
+        // Metrics
         this.metrics.eventsProcessed++;
         
         if (this.config.enableMetrics && priority) {
@@ -301,8 +301,8 @@ class EventBus {
     }
     
     startProcessing() {
-        // Mode event-driven: plus besoin de timer, traitement déclenché par emit()
-        // Méthode conservée pour rétrocompatibilité
+        // Event-driven mode: timer no longer needed, processing triggered by emit()
+        // Method kept for backwards compatibility
     }
     
     stopProcessing() {
@@ -313,7 +313,7 @@ class EventBus {
     }
     
     // ========================================================================
-    // UTILITAIRES
+    // UTILITIES
     // ========================================================================
     
     updateLatencyMetrics(priority, latency) {
@@ -327,7 +327,7 @@ class EventBus {
     cleanCaches() {
         const now = Date.now();
         
-        // Nettoyer throttle cache (garder 5 dernières secondes)
+        // Clean throttle cache (keep the last 5 seconds)
         for (const [key, timestamp] of this.throttleCache.entries()) {
             if (now - timestamp > 5000) {
                 this.throttleCache.delete(key);
@@ -405,7 +405,7 @@ class EventBus {
 }
 
 // ============================================================================
-// EXPORT & INITIALISATION GLOBALE
+// EXPORT & GLOBAL INITIALIZATION
 // ============================================================================
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -416,7 +416,7 @@ if (typeof window !== 'undefined') {
     window.EventBus = EventBus;
     window.EventPriority = EventPriority;
     
-    // ✓ CRITIQUE: Créer immédiatement l'instance globale
+    // ✓ CRITICAL: Create the global instance immediately
     if (!window.eventBus) {
         window.eventBus = new EventBus();
         console.log('✓ Global EventBus instance created');

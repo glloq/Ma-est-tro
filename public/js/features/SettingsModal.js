@@ -1,14 +1,14 @@
 /**
- * SettingsModal - Modal pour les réglages de l'application
+ * SettingsModal - Modal for application settings
  *
- * Fonctionnalités :
- * - Modification du thème (colored par défaut, dark en option)
- * - Ajustement du nombre de touches du clavier
- * - Modification du temps d'affichage des notes
- * - Gestion de l'instrument virtuel
- * - Sélection de la langue (FR, EN, ES)
+ * Features:
+ * - Theme change (colored by default, dark as an option)
+ * - Keyboard key-count adjustment
+ * - Note display duration change
+ * - Virtual instrument management
+ * - Language selection (FR, EN, ES)
  *
- * Dépendance: i18n doit être chargé avant ce script (js/i18n/I18n.js)
+ * Dependency: i18n must be loaded before this script (js/i18n/I18n.js)
  *
  * Mixins:
  *  - SettingsTemplates (renderContent, getLocaleFlag, updateModalTexts)
@@ -22,10 +22,10 @@ class SettingsModal {
         this.eventBus = eventBus;
         this.logger = logger;
 
-        // Paramètres par défaut
+        // Default settings
         this.settings = this.loadSettings();
 
-        // Initialisation
+        // Initialization
         this.init();
     }
 
@@ -34,18 +34,18 @@ class SettingsModal {
         this.setupEventListeners();
         this.applySettings();
 
-        // Écouter les changements de langue pour mettre à jour le modal
+        // Listen for language changes to update the modal
         i18n.onLocaleChange(() => this.updateModalTexts());
     }
 
     /**
-     * Charger les paramètres depuis localStorage
+     * Load settings from localStorage
      */
     loadSettings() {
         const defaults = {
             theme: 'colored',
-            keyboardOctaves: 2, // 2 octaves par défaut (24 touches)
-            noteDisplayTime: 20, // secondes
+            keyboardOctaves: 2, // 2 octaves by default (24 keys)
+            noteDisplayTime: 20, // seconds
             virtualInstrument: false,
             showPianoRoll: false,
             showDebugButton: true,
@@ -63,7 +63,7 @@ class SettingsModal {
             if (saved) {
                 const parsed = JSON.parse(saved);
 
-                // Migration: convertir keyboardKeys → keyboardOctaves si nécessaire
+                // Migration: convert keyboardKeys → keyboardOctaves if needed
                 if (parsed.keyboardKeys !== undefined && parsed.keyboardOctaves === undefined) {
                     const oldKeys = parsed.keyboardKeys;
                     parsed.keyboardOctaves = Math.ceil(oldKeys / 12);
@@ -71,7 +71,7 @@ class SettingsModal {
                     this.logger?.info(`Migrated keyboardKeys (${oldKeys}) to keyboardOctaves (${parsed.keyboardOctaves})`);
                 }
 
-                // Migration: thème light supprimé → colored
+                // Migration: light theme removed → colored
                 if (parsed.theme === 'light') {
                     parsed.theme = 'colored';
                     this.logger?.info('Migrated theme light → colored');
@@ -87,7 +87,7 @@ class SettingsModal {
     }
 
     /**
-     * Sauvegarder les paramètres dans localStorage
+     * Save settings to localStorage
      */
     saveSettings() {
         try {
@@ -99,7 +99,7 @@ class SettingsModal {
     }
 
     /**
-     * Créer la structure HTML du modal
+     * Create the modal's HTML structure
      */
     createModal() {
         // Modal overlay
@@ -132,19 +132,19 @@ class SettingsModal {
             <button class="btn settings-save-btn">${i18n.t('common.save')}</button>
         `;
 
-        // Assembler le modal
+        // Assemble the modal
         this.modal.appendChild(header);
         this.modal.appendChild(content);
         this.modal.appendChild(footer);
         this.overlay.appendChild(this.modal);
         document.body.appendChild(this.overlay);
 
-        // Ajouter les styles pour le toggle
+        // Add styles for the toggle
         this.addToggleStyles();
     }
 
     /**
-     * Configurer les écouteurs d'événements
+     * Configure event listeners
      */
     setupEventListeners() {
         this.modal.querySelector('.settings-close-btn').addEventListener('click', () => this.close());
@@ -164,7 +164,7 @@ class SettingsModal {
     }
 
     /**
-     * Attacher les événements du contenu (appelé après mise à jour du contenu)
+     * Attach the content events (called after the content is updated)
      */
     attachContentEventListeners() {
         const languageSelect = this.modal.querySelector('#languageSelect');
@@ -174,7 +174,7 @@ class SettingsModal {
             });
         }
 
-        // Dark mode toggle - pas d'action immédiate, appliqué au save
+        // Dark mode toggle - no immediate action, applied on save
 
         const keyboardRange = this.modal.querySelector('#keyboardOctavesRange');
         const keyboardValue = this.modal.querySelector('#keyboardOctavesValue');
@@ -315,7 +315,7 @@ class SettingsModal {
     }
 
     /**
-     * Sauvegarder et appliquer les paramètres
+     * Save and apply the settings
      */
     save() {
         const darkModeToggle = this.modal.querySelector('#darkModeToggle');
@@ -404,7 +404,7 @@ class SettingsModal {
     }
 
     /**
-     * Appliquer les paramètres actuels
+     * Apply the current settings
      */
     applySettings() {
         this.applyTheme(this.settings.theme);
@@ -435,7 +435,7 @@ class SettingsModal {
     }
 
     /**
-     * Obtenir les paramètres actuels
+     * Get the current settings
      */
     getSettings() {
         return { ...this.settings };

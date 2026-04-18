@@ -129,7 +129,7 @@
 
     // Fallback: filter the sequence directly
         const sequence = this.modal.pianoRoll.sequence || [];
-        return sequence.filter(note => note.f === 1); // f=1 indique une note sélectionnée
+        return sequence.filter(note => note.f === 1); // f=1 indicates a selected note
     }
 
     getSelectionCount() {
@@ -208,7 +208,7 @@
             return;
         }
 
-    // Obtenir la position actuelle du curseur
+    // Get the current cursor position
         const currentTime = this.modal.pianoRoll.xoffset || 0;
 
     // Use the piano roll's method
@@ -336,7 +336,7 @@
             return;
         }
 
-    // Afficher le modal de confirmation
+    // Show the confirmation modal
         const confirmed = await this.modal.dialogs.showChangeChannelModal(count, currentChannel, newChannel);
         if (!confirmed) {
             this.modal.log('info', 'Channel change cancelled by user');
@@ -365,7 +365,7 @@
     // Update the channel list (automatically drops empty channels)
         this.modal.ccPicker.updateChannelsFromSequence();
 
-    // Nettoyer activeChannels : retirer les canaux qui n'existent plus
+    // Clean up activeChannels: remove channels that no longer exist
         const existingChannelNumbers = new Set(this.modal.channels.map(ch => ch.channel));
         const channelsToRemove = [];
         this.modal.activeChannels.forEach(ch => {
@@ -442,7 +442,7 @@
             return;
         }
 
-    // Si plusieurs canaux sont actifs, demander de n'en garder qu'un seul
+    // If several channels are active, ask to keep only one
         if (this.modal.activeChannels.size > 1) {
             this.modal.showNotification(
                 this.modal.t('midiEditor.multipleChannelsWarning', { count: this.modal.activeChannels.size }),
@@ -457,7 +457,7 @@
         const selectedProgram = parseInt(instrumentSelector.value);
         const instrumentName = this.modal.getInstrumentName(selectedProgram);
 
-    // Un seul canal actif : c'est celui-ci qu'on modifie
+    // Only one active channel: that's the one we modify
         const targetChannel = Array.from(this.modal.activeChannels)[0];
         const channelInfo = this.modal.channels.find(ch => ch.channel === targetChannel);
 
@@ -476,7 +476,7 @@
         const selectionCount = this.getSelectionCount();
         const hasSelection = selectionCount > 0;
 
-    // Afficher le modal de confirmation
+    // Show the confirmation modal
         const result = await this.modal.dialogs.showChangeInstrumentModal({
             noteCount: selectionCount,
             channelNoteCount: channelInfo.noteCount,
@@ -505,7 +505,7 @@
         const selectedNotes = this.getSelectedNotes();
         if (selectedNotes.length === 0) return;
 
-    // Trouver un canal libre pour les notes avec le nouvel instrument
+    // Find a free channel for the notes with the new instrument
         let newChannel = this.findAvailableChannel(program);
 
         if (newChannel === -1) {
@@ -545,7 +545,7 @@
         this.modal.sequenceOps.syncFullSequenceFromPianoRoll();
         this.modal.ccPicker.updateChannelsFromSequence();
 
-    // Nettoyer activeChannels : retirer les canaux qui n'existent plus
+    // Clean up activeChannels: remove channels that no longer exist
         const existingChannelNumbers = new Set(this.modal.channels.map(ch => ch.channel));
         const channelsToRemove = [];
         this.modal.activeChannels.forEach(ch => {
@@ -558,7 +558,7 @@
             this.modal.log('info', `Removed empty channel ${ch} from active channels`);
         });
 
-    // Activer le nouveau canal
+    // Activate the new channel
         if (!this.modal.activeChannels.has(newChannel)) {
             this.modal.activeChannels.add(newChannel);
         }
@@ -613,7 +613,7 @@
             return existingChannel.channel;
         }
 
-    // Sinon, trouver un canal libre (0-15, sauf 9 pour drums)
+    // Otherwise, find a free channel (0-15, except 9 for drums)
         const usedChannels = new Set(this.modal.channels.map(ch => ch.channel));
 
         for (let i = 0; i < 16; i++) {
@@ -632,7 +632,7 @@
             }
         }
 
-        return -1; // Aucun canal disponible
+        return -1; // No channel available
     }
 
     cycleSnap() {
@@ -703,7 +703,7 @@
             }
         }
 
-    // Propager aux editeurs CC/Velocity/Tempo si la section est ouverte
+    // Propagate to CC/Velocity/Tempo editors if the section is open
         if (this.modal.ccSectionExpanded) {
             const ccToolMap = { 'select': 'select', 'drag-notes': 'move', 'edit': 'move', 'drag-view': 'select' };
             const ccTool = ccToolMap[mode];
@@ -880,7 +880,7 @@
                 this.undo();
             }
 
-    // Ctrl/Cmd + Y = Redo (ou Ctrl/Cmd + Shift + Z)
+    // Ctrl/Cmd + Y = Redo (or Ctrl/Cmd + Shift + Z)
             else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
                 e.preventDefault();
                 this.redo();
@@ -904,7 +904,7 @@
                 this.selectAllNotes();
             }
 
-    // Delete ou Backspace = Delete
+    // Delete or Backspace = Delete
             else if (e.key === 'Delete' || e.key === 'Backspace') {
                 e.preventDefault();
     // When the CC/velocity section is open, delete the selected CC/velocity points

@@ -13,31 +13,31 @@ class KeyboardModalNew {
         // i18n support
         this.localeUnsubscribe = null;
 
-        // État
+        // State
         this.devices = [];
         this.selectedDevice = null;
-        this.selectedDeviceCapabilities = null; // Capacités de l'instrument sélectionné
+        this.selectedDeviceCapabilities = null; // Selected instrument capabilities
         this.activeNotes = new Set();
-        this.mouseActiveNotes = new Set(); // Notes déclenchées par la souris (pour cleanup au mouseup global)
+        this.mouseActiveNotes = new Set(); // Notes triggered by the mouse (for cleanup on global mouseup)
         this.velocity = 80;
         this.modulation = 64; // CC#1 modulation wheel value (center)
         this._modWheelDragging = false;
         this.keyboardLayout = 'azerty';
-        this.isMouseDown = false; // Pour le drag sur le clavier
+        this.isMouseDown = false; // For dragging on the keyboard
 
         // Piano config
-        this.octaves = 3; // 3 octaves par défaut (plage: 1-4 octaves)
-        this.startNote = 48; // Première note MIDI affichée (C3 par défaut)
-        this.defaultStartNote = 48; // Valeur par défaut pour reset
-        // Notes blanches: semitones relatives dans une octave
+        this.octaves = 3; // 3 octaves by default (range: 1-4 octaves)
+        this.startNote = 48; // First MIDI note displayed (C3 by default)
+        this.defaultStartNote = 48; // Default value for reset
+        // White notes: relative semitones within an octave
         this.whiteNoteOffsets = [0, 2, 4, 5, 7, 9, 11]; // C D E F G A B
-        // Semitones qui ont une touche noire (dièse)
+        // Semitones that have a black key (sharp)
         this.blackNoteSemitones = new Set([1, 3, 6, 8, 10]); // C# D# F# G# A#
-        // Tables de correspondance pour les touches PC (générées dynamiquement)
+        // Mapping tables for PC keys (generated dynamically)
         this.visibleWhiteNotes = [];
         this.visibleBlackNotes = [];
 
-        // Le mapping clavier PC est dynamique (voir _resolveKeyToNote)
+        // The PC keyboard mapping is dynamic (see _resolveKeyToNote)
 
         // Bind handlers
         this.handleKeyDown = this.handleKeyDown.bind(this);
@@ -55,9 +55,9 @@ class KeyboardModalNew {
     // ========================================================================
 
     /**
-     * Helper pour traduire une clé
-     * @param {string} key - Clé de traduction
-     * @param {Object} params - Paramètres d'interpolation
+     * Helper to translate a key
+     * @param {string} key - Translation key
+     * @param {Object} params - Interpolation parameters
      * @returns {string} - Texte traduit
      */
     t(key, params = {}) {
@@ -65,16 +65,16 @@ class KeyboardModalNew {
     }
 
     /**
-     * Met à jour le contenu traduit de la modale
+     * Updates the translated content of the modal
      */
     updateTranslations() {
         if (!this.container) return;
 
-        // Titre
+        // Title
         const title = this.container.querySelector('.modal-header h2');
         if (title) title.textContent = `🎹 ${this.t('keyboard.title')}`;
 
-        // Vélocité
+        // Velocity
         const velocityLabel = this.container.querySelector('#velocity-control-panel .velocity-label-vertical');
         if (velocityLabel) velocityLabel.textContent = this.t('keyboard.velocity');
 
@@ -102,7 +102,7 @@ class KeyboardModalNew {
                 : this.t('keyboard.qwertyHelp');
         }
 
-        // Select par défaut
+        // Default select
         const deviceSelect = document.getElementById('keyboard-device-select');
         if (deviceSelect && deviceSelect.options.length > 0) {
             deviceSelect.options[0].textContent = this.t('common.select');
@@ -110,7 +110,7 @@ class KeyboardModalNew {
     }
 
     // ========================================================================
-    // ÉVÉNEMENTS
+    // EVENTS
     // ========================================================================
 
     setupEventListeners() {
@@ -119,7 +119,7 @@ class KeyboardModalNew {
             return;
         }
 
-        // Écouter les connexions/déconnexions Bluetooth pour rafraîchir la liste
+        // Listen for Bluetooth connects/disconnects to refresh the list
         this.eventBus.on('bluetooth:connected', async (_data) => {
             this.logger.info('[KeyboardModal] Bluetooth device connected, refreshing device list...');
             if (this.isOpen) {
@@ -154,7 +154,7 @@ class KeyboardModalNew {
     async open() {
         if (this.isOpen) return;
 
-        // Charger les paramètres sauvegardés pour appliquer le nombre de touches
+        // Load saved settings to apply the key count
         this.loadSettings();
 
         this.createModal();
@@ -224,9 +224,9 @@ class KeyboardModalNew {
     }
 
     /**
-     * Charger les capacités d'un instrument
-     * @param {string} deviceId - ID de l'appareil
-     * @param {number} [channel] - Canal MIDI (pour les devices multi-instruments)
+     * Load an instrument's capabilities
+     * @param {string} deviceId - Device ID
+     * @param {number} [channel] - MIDI channel (for multi-instrument devices)
      */
     async loadDeviceCapabilities(deviceId, channel) {
         if (!deviceId) {
@@ -251,7 +251,7 @@ class KeyboardModalNew {
     regeneratePianoKeys() {
         this.generatePianoKeys();
 
-        // Délégation d'événements: un seul listener sur le conteneur au lieu de 6 par touche
+        // Event delegation: a single listener on the container instead of 6 per key
         this._setupPianoDelegation();
 
         this.updatePianoDisplay();
@@ -280,28 +280,28 @@ class KeyboardModalNew {
     }
 
     /**
-     * Définir le nombre d'octaves du clavier
-     * @param {number} octaves - Nombre d'octaves (1-4)
+     * Set the number of keyboard octaves
+     * @param {number} octaves - Number of octaves (1-4)
      */
     setOctaves(octaves) {
-        // Limiter entre 1 et 4 octaves
+        // Clamp between 1 and 4 octaves
         this.octaves = Math.max(1, Math.min(4, octaves));
 
         this.logger.info(`[KeyboardModal] Nombre d'octaves changé: ${this.octaves} (${this.octaves * 12} touches)`);
 
-        // Régénérer le clavier si le modal est ouvert
+        // Regenerate the keyboard if the modal is open
         if (this.isOpen) {
             this.regeneratePianoKeys();
         }
     }
 
     /**
-     * Définir le nombre de touches du clavier (OBSOLÈTE - utiliser setOctaves)
-     * @param {number} numberOfKeys - Nombre de touches (12-48 touches)
-     * @deprecated Utiliser setOctaves() à la place
+     * Set the number of keyboard keys (DEPRECATED - use setOctaves)
+     * @param {number} numberOfKeys - Number of keys (12-48 keys)
+     * @deprecated Use setOctaves() instead
      */
     setNumberOfKeys(numberOfKeys) {
-        // Calculer le nombre d'octaves à afficher
+        // Compute the number of octaves to display
         const octaves = Math.ceil(numberOfKeys / 12);
         this.setOctaves(octaves);
     }
@@ -309,8 +309,8 @@ class KeyboardModalNew {
     handleGlobalMouseUp() {
         this.isMouseDown = false;
 
-        // Stopper toutes les notes déclenchées par la souris
-        // (évite les notes "coincées" si le mouseup se produit hors d'une touche)
+        // Stop all notes triggered by the mouse
+        // (avoids "stuck" notes if the mouseup happens outside a key)
         if (this.mouseActiveNotes.size > 0) {
             for (const note of this.mouseActiveNotes) {
                 this.stopNote(note);
@@ -324,7 +324,7 @@ class KeyboardModalNew {
         const key = e.currentTarget;
         const note = parseInt(key.dataset.note);
 
-        // Ne pas jouer si la touche est désactivée
+        // Don't play if the key is disabled
         if (key.classList.contains('disabled')) {
             return;
         }
@@ -341,20 +341,20 @@ class KeyboardModalNew {
 
         this.mouseActiveNotes.delete(note);
 
-        // Arrêter la note seulement si elle est active
+        // Stop the note only if it is active
         if (this.activeNotes.has(note)) {
             this.stopNote(note);
         }
     }
 
     handlePianoKeyEnter(e) {
-        // Jouer la note seulement si la souris est enfoncée (drag)
+        // Play the note only if the mouse is pressed (drag)
         if (!this.isMouseDown) return;
 
         const key = e.currentTarget;
         const note = parseInt(key.dataset.note);
 
-        // Ne pas jouer si la touche est désactivée
+        // Don't play if the key is disabled
         if (key.classList.contains('disabled')) {
             return;
         }
@@ -394,8 +394,8 @@ class KeyboardModalNew {
     // ========================================================================
 
     /**
-     * Retourne le canal MIDI de l'instrument sélectionné (depuis les capacités ou le device)
-     * @returns {number} Canal MIDI (0-15)
+     * Return the MIDI channel of the selected instrument (from capabilities or the device)
+     * @returns {number} MIDI channel (0-15)
      */
     getSelectedChannel() {
         if (this.selectedDeviceCapabilities && this.selectedDeviceCapabilities.channel !== undefined) {
@@ -429,7 +429,7 @@ class KeyboardModalNew {
     }
 
     /**
-     * Met à jour l'affichage de la plage de notes dans le header
+     * Updates the note-range display in the header
      */
     _updateOctaveDisplay() {
         const octaveDisplayEl = document.getElementById('keyboard-octave-display');
@@ -442,9 +442,9 @@ class KeyboardModalNew {
     }
 
     /**
-     * Obtenir le nom d'une note depuis son numéro MIDI
-     * @param {number} noteNumber - Numéro MIDI (0-127)
-     * @returns {string} - Nom de la note (ex: "C4", "F#5")
+     * Get a note's name from its MIDI number
+     * @param {number} noteNumber - MIDI number (0-127)
+     * @returns {string} - Note name (e.g. "C4", "F#5")
      */
     getNoteNameFromNumber(noteNumber) {
         const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -461,7 +461,7 @@ class KeyboardModalNew {
 
         this.devices.forEach(device => {
             const option = document.createElement('option');
-            // Pour les devices multi-instruments, inclure le canal dans la valeur
+            // For multi-instrument devices, include the channel in the value
             if (device._multiInstrument) {
                 option.value = `${device.device_id}::${device.channel}`;
                 const chLabel = `Ch${(device.channel || 0) + 1}`;
@@ -475,7 +475,7 @@ class KeyboardModalNew {
     }
 
     /**
-     * Rafraîchir la liste des périphériques si le modal est ouvert
+     * Refresh the device list if the modal is open
      */
     async refreshDevices() {
         if (!this.isOpen) return;

@@ -1,12 +1,12 @@
 /**
- * CCPitchbendEditor - Éditeur de Control Change et Pitchbend synchronisé avec le piano roll
+ * CCPitchbendEditor - Control Change and Pitchbend editor synchronized with the piano roll
  *
- * Fonctionnalités :
- * - Édition de CC1, CC2, CC5, CC7, CC10, CC11, CC74, CC77, pitchbend
- * - Outils : sélection, déplacement, ligne, dessin continu
- * - Synchronisation horizontale avec le piano roll
- * - Respect de la grille temporelle et du zoom
- * - Filtre par canal sélectionné
+ * Features:
+ * - Edit CC1, CC2, CC5, CC7, CC10, CC11, CC74, CC77, pitchbend
+ * - Tools: select, move, line, continuous draw
+ * - Horizontal synchronization with the piano roll
+ * - Honors the time grid and zoom
+ * - Filter by selected channel
  */
 
 class CCPitchbendEditor {
@@ -18,38 +18,38 @@ class CCPitchbendEditor {
             xrange: options.xrange || 1920,
             xoffset: options.xoffset || 0,
             grid: options.grid || 15,
-            onChange: options.onChange || null, // Callback appelé lors des changements
+            onChange: options.onChange || null, // Callback invoked on changes
             ...options
         };
 
-        // État de l'éditeur
-        this.events = []; // CC et pitchbend events
+        // Editor state
+        this.events = []; // CC and pitchbend events
         this.selectedEvents = new Set();
         this.currentTool = 'select'; // 'select', 'move', 'line', 'draw'
         this.currentCC = 'cc1'; // 'cc1', 'cc2', 'cc5', 'cc7', 'cc10', 'cc11', 'cc74', 'cc77', 'pitchbend'
         this.currentChannel = 0;
-        this.currentNote = null; // Pour poly aftertouch : note filtrée
-        this.curveType = 'linear'; // Type de courbe pour l'outil ligne : 'linear', 'exponential', 'logarithmic', 'sine'
-        this.drawDensityMultiplier = 1; // Multiplicateur de densité de points : <1 = plus dense, >1 = moins dense
+        this.currentNote = null; // For poly aftertouch: filtered note
+        this.curveType = 'linear'; // Curve type for the line tool: 'linear', 'exponential', 'logarithmic', 'sine'
+        this.drawDensityMultiplier = 1; // Point density multiplier: <1 = denser, >1 = sparser
         this.isDrawing = false;
         this.lastDrawPosition = null;
-        this.lastDrawTicks = null; // Dernier tick où un point a été créé en mode dessin
+        this.lastDrawTicks = null; // Last tick where a point was created in draw mode
 
-        // Historique pour undo/redo
+        // History for undo/redo
         this.history = [];
         this.historyIndex = -1;
 
-        // OPTIMISATION: Système de throttling pour le rendu
+        // OPTIMIZATION: Render throttling system
         this.pendingRender = false;
         this.renderScheduled = false;
         this.isDirty = false;
 
-        // Canvas de buffer pour la grille (statique)
+        // Buffer canvas for the grid (static)
         this.gridCanvas = null;
         this.gridCtx = null;
         this.gridDirty = true;
 
-        // Initialisation
+        // Initialization
         this.init();
     }
 
@@ -59,7 +59,7 @@ class CCPitchbendEditor {
     }
 
     createUI() {
-        // Conteneur principal
+        // Main container
         this.element = document.createElement('div');
         this.element.className = 'cc-pitchbend-editor';
         const isDark = document.body.classList.contains('dark-mode');
@@ -75,7 +75,7 @@ class CCPitchbendEditor {
             min-height: 0;
         `;
 
-        // Canvas pour le rendu
+        // Canvas for rendering
         this.canvas = document.createElement('canvas');
         this.canvas.style.cssText = `
             position: absolute;
@@ -85,7 +85,7 @@ class CCPitchbendEditor {
         `;
         this.ctx = this.canvas.getContext('2d');
 
-        // Overlay pour les interactions
+        // Overlay for interactions
         this.overlay = document.createElement('div');
         this.overlay.style.cssText = `
             position: absolute;
@@ -96,7 +96,7 @@ class CCPitchbendEditor {
             pointer-events: none;
         `;
 
-        // Tooltip pour afficher la valeur sous le curseur
+        // Tooltip to show the value under the cursor
         this.tooltip = document.createElement('div');
         this.tooltip.className = 'cc-editor-tooltip';
         this.tooltip.style.cssText = `
@@ -118,12 +118,12 @@ class CCPitchbendEditor {
         this.element.appendChild(this.tooltip);
         this.container.appendChild(this.element);
 
-        // Redimensionner le canvas
+        // Resize the canvas
         this.resize();
     }
 
     setupEventListeners() {
-        // Stocker les références bindées pour pouvoir les retirer dans destroy()
+        // Store bound references so we can remove them in destroy()
         this._boundMouseDown = this.handleMouseDown.bind(this);
         this._boundMouseMove = (e) => {
             if (this._mouseMoveRAF) return;
@@ -138,19 +138,19 @@ class CCPitchbendEditor {
         this._boundResize = this.resize.bind(this);
         this._boundThemeChanged = () => this._onThemeChanged();
 
-        // Événements souris (mousemove throttlé via rAF)
+        // Mouse events (mousemove throttled via rAF)
         this.canvas.addEventListener('mousedown', this._boundMouseDown);
         this.canvas.addEventListener('mousemove', this._boundMouseMove);
         this.canvas.addEventListener('mouseup', this._boundMouseUp);
         this.canvas.addEventListener('mouseleave', this._boundMouseLeave);
 
-        // Événements clavier
+        // Keyboard events
         document.addEventListener('keydown', this._boundKeyDown);
 
-        // Redimensionnement
+        // Resize
         window.addEventListener('resize', this._boundResize);
 
-        // Changement de thème
+        // Theme change
         document.addEventListener('theme-changed', this._boundThemeChanged);
     }
 
@@ -165,7 +165,7 @@ class CCPitchbendEditor {
     }
 
     resize() {
-        // CORRECTION: Forcer reflow de la cascade complète (container parents + element)
+        // FIX: Force reflow of the full cascade (container parents + element)
         if (this.container) {
             void this.container.offsetHeight;
         }
@@ -178,15 +178,15 @@ class CCPitchbendEditor {
         const width = rect.width;
         const height = rect.height;
 
-        // Ne redimensionner que si on a des dimensions valides
+        // Only resize when we have valid dimensions
         if (width > 0 && height > 100) {
-            // Stocker l'ancienne hauteur pour détecter les changements importants
+            // Store the old height to detect major changes
             const oldHeight = this.canvas.height;
 
             this.canvas.width = width;
             this.canvas.height = height;
 
-            // OPTIMISATION: Recréer le canvas de buffer pour la grille
+            // OPTIMIZATION: Recreate the grid buffer canvas
             if (!this.gridCanvas) {
                 this.gridCanvas = document.createElement('canvas');
                 this.gridCtx = this.gridCanvas.getContext('2d');
@@ -195,24 +195,24 @@ class CCPitchbendEditor {
             this.gridCanvas.height = height;
             this.gridDirty = true;
 
-            // Canvas redimensionné
+            // Canvas resized
 
             this.renderThrottled();
 
-            // CORRECTION: Vérification que la hauteur est stable après 1 frame
+            // FIX: Verify the height is stable after 1 frame
             if (oldHeight > 0 && Math.abs(height - oldHeight) > 50) {
-                // Changement important détecté, vérifier la stabilité
+                // Significant change detected, verify stability
                 requestAnimationFrame(() => {
                     const newHeight = this.element.getBoundingClientRect().height;
                     if (Math.abs(newHeight - height) > 2) {
-                        this.resize();  // Rappeler avec la vraie hauteur
+                        this.resize();  // Re-run with the real height
                     }
                 });
             }
         }
     }
 
-    // === Gestion des outils ===
+    // === Tool management ===
 
     setTool(tool) {
         this.currentTool = tool;
@@ -221,15 +221,15 @@ class CCPitchbendEditor {
 
     setCC(ccType) {
         this.currentCC = ccType;
-        this.cancelInteractions(); // Annuler actions en cours lors changement type CC
-        this.gridDirty = true; // Forcer le re-rendu de la grille (labels différents CC vs pitchbend)
+        this.cancelInteractions(); // Cancel ongoing actions when the CC type changes
+        this.gridDirty = true; // Force grid re-render (different labels for CC vs pitchbend)
         this.isDirty = true;
         this.renderThrottled();
     }
 
     setChannel(channel) {
         this.currentChannel = channel;
-        this.cancelInteractions(); // Annuler actions en cours lors changement canal
+        this.cancelInteractions(); // Cancel ongoing actions when the channel changes
         this.isDirty = true;
         this.renderThrottled();
     }
@@ -260,7 +260,7 @@ class CCPitchbendEditor {
     }
 
     cancelInteractions() {
-        // Annuler toutes les interactions en cours
+        // Cancel all ongoing interactions
         this.lineStart = null;
         this.selectionStart = null;
         this.dragStart = null;
@@ -269,7 +269,7 @@ class CCPitchbendEditor {
         this.lastDrawTicks = null;
     }
 
-    // === Conversion coordonnées ===
+    // === Coordinate conversion ===
 
     ticksToX(ticks) {
         return ((ticks - this.options.xoffset) / this.options.xrange) * this.canvas.width;
@@ -280,8 +280,8 @@ class CCPitchbendEditor {
     }
 
     valueToY(value) {
-        // Pour CC: 0-127 → bottom to top
-        // Pour pitchbend: -8192 to 8191 → bottom to top (16384 valeurs)
+        // For CC: 0-127 → bottom to top
+        // For pitchbend: -8192 to 8191 → bottom to top (16384 values)
         const margin = 6;
         const drawH = this.canvas.height - margin * 2;
         let normalized;
@@ -309,12 +309,12 @@ class CCPitchbendEditor {
         return Math.round(ticks / gridSize) * gridSize;
     }
 
-    // === Gestion des événements ===
+    // === Event management ===
 
     addEvent(ticks, value, channel = this.currentChannel, autoSave = true) {
         const snappedTicks = this.snapToGrid(ticks);
 
-        // Vérifier si un événement existe déjà à ce tick (pour éviter les doublons)
+        // Check whether an event already exists at this tick (to avoid duplicates)
         const existingEvent = this.events.find(e =>
             e.ticks === snappedTicks &&
             e.type === this.currentCC &&
@@ -322,7 +322,7 @@ class CCPitchbendEditor {
         );
 
         if (existingEvent) {
-            // Mettre à jour la valeur existante
+            // Update the existing value
             existingEvent.value = this.clampValue(value);
             if (autoSave) {
                 this.renderThrottled();
@@ -337,7 +337,7 @@ class CCPitchbendEditor {
             channel: channel,
             id: Date.now() + Math.random()
         };
-        // Pour poly aftertouch, attacher la note courante
+        // For poly aftertouch, attach the current note
         if (this.currentCC === 'polyAftertouch' && this.currentNote !== null) {
             event.note = this.currentNote;
         }
@@ -378,7 +378,7 @@ class CCPitchbendEditor {
         }
     }
 
-    // === Outils d'édition ===
+    // === Editing tools ===
 
     handleMouseDown(e) {
         const rect = this.canvas.getBoundingClientRect();
@@ -392,7 +392,7 @@ class CCPitchbendEditor {
                 this.isDrawing = true;
                 this.lastDrawPosition = { x, y };
                 this.lastDrawTicks = this.snapToGrid(ticks);
-                this.addEvent(ticks, value, this.currentChannel, false); // Ne pas sauvegarder immédiatement
+                this.addEvent(ticks, value, this.currentChannel, false); // Do not save immediately
                 this.renderThrottled();
                 break;
 
@@ -452,16 +452,16 @@ class CCPitchbendEditor {
         const value = this.yToValue(y);
 
         if (this.isDrawing && this.currentTool === 'draw') {
-            // Dessin continu - créer un point seulement si on a avancé d'au moins un tick de grille
+            // Continuous draw - only create a point if we've advanced at least one grid tick
             const snappedTicks = this.snapToGrid(ticks);
             if (this.lastDrawTicks === null || Math.abs(snappedTicks - this.lastDrawTicks) >= this.options.grid * this.drawDensityMultiplier) {
-                this.addEvent(ticks, value, this.currentChannel, false); // Ne pas sauvegarder immédiatement
+                this.addEvent(ticks, value, this.currentChannel, false); // Do not save immediately
                 this.lastDrawTicks = snappedTicks;
                 this.lastDrawPosition = { x, y };
                 this.renderThrottled();
             }
         } else if (this.dragStart && (this.currentTool === 'select' || this.currentTool === 'move')) {
-            // Déplacement des événements sélectionnés
+            // Move the selected events
             if (this.selectedEvents.size > 0) {
                 const deltaTicks = this.xToTicks(x) - this.dragStart.ticks;
                 const deltaValue = this.yToValue(y) - this.dragStart.value;
@@ -478,21 +478,21 @@ class CCPitchbendEditor {
                 this.renderThrottled();
             }
         } else if (this.selectionStart) {
-            // Rectangle de sélection
+            // Selection rectangle
             this.renderSelectionRect(this.selectionStart.x, this.selectionStart.y, x, y);
         } else if (this.lineStart) {
-            // Prévisualisation de la ligne
+            // Line preview
             this.renderLinePreview(this.lineStart, { ticks, value });
         }
 
-        // Toujours mettre à jour le tooltip
+        // Always update the tooltip
         this.updateTooltip(x, y, ticks, value);
     }
 
     updateTooltip(x, y, ticks, value) {
         if (!this.tooltip) return;
 
-        // Formater la valeur selon le type
+        // Format the value based on type
         let valueStr;
         if (this.currentCC === 'pitchbend') {
             valueStr = `PB: ${value}`;
@@ -504,7 +504,7 @@ class CCPitchbendEditor {
             valueStr = `Val: ${value}`;
         }
 
-        // Formater le temps en mesures:temps:ticks
+        // Format time as measures:beats:ticks
         const ppq = this.options.timebase || 480;
         const beat = Math.floor(ticks / ppq);
         const measure = Math.floor(beat / 4) + 1;
@@ -523,7 +523,7 @@ class CCPitchbendEditor {
             this.isDrawing = false;
             this.lastDrawPosition = null;
             this.lastDrawTicks = null;
-            // Sauvegarder l'état après avoir fini de dessiner
+            // Save state after finishing drawing
             this.saveState();
         }
 
@@ -549,7 +549,7 @@ class CCPitchbendEditor {
     }
 
     handleKeyDown(e) {
-        // Ne traiter les raccourcis que si l'éditeur est visible
+        // Only process shortcuts if the editor is visible
         if (!this.element || this.element.offsetParent === null) return;
 
         if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -574,7 +574,7 @@ class CCPitchbendEditor {
         }
     }
 
-    // === Utilitaires de sélection ===
+    // === Selection utilities ===
 
     getEventAtPosition(x, y, threshold = 5) {
         return this.getFilteredEvents().find(event => {
@@ -610,13 +610,13 @@ class CCPitchbendEditor {
     deleteSelected() {
         if (this.selectedEvents.size === 0) return;
 
-        // Supprimer les événements sélectionnés
+        // Remove the selected events
         this.events = this.events.filter(event => !this.selectedEvents.has(event.id));
 
-        // Effacer la sélection
+        // Clear the selection
         this.selectedEvents.clear();
 
-        // Sauvegarder l'état et notifier le changement
+        // Save state and notify the change
         this.saveState();
         if (this.options.onChange) {
             this.options.onChange();
@@ -624,7 +624,7 @@ class CCPitchbendEditor {
         this.renderThrottled();
     }
 
-    // === Outil ligne ===
+    // === Line tool ===
 
     createLine(startTicks, startValue, endTicks, endValue) {
         const minTicks = Math.min(startTicks, endTicks);
@@ -632,8 +632,8 @@ class CCPitchbendEditor {
         const ticksRange = maxTicks - minTicks;
         const valueRange = endValue - startValue;
 
-        // Créer des points le long de la ligne selon la grille
-        // Utiliser autoSave=false pour ne pas sauvegarder à chaque point
+        // Create points along the line according to the grid
+        // Use autoSave=false to avoid saving at every point
         for (let t = minTicks; t <= maxTicks; t += this.options.grid) {
             const progress = ticksRange > 0 ? (t - minTicks) / ticksRange : 0;
             const curveProgress = this.applyCurve(progress);
@@ -641,20 +641,20 @@ class CCPitchbendEditor {
             this.addEvent(t, value, this.currentChannel, false);
         }
 
-        // S'assurer que le endpoint exact est créé (peut ne pas tomber sur la grille)
+        // Ensure the exact endpoint is created (may not fall on the grid)
         const lastGridTick = Math.floor((maxTicks - minTicks) / this.options.grid) * this.options.grid + minTicks;
         if (lastGridTick < maxTicks) {
             this.addEvent(maxTicks, Math.round(startValue + valueRange * (ticksRange > 0 ? 1 : 0)), this.currentChannel, false);
         }
 
-        // Sauvegarder l'état une seule fois à la fin
+        // Save state only once at the end
         this.saveState();
         this.renderThrottled();
     }
 
-    // === Rendu ===
+    // === Rendering ===
 
-    // OPTIMISATION: Fonction throttled pour le rendu
+    // OPTIMIZATION: Throttled rendering function
     renderThrottled() {
         if (!this.renderScheduled) {
             this.renderScheduled = true;
@@ -673,44 +673,44 @@ class CCPitchbendEditor {
 
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // OPTIMISATION: Utiliser le canvas de buffer pour la grille
-        // Grille de fond
+        // OPTIMIZATION: Use the buffer canvas for the grid
+        // Background grid
         this.renderGrid();
 
-        // Ligne médiane (0 pour pitchbend, 64 pour CC)
+        // Center line (0 for pitchbend, 64 for CC)
         this.renderCenterLine();
 
-        // Événements
+        // Events
         this.renderEvents();
 
-        // Réinitialiser le dirty flag
+        // Reset the dirty flag
         this.isDirty = false;
 
         // Render complete
     }
 
     renderGrid() {
-        // OPTIMISATION: Vérifier si la grille doit être redessinée
-        // La grille change si xoffset, xrange, grid, ou currentCC changent
+        // OPTIMIZATION: Check whether the grid should be redrawn
+        // The grid changes if xoffset, xrange, grid, or currentCC change
         if (this.gridDirty || !this.gridCanvas) {
             this.renderGridToBuffer();
             this.gridDirty = false;
         }
 
-        // Copier le buffer de grille sur le canvas principal
+        // Copy the grid buffer to the main canvas
         this.ctx.drawImage(this.gridCanvas, 0, 0);
     }
 
     renderGridToBuffer() {
         if (!this.gridCtx) return;
 
-        const labelMargin = 50; // Marge pour les labels à gauche
+        const labelMargin = 50; // Margin for labels on the left
         const ctx = this.gridCtx;
 
-        // Effacer le buffer
+        // Clear the buffer
         ctx.clearRect(0, 0, this.gridCanvas.width, this.gridCanvas.height);
 
-        // Grille verticale (temps)
+        // Vertical grid (time)
         const isDark = document.body.classList.contains('dark-mode');
         ctx.strokeStyle = isDark ? '#3a3a3a' : '#d4daff';
         ctx.lineWidth = 1;
@@ -729,9 +729,9 @@ class CCPitchbendEditor {
             }
         }
 
-        // Grille horizontale (valeurs)
+        // Horizontal grid (values)
         if (this.currentCC === 'pitchbend') {
-            // Pour pitchbend : lignes aux valeurs -8192, -4096, 0, 4096, 8191
+            // For pitchbend: lines at values -8192, -4096, 0, 4096, 8191
             const values = [-8192, -4096, 0, 4096, 8191];
             ctx.strokeStyle = isDark ? '#3a3a3a' : '#d4daff';
             ctx.lineWidth = 1;
@@ -739,13 +739,13 @@ class CCPitchbendEditor {
             values.forEach(value => {
                 const y = this.valueToY(value);
 
-                // Ligne de grille
+                // Grid line
                 ctx.beginPath();
                 ctx.moveTo(labelMargin, y);
                 ctx.lineTo(this.gridCanvas.width, y);
                 ctx.stroke();
 
-                // Zone de label (fond)
+                // Label area (background)
                 ctx.fillStyle = isDark ? '#1a1a1a' : '#f0f4ff';
                 ctx.fillRect(0, y - 7, labelMargin - 2, 14);
 
@@ -756,7 +756,7 @@ class CCPitchbendEditor {
                 ctx.fillText(value.toString(), labelMargin - 5, y + 4);
             });
         } else {
-            // Pour CC : lignes aux valeurs 0, 32, 64, 96, 127
+            // For CC: lines at values 0, 32, 64, 96, 127
             const values = [0, 32, 64, 96, 127];
             ctx.strokeStyle = isDark ? '#3a3a3a' : '#d4daff';
             ctx.lineWidth = 1;
@@ -764,13 +764,13 @@ class CCPitchbendEditor {
             values.forEach(value => {
                 const y = this.valueToY(value);
 
-                // Ligne de grille
+                // Grid line
                 ctx.beginPath();
                 ctx.moveTo(labelMargin, y);
                 ctx.lineTo(this.gridCanvas.width, y);
                 ctx.stroke();
 
-                // Zone de label (fond)
+                // Label area (background)
                 ctx.fillStyle = isDark ? '#1a1a1a' : '#f0f4ff';
                 ctx.fillRect(0, y - 7, labelMargin - 2, 14);
 
@@ -782,7 +782,7 @@ class CCPitchbendEditor {
             });
         }
 
-        // Bordure verticale séparant la zone de labels
+        // Vertical border separating the label area
         ctx.strokeStyle = isDark ? '#555' : '#b0b8e8';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -790,7 +790,7 @@ class CCPitchbendEditor {
         ctx.lineTo(labelMargin, this.gridCanvas.height);
         ctx.stroke();
 
-        // Réinitialiser l'alignement du texte
+        // Reset text alignment
         ctx.textAlign = 'left';
     }
 
@@ -800,7 +800,7 @@ class CCPitchbendEditor {
 
         const isDark = document.body.classList.contains('dark-mode');
         if (this.currentCC === 'pitchbend') {
-            // Pour pitchbend : toujours afficher une barre centrale à 0
+            // For pitchbend: always display a center bar at 0
             this.ctx.strokeStyle = isDark ? '#888' : '#667eea';
             this.ctx.lineWidth = 2;
             const y = this.valueToY(0);
@@ -809,7 +809,7 @@ class CCPitchbendEditor {
             this.ctx.lineTo(this.canvas.width, y);
             this.ctx.stroke();
         } else {
-            // Pour CC : afficher une barre à 0 si pas d'événements
+            // For CC: display a bar at 0 when there are no events
             if (filteredEvents.length === 0) {
                 this.ctx.strokeStyle = isDark ? '#666' : '#8898d8';
                 this.ctx.lineWidth = 2;
@@ -827,7 +827,7 @@ class CCPitchbendEditor {
     renderEvents() {
         const allEvents = this.getFilteredEvents();
 
-        // Trier par ticks
+        // Sort by ticks
         allEvents.sort((a, b) => a.ticks - b.ticks);
 
         // Viewport culling: filter to visible range (with 1-event margin for connecting lines)
@@ -853,12 +853,12 @@ class CCPitchbendEditor {
 
         const events = allEvents.slice(firstVisible, lastVisible + 1);
 
-        // Dessiner les lignes connectant les événements
+        // Draw the lines connecting the events
         if (events.length > 1) {
             this.ctx.strokeStyle = '#4CAF50';
             this.ctx.lineWidth = 2;
 
-            // CC et Pitchbend : courbe en escalier (valeurs discrètes)
+            // CC and Pitchbend: staircase curve (discrete values)
             this.ctx.beginPath();
             events.forEach((event, i) => {
                 const x = this.ticksToX(event.ticks);
@@ -870,15 +870,15 @@ class CCPitchbendEditor {
                     const prevEvent = events[i - 1];
                     const prevY = this.valueToY(prevEvent.value);
 
-                    // Ligne horizontale depuis le point précédent jusqu'à l'abscisse du point actuel
+                    // Horizontal line from the previous point to the current point's x coordinate
                     this.ctx.lineTo(x, prevY);
-                    // Ligne verticale jusqu'au point actuel
+                    // Vertical line to the current point
                     this.ctx.lineTo(x, y);
                 }
             });
             this.ctx.stroke();
         } else if (events.length === 1) {
-            // Si un seul événement, afficher une ligne horizontale
+            // If there's only one event, display a horizontal line
             this.ctx.strokeStyle = '#4CAF50';
             this.ctx.lineWidth = 2;
             this.ctx.beginPath();
@@ -889,7 +889,7 @@ class CCPitchbendEditor {
             this.ctx.stroke();
         }
 
-        // Dessiner les points
+        // Draw the points
         events.forEach(event => {
             const x = this.ticksToX(event.ticks);
             const y = this.valueToY(event.value);
@@ -902,13 +902,13 @@ class CCPitchbendEditor {
         });
     }
 
-    // OPTIMISATION: Utiliser requestAnimationFrame pour les rendus temporaires
+    // OPTIMIZATION: Use requestAnimationFrame for transient renders
     renderSelectionRect(x1, y1, x2, y2) {
         if (!this.renderScheduled) {
             this.renderScheduled = true;
             requestAnimationFrame(() => {
                 this.render();
-                // Dessiner le rectangle de sélection par-dessus
+                // Draw the selection rectangle on top
                 this.ctx.strokeStyle = '#2196F3';
                 this.ctx.lineWidth = 1;
                 this.ctx.setLineDash([5, 5]);
@@ -924,7 +924,7 @@ class CCPitchbendEditor {
             this.renderScheduled = true;
             requestAnimationFrame(() => {
                 this.render();
-                // Dessiner la courbe de prévisualisation par-dessus
+                // Draw the preview curve on top
                 this.ctx.strokeStyle = '#9E9E9E';
                 this.ctx.lineWidth = 1;
                 this.ctx.setLineDash([5, 5]);
@@ -952,12 +952,12 @@ class CCPitchbendEditor {
         }
     }
 
-    // === Filtrage ===
+    // === Filtering ===
 
     getFilteredEvents() {
         return this.events.filter(event => {
             if (event.type !== this.currentCC || event.channel !== this.currentChannel) return false;
-            // Pour poly aftertouch, filtrer aussi par note
+            // For poly aftertouch, also filter by note
             if (this.currentCC === 'polyAftertouch' && this.currentNote !== null) {
                 return event.note === this.currentNote;
             }
@@ -965,7 +965,7 @@ class CCPitchbendEditor {
         });
     }
 
-    // === Synchronisation ===
+    // === Synchronization ===
 
     syncWith(pianoRoll) {
         const oldXRange = this.options.xrange;
@@ -977,7 +977,7 @@ class CCPitchbendEditor {
         this.options.grid = pianoRoll.grid;
         this.options.timebase = pianoRoll.timebase;
 
-        // OPTIMISATION: Marquer la grille comme dirty si les paramètres ont changé
+        // OPTIMIZATION: Mark the grid as dirty if parameters have changed
         if (oldXRange !== this.options.xrange ||
             oldXOffset !== this.options.xoffset ||
             oldGrid !== this.options.grid) {
@@ -990,7 +990,7 @@ class CCPitchbendEditor {
     // === Undo/Redo ===
 
     saveState() {
-        // Debounce: max 1 sauvegarde par 100ms pour éviter le lag en dessin continu
+        // Debounce: max 1 save per 100ms to avoid lag during continuous drawing
         if (this._saveStateTimer) clearTimeout(this._saveStateTimer);
         this._saveStateTimer = setTimeout(() => {
             this._doSaveState();
@@ -1004,13 +1004,13 @@ class CCPitchbendEditor {
             this.history.push(state);
             this.historyIndex++;
 
-            // Limiter l'historique
+            // Limit the history
             if (this.history.length > 50) {
                 this.history.shift();
                 this.historyIndex--;
             }
 
-            // Notifier le changement
+            // Notify the change
             if (this.options.onChange && typeof this.options.onChange === 'function') {
                 this.options.onChange();
             }
@@ -1018,7 +1018,7 @@ class CCPitchbendEditor {
     }
 
     undo() {
-        // Annuler tout timer de saveState en cours pour éviter corruption de l'historique
+        // Cancel any ongoing saveState timer to avoid history corruption
         if (this._saveStateTimer) clearTimeout(this._saveStateTimer);
         if (this.historyIndex > 0) {
             this.historyIndex--;
@@ -1026,7 +1026,7 @@ class CCPitchbendEditor {
             this.selectedEvents.clear();
             this.renderThrottled();
 
-            // Notifier le changement
+            // Notify the change
             if (this.options.onChange && typeof this.options.onChange === 'function') {
                 this.options.onChange();
             }
@@ -1034,7 +1034,7 @@ class CCPitchbendEditor {
     }
 
     redo() {
-        // Annuler tout timer de saveState en cours pour éviter corruption de l'historique
+        // Cancel any ongoing saveState timer to avoid history corruption
         if (this._saveStateTimer) clearTimeout(this._saveStateTimer);
         if (this.historyIndex < this.history.length - 1) {
             this.historyIndex++;
@@ -1042,7 +1042,7 @@ class CCPitchbendEditor {
             this.selectedEvents.clear();
             this.renderThrottled();
 
-            // Notifier le changement
+            // Notify the change
             if (this.options.onChange && typeof this.options.onChange === 'function') {
                 this.options.onChange();
             }
@@ -1058,7 +1058,7 @@ class CCPitchbendEditor {
             id: e.id || (Date.now() + Math.random())
         }));
 
-        // Log des événements par type et canal
+        // Log events by type and channel
         const eventsByType = {};
         this.events.forEach(e => {
             const key = `${e.type}-ch${e.channel}`;
@@ -1066,8 +1066,8 @@ class CCPitchbendEditor {
         });
         console.log('CCPitchbendEditor: Events by type/channel:', eventsByType);
 
-        // CORRECTION: Initialiser l'historique sans déclencher onChange
-        // (car charger les événements existants n'est pas une modification utilisateur)
+        // FIX: Initialize history without triggering onChange
+        // (loading existing events isn't a user modification)
         this.history = [JSON.stringify(this.events)];
         this.historyIndex = 0;
 
@@ -1082,13 +1082,13 @@ class CCPitchbendEditor {
         this.events = [];
         this.selectedEvents.clear();
 
-        // Réinitialiser l'historique
+        // Reset the history
         this.history = [JSON.stringify(this.events)];
         this.historyIndex = 0;
 
         this.renderThrottled();
 
-        // Notifier le changement (car clear est une action utilisateur)
+        // Notify the change (clear is a user action)
         if (this.options.onChange && typeof this.options.onChange === 'function') {
             this.options.onChange();
         }
