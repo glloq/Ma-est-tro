@@ -71,7 +71,7 @@
                             <div class="velocity-value-vertical modulation-value-vertical" id="keyboard-modulation-display">64</div>
                         </div>
 
-                        <!-- Zone principale du clavier -->
+                        <!-- Main keyboard area -->
                         <div class="keyboard-main">
                             <div class="keyboard-canvas-container">
                                 <div id="piano-container" class="piano-container"></div>
