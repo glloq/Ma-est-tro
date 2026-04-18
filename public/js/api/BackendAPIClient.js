@@ -312,17 +312,34 @@ class BackendAPIClient {
     // ========================================================================
 
     /**
-     * Upload MIDI file to backend
+     * Upload a MIDI file to the backend over HTTP.
+     *
+     * Uploads no longer go through the WebSocket as base64; the backend
+     * exposes `POST /api/files` (raw binary body, ?filename + ?folder query
+     * params). Same-origin browser requests are accepted without a token —
+     * see HttpServer auth middleware.
+     *
+     * @param {File|Blob} file - File from an `<input type="file">`.
+     * @param {string} [folder='/'] - Target folder in the library.
+     * @returns {Promise<Object>} The full response body from the server,
+     *   shaped like FileManager.handleUpload's return value (fileId,
+     *   contentHash, status, channels, etc.).
      */
     async uploadMidiFile(file, folder = '/') {
-        const arrayBuffer = await file.arrayBuffer();
-        const base64 = this.arrayBufferToBase64(arrayBuffer);
-
-        return this.sendCommand('file_upload', {
-            filename: file.name,
-            data: base64,
-            folder: folder
+        const url = `/api/files?filename=${encodeURIComponent(file.name)}&folder=${encodeURIComponent(folder)}`;
+        const buffer = await file.arrayBuffer();
+        const resp = await fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/octet-stream' },
+            body: buffer
         });
+        const body = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+            const msg = body && body.error ? body.error : `Upload failed (HTTP ${resp.status})`;
+            throw new Error(msg);
+        }
+        return body;
     }
 
     /**
