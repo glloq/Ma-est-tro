@@ -70,11 +70,16 @@ When `MAESTRO_API_TOKEN` is set, connect with:
 | `midi_all_notes_off` | All notes off on all channels | `deviceId` |
 | `midi_reset` | MIDI System Reset | `deviceId` |
 
-### File Management (20 commands)
+### File Management (WebSocket commands)
+
+> **Upload + download moved to HTTP in v6.** Uploads use
+> `POST /api/files` (raw binary body) and downloads stream from
+> `GET /api/files/:id/blob`. The legacy `file_upload` WS command is
+> gone; `file_export` now returns `{ url, contentHash, size, ... }`
+> instead of an inline base64 payload. See "HTTP endpoints" below.
 
 | Command | Description | Parameters |
 |---------|-------------|------------|
-| `file_upload` | Upload MIDI file | `filename`, `data` |
 | `file_list` | List files in folder | `folder?` (default '/') |
 | `file_metadata` | Get file metadata | `fileId` |
 | `file_read` | Read MIDI file for editing | `fileId` |
@@ -83,8 +88,8 @@ When `MAESTRO_API_TOKEN` is set, connect with:
 | `file_save_as` | Save with new name | `fileId`, `newFilename`, `midiData` |
 | `file_rename` | Rename file | `fileId`, `newFilename` |
 | `file_move` | Move file to folder | `fileId`, `folder` |
-| `file_duplicate` | Duplicate file | `fileId` |
-| `file_export` | Export file | `fileId` |
+| `file_duplicate` | Duplicate file (no-op when content_hash exists) | `fileId` |
+| `file_export` | Return signed download metadata `{url}` | `fileId` |
 | `file_search` | Search files | `query` |
 | `file_filter` | Advanced filtering | Multiple filter criteria |
 | `file_channels` | Get MIDI channels | `fileId` |
@@ -92,6 +97,24 @@ When `MAESTRO_API_TOKEN` is set, connect with:
 | `file_routing_status` | Get routing status | `fileId` |
 | `midi_instruments_list` | List distinct instruments | — |
 | `midi_categories_list` | List instrument categories | — |
+
+### HTTP endpoints
+
+| Method | Path | Body / Query | Response |
+|--------|------|--------------|----------|
+| `POST` | `/api/files?filename=&folder=` | Raw MIDI bytes (`Content-Type: application/octet-stream`), capped at `MAX_MIDI_FILE_SIZE` | `201 {fileId, contentHash, status:'created', ...}` or `200 {status:'duplicate'}` if content already known |
+| `GET` | `/api/files/:id/blob[?dl=1]` | — | `200` streaming `audio/midi`; `ETag` is the SHA-256 content hash |
+
+Same-origin browser requests skip the bearer-token check; external
+clients must send `Authorization: Bearer <MAESTRO_API_TOKEN>`.
+
+### WS events (server → client)
+
+| Event | Payload | When |
+|-------|---------|------|
+| `file_upload_progress` | `{uploadId, stage}` | Emitted during `POST /api/files` for stages: `received`, `hashed`, `parsed`, `analyzed`, `stored` |
+| `file_uploaded` | `{fileId, filename, contentHash}` | Once a file row is committed |
+| `file_list_updated` | `{files: [...]}` | After any CRUD on the library |
 
 ### Playback (21 commands)
 

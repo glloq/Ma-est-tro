@@ -476,29 +476,6 @@ class BackendAPIClient {
     // UTILITIES
     // ========================================================================
 
-    /**
-     * Convert ArrayBuffer to Base64
-     */
-    arrayBufferToBase64(buffer) {
-        let binary = '';
-        const bytes = new Uint8Array(buffer);
-        for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
-        return btoa(binary);
-    }
-
-    /**
-     * Convert Base64 to ArrayBuffer
-     */
-    base64ToArrayBuffer(base64) {
-        const binary = atob(base64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) {
-            bytes[i] = binary.charCodeAt(i);
-        }
-        return bytes.buffer;
-    }
 }
 
 // Export

@@ -438,9 +438,9 @@ class Application {
       this.wsServer.httpServer = this.httpServer.server;
       this.wsServer.start(); // start() already calls startHeartbeat()
 
-      // Start automated backups
+      // Start automated backups (DB snapshot + blob manifest sidecar).
       this._registerService('backupScheduler', new BackupScheduler(
-        { logger: this.logger, database: this.database }
+        { logger: this.logger, database: this.database, blobStore: this.blobStore }
       ));
       this.backupScheduler.start();
 

@@ -895,6 +895,26 @@ class MidiDatabase {
       this.logger.error(`Failed to delete tempo map: ${error.message}`);
     }
   }
+
+  /**
+   * Snapshot of every file's blob pointer, for a backup manifest. The
+   * BackupScheduler walks this list, stats each blob on disk, and
+   * writes a sidecar JSON next to the SQLite snapshot so a restore
+   * operator knows exactly which MIDI files lost their bytes.
+   *
+   * @returns {Array<{id:number, content_hash:string, blob_path:string,
+   *   filename:string, size:number}>}
+   */
+  listBlobsForManifest() {
+    try {
+      return this.db
+        .prepare('SELECT id, content_hash, blob_path, filename, size FROM midi_files ORDER BY id')
+        .all();
+    } catch (error) {
+      this.logger.error(`Failed to list blobs for manifest: ${error.message}`);
+      return [];
+    }
+  }
 }
 
 export default MidiDatabase;

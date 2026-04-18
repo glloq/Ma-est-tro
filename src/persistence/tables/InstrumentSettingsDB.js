@@ -316,14 +316,9 @@ class InstrumentSettingsDB {
         }
       }
 
-      // Also update instrument_latency table if it exists
-      try {
-        this.db.prepare(
-          'UPDATE instrument_latency SET device_id = ? WHERE device_id = ?'
-        ).run(newDeviceId, oldDeviceId);
-      } catch (e) {
-        // Table may not exist
-      }
+      // The legacy `instrument_latency` (singular) table was dropped
+      // in v6 — only the plural `instruments_latency` rows updated above
+      // need to follow the device_id rename.
 
       // Also update routing table if it exists
       try {
