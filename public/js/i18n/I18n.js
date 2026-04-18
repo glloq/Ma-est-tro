@@ -5,7 +5,7 @@
  *
  * Usage:
  *   await i18n.init();
- *   i18n.t('settings.title'); // "⚙️ Réglages"
+ *   i18n.t('settings.title'); // "⚙️ Settings"
  *   i18n.t('common.octaves', { count: 2 }); // "2 octaves"
  */
 
@@ -53,8 +53,8 @@
         }
 
         /**
-         * Initialise le système i18n
-         * Charge la langue sauvegardée ou détecte automatiquement
+         * Initialize the i18n system
+         * Loads the saved language or auto-detects it
          */
         async init() {
             if (this.initialized) {
@@ -230,14 +230,14 @@
         }
 
         /**
-         * Retourne la locale courante
+         * Return the current locale
          */
         getLocale() {
             return this.currentLocale;
         }
 
         /**
-         * Retourne la liste des locales supportées
+         * Return the list of supported locales
          */
         getSupportedLocales() {
             return this.supportedLocales.map(code => ({
@@ -247,7 +247,7 @@
         }
 
         /**
-         * Ajoute un écouteur pour les changements de langue
+         * Add a listener for language changes
          * @param {Function} callback
          */
         onLocaleChange(callback) {
@@ -258,7 +258,7 @@
         }
 
         /**
-         * Notifie tous les écouteurs du changement de langue
+         * Notify all listeners of the language change
          */
         notifyListeners() {
             this.listeners.forEach(callback => {
