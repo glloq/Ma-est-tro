@@ -216,7 +216,7 @@
         if (this.playbackManager) {
             this.playbackManager.syncMutedChannels();
         }
-        this.updateSequenceFromActiveChannels(previousActiveChannels);
+        this.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
         this.refreshChannelButtons();
     }
 
@@ -399,7 +399,7 @@
                     this.channelDisabled.add(ch.channel);
                 }
             });
-            this.updateSequenceFromActiveChannels(previousActiveChannels);
+            this.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
             this.routingOps.updateChannelButtons();
             this.renderer.updateInstrumentSelector();
             this.syncMutedChannels();
@@ -413,7 +413,7 @@
                 this.activeChannels.add(ch.channel);
                 this.channelDisabled.delete(ch.channel);
             });
-            this.updateSequenceFromActiveChannels(previousActiveChannels);
+            this.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
             this.routingOps.updateChannelButtons();
             this.renderer.updateInstrumentSelector();
             this.syncMutedChannels();
@@ -444,8 +444,8 @@
 
         this._closeChannelSettingsPopover();
 
-        if (typeof this.updateSequenceFromActiveChannels === 'function') {
-            this.updateSequenceFromActiveChannels(null, true);
+        if (typeof this.sequenceOps.updateSequenceFromActiveChannels === 'function') {
+            this.sequenceOps.updateSequenceFromActiveChannels(null, true);
         }
         if (typeof this.refreshChannelButtons === 'function') this.refreshChannelButtons();
         if (typeof this.renderer.updateInstrumentSelector === 'function') this.renderer.updateInstrumentSelector();
@@ -747,7 +747,7 @@
         this.activeChannels.add(channel);
         this._pianoRollSoloChannel = null;
 
-        this.updateSequenceFromActiveChannels(previousActiveChannels);
+        this.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
         if (this.channelPanel) {
             this.channelPanel.updateChannelButtons();
             this.channelPanel.updateInstrumentSelector();
@@ -990,7 +990,7 @@
         this.activeChannels.clear();
         this.activeChannels.add(channel);
         this._pianoRollSoloChannel = null;
-        this.updateSequenceFromActiveChannels(new Set([channel]), specialtyEditorWasActive);
+        this.sequenceOps.updateSequenceFromActiveChannels(new Set([channel]), specialtyEditorWasActive);
         this.refreshChannelButtons();
 
     // Get MIDI notes for this channel
@@ -1061,7 +1061,7 @@
         this.activeChannels.clear();
         this.activeChannels.add(channel);
         this._pianoRollSoloChannel = null;
-        this.updateSequenceFromActiveChannels(new Set([channel]), specialtyEditorWasActive);
+        this.sequenceOps.updateSequenceFromActiveChannels(new Set([channel]), specialtyEditorWasActive);
         this.refreshChannelButtons();
 
     // Determine wind preset from channel's GM program
@@ -1128,7 +1128,7 @@
         this._savedActiveChannels = null;
         this._pianoRollSoloChannel = null;
 
-        this.updateSequenceFromActiveChannels(previousActiveChannels);
+        this.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
         if (this.channelPanel) {
             this.channelPanel.updateChannelButtons();
             this.channelPanel.updateInstrumentSelector();
@@ -1177,7 +1177,7 @@
         this.activeChannels.add(channel);
         this._pianoRollSoloChannel = channel;
 
-        this.updateSequenceFromActiveChannels(previousActiveChannels);
+        this.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
         this.refreshChannelButtons();
         this._updateEditButtonState(true);
     }

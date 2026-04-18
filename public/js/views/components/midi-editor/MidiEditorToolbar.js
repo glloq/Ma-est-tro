@@ -261,7 +261,7 @@ class MidiEditorToolbar {
 
         m.isDirty = true;
         m.updateSaveButton();
-        m.syncFullSequenceFromPianoRoll();
+        m.sequenceOps.syncFullSequenceFromPianoRoll();
 
         m.updateChannelsFromSequence();
 
@@ -281,7 +281,7 @@ class MidiEditorToolbar {
             m.activeChannels.add(newChannel);
         }
 
-        m.updateSequenceFromActiveChannels(null, true);
+        m.sequenceOps.updateSequenceFromActiveChannels(null, true);
         m.refreshChannelButtons();
         m.updateInstrumentSelector();
         m.updateEditButtons();
@@ -393,7 +393,7 @@ class MidiEditorToolbar {
 
         m.isDirty = true;
         m.updateSaveButton();
-        m.syncFullSequenceFromPianoRoll();
+        m.sequenceOps.syncFullSequenceFromPianoRoll();
         m.updateChannelsFromSequence();
 
         const existingChannelNumbers = new Set(m.channels.map(ch => ch.channel));
@@ -412,7 +412,7 @@ class MidiEditorToolbar {
             m.activeChannels.add(newChannel);
         }
 
-        m.updateSequenceFromActiveChannels(null, true);
+        m.sequenceOps.updateSequenceFromActiveChannels(null, true);
         m.refreshChannelButtons();
         m.updateInstrumentSelector();
         m.updateEditButtons();

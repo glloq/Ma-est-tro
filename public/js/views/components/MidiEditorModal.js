@@ -259,7 +259,7 @@ class MidiEditorModal {
             }
 
             // Convertir en sequence pour webaudio-pianoroll
-            this.convertMidiToSequence();
+            this.sequenceOps.convertMidiToSequence();
 
             this.log('info', `MIDI file loaded: ${this.midiData.tracks?.length || 0} tracks, ${this.sequence.length} notes`);
 
@@ -367,7 +367,7 @@ if (typeof MidiEditorCC !== 'undefined') {
 }
 
 const _mixins = [
-    typeof MidiEditorSequenceMixin !== 'undefined' ? MidiEditorSequenceMixin : null,
+    // MidiEditorSequenceMixin retiré — remplacé par this.sequenceOps (P2-F.10i body-rewrite).
     // MidiEditorCCMixin retiré — remplacé par this.ccOps (P2-F.10h body-rewrite).
     // MidiEditorDrawSettingsMixin retiré — remplacé par this.drawSettings (P2-F.10b-cleanup).
     // MidiEditorCCPickerMixin retiré — remplacé par this.ccPicker (P2-F.10c body-rewrite).

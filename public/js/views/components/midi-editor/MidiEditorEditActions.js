@@ -64,7 +64,7 @@
             this.log('info', 'Undo successful');
             this.isDirty = true;
             this.routingOps.updateSaveButton();
-            this.syncFullSequenceFromPianoRoll();
+            this.sequenceOps.syncFullSequenceFromPianoRoll();
             this.updateUndoRedoButtonsState();
         }
     }
@@ -100,7 +100,7 @@
             this.log('info', 'Redo successful');
             this.isDirty = true;
             this.routingOps.updateSaveButton();
-            this.syncFullSequenceFromPianoRoll();
+            this.sequenceOps.syncFullSequenceFromPianoRoll();
             this.updateUndoRedoButtonsState();
         }
     }
@@ -245,7 +245,7 @@
 
         this.isDirty = true;
         this.routingOps.updateSaveButton();
-        this.syncFullSequenceFromPianoRoll();
+        this.sequenceOps.syncFullSequenceFromPianoRoll();
         this.updateEditButtons();
     }
 
@@ -294,7 +294,7 @@
 
         this.isDirty = true;
         this.routingOps.updateSaveButton();
-        this.syncFullSequenceFromPianoRoll();
+        this.sequenceOps.syncFullSequenceFromPianoRoll();
         this.updateEditButtons();
     }
 
@@ -398,7 +398,7 @@
 
         this.isDirty = true;
         this.routingOps.updateSaveButton();
-        this.syncFullSequenceFromPianoRoll();
+        this.sequenceOps.syncFullSequenceFromPianoRoll();
 
     // Update the channel list (automatically drops empty channels)
         this.ccPicker.updateChannelsFromSequence();
@@ -422,7 +422,7 @@
         }
 
     // Update the displayed sequence (skipSync=true — already synced)
-        this.updateSequenceFromActiveChannels(null, true);
+        this.sequenceOps.updateSequenceFromActiveChannels(null, true);
 
     // Refresh the channel buttons
         this.refreshChannelButtons();
@@ -590,7 +590,7 @@
 
         this.isDirty = true;
         this.routingOps.updateSaveButton();
-        this.syncFullSequenceFromPianoRoll();
+        this.sequenceOps.syncFullSequenceFromPianoRoll();
         this.ccPicker.updateChannelsFromSequence();
 
     // Nettoyer activeChannels : retirer les canaux qui n'existent plus
@@ -612,7 +612,7 @@
         }
 
     // Update the displayed sequence (skipSync=true — already synced)
-        this.updateSequenceFromActiveChannels(null, true);
+        this.sequenceOps.updateSequenceFromActiveChannels(null, true);
 
         this.refreshChannelButtons();
         this._refreshStringInstrumentChannels();

@@ -1,76 +1,71 @@
 // ============================================================================
 // File: public/js/views/components/midi-editor/MidiEditorSequence.js
-// Description: MIDI sequence management (conversion, sync, channels)
-//   Mixin: methods added to MidiEditorModal.prototype
+// Description: MIDI sequence management (conversion, sync, channels).
+//   Sub-component class ; called via `modal.sequenceOps.<method>(...)`.
+//   (P2-F.10i body rewrite — no longer a prototype mixin.)
 // ============================================================================
 
 (function() {
     'use strict';
 
-    /**
-     * Methodes de gestion de la sequence MIDI.
-     * Ajoutees au prototype de MidiEditorModal apres son chargement.
-     * @namespace MidiEditorSequenceMixin
-     */
-    const MidiEditorSequenceMixin = {
+    class MidiEditorSequence {
+        constructor(modal) {
+            this.modal = modal;
+        }
 
-        /**
-         * Convertir les donnees MIDI en format sequence pour webaudio-pianoroll
-         * Format: {t: tick, g: gate, n: note, c: channel, v: velocity}
-         */
-        convertMidiToSequence: function() {
-            this.fullSequence = [];
-            this.channels = [];
+    convertMidiToSequence() {
+            this.modal.fullSequence = [];
+            this.modal.channels = [];
 
-            if (!this.midiData || !this.midiData.tracks) {
-                this.log('warn', 'No MIDI tracks to convert');
+            if (!this.modal.midiData || !this.modal.midiData.tracks) {
+                this.modal.log('warn', 'No MIDI tracks to convert');
                 return;
             }
 
-            const ticksPerBeat = this.midiData.header?.ticksPerBeat || 480;
-            this.ticksPerBeat = ticksPerBeat;
+            const ticksPerBeat = this.modal.midiData.header?.ticksPerBeat || 480;
+            this.modal.ticksPerBeat = ticksPerBeat;
 
             // Extraire le tempo et la tempo map du fichier MIDI
             let tempo = 120;
-            this.tempoEvents = [];
-            if (this.midiData.tracks && this.midiData.tracks.length > 0) {
-                for (const track of this.midiData.tracks) {
+            this.modal.tempoEvents = [];
+            if (this.modal.midiData.tracks && this.modal.midiData.tracks.length > 0) {
+                for (const track of this.modal.midiData.tracks) {
                     if (!track.events) continue;
                     let currentTick = 0;
                     for (const event of track.events) {
                         currentTick += event.deltaTime || 0;
                         if (event.type === 'setTempo' && event.microsecondsPerBeat) {
                             const bpm = Math.round(60000000 / event.microsecondsPerBeat);
-                            if (this.tempoEvents.length === 0) {
+                            if (this.modal.tempoEvents.length === 0) {
                                 tempo = bpm;
                             }
-                            this.tempoEvents.push({
+                            this.modal.tempoEvents.push({
                                 ticks: currentTick,
                                 tempo: bpm,
-                                id: `tempo_${currentTick}_${this.tempoEvents.length}`
+                                id: `tempo_${currentTick}_${this.modal.tempoEvents.length}`
                             });
                         }
                     }
                 }
-                if (this.tempoEvents.length > 0) {
-                    this.log('info', `Extracted ${this.tempoEvents.length} tempo events (first: ${tempo} BPM)`);
+                if (this.modal.tempoEvents.length > 0) {
+                    this.modal.log('info', `Extracted ${this.modal.tempoEvents.length} tempo events (first: ${tempo} BPM)`);
                 }
             }
-            this.tempo = tempo;
+            this.modal.tempo = tempo;
 
-            this.log('info', `Converting MIDI: ${this.midiData.tracks.length} tracks, ${ticksPerBeat} ticks/beat, ${tempo} BPM`);
+            this.modal.log('info', `Converting MIDI: ${this.modal.midiData.tracks.length} tracks, ${ticksPerBeat} ticks/beat, ${tempo} BPM`);
 
             const channelInstruments = new Map();
             const channelNoteCount = new Map();
             const allNotes = [];
 
-            this.midiData.tracks.forEach((track, trackIndex) => {
+            this.modal.midiData.tracks.forEach((track, trackIndex) => {
                 if (!track.events) {
-                    this.log('debug', `Track ${trackIndex}: no events`);
+                    this.modal.log('debug', `Track ${trackIndex}: no events`);
                     return;
                 }
 
-                this.log('debug', `Track ${trackIndex} (${track.name || 'unnamed'}): ${track.events.length} events`);
+                this.modal.log('debug', `Track ${trackIndex} (${track.name || 'unnamed'}): ${track.events.length} events`);
 
                 const activeNotes = new Map();
                 let currentTick = 0;
@@ -83,7 +78,7 @@
                     if (event.type === 'programChange') {
                         const channel = event.channel ?? 0;
                         channelInstruments.set(channel, event.programNumber);
-                        this.log('debug', `Channel ${channel}: program ${event.programNumber} (${this.getInstrumentName(event.programNumber)})`);
+                        this.modal.log('debug', `Channel ${channel}: program ${event.programNumber} (${this.modal.getInstrumentName(event.programNumber)})`);
                     }
 
                     if (event.type === 'noteOn' && event.velocity > 0) {
@@ -107,7 +102,7 @@
                         });
 
                         if (noteOnCount === 1) {
-                            this.log('debug', `First noteOn in track ${trackIndex}:`, {
+                            this.modal.log('debug', `First noteOn in track ${trackIndex}:`, {
                                 tick: currentTick, note: event.noteNumber,
                                 velocity: event.velocity, channel: channel
                             });
@@ -141,105 +136,99 @@
                     channelNoteCount.set(noteOn.channel, (channelNoteCount.get(noteOn.channel) || 0) + 1);
                 }
                 if (activeNotes.size > 0) {
-                    this.log('warn', `Track ${trackIndex}: ${activeNotes.size} orphaned notes (no noteOff) recovered`);
+                    this.modal.log('warn', `Track ${trackIndex}: ${activeNotes.size} orphaned notes (no noteOff) recovered`);
                 }
                 activeNotes.clear();
 
-                this.log('debug', `Track ${trackIndex} summary: ${noteOnCount} note-ons, ${noteOffCount} note-offs, ${allNotes.length} complete notes`);
+                this.modal.log('debug', `Track ${trackIndex} summary: ${noteOnCount} note-ons, ${noteOffCount} note-offs, ${allNotes.length} complete notes`);
             });
 
-            this.fullSequence = allNotes.map(note => ({
+            this.modal.fullSequence = allNotes.map(note => ({
                 t: note.tick, g: note.gate, n: note.note,
                 c: note.channel, v: note.velocity || 100
             }));
 
-            this.fullSequence.sort((a, b) => a.t - b.t);
+            this.modal.fullSequence.sort((a, b) => a.t - b.t);
 
             channelNoteCount.forEach((count, channel) => {
                 const hasExplicitProgram = channelInstruments.has(channel);
                 const programNumber = channelInstruments.get(channel) || 0;
-                const instrumentName = channel === 9 ? this.t('midiEditor.drumKit') : this.getInstrumentName(programNumber);
+                const instrumentName = channel === 9 ? this.modal.t('midiEditor.drumKit') : this.modal.getInstrumentName(programNumber);
 
-                this.channels.push({
+                this.modal.channels.push({
                     channel: channel, program: programNumber,
                     instrument: instrumentName, noteCount: count,
                     hasExplicitProgram: hasExplicitProgram
                 });
             });
 
-            this.channels.sort((a, b) => a.channel - b.channel);
+            this.modal.channels.sort((a, b) => a.channel - b.channel);
 
-            this.log('info', `Converted ${this.fullSequence.length} notes to sequence`);
-            this.log('info', `Found ${this.channels.length} channels:`, this.channels);
+            this.modal.log('info', `Converted ${this.modal.fullSequence.length} notes to sequence`);
+            this.modal.log('info', `Found ${this.modal.channels.length} channels:`, this.modal.channels);
 
-            this.ccOps.extractCCAndPitchbend();
-            this.ccOps.updateDynamicCCButtons();
+            this.modal.ccOps.extractCCAndPitchbend();
+            this.modal.ccOps.updateDynamicCCButtons();
 
-            this.activeChannels.clear();
-            if (this.channels.length > 0) {
-                this.channels.forEach(ch => this.activeChannels.add(ch.channel));
-                this.sequence = this.fullSequence.filter(note => this.activeChannels.has(note.c));
-                this.log('info', `All ${this.channels.length} channels activated by default`);
-                this.log('info', `Initial sequence: ${this.sequence.length} notes visible`);
+            this.modal.activeChannels.clear();
+            if (this.modal.channels.length > 0) {
+                this.modal.channels.forEach(ch => this.modal.activeChannels.add(ch.channel));
+                this.modal.sequence = this.modal.fullSequence.filter(note => this.modal.activeChannels.has(note.c));
+                this.modal.log('info', `All ${this.modal.channels.length} channels activated by default`);
+                this.modal.log('info', `Initial sequence: ${this.modal.sequence.length} notes visible`);
             } else {
-                this.log('warn', 'No notes found! Check MIDI data structure.');
-                this.sequence = [];
+                this.modal.log('warn', 'No notes found! Check MIDI data structure.');
+                this.modal.sequence = [];
             }
-        },
+        }
 
-        /**
-         * Basculer l'affichage d'un canal
-         */
-        toggleChannel: function(channel) {
-            const previousActiveChannels = new Set(this.activeChannels);
+    toggleChannel(channel) {
+            const previousActiveChannels = new Set(this.modal.activeChannels);
 
-            if (this.activeChannels.has(channel)) {
-                this.activeChannels.delete(channel);
-                this.channelDisabled.add(channel);
+            if (this.modal.activeChannels.has(channel)) {
+                this.modal.activeChannels.delete(channel);
+                this.modal.channelDisabled.add(channel);
             } else {
-                this.activeChannels.add(channel);
-                this.channelDisabled.delete(channel);
+                this.modal.activeChannels.add(channel);
+                this.modal.channelDisabled.delete(channel);
             }
 
-            this.log('info', `Toggled channel ${channel}. Active channels: [${Array.from(this.activeChannels).join(', ')}]`);
+            this.modal.log('info', `Toggled channel ${channel}. Active channels: [${Array.from(this.modal.activeChannels).join(', ')}]`);
 
-            if (this.tablatureEditor && this.tablatureEditor.isVisible) {
-                this.tablatureEditor.hide();
-                this._updateTabButtonState(false);
+            if (this.modal.tablatureEditor && this.modal.tablatureEditor.isVisible) {
+                this.modal.tablatureEditor.hide();
+                this.modal._updateTabButtonState(false);
             }
 
-            if (this.drumPatternEditor && this.drumPatternEditor.isVisible) {
-                this.drumPatternEditor.hide();
-                this._updateDrumButtonState(false);
+            if (this.modal.drumPatternEditor && this.modal.drumPatternEditor.isVisible) {
+                this.modal.drumPatternEditor.hide();
+                this.modal._updateDrumButtonState(false);
             }
 
             this.updateSequenceFromActiveChannels(previousActiveChannels);
-            this.routingOps.updateChannelButtons();
-            this.renderer.updateInstrumentSelector();
+            this.modal.routingOps.updateChannelButtons();
+            this.modal.renderer.updateInstrumentSelector();
 
-            if (this.channelPanel) {
-                this.channelPanel.updateTablatureButton();
+            if (this.modal.channelPanel) {
+                this.modal.channelPanel.updateTablatureButton();
             }
 
-            this.ccPicker.updateCCEditorChannel();
-            this.syncMutedChannels();
-            this._updateChannelDisabledVisual(channel);
+            this.modal.ccPicker.updateCCEditorChannel();
+            this.modal.syncMutedChannels();
+            this.modal._updateChannelDisabledVisual(channel);
 
             // Sync popover checkbox if open for this channel
-            if (this._channelSettingsOpen === channel && this._channelSettingsPopoverEl) {
-                const cb = this._channelSettingsPopoverEl.querySelector('.channel-enabled-checkbox');
-                if (cb) cb.checked = this.activeChannels.has(channel);
+            if (this.modal._channelSettingsOpen === channel && this.modal._channelSettingsPopoverEl) {
+                const cb = this.modal._channelSettingsPopoverEl.querySelector('.channel-enabled-checkbox');
+                if (cb) cb.checked = this.modal.activeChannels.has(channel);
             }
 
-            if (this.channelPlayableHighlights.size > 0) {
-                this._syncPianoRollHighlights();
+            if (this.modal.channelPlayableHighlights.size > 0) {
+                this.modal._syncPianoRollHighlights();
             }
-        },
+        }
 
-        /**
-         * Mettre a jour la sequence depuis les canaux actifs
-         */
-        updateSequenceFromActiveChannels: function(previousActiveChannels, skipSync) {
+    updateSequenceFromActiveChannels(previousActiveChannels, skipSync) {
             if (previousActiveChannels === undefined) previousActiveChannels = null;
             if (skipSync === undefined) skipSync = false;
 
@@ -247,102 +236,88 @@
                 this.syncFullSequenceFromPianoRoll(previousActiveChannels);
             }
 
-            if (this.activeChannels.size === 0) {
-                this.sequence = [];
+            if (this.modal.activeChannels.size === 0) {
+                this.modal.sequence = [];
             } else {
-                this.sequence = this.fullSequence.filter(note => this.activeChannels.has(note.c));
+                this.modal.sequence = this.modal.fullSequence.filter(note => this.modal.activeChannels.has(note.c));
             }
 
-            this.log('info', `Updated sequence: ${this.sequence.length} notes from ${this.activeChannels.size} active channel(s)`);
+            this.modal.log('info', `Updated sequence: ${this.modal.sequence.length} notes from ${this.modal.activeChannels.size} active channel(s)`);
 
-            if (this.pianoRoll) {
-                this.pianoRoll.sequence.length = 0;
+            if (this.modal.pianoRoll) {
+                this.modal.pianoRoll.sequence.length = 0;
 
-                this.sequence.forEach(note => {
-                    this.pianoRoll.sequence.push({...note});
+                this.modal.sequence.forEach(note => {
+                    this.modal.pianoRoll.sequence.push({...note});
                 });
 
-                this.pianoRoll.channelColors = this.channelColors;
+                this.modal.pianoRoll.channelColors = this.modal.channelColors;
 
-                if (this.activeChannels.size > 0) {
-                    this.pianoRoll.defaultChannel = Array.from(this.activeChannels)[0];
-                    this.log('debug', `Default channel for new notes: ${this.pianoRoll.defaultChannel}`);
+                if (this.modal.activeChannels.size > 0) {
+                    this.modal.pianoRoll.defaultChannel = Array.from(this.modal.activeChannels)[0];
+                    this.modal.log('debug', `Default channel for new notes: ${this.modal.pianoRoll.defaultChannel}`);
                 }
 
-                if (typeof this.pianoRoll.redraw === 'function') {
-                    this.pianoRoll.redraw();
-                    this.log('debug', `Piano roll redrawn after channel toggle: ${this.pianoRoll.sequence.length} notes visible`);
+                if (typeof this.modal.pianoRoll.redraw === 'function') {
+                    this.modal.pianoRoll.redraw();
+                    this.modal.log('debug', `Piano roll redrawn after channel toggle: ${this.modal.pianoRoll.sequence.length} notes visible`);
                 }
             }
 
             // Sync CC/Velocity editor to the edited channel
-            if (this.activeChannels.size === 1 && this.ccSectionExpanded) {
-                const ch = Array.from(this.activeChannels)[0];
-                if (this.ccEditor) this.ccEditor.setChannel(ch);
-                if (this.velocityEditor) this.velocityEditor.setChannel(ch);
-                if (typeof this.ccOps.updateEditorChannelSelector === 'function') {
-                    this.ccOps.updateEditorChannelSelector();
+            if (this.modal.activeChannels.size === 1 && this.modal.ccSectionExpanded) {
+                const ch = Array.from(this.modal.activeChannels)[0];
+                if (this.modal.ccEditor) this.modal.ccEditor.setChannel(ch);
+                if (this.modal.velocityEditor) this.modal.velocityEditor.setChannel(ch);
+                if (typeof this.modal.ccOps.updateEditorChannelSelector === 'function') {
+                    this.modal.ccOps.updateEditorChannelSelector();
                 }
             }
 
-            if (typeof this.events._updateNavigationMinimap === 'function') {
-                this.events._updateNavigationMinimap();
+            if (typeof this.modal.events._updateNavigationMinimap === 'function') {
+                this.modal.events._updateNavigationMinimap();
             }
-        },
+        }
 
-        /**
-         * Synchroniser fullSequence avec les notes actuelles du piano roll
-         */
-        syncFullSequenceFromPianoRoll: function(previousActiveChannels) {
+    syncFullSequenceFromPianoRoll(previousActiveChannels) {
             if (previousActiveChannels === undefined) previousActiveChannels = null;
-            if (!this.pianoRoll || !this.pianoRoll.sequence) return;
+            if (!this.modal.pianoRoll || !this.modal.pianoRoll.sequence) return;
 
-            const currentSequence = this.pianoRoll.sequence;
-            const visibleChannels = previousActiveChannels || this.activeChannels;
-            const invisibleNotes = this.fullSequence.filter(note => !visibleChannels.has(note.c));
+            const currentSequence = this.modal.pianoRoll.sequence;
+            const visibleChannels = previousActiveChannels || this.modal.activeChannels;
+            const invisibleNotes = this.modal.fullSequence.filter(note => !visibleChannels.has(note.c));
             const visibleNotes = currentSequence.map(note => ({
                 t: note.t, g: note.g, n: note.n,
                 c: note.c !== undefined ? note.c : Array.from(visibleChannels)[0] || 0,
                 v: note.v || 100
             }));
 
-            this.fullSequence = [...invisibleNotes, ...visibleNotes];
-            this.fullSequence.sort((a, b) => a.t - b.t);
+            this.modal.fullSequence = [...invisibleNotes, ...visibleNotes];
+            this.modal.fullSequence.sort((a, b) => a.t - b.t);
 
-            this.log('debug', `Synced fullSequence: ${invisibleNotes.length} invisible + ${visibleNotes.length} visible = ${this.fullSequence.length} total (using ${previousActiveChannels ? 'previous' : 'current'} active channels)`);
+            this.modal.log('debug', `Synced fullSequence: ${invisibleNotes.length} invisible + ${visibleNotes.length} visible = ${this.modal.fullSequence.length} total (using ${previousActiveChannels ? 'previous' : 'current'} active channels)`);
 
-            if (this.tablatureEditor && this.tablatureEditor.isVisible && this.activeChannels.size === 1) {
-                const activeChannel = Array.from(this.activeChannels)[0];
+            if (this.modal.tablatureEditor && this.modal.tablatureEditor.isVisible && this.modal.activeChannels.size === 1) {
+                const activeChannel = Array.from(this.modal.activeChannels)[0];
                 const channelNotes = visibleNotes.filter(n => n.c === activeChannel);
-                this.tablatureEditor.onMidiNotesChanged(channelNotes);
+                this.modal.tablatureEditor.onMidiNotesChanged(channelNotes);
             }
 
-            if (this.drumPatternEditor && this.drumPatternEditor.isVisible) {
-                const drumChannel = this.drumPatternEditor.channel;
+            if (this.modal.drumPatternEditor && this.modal.drumPatternEditor.isVisible) {
+                const drumChannel = this.modal.drumPatternEditor.channel;
                 const drumNotes = visibleNotes.filter(n => n.c === drumChannel);
-                this.drumPatternEditor.onMidiNotesChanged(drumNotes);
+                this.modal.drumPatternEditor.onMidiNotesChanged(drumNotes);
             }
 
-            if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) {
-                const windChannel = this.windInstrumentEditor.channel;
+            if (this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible) {
+                const windChannel = this.modal.windInstrumentEditor.channel;
                 const windNotes = visibleNotes.filter(n => n.c === windChannel);
-                this.windInstrumentEditor.onMidiNotesChanged(windNotes);
+                this.modal.windInstrumentEditor.onMidiNotesChanged(windNotes);
             }
         }
-    };
-
-    // Facade sub-component (P2-F.10c-batch).
-    class MidiEditorSequence {
-        constructor(modal) { this.modal = modal; }
     }
-    Object.keys(MidiEditorSequenceMixin).forEach((key) => {
-        MidiEditorSequence.prototype[key] = function(...args) {
-            return MidiEditorSequenceMixin[key].apply(this.modal, args);
-        };
-    });
 
     if (typeof window !== 'undefined') {
-        window.MidiEditorSequenceMixin = MidiEditorSequenceMixin;
         window.MidiEditorSequence = MidiEditorSequence;
     }
 })();

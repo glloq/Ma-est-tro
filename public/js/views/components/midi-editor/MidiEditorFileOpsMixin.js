@@ -238,7 +238,7 @@
             this.modal.log('info', `Saving MIDI file: ${this.modal.currentFile}`);
 
     // Sync fullSequence with the current piano roll (handles channels, additions, deletions, etc.)
-            this.modal.syncFullSequenceFromPianoRoll();
+            this.modal.sequenceOps.syncFullSequenceFromPianoRoll();
 
     // Sync CC/pitch-bend events from the editor
             this.modal.ccPicker.syncCCEventsFromEditor();
@@ -378,7 +378,7 @@
             this.modal.log('info', `Saving MIDI file as: ${newFilename}`);
 
     // Synchronize data from piano roll
-            this.modal.syncFullSequenceFromPianoRoll();
+            this.modal.sequenceOps.syncFullSequenceFromPianoRoll();
             this.modal.ccPicker.syncCCEventsFromEditor();
             this.modal.ccPicker.updateChannelsFromSequence();
 

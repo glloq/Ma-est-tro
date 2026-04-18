@@ -492,7 +492,7 @@ class TablatureEditor {
 
         // Update visible sequence
         const previousActiveChannels = new Set(m.activeChannels);
-        m.updateSequenceFromActiveChannels(previousActiveChannels, true);
+        m.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels, true);
 
         // Refresh piano roll
         if (m.pianoRoll) {

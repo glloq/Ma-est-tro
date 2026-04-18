@@ -135,7 +135,7 @@
                     return;
                 }
                 const channel = parseInt(channelChip.dataset.channel);
-                if (!isNaN(channel)) this.modal.toggleChannel(channel);
+                if (!isNaN(channel)) this.modal.sequenceOps.toggleChannel(channel);
                 return;
             }
             const settingsBtn = e.target.closest('.chip-settings-btn');
@@ -160,7 +160,7 @@
                     this.modal.activeChannels.add(ch.channel);
                     this.modal.channelDisabled.delete(ch.channel);
                 });
-                this.modal.updateSequenceFromActiveChannels(previousActiveChannels);
+                this.modal.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
                 this.modal.updateChannelButtons();
                 this.modal.renderer.updateInstrumentSelector();
                 this.modal.syncMutedChannels();
@@ -220,7 +220,7 @@
                             this.modal.channelDisabled.add(ch.channel);
                         }
                     });
-                    this.modal.updateSequenceFromActiveChannels(previousActiveChannels);
+                    this.modal.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
                     this.modal.updateChannelButtons();
                     this.modal.renderer.updateInstrumentSelector();
                     this.modal.syncMutedChannels();

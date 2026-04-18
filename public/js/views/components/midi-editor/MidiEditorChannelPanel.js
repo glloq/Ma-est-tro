@@ -34,7 +34,7 @@ class MidiEditorChannelPanel {
 
         m.log('info', `Toggled channel ${channel}. Active channels: [${Array.from(m.activeChannels).join(', ')}]`);
 
-        m.updateSequenceFromActiveChannels(previousActiveChannels);
+        m.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
         this.updateChannelButtons();
         this.updateInstrumentSelector();
         this.updateTablatureButton();

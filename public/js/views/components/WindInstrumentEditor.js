@@ -458,7 +458,7 @@ class WindInstrumentEditor {
         m.fullSequence.sort((a, b) => a.t - b.t);
 
         const previousActiveChannels = new Set(m.activeChannels);
-        m.updateSequenceFromActiveChannels(previousActiveChannels, true);
+        m.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels, true);
 
         if (m.pianoRoll) {
             m.pianoRoll.sequence = m.sequence;

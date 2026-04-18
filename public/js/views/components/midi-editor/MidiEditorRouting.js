@@ -651,7 +651,7 @@
             changeTimeout = setTimeout(() => {
                 this.modal.isDirty = true;
                 this.updateSaveButton();
-                this.modal.syncFullSequenceFromPianoRoll();
+                this.modal.sequenceOps.syncFullSequenceFromPianoRoll();
                 this.modal.updateUndoRedoButtonsState(); // Mettre à jour undo/redo quand la séquence change
                 this.modal.updateEditButtons(); // Mettre à jour copy/paste/delete quand la sélection change
 
