@@ -39,11 +39,6 @@ class MidiEditorChannelPanel {
         this.updateInstrumentSelector();
         this.updateTablatureButton();
 
-        // Mettre a jour le canal pour l'edition CC
-        if (m.ccPanel) {
-            m.ccPanel.updateCCEditorChannel();
-        }
-
         // Synchroniser les canaux mutes avec le synthetiseur
         if (m.playbackManager) {
             m.playbackManager.syncMutedChannels();
