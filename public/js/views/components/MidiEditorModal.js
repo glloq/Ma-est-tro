@@ -360,14 +360,15 @@ MidiEditorModal.prototype._saveDragPlaybackPref = function(value) {
 // ============================================================================
 
 // Copy static-like properties to the class itself (for MidiEditorModal.CC_NAMES access)
-if (typeof MidiEditorCCMixin !== 'undefined') {
-    if (MidiEditorCCMixin.CC_NAMES) MidiEditorModal.CC_NAMES = MidiEditorCCMixin.CC_NAMES;
-    if (MidiEditorCCMixin.CC_CATEGORIES) MidiEditorModal.CC_CATEGORIES = MidiEditorCCMixin.CC_CATEGORIES;
+// Sourced from MidiEditorCC class (P2-F.10h — mixin retired).
+if (typeof MidiEditorCC !== 'undefined') {
+    if (MidiEditorCC.CC_NAMES) MidiEditorModal.CC_NAMES = MidiEditorCC.CC_NAMES;
+    if (MidiEditorCC.CC_CATEGORIES) MidiEditorModal.CC_CATEGORIES = MidiEditorCC.CC_CATEGORIES;
 }
 
 const _mixins = [
     typeof MidiEditorSequenceMixin !== 'undefined' ? MidiEditorSequenceMixin : null,
-    typeof MidiEditorCCMixin !== 'undefined' ? MidiEditorCCMixin : null,
+    // MidiEditorCCMixin retiré — remplacé par this.ccOps (P2-F.10h body-rewrite).
     // MidiEditorDrawSettingsMixin retiré — remplacé par this.drawSettings (P2-F.10b-cleanup).
     // MidiEditorCCPickerMixin retiré — remplacé par this.ccPicker (P2-F.10c body-rewrite).
     // MidiEditorFileOpsMixin retiré — remplacé par this.fileOps (P2-F.10d body-rewrite).

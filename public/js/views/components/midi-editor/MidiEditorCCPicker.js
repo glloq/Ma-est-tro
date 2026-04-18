@@ -24,14 +24,14 @@
         if (!addBtn) return;
 
     // Determine which CCs are already visible (have data or are static buttons)
-        const allUsedTypes = this.modal.getAllUsedCCTypes();
+        const allUsedTypes = this.modal.ccOps.getAllUsedCCTypes();
         const staticCCNums = new Set([1, 2, 5, 7, 10, 11, 74, 76, 77, 78, 91]);
 
     // Build the picker's HTML content, grouped by category
         let categoriesHTML = '';
         MidiEditorModal.CC_CATEGORIES.forEach(cat => {
             const buttonsHTML = cat.ccs.map(ccNum => {
-                const ccName = this.modal._getCCName(ccNum);
+                const ccName = this.modal.ccOps._getCCName(ccNum);
                 const ccType = `cc${ccNum}`;
                 const isUsed = allUsedTypes.has(ccType);
                 const isStatic = staticCCNums.has(ccNum);
@@ -94,7 +94,7 @@
             e.stopPropagation();
             const ccNum = parseInt(item.dataset.ccNum);
             if (!isNaN(ccNum)) {
-                this.modal.selectCCType(`cc${ccNum}`);
+                this.modal.ccOps.selectCCType(`cc${ccNum}`);
                 picker.remove();
                 this.modal.log('info', `CC picker: CC${ccNum} selected`);
             }
@@ -115,7 +115,7 @@
             if (!customInput) return;
             const ccNum = parseInt(customInput.value);
             if (!isNaN(ccNum) && ccNum >= 0 && ccNum <= 127) {
-                this.modal.selectCCType(`cc${ccNum}`);
+                this.modal.ccOps.selectCCType(`cc${ccNum}`);
                 picker.remove();
                 this.modal.log('info', `CC picker custom: CC${ccNum} selected`);
             }
@@ -216,7 +216,7 @@
         }
 
     // Update the channel selector to show only used channels
-        this.modal.updateEditorChannelSelector();
+        this.modal.ccOps.updateEditorChannelSelector();
 
     // When editing a single channel, use that channel; otherwise fall back to first channel
         let activeChannel;
@@ -224,15 +224,15 @@
             activeChannel = Array.from(this.modal.activeChannels)[0];
         } else {
             const fileChannels = this.modal.channels.map(ch => ch.channel).sort((a, b) => a - b);
-            const usedChannels = this.modal.getCCChannelsUsed();
+            const usedChannels = this.modal.ccOps.getCCChannelsUsed();
             activeChannel = fileChannels.length > 0 ? fileChannels[0] : (usedChannels.length > 0 ? usedChannels[0] : 0);
         }
         this.modal.ccEditor.setChannel(activeChannel);
 
     // Auto-select a CC type that has data on this channel
-        this.modal.selectBestCCTypeForChannel(activeChannel);
+        this.modal.ccOps.selectBestCCTypeForChannel(activeChannel);
 
-        this.modal.highlightUsedCCButtons();
+        this.modal.ccOps.highlightUsedCCButtons();
 
         this.modal.log('info', `CC Editor initialized - Type: ${this.modal.currentCCType}, Channel: ${activeChannel + 1}, File channels: [${fileChannels.map(c => c + 1).join(', ')}]`);
 
@@ -428,12 +428,12 @@
             : (this.modal.channels.length > 0 ? this.modal.channels[0].channel : 0);
         this.modal.velocityEditor.setChannel(firstChannel);
 
-        this.modal.highlightUsedCCButtons();
+        this.modal.ccOps.highlightUsedCCButtons();
 
         this.modal.log('info', `Velocity Editor initialized with ${this.modal.fullSequence.length} notes, default channel: ${firstChannel + 1}`);
 
     // Update the channel selector
-        this.modal.updateEditorChannelSelector();
+        this.modal.ccOps.updateEditorChannelSelector();
 
     // Add a listener that refreshes the delete button on interactions
         container.addEventListener('mouseup', () => {

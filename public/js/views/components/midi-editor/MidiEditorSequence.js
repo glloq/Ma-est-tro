@@ -172,8 +172,8 @@
             this.log('info', `Converted ${this.fullSequence.length} notes to sequence`);
             this.log('info', `Found ${this.channels.length} channels:`, this.channels);
 
-            this.extractCCAndPitchbend();
-            this.updateDynamicCCButtons();
+            this.ccOps.extractCCAndPitchbend();
+            this.ccOps.updateDynamicCCButtons();
 
             this.activeChannels.clear();
             if (this.channels.length > 0) {
@@ -280,8 +280,8 @@
                 const ch = Array.from(this.activeChannels)[0];
                 if (this.ccEditor) this.ccEditor.setChannel(ch);
                 if (this.velocityEditor) this.velocityEditor.setChannel(ch);
-                if (typeof this.updateEditorChannelSelector === 'function') {
-                    this.updateEditorChannelSelector();
+                if (typeof this.ccOps.updateEditorChannelSelector === 'function') {
+                    this.ccOps.updateEditorChannelSelector();
                 }
             }
 

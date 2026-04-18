@@ -288,7 +288,7 @@
             if (ccTitle) {
                 ccTitle.addEventListener('click', (e) => {
                     e.preventDefault();
-                    this.modal.toggleCCSection();
+                    this.modal.ccOps.toggleCCSection();
                 });
             }
     // Gear button for CC drawing settings
@@ -310,7 +310,7 @@
             if (ccTypeBtn) {
                 e.preventDefault();
                 const ccType = ccTypeBtn.dataset.ccType;
-                if (ccType) this.modal.selectCCType(ccType);
+                if (ccType) this.modal.ccOps.selectCCType(ccType);
                 return;
             }
             const ccToolBtn = e.target.closest('.cc-tool-btn');
