@@ -1,32 +1,32 @@
 /* ======================================================================================
-   CONTRÔLEUR DE BASE - PATTERN CONTROLLER DU MVC
+   BASE CONTROLLER - MVC CONTROLLER PATTERN
    ======================================================================================
-   Fichier: frontend/js/core/BaseController.js
+   File: frontend/js/core/BaseController.js
    Version: v3.5.0 - BACKEND NULL SAFETY
    Date: 2025-11-04
    ======================================================================================
-   CORRECTIONS v3.5.0:
-   ✦ CRITIQUE: Ajout méthode ensureBackendAvailable() pour vérification backend
-   ✦ CRITIQUE: Ajout méthode isBackendReady() pour check état connexion
-   ✦ Protection complète contre backend null/undefined
-   ✦ Gestion mode offline avec messages appropriés
-   
-   CORRECTIONS v3.4.0:
-   ✦ CRITIQUE: Ajout paramètre backend au constructeur
-   ✦ CRITIQUE: this.backend initialisé avec fallback window.backendService
-   ✦ Protection contre backend null
-   ✦ Signature cohérente pour tous les contrôleurs
+   FIXES v3.5.0:
+   ✦ CRITICAL: Added ensureBackendAvailable() method for backend check
+   ✦ CRITICAL: Added isBackendReady() method to check connection state
+   ✦ Full protection against backend null/undefined
+   ✦ Offline-mode handling with appropriate messages
+
+   FIXES v3.4.0:
+   ✦ CRITICAL: Added backend parameter to the constructor
+   ✦ CRITICAL: this.backend initialized with window.backendService fallback
+   ✦ Protection against null backend
+   ✦ Consistent signature for all controllers
    ====================================================================================== */
 
 class BaseController {
     constructor(eventBus, models = {}, views = {}, notifications = null, debugConsole = null, backend = null) {
-        // ✦ CRITIQUE: EventBus avec fallback robuste
+        // ✦ CRITICAL: EventBus with robust fallback
         this.eventBus = eventBus || window.eventBus || null;
-        
-        // Validation EventBus
+
+        // EventBus validation
         if (!this.eventBus) {
             console.error(`[${this.constructor.name}] CRITIQUE: EventBus non disponible!`);
-            // Créer un fallback minimal pour éviter les crashes
+            // Create a minimal fallback to avoid crashes
             this.eventBus = {
                 on: () => () => {},
                 once: () => () => {},
@@ -35,21 +35,21 @@ class BaseController {
             };
         }
         
-        // ✦ CRITIQUE: Backend avec fallback robuste
+        // ✦ CRITICAL: Backend with robust fallback
         this.backend = backend || window.backendService || window.app?.services?.backend || null;
-        
-        // Validation Backend (warning seulement, pas d'erreur critique)
+
+        // Backend validation (warning only, not a critical error)
         if (!this.backend) {
             console.warn(`[${this.constructor.name}] Backend service not available - offline mode`);
         }
         
-        // Références aux composants principaux
+        // References to main components
         this.models = models;
         this.views = views;
         this.notifications = notifications;
         this.debugConsole = debugConsole;
         
-        // État du contrôleur
+        // Controller state
         this.state = {
             isInitialized: false,
             isActive: false,
@@ -68,11 +68,11 @@ class BaseController {
             cacheTTL: 5 * 60 * 1000 // 5 minutes
         };
         
-        // Gestion des événements
+        // Event handling
         this.eventSubscriptions = [];
         this.actionQueue = [];
         
-        // Métriques et monitoring
+        // Metrics and monitoring
         this.metrics = {
             actionsExecuted: 0,
             errorsHandled: 0,
@@ -80,51 +80,51 @@ class BaseController {
             startTime: Date.now()
         };
         
-        // Cache pour optimisation
+        // Cache for optimization
         this.cache = new Map();
         this.cacheTimestamps = new Map();
         this._lastCacheClean = null;
 		
-        // Validateurs d'entrée
+        // Input validators
         this.validators = {};
         
-        // Actions debouncées
+        // Debounced actions
         this.debouncedActions = new Map();
         
-        // Initialisation automatique si configurée
+        // Automatic initialization if configured
         if (this.config.autoInitialize) {
             this.initialize();
         }
     }
 
     /**
-     * ✦ NOUVEAU v3.5.0: Vérifie si le backend est disponible et connecté
-     * @returns {boolean} true si backend disponible et prêt
+     * ✦ NEW v3.5.0: Check whether the backend is available and connected
+     * @returns {boolean} true if backend is available and ready
      */
     isBackendReady() {
         if (!this.backend) {
             return false;
         }
         
-        // Vérifier si le backend a une méthode isConnected
+        // Check whether the backend has an isConnected method
         if (typeof this.backend.isConnected === 'function') {
             return this.backend.isConnected();
         }
         
-        // Vérifier si le backend a une propriété connected
+        // Check whether the backend has a connected property
         if (this.backend.connected !== undefined) {
             return this.backend.connected;
         }
         
-        // Si pas de méthode de vérification, considérer comme prêt si existe
+        // If no check method, consider it ready if it exists
         return true;
     }
 
     /**
-     * ✦ NOUVEAU v3.5.0: S'assure que le backend est disponible
-     * Lance une erreur appropriée si backend non disponible
-     * @param {string} operation - Nom de l'opération qui nécessite le backend
-     * @throws {Error} Si backend non disponible
+     * ✦ NEW v3.5.0: Ensures the backend is available
+     * Throws an appropriate error if the backend is unavailable
+     * @param {string} operation - Name of the operation that requires the backend
+     * @throws {Error} If backend is not available
      */
     ensureBackendAvailable(operation = 'operation') {
         if (!this.backend) {
@@ -143,11 +143,11 @@ class BaseController {
     }
 
     /**
-     * ✦ NOUVEAU v3.5.0: Exécute une opération backend avec gestion d'erreur
-     * @param {Function} operation - Fonction async qui utilise le backend
-     * @param {string} operationName - Nom de l'opération pour les logs
-     * @param {*} defaultValue - Valeur par défaut si backend non disponible
-     * @returns {Promise<*>} Résultat de l'opération ou defaultValue
+     * ✦ NEW v3.5.0: Execute a backend operation with error handling
+     * @param {Function} operation - Async function that uses the backend
+     * @param {string} operationName - Operation name for logs
+     * @param {*} defaultValue - Default value if backend is unavailable
+     * @returns {Promise<*>} Operation result or defaultValue
      */
     async withBackend(operation, operationName = 'operation', defaultValue = null) {
         try {
@@ -163,7 +163,7 @@ class BaseController {
     }
 
     /**
-     * Initialisation du contrôleur
+     * Controller initialization
      */
     initialize() {
         if (this.state.isInitialized) {
@@ -174,7 +174,7 @@ class BaseController {
         try {
             this.log('info', this.constructor.name, 'Initializing...');
             
-            // Hook pour initialisation personnalisée
+            // Hook for custom initialization
             if (typeof this.onInitialize === 'function') {
                 this.onInitialize();
             }
@@ -188,7 +188,7 @@ class BaseController {
     }
 
     /**
-     * Active le contrôleur
+     * Activates the controller
      */
     activate() {
         if (this.state.isDestroyed) {
@@ -202,7 +202,7 @@ class BaseController {
         
         this.state.isActive = true;
         
-        // Hook pour activation personnalisée
+        // Hook for custom activation
         if (typeof this.onActivate === 'function') {
             this.onActivate();
         }
@@ -211,7 +211,7 @@ class BaseController {
     }
 
     /**
-     * Désactive le contrôleur
+     * Deactivates the controller
      */
     deactivate() {
         if (!this.state.isActive) {
@@ -220,7 +220,7 @@ class BaseController {
         
         this.state.isActive = false;
         
-        // Hook pour désactivation personnalisée
+        // Hook for custom deactivation
         if (typeof this.onDeactivate === 'function') {
             this.onDeactivate();
         }
@@ -229,7 +229,7 @@ class BaseController {
     }
 
     /**
-     * Gestion d'erreur unifiée
+     * Unified error handling
      */
     handleError(context, error, showNotification = true) {
         this.metrics.errorsHandled++;
@@ -242,14 +242,14 @@ class BaseController {
         // Log
         this.log('error', this.constructor.name, context, error);
         
-        // Notification si activée
+        // Notification if enabled
         if (showNotification && this.notifications) {
             const message = error.message || 'An error occurred';
             this.notifications.show(`${context}: ${message}`, 'error', 5000);
             this.metrics.notificationsSent++;
         }
         
-        // Événement
+        // Event
         if (this.eventBus) {
             this.eventBus.emit('controller:error', {
                 controller: this.constructor.name,
@@ -258,7 +258,7 @@ class BaseController {
             });
         }
         
-        // Hook personnalisé
+        // Custom hook
         if (typeof this.onError === 'function') {
             this.onError(context, error);
         }
@@ -270,25 +270,25 @@ class BaseController {
     log(level, source, ...args) {
         const prefix = `[${source}]`;
         
-        // Essayer debugConsole si la méthode existe
+        // Try debugConsole if the method exists
         if (this.debugConsole && typeof this.debugConsole[level] === 'function') {
             this.debugConsole[level](prefix, ...args);
         } 
-        // Sinon essayer window.logger si la méthode existe
+        // Otherwise try window.logger if the method exists
         else if (window.logger && typeof window.logger[level] === 'function') {
             window.logger[level](prefix, ...args);
         } 
-        // Fallback sur console standard
+        // Fallback to standard console
         else if (typeof console[level] === 'function') {
             console[level](prefix, ...args);
         } else {
-            // Dernier recours : console.log
+            // Last resort: console.log
             console.log(prefix, ...args);
         }
     }
 
     /**
-     * Méthodes de logging raccourcies
+     * Shortcut logging methods
      */
     logDebug(...args) {
         this.log('debug', this.constructor.name, ...args);
@@ -307,7 +307,7 @@ class BaseController {
     }
 
     /**
-     * Validation d'entrée
+     * Input validation
      */
     validate(data, validatorName) {
         if (!this.config.validateInputs) {
@@ -324,7 +324,7 @@ class BaseController {
     }
 
     /**
-     * Émission d'événement
+     * Event emission
      */
     emit(eventName, data = {}) {
         if (!this.eventBus) return;
@@ -339,7 +339,7 @@ class BaseController {
     }
 
     /**
-     * Abonnement à événement
+     * Event subscription
      */
     on(eventName, handler) {
         if (!this.eventBus) return () => {};
@@ -365,14 +365,14 @@ class BaseController {
         this.cache.set(key, value);
         this.cacheTimestamps.set(key, Date.now());
         
-        // Nettoyage périodique
+        // Periodic cleanup
         this.cleanCache();
     }
 
     cleanCache() {
         const now = Date.now();
         
-        // Nettoyer seulement toutes les 60 secondes max
+        // Clean only every 60 seconds at most
         if (this._lastCacheClean && now - this._lastCacheClean < 60000) {
             return;
         }
@@ -421,7 +421,7 @@ class BaseController {
     }
 
     /**
-     * Métriques
+     * Metrics
      */
     getMetrics() {
         return {
@@ -442,7 +442,7 @@ class BaseController {
         
         this.log('info', this.constructor.name, 'Destroying...');
         
-        // Désabonner tous les événements
+        // Unsubscribe all events
         this.eventSubscriptions.forEach(({ unsubscribe }) => {
             if (typeof unsubscribe === 'function') {
                 unsubscribe();
@@ -450,14 +450,14 @@ class BaseController {
         });
         this.eventSubscriptions = [];
         
-        // Nettoyer les timers debounce
+        // Clear debounce timers
         this.debouncedActions.forEach((timeout) => clearTimeout(timeout));
         this.debouncedActions.clear();
         
-        // Vider le cache
+        // Clear the cache
         this.clearCache();
         
-        // Hook personnalisé
+        // Custom hook
         if (typeof this.onDestroy === 'function') {
             this.onDestroy();
         }

@@ -122,7 +122,7 @@
     // document listener attached/removed in _toggleChannelSettingsPopover /
     // _closeChannelSettingsPopover — no capture-phase container listener needed.
 
-    // OPTIMISATION: Event delegation pour tous les boutons de canal
+    // OPTIMIZATION: Event delegation for all channel buttons
     // Replaces 4 forEach loops × 16 buttons = ~64 listeners with a single listener
         this.modal.container.addEventListener('click', (e) => {
             const channelChip = e.target.closest('.channel-chip');
@@ -259,7 +259,7 @@
             dragPlaybackToggle.addEventListener('click', () => this.modal.toggleDragPlayback());
         }
 
-    // Input de tempo
+    // Tempo input
         const tempoInput = document.getElementById('tempo-input');
         if (tempoInput) {
             tempoInput.addEventListener('change', (e) => {
@@ -302,8 +302,8 @@
             }
         }
 
-    // Boutons de type CC (horizontaux)
-    // OPTIMISATION: Event delegation pour boutons CC type, outils et suppression
+    // CC type buttons (horizontal)
+    // OPTIMIZATION: Event delegation for CC type, tool, and delete buttons
     // Replaces ~20+ individual listeners with a single delegated listener
         this.modal.container.addEventListener('click', (e) => {
             const ccTypeBtn = e.target.closest('.cc-type-btn');
@@ -337,7 +337,7 @@
             }
         });
 
-    // Bouton + pour ouvrir le CC picker
+    // "+" button to open the CC picker
         const ccAddBtn = document.getElementById('cc-add-btn');
         if (ccAddBtn) {
             ccAddBtn.addEventListener('click', (e) => {
@@ -361,7 +361,7 @@
             });
         }
 
-    // Barre de drag pour redimensionner la section CC/Velocity
+    // Drag bar to resize the CC/Velocity section
         const resizeBar = document.getElementById('cc-resize-btn');
         const notesSection = this.modal.container.querySelector('.notes-section');
         const ccSection = document.getElementById('cc-section');
@@ -377,7 +377,7 @@
             let isResizing = false;
             let startY = 0;
             let startNotesHeight = 0;
-            let availableHeight = 0;  // Espace disponible réel pour le resize
+            let availableHeight = 0;  // Actual space available for resizing
             let startNotesFlex = 3;
             let startCCFlex = 2;
 
@@ -386,7 +386,7 @@
 
                 this.modal.log('info', '=== RESIZE MOUSEDOWN DETECTED ===');
 
-    // Ne permettre le resize que si la section CC est expanded
+    // Only allow resize if the CC section is expanded
                 if (!this.modal.ccSectionExpanded || !ccSection.classList.contains('expanded')) {
                     this.modal.log('warn', 'Resize blocked: CC section not expanded');
                     return;
@@ -397,7 +397,7 @@
                 startNotesHeight = notesSection.clientHeight;
 
     // Capture the REAL available space from modal-dialog (fixed 95vh height)
-                const modalDialog = this.modal.container.querySelector('.modal-dialog');  // ENFANT, pas parent !
+                const modalDialog = this.modal.container.querySelector('.modal-dialog');  // CHILD, not parent!
                 const modalHeader = this.modal.container.querySelector('.modal-header');
                 const toolbarHeight = this.modal.container.querySelector('.editor-toolbar')?.clientHeight || 0;
                 const channelsToolbarHeight = this.modal.container.querySelector('.channels-toolbar')?.clientHeight || 0;
@@ -405,12 +405,12 @@
                 const modalDialogHeight = modalDialog?.clientHeight || 0;
                 const modalHeaderHeight = modalHeader?.clientHeight || 0;
 
-    // Espace disponible = hauteur totale du dialog - header - toolbars
+    // Available space = total dialog height - header - toolbars
                 availableHeight = modalDialogHeight - modalHeaderHeight - toolbarHeight - channelsToolbarHeight;
 
                 this.modal.log('info', `Resize: modalDialog=${modalDialogHeight}px, modalHeader=${modalHeaderHeight}px, toolbars=${toolbarHeight + channelsToolbarHeight}px, available=${availableHeight}px`);
 
-    // Obtenir les flex-grow actuels
+    // Get the current flex-grow values
                 const notesStyle = window.getComputedStyle(notesSection);
                 const ccStyle = window.getComputedStyle(ccSection);
                 startNotesFlex = parseFloat(notesStyle.flexGrow) || 3;
@@ -437,7 +437,7 @@
                 if (!isResizing) return;
 
                 const deltaY = e.clientY - startY;
-                const resizeBarHeight = 12; // Hauteur de la barre
+                const resizeBarHeight = 12; // Bar height
 
     // Use the REAL available space captured at the start
                 const totalFlexHeight = availableHeight - resizeBarHeight;
@@ -450,7 +450,7 @@
 
                 this.modal.log('debug', `Resize: deltaY=${deltaY}, availableH=${availableHeight}px, notesH=${newNotesHeight}px, ccH=${newCCHeight}px`);
 
-    // Appliquer les hauteurs directement en pixels
+    // Apply heights directly in pixels
     // Disable the CSS min-height rules that block the resize
                 notesSection.style.setProperty('min-height', '0px', 'important');
                 notesSection.style.setProperty('height', `${newNotesHeight}px`, 'important');
@@ -467,7 +467,7 @@
 
     // Resize the editors during drag so the grid stays visible
                 requestAnimationFrame(() => {
-    // SOLUTION 2.2: Forcer recalcul de TOUTE la cascade flex (5 niveaux)
+    // SOLUTION 2.2: Force recalculation of the ENTIRE flex cascade (5 levels)
                     void ccSection.offsetHeight;
                     const ccContent = ccSection.querySelector('.cc-section-content');
                     const ccLayout = ccSection.querySelector('.cc-editor-layout');
@@ -487,7 +487,7 @@
                         const ccHeight = ccContainer?.clientHeight || 0;
                         this.modal.log('debug', `CC editor resize called - container height: ${ccHeight}px`);
 
-    // Premier appel resize
+    // First resize call
                         this.modal.ccEditor.resize();
 
     // SOLUTION 2.3: double call after 2 frames for layout stabilization
@@ -503,7 +503,7 @@
                         this.modal.velocityEditor.resize();
                         this.modal.log('debug', 'Velocity editor resize called');
 
-    // Double appel pour velocity editor aussi
+    // Double call for the velocity editor too
                         setTimeout(() => {
                             if (this.modal.velocityEditor && typeof this.modal.velocityEditor.resize === 'function') {
                                 this.modal.velocityEditor.resize();
@@ -525,7 +525,7 @@
                     notesSection.style.transition = '';
                     ccSection.style.transition = '';
 
-    // GARDER overflow: hidden pour que le slider reste au-dessus
+    // KEEP overflow: hidden so the slider stays on top
     // Do not reset notesSection.style.overflow = '';
 
     // Resize the editors after the resize
@@ -546,7 +546,7 @@
             };
 
             resizeBar.addEventListener('mousedown', startResize);
-    // Stocker les refs pour cleanup dans doClose()
+    // Store the refs for cleanup in doClose()
             this.modal._resizeDoResize = doResize;
             this.modal._resizeStopResize = stopResize;
             document.addEventListener('mousemove', doResize);
@@ -589,7 +589,7 @@
     // Ensure colors are always defined
         this.modal.pianoRoll.channelColors = this.modal.channelColors;
 
-    // Forcer le redraw
+    // Force redraw
         if (typeof this.modal.pianoRoll.redraw === 'function') {
             this.modal.pianoRoll.redraw();
         }
@@ -738,7 +738,7 @@
     }
 
     scrollHorizontal(percentage) {
-    // Calculer l'offset en fonction de la plage totale du fichier MIDI
+    // Compute the offset based on the total range of the MIDI file
         const maxTick = this.modal.midiData?.maxTick || 0;
 
         if (this.modal.pianoRoll) {
@@ -756,7 +756,7 @@
             }
         }
 
-    // Synchroniser la tablature
+    // Sync the tablature
         if (this.modal.tablatureEditor && this.modal.tablatureEditor.isVisible && this.modal.tablatureEditor.renderer) {
             const renderer = this.modal.tablatureEditor.renderer;
             const canvasWidth = this.modal.tablatureEditor.tabCanvasEl?.width || 800;

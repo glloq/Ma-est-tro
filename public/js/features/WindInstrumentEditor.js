@@ -1,5 +1,5 @@
 // ============================================================================
-// Fichier: public/js/features/WindInstrumentEditor.js
+// File: public/js/features/WindInstrumentEditor.js
 // Description: Main wind/brass instrument editor component
 //   Orchestrates WindMelodyRenderer + WindArticulationPanel
 //   Handles bidirectional sync with MIDI editor (piano roll)
@@ -556,7 +556,7 @@ class WindInstrumentEditor {
         if (!this.isVisible) return;
 
         if (this.renderer) {
-            // Ne pas écraser scrollX si l'utilisateur est en train de pan
+            // Don't overwrite scrollX if the user is currently panning
             if (!this.renderer._isDragging) {
                 const pr = this.modal.pianoRoll;
                 if (pr) {

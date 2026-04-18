@@ -1,12 +1,12 @@
 /**
- * VelocityEditor - Éditeur de vélocité des notes synchronisé avec le piano roll
+ * VelocityEditor - Note velocity editor synchronized with the piano roll
  *
- * Fonctionnalités :
- * - Affichage des barres de vélocité sous forme de graphique
- * - Outils : sélection, déplacement, ligne, dessin continu
- * - Synchronisation horizontale avec le piano roll
- * - Respect de la grille temporelle et du zoom
- * - Filtre par canal sélectionné
+ * Features:
+ * - Display velocity bars as a graph
+ * - Tools: select, move, line, continuous draw
+ * - Horizontal synchronization with the piano roll
+ * - Honors the time grid and zoom
+ * - Filter by selected channel
  */
 
 class VelocityEditor {
@@ -18,35 +18,35 @@ class VelocityEditor {
             xrange: options.xrange || 1920,
             xoffset: options.xoffset || 0,
             grid: options.grid || 15,
-            onChange: options.onChange || null, // Callback appelé lors des changements
+            onChange: options.onChange || null, // Callback invoked on changes
             ...options
         };
 
-        // État de l'éditeur
-        this.sequence = []; // Notes avec vélocité
-        this.selectedNotes = new Set(); // IDs des notes sélectionnées
+        // Editor state
+        this.sequence = []; // Notes with velocity
+        this.selectedNotes = new Set(); // IDs of selected notes
         this.currentTool = 'select'; // 'select', 'move', 'line', 'draw'
         this.currentChannel = 0;
-        this.activeChannels = new Set([0]); // Canaux visibles
+        this.activeChannels = new Set([0]); // Visible channels
         this.isDrawing = false;
         this.lastDrawPosition = null;
         this.lastDrawTicks = null;
 
-        // Historique pour undo/redo
+        // History for undo/redo
         this.history = [];
         this.historyIndex = -1;
 
-        // OPTIMISATION: Système de throttling pour le rendu
+        // OPTIMIZATION: Render throttling system
         this.pendingRender = false;
         this.renderScheduled = false;
         this.isDirty = false;
 
-        // Canvas de buffer pour la grille (statique)
+        // Buffer canvas for the grid (static)
         this.gridCanvas = null;
         this.gridCtx = null;
         this.gridDirty = true;
 
-        // Initialisation
+        // Initialization
         this.init();
     }
 
@@ -56,7 +56,7 @@ class VelocityEditor {
     }
 
     createUI() {
-        // Conteneur principal
+        // Main container
         this.element = document.createElement('div');
         this.element.className = 'velocity-editor';
         this.element.style.cssText = `
@@ -71,7 +71,7 @@ class VelocityEditor {
             min-height: 0;
         `;
 
-        // Canvas pour le rendu
+        // Canvas for rendering
         this.canvas = document.createElement('canvas');
         this.canvas.style.cssText = `
             position: absolute;
@@ -83,7 +83,7 @@ class VelocityEditor {
         `;
         this.ctx = this.canvas.getContext('2d');
 
-        // Overlay pour les interactions
+        // Overlay for interactions
         this.overlay = document.createElement('div');
         this.overlay.style.cssText = `
             position: absolute;
@@ -98,12 +98,12 @@ class VelocityEditor {
         this.element.appendChild(this.overlay);
         this.container.appendChild(this.element);
 
-        // Redimensionner le canvas
+        // Resize the canvas
         this.resize();
     }
 
     setupEventListeners() {
-        // Stocker les références bindées pour pouvoir les retirer dans destroy()
+        // Store bound references so we can remove them in destroy()
         this._boundMouseDown = this.handleMouseDown.bind(this);
         this._boundMouseMove = (e) => {
             if (this._mouseMoveRAF) return;
@@ -118,19 +118,19 @@ class VelocityEditor {
         this._boundResize = this.resize.bind(this);
         this._boundThemeChanged = () => this._onThemeChanged();
 
-        // Événements souris (mousemove throttlé via rAF)
+        // Mouse events (mousemove throttled via rAF)
         this.canvas.addEventListener('mousedown', this._boundMouseDown);
         this.canvas.addEventListener('mousemove', this._boundMouseMove);
         this.canvas.addEventListener('mouseup', this._boundMouseUp);
         this.canvas.addEventListener('mouseleave', this._boundMouseLeave);
 
-        // Événements clavier
+        // Keyboard events
         document.addEventListener('keydown', this._boundKeyDown);
 
-        // Redimensionnement
+        // Resize
         window.addEventListener('resize', this._boundResize);
 
-        // Changement de thème
+        // Theme change
         document.addEventListener('theme-changed', this._boundThemeChanged);
     }
 
@@ -145,21 +145,21 @@ class VelocityEditor {
     }
 
     resize() {
-        // Forcer le reflow pour obtenir les dimensions finales
+        // Force reflow to get the final dimensions
         void this.element.offsetHeight;
 
         const rect = this.element.getBoundingClientRect();
         const width = rect.width;
         const height = rect.height;
 
-        // Debug resize supprimé pour performance
+        // Debug resize removed for performance
 
-        // Ne redimensionner que si on a des dimensions valides
+        // Only resize when we have valid dimensions
         if (width > 0 && height > 100) {
             this.canvas.width = width;
             this.canvas.height = height;
 
-            // OPTIMISATION: Recréer le canvas de buffer pour la grille
+            // OPTIMIZATION: Recreate the grid buffer canvas
             if (!this.gridCanvas) {
                 this.gridCanvas = document.createElement('canvas');
                 this.gridCtx = this.gridCanvas.getContext('2d');
@@ -174,7 +174,7 @@ class VelocityEditor {
         }
     }
 
-    // === Gestion des outils ===
+    // === Tool management ===
 
     setTool(tool) {
         this.currentTool = tool;
@@ -183,9 +183,9 @@ class VelocityEditor {
 
     setChannel(channel) {
         this.currentChannel = channel;
-        this.activeChannels = new Set([channel]); // CORRECTION: Mettre à jour activeChannels pour filtrage
-        this.selectedNotes.clear(); // IMPORTANT: Effacer sélection car indices deviennent invalides
-        // Annuler les actions en cours
+        this.activeChannels = new Set([channel]); // FIX: Update activeChannels for filtering
+        this.selectedNotes.clear(); // IMPORTANT: Clear selection since indices become invalid
+        // Cancel any ongoing actions
         this.cancelInteractions();
         this.isDirty = true;
         this.renderThrottled();
@@ -193,15 +193,15 @@ class VelocityEditor {
 
     setActiveChannels(channels) {
         this.activeChannels = new Set(channels);
-        this.selectedNotes.clear(); // IMPORTANT: Effacer sélection car indices deviennent invalides
-        // Annuler les actions en cours
+        this.selectedNotes.clear(); // IMPORTANT: Clear selection since indices become invalid
+        // Cancel any ongoing actions
         this.cancelInteractions();
         this.isDirty = true;
         this.renderThrottled();
     }
 
     cancelInteractions() {
-        // Annuler toutes les interactions en cours
+        // Cancel all ongoing interactions
         this.lineStart = null;
         this.selectionStart = null;
         this.dragStart = null;
@@ -212,7 +212,7 @@ class VelocityEditor {
         this.lastMouseY = undefined;
     }
 
-    // === Conversion coordonnées ===
+    // === Coordinate conversion ===
 
     ticksToX(ticks) {
         return ((ticks - this.options.xoffset) / this.options.xrange) * this.canvas.width;
@@ -242,7 +242,7 @@ class VelocityEditor {
         return Math.round(ticks / gridSize) * gridSize;
     }
 
-    // === Gestion de la séquence ===
+    // === Sequence management ===
 
     setSequence(sequence) {
         this.sequence = sequence || [];
@@ -256,7 +256,7 @@ class VelocityEditor {
         return this.sequence;
     }
 
-    // === Modification de vélocité ===
+    // === Velocity modification ===
 
     updateNoteVelocity(noteIndex, velocity) {
         if (noteIndex >= 0 && noteIndex < this.sequence.length) {
@@ -288,7 +288,7 @@ class VelocityEditor {
         }
     }
 
-    // === Outils d'édition ===
+    // === Editing tools ===
 
     handleMouseDown(e) {
         const rect = this.canvas.getBoundingClientRect();
@@ -303,7 +303,7 @@ class VelocityEditor {
                 this.lastDrawPosition = { x, y };
                 this.lastDrawTicks = this.snapToGrid(ticks);
 
-                // Trouver la note à ce tick et modifier sa vélocité
+                // Find the note at this tick and modify its velocity
                 const noteAtDraw = this.getNoteAtTick(ticks);
                 if (noteAtDraw !== null) {
                     this.updateNoteVelocity(noteAtDraw, velocity);
@@ -336,7 +336,7 @@ class VelocityEditor {
                     }
                     this.dragStart = { x, y, ticks, velocity, initialVelocities: new Map() };
 
-                    // Stocker les vélocités initiales pour le drag
+                    // Store initial velocities for the drag
                     Array.from(this.selectedNotes).forEach(index => {
                         if (index >= 0 && index < this.sequence.length) {
                             this.dragStart.initialVelocities.set(index, this.sequence[index].v || 100);
@@ -361,7 +361,7 @@ class VelocityEditor {
                     }
                     this.dragStart = { x, y, ticks, velocity, initialVelocities: new Map() };
 
-                    // Stocker les vélocités initiales
+                    // Store initial velocities
                     Array.from(this.selectedNotes).forEach(index => {
                         if (index >= 0 && index < this.sequence.length) {
                             this.dragStart.initialVelocities.set(index, this.sequence[index].v || 100);
@@ -381,12 +381,12 @@ class VelocityEditor {
         const ticks = this.xToTicks(x);
         const velocity = this.yToVelocity(y);
 
-        // Stocker la position de la souris pour le rendu
+        // Store mouse position for rendering
         this.lastMouseX = x;
         this.lastMouseY = y;
 
         if (this.isDrawing && this.currentTool === 'draw') {
-            // Dessin continu - modifier la vélocité des notes sous le curseur
+            // Continuous draw - modify the velocity of notes under the cursor
             const snappedTicks = this.snapToGrid(ticks);
             if (this.lastDrawTicks === null || Math.abs(snappedTicks - this.lastDrawTicks) >= this.options.grid) {
                 const noteAtDraw = this.getNoteAtTick(ticks);
@@ -398,7 +398,7 @@ class VelocityEditor {
                 this.renderThrottled();
             }
         } else if (this.dragStart && (this.currentTool === 'select' || this.currentTool === 'move')) {
-            // Déplacement vertical des barres de vélocité
+            // Vertical movement of velocity bars
             if (this.selectedNotes.size > 0) {
                 const deltaVelocity = this.yToVelocity(y) - this.dragStart.velocity;
 
@@ -412,7 +412,7 @@ class VelocityEditor {
                 this.renderThrottled();
             }
         } else if (this.selectionStart || this.lineStart) {
-            // Rectangle de sélection ou prévisualisation de ligne
+            // Selection rectangle or line preview
             this.renderThrottled();
         }
     }
@@ -422,7 +422,7 @@ class VelocityEditor {
             this.isDrawing = false;
             this.lastDrawPosition = null;
             this.lastDrawTicks = null;
-            // Sauvegarder l'état après avoir fini de dessiner
+            // Save state after finishing drawing
             this.saveState();
             this.notifyChange();
         }
@@ -449,7 +449,7 @@ class VelocityEditor {
     }
 
     handleKeyDown(e) {
-        // Ne traiter les raccourcis que si l'éditeur est visible
+        // Only process shortcuts if the editor is visible
         if (!this.element || this.element.offsetParent === null) return;
 
         if (e.key === 'Escape') {
@@ -470,10 +470,10 @@ class VelocityEditor {
         }
     }
 
-    // === Utilitaires de sélection ===
+    // === Selection utilities ===
 
     getNoteAtPosition(x, y, threshold = 8) {
-        // CORRECTION: Retourner l'index dans this.sequence (pas filtered)
+        // FIX: Return the index in this.sequence (not filtered)
         for (let i = 0; i < this.sequence.length; i++) {
             const note = this.sequence[i];
             if (!this.activeChannels.has(note.c)) continue;
@@ -486,7 +486,7 @@ class VelocityEditor {
                 x <= nx + barWidth + threshold &&
                 y >= ny - threshold &&
                 y <= this.canvas.height + threshold) {
-                return i; // Index dans this.sequence
+                return i; // Index in this.sequence
             }
         }
         return null;
@@ -497,12 +497,12 @@ class VelocityEditor {
             threshold = this.options.grid / 2;
         }
 
-        // CORRECTION: Retourner l'index dans this.sequence (pas filtered)
+        // FIX: Return the index in this.sequence (not filtered)
         for (let i = 0; i < this.sequence.length; i++) {
             const note = this.sequence[i];
             if (!this.activeChannels.has(note.c)) continue;
             if (Math.abs(note.t - ticks) <= threshold) {
-                return i; // Index dans this.sequence
+                return i; // Index in this.sequence
             }
         }
         return null;
@@ -514,7 +514,7 @@ class VelocityEditor {
         const top = Math.min(y1, y2);
         const bottom = Math.max(y1, y2);
 
-        // CORRECTION: Utiliser l'index dans this.sequence (pas filtered)
+        // FIX: Use the index in this.sequence (not filtered)
         for (let i = 0; i < this.sequence.length; i++) {
             const note = this.sequence[i];
             if (!this.activeChannels.has(note.c)) continue;
@@ -524,7 +524,7 @@ class VelocityEditor {
             const ny = this.velocityToY(note.v || 100);
 
             if (nx >= left && nx + barWidth <= right && ny >= top && ny <= bottom) {
-                this.selectedNotes.add(i); // Index dans this.sequence
+                this.selectedNotes.add(i); // Index in this.sequence
             }
         }
 
@@ -533,10 +533,10 @@ class VelocityEditor {
 
     selectAll() {
         this.selectedNotes.clear();
-        // CORRECTION: Utiliser l'index dans this.sequence (pas filtered)
+        // FIX: Use the index in this.sequence (not filtered)
         for (let i = 0; i < this.sequence.length; i++) {
             if (this.activeChannels.has(this.sequence[i].c)) {
-                this.selectedNotes.add(i); // Index dans this.sequence
+                this.selectedNotes.add(i); // Index in this.sequence
             }
         }
         this.renderThrottled();
@@ -545,20 +545,20 @@ class VelocityEditor {
     deleteSelected() {
         if (this.selectedNotes.size === 0) return;
 
-        // Convertir en tableau et trier en ordre décroissant pour supprimer de la fin
+        // Convert to array and sort in descending order to delete from the end
         const indices = Array.from(this.selectedNotes).sort((a, b) => b - a);
 
-        // Supprimer les notes sélectionnées
+        // Remove the selected notes
         indices.forEach(index => {
             if (index >= 0 && index < this.sequence.length) {
                 this.sequence.splice(index, 1);
             }
         });
 
-        // Effacer la sélection
+        // Clear the selection
         this.selectedNotes.clear();
 
-        // Sauvegarder l'état et notifier le changement
+        // Save state and notify the change
         this.saveState();
         this.notifyChange();
         this.renderThrottled();
@@ -568,16 +568,16 @@ class VelocityEditor {
         return this.sequence.filter(note => this.activeChannels.has(note.c));
     }
 
-    // === Création de ligne ===
+    // === Line creation ===
 
     createLine(startTicks, startVelocity, endTicks, endVelocity) {
         const minTicks = Math.min(startTicks, endTicks);
         const maxTicks = Math.max(startTicks, endTicks);
 
-        // Trouver toutes les notes dans la plage temporelle
+        // Find all notes within the time range
         this.sequence.forEach((note, index) => {
             if (note.t >= minTicks && note.t <= maxTicks && this.activeChannels.has(note.c)) {
-                // Interpolation linéaire (protection division par zéro si même tick)
+                // Linear interpolation (guard against division by zero for same tick)
                 const range = endTicks - startTicks;
                 const t = range !== 0 ? (note.t - startTicks) / range : 0;
                 const velocity = Math.round(startVelocity + t * (endVelocity - startVelocity));
@@ -590,7 +590,7 @@ class VelocityEditor {
         this.renderThrottled();
     }
 
-    // === Rendu ===
+    // === Rendering ===
 
     renderThrottled() {
         if (!this.renderScheduled) {
@@ -610,24 +610,24 @@ class VelocityEditor {
             return;
         }
 
-        // OPTIMISATION: Redessiner la grille uniquement si nécessaire
+        // OPTIMIZATION: Redraw the grid only when needed
         if (this.gridDirty) {
             this.renderGridToBuffer();
             this.gridDirty = false;
         }
 
-        // Effacer le canvas principal
+        // Clear the main canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Copier la grille depuis le buffer
+        // Copy the grid from the buffer
         if (this.gridCanvas) {
             this.ctx.drawImage(this.gridCanvas, 0, 0);
         }
 
-        // Dessiner les barres de vélocité
+        // Draw the velocity bars
         this.renderVelocityBars();
 
-        // Dessiner les éléments interactifs
+        // Draw the interactive elements
         if (this.selectionStart && this.lastMouseX !== undefined) {
             this.renderSelectionRect(
                 this.selectionStart.x,
@@ -648,13 +648,13 @@ class VelocityEditor {
     renderGridToBuffer() {
         if (!this.gridCtx) return;
 
-        const labelMargin = 50; // IDENTIQUE À CC: Marge pour les labels à gauche
+        const labelMargin = 50; // SAME AS CC: Margin for labels on the left
         const ctx = this.gridCtx;
 
-        // Effacer le buffer
+        // Clear the buffer
         ctx.clearRect(0, 0, this.gridCanvas.width, this.gridCanvas.height);
 
-        // Grille verticale (temps) - IDENTIQUE À CC
+        // Vertical grid (time) - SAME AS CC
         const isDark = document.body.classList.contains('dark-mode');
         ctx.strokeStyle = isDark ? '#3a3a3a' : '#d4daff';
         ctx.lineWidth = 1;
@@ -673,21 +673,21 @@ class VelocityEditor {
             }
         }
 
-        // Grille horizontale (valeurs de vélocité) - IDENTIQUE À CC
-        const values = [0, 32, 64, 96, 127]; // IDENTIQUE À CC
+        // Horizontal grid (velocity values) - SAME AS CC
+        const values = [0, 32, 64, 96, 127]; // SAME AS CC
         ctx.strokeStyle = isDark ? '#3a3a3a' : '#d4daff';
         ctx.lineWidth = 1;
 
         values.forEach(value => {
             const y = this.velocityToY(value);
 
-            // Ligne de grille
+            // Grid line
             ctx.beginPath();
             ctx.moveTo(labelMargin, y);
             ctx.lineTo(this.gridCanvas.width, y);
             ctx.stroke();
 
-            // Zone de label (fond)
+            // Label area (background)
             ctx.fillStyle = isDark ? '#1a1a1a' : '#f0f4ff';
             ctx.fillRect(0, y - 7, labelMargin - 2, 14);
 
@@ -698,7 +698,7 @@ class VelocityEditor {
             ctx.fillText(value.toString(), labelMargin - 5, y + 4);
         });
 
-        // Bordure verticale séparant la zone de labels
+        // Vertical border separating the label area
         ctx.strokeStyle = isDark ? '#555' : '#b0b8e8';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -706,7 +706,7 @@ class VelocityEditor {
         ctx.lineTo(labelMargin, this.gridCanvas.height);
         ctx.stroke();
 
-        // Réinitialiser l'alignement du texte
+        // Reset text alignment
         ctx.textAlign = 'left';
     }
 
@@ -730,23 +730,23 @@ class VelocityEditor {
             const barWidth = Math.max(2, this.ticksToX(note.t + note.g) - x);
             const barHeight = this.velocityToY(0) - y;
 
-            // Couleur basée sur la vélocité
+            // Color based on velocity
             const intensityRatio = velocity / 127;
-            const hue = 120 + (240 - 120) * (1 - intensityRatio); // Vert (120) à Bleu (240)
+            const hue = 120 + (240 - 120) * (1 - intensityRatio); // Green (120) to Blue (240)
             const saturation = 60 + 40 * intensityRatio;
             const lightness = 40 + 20 * intensityRatio;
 
-            // Barre de vélocité - vérifier sélection avec index complet
-            const isSelected = this.selectedNotes.has(i); // i est l'index dans this.sequence
+            // Velocity bar - check selection with full index
+            const isSelected = this.selectedNotes.has(i); // i is the index in this.sequence
             if (isSelected) {
-                ctx.fillStyle = `hsl(50, 100%, 60%)`; // Jaune pour sélection
+                ctx.fillStyle = `hsl(50, 100%, 60%)`; // Yellow for selection
             } else {
                 ctx.fillStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
             }
 
             ctx.fillRect(x, y, barWidth, barHeight);
 
-            // Bordure
+            // Border
             if (isSelected) {
                 ctx.strokeStyle = '#fff';
                 ctx.lineWidth = 2;
@@ -757,18 +757,18 @@ class VelocityEditor {
 
     renderSelectionRect(x1, y1, x2, y2) {
         const ctx = this.ctx;
-        ctx.strokeStyle = '#2196F3'; // IDENTIQUE CC: Bleu
+        ctx.strokeStyle = '#2196F3'; // SAME AS CC: Blue
         ctx.lineWidth = 1;
-        ctx.setLineDash([5, 5]); // IDENTIQUE CC
+        ctx.setLineDash([5, 5]); // SAME AS CC
         ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
         ctx.setLineDash([]);
     }
 
     renderLinePreview(start, end) {
         const ctx = this.ctx;
-        ctx.strokeStyle = '#9E9E9E'; // IDENTIQUE CC: Gris
-        ctx.lineWidth = 1; // IDENTIQUE CC
-        ctx.setLineDash([5, 5]); // IDENTIQUE CC
+        ctx.strokeStyle = '#9E9E9E'; // SAME AS CC: Gray
+        ctx.lineWidth = 1; // SAME AS CC
+        ctx.setLineDash([5, 5]); // SAME AS CC
         ctx.beginPath();
         ctx.moveTo(this.ticksToX(start.ticks), this.velocityToY(start.velocity));
         ctx.lineTo(this.ticksToX(end.ticks), this.velocityToY(end.velocity));
@@ -776,7 +776,7 @@ class VelocityEditor {
         ctx.setLineDash([]);
     }
 
-    // === Synchronisation avec piano roll ===
+    // === Synchronization with piano roll ===
 
     syncWith(pianoRoll) {
         this.options.xrange = pianoRoll.xrange;
@@ -787,10 +787,10 @@ class VelocityEditor {
         this.renderThrottled();
     }
 
-    // === Historique (Undo/Redo) ===
+    // === History (Undo/Redo) ===
 
     saveState() {
-        // Debounce: max 1 sauvegarde par 100ms pour éviter le lag en dessin continu
+        // Debounce: max 1 save per 100ms to avoid lag during continuous drawing
         if (this._saveStateTimer) clearTimeout(this._saveStateTimer);
         this._saveStateTimer = setTimeout(() => {
             this._doSaveState();
@@ -802,17 +802,17 @@ class VelocityEditor {
             sequence: this.sequence.map(note => ({ ...note }))
         });
 
-        // Supprimer les états futurs si on est au milieu de l'historique
+        // Drop future states if we are in the middle of the history
         if (this.historyIndex < this.history.length - 1) {
             this.history = this.history.slice(0, this.historyIndex + 1);
         }
 
         this.history.push(state);
 
-        // Limiter l'historique à 20 états (reduced for memory efficiency)
+        // Limit history to 20 states (reduced for memory efficiency)
         if (this.history.length > 20) {
             this.history.shift();
-            // historyIndex reste stable car on supprime le premier élément
+            // historyIndex stays stable because we remove the first element
         } else {
             this.historyIndex++;
         }

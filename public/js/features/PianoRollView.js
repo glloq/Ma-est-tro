@@ -1,6 +1,6 @@
 // ============================================================================
-// Fichier: public/js/features/PianoRollView.js
-// Version: v6.0.0 - Lecture DIRECTE du temps depuis le synthétiseur audio
+// File: public/js/features/PianoRollView.js
+// Version: v6.0.0 - DIRECT time read from the audio synthesizer
 // ============================================================================
 
 class PianoRollView {
@@ -8,25 +8,25 @@ class PianoRollView {
         this.eventBus = eventBus;
         this.logger = logger;
 
-        // État
+        // State
         this.isVisible = false;
         this.isEnabled = false;
         this.isPlaying = false;
 
-        // Données MIDI - stockées en SECONDES (comme VirtualMidiPlayer)
+        // MIDI data - stored in SECONDS (like VirtualMidiPlayer)
         this.notes = [];
         this.channels = [];
         this.mutedChannels = new Set();
 
-        // Timing - reçu DIRECTEMENT de la source externe en SECONDES
+        // Timing - received DIRECTLY from the external source in SECONDS
         this.currentTime = 0;
         this.tempo = 120;
         this.ticksPerBeat = 480;
 
-        // Fenêtre d'affichage en secondes (par défaut 20s, comme dans les réglages)
+        // Display window in seconds (default 20s, same as in settings)
         this.displayWindowSeconds = 20;
 
-        // Plage de notes
+        // Note range
         this.noteMin = 21;
         this.noteMax = 108;
 
@@ -35,7 +35,7 @@ class PianoRollView {
         this.ctx = null;
         this.container = null;
 
-        // Couleurs
+        // Colors
         this.channelColors = [
             '#FF0066', '#00FFFF', '#FF00FF', '#FFFF00',
             '#00FF00', '#FF6600', '#9D00FF', '#00FF99',
@@ -49,7 +49,7 @@ class PianoRollView {
 
         this.init();
 
-        // Écouter les changements de thème (bound reference for cleanup)
+        // Listen for theme changes (bound reference for cleanup)
         this._onThemeChanged = () => this.updateTheme();
         document.addEventListener('theme-changed', this._onThemeChanged);
     }
@@ -131,7 +131,7 @@ class PianoRollView {
             if (!this.isEnabled && this.isVisible) this.hide();
         });
 
-        // Temps d'affichage en preview
+        // Display time in preview
         this.eventBus.on('settings:display_time_changed', (d) => {
             if (d.time) {
                 this.displayWindowSeconds = d.time;
@@ -139,12 +139,12 @@ class PianoRollView {
             }
         });
 
-        // Fichier chargé - UTILISER parsedEvents si disponible (timing IDENTIQUE à l'audio)
+        // File loaded - USE parsedEvents if available (timing IDENTICAL to audio)
         this.eventBus.on('file:selected', (data) => {
             if (data.tempo) this.tempo = data.tempo;
             if (data.ticksPerBeat) this.ticksPerBeat = data.ticksPerBeat;
 
-            // PRIORITÉ: utiliser parsedEvents s'ils existent (timing exact de VirtualMidiPlayer)
+            // PRIORITY: use parsedEvents if they exist (exact timing from VirtualMidiPlayer)
             if (data.parsedEvents && data.parsedEvents.length > 0) {
                 this.loadFromParsedEvents(data.parsedEvents);
                 this.log('info', `Using pre-parsed events: ${this.notes.length} notes`);
@@ -154,7 +154,7 @@ class PianoRollView {
             }
         });
 
-        // Play - démarrer notre propre boucle d'animation
+        // Play - start our own animation loop
         this.eventBus.on('playback:play', () => {
             this.isPlaying = true;
             if (this.isEnabled && this.notes.length > 0) {
@@ -163,7 +163,7 @@ class PianoRollView {
             }
         });
 
-        // Pause - arrêt immédiat
+        // Pause - immediate stop
         this.eventBus.on('playback:pause', () => {
             this.isPlaying = false;
             this.stopAnimationLoop();
@@ -177,7 +177,7 @@ class PianoRollView {
             this.hide();
         });
 
-        // Temps - utiliser comme source de timing DIRECTE
+        // Time - use as a DIRECT timing source
         this.eventBus.on('playback:time', (data) => {
             if (data.time !== undefined) {
                 this.currentTime = data.time;
@@ -185,14 +185,14 @@ class PianoRollView {
         });
     }
 
-    // Boucle d'animation propre au piano roll - LIT LE TEMPS DIRECTEMENT depuis l'audio
+    // Animation loop specific to the piano roll - READS TIME DIRECTLY from audio
     startAnimationLoop() {
         if (this.animationFrame) return;
 
         const animate = () => {
             if (!this.isPlaying) return;
 
-            // LIRE LE TEMPS DIRECTEMENT depuis le synthétiseur - PAS via événements!
+            // READ TIME DIRECTLY from the synthesizer - NOT via events!
             this.updateTimeFromSynth();
 
             // Skip draw if time hasn't changed significantly (saves GPU)
@@ -205,9 +205,9 @@ class PianoRollView {
         this.animationFrame = requestAnimationFrame(animate);
     }
 
-    // Obtenir le temps depuis la source appropriée
+    // Get the time from the appropriate source
     updateTimeFromSynth() {
-        // Essayer d'abord le player virtuel (mode instrument virtuel)
+        // Try the virtual player first (virtual instrument mode)
         const player = window.virtualPlayer;
         if (player && player.synthesizer && player.synthesizer.audioContext) {
             const synth = player.synthesizer;
@@ -225,8 +225,8 @@ class PianoRollView {
             return;
         }
 
-        // Mode backend: utiliser le temps reçu via playback:time events
-        // (déjà mis à jour par l'event handler)
+        // Backend mode: use the time received via playback:time events
+        // (already updated by the event handler)
         // DEBUG: Log timing every second
         if (this._debug && (!this._lastDebugLog || this.currentTime - this._lastDebugLog >= 1)) {
             console.log(`[PianoRoll DEBUG] BACKEND mode: time=${this.currentTime.toFixed(2)}s`);
@@ -248,13 +248,13 @@ class PianoRollView {
             return;
         }
 
-        // Parser les notes - EXACTEMENT comme VirtualMidiPlayer.buildEventList()
-        // Stocker en SECONDES pour synchronisation parfaite
+        // Parse notes - EXACTLY like VirtualMidiPlayer.buildEventList()
+        // Store in SECONDS for perfect synchronization
         this.notes = [];
         const channelSet = new Set();
         const noteOns = {};
 
-        // Calculer ticksPerSecond avec tempo et ticksPerBeat de la source
+        // Compute ticksPerSecond from the source's tempo and ticksPerBeat
         const beatsPerSecond = this.tempo / 60;
         const ticksPerSecond = beatsPerSecond * this.ticksPerBeat;
 
@@ -262,25 +262,25 @@ class PianoRollView {
             if (!track.events) return;
             const events = track.events;
 
-            let currentTick = 0; // Accumulation de deltaTime
+            let currentTick = 0; // Accumulation of deltaTime
 
             events.forEach(event => {
-                // Accumuler deltaTime (comme VirtualMidiPlayer)
+                // Accumulate deltaTime (like VirtualMidiPlayer)
                 currentTick += event.deltaTime || 0;
 
-                // Convertir en secondes EXACTEMENT comme VirtualMidiPlayer
+                // Convert to seconds EXACTLY like VirtualMidiPlayer
                 const timeInSeconds = currentTick / ticksPerSecond;
 
                 const ch = event.channel !== undefined ? event.channel : 0;
                 const note = event.noteNumber;
                 const vel = event.velocity || 0;
 
-                // noteOn avec velocity > 0
+                // noteOn with velocity > 0
                 if (event.type === 'noteOn' && vel > 0 && note !== undefined) {
                     noteOns[`${ch}_${note}`] = { time: timeInSeconds, ch, note, vel };
                     channelSet.add(ch);
                 }
-                // noteOff ou noteOn avec velocity 0
+                // noteOff or noteOn with velocity 0
                 else if ((event.type === 'noteOff' || (event.type === 'noteOn' && vel === 0)) && note !== undefined) {
                     const key = `${ch}_${note}`;
                     if (noteOns[key]) {
@@ -299,7 +299,7 @@ class PianoRollView {
 
         this.notes.sort((a, b) => a.startTime - b.startTime);
 
-        // Plage de notes
+        // Note range
         if (this.notes.length > 0) {
             let minN = 127, maxN = 0;
             this.notes.forEach(n => {
@@ -314,14 +314,14 @@ class PianoRollView {
         this.renderButtons();
     }
 
-    // Charger depuis les événements pré-parsés de VirtualMidiPlayer
-    // Ces événements ont EXACTEMENT le même timing que l'audio
+    // Load from pre-parsed VirtualMidiPlayer events
+    // These events have EXACTLY the same timing as audio
     loadFromParsedEvents(events) {
         this.notes = [];
         const channelSet = new Set();
         const noteOns = {}; // key: "channel_note" -> {time, channel, note, velocity}
 
-        // Coupler noteOn/noteOff (événements déjà triés par temps)
+        // Pair noteOn/noteOff (events already sorted by time)
         for (const event of events) {
             const key = `${event.channel}_${event.note}`;
 
@@ -349,7 +349,7 @@ class PianoRollView {
 
         this.notes.sort((a, b) => a.startTime - b.startTime);
 
-        // Plage de notes
+        // Note range
         if (this.notes.length > 0) {
             let minN = 127, maxN = 0;
             this.notes.forEach(n => {
@@ -454,7 +454,7 @@ class PianoRollView {
         const w = this.canvas.width / (window.devicePixelRatio || 1);
         const h = this.canvas.height / (window.devicePixelRatio || 1);
 
-        // Fond
+        // Background
         this.ctx.fillStyle = this.bgColor;
         this.ctx.fillRect(0, 0, w, h);
 
@@ -466,7 +466,7 @@ class PianoRollView {
             return;
         }
 
-        // Fenêtre d'affichage directement en SECONDES
+        // Display window directly in SECONDS
         const windowSeconds = this.displayWindowSeconds;
         const startTime = this.currentTime;
         const endTime = startTime + windowSeconds;
@@ -502,14 +502,14 @@ class PianoRollView {
 
             const muted = this.mutedChannels.has(n.channel);
 
-            // X position - directement en secondes
+            // X position - directly in seconds
             const x1 = playheadX + ((n.startTime - startTime) / windowSeconds) * (w - playheadX);
             const x2 = playheadX + ((n.endTime - startTime) / windowSeconds) * (w - playheadX);
 
-            // Y position (inversé)
+            // Y position (inverted)
             const y = h - ((n.note - this.noteMin) / noteRange) * h;
 
-            // Couleur avec semi-transparence pour le mélange multi-canal
+            // Color with semi-transparency for multi-channel blending
             this.ctx.globalAlpha = muted ? 0.4 : noteAlpha;
             this.ctx.fillStyle = muted ? this.mutedColor : this.channelColors[n.channel % 16];
             this.ctx.fillRect(x1, y - noteH / 2, Math.max(2, x2 - x1), noteH);
@@ -525,7 +525,7 @@ class PianoRollView {
         this.ctx.lineTo(playheadX, h);
         this.ctx.stroke();
 
-        // Temps - directement en secondes
+        // Time - directly in seconds
         const m = Math.floor(this.currentTime / 60);
         const s = Math.floor(this.currentTime % 60);
         this.ctx.fillStyle = isDarkTheme ? '#fff' : '#2d3561';

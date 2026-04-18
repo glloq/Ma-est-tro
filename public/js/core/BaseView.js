@@ -1,47 +1,47 @@
 // ============================================================================
-// Fichier: frontend/js/core/BaseView.js
-// Chemin réel: frontend/js/core/BaseView.js
-// Version: v4.0.0 - RECONSTRUCTION COMPLÈTE
+// File: frontend/js/core/BaseView.js
+// Actual path: frontend/js/core/BaseView.js
+// Version: v4.0.0 - FULL REBUILD
 // Date: 2025-11-05
 // ============================================================================
-// RECONSTRUCTION v4.0.0:
-// ✅ CRITIQUE: Recréation complète de BaseView (fichier corrompu)
-// ✅ Signature standard: constructor(containerId, eventBus)
-// ✅ Résolution container robuste
-// ✅ Fallback EventBus minimal
-// ✅ Méthodes essentielles: render(), show(), hide(), update(), emit()
-// ✅ Gestion événements avec cleanup
-// ✅ Validation et logging intégrés
+// REBUILD v4.0.0:
+// ✅ CRITICAL: Complete re-creation of BaseView (corrupted file)
+// ✅ Standard signature: constructor(containerId, eventBus)
+// ✅ Robust container resolution
+// ✅ Minimal EventBus fallback
+// ✅ Essential methods: render(), show(), hide(), update(), emit()
+// ✅ Event handling with cleanup
+// ✅ Built-in validation and logging
 // ============================================================================
 
 class BaseView {
     /**
-     * Constructeur de la vue de base
-     * @param {string|HTMLElement} containerId - ID du conteneur ou élément DOM
-     * @param {EventBus} eventBus - Instance EventBus pour communication
+     * Base view constructor
+     * @param {string|HTMLElement} containerId - Container ID or DOM element
+     * @param {EventBus} eventBus - EventBus instance for communication
      */
     constructor(containerId, eventBus) {
-        // ✅ EventBus avec fallback robuste
+        // ✅ EventBus with robust fallback
         this.eventBus = eventBus || window.eventBus;
-        
-        // ✅ CRITIQUE: Si EventBus toujours absent, créer fallback minimal
+
+        // ✅ CRITICAL: If EventBus is still missing, create minimal fallback
         if (!this.eventBus) {
             console.warn(
                 `[${this.constructor.name}] EventBus not found - creating minimal fallback. ` +
                 `Check that EventBus is initialized in main.js before Application.`
             );
             
-            // Créer un EventBus minimal fonctionnel
+            // Create a minimal functional EventBus
             this.eventBus = {
-                on: () => () => {},      // Retourne une fonction de désinscription vide
-                once: () => () => {},    // Retourne une fonction de désinscription vide
-                emit: () => {},          // Ne fait rien
-                off: () => {},           // Ne fait rien
-                _isFallback: true        // Marqueur pour identification
+                on: () => () => {},      // Returns an empty unsubscribe function
+                once: () => () => {},    // Returns an empty unsubscribe function
+                emit: () => {},          // Does nothing
+                off: () => {},           // Does nothing
+                _isFallback: true        // Marker for identification
             };
         }
         
-        // ✅ Résolution du container
+        // ✅ Container resolution
         this.container = this.resolveContainer(containerId);
         this.containerId = typeof containerId === 'string' ? containerId : containerId?.id || 'unknown';
         
@@ -49,7 +49,7 @@ class BaseView {
         this.logger = window.logger || this.createFallbackLogger();
         this.backend = window.backendService || window.app?.services?.backend || null;
         
-        // État de la vue
+        // View state
         this.state = {
             initialized: false,
             visible: false,
@@ -68,11 +68,11 @@ class BaseView {
             debounceMs: 100
         };
         
-        // Cache d'éléments DOM
+        // DOM element cache
         this.elements = {};
         this.cachedElements = new Map();
         
-        // Gestion des événements
+        // Event handling
         this.eventSubscriptions = [];
         this.domEventListeners = [];
         
@@ -80,7 +80,7 @@ class BaseView {
         this._updateTimer = null;
         this._renderTimer = null;
         
-        // Métriques
+        // Metrics
         this.metrics = {
             renderCount: 0,
             updateCount: 0,
@@ -97,30 +97,30 @@ class BaseView {
     }
     
     // ========================================================================
-    // RÉSOLUTION CONTAINER
+    // CONTAINER RESOLUTION
     // ========================================================================
     
     /**
-     * Résout le container à partir d'un ID ou élément DOM
-     * @param {string|HTMLElement} input - ID ou élément
-     * @returns {HTMLElement|null} Élément DOM résolu
+     * Resolves the container from an ID or DOM element
+     * @param {string|HTMLElement} input - ID or element
+     * @returns {HTMLElement|null} Resolved DOM element
      */
     resolveContainer(input) {
         if (!input) {
             return null;
         }
         
-        // Si déjà un élément DOM, le retourner
+        // If already a DOM element, return it
         if (input instanceof HTMLElement) {
             return input;
         }
         
-        // Si string, chercher par ID ou sélecteur
+        // If a string, search by ID or selector
         if (typeof input === 'string') {
-            // Essayer avec #
+            // Try with #
             let element = document.querySelector(input.startsWith('#') ? input : `#${input}`);
             
-            // Si pas trouvé, essayer comme sélecteur CSS
+            // If not found, try as a CSS selector
             if (!element) {
                 element = document.querySelector(input);
             }
@@ -132,11 +132,11 @@ class BaseView {
     }
     
     // ========================================================================
-    // CYCLE DE VIE
+    // LIFECYCLE
     // ========================================================================
     
     /**
-     * Initialise la vue
+     * Initializes the view
      */
     init() {
         if (this.state.initialized) {
@@ -155,12 +155,12 @@ class BaseView {
     }
     
     /**
-     * Détruit la vue et nettoie les ressources
+     * Destroys the view and cleans up resources
      */
     destroy() {
         this.log('debug', `Destroying ${this.constructor.name}`);
         
-        // Nettoyer les timers
+        // Clear timers
         if (this._updateTimer) {
             clearTimeout(this._updateTimer);
             this._updateTimer = null;
@@ -171,7 +171,7 @@ class BaseView {
             this._renderTimer = null;
         }
         
-        // Désinscrire tous les événements EventBus
+        // Unsubscribe all EventBus events
         this.eventSubscriptions.forEach(unsub => {
             if (typeof unsub === 'function') {
                 unsub();
@@ -179,7 +179,7 @@ class BaseView {
         });
         this.eventSubscriptions = [];
         
-        // Retirer tous les event listeners DOM
+        // Remove all DOM event listeners
         this.domEventListeners.forEach(({ element, event, handler, options }) => {
             if (element && typeof element.removeEventListener === 'function') {
                 element.removeEventListener(event, handler, options);
@@ -187,11 +187,11 @@ class BaseView {
         });
         this.domEventListeners = [];
         
-        // Vider le cache
+        // Clear the cache
         this.cachedElements.clear();
         this.elements = {};
         
-        // Réinitialiser l'état
+        // Reset state
         this.state.initialized = false;
         this.state.rendered = false;
         
@@ -199,12 +199,12 @@ class BaseView {
     }
     
     // ========================================================================
-    // RENDU
+    // RENDER
     // ========================================================================
     
     /**
-     * Rend la vue (à surcharger dans les classes filles)
-     * @param {Object} data - Données optionnelles pour le rendu
+     * Renders the view (override in subclasses)
+     * @param {Object} data - Optional data for rendering
      */
     render(data = null) {
         if (!this.container) {
@@ -219,10 +219,10 @@ class BaseView {
             this.state.lastUpdate = Date.now();
             this.metrics.renderCount++;
             
-            // Les classes filles doivent implémenter leur logique de rendu
+            // Subclasses should implement their own render logic
             // this.container.innerHTML = this.template(data);
             
-            // Émettre événement de rendu
+            // Emit render event
             this.emit('render', { 
                 view: this.constructor.name,
                 data 
@@ -239,8 +239,8 @@ class BaseView {
     }
     
     /**
-     * Met à jour la vue avec de nouvelles données
-     * @param {Object} data - Nouvelles données
+     * Updates the view with new data
+     * @param {Object} data - New data
      */
     update(data = null) {
         if (!this.state.initialized) {
@@ -261,18 +261,18 @@ class BaseView {
     }
     
     /**
-     * Rafraîchit la vue
+     * Refreshes the view
      */
     refresh() {
         this.render();
     }
     
     // ========================================================================
-    // VISIBILITÉ
+    // VISIBILITY
     // ========================================================================
     
     /**
-     * Affiche la vue
+     * Shows the view
      */
     show() {
         if (!this.container) {
@@ -288,7 +288,7 @@ class BaseView {
     }
     
     /**
-     * Cache la vue
+     * Hides the view
      */
     hide() {
         if (!this.container) {
@@ -304,7 +304,7 @@ class BaseView {
     }
     
     /**
-     * Toggle la visibilité
+     * Toggles visibility
      */
     toggle() {
         if (this.state.visible) {
@@ -315,13 +315,13 @@ class BaseView {
     }
     
     // ========================================================================
-    // GESTION DES ÉVÉNEMENTS
+    // EVENT HANDLING
     // ========================================================================
     
     /**
-     * Écoute un événement EventBus
-     * @param {string} event - Nom de l'événement
-     * @param {Function} handler - Fonction de gestion
+     * Listen to an EventBus event
+     * @param {string} event - Event name
+     * @param {Function} handler - Handler function
      */
     on(event, handler) {
         if (!this.eventBus || typeof this.eventBus.on !== 'function') {
@@ -336,9 +336,9 @@ class BaseView {
     }
     
     /**
-     * Écoute un événement une seule fois
-     * @param {string} event - Nom de l'événement
-     * @param {Function} handler - Fonction de gestion
+     * Listen to an event only once
+     * @param {string} event - Event name
+     * @param {Function} handler - Handler function
      */
     once(event, handler) {
         if (!this.eventBus || typeof this.eventBus.once !== 'function') {
@@ -353,9 +353,9 @@ class BaseView {
     }
     
     /**
-     * Émet un événement EventBus
-     * @param {string} event - Nom de l'événement
-     * @param {*} data - Données de l'événement
+     * Emits an EventBus event
+     * @param {string} event - Event name
+     * @param {*} data - Event data
      */
     emit(event, data = null) {
         if (!this.eventBus || typeof this.eventBus.emit !== 'function') {
@@ -366,9 +366,9 @@ class BaseView {
     }
     
     /**
-     * Se désabonne d'un événement
-     * @param {string} event - Nom de l'événement
-     * @param {Function} handler - Fonction de gestion
+     * Unsubscribe from an event
+     * @param {string} event - Event name
+     * @param {Function} handler - Handler function
      */
     off(event, handler) {
         if (!this.eventBus || typeof this.eventBus.off !== 'function') {
@@ -379,11 +379,11 @@ class BaseView {
     }
     
     /**
-     * Ajoute un event listener DOM avec tracking
-     * @param {HTMLElement} element - Élément DOM
-     * @param {string} event - Type d'événement
-     * @param {Function} handler - Gestionnaire
-     * @param {Object} options - Options addEventListener
+     * Add a DOM event listener with tracking
+     * @param {HTMLElement} element - DOM element
+     * @param {string} event - Event type
+     * @param {Function} handler - Handler
+     * @param {Object} options - addEventListener options
      */
     addDOMListener(element, event, handler, options = {}) {
         if (!element || typeof element.addEventListener !== 'function') {
@@ -400,9 +400,9 @@ class BaseView {
     // ========================================================================
     
     /**
-     * Cache un élément DOM par sélecteur
-     * @param {string} selector - Sélecteur CSS
-     * @param {HTMLElement} context - Contexte de recherche (défaut: container)
+     * Cache a DOM element by selector
+     * @param {string} selector - CSS selector
+     * @param {HTMLElement} context - Search context (default: container)
      * @returns {HTMLElement|null}
      */
     cacheElement(selector, context = null) {
@@ -426,8 +426,8 @@ class BaseView {
     }
     
     /**
-     * Récupère un élément du cache ou le cherche
-     * @param {string} selector - Sélecteur CSS
+     * Retrieve an element from the cache or search for it
+     * @param {string} selector - CSS selector
      * @returns {HTMLElement|null}
      */
     $(selector) {
@@ -435,9 +435,9 @@ class BaseView {
     }
     
     /**
-     * Récupère tous les éléments correspondants
-     * @param {string} selector - Sélecteur CSS
-     * @param {HTMLElement} context - Contexte de recherche
+     * Retrieve all matching elements
+     * @param {string} selector - CSS selector
+     * @param {HTMLElement} context - Search context
      * @returns {NodeList}
      */
     $$(selector, context = null) {
@@ -446,7 +446,7 @@ class BaseView {
     }
     
     /**
-     * Vide le cache d'éléments DOM
+     * Clears the DOM element cache
      */
     clearCache() {
         this.cachedElements.clear();
@@ -454,12 +454,12 @@ class BaseView {
     }
     
     // ========================================================================
-    // ÉTAT ET DONNÉES
+    // STATE AND DATA
     // ========================================================================
     
     /**
-     * Définit l'état de chargement
-     * @param {boolean} loading - État de chargement
+     * Set the loading state
+     * @param {boolean} loading - Loading state
      */
     setLoading(loading) {
         this.state.loading = loading;
@@ -467,8 +467,8 @@ class BaseView {
     }
     
     /**
-     * Définit une erreur
-     * @param {Error|string} error - Erreur
+     * Sets an error
+     * @param {Error|string} error - Error
      */
     setError(error) {
         this.state.error = error;
@@ -477,26 +477,26 @@ class BaseView {
     }
     
     /**
-     * Efface l'erreur
+     * Clears the error
      */
     clearError() {
         this.state.error = null;
     }
     
     // ========================================================================
-    // GESTION DES ERREURS
+    // ERROR HANDLING
     // ========================================================================
     
     /**
-     * Gère une erreur
-     * @param {string} context - Contexte de l'erreur
-     * @param {Error} error - Erreur
+     * Handles an error
+     * @param {string} context - Error context
+     * @param {Error} error - Error
      */
     handleError(context, error) {
         this.log('error', `${this.constructor.name} - ${context}:`, error);
         this.setError(error);
         
-        // Notifier via EventBus
+        // Notify via EventBus
         this.emit('view:error', {
             view: this.constructor.name,
             context,
@@ -505,29 +505,29 @@ class BaseView {
     }
     
     // ========================================================================
-    // UTILITAIRES
+    // UTILITIES
     // ========================================================================
     
     /**
-     * Échappe du HTML pour prévenir XSS
-     * @param {string} unsafe - Chaîne non sûre
-     * @returns {string} Chaîne échappée
+     * Escapes HTML to prevent XSS
+     * @param {string} unsafe - Unsafe string
+     * @returns {string} Escaped string
      */
     escapeHtml(unsafe) {
         return window.escapeHtml(unsafe);
     }
     
     /**
-     * Crée un élément DOM
-     * @param {string} tag - Tag HTML
-     * @param {Object} attributes - Attributs
-     * @param {string|HTMLElement} content - Contenu
+     * Creates a DOM element
+     * @param {string} tag - HTML tag
+     * @param {Object} attributes - Attributes
+     * @param {string|HTMLElement} content - Content
      * @returns {HTMLElement}
      */
     createElement(tag, attributes = {}, content = null) {
         const element = document.createElement(tag);
         
-        // Définir les attributs
+        // Set attributes
         Object.entries(attributes).forEach(([key, value]) => {
             if (key === 'className') {
                 element.className = value;
@@ -540,7 +540,7 @@ class BaseView {
             }
         });
         
-        // Ajouter le contenu
+        // Add content
         if (content !== null) {
             if (typeof content === 'string') {
                 element.textContent = content;
@@ -553,9 +553,9 @@ class BaseView {
     }
     
     /**
-     * Débounce une fonction
-     * @param {Function} func - Fonction à débouncer
-     * @param {number} wait - Délai en ms
+     * Debounce a function
+     * @param {Function} func - Function to debounce
+     * @param {number} wait - Delay in ms
      * @returns {Function}
      */
     debounce(func, wait = this.config.debounceMs) {
@@ -575,7 +575,7 @@ class BaseView {
     // ========================================================================
     
     /**
-     * Crée un logger fallback
+     * Creates a fallback logger
      * @returns {Object}
      */
     createFallbackLogger() {
@@ -597,8 +597,8 @@ class BaseView {
     }
     
     /**
-     * Log un message
-     * @param {string} level - Niveau de log
+     * Log a message
+     * @param {string} level - Log level
      * @param {...any} args - Arguments
      */
     log(level, ...args) {
@@ -614,11 +614,11 @@ class BaseView {
     }
     
     // ========================================================================
-    // MÉTRIQUES
+    // METRICS
     // ========================================================================
     
     /**
-     * Obtient les métriques de la vue
+     * Gets the view metrics
      * @returns {Object}
      */
     getMetrics() {
@@ -635,7 +635,7 @@ class BaseView {
     }
     
     /**
-     * Réinitialise les métriques
+     * Reset metrics
      */
     resetMetrics() {
         this.metrics = {

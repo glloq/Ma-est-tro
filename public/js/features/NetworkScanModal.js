@@ -1,16 +1,16 @@
 // ============================================================================
-// Fichier: frontend/js/features/NetworkScanModal.js
+// File: frontend/js/features/NetworkScanModal.js
 // Version: v1.1.0 (i18n support)
 // Date: 2025-11-16
 // ============================================================================
 // Description:
-//   Modal personnalisée pour scanner et connecter des instruments via réseau/WiFi
-//   - Affichage des périphériques disponibles sur le réseau
-//   - Connexion aux instruments
-//   - Interface utilisateur intuitive
-//   - Support multilingue (i18n)
+//   Custom modal for scanning and connecting instruments via network/WiFi
+//   - Display available devices on the network
+//   - Connect to instruments
+//   - Intuitive UI
+//   - Multi-language support (i18n)
 //
-// Dépendance: i18n doit être chargé avant ce script (js/i18n/I18n.js)
+// Dependency: i18n must be loaded before this script (js/i18n/I18n.js)
 // ============================================================================
 
 class NetworkScanModal {
@@ -29,44 +29,44 @@ class NetworkScanModal {
         this.logger.info('NetworkScanModal', '✓ Modal initialized v1.1.0 (i18n)');
     }
 
-    // Helper pour les traductions
+    // Helper for translations
     t(key, params) {
         return typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
     }
 
     // ========================================================================
-    // ÉVÉNEMENTS
+    // EVENTS
     // ========================================================================
 
     setupEventListeners() {
         if (!this.eventBus) return;
 
-        // Réponse du scan réseau
+        // Network scan response
         this.eventBus.on('network:scanned', (data) => {
             this.handleScanComplete(data);
         });
 
-        // Réponse de la liste des appareils connectés
+        // Connected devices list response
         this.eventBus.on('network:connected_list', (data) => {
             this.handleConnectedList(data);
         });
 
-        // Connexion réussie
+        // Connection succeeded
         this.eventBus.on('network:connected', (data) => {
             this.handleDeviceConnected(data);
         });
 
-        // Déconnexion réussie
+        // Disconnection succeeded
         this.eventBus.on('network:disconnected', (data) => {
             this.handleDeviceDisconnected(data);
         });
 
-        // Erreur de scan
+        // Scan error
         this.eventBus.on('network:scan_error', (data) => {
             this.handleScanError(data);
         });
 
-        // Écouter les changements de langue
+        // Listen for language changes
         if (typeof i18n !== 'undefined') {
             this._localeUnsubscribe = i18n.onLocaleChange(() => this.updateModalContent());
         }
@@ -121,7 +121,7 @@ class NetworkScanModal {
     }
 
     /**
-     * Crée le DOM de la modal
+     * Build the modal DOM
      */
     createModal() {
         // Supprimer l'ancienne modal si elle existe
@@ -129,14 +129,14 @@ class NetworkScanModal {
             this.container.remove();
         }
 
-        // Créer la nouvelle modal
+        // Create the new modal
         this.container = document.createElement('div');
         this.container.className = 'modal-overlay network-scan-modal';
         this.container.innerHTML = this.renderModalContent();
 
         document.body.appendChild(this.container);
 
-        // Attacher les événements
+        // Attach events
         this.attachModalEvents();
     }
 
@@ -207,7 +207,7 @@ class NetworkScanModal {
                         </div>
                     </div>
 
-                    <!-- Section appareils connectés -->
+                    <!-- Connected devices section -->
                     ${this.connectedDevices.length > 0 ? `
                         <div class="connected-section">
                             <h3>${this.t('network.connectedDevices')}</h3>
@@ -233,7 +233,7 @@ class NetworkScanModal {
     }
 
     /**
-     * Rendu de la liste des périphériques disponibles
+     * Render the available devices list
      */
     renderAvailableDevices() {
         if (this.scanning) {
@@ -264,7 +264,7 @@ class NetworkScanModal {
     }
 
     /**
-     * Rendu d'un périphérique disponible
+     * Render an available device
      */
     renderAvailableDevice(device) {
         const deviceName = escapeHtml(device.name || this.t('network.networkInstrument'));
@@ -293,7 +293,7 @@ class NetworkScanModal {
     }
 
     /**
-     * Rendu de la liste des périphériques connectés
+     * Render the connected devices list
      */
     renderConnectedDevices() {
         if (this.connectedDevices.length === 0) {
@@ -308,7 +308,7 @@ class NetworkScanModal {
     }
 
     /**
-     * Rendu d'un périphérique connecté
+     * Render a connected device
      */
     renderConnectedDevice(device) {
         const deviceName = escapeHtml(device.name || device.ip);
@@ -337,17 +337,17 @@ class NetworkScanModal {
     }
 
     // ========================================================================
-    // ÉVÉNEMENTS DOM
+    // DOM EVENTS
     // ========================================================================
 
     /**
-     * Attache les événements de la modal
+     * Attach the modal events
      */
     attachModalEvents() {
         if (!this.container) return;
 
-        // Utiliser la délégation d'événements sur le conteneur
-        // pour gérer TOUS les clics (fermeture, scan, connexion, déconnexion)
+        // Use event delegation on the container
+        // to handle ALL clicks (close, scan, connect, disconnect)
         this.container.addEventListener('click', (e) => {
             const action = e.target.dataset.action;
 
@@ -378,7 +378,7 @@ class NetworkScanModal {
                 return;
             }
 
-            // Déconnexion device
+            // Device disconnect
             if (action === 'disconnect') {
                 const deviceIp = e.target.dataset.deviceIp;
                 const deviceName = e.target.dataset.deviceName || `Appareil ${deviceIp}`;
@@ -403,7 +403,7 @@ class NetworkScanModal {
     // ========================================================================
 
     /**
-     * Lance le scan réseau
+     * Start the network scan
      */
     startScan() {
         if (this.scanning) {
@@ -414,11 +414,11 @@ class NetworkScanModal {
         this.scanning = true;
         this.availableDevices = [];
 
-        // Vérifier si le scan complet est activé
+        // Check whether full scan is enabled
         const fullScanCheckbox = this.container ? this.container.querySelector('#fullScanCheckbox') : null;
         const fullScan = fullScanCheckbox ? fullScanCheckbox.checked : false;
 
-        // Debug: Confirmer l'état de la checkbox
+        // Debug: Confirm checkbox state
         console.log('='.repeat(80));
         console.log('🔍 DÉMARRAGE DU SCAN');
         console.log(`   Checkbox trouvée: ${fullScanCheckbox ? 'OUI' : 'NON'}`);
@@ -470,17 +470,17 @@ class NetworkScanModal {
 
         this.logger.info('NetworkScanModal', `Manual connection to: ${ip}:${port}`);
 
-        // Connecter le périphérique
+        // Connect the device
         const deviceName = `${this.t('network.networkInstrument')} (${ip})`;
         this.connectDevice(ip, port, deviceName);
 
-        // Vider les champs après connexion
+        // Clear fields after connection
         ipInput.value = '';
         if (portInput) portInput.value = '5004';
     }
 
     /**
-     * Charge la liste des périphériques connectés
+     * Load the connected devices list
      */
     loadConnectedDevices() {
         this.logger.debug('NetworkScanModal', 'Loading connected devices');
@@ -491,7 +491,7 @@ class NetworkScanModal {
     }
 
     /**
-     * Connecte un périphérique
+     * Connect a device
      */
     connectDevice(deviceIp, devicePort, deviceName) {
         this.logger.info('NetworkScanModal', `Connecting device: ${deviceIp}${devicePort ? ':' + devicePort : ''}`);
@@ -507,10 +507,10 @@ class NetworkScanModal {
     }
 
     /**
-     * Affiche le modal de confirmation de déconnexion
+     * Show the disconnect-confirmation modal
      */
     showDisconnectModal(deviceIp, deviceName) {
-        // Créer le modal
+        // Create the modal
         const modalOverlay = document.createElement('div');
         modalOverlay.className = 'disconnect-modal-overlay';
         modalOverlay.innerHTML = `
@@ -538,7 +538,7 @@ class NetworkScanModal {
         // Ajouter au DOM
         document.body.appendChild(modalOverlay);
 
-        // Gérer les clics
+        // Handle clicks
         modalOverlay.addEventListener('click', (e) => {
             if (e.target === modalOverlay || e.target.dataset.action === 'cancel') {
                 modalOverlay.remove();
@@ -548,7 +548,7 @@ class NetworkScanModal {
             }
         });
 
-        // Focus sur le bouton annuler par défaut
+        // Focus the cancel button by default
         setTimeout(() => {
             const cancelBtn = modalOverlay.querySelector('.btn-cancel');
             if (cancelBtn) cancelBtn.focus();
@@ -556,7 +556,7 @@ class NetworkScanModal {
     }
 
     /**
-     * Déconnecte un périphérique (sans confirmation)
+     * Disconnect a device (without confirmation)
      */
     disconnectDevice(deviceIp) {
         this.logger.info('NetworkScanModal', `Disconnecting device: ${deviceIp}`);
@@ -574,7 +574,7 @@ class NetworkScanModal {
     // ========================================================================
 
     /**
-     * Gère la fin du scan
+     * Handle scan completion
      */
     handleScanComplete(data) {
         this.scanning = false;
@@ -582,7 +582,7 @@ class NetworkScanModal {
 
         this.logger.info('NetworkScanModal', `Scan complete: ${this.availableDevices.length} devices found`);
 
-        // Debug: Afficher les devices reçus
+        // Debug: Display received devices
         console.log('='.repeat(80));
         console.log('📡 SCAN TERMINÉ - Devices reçus du backend:');
         console.log(`   Total: ${this.availableDevices.length} devices`);
@@ -595,7 +595,7 @@ class NetworkScanModal {
     }
 
     /**
-     * Gère la liste des périphériques connectés
+     * Handle the connected devices list
      */
     handleConnectedList(data) {
         this.connectedDevices = data.devices || [];
@@ -606,12 +606,12 @@ class NetworkScanModal {
     }
 
     /**
-     * Gère la connexion réussie d'un périphérique
+     * Handle a successful device connection
      */
     handleDeviceConnected(data) {
         this.logger.info('NetworkScanModal', `Device connected: ${data.ip || data.address}`);
 
-        // Recharger la liste des appareils connectés
+        // Reload the connected devices list
         this.loadConnectedDevices();
 
         // Supprimer de la liste des disponibles
@@ -622,26 +622,26 @@ class NetworkScanModal {
 
         this.updateModalContent();
 
-        // Afficher un message de succès
+        // Show a success message
         if (this.logger.success) {
             this.logger.success('NetworkScanModal', this.t('network.connectionSuccess', { name: data.name || deviceIp }));
         }
     }
 
     /**
-     * Gère la déconnexion d'un périphérique
+     * Handle a device disconnection
      */
     handleDeviceDisconnected(data) {
         this.logger.info('NetworkScanModal', `Device disconnected: ${data.ip || data.address}`);
 
-        // Recharger la liste des appareils connectés
+        // Reload the connected devices list
         this.loadConnectedDevices();
 
         this.updateModalContent();
     }
 
     /**
-     * Gère les erreurs de scan
+     * Handle scan errors
      */
     handleScanError(data) {
         this.scanning = false;
@@ -652,11 +652,11 @@ class NetworkScanModal {
     }
 
     // ========================================================================
-    // MISE À JOUR
+    // UPDATE
     // ========================================================================
 
     /**
-     * Met à jour le contenu de la modal
+     * Update the modal content
      */
     updateModalContent() {
         if (!this.container || !this.isOpen) return;
@@ -664,14 +664,14 @@ class NetworkScanModal {
         const modalDialog = this.container.querySelector('.modal-dialog');
         if (modalDialog) {
             const fullHTML = this.renderModalContent();
-            // Extraire le contenu entre la première balise ouvrante et la dernière fermante
+            // Extract the content between the first opening and last closing tag
             const innerHTML = fullHTML
                 .replace(/^\s*<div class="modal-dialog modal-lg">\s*/, '')
                 .replace(/\s*<\/div>\s*$/, '');
             modalDialog.innerHTML = innerHTML;
 
-            // Réattacher uniquement l'événement Enter sur le champ IP
-            // (les autres sont délégués au conteneur)
+            // Re-attach only the Enter event on the IP field
+            // (the others are delegated to the container)
             const manualIpInput = this.container.querySelector('#manualIp');
             if (manualIpInput) {
                 manualIpInput.addEventListener('keypress', (e) => {

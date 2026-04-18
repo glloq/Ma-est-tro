@@ -1,6 +1,6 @@
 // public/js/features/auto-assign/RoutingSummaryApi.js
 // API calls used by RoutingSummaryPage, grouped behind a thin facade
-// (P2-F.2, plan §11 step 2 — "extraire les accès API").
+// (P2-F.2, plan §11 step 2 — "extract API access").
 //
 // The original page hit 4 WS commands directly : we hide the command names
 // and argument shapes here so future schema migrations (ADR-004) need to

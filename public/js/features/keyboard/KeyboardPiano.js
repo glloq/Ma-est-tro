@@ -43,7 +43,7 @@
 
                 <div class="modal-body">
                     <div class="keyboard-layout">
-                        <!-- Slider vélocité vertical à gauche -->
+                        <!-- Vertical velocity slider on the left -->
                         <div class="velocity-control-vertical" id="velocity-control-panel">
                             <div class="velocity-label-vertical">${this.t('keyboard.velocity')}</div>
                             <div class="velocity-slider-wrapper">
@@ -71,7 +71,7 @@
                             <div class="velocity-value-vertical modulation-value-vertical" id="keyboard-modulation-display">64</div>
                         </div>
 
-                        <!-- Zone principale du clavier -->
+                        <!-- Main keyboard area -->
                         <div class="keyboard-main">
                             <div class="keyboard-canvas-container">
                                 <div id="piano-container" class="piano-container"></div>
@@ -88,7 +88,7 @@
 
         document.body.appendChild(this.container);
 
-        // Générer les touches du piano
+        // Generate the piano keys
         this.generatePianoKeys();
     }
 
@@ -106,7 +106,7 @@
         const endNote = this.startNote + totalNotes;
         const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-        // Collecter les touches blanches et noires
+        // Collect the white and black keys
         this.visibleWhiteNotes = [];
         this.visibleBlackNotes = [];
 
@@ -121,7 +121,7 @@
 
         const totalWhiteKeys = this.visibleWhiteNotes.length;
 
-        // Générer les touches blanches
+        // Generate the white keys
         for (let i = 0; i < totalWhiteKeys; i++) {
             const noteNumber = this.visibleWhiteNotes[i];
             const octave = Math.floor(noteNumber / 12) - 1;
@@ -144,15 +144,15 @@
             pianoContainer.appendChild(whiteKey);
         }
 
-        // Générer les touches noires positionnées sur les blanches
+        // Generate the black keys positioned over the white keys
         for (const blackNote of this.visibleBlackNotes) {
             const octave = Math.floor(blackNote / 12) - 1;
             const noteName = noteNames[blackNote % 12];
 
-            // Trouver la touche blanche juste avant cette noire
-            const whiteBelow = blackNote - 1; // la blanche en dessous
+            // Find the white key just before this black one
+            const whiteBelow = blackNote - 1; // the white key below
             const whiteIndex = this.visibleWhiteNotes.indexOf(whiteBelow);
-            if (whiteIndex < 0) continue; // bord du clavier
+            if (whiteIndex < 0) continue; // edge of the keyboard
 
             const blackKey = document.createElement('div');
             blackKey.className = 'piano-key black-key';
@@ -163,7 +163,7 @@
                 blackKey.classList.add('disabled');
             }
 
-            // Positionner entre la blanche courante et la suivante
+            // Position between the current white key and the next
             blackKey.style.left = `calc(${whiteIndex * (100 / totalWhiteKeys)}% + ${(100 / totalWhiteKeys) * 0.7}%)`;
 
             pianoContainer.appendChild(blackKey);
@@ -171,20 +171,20 @@
     }
 
     /**
-     * Vérifier si une note est jouable par l'instrument sélectionné
-     * @param {number} noteNumber - Numéro MIDI de la note
-     * @returns {boolean} - true si la note est jouable
+     * Check whether a note is playable by the selected instrument
+     * @param {number} noteNumber - MIDI note number
+     * @returns {boolean} - true if the note is playable
      */
     KeyboardPianoMixin.isNotePlayable = function(noteNumber) {
         if (!this.selectedDeviceCapabilities) {
-            return true; // Pas de restrictions si pas de capacités définies
+            return true; // No restrictions if no capabilities defined
         }
 
         const caps = this.selectedDeviceCapabilities;
 
-        // Mode discrete : vérifier si la note est dans la liste
+        // Discrete mode: check whether the note is in the list
         if (caps.note_selection_mode === 'discrete') {
-            // Si pas de notes sélectionnées, autoriser toutes les notes
+            // If no notes selected, allow all notes
             if (!caps.selected_notes) {
                 return true;
             }
@@ -192,7 +192,7 @@
                 const selectedNotes = typeof caps.selected_notes === 'string'
                     ? JSON.parse(caps.selected_notes)
                     : caps.selected_notes;
-                // Si la liste est vide, autoriser toutes les notes
+                // If the list is empty, allow all notes
                 if (!Array.isArray(selectedNotes) || selectedNotes.length === 0) {
                     return true;
                 }
@@ -202,11 +202,11 @@
             }
         }
 
-        // Mode range : vérifier si la note est dans la plage
+        // Range mode: check whether the note is within the range
         const minNote = caps.note_range_min;
         const maxNote = caps.note_range_max;
 
-        // Si aucune plage définie, autoriser toutes les notes
+        // If no range defined, allow all notes
         if ((minNote === null || minNote === undefined) &&
             (maxNote === null || maxNote === undefined)) {
             return true;
@@ -223,14 +223,14 @@
     }
 
     /**
-     * Délégation d'événements sur le conteneur piano
-     * Remplace les listeners individuels par touche (évite les fuites mémoire)
+     * Event delegation on the piano container
+     * Replaces per-key individual listeners (avoids memory leaks)
      */
     KeyboardPianoMixin._setupPianoDelegation = function() {
         const container = document.getElementById('piano-container');
         if (!container) return;
 
-        // Retirer les anciens listeners délégués s'ils existent
+        // Remove the old delegated listeners if they exist
         if (this._pianoMouseDown) {
             container.removeEventListener('mousedown', this._pianoMouseDown);
             container.removeEventListener('mouseup', this._pianoMouseUp);
@@ -245,7 +245,7 @@
         this._pianoMouseDown = (e) => {
             const key = getKey(e);
             if (key) {
-                e.preventDefault(); // Empêcher le drag/sélection du navigateur
+                e.preventDefault(); // Prevent the browser's drag/selection
                 this.handlePianoKeyDown({ currentTarget: key, preventDefault: () => {} });
             }
         };
@@ -283,8 +283,8 @@
     }
 
     /**
-     * Auto-centrer le clavier sur la plage de notes de l'instrument
-     * Calcule startNote avec une précision à la note (pas à l'octave)
+     * Auto-center the keyboard on the instrument's note range
+     * Computes startNote with per-note precision (not per-octave)
      */
     KeyboardPianoMixin.autoCenterKeyboard = function() {
         const caps = this.selectedDeviceCapabilities;
@@ -295,11 +295,11 @@
             return;
         }
 
-        // Déterminer la plage effective selon le mode
+        // Determine the effective range based on mode
         let effectiveMin, effectiveMax;
 
         if (caps.note_selection_mode === 'discrete' && caps.selected_notes) {
-            // Mode percussion : calculer min/max depuis les notes discrètes
+            // Percussion mode: compute min/max from the discrete notes
             try {
                 const notes = typeof caps.selected_notes === 'string'
                     ? JSON.parse(caps.selected_notes)
@@ -311,7 +311,7 @@
             } catch (e) { /* ignore */ }
         }
 
-        // Fallback sur note_range_min/max
+        // Fall back to note_range_min/max
         if (effectiveMin === undefined || effectiveMax === undefined) {
             const minNote = Number(caps.note_range_min);
             const maxNote = Number(caps.note_range_max);
@@ -325,14 +325,14 @@
             effectiveMax = isFinite(maxNote) ? maxNote : 108;
         }
 
-        // Centre de la plage jouable
+        // Center of the playable range
         const rangeCenter = (effectiveMin + effectiveMax) / 2;
         const totalNotes = this.octaves * 12;
 
-        // startNote idéal pour centrer la vue sur la plage jouable
+        // Ideal startNote to center the view on the playable range
         const idealStart = Math.round(rangeCenter - totalNotes / 2);
 
-        // Clamper dans les limites MIDI (0-127)
+        // Clamp within MIDI bounds (0-127)
         this.startNote = Math.max(0, Math.min(127 - totalNotes, idealStart));
 
         this._updateOctaveDisplay();
