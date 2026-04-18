@@ -931,91 +931,17 @@ class MidiEditorCCPanel {
      */
     extractCCAndPitchbend() {
         const m = this.modal;
-        m.ccEvents = [];
-
         if (!m.midiData || !m.midiData.tracks) {
+            m.ccEvents = [];
             m.log('warn', 'No MIDI tracks to extract CC/pitchbend');
             return;
         }
 
-        m.midiData.tracks.forEach((track, _trackIndex) => {
-            if (!track.events) {
-                return;
-            }
-
-            let currentTick = 0;
-
-            track.events.forEach((event) => {
-                currentTick += event.deltaTime || 0;
-
-                if (event.type === 'controller') {
-                    const channel = event.channel !== undefined ? event.channel : 0;
-                    const controller = event.controllerType;
-
-                    if (controller !== undefined && controller >= 0 && controller <= 127) {
-                        m.ccEvents.push({
-                            type: `cc${controller}`,
-                            ticks: currentTick,
-                            channel: channel,
-                            value: event.value,
-                            id: Date.now() + Math.random() + m.ccEvents.length
-                        });
-                    }
-                }
-
-                if (event.type === 'pitchBend') {
-                    const channel = event.channel !== undefined ? event.channel : 0;
-                    m.ccEvents.push({
-                        type: 'pitchbend',
-                        ticks: currentTick,
-                        channel: channel,
-                        value: event.value,
-                        id: Date.now() + Math.random() + m.ccEvents.length
-                    });
-                }
-
-                // Channel Aftertouch events
-                if (event.type === 'channelAftertouch') {
-                    const channel = event.channel !== undefined ? event.channel : 0;
-                    m.ccEvents.push({
-                        type: 'aftertouch',
-                        ticks: currentTick,
-                        channel: channel,
-                        value: event.amount !== undefined ? event.amount : (event.value || 0),
-                        id: Date.now() + Math.random() + m.ccEvents.length
-                    });
-                }
-
-                // Polyphonic Aftertouch events (polyAftertouch from CustomMidiParser, noteAftertouch from midi-file lib)
-                if (event.type === 'polyAftertouch' || event.type === 'noteAftertouch') {
-                    const channel = event.channel !== undefined ? event.channel : 0;
-                    m.ccEvents.push({
-                        type: 'polyAftertouch',
-                        ticks: currentTick,
-                        channel: channel,
-                        note: event.noteNumber,
-                        value: event.pressure !== undefined ? event.pressure : (event.amount !== undefined ? event.amount : (event.value || 0)),
-                        id: Date.now() + Math.random() + m.ccEvents.length
-                    });
-                }
-            });
-        });
-
-        m.ccEvents.sort((a, b) => a.ticks - b.ticks);
-
+        m.ccEvents = window.MidiEditorCCPanelAnalysis.extractCCEvents(m.midiData);
         m.log('info', `Extracted ${m.ccEvents.length} CC/pitchbend events`);
 
-        const typeCounts = {};
-        m.ccEvents.forEach(e => {
-            typeCounts[e.type] = (typeCounts[e.type] || 0) + 1;
-        });
-        const summary = Object.entries(typeCounts)
-            .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
-            .map(([type, count]) => `${type}: ${count}`)
-            .join(', ');
-        if (summary) {
-            m.log('info', `  - ${summary}`);
-        }
+        const summary = window.MidiEditorCCPanelAnalysis.summarizeCCTypes(m.ccEvents);
+        if (summary) m.log('info', `  - ${summary}`);
 
         const usedChannels = this.getCCChannelsUsed();
         if (usedChannels.length > 0) {
@@ -1205,14 +1131,9 @@ class MidiEditorCCPanel {
      * Obtenir les notes ayant des evenements polyAftertouch sur un canal donne
      */
     getPolyAftertouchNotes(channel) {
-        const m = this.modal;
-        const notes = new Set();
-        m.ccEvents.forEach(event => {
-            if (event.type === 'polyAftertouch' && event.channel === channel && event.note !== undefined) {
-                notes.add(event.note);
-            }
+        return window.MidiEditorCCPanelAnalysis.getPolyAftertouchNotes({
+            channel, ccEvents: this.modal.ccEvents
         });
-        return Array.from(notes).sort((a, b) => a - b);
     }
 
     /**

@@ -57,10 +57,101 @@
     return Array.from(channels).sort((a, b) => a - b);
   }
 
+  /**
+   * Extract CC, pitchbend, aftertouch and polyAftertouch events from the
+   * raw parsed MIDI structure. Returns a flat array sorted by tick. Pure
+   * function — no side effects, no `this`.
+   */
+  function extractCCEvents(midiData) {
+    const out = [];
+    if (!midiData || !midiData.tracks) return out;
+
+    midiData.tracks.forEach((track) => {
+      if (!track.events) return;
+      let currentTick = 0;
+      track.events.forEach((event) => {
+        currentTick += event.deltaTime || 0;
+        const channel = event.channel !== undefined ? event.channel : 0;
+
+        if (event.type === 'controller') {
+          const controller = event.controllerType;
+          if (controller !== undefined && controller >= 0 && controller <= 127) {
+            out.push({
+              type: `cc${controller}`,
+              ticks: currentTick,
+              channel,
+              value: event.value,
+              id: Date.now() + Math.random() + out.length
+            });
+          }
+        } else if (event.type === 'pitchBend') {
+          out.push({
+            type: 'pitchbend',
+            ticks: currentTick,
+            channel,
+            value: event.value,
+            id: Date.now() + Math.random() + out.length
+          });
+        } else if (event.type === 'channelAftertouch') {
+          out.push({
+            type: 'aftertouch',
+            ticks: currentTick,
+            channel,
+            value: event.amount !== undefined ? event.amount : (event.value || 0),
+            id: Date.now() + Math.random() + out.length
+          });
+        } else if (event.type === 'polyAftertouch' || event.type === 'noteAftertouch') {
+          out.push({
+            type: 'polyAftertouch',
+            ticks: currentTick,
+            channel,
+            note: event.noteNumber,
+            value: event.pressure !== undefined
+              ? event.pressure
+              : (event.amount !== undefined ? event.amount : (event.value || 0)),
+            id: Date.now() + Math.random() + out.length
+          });
+        }
+      });
+    });
+
+    out.sort((a, b) => a.ticks - b.ticks);
+    return out;
+  }
+
+  /**
+   * Sorted array of notes having polyAftertouch events on the given channel.
+   */
+  function getPolyAftertouchNotes({ channel, ccEvents }) {
+    const notes = new Set();
+    (ccEvents || []).forEach(event => {
+      if (event.type === 'polyAftertouch' && event.channel === channel && event.note !== undefined) {
+        notes.add(event.note);
+      }
+    });
+    return Array.from(notes).sort((a, b) => a - b);
+  }
+
+  /**
+   * Summarize CC events by type (e.g. "cc1: 42, cc7: 18, pitchbend: 5").
+   * Pure — used by the logger side-effect in the caller.
+   */
+  function summarizeCCTypes(ccEvents) {
+    const typeCounts = {};
+    (ccEvents || []).forEach(e => { typeCounts[e.type] = (typeCounts[e.type] || 0) + 1; });
+    return Object.entries(typeCounts)
+      .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+      .map(([type, count]) => `${type}: ${count}`)
+      .join(', ');
+  }
+
   window.MidiEditorCCPanelAnalysis = Object.freeze({
     getUsedCCTypesForChannel,
     getAllUsedCCTypes,
     getAllCCChannels,
-    getCCChannelsUsed
+    getCCChannelsUsed,
+    extractCCEvents,
+    getPolyAftertouchNotes,
+    summarizeCCTypes
   });
 })();
