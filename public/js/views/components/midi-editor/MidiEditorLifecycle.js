@@ -158,7 +158,7 @@
             this.log('debug', 'Save and close clicked');
             document.removeEventListener('keydown', escHandler);
             confirmModal.remove();
-            await this.saveMidiFile();
+            await this.fileOps.saveMidiFile();
     // Close after saving
             this.doClose();
         });

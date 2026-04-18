@@ -31,13 +31,13 @@
                     this.close();
                     break;
                 case 'save':
-                    this.saveMidiFile();
+                    this.fileOps.saveMidiFile();
                     break;
                 case 'save-as':
-                    this.showSaveAsDialog();
+                    this.fileOps.showSaveAsDialog();
                     break;
                 case 'auto-assign':
-                    this.showAutoAssignModal();
+                    this.fileOps.showAutoAssignModal();
                     break;
                 case 'zoom-h-in':
                     this.zoomHorizontal(0.8);
@@ -81,7 +81,7 @@
                     this.cycleSnap();
                     break;
                 case 'rename-file':
-                    this.showRenameDialog();
+                    this.fileOps.showRenameDialog();
                     break;
                 case 'toggle-settings-popover':
                     this.toggleSettingsPopover();

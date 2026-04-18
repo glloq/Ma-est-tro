@@ -1,31 +1,30 @@
 // ============================================================================
 // File: public/js/views/components/midi-editor/MidiEditorFileOpsMixin.js
-// Description: File operations for the MIDI Editor (save / save-as / rename /
-//              convert sequence → MIDI / auto-assign modal).
-//   Mixin: methods added to MidiEditorModal.prototype
+// Description: File operations (save/load/rename/export) for the MIDI editor
+//   Sub-component class ; called via `modal.fileOps.<method>(...)`.
+//   (P2-F.10d body rewrite — no longer a prototype mixin.)
 // ============================================================================
 
 (function() {
     'use strict';
 
-    const MidiEditorFileOpsMixin = {};
+    class MidiEditorFileOps {
+        constructor(modal) {
+            this.modal = modal;
+        }
 
-    /**
-    * Convertir la sequence en données MIDI pour le backend
-    * Format compatible avec la bibliothèque 'midi-file'
-    */
-    MidiEditorFileOpsMixin.convertSequenceToMidi = function() {
+    convertSequenceToMidi() {
     // Use fullSequence which holds every up-to-date note
-        const fullSequenceToSave = this.fullSequence;
+        const fullSequenceToSave = this.modal.fullSequence;
 
         if (!fullSequenceToSave || fullSequenceToSave.length === 0) {
-            this.log('warn', 'No sequence to convert');
+            this.modal.log('warn', 'No sequence to convert');
             return null;
         }
 
-        const ticksPerBeat = this.midiData?.header?.ticksPerBeat || 480;
+        const ticksPerBeat = this.modal.midiData?.header?.ticksPerBeat || 480;
 
-        this.log('info', `Converting ${fullSequenceToSave.length} notes to MIDI`);
+        this.modal.log('info', `Converting ${fullSequenceToSave.length} notes to MIDI`);
 
     // Clamp MIDI values to their valid ranges and count any corrections for the log.
     // The MIDI standard enforces 7-bit values (0-127) for note/velocity/CC,
@@ -43,8 +42,8 @@
         const events = [];
 
     // Add tempo events (full tempo map or global tempo)
-        if (this.tempoEvents && this.tempoEvents.length > 0) {
-            this.tempoEvents.forEach(tempoEvent => {
+        if (this.modal.tempoEvents && this.modal.tempoEvents.length > 0) {
+            this.modal.tempoEvents.forEach(tempoEvent => {
                 const usPerBeat = Math.round(60000000 / tempoEvent.tempo);
                 events.push({
                     absoluteTime: tempoEvent.ticks,
@@ -52,17 +51,17 @@
                     microsecondsPerBeat: usPerBeat
                 });
             });
-            this.log('debug', `Added ${this.tempoEvents.length} tempo events from tempo map`);
+            this.modal.log('debug', `Added ${this.modal.tempoEvents.length} tempo events from tempo map`);
         } else {
     // Fallback: tempo global unique
-            const tempo = this.tempo || 120;
+            const tempo = this.modal.tempo || 120;
             const microsecondsPerBeat = Math.round(60000000 / tempo);
             events.push({
                 absoluteTime: 0,
                 type: 'setTempo',
                 microsecondsPerBeat: microsecondsPerBeat
             });
-            this.log('debug', `Added single tempo event: ${tempo} BPM (${microsecondsPerBeat} μs/beat)`);
+            this.modal.log('debug', `Added single tempo event: ${tempo} BPM (${microsecondsPerBeat} μs/beat)`);
         }
 
     // Determine which channels are in use and their programs
@@ -71,8 +70,8 @@
             const channel = note.c !== undefined ? note.c : 0;
             if (!usedChannels.has(channel)) {
     // Trouver l'instrument pour ce canal
-                const channelInfo = this.channels.find(ch => ch.channel === channel);
-                const program = channelInfo ? channelInfo.program : this.selectedInstrument || 0;
+                const channelInfo = this.modal.channels.find(ch => ch.channel === channel);
+                const program = channelInfo ? channelInfo.program : this.modal.selectedInstrument || 0;
                 usedChannels.set(channel, program);
             }
         });
@@ -86,7 +85,7 @@
                     channel: channel,
                     programNumber: program
                 });
-                this.log('debug', `Added programChange for channel ${channel}: ${this.getInstrumentName(program)}`);
+                this.modal.log('debug', `Added programChange for channel ${channel}: ${this.modal.getInstrumentName(program)}`);
             }
         });
 
@@ -118,11 +117,11 @@
         });
 
     // Add CC and pitch-bend events
-        if (this.ccEvents && this.ccEvents.length > 0) {
-            this.log('info', `Adding ${this.ccEvents.length} CC/pitchbend events to MIDI file`);
+        if (this.modal.ccEvents && this.modal.ccEvents.length > 0) {
+            this.modal.log('info', `Adding ${this.modal.ccEvents.length} CC/pitchbend events to MIDI file`);
 
             let ccCount = 0, pbCount = 0, atCount = 0;
-            this.ccEvents.forEach(ccEvent => {
+            this.modal.ccEvents.forEach(ccEvent => {
                 const ccTick = clamp(ccEvent.ticks ?? ccEvent.tick ?? 0, 0, Number.MAX_SAFE_INTEGER, 'ticks');
                 const ccChannel = clamp(ccEvent.channel, 0, 15, 'channel');
     // Translate the editor type (cc1, cc2, cc5, cc7, cc10, cc11, cc74) into a controller number
@@ -165,9 +164,9 @@
                 }
             });
 
-            this.log('info', `Converted to MIDI: ${ccCount} CC, ${pbCount} pitchbend, ${atCount} aftertouch events`);
+            this.modal.log('info', `Converted to MIDI: ${ccCount} CC, ${pbCount} pitchbend, ${atCount} aftertouch events`);
         } else {
-            this.log('warn', 'No CC/Pitchbend events to save');
+            this.modal.log('warn', 'No CC/Pitchbend events to save');
         }
 
     // Trier par temps absolu
@@ -215,12 +214,12 @@
     // Report any clamped values so data corruption shows up in the log instead of silently
         const totalClamped = Object.values(clampStats).reduce((a, b) => a + b, 0);
         if (totalClamped > 0) {
-            this.log('warn', `Clamped ${totalClamped} out-of-range MIDI values: ${JSON.stringify(clampStats)}`);
+            this.modal.log('warn', `Clamped ${totalClamped} out-of-range MIDI values: ${JSON.stringify(clampStats)}`);
         }
 
         return {
             header: {
-                format: this.midiData?.header?.format || 1,
+                format: this.modal.midiData?.header?.format || 1,
                 numTracks: 1,
                 ticksPerBeat: ticksPerBeat
             },
@@ -228,32 +227,29 @@
         };
     }
 
-    /**
-    * Save the MIDI file
-    */
-    MidiEditorFileOpsMixin.saveMidiFile = async function() {
-        if (!this.currentFile || !this.pianoRoll) {
-            this.log('error', 'Cannot save: no file or piano roll');
-            this.showError(this.t('midiEditor.cannotSave'));
+    async saveMidiFile() {
+        if (!this.modal.currentFile || !this.modal.pianoRoll) {
+            this.modal.log('error', 'Cannot save: no file or piano roll');
+            this.modal.showError(this.modal.t('midiEditor.cannotSave'));
             return;
         }
 
         try {
-            this.log('info', `Saving MIDI file: ${this.currentFile}`);
+            this.modal.log('info', `Saving MIDI file: ${this.modal.currentFile}`);
 
     // Sync fullSequence with the current piano roll (handles channels, additions, deletions, etc.)
-            this.syncFullSequenceFromPianoRoll();
+            this.modal.syncFullSequenceFromPianoRoll();
 
     // Sync CC/pitch-bend events from the editor
-            this.ccPicker.syncCCEventsFromEditor();
+            this.modal.ccPicker.syncCCEventsFromEditor();
 
     // Sync tempo events from the editor
-            this.ccPicker.syncTempoEventsFromEditor();
+            this.modal.ccPicker.syncTempoEventsFromEditor();
 
     // Update the channel list to reflect the current sequence
-            this.ccPicker.updateChannelsFromSequence();
+            this.modal.ccPicker.updateChannelsFromSequence();
 
-            this.log('info', `Saving ${this.fullSequence.length} notes across ${this.channels.length} channels`);
+            this.modal.log('info', `Saving ${this.modal.fullSequence.length} notes across ${this.modal.channels.length} channels`);
 
     // Convertir en format MIDI
             const midiData = this.convertSequenceToMidi();
@@ -262,20 +258,20 @@
                 throw new Error('Échec de conversion en format MIDI');
             }
 
-            this.log('debug', `MIDI data to save: ${midiData.tracks.length} tracks`);
+            this.modal.log('debug', `MIDI data to save: ${midiData.tracks.length} tracks`);
 
     // Send to the backend
-            const response = await this.api.writeMidiFile(this.currentFile, midiData);
+            const response = await this.modal.api.writeMidiFile(this.modal.currentFile, midiData);
 
             if (response && response.success) {
-                this.isDirty = false;
-                this.updateSaveButton();
-                this.showNotification(this.t('midiEditor.saveSuccess'), 'success');
+                this.modal.isDirty = false;
+                this.modal.updateSaveButton();
+                this.modal.showNotification(this.modal.t('midiEditor.saveSuccess'), 'success');
 
     // Emit event
-                if (this.eventBus) {
-                    this.eventBus.emit('midi_editor:saved', {
-                        filePath: this.currentFile
+                if (this.modal.eventBus) {
+                    this.modal.eventBus.emit('midi_editor:saved', {
+                        filePath: this.modal.currentFile
                     });
                 }
             } else {
@@ -283,23 +279,20 @@
             }
 
         } catch (error) {
-            this.log('error', 'Failed to save MIDI file:', error);
-            this.showError(`${this.t('errors.saveFailed')}: ${error.message}`);
+            this.modal.log('error', 'Failed to save MIDI file:', error);
+            this.modal.showError(`${this.modal.t('errors.saveFailed')}: ${error.message}`);
         }
     }
 
-    /**
-    * Show Save As dialog to save the file with a new name
-    */
-    MidiEditorFileOpsMixin.showSaveAsDialog = function() {
-        if (!this.currentFile || !this.pianoRoll) {
-            this.log('error', 'Cannot save as: no file or piano roll');
-            this.showError(this.t('midiEditor.cannotSave'));
+    showSaveAsDialog() {
+        if (!this.modal.currentFile || !this.modal.pianoRoll) {
+            this.modal.log('error', 'Cannot save as: no file or piano roll');
+            this.modal.showError(this.modal.t('midiEditor.cannotSave'));
             return;
         }
 
     // Extract current name without extension
-        const currentName = this.currentFilename || this.currentFile || '';
+        const currentName = this.modal.currentFilename || this.modal.currentFile || '';
         const baseName = currentName.replace(/\.(mid|midi)$/i, '');
         const extension = currentName.match(/\.(mid|midi)$/i)?.[0] || '.mid';
 
@@ -309,18 +302,18 @@
         dialog.innerHTML = `
             <div class="rename-dialog">
                 <div class="rename-dialog-header">
-                    <h4>📄 ${this.t('midiEditor.saveAs')}</h4>
+                    <h4>📄 ${this.modal.t('midiEditor.saveAs')}</h4>
                 </div>
                 <div class="rename-dialog-body">
-                    <p>${this.t('midiEditor.saveAsDescription')}</p>
+                    <p>${this.modal.t('midiEditor.saveAsDescription')}</p>
                     <div class="rename-input-container">
                         <input type="text" class="rename-input" value="${escapeHtml(baseName)}" />
                         <span class="rename-extension">${extension}</span>
                     </div>
                 </div>
                 <div class="rename-dialog-footer rename-buttons">
-                    <button class="btn btn-secondary rename-cancel">${this.t('common.cancel')}</button>
-                    <button class="btn btn-primary rename-confirm">${this.t('common.save')}</button>
+                    <button class="btn btn-secondary rename-cancel">${this.modal.t('common.cancel')}</button>
+                    <button class="btn btn-primary rename-confirm">${this.modal.t('common.save')}</button>
                 </div>
             </div>
         `;
@@ -346,7 +339,7 @@
         confirmBtn.addEventListener('click', async () => {
             const newBaseName = input.value.trim();
             if (!newBaseName) {
-                this.showError(this.t('midiEditor.emptyFilename'));
+                this.modal.showError(this.modal.t('midiEditor.emptyFilename'));
                 return;
             }
 
@@ -374,25 +367,22 @@
         });
     }
 
-    /**
-    * Save the current file with a new name (export)
-    */
-    MidiEditorFileOpsMixin.saveAsFile = async function(newFilename) {
-        if (!this.currentFile || !this.pianoRoll) {
-            this.log('error', 'Cannot save as: no file or piano roll');
-            this.showError(this.t('midiEditor.cannotSave'));
+    async saveAsFile(newFilename) {
+        if (!this.modal.currentFile || !this.modal.pianoRoll) {
+            this.modal.log('error', 'Cannot save as: no file or piano roll');
+            this.modal.showError(this.modal.t('midiEditor.cannotSave'));
             return;
         }
 
         try {
-            this.log('info', `Saving MIDI file as: ${newFilename}`);
+            this.modal.log('info', `Saving MIDI file as: ${newFilename}`);
 
     // Synchronize data from piano roll
-            this.syncFullSequenceFromPianoRoll();
-            this.ccPicker.syncCCEventsFromEditor();
-            this.ccPicker.updateChannelsFromSequence();
+            this.modal.syncFullSequenceFromPianoRoll();
+            this.modal.ccPicker.syncCCEventsFromEditor();
+            this.modal.ccPicker.updateChannelsFromSequence();
 
-            this.log('info', `Saving ${this.fullSequence.length} notes across ${this.channels.length} channels`);
+            this.modal.log('info', `Saving ${this.modal.fullSequence.length} notes across ${this.modal.channels.length} channels`);
 
     // Convert to MIDI format
             const midiData = this.convertSequenceToMidi();
@@ -401,25 +391,25 @@
                 throw new Error('Failed to convert to MIDI format');
             }
 
-            this.log('debug', `MIDI data to save: ${midiData.tracks.length} tracks`);
+            this.modal.log('debug', `MIDI data to save: ${midiData.tracks.length} tracks`);
 
     // Send to backend with new filename
-            const response = await this.api.sendCommand('file_save_as', {
-                fileId: this.currentFile,
+            const response = await this.modal.api.sendCommand('file_save_as', {
+                fileId: this.modal.currentFile,
                 newFilename: newFilename,
                 midiData: midiData
             });
 
             if (response && response.success) {
-                this.showNotification(
-                    this.t('midiEditor.saveAsSuccess', { filename: newFilename }),
+                this.modal.showNotification(
+                    this.modal.t('midiEditor.saveAsSuccess', { filename: newFilename }),
                     'success'
                 );
 
     // Emit event
-                if (this.eventBus) {
-                    this.eventBus.emit('midi_editor:saved_as', {
-                        originalFile: this.currentFile,
+                if (this.modal.eventBus) {
+                    this.modal.eventBus.emit('midi_editor:saved_as', {
+                        originalFile: this.modal.currentFile,
                         newFile: response.newFileId,
                         newFilename: newFilename
                     });
@@ -434,39 +424,31 @@
             }
 
         } catch (error) {
-            this.log('error', 'Failed to save file as:', error);
-            this.showError(`${this.t('errors.saveFailed')}: ${error.message}`);
+            this.modal.log('error', 'Failed to save file as:', error);
+            this.modal.showError(`${this.modal.t('errors.saveFailed')}: ${error.message}`);
         }
     }
 
-    /**
-    * Show routing modal (RoutingSummaryPage)
-    */
-    MidiEditorFileOpsMixin.showAutoAssignModal = async function() {
-        if (!this.currentFile) {
-            this.showErrorModal(this.t('midiEditor.noFileLoaded'));
+    async showAutoAssignModal() {
+        if (!this.modal.currentFile) {
+            this.modal.showErrorModal(this.modal.t('midiEditor.noFileLoaded'));
             return;
         }
 
         if (!window.RoutingSummaryPage) {
-            this.showErrorModal(this.t('autoAssign.componentNotLoaded'));
+            this.modal.showErrorModal(this.modal.t('autoAssign.componentNotLoaded'));
             return;
         }
 
-        const routingPage = new window.RoutingSummaryPage(this.api);
-        routingPage.show(this.currentFile, this.currentFilename || '', this.channels || [], (result) => {
+        const routingPage = new window.RoutingSummaryPage(this.modal.api);
+        routingPage.show(this.modal.currentFile, this.modal.currentFilename || '', this.modal.channels || [], (result) => {
             if (result && window.eventBus) {
                 window.eventBus.emit('routing:changed', result);
             }
         });
     }
 
-    /**
-    * Dynamically load a script if not already loaded
-    * @param {string} src - Script path relative to root
-    * @returns {Promise<void>}
-    */
-    MidiEditorFileOpsMixin.loadScript = function(src) {
+    loadScript(src) {
         return new Promise((resolve, reject) => {
     // Check if already loaded
             const existing = document.querySelector(`script[src="${src}"]`);
@@ -482,12 +464,9 @@
         });
     }
 
-    /**
-    * Afficher la boîte de dialogue pour renommer le fichier
-    */
-    MidiEditorFileOpsMixin.showRenameDialog = function() {
+    showRenameDialog() {
     // Extraire le nom sans extension
-        const currentName = this.currentFilename || this.currentFile || '';
+        const currentName = this.modal.currentFilename || this.modal.currentFile || '';
         const baseName = currentName.replace(/\.(mid|midi)$/i, '');
         const extension = currentName.match(/\.(mid|midi)$/i)?.[0] || '.mid';
 
@@ -497,7 +476,7 @@
         dialog.innerHTML = `
             <div class="rename-dialog">
                 <div class="rename-dialog-header">
-                    <h4>✏️ ${this.t('midiEditor.renameFile')}</h4>
+                    <h4>✏️ ${this.modal.t('midiEditor.renameFile')}</h4>
                 </div>
                 <div class="rename-dialog-body">
                     <div class="rename-input-container">
@@ -506,8 +485,8 @@
                     </div>
                 </div>
                 <div class="rename-dialog-footer rename-buttons">
-                    <button class="btn btn-secondary rename-cancel">${this.t('common.cancel')}</button>
-                    <button class="btn btn-primary rename-confirm">${this.t('common.save')}</button>
+                    <button class="btn btn-secondary rename-cancel">${this.modal.t('common.cancel')}</button>
+                    <button class="btn btn-primary rename-confirm">${this.modal.t('common.save')}</button>
                 </div>
             </div>
         `;
@@ -532,7 +511,7 @@
         const confirmRename = async () => {
             const newName = input.value.trim();
             if (!newName) {
-                this.showError(this.t('midiEditor.renameEmpty'));
+                this.modal.showError(this.modal.t('midiEditor.renameEmpty'));
                 return;
             }
 
@@ -540,25 +519,25 @@
 
             try {
     // Appeler l'API pour renommer le fichier
-                const response = await this.api.sendCommand('file_rename', {
-                    fileId: this.currentFile,
+                const response = await this.modal.api.sendCommand('file_rename', {
+                    fileId: this.modal.currentFile,
                     newFilename: newFilename
                 });
 
                 if (response && response.success) {
     // Update the displayed name
-                    this.currentFilename = newFilename;
-                    const fileNameSpan = this.container.querySelector('#editor-file-name');
+                    this.modal.currentFilename = newFilename;
+                    const fileNameSpan = this.modal.container.querySelector('#editor-file-name');
                     if (fileNameSpan) {
                         fileNameSpan.textContent = newFilename;
                     }
 
-                    this.showNotification(this.t('midiEditor.renameSuccess'), 'success');
+                    this.modal.showNotification(this.modal.t('midiEditor.renameSuccess'), 'success');
 
     // Emit event to refresh the file list
-                    if (this.eventBus) {
-                        this.eventBus.emit('midi_editor:file_renamed', {
-                            fileId: this.currentFile,
+                    if (this.modal.eventBus) {
+                        this.modal.eventBus.emit('midi_editor:file_renamed', {
+                            fileId: this.modal.currentFile,
                             oldFilename: currentName,
                             newFilename: newFilename
                         });
@@ -567,8 +546,8 @@
                     throw new Error(response?.error || 'Rename failed');
                 }
             } catch (error) {
-                this.log('error', 'Failed to rename file:', error);
-                this.showError(`${this.t('midiEditor.renameFailed')}: ${error.message}`);
+                this.modal.log('error', 'Failed to rename file:', error);
+                this.modal.showError(`${this.modal.t('midiEditor.renameFailed')}: ${error.message}`);
             }
 
             closeDialog();
@@ -585,19 +564,9 @@
             if (e.key === 'Escape') closeDialog();
         });
     }
-
-    // Facade sub-component (P2-F.10c-batch).
-    class MidiEditorFileOps {
-        constructor(modal) { this.modal = modal; }
     }
-    Object.keys(MidiEditorFileOpsMixin).forEach((key) => {
-        MidiEditorFileOps.prototype[key] = function(...args) {
-            return MidiEditorFileOpsMixin[key].apply(this.modal, args);
-        };
-    });
 
     if (typeof window !== 'undefined') {
-        window.MidiEditorFileOpsMixin = MidiEditorFileOpsMixin;
         window.MidiEditorFileOps = MidiEditorFileOps;
     }
 })();
