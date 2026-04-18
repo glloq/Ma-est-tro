@@ -45,8 +45,8 @@ Les images serviront a identifier visuellement chaque instrument dans l'interfac
 - [ ] `bright_acoustic.svg` — GM 1 — Piano brillant
 - [x] `electric_grand.svg` — GM 2 — Piano electrique grand
 - [ ] `honky_tonk.svg` — GM 3 — Honky-tonk
-- [x] `electric_grand.svg` — GM 4 — Piano electrique 1 (Rhodes)
-- [x] `electric_grand.svg` — GM 5 — Piano electrique 2 (Wurlitzer/DX7)
+- [x] `electric_piano_1.svg` — GM 4 — Piano electrique 1 (Rhodes)
+- [x] `electric_piano_2.svg` — GM 5 — Piano electrique 2 (Wurlitzer/DX7)
 - [ ] `harpsichord.svg` — GM 6 — Clavecin
 - [ ] `clavinet.svg` — GM 7 — Clavinet
 
@@ -69,19 +69,19 @@ Les images serviront a identifier visuellement chaque instrument dans l'interfac
 - [ ] `church_organ.svg` — GM 19 — Orgue d'eglise
 - [ ] `reed_organ.svg` — GM 20 — Orgue a anches (harmonium)
 - [x] `accordion.svg` — GM 21 — Accordeon
-- [ ] `harmonica.svg` — GM 22 — Harmonica
+- [x] `harmonica.svg` — GM 22 — Harmonica
 - [x] `tango_accordion.svg` — GM 23 — Bandoneon
 
 ### Guitare (GM 24-31) — 8 images
 
-- [x] `guitar-nylon.svg` — GM 24 — Guitare classique (nylon)
-- [x] `guitar-steel.svg` — GM 25 — Guitare folk (acier)
+- [x] `nylon.svg` — GM 24 — Guitare classique (nylon)
+- [x] `steel.svg` — GM 25 — Guitare folk (acier)
 - [ ] `jazz.svg` — GM 26 — Guitare jazz (archtop)
-- [x] `electric-guitar.svg` — GM 27 — Guitare clean (electrique)
-- [x] `electric-guitar.svg` — GM 28 — Guitare muted (electrique)
-- [x] `electric-guitar.svg` — GM 29 — Guitare overdrive (electrique)
-- [x] `electric-guitar.svg` — GM 30 — Guitare distortion (electrique)
-- [x] `electric-guitar.svg` — GM 31 — Guitare harmoniques (electrique)
+- [x] `clean.svg` — GM 27 — Guitare clean (electrique)
+- [x] `muted.svg` — GM 28 — Guitare muted (electrique)
+- [x] `overdrive.svg` — GM 29 — Guitare overdrive (electrique)
+- [x] `distortion.svg` — GM 30 — Guitare distortion (electrique)
+- [x] `harmonics.svg` — GM 31 — Guitare harmoniques (electrique)
 
 ### Basse (GM 32-37) — 6 images
 
@@ -94,9 +94,9 @@ Les images serviront a identifier visuellement chaque instrument dans l'interfac
 
 ### Cordes (GM 40-47) — 8 images
 
-- [ ] `violin.svg` — GM 40 — Violon
+- [x] `violin.svg` — GM 40 — Violon
 - [ ] `viola.svg` — GM 41 — Alto
-- [ ] `cello.svg` — GM 42 — Violoncelle
+- [x] `cello.svg` — GM 42 — Violoncelle
 - [x] `contrabass.svg` — GM 43 — Contrebasse a cordes
 - [ ] `tremolo.svg` — GM 44 — Cordes tremolo
 - [ ] `pizzicato.svg` — GM 45 — Cordes pizzicato
@@ -123,8 +123,8 @@ Les images serviront a identifier visuellement chaque instrument dans l'interfac
 ### Anches (GM 64-71) — 8 images
 
 - [x] `soprano_sax.svg` — GM 64 — Saxophone soprano
-- [ ] `alto_sax.svg` — GM 65 — Saxophone alto
-- [ ] `tenor_sax.svg` — GM 66 — Saxophone tenor
+- [x] `alto_sax.svg` — GM 65 — Saxophone alto
+- [x] `tenor_sax.svg` — GM 66 — Saxophone tenor
 - [ ] `baritone_sax.svg` — GM 67 — Saxophone baryton
 - [ ] `oboe.svg` — GM 68 — Hautbois
 - [ ] `english_horn.svg` — GM 69 — Cor anglais
@@ -137,16 +137,16 @@ Les images serviront a identifier visuellement chaque instrument dans l'interfac
 - [ ] `flute.svg` — GM 73 — Flute traversiere
 - [x] `recorder.svg` — GM 74 — Flute a bec
 - [x] `pan_flute.svg` — GM 75 — Flute de Pan
-- [ ] `bottle.svg` — GM 76 — Bouteille soufflee
-- [ ] `shakuhachi.svg` — GM 77 — Shakuhachi
-- [ ] `whistle.svg` — GM 78 — Sifflet
-- [ ] `ocarina.svg` — GM 79 — Ocarina
+- [x] `bottle.svg` — GM 76 — Bouteille soufflee
+- [x] `shakuhachi.svg` — GM 77 — Shakuhachi
+- [x] `whistle.svg` — GM 78 — Sifflet
+- [x] `ocarina.svg` — GM 79 — Ocarina
 
 ### Ethnique (GM 104-111) — 8 images
 
-- [ ] `sitar.svg` — GM 104 — Sitar
+- [x] `sitar.svg` — GM 104 — Sitar
 - [x] `banjo.svg` — GM 105 — Banjo
-- [ ] `shamisen.svg` — GM 106 — Shamisen
+- [x] `shamisen.svg` — GM 106 — Shamisen
 - [ ] `koto.svg` — GM 107 — Koto
 - [ ] `kalimba.svg` — GM 108 — Kalimba
 - [x] `bagpipe.svg` — GM 109 — Cornemuse
@@ -181,7 +181,7 @@ Chaque element de percussion du kit General MIDI standard (canal 10).
 - [ ] `drum_37.svg` — Note 37 — Side Stick
 - [ ] `drum_38.svg` — Note 38 — Acoustic Snare
 - [x] `Hand-Clap.svg` — Note 39 — Hand Clap
-- [ ] `drum_40.svg` — Note 40 — Electric Snare
+- [x] `drum_40.svg` — Note 40 — Electric Snare
 
 #### Charleston (Hi-Hat)
 
@@ -210,17 +210,17 @@ Chaque element de percussion du kit General MIDI standard (canal 10).
 
 #### Accessoires
 
-- [ ] `drum_54.svg` — Note 54 — Tambourine
-- [ ] `drum_56.svg` — Note 56 — Cowbell
+- [x] `Tambourine.svg` — Note 54 — Tambourine
+- [x] `Cowbell.svg` — Note 56 — Cowbell
 - [ ] `drum_58.svg` — Note 58 — Vibraslap
 
 #### Percussions latines
 
-- [x] `drum_60.svg` — Note 60 — Hi Bongo
-- [x] `drum_61.svg` — Note 61 — Low Bongo
-- [x] `drum_62.svg` — Note 62 — Mute Hi Conga
-- [x] `drum_63.svg` — Note 63 — Open Hi Conga
-- [x] `drum_64.svg` — Note 64 — Low Conga
+- [x] `Bongos.svg` — Note 60 — Hi Bongo
+- [x] `Bongos.svg` — Note 61 — Low Bongo
+- [x] `Conga.svg` — Note 62 — Mute Hi Conga
+- [x] `Conga.svg` — Note 63 — Open Hi Conga
+- [x] `Conga.svg` — Note 64 — Low Conga
 - [ ] `drum_65.svg` — Note 65 — High Timbale
 - [ ] `drum_66.svg` — Note 66 — Low Timbale
 - [ ] `drum_67.svg` — Note 67 — High Agogo
@@ -239,8 +239,8 @@ Chaque element de percussion du kit General MIDI standard (canal 10).
 - [ ] `drum_77.svg` — Note 77 — Low Wood Block
 - [ ] `drum_78.svg` — Note 78 — Mute Cuica
 - [ ] `drum_79.svg` — Note 79 — Open Cuica
-- [ ] `drum_80.svg` — Note 80 — Mute Triangle
-- [ ] `drum_81.svg` — Note 81 — Open Triangle
+- [x] `Triangle.svg` — Note 80 — Mute Triangle
+- [x] `Triangle.svg` — Note 81 — Open Triangle
 
 ### Kits de batterie — 4 images
 

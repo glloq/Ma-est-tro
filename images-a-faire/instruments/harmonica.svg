@@ -1,33 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- Harmonica - GM 22 -->
-  <g transform="rotate(30, 64, 64)">
-
-    <!-- Corps principal -->
-    <rect x="14" y="46" width="100" height="36" rx="4" fill="#C0C0C0" stroke="#888" stroke-width="2"/>
-
-    <!-- Plaque superieure -->
-    <rect x="16" y="48" width="96" height="14" rx="2" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
-
-    <!-- Plaque inferieure -->
-    <rect x="16" y="66" width="96" height="14" rx="2" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
-
-    <!-- Trous de souffle (10) -->
-    <rect x="22" y="52" width="6" height="6" rx="1" fill="#333"/>
-    <rect x="32" y="52" width="6" height="6" rx="1" fill="#333"/>
-    <rect x="42" y="52" width="6" height="6" rx="1" fill="#333"/>
-    <rect x="52" y="52" width="6" height="6" rx="1" fill="#333"/>
-    <rect x="62" y="52" width="6" height="6" rx="1" fill="#333"/>
-    <rect x="72" y="52" width="6" height="6" rx="1" fill="#333"/>
-    <rect x="82" y="52" width="6" height="6" rx="1" fill="#333"/>
-    <rect x="92" y="52" width="6" height="6" rx="1" fill="#333"/>
-    <rect x="102" y="52" width="6" height="6" rx="1" fill="#333"/>
-
-    <!-- Numeros des trous -->
-    <text x="25" y="77" font-size="5" fill="#333" font-family="sans-serif">1</text>
-    <text x="45" y="77" font-size="5" fill="#333" font-family="sans-serif">3</text>
-    <text x="65" y="77" font-size="5" fill="#333" font-family="sans-serif">5</text>
-    <text x="85" y="77" font-size="5" fill="#333" font-family="sans-serif">7</text>
-    <text x="104" y="77" font-size="5" fill="#333" font-family="sans-serif">9</text>
-
-  </g>
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+	 viewBox="0 0 496.2 496.2" xml:space="preserve">
+<path style="fill:#EA4949;" d="M496.2,248.1C496.2,111.1,385.1,0,248.1,0S0,111.1,0,248.1s111.1,248.1,248.1,248.1
+	S496.2,385.1,496.2,248.1z"/>
+<polygon style="fill:#C1822F;" points="409.6,231.4 86.6,231.4 74.1,244.6 422.1,244.6 "/>
+<polygon style="fill:#A3D5E0;" points="408.6,233.5 87.6,233.5 78.8,242.4 417.4,242.4 "/>
+<path style="fill:#7A7570;" d="M394.6,274.9c0,5.4-4.4,9.8-9.8,9.8H118.1c-5.4,0-9.8-4.4-9.8-9.8v-43.5h286.4v43.5H394.6z"/>
+<rect x="74.1" y="244.6" style="fill:#A06D24;" width="348" height="21.6"/>
+<g>
+	<rect x="122.5" y="244.6" style="fill:#090400;" width="13.6" height="21.6"/>
+	<rect x="148.9" y="244.6" style="fill:#090400;" width="13.6" height="21.6"/>
+	<rect x="175.3" y="244.6" style="fill:#090400;" width="13.6" height="21.6"/>
+	<rect x="201.7" y="244.6" style="fill:#090400;" width="13.6" height="21.6"/>
+	<rect x="228.1" y="244.6" style="fill:#090400;" width="13.6" height="21.6"/>
+	<rect x="254.5" y="244.6" style="fill:#090400;" width="13.6" height="21.6"/>
+	<rect x="280.9" y="244.6" style="fill:#090400;" width="13.6" height="21.6"/>
+	<rect x="307.3" y="244.6" style="fill:#090400;" width="13.6" height="21.6"/>
+	<rect x="333.7" y="244.6" style="fill:#090400;" width="13.6" height="21.6"/>
+	<rect x="360" y="244.6" style="fill:#090400;" width="13.6" height="21.6"/>
+</g>
+<polygon style="fill:#A3D5E0;" points="384.8,211.5 118.1,211.5 108.2,231.4 394.6,231.4 "/>
 </svg>
