@@ -512,7 +512,7 @@ class BluetoothScanModal {
     }
 
     /**
-     * Déconnecte un périphérique
+     * Disconnect a device
      */
     disconnectDevice(deviceAddress) {
         this.logger.info('BluetoothScanModal', `Disconnecting device: ${deviceAddress}`);
@@ -525,16 +525,16 @@ class BluetoothScanModal {
     }
 
     /**
-     * Oublie un périphérique appairé
+     * Forget a paired device
      */
     unpairDevice(deviceAddress) {
         const t = (key, params) => typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
 
-        // Trouver le nom du périphérique
+        // Find the device name
         const device = this.pairedDevices.find(d => d.address === deviceAddress);
         const deviceName = device ? device.name : deviceAddress;
 
-        // Afficher la modal de confirmation
+        // Show the confirmation modal
         this.showConfirmModal(
             t('bluetooth.forgetDevice.title'),
             `${t('bluetooth.forgetDevice.message', { deviceName: escapeHtml(deviceName) })}<br><br>${t('bluetooth.forgetDevice.warning')}`,
@@ -542,10 +542,10 @@ class BluetoothScanModal {
                 this.logger.info('BluetoothScanModal', `Forgetting device: ${deviceAddress}`);
 
                 try {
-                    // Appeler la commande ble_forget via l'API
+                    // Call the ble_forget command via the API
                     await window.api.sendCommand('ble_forget', { address: deviceAddress });
 
-                    // Recharger la liste des appareils appairés
+                    // Reload the paired devices list
                     this.loadPairedDevices();
 
                     this.logger.info('BluetoothScanModal', `Device ${deviceAddress} forgotten successfully`);
@@ -561,13 +561,13 @@ class BluetoothScanModal {
     // ========================================================================
 
     /**
-     * Gère la fin du scan
+     * Handle scan completion
      */
     handleScanComplete(data) {
         this.scanning = false;
         const allDevices = data.devices || [];
 
-        // Filtrer les périphériques déjà appairés pour éviter les doublons
+        // Filter out already-paired devices to avoid duplicates
         this.availableDevices = allDevices.filter(device => {
             const deviceId = device.id || device.address;
             const isAlreadyPaired = this.pairedDevices.some(
@@ -582,7 +582,7 @@ class BluetoothScanModal {
     }
 
     /**
-     * Gère la liste des périphériques appairés
+     * Handle the paired devices list
      */
     handlePairedList(data) {
         this.pairedDevices = data.devices || [];
@@ -593,18 +593,18 @@ class BluetoothScanModal {
     }
 
     /**
-     * Gère l'appairage réussi d'un périphérique
+     * Handle successful device pairing
      */
     handleDevicePaired(data) {
         this.logger.info('BluetoothScanModal', `Device paired: ${data.device_id}`);
 
-        // Petit délai pour laisser le backend mettre à jour
+        // Small delay to let the backend update
         setTimeout(() => {
-            // Recharger la liste des appareils appairés
+            // Reload the paired devices list
             this.loadPairedDevices();
         }, 500);
 
-        // Supprimer de la liste des disponibles immédiatement
+        // Remove from the available list immediately
         this.availableDevices = this.availableDevices.filter(
             d => (d.id || d.address) !== data.device_id
         );
@@ -613,14 +613,14 @@ class BluetoothScanModal {
     }
 
     /**
-     * Gère les erreurs de scan
+     * Handle scan errors
      */
     handleScanError(data) {
         this.scanning = false;
 
         this.logger.error('BluetoothScanModal', 'Scan error:', data.error);
 
-        // Vérifier si c'est une erreur de Bluetooth désactivé
+        // Check whether this is a Bluetooth-disabled error
         if (data.error && data.error.includes('poweredOff')) {
             this.bluetoothEnabled = false;
             this.bluetoothState = 'poweredOff';
@@ -630,7 +630,7 @@ class BluetoothScanModal {
     }
 
     /**
-     * Gère l'état du Bluetooth
+     * Handle the Bluetooth state
      */
     handleBluetoothStatus(data) {
         this.bluetoothEnabled = data.enabled || false;
@@ -640,7 +640,7 @@ class BluetoothScanModal {
 
         this.updateModalContent();
 
-        // Si Bluetooth est activé, lancer le scan et charger les périphériques appairés
+        // If Bluetooth is enabled, start the scan and load the paired devices
         if (this.bluetoothEnabled) {
             this.startScan();
             this.loadPairedDevices();
@@ -648,7 +648,7 @@ class BluetoothScanModal {
     }
 
     /**
-     * Gère l'activation du Bluetooth
+     * Handle Bluetooth being powered on
      */
     handleBluetoothPoweredOn(_data) {
         this.bluetoothEnabled = true;
@@ -658,13 +658,13 @@ class BluetoothScanModal {
 
         this.updateModalContent();
 
-        // Lancer automatiquement le scan
+        // Automatically start the scan
         this.startScan();
         this.loadPairedDevices();
     }
 
     /**
-     * Gère la désactivation du Bluetooth
+     * Handle Bluetooth being powered off
      */
     handleBluetoothPoweredOff(_data) {
         this.bluetoothEnabled = false;
@@ -677,14 +677,14 @@ class BluetoothScanModal {
     }
 
     /**
-     * Gère l'oubli d'un périphérique
+     * Handle a device being forgotten
      */
     handleDeviceUnpaired(data) {
         const deviceId = data.device_id || data.address;
 
         this.logger.info('BluetoothScanModal', `Device unpaired: ${deviceId}`);
 
-        // Supprimer de la liste des appareils appairés
+        // Remove from the paired devices list
         this.pairedDevices = this.pairedDevices.filter(
             d => d.address !== deviceId
         );
@@ -693,26 +693,26 @@ class BluetoothScanModal {
     }
 
     /**
-     * Gère la connexion d'un périphérique
+     * Handle a device connection
      */
     handleDeviceConnected(data) {
         const deviceId = data.device_id || data.address;
 
         this.logger.info('BluetoothScanModal', `Device connected: ${deviceId}`);
 
-        // Rafraîchir IMMÉDIATEMENT pour afficher le statut connecté
+        // Refresh IMMEDIATELY to show the connected status
         this.loadPairedDevices();
     }
 
     /**
-     * Gère la déconnexion d'un périphérique
+     * Handle a device disconnection
      */
     handleDeviceDisconnected(data) {
         const deviceId = data.device_id || data.address;
 
         this.logger.info('BluetoothScanModal', `Device disconnected: ${deviceId}`);
 
-        // Recharger la liste depuis le backend pour être sûr d'avoir le bon statut
+        // Reload the list from the backend to ensure we have the correct status
         this.loadPairedDevices();
     }
 
@@ -721,7 +721,7 @@ class BluetoothScanModal {
     // ========================================================================
 
     /**
-     * Vérifie l'état du Bluetooth
+     * Check the Bluetooth state
      */
     checkBluetoothStatus() {
         this.logger.debug('BluetoothScanModal', 'Checking Bluetooth status');
@@ -732,7 +732,7 @@ class BluetoothScanModal {
     }
 
     /**
-     * Active le Bluetooth
+     * Power on Bluetooth
      */
     powerOnBluetooth() {
         this.logger.info('BluetoothScanModal', 'Requesting Bluetooth power on');
@@ -743,7 +743,7 @@ class BluetoothScanModal {
     }
 
     /**
-     * Désactive le Bluetooth
+     * Power off Bluetooth
      */
     powerOffBluetooth() {
         this.logger.info('BluetoothScanModal', 'Requesting Bluetooth power off');
@@ -754,7 +754,7 @@ class BluetoothScanModal {
     }
 
     /**
-     * Rendu du message Bluetooth désactivé
+     * Render the "Bluetooth disabled" message
      */
     renderBluetoothDisabled() {
         const t = (key, params) => typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
@@ -802,55 +802,55 @@ class BluetoothScanModal {
     }
 
     // ========================================================================
-    // MISE À JOUR
+    // UPDATE
     // ========================================================================
 
     /**
-     * Met à jour le contenu de la modal
+     * Update the modal content
      */
     updateModalContent() {
         if (!this.container || !this.isOpen) return;
 
         const modalDialog = this.container.querySelector('.modal-dialog');
         if (modalDialog) {
-            // Re-render le contenu complet de la modal
+            // Re-render the entire modal content
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = this.renderModalContent();
 
-            // Extraire le contenu interne du modal-dialog (sans la balise modal-dialog elle-même)
+            // Extract the inner content of modal-dialog (without the modal-dialog tag itself)
             const newContent = tempDiv.querySelector('.modal-dialog');
             if (newContent) {
                 modalDialog.innerHTML = newContent.innerHTML;
             }
 
-            // Réattacher les événements
+            // Re-attach the events
             this.attachModalEvents();
         }
     }
 
     // ========================================================================
-    // MODAL DE CONFIRMATION
+    // CONFIRMATION MODAL
     // ========================================================================
 
     /**
-     * Affiche une modal de confirmation
-     * @param {string} title - Titre de la modal
-     * @param {string} message - Message de confirmation (peut contenir du HTML)
-     * @param {Function} onConfirm - Callback si confirmé
+     * Show a confirmation modal
+     * @param {string} title - Modal title
+     * @param {string} message - Confirmation message (can contain HTML)
+     * @param {Function} onConfirm - Callback on confirmation
      */
     showConfirmModal(title, message, onConfirm) {
         const t = (key, params) => typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
 
-        // Empêcher l'empilement de modals - fermer la précédente si elle existe
+        // Prevent stacking of modals - close the previous one if it exists
         const existingConfirmModal = document.querySelector('.confirm-modal');
         if (existingConfirmModal) {
             existingConfirmModal.remove();
         }
 
-        // Créer la modal de confirmation
+        // Create the confirmation modal
         const confirmModal = document.createElement('div');
         confirmModal.className = 'modal-overlay confirm-modal';
-        confirmModal.style.zIndex = '10001'; // Au-dessus de la modal Bluetooth
+        confirmModal.style.zIndex = '10001'; // Above the Bluetooth modal
 
         confirmModal.innerHTML = `
             <div class="modal-dialog modal-sm">
@@ -869,14 +869,14 @@ class BluetoothScanModal {
 
         document.body.appendChild(confirmModal);
 
-        // Fonction pour fermer la modal
+        // Function to close the modal
         const closeModal = () => {
             if (confirmModal && confirmModal.parentNode) {
                 confirmModal.remove();
             }
         };
 
-        // Bouton Annuler
+        // Cancel button
         const cancelBtn = confirmModal.querySelector('[data-action="cancel"]');
         if (cancelBtn) {
             cancelBtn.addEventListener('click', (e) => {
@@ -886,7 +886,7 @@ class BluetoothScanModal {
             });
         }
 
-        // Bouton Confirmer
+        // Confirm button
         const confirmBtn = confirmModal.querySelector('[data-action="confirm"]');
         if (confirmBtn) {
             confirmBtn.addEventListener('click', (e) => {
@@ -908,7 +908,7 @@ class BluetoothScanModal {
             }, { once: true });
         }
 
-        // Clic sur le fond pour fermer
+        // Click backdrop to close
         confirmModal.addEventListener('click', (e) => {
             if (e.target === confirmModal) {
                 closeModal();
@@ -917,7 +917,7 @@ class BluetoothScanModal {
     }
 
     // ========================================================================
-    // UTILITAIRES
+    // UTILITIES
     // ========================================================================
 
 }

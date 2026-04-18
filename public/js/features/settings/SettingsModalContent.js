@@ -4,7 +4,7 @@
     const SettingsModalContent = {};
 
     /**
-     * Générer le contenu HTML du modal
+     * Generate the modal's HTML content
      */
     SettingsModalContent.renderContent = function() {
         const currentLocale = i18n.getLocale();
