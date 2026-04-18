@@ -218,6 +218,8 @@ class MidiUtils {
         return [0xFB];
       case 'stop':
         return [0xFC];
+      case 'reset':
+        return [0xFF];
       default:
         return null;
     }

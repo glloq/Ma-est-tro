@@ -167,14 +167,29 @@ async function midiAllNotesOff(app, data) {
 }
 
 /**
- * Placeholder for MIDI System Reset (0xFF). Currently a no-op.
- * TODO: emit System Reset on the targeted device once the transports
- * support raw realtime bytes.
+ * Emit MIDI System Reset (status byte `0xFF`) to the target device.
+ * When `deviceId` is omitted, the reset is broadcast to every open
+ * output so a one-click "reset everything" workflow is possible.
  *
- * @returns {Promise<{success:true}>}
+ * @param {Object} app
+ * @param {{deviceId?:string}} data
+ * @returns {Promise<{success:boolean, targets:number}>}
  */
-async function midiReset(_app, _data) {
-  return { success: true };
+async function midiReset(app, data) {
+  if (data && data.deviceId) {
+    const ok = app.deviceManager.sendMessage(data.deviceId, 'reset', {});
+    return { success: ok, targets: ok ? 1 : 0 };
+  }
+
+  // Broadcast to every connected output device.
+  let sent = 0;
+  const devices = app.deviceManager.getDeviceList();
+  for (const device of devices) {
+    if (device.output && device.enabled !== false) {
+      if (app.deviceManager.sendMessage(device.id, 'reset', {})) sent++;
+    }
+  }
+  return { success: true, targets: sent };
 }
 
 /**
