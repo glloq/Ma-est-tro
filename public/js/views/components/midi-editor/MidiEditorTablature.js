@@ -401,7 +401,7 @@
             });
             this.updateSequenceFromActiveChannels(previousActiveChannels);
             this.updateChannelButtons();
-            this.updateInstrumentSelector();
+            this.renderer.updateInstrumentSelector();
             this.syncMutedChannels();
         });
 
@@ -415,7 +415,7 @@
             });
             this.updateSequenceFromActiveChannels(previousActiveChannels);
             this.updateChannelButtons();
-            this.updateInstrumentSelector();
+            this.renderer.updateInstrumentSelector();
             this.syncMutedChannels();
         });
 
@@ -448,7 +448,7 @@
             this.updateSequenceFromActiveChannels(null, true);
         }
         if (typeof this.refreshChannelButtons === 'function') this.refreshChannelButtons();
-        if (typeof this.updateInstrumentSelector === 'function') this.updateInstrumentSelector();
+        if (typeof this.renderer.updateInstrumentSelector === 'function') this.renderer.updateInstrumentSelector();
         if (typeof this.syncMutedChannels === 'function') this.syncMutedChannels();
 
         this.isDirty = true;

@@ -428,7 +428,7 @@
         this.refreshChannelButtons();
 
     // Update the instrument selector for the new channel
-        this.updateInstrumentSelector();
+        this.renderer.updateInstrumentSelector();
 
         this.updateEditButtons();
     }
@@ -446,7 +446,7 @@
     // Preserve scroll position across DOM rebuild
             const scrollLeft = channelsToolbar.scrollLeft;
 
-            channelsToolbar.innerHTML = this.renderChannelButtons();
+            channelsToolbar.innerHTML = this.renderer.renderChannelButtons();
 
     // Restore scroll position so the user sees the same channels as before
             channelsToolbar.scrollLeft = scrollLeft;
@@ -616,7 +616,7 @@
 
         this.refreshChannelButtons();
         this._refreshStringInstrumentChannels();
-        this.updateInstrumentSelector();
+        this.renderer.updateInstrumentSelector();
         this.updateEditButtons();
     }
 

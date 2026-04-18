@@ -141,7 +141,7 @@
                     <!-- Channel toolbar (just below the header) -->
                     <div class="channels-toolbar-wrapper">
                         <div class="channels-toolbar">
-                            ${this.renderChannelButtons()}
+                            ${this.renderer.renderChannelButtons()}
                         </div>
                         <div class="channel-global-actions">
                             <button class="btn-show-all-channels" title="${this.t('midiEditor.showAllChannels')}">👁️</button>
@@ -272,7 +272,7 @@
                                     <span class="settings-popover-hint">${this.t('midiEditor.moveToChannelHint')}</span>
                                     <div class="settings-row">
                                         <select class="snap-select" id="channel-selector" title="${this.t('midiEditor.changeChannelTip')}">
-                                            ${this.renderChannelOptions()}
+                                            ${this.renderer.renderChannelOptions()}
                                         </select>
                                         <button class="tool-btn-apply" data-action="change-channel" id="change-channel-btn" title="${this.t('midiEditor.applyChannel')}" disabled>${this.t('midiEditor.applyBtn')}</button>
                                     </div>
@@ -282,7 +282,7 @@
                                     <span class="settings-popover-hint">${this.t('midiEditor.changeInstrumentHint')}</span>
                                     <div class="settings-row">
                                         <select class="snap-select" id="instrument-selector" title="${this.t('midiEditor.selectInstrument')}">
-                                            ${this.renderInstrumentOptions()}
+                                            ${this.renderer.renderInstrumentOptions()}
                                         </select>
                                         <button class="tool-btn-apply" data-action="apply-instrument" id="apply-instrument-btn" title="${this.t('midiEditor.applyInstrument')}">${this.t('midiEditor.applyBtn')}</button>
                                     </div>
@@ -700,7 +700,7 @@
         this.updateStats();
         this.updateEditButtons(); // État initial
         this.updateUndoRedoButtonsState(); // État initial undo/redo
-        this.updateInstrumentSelector(); // État initial sélecteur d'instrument
+        this.renderer.updateInstrumentSelector(); // État initial sélecteur d'instrument
 
     // Pick the default mode (drag-view for navigation)
         if (this.pianoRoll && typeof this.pianoRoll.setUIMode === 'function') {

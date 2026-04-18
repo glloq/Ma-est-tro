@@ -65,8 +65,8 @@ class MidiEditorChannelPanel {
      * Generer les boutons de canal
      */
     renderChannelButtons() {
-        // Delegate to modal's renderChannelButtons
-        return this.modal.renderChannelButtons();
+        // Delegate to the renderer sub-component (P2-F.10e).
+        return this.modal.renderer.renderChannelButtons();
     }
 
     /**

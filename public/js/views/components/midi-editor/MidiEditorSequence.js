@@ -215,7 +215,7 @@
 
             this.updateSequenceFromActiveChannels(previousActiveChannels);
             this.updateChannelButtons();
-            this.updateInstrumentSelector();
+            this.renderer.updateInstrumentSelector();
 
             if (this.channelPanel) {
                 this.channelPanel.updateTablatureButton();

@@ -162,7 +162,7 @@
                 });
                 this.updateSequenceFromActiveChannels(previousActiveChannels);
                 this.updateChannelButtons();
-                this.updateInstrumentSelector();
+                this.renderer.updateInstrumentSelector();
                 this.syncMutedChannels();
                 return;
             }
@@ -222,7 +222,7 @@
                     });
                     this.updateSequenceFromActiveChannels(previousActiveChannels);
                     this.updateChannelButtons();
-                    this.updateInstrumentSelector();
+                    this.renderer.updateInstrumentSelector();
                     this.syncMutedChannels();
                 }
                 return;
