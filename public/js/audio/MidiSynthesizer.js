@@ -767,7 +767,7 @@ class MidiSynthesizer {
     }
 
     /**
-     * Démarrer la lecture
+     * Start playback
      */
     async play() {
         if (!this.isInitialized) {
@@ -775,7 +775,7 @@ class MidiSynthesizer {
             if (!initialized) return;
         }
 
-        // Reprendre le contexte si suspendu
+        // Resume the context if suspended
         if (this.audioContext.state === 'suspended') {
             await this.audioContext.resume();
         }
@@ -830,7 +830,7 @@ class MidiSynthesizer {
         this.lastScheduledTick = this.startTick;
         this.schedulePointer = 0;
 
-        // Appliquer un changement de banque en attente
+        // Apply a pending bank switch
         if (this._pendingBankSwitch) {
             this._applyBankSwitch(this._pendingBankSwitch);
             this._pendingBankSwitch = null;
@@ -844,8 +844,8 @@ class MidiSynthesizer {
     }
 
     /**
-     * Muter un canal
-     * @param {number} channel - Numéro du canal (0-15)
+     * Mute a channel
+     * @param {number} channel - Channel number (0-15)
      */
     muteChannel(channel) {
         this.mutedChannels.add(channel);
@@ -853,8 +853,8 @@ class MidiSynthesizer {
     }
 
     /**
-     * Démuter un canal
-     * @param {number} channel - Numéro du canal (0-15)
+     * Unmute a channel
+     * @param {number} channel - Channel number (0-15)
      */
     unmuteChannel(channel) {
         this.mutedChannels.delete(channel);
@@ -862,8 +862,8 @@ class MidiSynthesizer {
     }
 
     /**
-     * Définir les canaux mutés
-     * @param {Set|Array} channels - Canaux à muter
+     * Set the muted channels
+     * @param {Set|Array} channels - Channels to mute
      */
     setMutedChannels(channels) {
         this.mutedChannels = new Set(channels);
@@ -871,8 +871,8 @@ class MidiSynthesizer {
     }
 
     /**
-     * Vérifier si un canal est muté
-     * @param {number} channel - Numéro du canal
+     * Check whether a channel is muted
+     * @param {number} channel - Channel number
      * @returns {boolean}
      */
     isChannelMuted(channel) {
@@ -880,7 +880,7 @@ class MidiSynthesizer {
     }
 
     /**
-     * Annuler toutes les notes en cours
+     * Cancel all ongoing notes
      */
     cancelAllNotes() {
         this.activeEnvelopes.forEach(envelope => {
@@ -889,7 +889,7 @@ class MidiSynthesizer {
                     envelope.cancel();
                 }
             } catch (e) {
-                // Ignorer
+                // Ignore
             }
         });
         this.activeEnvelopes = [];
@@ -919,7 +919,7 @@ class MidiSynthesizer {
     }
 
     /**
-     * Démarrer le scheduler
+     * Start the scheduler
      */
     startScheduler() {
         if (this.schedulerInterval) clearInterval(this.schedulerInterval);
@@ -945,7 +945,7 @@ class MidiSynthesizer {
     }
 
     /**
-     * Arrêter le scheduler
+     * Stop the scheduler
      */
     stopScheduler() {
         if (this.schedulerInterval) {
@@ -966,7 +966,7 @@ class MidiSynthesizer {
     }
 
     /**
-     * Planifier les notes
+     * Schedule notes
      */
     scheduleNotes() {
         if (!this.isPlaying) return;
@@ -1016,7 +1016,7 @@ class MidiSynthesizer {
     }
 
     /**
-     * Libérer les ressources
+     * Release resources
      */
     dispose() {
         this.stop();

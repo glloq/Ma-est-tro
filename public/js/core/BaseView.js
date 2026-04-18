@@ -1,47 +1,47 @@
 // ============================================================================
-// Fichier: frontend/js/core/BaseView.js
-// Chemin réel: frontend/js/core/BaseView.js
-// Version: v4.0.0 - RECONSTRUCTION COMPLÈTE
+// File: frontend/js/core/BaseView.js
+// Actual path: frontend/js/core/BaseView.js
+// Version: v4.0.0 - FULL REBUILD
 // Date: 2025-11-05
 // ============================================================================
-// RECONSTRUCTION v4.0.0:
-// ✅ CRITIQUE: Recréation complète de BaseView (fichier corrompu)
-// ✅ Signature standard: constructor(containerId, eventBus)
-// ✅ Résolution container robuste
-// ✅ Fallback EventBus minimal
-// ✅ Méthodes essentielles: render(), show(), hide(), update(), emit()
-// ✅ Gestion événements avec cleanup
-// ✅ Validation et logging intégrés
+// REBUILD v4.0.0:
+// ✅ CRITICAL: Complete re-creation of BaseView (corrupted file)
+// ✅ Standard signature: constructor(containerId, eventBus)
+// ✅ Robust container resolution
+// ✅ Minimal EventBus fallback
+// ✅ Essential methods: render(), show(), hide(), update(), emit()
+// ✅ Event handling with cleanup
+// ✅ Built-in validation and logging
 // ============================================================================
 
 class BaseView {
     /**
-     * Constructeur de la vue de base
-     * @param {string|HTMLElement} containerId - ID du conteneur ou élément DOM
-     * @param {EventBus} eventBus - Instance EventBus pour communication
+     * Base view constructor
+     * @param {string|HTMLElement} containerId - Container ID or DOM element
+     * @param {EventBus} eventBus - EventBus instance for communication
      */
     constructor(containerId, eventBus) {
-        // ✅ EventBus avec fallback robuste
+        // ✅ EventBus with robust fallback
         this.eventBus = eventBus || window.eventBus;
-        
-        // ✅ CRITIQUE: Si EventBus toujours absent, créer fallback minimal
+
+        // ✅ CRITICAL: If EventBus is still missing, create minimal fallback
         if (!this.eventBus) {
             console.warn(
                 `[${this.constructor.name}] EventBus not found - creating minimal fallback. ` +
                 `Check that EventBus is initialized in main.js before Application.`
             );
             
-            // Créer un EventBus minimal fonctionnel
+            // Create a minimal functional EventBus
             this.eventBus = {
-                on: () => () => {},      // Retourne une fonction de désinscription vide
-                once: () => () => {},    // Retourne une fonction de désinscription vide
-                emit: () => {},          // Ne fait rien
-                off: () => {},           // Ne fait rien
-                _isFallback: true        // Marqueur pour identification
+                on: () => () => {},      // Returns an empty unsubscribe function
+                once: () => () => {},    // Returns an empty unsubscribe function
+                emit: () => {},          // Does nothing
+                off: () => {},           // Does nothing
+                _isFallback: true        // Marker for identification
             };
         }
         
-        // ✅ Résolution du container
+        // ✅ Container resolution
         this.container = this.resolveContainer(containerId);
         this.containerId = typeof containerId === 'string' ? containerId : containerId?.id || 'unknown';
         
@@ -49,7 +49,7 @@ class BaseView {
         this.logger = window.logger || this.createFallbackLogger();
         this.backend = window.backendService || window.app?.services?.backend || null;
         
-        // État de la vue
+        // View state
         this.state = {
             initialized: false,
             visible: false,
