@@ -31,7 +31,8 @@
       keysHTML += `<div class="${cls}" style="left:${leftPct.toFixed(2)}%;width:${keyW.toFixed(2)}%"></div>`;
 
       if (semitone === 0) {
-        const octave = Math.floor(n / 12);
+        // Scientific pitch notation: MIDI 60 = C4 (middle C).
+        const octave = Math.floor(n / 12) - 1;
         keysHTML += `<span class="rs-kb-label" style="left:${leftPct.toFixed(2)}%">C${octave}</span>`;
       }
     }

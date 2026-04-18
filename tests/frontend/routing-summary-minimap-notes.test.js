@@ -207,7 +207,7 @@ describe('buildMinimapBuckets — multi-channel', () => {
     expect(out.multiChannel).toBe(true);
     expect(out.channels).toEqual([0, 3]);
     expect(out.buckets.get(0)[0]).toBe(true);
-    expect(out.buckets.get(3)[4]).toBe(true); // totalTicks = 51, 50/51*10 = 9.8 → 9
+    expect(out.buckets.get(3)[9]).toBe(true); // totalTicks = 51, 50/51*10 = 9.8 → 9
   });
 });
 

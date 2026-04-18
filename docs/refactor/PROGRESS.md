@@ -9,8 +9,8 @@
 |---|---|
 | Phase active | **Phase 2 — Persistance (migration handlers)** |
 | Branche de travail | `claude/refactor-maestro-project-L6ptg` |
-| Dernier lot terminé | **P2-F.9** — layout frontend migré vers `public/js/features/` (~100 script tags, 5 tests, 31 fichiers top-level + 6 sous-dossiers métier). Phase 1 + Phase 2 frontend clôturées. |
-| Prochain lot suggéré | Refactorisation essentiellement finie. Reste : maintenance / nettoyage cosmétique. |
+| Dernier lot terminé | **cleanup-test-debt** — résolution des 18 échecs pré-existants `midi-filter.test.js` (schéma test, mock `fileRepository`, défauts FilterManager) + 2 échecs frontend (renderer octave label, test minimap index). **590/590 backend + 97/97 frontend verts.** |
+| Prochain lot suggéré | Plus de dette active. Toute la refactorisation est livrée et testée. |
 | Date dernière mise à jour | 2026-04-18 |
 | Agent ayant mis à jour | Claude (agent refactoring) |
 
@@ -264,7 +264,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 
 ## Blocages actifs
 
-- **tests/midi-filter.test.js — 18 échecs pré-existants** (2026-04-17) : ce fichier de test est skippé par `jest.config.cjs` quand better-sqlite3 n'est pas compilé (cas CI actuel). Les échecs existaient avant les lots Phase 2 (dernière modification du fichier en `a668ae5`, avant Phase 2). Pas bloquant pour le refactor mais à corriger dans un lot dédié hors Phase 2 (scope FilterManager / défauts de tri).
+- ~~**tests/midi-filter.test.js — 18 échecs pré-existants**~~ **Résolus (2026-04-18, cleanup-test-debt)**. 3 causes racines : (1) schéma test `instruments_latency` manquait 6 colonnes ajoutées par les migrations 013/015/031 ; (2) mock d'app n'exposait pas `fileRepository` (le code appelait `app.fileRepository.filter` depuis P0-2.5d) ; (3) `FilterManager` défauts `filename/ASC` alors que la spec test attendait `uploaded_at/DESC`. Fix : schéma enrichi, mock étendu (`fileRepository` + `fileManager._batchGetRoutingStatus`/`formatFileSize`/`formatDuration`), défauts FilterManager corrigés. 135/135 tests midi-filter verts.
 - **Schéma legacy `UNIQUE(midi_file_id, track_id)` sur `midi_instrument_routings`** (2026-04-17) : migration 006 impose cette contrainte jamais droppée par 020/032. Les splits coexistent uniquement si les segments ont des `target_channel` distincts (multi-channel devices). Si des utilisateurs attendent des splits 100 % virtuels (même target), le comportement actuel les rejette. **Hors scope P0-2.6** — freeze SQL actif. À traiter via ADR Phase 4 (migration 041 + script de backfill).
 
 ---
