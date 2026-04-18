@@ -85,6 +85,9 @@ export default class NobleBleAdapter extends EventEmitter {
    * Scan once and capture the current device list. Equivalent to
    * BluetoothManager.startScan(duration) behaviour : surface results via
    * 'device-discovered' events.
+   *
+   * Event payload includes the optional metadata fields `rssi`, `uuids`
+   * and `isMidiDevice` (additive, callers may ignore them).
    */
   async scanOnce(durationMs = 5000) {
     await this.startDiscovery();
@@ -94,7 +97,14 @@ export default class NobleBleAdapter extends EventEmitter {
       try {
         const device = await this._adapter.getDevice(address);
         const name = await device.getName().catch(() => address);
-        const descriptor = { address, name };
+        const rssi = await device.getRSSI().catch(() => -100);
+        const uuids = await device.getUUIDs().catch(() => []);
+        const isMidiDevice = Array.isArray(uuids) && uuids.some((u) =>
+          typeof u === 'string' &&
+          (u.toLowerCase().includes('03b80e5a') ||
+           u.toLowerCase() === BLE_MIDI_SERVICE_UUID.toLowerCase())
+        );
+        const descriptor = { address, name, rssi, uuids, isMidiDevice };
         this._discovered.set(address, descriptor);
         this.emit(BLE_EVENTS.DEVICE_DISCOVERED, { ...descriptor });
       } catch (e) {

@@ -34,6 +34,18 @@ export default class InMemoryBleAdapter extends EventEmitter {
     this._scanning = false;
   }
 
+  /**
+   * Convenience method (parity with NobleBleAdapter): start discovery, wait
+   * `durationMs`, stop discovery. Used by BluetoothManager to perform a
+   * timed scan without owning the timer itself.
+   */
+  async scanOnce(durationMs = 0) {
+    await this.startDiscovery();
+    if (durationMs > 0) await new Promise((r) => setTimeout(r, durationMs));
+    await this.stopDiscovery();
+    return this.listDiscovered();
+  }
+
   listDiscovered() {
     return Array.from(this._discovered.values()).map((d) => ({ ...d }));
   }
