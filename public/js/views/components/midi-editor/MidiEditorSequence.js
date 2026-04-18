@@ -285,8 +285,8 @@
                 }
             }
 
-            if (typeof this._updateNavigationMinimap === 'function') {
-                this._updateNavigationMinimap();
+            if (typeof this.events._updateNavigationMinimap === 'function') {
+                this.events._updateNavigationMinimap();
             }
         },
 

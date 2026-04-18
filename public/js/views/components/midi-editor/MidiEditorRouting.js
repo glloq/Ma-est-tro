@@ -481,7 +481,7 @@
         document.body.appendChild(this.container);
 
     // Attach events
-        this.attachEvents();
+        this.events.attachEvents();
 
     // Fermer avec Escape
         this.escapeHandler = (e) => {
@@ -564,7 +564,7 @@
         this.pianoRoll.setAttribute('cursor', '0');
 
     // Clean, modern piano roll colors (theme-aware)
-        this._applyPianoRollTheme();
+        this.events._applyPianoRollTheme();
 
         this.log('info', `Piano roll configured: xrange=${xrange}, yrange=${noteRange}, yoffset=${yoffset} (centered), tempo=${this.tempo || 120} BPM, timebase=${this.ticksPerBeat || 480} ticks/beat`);
 
@@ -608,13 +608,13 @@
         }
 
     // Initialiser la barre de navigation overview
-        this._initNavigationOverview(maxTick, xrange);
+        this.events._initNavigationOverview(maxTick, xrange);
 
     // Synchroniser les sliders avec la navigation native du piano roll
-        this.setupScrollSynchronization();
+        this.events.setupScrollSynchronization();
 
     // Initialize PlaybackTimelineBar
-        this._initTimelineBar(maxTick, ticksPerBeat, xrange);
+        this.events._initTimelineBar(maxTick, ticksPerBeat, xrange);
 
         // Load the sequence only when it exists and is non-empty
         if (this.sequence && this.sequence.length > 0) {

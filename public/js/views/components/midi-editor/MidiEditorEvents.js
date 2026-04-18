@@ -1,26 +1,26 @@
 // ============================================================================
 // File: public/js/views/components/midi-editor/MidiEditorEvents.js
-// Description: Event handlers and resize management
-//   Mixin: methods added to MidiEditorModal.prototype
+// Description: DOM event attachment + viewport / navigation / zoom / scroll.
+//   Sub-component class ; called via `modal.events.<method>(...)`.
+//   (P2-F.10f body rewrite — no longer a prototype mixin.)
 // ============================================================================
 
 (function() {
     'use strict';
 
-    const MidiEditorEventsMixin = {};
+    class MidiEditorEvents {
+        constructor(modal) {
+            this.modal = modal;
+        }
 
-    // ========================================================================
-    // EVENTS
-    // ========================================================================
-
-    MidiEditorEventsMixin.attachEvents = function() {
-        if (!this.container) return;
+    attachEvents() {
+        if (!this.modal.container) return;
 
     // No backdrop click-to-close for the MIDI editor
     // (prevents accidental dismissals during editing)
 
     // Action buttons
-        this.container.addEventListener('click', (e) => {
+        this.modal.container.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-action]');
             if (!btn) return;
 
@@ -28,16 +28,16 @@
 
             switch (action) {
                 case 'close':
-                    this.close();
+                    this.modal.close();
                     break;
                 case 'save':
-                    this.fileOps.saveMidiFile();
+                    this.modal.fileOps.saveMidiFile();
                     break;
                 case 'save-as':
-                    this.fileOps.showSaveAsDialog();
+                    this.modal.fileOps.showSaveAsDialog();
                     break;
                 case 'auto-assign':
-                    this.fileOps.showAutoAssignModal();
+                    this.modal.fileOps.showAutoAssignModal();
                     break;
                 case 'zoom-h-in':
                     this.zoomHorizontal(0.8);
@@ -54,52 +54,52 @@
 
     // New edit buttons
                 case 'undo':
-                    this.undo();
+                    this.modal.undo();
                     break;
                 case 'redo':
-                    this.redo();
+                    this.modal.redo();
                     break;
                 case 'copy':
-                    this.copy();
+                    this.modal.copy();
                     break;
                 case 'paste':
-                    this.paste();
+                    this.modal.paste();
                     break;
                 case 'delete':
-                    this.deleteSelectedNotes();
+                    this.modal.deleteSelectedNotes();
                     break;
                 case 'select-all':
-                    this.selectAll();
+                    this.modal.selectAll();
                     break;
                 case 'change-channel':
-                    this.changeChannel();
+                    this.modal.changeChannel();
                     break;
                 case 'apply-instrument':
-                    this.applyInstrument();
+                    this.modal.applyInstrument();
                     break;
                 case 'cycle-snap':
-                    this.cycleSnap();
+                    this.modal.cycleSnap();
                     break;
                 case 'rename-file':
-                    this.fileOps.showRenameDialog();
+                    this.modal.fileOps.showRenameDialog();
                     break;
                 case 'toggle-settings-popover':
                     this.toggleSettingsPopover();
                     break;
                 case 'toggle-preview-source':
-                    this.togglePreviewSource();
+                    this.modal.togglePreviewSource();
                     break;
     // configure-string-instrument removed — config is in instrument settings
 
     // Playback controls
                 case 'playback-play':
-                    this.playbackPlay();
+                    this.modal.playbackPlay();
                     break;
                 case 'playback-pause':
-                    this.playbackPause();
+                    this.modal.playbackPause();
                     break;
                 case 'playback-stop':
-                    this.playbackStop();
+                    this.modal.playbackStop();
                     break;
 
     // Edit modes
@@ -111,7 +111,7 @@
                 case 'mode-edit': {
                     const mode = btn.dataset.mode;
                     if (mode) {
-                        this.setEditMode(mode);
+                        this.modal.setEditMode(mode);
                     }
                     break;
                 }
@@ -124,18 +124,18 @@
 
     // OPTIMISATION: Event delegation pour tous les boutons de canal
     // Replaces 4 forEach loops × 16 buttons = ~64 listeners with a single listener
-        this.container.addEventListener('click', (e) => {
+        this.modal.container.addEventListener('click', (e) => {
             const channelChip = e.target.closest('.channel-chip');
             if (channelChip) {
                 e.preventDefault();
                 e.stopPropagation();
     // Block channel toggle when a specialized editor is active
-                if (this._isSpecializedEditorActive()) {
-                    this.showNotification(this.t('midiEditor.closeEditorFirst') || 'Close the specialized editor first', 'info');
+                if (this.modal._isSpecializedEditorActive()) {
+                    this.modal.showNotification(this.modal.t('midiEditor.closeEditorFirst') || 'Close the specialized editor first', 'info');
                     return;
                 }
                 const channel = parseInt(channelChip.dataset.channel);
-                if (!isNaN(channel)) this.toggleChannel(channel);
+                if (!isNaN(channel)) this.modal.toggleChannel(channel);
                 return;
             }
             const settingsBtn = e.target.closest('.chip-settings-btn');
@@ -143,7 +143,7 @@
                 e.preventDefault();
                 e.stopPropagation();
                 const channel = parseInt(settingsBtn.dataset.channel);
-                if (!isNaN(channel)) this._toggleChannelSettingsPopover(channel, settingsBtn);
+                if (!isNaN(channel)) this.modal._toggleChannelSettingsPopover(channel, settingsBtn);
                 return;
             }
     // Global "Show All" button
@@ -152,18 +152,18 @@
                 e.preventDefault();
                 e.stopPropagation();
     // Close any active specialized editor first so we truly show all channels
-                if (this.tablatureEditor?.isVisible) this.tablatureEditor.hide();
-                if (this.drumPatternEditor?.isVisible) this.drumPatternEditor.hide();
-                if (this.windInstrumentEditor?.isVisible) this.windInstrumentEditor.hide();
-                const previousActiveChannels = new Set(this.activeChannels);
-                this.channels.forEach(ch => {
-                    this.activeChannels.add(ch.channel);
-                    this.channelDisabled.delete(ch.channel);
+                if (this.modal.tablatureEditor?.isVisible) this.modal.tablatureEditor.hide();
+                if (this.modal.drumPatternEditor?.isVisible) this.modal.drumPatternEditor.hide();
+                if (this.modal.windInstrumentEditor?.isVisible) this.modal.windInstrumentEditor.hide();
+                const previousActiveChannels = new Set(this.modal.activeChannels);
+                this.modal.channels.forEach(ch => {
+                    this.modal.activeChannels.add(ch.channel);
+                    this.modal.channelDisabled.delete(ch.channel);
                 });
-                this.updateSequenceFromActiveChannels(previousActiveChannels);
-                this.updateChannelButtons();
-                this.renderer.updateInstrumentSelector();
-                this.syncMutedChannels();
+                this.modal.updateSequenceFromActiveChannels(previousActiveChannels);
+                this.modal.updateChannelButtons();
+                this.modal.renderer.updateInstrumentSelector();
+                this.modal.syncMutedChannels();
                 return;
             }
             const tabBtn = e.target.closest('.channel-tab-btn');
@@ -171,7 +171,7 @@
                 e.preventDefault();
                 e.stopPropagation();
                 const channel = parseInt(tabBtn.dataset.channel);
-                if (!isNaN(channel)) this._openTablatureForChannel(channel);
+                if (!isNaN(channel)) this.modal._openTablatureForChannel(channel);
                 return;
             }
             const drumBtn = e.target.closest('.channel-drum-btn');
@@ -179,7 +179,7 @@
                 e.preventDefault();
                 e.stopPropagation();
                 const channel = parseInt(drumBtn.dataset.channel);
-                if (!isNaN(channel)) this._openDrumPatternForChannel(channel);
+                if (!isNaN(channel)) this.modal._openDrumPatternForChannel(channel);
                 return;
             }
             const windBtn = e.target.closest('.channel-wind-btn');
@@ -187,7 +187,7 @@
                 e.preventDefault();
                 e.stopPropagation();
                 const channel = parseInt(windBtn.dataset.channel);
-                if (!isNaN(channel)) this._openWindEditorForChannel(channel);
+                if (!isNaN(channel)) this.modal._openWindEditorForChannel(channel);
                 return;
             }
             const editBtn = e.target.closest('.channel-edit-btn');
@@ -195,35 +195,35 @@
                 e.preventDefault();
                 e.stopPropagation();
                 const channel = parseInt(editBtn.dataset.channel);
-                if (!isNaN(channel)) this._openPianoRollForChannel(channel);
+                if (!isNaN(channel)) this.modal._openPianoRollForChannel(channel);
                 return;
             }
         });
 
     // Double-click on channel chip = Solo (hide all others)
-        this.container.addEventListener('dblclick', (e) => {
+        this.modal.container.addEventListener('dblclick', (e) => {
             const channelChip = e.target.closest('.channel-chip');
             if (channelChip) {
                 e.preventDefault();
                 e.stopPropagation();
     // Block solo when a specialized editor is active
-                if (this._isSpecializedEditorActive()) return;
+                if (this.modal._isSpecializedEditorActive()) return;
                 const channel = parseInt(channelChip.dataset.channel);
                 if (!isNaN(channel)) {
-                    const previousActiveChannels = new Set(this.activeChannels);
-                    this.activeChannels.clear();
-                    this.activeChannels.add(channel);
-                    this.channels.forEach(ch => {
+                    const previousActiveChannels = new Set(this.modal.activeChannels);
+                    this.modal.activeChannels.clear();
+                    this.modal.activeChannels.add(channel);
+                    this.modal.channels.forEach(ch => {
                         if (ch.channel === channel) {
-                            this.channelDisabled.delete(ch.channel);
+                            this.modal.channelDisabled.delete(ch.channel);
                         } else {
-                            this.channelDisabled.add(ch.channel);
+                            this.modal.channelDisabled.add(ch.channel);
                         }
                     });
-                    this.updateSequenceFromActiveChannels(previousActiveChannels);
-                    this.updateChannelButtons();
-                    this.renderer.updateInstrumentSelector();
-                    this.syncMutedChannels();
+                    this.modal.updateSequenceFromActiveChannels(previousActiveChannels);
+                    this.modal.updateChannelButtons();
+                    this.modal.renderer.updateInstrumentSelector();
+                    this.modal.syncMutedChannels();
                 }
                 return;
             }
@@ -232,31 +232,31 @@
     // Toggle preview source (GM / Routed)
         const previewToggle = document.getElementById('preview-source-toggle');
         if (previewToggle) {
-            previewToggle.addEventListener('click', () => this.togglePreviewSource());
+            previewToggle.addEventListener('click', () => this.modal.togglePreviewSource());
         }
 
     // Toggle playable notes global
         const playableToggle = document.getElementById('playable-notes-toggle');
         if (playableToggle) {
-            playableToggle.addEventListener('click', () => this.togglePlayableNotesGlobal());
+            playableToggle.addEventListener('click', () => this.modal.togglePlayableNotesGlobal());
         }
 
     // Toggle touch mode
         const touchModeToggle = document.getElementById('touch-mode-toggle');
         if (touchModeToggle) {
-            touchModeToggle.addEventListener('click', () => this.toggleTouchMode());
+            touchModeToggle.addEventListener('click', () => this.modal.toggleTouchMode());
         }
 
     // Toggle keyboard playback
         const kbPlaybackToggle = document.getElementById('keyboard-playback-toggle');
         if (kbPlaybackToggle) {
-            kbPlaybackToggle.addEventListener('click', () => this.toggleKeyboardPlayback());
+            kbPlaybackToggle.addEventListener('click', () => this.modal.toggleKeyboardPlayback());
         }
 
     // Toggle drag playback
         const dragPlaybackToggle = document.getElementById('drag-playback-toggle');
         if (dragPlaybackToggle) {
-            dragPlaybackToggle.addEventListener('click', () => this.toggleDragPlayback());
+            dragPlaybackToggle.addEventListener('click', () => this.modal.toggleDragPlayback());
         }
 
     // Input de tempo
@@ -265,10 +265,10 @@
             tempoInput.addEventListener('change', (e) => {
                 const newTempo = parseInt(e.target.value);
                 if (!isNaN(newTempo) && newTempo >= 20 && newTempo <= 300) {
-                    this.setTempo(newTempo);
+                    this.modal.setTempo(newTempo);
                 } else {
     // Restore the previous value when invalid
-                    e.target.value = this.tempo || 120;
+                    e.target.value = this.modal.tempo || 120;
                 }
             });
     // Also react to changes made while typing (input event)
@@ -276,7 +276,7 @@
                 const newTempo = parseInt(e.target.value);
                 if (!isNaN(newTempo) && newTempo >= 20 && newTempo <= 300) {
     // Real-time update (optional — can be removed if too chatty)
-                    this.setTempo(newTempo);
+                    this.modal.setTempo(newTempo);
                 }
             });
         }
@@ -288,7 +288,7 @@
             if (ccTitle) {
                 ccTitle.addEventListener('click', (e) => {
                     e.preventDefault();
-                    this.toggleCCSection();
+                    this.modal.toggleCCSection();
                 });
             }
     // Gear button for CC drawing settings
@@ -297,7 +297,7 @@
                 ccDrawSettingsBtn.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    this.drawSettings.toggleDrawSettingsPopover();
+                    this.modal.drawSettings.toggleDrawSettingsPopover();
                 });
             }
         }
@@ -305,12 +305,12 @@
     // Boutons de type CC (horizontaux)
     // OPTIMISATION: Event delegation pour boutons CC type, outils et suppression
     // Replaces ~20+ individual listeners with a single delegated listener
-        this.container.addEventListener('click', (e) => {
+        this.modal.container.addEventListener('click', (e) => {
             const ccTypeBtn = e.target.closest('.cc-type-btn');
             if (ccTypeBtn) {
                 e.preventDefault();
                 const ccType = ccTypeBtn.dataset.ccType;
-                if (ccType) this.selectCCType(ccType);
+                if (ccType) this.modal.selectCCType(ccType);
                 return;
             }
             const ccToolBtn = e.target.closest('.cc-tool-btn');
@@ -318,21 +318,21 @@
                 e.preventDefault();
                 const tool = ccToolBtn.dataset.tool;
                 if (tool) {
-                    this.container.querySelectorAll('.cc-tool-btn').forEach(b => b.classList.remove('active'));
+                    this.modal.container.querySelectorAll('.cc-tool-btn').forEach(b => b.classList.remove('active'));
                     ccToolBtn.classList.add('active');
-                    if (this.currentCCType === 'tempo' && this.tempoEditor) {
-                        this.tempoEditor.setTool(tool);
-                    } else if (this.currentCCType === 'velocity' && this.velocityEditor) {
-                        this.velocityEditor.setTool(tool);
-                    } else if (this.ccEditor) {
-                        this.ccEditor.setTool(tool);
+                    if (this.modal.currentCCType === 'tempo' && this.modal.tempoEditor) {
+                        this.modal.tempoEditor.setTool(tool);
+                    } else if (this.modal.currentCCType === 'velocity' && this.modal.velocityEditor) {
+                        this.modal.velocityEditor.setTool(tool);
+                    } else if (this.modal.ccEditor) {
+                        this.modal.ccEditor.setTool(tool);
                     }
                 }
                 return;
             }
             if (e.target.closest('#cc-delete-btn')) {
                 e.preventDefault();
-                this.ccPicker.deleteSelectedCCVelocity();
+                this.modal.ccPicker.deleteSelectedCCVelocity();
                 return;
             }
         });
@@ -343,7 +343,7 @@
             ccAddBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                this.ccPicker.openCCPicker();
+                this.modal.ccPicker.openCCPicker();
             });
         }
 
@@ -356,22 +356,22 @@
         const instrumentSelector = document.getElementById('instrument-selector');
         if (instrumentSelector) {
             instrumentSelector.addEventListener('change', (e) => {
-                this.selectedInstrument = parseInt(e.target.value);
-                this.log('info', `Selected instrument changed to: ${this.getInstrumentName(this.selectedInstrument)} (${this.selectedInstrument})`);
+                this.modal.selectedInstrument = parseInt(e.target.value);
+                this.modal.log('info', `Selected instrument changed to: ${this.modal.getInstrumentName(this.modal.selectedInstrument)} (${this.modal.selectedInstrument})`);
             });
         }
 
     // Barre de drag pour redimensionner la section CC/Velocity
         const resizeBar = document.getElementById('cc-resize-btn');
-        const notesSection = this.container.querySelector('.notes-section');
+        const notesSection = this.modal.container.querySelector('.notes-section');
         const ccSection = document.getElementById('cc-section');
 
         if (resizeBar && notesSection && ccSection) {
-            this.log('info', 'Resize bar found, attaching drag events');
+            this.modal.log('info', 'Resize bar found, attaching drag events');
 
     // Log on hover to verify the bar is accessible
             resizeBar.addEventListener('mouseenter', () => {
-                this.log('debug', 'Mouse entered resize bar');
+                this.modal.log('debug', 'Mouse entered resize bar');
             });
 
             let isResizing = false;
@@ -384,11 +384,11 @@
             const startResize = (e) => {
                 e.preventDefault();
 
-                this.log('info', '=== RESIZE MOUSEDOWN DETECTED ===');
+                this.modal.log('info', '=== RESIZE MOUSEDOWN DETECTED ===');
 
     // Ne permettre le resize que si la section CC est expanded
-                if (!this.ccSectionExpanded || !ccSection.classList.contains('expanded')) {
-                    this.log('warn', 'Resize blocked: CC section not expanded');
+                if (!this.modal.ccSectionExpanded || !ccSection.classList.contains('expanded')) {
+                    this.modal.log('warn', 'Resize blocked: CC section not expanded');
                     return;
                 }
 
@@ -397,10 +397,10 @@
                 startNotesHeight = notesSection.clientHeight;
 
     // Capture the REAL available space from modal-dialog (fixed 95vh height)
-                const modalDialog = this.container.querySelector('.modal-dialog');  // ENFANT, pas parent !
-                const modalHeader = this.container.querySelector('.modal-header');
-                const toolbarHeight = this.container.querySelector('.editor-toolbar')?.clientHeight || 0;
-                const channelsToolbarHeight = this.container.querySelector('.channels-toolbar')?.clientHeight || 0;
+                const modalDialog = this.modal.container.querySelector('.modal-dialog');  // ENFANT, pas parent !
+                const modalHeader = this.modal.container.querySelector('.modal-header');
+                const toolbarHeight = this.modal.container.querySelector('.editor-toolbar')?.clientHeight || 0;
+                const channelsToolbarHeight = this.modal.container.querySelector('.channels-toolbar')?.clientHeight || 0;
 
                 const modalDialogHeight = modalDialog?.clientHeight || 0;
                 const modalHeaderHeight = modalHeader?.clientHeight || 0;
@@ -408,7 +408,7 @@
     // Espace disponible = hauteur totale du dialog - header - toolbars
                 availableHeight = modalDialogHeight - modalHeaderHeight - toolbarHeight - channelsToolbarHeight;
 
-                this.log('info', `Resize: modalDialog=${modalDialogHeight}px, modalHeader=${modalHeaderHeight}px, toolbars=${toolbarHeight + channelsToolbarHeight}px, available=${availableHeight}px`);
+                this.modal.log('info', `Resize: modalDialog=${modalDialogHeight}px, modalHeader=${modalHeaderHeight}px, toolbars=${toolbarHeight + channelsToolbarHeight}px, available=${availableHeight}px`);
 
     // Obtenir les flex-grow actuels
                 const notesStyle = window.getComputedStyle(notesSection);
@@ -416,7 +416,7 @@
                 startNotesFlex = parseFloat(notesStyle.flexGrow) || 3;
                 startCCFlex = parseFloat(ccStyle.flexGrow) || 2;
 
-                this.log('info', `Initial flex: notes=${startNotesFlex}, cc=${startCCFlex}`);
+                this.modal.log('info', `Initial flex: notes=${startNotesFlex}, cc=${startCCFlex}`);
 
     // Disable transitions during the resize to avoid animations
                 notesSection.style.transition = 'none';
@@ -448,7 +448,7 @@
                 const newNotesHeight = Math.max(minNotesHeight, Math.min(totalFlexHeight - minCCHeight, startNotesHeight + deltaY));
                 const newCCHeight = totalFlexHeight - newNotesHeight;
 
-                this.log('debug', `Resize: deltaY=${deltaY}, availableH=${availableHeight}px, notesH=${newNotesHeight}px, ccH=${newCCHeight}px`);
+                this.modal.log('debug', `Resize: deltaY=${deltaY}, availableH=${availableHeight}px, notesH=${newNotesHeight}px, ccH=${newCCHeight}px`);
 
     // Appliquer les hauteurs directement en pixels
     // Disable the CSS min-height rules that block the resize
@@ -463,7 +463,7 @@
     // Check whether the styles actually applied
                 const actualNotesHeight = notesSection.clientHeight;
                 const actualCCHeight = ccSection.clientHeight;
-                this.log('debug', `Applied styles - Expected: notes=${newNotesHeight}px cc=${newCCHeight}px, Actual: notes=${actualNotesHeight}px cc=${actualCCHeight}px`);
+                this.modal.log('debug', `Applied styles - Expected: notes=${newNotesHeight}px cc=${newCCHeight}px, Actual: notes=${actualNotesHeight}px cc=${actualCCHeight}px`);
 
     // Resize the editors during drag so the grid stays visible
                 requestAnimationFrame(() => {
@@ -476,37 +476,37 @@
                     void ccLayout?.offsetHeight;
                     void ccMain?.offsetHeight;
 
-                    if (this.pianoRoll && typeof this.pianoRoll.redraw === 'function') {
-                        this.pianoRoll.redraw();
-                        this.log('debug', 'Piano roll redraw called');
+                    if (this.modal.pianoRoll && typeof this.modal.pianoRoll.redraw === 'function') {
+                        this.modal.pianoRoll.redraw();
+                        this.modal.log('debug', 'Piano roll redraw called');
                     }
 
-                    if (this.ccEditor && typeof this.ccEditor.resize === 'function') {
+                    if (this.modal.ccEditor && typeof this.modal.ccEditor.resize === 'function') {
     // SOLUTION 2.1: fix the selector bug (.cc-pitchbend-editor, not -container)
                         const ccContainer = ccSection.querySelector('.cc-pitchbend-editor');
                         const ccHeight = ccContainer?.clientHeight || 0;
-                        this.log('debug', `CC editor resize called - container height: ${ccHeight}px`);
+                        this.modal.log('debug', `CC editor resize called - container height: ${ccHeight}px`);
 
     // Premier appel resize
-                        this.ccEditor.resize();
+                        this.modal.ccEditor.resize();
 
     // SOLUTION 2.3: double call after 2 frames for layout stabilization
                         setTimeout(() => {
-                            if (this.ccEditor && typeof this.ccEditor.resize === 'function') {
-                                this.ccEditor.resize();
-                                this.log('debug', 'CC editor re-resize after layout stabilization');
+                            if (this.modal.ccEditor && typeof this.modal.ccEditor.resize === 'function') {
+                                this.modal.ccEditor.resize();
+                                this.modal.log('debug', 'CC editor re-resize after layout stabilization');
                             }
                         }, 32);
                     }
 
-                    if (this.velocityEditor && typeof this.velocityEditor.resize === 'function') {
-                        this.velocityEditor.resize();
-                        this.log('debug', 'Velocity editor resize called');
+                    if (this.modal.velocityEditor && typeof this.modal.velocityEditor.resize === 'function') {
+                        this.modal.velocityEditor.resize();
+                        this.modal.log('debug', 'Velocity editor resize called');
 
     // Double appel pour velocity editor aussi
                         setTimeout(() => {
-                            if (this.velocityEditor && typeof this.velocityEditor.resize === 'function') {
-                                this.velocityEditor.resize();
+                            if (this.modal.velocityEditor && typeof this.modal.velocityEditor.resize === 'function') {
+                                this.modal.velocityEditor.resize();
                             }
                         }, 32);
                     }
@@ -530,16 +530,16 @@
 
     // Resize the editors after the resize
                     requestAnimationFrame(() => {
-                        if (this.pianoRoll && typeof this.pianoRoll.redraw === 'function') {
-                            this.pianoRoll.redraw();
+                        if (this.modal.pianoRoll && typeof this.modal.pianoRoll.redraw === 'function') {
+                            this.modal.pianoRoll.redraw();
                         }
 
-                        if (this.ccEditor && typeof this.ccEditor.resize === 'function') {
-                            this.ccEditor.resize();
+                        if (this.modal.ccEditor && typeof this.modal.ccEditor.resize === 'function') {
+                            this.modal.ccEditor.resize();
                         }
 
-                        if (this.velocityEditor && typeof this.velocityEditor.resize === 'function') {
-                            this.velocityEditor.resize();
+                        if (this.modal.velocityEditor && typeof this.modal.velocityEditor.resize === 'function') {
+                            this.modal.velocityEditor.resize();
                         }
                     });
                 }
@@ -547,31 +547,28 @@
 
             resizeBar.addEventListener('mousedown', startResize);
     // Stocker les refs pour cleanup dans doClose()
-            this._resizeDoResize = doResize;
-            this._resizeStopResize = stopResize;
+            this.modal._resizeDoResize = doResize;
+            this.modal._resizeStopResize = stopResize;
             document.addEventListener('mousemove', doResize);
             document.addEventListener('mouseup', stopResize);
         }
     }
 
-    /**
-    * Recharger le piano roll avec la séquence actuelle
-    */
-    MidiEditorEventsMixin.reloadPianoRoll = function() {
-        if (!this.pianoRoll) {
-            this.log('warn', 'Cannot reload piano roll: not initialized');
+    reloadPianoRoll() {
+        if (!this.modal.pianoRoll) {
+            this.modal.log('warn', 'Cannot reload piano roll: not initialized');
             return;
         }
 
-        this.log('info', `Reloading piano roll with ${this.sequence.length} notes`);
+        this.modal.log('info', `Reloading piano roll with ${this.modal.sequence.length} notes`);
 
     // Compute the tick range from the sequence
         let maxTick = 0;
         let minNote = 127;
         let maxNote = 0;
 
-        if (this.sequence && this.sequence.length > 0) {
-            this.sequence.forEach(note => {
+        if (this.modal.sequence && this.modal.sequence.length > 0) {
+            this.modal.sequence.forEach(note => {
                 const endTick = note.t + note.g;
                 if (endTick > maxTick) maxTick = endTick;
                 if (note.n < minNote) minNote = note.n;
@@ -583,117 +580,108 @@
         const xrange = Math.max(128, Math.ceil(maxTick / 128) * 128);
         const noteRange = Math.max(36, maxNote - minNote + 12);
 
-        this.pianoRoll.setAttribute('xrange', xrange.toString());
-        this.pianoRoll.setAttribute('yrange', noteRange.toString());
+        this.modal.pianoRoll.setAttribute('xrange', xrange.toString());
+        this.modal.pianoRoll.setAttribute('yrange', noteRange.toString());
 
     // Reload the sequence
-        this.pianoRoll.sequence = this.sequence;
+        this.modal.pianoRoll.sequence = this.modal.sequence;
 
     // Ensure colors are always defined
-        this.pianoRoll.channelColors = this.channelColors;
+        this.modal.pianoRoll.channelColors = this.modal.channelColors;
 
     // Forcer le redraw
-        if (typeof this.pianoRoll.redraw === 'function') {
-            this.pianoRoll.redraw();
+        if (typeof this.modal.pianoRoll.redraw === 'function') {
+            this.modal.pianoRoll.redraw();
         }
 
     // Update the stats
-        this.updateStats();
+        this.modal.updateStats();
 
-        this.log('info', `Piano roll reloaded: ${this.sequence.length} notes, xrange=${xrange}, yrange=${noteRange}`);
+        this.modal.log('info', `Piano roll reloaded: ${this.modal.sequence.length} notes, xrange=${xrange}, yrange=${noteRange}`);
     }
 
-    /**
-    * Zoom horizontal
-    */
-    MidiEditorEventsMixin.zoomHorizontal = function(factor) {
+    zoomHorizontal(factor) {
     // Dispatch to specialized editor if active
-        const specializedRenderer = this._getActiveSpecializedRenderer();
+        const specializedRenderer = this.modal._getActiveSpecializedRenderer();
         if (specializedRenderer && typeof specializedRenderer.setZoom === 'function') {
             const currentTPP = specializedRenderer.ticksPerPixel || 2;
     // factor < 1 = zoom in (reduce ticksPerPixel), factor > 1 = zoom out
             specializedRenderer.setZoom(currentTPP * factor);
-            this.ccPicker.syncAllEditors();
+            this.modal.ccPicker.syncAllEditors();
             return;
         }
 
-        if (!this.pianoRoll) {
-            this.log('warn', 'Cannot zoom: piano roll not initialized');
+        if (!this.modal.pianoRoll) {
+            this.modal.log('warn', 'Cannot zoom: piano roll not initialized');
             return;
         }
 
     // Try to read the property directly
-        const currentRange = this.pianoRoll.xrange || parseInt(this.pianoRoll.getAttribute('xrange')) || 128;
+        const currentRange = this.modal.pianoRoll.xrange || parseInt(this.modal.pianoRoll.getAttribute('xrange')) || 128;
         const newRange = Math.max(16, Math.min(100000, Math.round(currentRange * factor)));
 
     // Try both methods
-        this.pianoRoll.setAttribute('xrange', newRange.toString());
-        if (this.pianoRoll.xrange !== undefined) {
-            this.pianoRoll.xrange = newRange;
+        this.modal.pianoRoll.setAttribute('xrange', newRange.toString());
+        if (this.modal.pianoRoll.xrange !== undefined) {
+            this.modal.pianoRoll.xrange = newRange;
         }
 
     // Force a redraw after a short delay, then sync the editors
         setTimeout(() => {
-            if (typeof this.pianoRoll.redraw === 'function') {
-                this.pianoRoll.redraw();
+            if (typeof this.modal.pianoRoll.redraw === 'function') {
+                this.modal.pianoRoll.redraw();
             }
-            this.ccPicker.syncAllEditors();
+            this.modal.ccPicker.syncAllEditors();
         }, 50);
 
-        this.log('info', `Horizontal zoom: ${currentRange} -> ${newRange}`);
+        this.modal.log('info', `Horizontal zoom: ${currentRange} -> ${newRange}`);
     }
 
-    /**
-    * Zoom vertical
-    */
-    MidiEditorEventsMixin.zoomVertical = function(factor) {
+    zoomVertical(factor) {
     // Dispatch to specialized editor if active
-        const specializedRenderer = this._getActiveSpecializedRenderer();
+        const specializedRenderer = this.modal._getActiveSpecializedRenderer();
         if (specializedRenderer && typeof specializedRenderer.setVerticalZoom === 'function') {
             specializedRenderer.setVerticalZoom(factor);
-            this.ccPicker.syncAllEditors();
+            this.modal.ccPicker.syncAllEditors();
             return;
         }
 
-        if (!this.pianoRoll) {
-            this.log('warn', 'Cannot zoom: piano roll not initialized');
+        if (!this.modal.pianoRoll) {
+            this.modal.log('warn', 'Cannot zoom: piano roll not initialized');
             return;
         }
 
     // Try to read the property directly
-        const currentRange = this.pianoRoll.yrange || parseInt(this.pianoRoll.getAttribute('yrange')) || 36;
+        const currentRange = this.modal.pianoRoll.yrange || parseInt(this.modal.pianoRoll.getAttribute('yrange')) || 36;
         const newRange = Math.max(12, Math.min(88, Math.round(currentRange * factor)));
 
     // Try both methods
-        this.pianoRoll.setAttribute('yrange', newRange.toString());
-        if (this.pianoRoll.yrange !== undefined) {
-            this.pianoRoll.yrange = newRange;
+        this.modal.pianoRoll.setAttribute('yrange', newRange.toString());
+        if (this.modal.pianoRoll.yrange !== undefined) {
+            this.modal.pianoRoll.yrange = newRange;
         }
 
     // Force a redraw after a short delay
         setTimeout(() => {
-            if (typeof this.pianoRoll.redraw === 'function') {
-                this.pianoRoll.redraw();
+            if (typeof this.modal.pianoRoll.redraw === 'function') {
+                this.modal.pianoRoll.redraw();
             }
         }, 50);
 
-        this.log('info', `Vertical zoom: ${currentRange} -> ${newRange}`);
+        this.modal.log('info', `Vertical zoom: ${currentRange} -> ${newRange}`);
     }
 
-    /**
-    * Initialiser la barre de navigation overview
-    */
-    MidiEditorEventsMixin._initNavigationOverview = function(maxTick, xrange) {
-        const overviewContainer = this.container?.querySelector('#navigation-overview-container');
+    _initNavigationOverview(maxTick, xrange) {
+        const overviewContainer = this.modal.container?.querySelector('#navigation-overview-container');
         if (!overviewContainer || typeof NavigationOverviewBar === 'undefined') return;
 
     // Clean up previous instance
-        if (this.navigationBar) {
-            this.navigationBar.destroy();
-            this.navigationBar = null;
+        if (this.modal.navigationBar) {
+            this.modal.navigationBar.destroy();
+            this.modal.navigationBar = null;
         }
 
-        this.navigationBar = new NavigationOverviewBar(overviewContainer, {
+        this.modal.navigationBar = new NavigationOverviewBar(overviewContainer, {
             height: 20,
             onNavigate: (percentage) => {
                 this.scrollHorizontal(percentage);
@@ -703,85 +691,75 @@
             }
         });
 
-        this.navigationBar.setViewport(0, xrange, maxTick);
+        this.modal.navigationBar.setViewport(0, xrange, maxTick);
         this._updateNavigationMinimap();
-        this.log('info', `Navigation overview bar initialized: maxTick=${maxTick}, xrange=${xrange}`);
+        this.modal.log('info', `Navigation overview bar initialized: maxTick=${maxTick}, xrange=${xrange}`);
     }
 
-    /**
-    * Mettre a jour la minimap de la barre de navigation (mode single-channel uniquement)
-    */
-    MidiEditorEventsMixin._updateNavigationMinimap = function() {
-        if (!this.navigationBar) return;
-        if (this.activeChannels && this.activeChannels.size === 1) {
-            const ch = Array.from(this.activeChannels)[0];
-            const source = this.fullSequence || this.sequence || [];
+    _updateNavigationMinimap() {
+        if (!this.modal.navigationBar) return;
+        if (this.modal.activeChannels && this.modal.activeChannels.size === 1) {
+            const ch = Array.from(this.modal.activeChannels)[0];
+            const source = this.modal.fullSequence || this.modal.sequence || [];
             const notes = source.filter(n => n.c === ch);
-            const color = (this.channelColors && this.channelColors[ch]) || '#888';
-            this.navigationBar.setMinimap(notes, color);
+            const color = (this.modal.channelColors && this.modal.channelColors[ch]) || '#888';
+            this.modal.navigationBar.setMinimap(notes, color);
         } else {
-            this.navigationBar.setMinimap(null);
+            this.modal.navigationBar.setMinimap(null);
         }
     }
 
-    /**
-    * Synchroniser la barre de navigation overview avec le piano roll
-    */
-    MidiEditorEventsMixin.setupScrollSynchronization = function() {
-        if (!this.pianoRoll) return;
+    setupScrollSynchronization() {
+        if (!this.modal.pianoRoll) return;
 
         let syncScheduled = false;
 
         const onViewportChange = (e) => {
-            if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) return;
+            if (this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible) return;
 
             const { xoffset, xrange } = e.detail;
 
             // Update navigation overview bar
-            const maxTick = this.midiData?.maxTick || 0;
-            this.navigationBar?.setViewport(xoffset, xrange, maxTick);
+            const maxTick = this.modal.midiData?.maxTick || 0;
+            this.modal.navigationBar?.setViewport(xoffset, xrange, maxTick);
 
             if (!syncScheduled) {
                 syncScheduled = true;
                 requestAnimationFrame(() => {
-                    this.ccPicker.syncAllEditors();
+                    this.modal.ccPicker.syncAllEditors();
                     syncScheduled = false;
                 });
             }
         };
 
-        this.pianoRoll.addEventListener('viewportchange', onViewportChange);
+        this.modal.pianoRoll.addEventListener('viewportchange', onViewportChange);
         // Store reference for cleanup
-        this._viewportChangeHandler = onViewportChange;
+        this.modal._viewportChangeHandler = onViewportChange;
     }
 
-
-    /**
-    * Défilement horizontal (0-100%)
-    */
-    MidiEditorEventsMixin.scrollHorizontal = function(percentage) {
+    scrollHorizontal(percentage) {
     // Calculer l'offset en fonction de la plage totale du fichier MIDI
-        const maxTick = this.midiData?.maxTick || 0;
+        const maxTick = this.modal.midiData?.maxTick || 0;
 
-        if (this.pianoRoll) {
-            const xrange = this.pianoRoll.xrange || parseInt(this.pianoRoll.getAttribute('xrange')) || 128;
+        if (this.modal.pianoRoll) {
+            const xrange = this.modal.pianoRoll.xrange || parseInt(this.modal.pianoRoll.getAttribute('xrange')) || 128;
             const maxOffset = Math.max(0, maxTick - xrange);
             const newOffset = Math.round((percentage / 100) * maxOffset);
 
-            this.pianoRoll.xoffset = newOffset;
-            this.pianoRoll.setAttribute('xoffset', newOffset.toString());
+            this.modal.pianoRoll.xoffset = newOffset;
+            this.modal.pianoRoll.setAttribute('xoffset', newOffset.toString());
 
     // Do not redraw the piano roll while it is hidden (wind editor active)
-            if (typeof this.pianoRoll.redraw === 'function' &&
-                !(this.windInstrumentEditor && this.windInstrumentEditor.isVisible)) {
-                this.pianoRoll.redraw();
+            if (typeof this.modal.pianoRoll.redraw === 'function' &&
+                !(this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible)) {
+                this.modal.pianoRoll.redraw();
             }
         }
 
     // Synchroniser la tablature
-        if (this.tablatureEditor && this.tablatureEditor.isVisible && this.tablatureEditor.renderer) {
-            const renderer = this.tablatureEditor.renderer;
-            const canvasWidth = this.tablatureEditor.tabCanvasEl?.width || 800;
+        if (this.modal.tablatureEditor && this.modal.tablatureEditor.isVisible && this.modal.tablatureEditor.renderer) {
+            const renderer = this.modal.tablatureEditor.renderer;
+            const canvasWidth = this.modal.tablatureEditor.tabCanvasEl?.width || 800;
             const visibleTicks = (canvasWidth - renderer.headerWidth) * renderer.ticksPerPixel;
             const maxOffset = Math.max(0, maxTick - visibleTicks);
             const newOffset = Math.round((percentage / 100) * maxOffset);
@@ -789,9 +767,9 @@
         }
 
     // Sync the drum editor
-        if (this.drumPatternEditor && this.drumPatternEditor.isVisible && this.drumPatternEditor.gridRenderer) {
-            const renderer = this.drumPatternEditor.gridRenderer;
-            const canvasWidth = this.drumPatternEditor.gridCanvasEl?.width || 800;
+        if (this.modal.drumPatternEditor && this.modal.drumPatternEditor.isVisible && this.modal.drumPatternEditor.gridRenderer) {
+            const renderer = this.modal.drumPatternEditor.gridRenderer;
+            const canvasWidth = this.modal.drumPatternEditor.gridCanvasEl?.width || 800;
             const visibleTicks = (canvasWidth - (renderer.headerWidth || 0)) * (renderer.ticksPerPixel || 2);
             const maxOffset = Math.max(0, maxTick - visibleTicks);
             const newOffset = Math.round((percentage / 100) * maxOffset);
@@ -799,78 +777,65 @@
         }
 
     // Sync the wind editor
-        if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) {
-            this.windInstrumentEditor.scrollHorizontal(percentage);
+        if (this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible) {
+            this.modal.windInstrumentEditor.scrollHorizontal(percentage);
         }
 
     // Sync the CC editor
-        this.ccPicker.syncCCEditor();
+        this.modal.ccPicker.syncCCEditor();
     }
 
-    /**
-    * Défilement vertical (0-100%)
-    */
-    MidiEditorEventsMixin.scrollVertical = function(percentage) {
-        if (this.pianoRoll) {
-            const yrange = this.pianoRoll.yrange || parseInt(this.pianoRoll.getAttribute('yrange')) || 36;
+    scrollVertical(percentage) {
+        if (this.modal.pianoRoll) {
+            const yrange = this.modal.pianoRoll.yrange || parseInt(this.modal.pianoRoll.getAttribute('yrange')) || 36;
 
     // Full MIDI range: notes 0-127
             const totalMidiRange = 128;
             const maxOffset = Math.max(0, totalMidiRange - yrange);
             const newOffset = Math.round((percentage / 100) * maxOffset);
 
-            this.pianoRoll.yoffset = newOffset;
-            this.pianoRoll.setAttribute('yoffset', newOffset.toString());
+            this.modal.pianoRoll.yoffset = newOffset;
+            this.modal.pianoRoll.setAttribute('yoffset', newOffset.toString());
 
     // Do not redraw the piano roll while it is hidden (wind editor active)
-            if (typeof this.pianoRoll.redraw === 'function' &&
-                !(this.windInstrumentEditor && this.windInstrumentEditor.isVisible)) {
-                this.pianoRoll.redraw();
+            if (typeof this.modal.pianoRoll.redraw === 'function' &&
+                !(this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible)) {
+                this.modal.pianoRoll.redraw();
             }
         }
 
     // Sync the wind editor
-        if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) {
-            this.windInstrumentEditor.scrollVertical(percentage);
+        if (this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible) {
+            this.modal.windInstrumentEditor.scrollVertical(percentage);
         }
     }
 
-
-
-    // === METHODS RESTORED FROM PLAYBACK SECTION ===
-
-    /**
-     * Apply clean, modern colors to the piano roll based on the current theme.
-     */
-    MidiEditorEventsMixin._applyPianoRollTheme = function() {
-        if (!this.pianoRoll) return;
+    _applyPianoRollTheme() {
+        if (!this.modal.pianoRoll) return;
 
         const isDark = document.body.classList.contains('dark-mode');
 
         if (isDark) {
-            this.pianoRoll.setAttribute('collt', '#262830');
-            this.pianoRoll.setAttribute('coldk', '#22242a');
-            this.pianoRoll.setAttribute('colgrid', '#2e3038');
-            this.pianoRoll.setAttribute('colrulerbg', '#1e2028');
-            this.pianoRoll.setAttribute('colrulerfg', '#8890a0');
-            this.pianoRoll.setAttribute('colrulerborder', '#2e3038');
-            this.pianoRoll.setAttribute('colnoteborder', 'rgba(255,255,255,0.1)');
+            this.modal.pianoRoll.setAttribute('collt', '#262830');
+            this.modal.pianoRoll.setAttribute('coldk', '#22242a');
+            this.modal.pianoRoll.setAttribute('colgrid', '#2e3038');
+            this.modal.pianoRoll.setAttribute('colrulerbg', '#1e2028');
+            this.modal.pianoRoll.setAttribute('colrulerfg', '#8890a0');
+            this.modal.pianoRoll.setAttribute('colrulerborder', '#2e3038');
+            this.modal.pianoRoll.setAttribute('colnoteborder', 'rgba(255,255,255,0.1)');
         } else {
-            this.pianoRoll.setAttribute('collt', '#ddd6f3');
-            this.pianoRoll.setAttribute('coldk', '#d2cae8');
-            this.pianoRoll.setAttribute('colgrid', '#c8c0de');
-            this.pianoRoll.setAttribute('colrulerbg', '#d5cdef');
-            this.pianoRoll.setAttribute('colrulerfg', '#4a3f6b');
-            this.pianoRoll.setAttribute('colrulerborder', '#c0b8d8');
-            this.pianoRoll.setAttribute('colnoteborder', 'rgba(102,126,234,0.25)');
+            this.modal.pianoRoll.setAttribute('collt', '#ddd6f3');
+            this.modal.pianoRoll.setAttribute('coldk', '#d2cae8');
+            this.modal.pianoRoll.setAttribute('colgrid', '#c8c0de');
+            this.modal.pianoRoll.setAttribute('colrulerbg', '#d5cdef');
+            this.modal.pianoRoll.setAttribute('colrulerfg', '#4a3f6b');
+            this.modal.pianoRoll.setAttribute('colrulerborder', '#c0b8d8');
+            this.modal.pianoRoll.setAttribute('colnoteborder', 'rgba(102,126,234,0.25)');
         }
     }
 
-    /**
-     * Ouvrir/fermer le popover de parametres (Canal, Instrument, Device)
-     */
-    MidiEditorEventsMixin.toggleSettingsPopover = function() {
-        const popover = this.container.querySelector('#settings-popover');
+    toggleSettingsPopover() {
+        const popover = this.modal.container.querySelector('#settings-popover');
         if (!popover) return;
         const isVisible = popover.style.display !== 'none';
         popover.style.display = isVisible ? 'none' : 'block';
@@ -886,94 +851,81 @@
         }
     }
 
-    /**
-     * Initialize the PlaybackTimelineBar for the piano editor.
-     */
-    MidiEditorEventsMixin._initTimelineBar = function(maxTick, ticksPerBeat, xrange) {
-        const timelineContainer = this.container?.querySelector('#playback-timeline-container');
+    _initTimelineBar(maxTick, ticksPerBeat, xrange) {
+        const timelineContainer = this.modal.container?.querySelector('#playback-timeline-container');
         if (!timelineContainer || typeof PlaybackTimelineBar === 'undefined') return;
 
-        if (this.timelineBar) {
-            this.timelineBar.destroy();
-            this.timelineBar = null;
+        if (this.modal.timelineBar) {
+            this.modal.timelineBar.destroy();
+            this.modal.timelineBar = null;
         }
 
-        const pianoLeftOffset = this.ccPicker._getActiveEditorHeaderWidth();
+        const pianoLeftOffset = this.modal.ccPicker._getActiveEditorHeaderWidth();
 
-        this.timelineBar = new PlaybackTimelineBar(timelineContainer, {
+        this.modal.timelineBar = new PlaybackTimelineBar(timelineContainer, {
             ticksPerBeat: ticksPerBeat,
             beatsPerMeasure: 4,
             leftOffset: pianoLeftOffset,
             height: 30,
             onSeek: (tick) => {
-                const rangeStart = this.timelineBar.rangeStart || 0;
-                const rangeEnd = this.timelineBar.rangeEnd || (this.midiData?.maxTick || 0);
+                const rangeStart = this.modal.timelineBar.rangeStart || 0;
+                const rangeEnd = this.modal.timelineBar.rangeEnd || (this.modal.midiData?.maxTick || 0);
                 const clampedTick = Math.max(rangeStart, Math.min(tick, rangeEnd));
-                if (this.pianoRoll) this.pianoRoll.cursor = clampedTick;
-                if (this.synthesizer && typeof this.synthesizer.seek === 'function') this.synthesizer.seek(clampedTick);
-                if (this.timelineBar) this.timelineBar.setPlayhead(clampedTick);
-                if (this.tablatureEditor && this.tablatureEditor.isVisible) this.tablatureEditor.updatePlayhead(clampedTick);
-                if (this.drumPatternEditor && this.drumPatternEditor.isVisible) this.drumPatternEditor.updatePlayhead(clampedTick);
-                if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) this.windInstrumentEditor.updatePlayhead(clampedTick);
-                this.log('debug', `Timeline seek to tick ${clampedTick}`);
+                if (this.modal.pianoRoll) this.modal.pianoRoll.cursor = clampedTick;
+                if (this.modal.synthesizer && typeof this.modal.synthesizer.seek === 'function') this.modal.synthesizer.seek(clampedTick);
+                if (this.modal.timelineBar) this.modal.timelineBar.setPlayhead(clampedTick);
+                if (this.modal.tablatureEditor && this.modal.tablatureEditor.isVisible) this.modal.tablatureEditor.updatePlayhead(clampedTick);
+                if (this.modal.drumPatternEditor && this.modal.drumPatternEditor.isVisible) this.modal.drumPatternEditor.updatePlayhead(clampedTick);
+                if (this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible) this.modal.windInstrumentEditor.updatePlayhead(clampedTick);
+                this.modal.log('debug', `Timeline seek to tick ${clampedTick}`);
             },
             onPan: (newScrollX) => {
-                if (this.pianoRoll) {
-                    this.pianoRoll.xoffset = newScrollX;
-                    if (typeof this.pianoRoll.redraw === 'function' &&
-                        !(this.windInstrumentEditor && this.windInstrumentEditor.isVisible)) {
-                        this.pianoRoll.redraw();
+                if (this.modal.pianoRoll) {
+                    this.modal.pianoRoll.xoffset = newScrollX;
+                    if (typeof this.modal.pianoRoll.redraw === 'function' &&
+                        !(this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible)) {
+                        this.modal.pianoRoll.redraw();
                     }
                 }
-                const maxTick2 = this.midiData?.maxTick || 0;
-                const xrange2 = this.pianoRoll?.xrange || 1920;
-                this.navigationBar?.setViewport(newScrollX, xrange2, maxTick2);
-                if (this.tablatureEditor && this.tablatureEditor.isVisible && this.tablatureEditor.renderer) this.tablatureEditor.renderer.setScrollX(newScrollX);
-                if (this.drumPatternEditor && this.drumPatternEditor.isVisible && this.drumPatternEditor.gridRenderer) this.drumPatternEditor.gridRenderer.setScrollX(newScrollX);
-                if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible && this.windInstrumentEditor.renderer) this.windInstrumentEditor.renderer.setScrollX(newScrollX);
-                this.ccPicker.syncCCEditor();
-                this.ccPicker.syncVelocityEditor();
-                this.ccPicker.syncTempoEditor();
+                const maxTick2 = this.modal.midiData?.maxTick || 0;
+                const xrange2 = this.modal.pianoRoll?.xrange || 1920;
+                this.modal.navigationBar?.setViewport(newScrollX, xrange2, maxTick2);
+                if (this.modal.tablatureEditor && this.modal.tablatureEditor.isVisible && this.modal.tablatureEditor.renderer) this.modal.tablatureEditor.renderer.setScrollX(newScrollX);
+                if (this.modal.drumPatternEditor && this.modal.drumPatternEditor.isVisible && this.modal.drumPatternEditor.gridRenderer) this.modal.drumPatternEditor.gridRenderer.setScrollX(newScrollX);
+                if (this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible && this.modal.windInstrumentEditor.renderer) this.modal.windInstrumentEditor.renderer.setScrollX(newScrollX);
+                this.modal.ccPicker.syncCCEditor();
+                this.modal.ccPicker.syncVelocityEditor();
+                this.modal.ccPicker.syncTempoEditor();
             },
             onRangeChange: (start, end) => {
-                if (this.pianoRoll) {
-                    this.pianoRoll.setAttribute('markstart', start.toString());
-                    this.pianoRoll.setAttribute('markend', end.toString());
+                if (this.modal.pianoRoll) {
+                    this.modal.pianoRoll.setAttribute('markstart', start.toString());
+                    this.modal.pianoRoll.setAttribute('markend', end.toString());
                 }
-                this.playbackStartTick = start;
-                this.playbackEndTick = end;
-                if (this.synthesizer) {
-                    const currentTick = this.synthesizer.currentTick || 0;
-                    this.synthesizer.startTick = Math.max(0, start);
-                    this.synthesizer.endTick = end;
-                    if (currentTick < start || currentTick > end) this.synthesizer.currentTick = start;
+                this.modal.playbackStartTick = start;
+                this.modal.playbackEndTick = end;
+                if (this.modal.synthesizer) {
+                    const currentTick = this.modal.synthesizer.currentTick || 0;
+                    this.modal.synthesizer.startTick = Math.max(0, start);
+                    this.modal.synthesizer.endTick = end;
+                    if (currentTick < start || currentTick > end) this.modal.synthesizer.currentTick = start;
                 }
-                if (this.timelineBar) {
-                    const playhead = this.timelineBar.playheadTick;
-                    if (playhead < start) { this.timelineBar.setPlayhead(start); if (this.pianoRoll) this.pianoRoll.cursor = start; }
-                    else if (playhead > end) { this.timelineBar.setPlayhead(end); if (this.pianoRoll) this.pianoRoll.cursor = end; }
+                if (this.modal.timelineBar) {
+                    const playhead = this.modal.timelineBar.playheadTick;
+                    if (playhead < start) { this.modal.timelineBar.setPlayhead(start); if (this.modal.pianoRoll) this.modal.pianoRoll.cursor = start; }
+                    else if (playhead > end) { this.modal.timelineBar.setPlayhead(end); if (this.modal.pianoRoll) this.modal.pianoRoll.cursor = end; }
                 }
-                this.log('debug', `Timeline range changed: ${start} - ${end}`);
+                this.modal.log('debug', `Timeline range changed: ${start} - ${end}`);
             },
         });
 
-        this.timelineBar.setTotalTicks(maxTick);
-        this.timelineBar.setRange(0, maxTick);
-        this.timelineBar.setZoom(xrange / ((timelineContainer.clientWidth || 800) - pianoLeftOffset));
+        this.modal.timelineBar.setTotalTicks(maxTick);
+        this.modal.timelineBar.setRange(0, maxTick);
+        this.modal.timelineBar.setZoom(xrange / ((timelineContainer.clientWidth || 800) - pianoLeftOffset));
     }
-
-    // Facade sub-component (P2-F.10c-batch).
-    class MidiEditorEvents {
-        constructor(modal) { this.modal = modal; }
     }
-    Object.keys(MidiEditorEventsMixin).forEach((key) => {
-        MidiEditorEvents.prototype[key] = function(...args) {
-            return MidiEditorEventsMixin[key].apply(this.modal, args);
-        };
-    });
 
     if (typeof window !== 'undefined') {
-        window.MidiEditorEventsMixin = MidiEditorEventsMixin;
         window.MidiEditorEvents = MidiEditorEvents;
     }
 })();
