@@ -171,20 +171,20 @@
     }
 
     /**
-     * Vérifier si une note est jouable par l'instrument sélectionné
-     * @param {number} noteNumber - Numéro MIDI de la note
-     * @returns {boolean} - true si la note est jouable
+     * Check whether a note is playable by the selected instrument
+     * @param {number} noteNumber - MIDI note number
+     * @returns {boolean} - true if the note is playable
      */
     KeyboardPianoMixin.isNotePlayable = function(noteNumber) {
         if (!this.selectedDeviceCapabilities) {
-            return true; // Pas de restrictions si pas de capacités définies
+            return true; // No restrictions if no capabilities defined
         }
 
         const caps = this.selectedDeviceCapabilities;
 
-        // Mode discrete : vérifier si la note est dans la liste
+        // Discrete mode: check whether the note is in the list
         if (caps.note_selection_mode === 'discrete') {
-            // Si pas de notes sélectionnées, autoriser toutes les notes
+            // If no notes selected, allow all notes
             if (!caps.selected_notes) {
                 return true;
             }
@@ -192,7 +192,7 @@
                 const selectedNotes = typeof caps.selected_notes === 'string'
                     ? JSON.parse(caps.selected_notes)
                     : caps.selected_notes;
-                // Si la liste est vide, autoriser toutes les notes
+                // If the list is empty, allow all notes
                 if (!Array.isArray(selectedNotes) || selectedNotes.length === 0) {
                     return true;
                 }
@@ -202,11 +202,11 @@
             }
         }
 
-        // Mode range : vérifier si la note est dans la plage
+        // Range mode: check whether the note is within the range
         const minNote = caps.note_range_min;
         const maxNote = caps.note_range_max;
 
-        // Si aucune plage définie, autoriser toutes les notes
+        // If no range defined, allow all notes
         if ((minNote === null || minNote === undefined) &&
             (maxNote === null || maxNote === undefined)) {
             return true;
@@ -223,14 +223,14 @@
     }
 
     /**
-     * Délégation d'événements sur le conteneur piano
-     * Remplace les listeners individuels par touche (évite les fuites mémoire)
+     * Event delegation on the piano container
+     * Replaces per-key individual listeners (avoids memory leaks)
      */
     KeyboardPianoMixin._setupPianoDelegation = function() {
         const container = document.getElementById('piano-container');
         if (!container) return;
 
-        // Retirer les anciens listeners délégués s'ils existent
+        // Remove the old delegated listeners if they exist
         if (this._pianoMouseDown) {
             container.removeEventListener('mousedown', this._pianoMouseDown);
             container.removeEventListener('mouseup', this._pianoMouseUp);
@@ -245,7 +245,7 @@
         this._pianoMouseDown = (e) => {
             const key = getKey(e);
             if (key) {
-                e.preventDefault(); // Empêcher le drag/sélection du navigateur
+                e.preventDefault(); // Prevent the browser's drag/selection
                 this.handlePianoKeyDown({ currentTarget: key, preventDefault: () => {} });
             }
         };
@@ -283,8 +283,8 @@
     }
 
     /**
-     * Auto-centrer le clavier sur la plage de notes de l'instrument
-     * Calcule startNote avec une précision à la note (pas à l'octave)
+     * Auto-center the keyboard on the instrument's note range
+     * Computes startNote with per-note precision (not per-octave)
      */
     KeyboardPianoMixin.autoCenterKeyboard = function() {
         const caps = this.selectedDeviceCapabilities;
@@ -295,11 +295,11 @@
             return;
         }
 
-        // Déterminer la plage effective selon le mode
+        // Determine the effective range based on mode
         let effectiveMin, effectiveMax;
 
         if (caps.note_selection_mode === 'discrete' && caps.selected_notes) {
-            // Mode percussion : calculer min/max depuis les notes discrètes
+            // Percussion mode: compute min/max from the discrete notes
             try {
                 const notes = typeof caps.selected_notes === 'string'
                     ? JSON.parse(caps.selected_notes)
@@ -311,7 +311,7 @@
             } catch (e) { /* ignore */ }
         }
 
-        // Fallback sur note_range_min/max
+        // Fall back to note_range_min/max
         if (effectiveMin === undefined || effectiveMax === undefined) {
             const minNote = Number(caps.note_range_min);
             const maxNote = Number(caps.note_range_max);
@@ -325,14 +325,14 @@
             effectiveMax = isFinite(maxNote) ? maxNote : 108;
         }
 
-        // Centre de la plage jouable
+        // Center of the playable range
         const rangeCenter = (effectiveMin + effectiveMax) / 2;
         const totalNotes = this.octaves * 12;
 
-        // startNote idéal pour centrer la vue sur la plage jouable
+        // Ideal startNote to center the view on the playable range
         const idealStart = Math.round(rangeCenter - totalNotes / 2);
 
-        // Clamper dans les limites MIDI (0-127)
+        // Clamp within MIDI bounds (0-127)
         this.startNote = Math.max(0, Math.min(127 - totalNotes, idealStart));
 
         this._updateOctaveDisplay();

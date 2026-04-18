@@ -1,7 +1,7 @@
 /**
- * I18n - Gestionnaire d'internationalisation léger pour Ma-est-tro
+ * I18n - Lightweight internationalization manager for Ma-est-tro
  *
- * Supporte : Français (fr), Anglais (en), Espagnol (es)
+ * Supports: French (fr), English (en), Spanish (es)
  *
  * Usage:
  *   await i18n.init();
@@ -62,13 +62,13 @@
                 return;
             }
 
-            // Récupérer la langue sauvegardée ou détecter automatiquement
+            // Read the saved locale or auto-detect from the browser
             const savedLocale = localStorage.getItem('maestro_locale');
             const browserLocale = navigator.language?.split('-')[0];
 
             let locale = savedLocale || browserLocale || this.fallbackLocale;
 
-            // Vérifier que la locale est supportée
+            // Check that the locale is supported
             if (!this.supportedLocales.includes(locale)) {
                 locale = this.fallbackLocale;
             }
@@ -81,8 +81,8 @@
         }
 
         /**
-         * Charge un fichier de traduction
-         * @param {string} locale - Code de langue (fr, en, es)
+         * Load a translation file
+         * @param {string} locale - Language code (fr, en, es)
          */
         async loadLocale(locale) {
             try {
@@ -97,13 +97,13 @@
                 this._translationCache = new Map(); // Invalidate cache on locale change
                 localStorage.setItem('maestro_locale', locale);
 
-                // Mettre à jour l'attribut lang du HTML
+                // Update the HTML lang attribute
                 document.documentElement.lang = locale;
 
             } catch (error) {
                 console.warn(`[I18n] Failed to load locale "${locale}":`, error);
 
-                // Fallback vers la langue par défaut
+                // Fall back to the default language
                 if (locale !== this.fallbackLocale) {
                     console.log(`[I18n] Falling back to ${this.fallbackLocale}`);
                     await this.loadLocale(this.fallbackLocale);
@@ -112,10 +112,10 @@
         }
 
         /**
-         * Traduit une clé
-         * @param {string} key - Clé de traduction (ex: "settings.title")
-         * @param {Object} params - Paramètres pour l'interpolation
-         * @returns {string|Array|Object} - Texte traduit, tableau, objet ou clé si non trouvé
+         * Translate a key
+         * @param {string} key - Translation key (e.g. "settings.title")
+         * @param {Object} params - Parameters for interpolation
+         * @returns {string|Array|Object} - Translated text, array, object, or the key when not found
          */
         t(key, params = {}) {
             // Fast path: cache hit for parameterless lookups
@@ -137,12 +137,12 @@
                 }
             }
 
-            // Si c'est un tableau, le retourner directement
+            // If it's an array, return it as-is
             if (Array.isArray(value)) {
                 return value;
             }
 
-            // Si c'est un objet (pas un tableau), le retourner directement
+            // If it's an object (not an array), return it as-is
             if (typeof value === 'object' && value !== null) {
                 return value;
             }
@@ -152,7 +152,7 @@
                 return key;
             }
 
-            // Interpolation des paramètres : {param} → valeur
+            // Interpolate parameters: {param} → value
             const result = hasParams
                 ? value.replace(/\{(\w+)\}/g, (match, name) => {
                     return Object.hasOwn(params, name) ? params[name] : match;
@@ -168,8 +168,8 @@
         }
 
         /**
-         * Change la langue courante
-         * @param {string} locale - Code de langue
+         * Change the current language
+         * @param {string} locale - Language code
          */
         async setLocale(locale) {
             if (!this.supportedLocales.includes(locale)) {
@@ -189,10 +189,10 @@
         }
 
         /**
-         * Met à jour tous les éléments avec l'attribut data-i18n
+         * Update every element carrying a data-i18n attribute
          */
         updatePageTranslations() {
-            // Éléments avec data-i18n pour le contenu textuel
+            // Elements with data-i18n for text content
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
                 const translation = this.t(key);
@@ -201,7 +201,7 @@
                 }
             });
 
-            // Éléments avec data-i18n-placeholder pour les placeholders
+            // Elements with data-i18n-placeholder for placeholders
             document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
                 const key = el.getAttribute('data-i18n-placeholder');
                 const translation = this.t(key);
@@ -210,7 +210,7 @@
                 }
             });
 
-            // Éléments avec data-i18n-title pour les titres (tooltips)
+            // Elements with data-i18n-title for titles (tooltips)
             document.querySelectorAll('[data-i18n-title]').forEach(el => {
                 const key = el.getAttribute('data-i18n-title');
                 const translation = this.t(key);
@@ -219,7 +219,7 @@
                 }
             });
 
-            // Éléments avec data-i18n-html pour le contenu HTML
+            // Elements with data-i18n-html for HTML content
             document.querySelectorAll('[data-i18n-html]').forEach(el => {
                 const key = el.getAttribute('data-i18n-html');
                 const translation = this.t(key);
@@ -289,7 +289,7 @@
         }
     }
 
-    // Instance singleton exposée globalement
+    // Singleton instance exposed globally
     global.i18n = new I18n();
 
     // Export pour ES modules si disponible
