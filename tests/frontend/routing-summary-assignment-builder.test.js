@@ -2,7 +2,7 @@
 //
 // Unit tests for the pure state → apply_assignments payload transformation
 // extracted in P2-F.3. The builder lives in
-// public/js/views/components/auto-assign/RoutingSummaryAssignmentBuilder.js
+// public/js/features/auto-assign/RoutingSummaryAssignmentBuilder.js
 // and is exposed on `window.RoutingSummaryAssignmentBuilder`.
 
 import { describe, it, expect, beforeAll } from 'vitest';
@@ -20,8 +20,8 @@ function loadScript(relativePath) {
 }
 
 beforeAll(() => {
-  loadScript('../../public/js/views/components/auto-assign/RoutingSummaryConstants.js');
-  loadScript('../../public/js/views/components/auto-assign/RoutingSummaryAssignmentBuilder.js');
+  loadScript('../../public/js/features/auto-assign/RoutingSummaryConstants.js');
+  loadScript('../../public/js/features/auto-assign/RoutingSummaryAssignmentBuilder.js');
 });
 
 function builder() {

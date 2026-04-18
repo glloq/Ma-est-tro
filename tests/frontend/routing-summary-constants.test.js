@@ -13,7 +13,7 @@ function load(relativePath) {
 }
 
 beforeAll(() => {
-  load('../../public/js/views/components/auto-assign/RoutingSummaryConstants.js');
+  load('../../public/js/features/auto-assign/RoutingSummaryConstants.js');
 });
 
 const C = () => win.RoutingSummaryConstants;

@@ -13,7 +13,7 @@ function load(relativePath) {
 }
 
 beforeAll(() => {
-  load('../../public/js/views/components/auto-assign/RoutingSummaryMinimapNotes.js');
+  load('../../public/js/features/auto-assign/RoutingSummaryMinimapNotes.js');
 });
 
 const extract = (args) => win.RoutingSummaryMinimapNotes.extractNotesForMinimap(args);
