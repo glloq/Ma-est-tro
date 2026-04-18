@@ -16,28 +16,14 @@ export default class InstrumentRepository {
     this.database = database;
   }
 
-  findById(instrumentId) {
-    return this.database.getInstrument(instrumentId);
-  }
-
-  findAll() {
-    return this.database.getInstruments();
-  }
+  // findById/findAll/save/update/delete generic CRUD over a phantom
+  // `instruments` table were removed in v6 (the table was never created
+  // by the baseline schema and no live caller depended on them).
+  // Per-channel data lives on `instruments_latency` (plural), reachable
+  // via the *Settings/*Capabilities helpers below.
 
   findAllWithCapabilities() {
     return this.database.getInstrumentsWithCapabilities();
-  }
-
-  save(instrument) {
-    return this.database.insertInstrument(instrument);
-  }
-
-  update(instrumentId, updates) {
-    return this.database.updateInstrument(instrumentId, updates);
-  }
-
-  delete(instrumentId) {
-    return this.database.deleteInstrument(instrumentId);
   }
 
   getCapabilities(deviceId, channel) {
@@ -68,9 +54,11 @@ export default class InstrumentRepository {
     return this.database.getInstrumentsByDevice(deviceId);
   }
 
-  deleteLatencyProfile(deviceId) {
-    return this.database.deleteLatencyProfile(deviceId);
-  }
+  // deleteLatencyProfile removed in v6 — latency now lives on the
+  // per-channel rows of `instruments_latency` (plural). To clear a
+  // device's latency, either patch sync_delay/avg_latency back to 0
+  // via updateSettings, or use deleteSettingsByDevice to drop the row
+  // entirely.
 
   deleteSettingsByDevice(deviceId, channel) {
     return this.database.deleteInstrumentSettingsByDevice(deviceId, channel);

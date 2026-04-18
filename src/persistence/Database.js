@@ -589,36 +589,12 @@ class DatabaseManager {
     return this.midiDB.findFilesByCategory(categories, mode);
   }
 
-  // Instruments
-  insertInstrument(instrument) {
-    return this.instrumentDB.insertInstrument(instrument);
-  }
-  getInstrument(instrumentId) {
-    return this.instrumentDB.getInstrument(instrumentId);
-  }
-  getInstruments() {
-    return this.instrumentDB.getInstruments();
-  }
-  updateInstrument(instrumentId, updates) {
-    return this.instrumentDB.updateInstrument(instrumentId, updates);
-  }
-  deleteInstrument(instrumentId) {
-    return this.instrumentDB.deleteInstrument(instrumentId);
-  }
+  // Instruments + LatencyProfile generic CRUD methods removed in v6 —
+  // both the `instruments` and `instrument_latency` (singular) tables
+  // were dropped from the baseline schema. Per-channel settings + latency
+  // now live exclusively on `instruments_latency` (plural) via
+  // InstrumentSettingsDB / InstrumentCapabilitiesDB.
 
-  // Latency Profiles
-  saveLatencyProfile(profile) {
-    return this.instrumentDB.saveLatencyProfile(profile);
-  }
-  getLatencyProfile(deviceId) {
-    return this.instrumentDB.getLatencyProfile(deviceId);
-  }
-  getLatencyProfiles() {
-    return this.instrumentDB.getLatencyProfiles();
-  }
-  deleteLatencyProfile(deviceId) {
-    return this.instrumentDB.deleteLatencyProfile(deviceId);
-  }
   deleteInstrumentSettingsByDevice(...args) {
     return this.instrumentDB.deleteInstrumentSettingsByDevice(...args);
   }
@@ -859,7 +835,7 @@ class DatabaseManager {
         size: fs.statSync(this.dbPath).size,
         files: safeCount('midi_files'),
         routes: safeCount('routes'),
-        instruments: safeCount('instruments'),
+        instruments: safeCount('instruments_latency'),
         sessions: safeCount('sessions'),
         playlists: safeCount('playlists')
       };

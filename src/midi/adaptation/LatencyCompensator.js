@@ -42,23 +42,17 @@ class LatencyCompensator {
    *
    * @returns {void}
    */
+  /**
+   * @deprecated Quarantined in v6 — the legacy `instrument_latency`
+   * (singular) table this method targeted was removed by the baseline
+   * schema and never lined up with the columns of `instruments_latency`
+   * (plural). Until a real migration is wired (read sync_delay/avg_latency/
+   * min_latency/max_latency/last_calibration from `instruments_latency`),
+   * profiles only live in memory for the lifetime of the process.
+   */
   loadProfilesFromDB() {
-    try {
-      const profiles = this.app.database.getLatencyProfiles();
-      profiles.forEach(profile => {
-        this.profiles.set(profile.device_id, {
-          latency: profile.latency_ms,
-          lastCalibrated: new Date(profile.last_calibrated),
-          measurementCount: profile.measurement_count || 1,
-          averageLatency: profile.average_latency_ms || profile.latency_ms,
-          minLatency: profile.min_latency_ms || profile.latency_ms,
-          maxLatency: profile.max_latency_ms || profile.latency_ms
-        });
-      });
-      this.app.logger.info(`Loaded ${profiles.length} latency profiles from database`);
-    } catch (error) {
-      this.app.logger.error(`Failed to load latency profiles: ${error.message}`);
-    }
+    // No-op: persistence is suspended (see @deprecated note above).
+    this.app.logger.debug('LatencyCompensator: profile persistence is quarantined; starting with empty in-memory map');
   }
 
   /**
@@ -231,23 +225,8 @@ class LatencyCompensator {
     };
 
     this.profiles.set(deviceId, profile);
-
-    // Save to database
-    try {
-      this.app.database.saveLatencyProfile({
-        device_id: deviceId,
-        latency_ms: latency,
-        last_calibrated: profile.lastCalibrated.toISOString(),
-        measurement_count: profile.measurementCount,
-        average_latency_ms: profile.averageLatency,
-        min_latency_ms: profile.minLatency,
-        max_latency_ms: profile.maxLatency
-      });
-    } catch (error) {
-      this.app.logger.error(`Failed to save latency profile: ${error.message}`);
-    }
-
-    this.app.logger.info(`Latency set for ${deviceId}: ${latency.toFixed(2)}ms`);
+    // Persistence quarantined in v6 — see loadProfilesFromDB.
+    this.app.logger.info(`Latency set for ${deviceId}: ${latency.toFixed(2)}ms (in-memory only)`);
   }
 
   /**
@@ -299,13 +278,8 @@ class LatencyCompensator {
    */
   deleteProfile(deviceId) {
     this.profiles.delete(deviceId);
-    
-    try {
-      this.app.database.deleteLatencyProfile(deviceId);
-      this.app.logger.info(`Latency profile deleted for ${deviceId}`);
-    } catch (error) {
-      this.app.logger.error(`Failed to delete latency profile: ${error.message}`);
-    }
+    // Persistence quarantined in v6 — see loadProfilesFromDB.
+    this.app.logger.info(`Latency profile deleted for ${deviceId} (in-memory only)`);
   }
 
   /**
