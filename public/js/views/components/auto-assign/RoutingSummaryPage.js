@@ -541,12 +541,7 @@ class RoutingSummaryPage {
    * Falls back to looking up the instrument in allInstruments if seg.gmProgram is missing.
    */
   _resolveSegmentGmProgram(seg) {
-    if (seg.gmProgram != null) return seg.gmProgram;
-    if (seg.instrumentId) {
-      const inst = (this.allInstruments || []).find(i => i.id === seg.instrumentId);
-      if (inst) return inst.gm_program;
-    }
-    return null;
+    return window.RoutingSummaryHelpers.resolveSegmentGmProgram(seg, this.allInstruments || []);
   }
 
   /**
@@ -597,11 +592,7 @@ class RoutingSummaryPage {
    * Get display name for an instrument. Prefers custom_name, then GM program name, then device name.
    */
   _getInstrumentDisplayName(inst) {
-    if (!inst) return '?';
-    if (inst.custom_name) return inst.custom_name;
-    const gmName = getGmProgramName(inst.gm_program ?? inst.gmProgram ?? null);
-    if (gmName) return gmName;
-    return inst.name || '?';
+    return window.RoutingSummaryHelpers.getInstrumentDisplayName(inst);
   }
 
   /**
@@ -609,31 +600,24 @@ class RoutingSummaryPage {
    * Handles both { max, avg } objects and raw number formats.
    */
   _getChannelPolyphony(channel) {
-    const ch = String(channel);
-    const analysis = this.channelAnalyses[parseInt(channel)] || this.selectedAssignments[ch]?.channelAnalysis;
-    if (!analysis?.polyphony) return null;
-    if (typeof analysis.polyphony === 'number') return analysis.polyphony;
-    return analysis.polyphony.max ?? null;
+    return window.RoutingSummaryHelpers.getChannelPolyphony({
+      channel,
+      channelAnalyses: this.channelAnalyses,
+      selectedAssignments: this.selectedAssignments
+    });
   }
 
   /**
    * Get total polyphony capacity of assigned instrument(s) for a channel.
    */
   _getInstrumentPolyphony(channel) {
-    const ch = String(channel);
-    const chNum = parseInt(channel);
-    if (this.splitChannels.has(chNum) && this.splitAssignments[chNum]) {
-      return (this.splitAssignments[chNum].segments || []).reduce((s, seg) => {
-        // Look up instrument polyphony from allInstruments
-        const inst = (this.allInstruments || []).find(i => i.id === seg.instrumentId);
-        return s + (inst?.polyphony || seg.polyphonyShare || 16);
-      }, 0);
-    }
-    const assignment = this.selectedAssignments[ch];
-    if (!assignment) return null;
-    // Prefer allInstruments data (always populated from DB)
-    const inst = (this.allInstruments || []).find(i => i.id === assignment.instrumentId);
-    return inst?.polyphony || assignment.polyphony || null;
+    return window.RoutingSummaryHelpers.getInstrumentPolyphony({
+      channel,
+      splitChannels: this.splitChannels,
+      splitAssignments: this.splitAssignments,
+      selectedAssignments: this.selectedAssignments,
+      allInstruments: this.allInstruments || []
+    });
   }
 
   /**
@@ -641,51 +625,29 @@ class RoutingSummaryPage {
    * @returns {{ playable: number, total: number } | null}
    */
   _computePlayableNotes(ch) {
-    const assignment = this.selectedAssignments[String(ch)];
-    const analysis = this.channelAnalyses[parseInt(ch)] || assignment?.channelAnalysis;
-    if (!assignment || !analysis?.noteDistribution) return null;
-
-    const usedNotes = Object.keys(analysis.noteDistribution).map(Number);
-    const totalNotes = usedNotes.length;
-    if (totalNotes === 0) return null;
-
-    const instMin = assignment.noteRangeMin ?? 0;
-    const instMax = assignment.noteRangeMax ?? 127;
-    const adapt = this.adaptationSettings[String(ch)] || {};
-    const semi = (this.autoAdaptation && adapt.pitchShift !== 'none') ? (adapt.transpositionSemitones || 0) : 0;
-    const playable = usedNotes.filter(n => {
-      const shifted = n + semi;
-      return shifted >= instMin && shifted <= instMax;
-    }).length;
-    return { playable, total: totalNotes };
+    return window.RoutingSummaryHelpers.computePlayableNotes({
+      channel: ch,
+      selectedAssignments: this.selectedAssignments,
+      channelAnalyses: this.channelAnalyses,
+      adaptationSettings: this.adaptationSettings,
+      autoAdaptation: this.autoAdaptation
+    });
   }
 
   /**
    * Build <option> list for instrument dropdown in summary table.
    */
   _buildInstrumentOptions(ch, assignment, isSkipped) {
-    const options = this.suggestions[String(ch)] || [];
-    const lowOptions = this.lowScoreSuggestions[String(ch)] || [];
-    const allOptions = [...options, ...lowOptions];
-    const currentId = assignment?.instrumentId || '';
-
-    // "Ignore" option always first — selected when channel is skipped
-    const ignoreLabel = _t('autoAssign.overviewStatusSkipped') || 'Ignore';
-    let html = `<option value="ignore" ${isSkipped ? 'selected' : ''}>${escapeHtml(ignoreLabel)}</option>`;
-
-    if (allOptions.length === 0) {
-      return html;
-    }
-
-    for (const opt of allOptions) {
-      const inst = opt.instrument;
-      const score = opt.compatibility?.score || 0;
-      const name = this._getInstrumentDisplayName(inst);
-      const displayName = name.length > MAX_INST_NAME ? name.slice(0, MAX_INST_NAME - 1) + '\u2026' : name;
-      const selected = (!isSkipped && inst.id === currentId) ? 'selected' : '';
-      html += `<option value="${inst.id}" ${selected}>${escapeHtml(displayName)} (${score})</option>`;
-    }
-    return html;
+    return window.RoutingSummaryHelpers.buildInstrumentOptions({
+      channel: ch,
+      assignment,
+      isSkipped,
+      suggestions: this.suggestions,
+      lowScoreSuggestions: this.lowScoreSuggestions,
+      maxNameLen: MAX_INST_NAME,
+      escape: escapeHtml,
+      getDisplayName: (inst) => this._getInstrumentDisplayName(inst)
+    });
   }
 
   // ============================================================================

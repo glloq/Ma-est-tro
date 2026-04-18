@@ -152,12 +152,102 @@
     return { summaryHTML, supportedCount, unsupportedCount, allUnknown: instrumentCCs === null };
   }
 
+  function resolveSegmentGmProgram(seg, allInstruments) {
+    if (seg.gmProgram != null) return seg.gmProgram;
+    if (seg.instrumentId) {
+      const inst = (allInstruments || []).find(i => i.id === seg.instrumentId);
+      if (inst) return inst.gm_program;
+    }
+    return null;
+  }
+
+  function getInstrumentDisplayName(inst) {
+    if (!inst) return '?';
+    if (inst.custom_name) return inst.custom_name;
+    const gmName = (typeof getGmProgramName === 'function')
+      ? getGmProgramName(inst.gm_program ?? inst.gmProgram ?? null)
+      : null;
+    if (gmName) return gmName;
+    return inst.name || '?';
+  }
+
+  function getChannelPolyphony({ channel, channelAnalyses, selectedAssignments }) {
+    const ch = String(channel);
+    const analysis = channelAnalyses[parseInt(channel)] || selectedAssignments[ch]?.channelAnalysis;
+    if (!analysis?.polyphony) return null;
+    if (typeof analysis.polyphony === 'number') return analysis.polyphony;
+    return analysis.polyphony.max ?? null;
+  }
+
+  function getInstrumentPolyphony({ channel, splitChannels, splitAssignments, selectedAssignments, allInstruments }) {
+    const ch = String(channel);
+    const chNum = parseInt(channel);
+    if (splitChannels.has(chNum) && splitAssignments[chNum]) {
+      return (splitAssignments[chNum].segments || []).reduce((s, seg) => {
+        const inst = (allInstruments || []).find(i => i.id === seg.instrumentId);
+        return s + (inst?.polyphony || seg.polyphonyShare || 16);
+      }, 0);
+    }
+    const assignment = selectedAssignments[ch];
+    if (!assignment) return null;
+    const inst = (allInstruments || []).find(i => i.id === assignment.instrumentId);
+    return inst?.polyphony || assignment.polyphony || null;
+  }
+
+  function buildInstrumentOptions({ channel, assignment, isSkipped, suggestions, lowScoreSuggestions, maxNameLen, escape, getDisplayName }) {
+    const options = suggestions[String(channel)] || [];
+    const lowOptions = lowScoreSuggestions[String(channel)] || [];
+    const allOptions = [...options, ...lowOptions];
+    const currentId = assignment?.instrumentId || '';
+
+    const ignoreLabel = _t('autoAssign.overviewStatusSkipped') || 'Ignore';
+    let html = `<option value="ignore" ${isSkipped ? 'selected' : ''}>${escape(ignoreLabel)}</option>`;
+
+    if (allOptions.length === 0) return html;
+
+    for (const opt of allOptions) {
+      const inst = opt.instrument;
+      const score = opt.compatibility?.score || 0;
+      const name = getDisplayName(inst);
+      const displayName = name.length > maxNameLen ? name.slice(0, maxNameLen - 1) + '\u2026' : name;
+      const selected = (!isSkipped && inst.id === currentId) ? 'selected' : '';
+      html += `<option value="${inst.id}" ${selected}>${escape(displayName)} (${score})</option>`;
+    }
+    return html;
+  }
+
+  function computePlayableNotes({ channel, selectedAssignments, channelAnalyses, adaptationSettings, autoAdaptation }) {
+    const assignment = selectedAssignments[String(channel)];
+    const analysis = channelAnalyses[parseInt(channel)] || assignment?.channelAnalysis;
+    if (!assignment || !analysis?.noteDistribution) return null;
+
+    const usedNotes = Object.keys(analysis.noteDistribution).map(Number);
+    const totalNotes = usedNotes.length;
+    if (totalNotes === 0) return null;
+
+    const instMin = assignment.noteRangeMin ?? 0;
+    const instMax = assignment.noteRangeMax ?? 127;
+    const adapt = adaptationSettings[String(channel)] || {};
+    const semi = (autoAdaptation && adapt.pitchShift !== 'none') ? (adapt.transpositionSemitones || 0) : 0;
+    const playable = usedNotes.filter(n => {
+      const shifted = n + semi;
+      return shifted >= instMin && shifted <= instMax;
+    }).length;
+    return { playable, total: totalNotes };
+  }
+
   window.RoutingSummaryHelpers = Object.freeze({
     mergeHints,
     detectOverlaps,
     computeSplitCoverageScore,
     getCCName,
     getInstrumentCCs,
-    computeCCSummary
+    computeCCSummary,
+    resolveSegmentGmProgram,
+    getInstrumentDisplayName,
+    getChannelPolyphony,
+    getInstrumentPolyphony,
+    computePlayableNotes,
+    buildInstrumentOptions
   });
 })();
