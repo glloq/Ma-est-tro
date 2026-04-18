@@ -534,24 +534,24 @@
     };
 
     /**
-     * Mettre à jour les textes du modal lors du changement de langue
+     * Update the modal texts when the language changes
      */
     SettingsModalContent.updateModalTexts = function() {
         if (!this.modal) return;
 
-        // Mettre à jour le titre
+        // Update the title
         const title = this.modal.querySelector('.settings-title');
         if (title) {
             title.innerHTML = `⚙️ ${i18n.t('settings.title')}`;
         }
 
-        // Mettre à jour le contenu
+        // Update the content
         const content = this.modal.querySelector('.settings-modal-content');
         if (content) {
             content.innerHTML = this.renderContent();
-            // Réattacher les événements pour les nouveaux éléments
+            // Re-attach events for the new elements
             this.attachContentEventListeners();
-            // Restaurer les valeurs du toggle dark mode
+            // Restore the dark mode toggle values
             const darkModeToggle = this.modal.querySelector('#darkModeToggle');
             if (darkModeToggle) darkModeToggle.checked = this.settings.theme === 'dark';
             // Re-vérifier les mises à jour (le HTML a été régénéré)
