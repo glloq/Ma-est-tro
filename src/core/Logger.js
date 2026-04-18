@@ -310,6 +310,37 @@ class Logger {
   }
 
   /**
+   * Truncate the active log file to zero bytes and reopen the write
+   * stream. Safe to call while the logger is in use — in-flight writes
+   * buffered in userspace before the close are flushed; subsequent
+   * writes go to the fresh file. Console output is unaffected.
+   *
+   * @returns {boolean} True on success. Returns false silently when no
+   *   log file is configured (console-only loggers).
+   */
+  clear() {
+    if (!this.logFile) return false;
+    try {
+      if (this._stream) {
+        this._stream.end();
+        this._stream = null;
+      }
+      // Open with 'w' to truncate to zero bytes; close immediately so
+      // the writable-stream reopen below owns the descriptor.
+      fs.closeSync(fs.openSync(this.logFile, 'w'));
+      this._openStream();
+      this._writeCount = 0;
+      return true;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Log clear failed:', error.message);
+      // Best-effort reopen so logging can resume even if truncation failed.
+      try { this._openStream(); } catch { /* ignore */ }
+      return false;
+    }
+  }
+
+  /**
    * Log an Express-style HTTP request at `info`. Captures method, URL, IP
    * and User-Agent for basic access tracing.
    *
