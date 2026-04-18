@@ -1,30 +1,47 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- Cloches tubulaires - GM 14 -->
-  <g transform="rotate(15, 64, 64)">
-
-    <!-- Cadre superieur -->
-    <rect x="18" y="10" width="92" height="6" rx="2" fill="#888" stroke="#666" stroke-width="1.5"/>
-
-    <!-- Montants -->
-    <rect x="18" y="10" width="4" height="100" rx="1" fill="#888" stroke="#666" stroke-width="1"/>
-    <rect x="106" y="10" width="4" height="100" rx="1" fill="#888" stroke="#666" stroke-width="1"/>
-
-    <!-- Tubes (du plus long au plus court) -->
-    <rect x="26" y="18" width="6" height="82" rx="2" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
-    <rect x="36" y="18" width="6" height="76" rx="2" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
-    <rect x="46" y="18" width="6" height="70" rx="2" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
-    <rect x="56" y="18" width="6" height="64" rx="2" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
-    <rect x="66" y="18" width="6" height="58" rx="2" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
-    <rect x="76" y="18" width="6" height="52" rx="2" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
-    <rect x="86" y="18" width="6" height="46" rx="2" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
-    <rect x="96" y="18" width="6" height="40" rx="2" fill="#D4A843" stroke="#B8960F" stroke-width="1"/>
-
-    <!-- Pedale de sustain -->
-    <rect x="50" y="106" width="28" height="6" rx="2" fill="#666" stroke="#444" stroke-width="1"/>
-
-    <!-- Maillet -->
-    <line x1="48" y1="0" x2="54" y2="18" stroke="#8B6914" stroke-width="2.5" stroke-linecap="round"/>
-    <circle cx="54" cy="18" r="4" fill="#D4934A" stroke="#8B6914" stroke-width="1"/>
-
-  </g>
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+	 viewBox="0 0 512 512" xml:space="preserve">
+<g>
+	<rect x="239.304" y="114.087" style="fill:#3E3D41;" width="33.391" height="121.689"/>
+	<rect x="139.687" y="114.087" style="fill:#3E3D41;" width="33.391" height="121.689"/>
+	<rect x="40.07" y="114.087" style="fill:#3E3D41;" width="33.391" height="121.689"/>
+	<rect x="438.539" y="114.087" style="fill:#3E3D41;" width="33.391" height="121.689"/>
+	<rect x="338.922" y="114.087" style="fill:#3E3D41;" width="33.391" height="121.689"/>
+</g>
+<g>
+	<rect x="239.304" y="114.087" style="fill:#29292B;" width="33.391" height="42.663"/>
+	<rect x="139.687" y="114.087" style="fill:#29292B;" width="33.391" height="42.663"/>
+	<rect x="40.07" y="114.087" style="fill:#29292B;" width="33.391" height="42.663"/>
+	<rect x="438.539" y="114.087" style="fill:#29292B;" width="33.391" height="42.663"/>
+	<rect x="338.922" y="114.087" style="fill:#29292B;" width="33.391" height="42.663"/>
+</g>
+<path style="fill:#296099;" d="M492.151,135.605H19.849C8.887,135.605,0,126.719,0,115.757V53.055
+	c0-10.962,8.887-19.849,19.849-19.849H492.15c10.962,0,19.849,8.887,19.849,19.849v62.701
+	C512,126.719,503.113,135.605,492.151,135.605z"/>
+<path style="fill:#22558A;" d="M492.151,33.205H256v102.4h236.151c10.962,0,19.849-8.887,19.849-19.849V53.055
+	C512,42.093,503.113,33.205,492.151,33.205z"/>
+<rect x="40.07" y="65.948" style="fill:#2F6EAF;" width="430.57" height="31.721"/>
+<path style="fill:#C57300;" d="M281.6,412.012h-51.2c-5.943,0-10.76-4.817-10.76-10.76V213.89c0-5.943,4.817-10.76,10.76-10.76h51.2
+	c5.943,0,10.76,4.817,10.76,10.76v187.362C292.36,407.195,287.543,412.012,281.6,412.012z"/>
+<path style="fill:#E6C017;" d="M181.983,378.621h-51.2c-5.943,0-10.76-4.817-10.76-10.76V213.89c0-5.943,4.817-10.76,10.76-10.76
+	h51.2c5.943,0,10.76,4.817,10.76,10.76v153.971C192.742,373.803,187.925,378.621,181.983,378.621z"/>
+<g>
+	<path style="fill:#C57300;" d="M82.365,346.342h-51.2c-5.943,0-10.76-4.817-10.76-10.76V213.89c0-5.943,4.817-10.76,10.76-10.76
+		h51.2c5.943,0,10.76,4.817,10.76,10.76v121.692C93.125,341.525,88.308,346.342,82.365,346.342z"/>
+	<path style="fill:#C57300;" d="M480.835,478.795h-51.2c-5.943,0-10.76-4.817-10.76-10.76V213.89c0-5.943,4.817-10.76,10.76-10.76
+		h51.2c5.943,0,10.76,4.817,10.76,10.76v254.145C491.595,473.977,486.777,478.795,480.835,478.795z"/>
+</g>
+<path style="fill:#E6C017;" d="M381.217,445.403h-51.2c-5.943,0-10.76-4.817-10.76-10.76V213.89c0-5.943,4.817-10.76,10.76-10.76
+	h51.2c5.943,0,10.76,4.817,10.76,10.76v220.753C391.977,440.586,387.16,445.403,381.217,445.403z"/>
+<path style="fill:#A56200;" d="M82.365,203.13h-25.6v143.212h25.6c5.943,0,10.76-4.817,10.76-10.76V213.89
+	C93.125,207.948,88.308,203.13,82.365,203.13z"/>
+<path style="fill:#D6AF00;" d="M181.983,203.13h-25.6v175.49h25.6c5.943,0,10.76-4.817,10.76-10.76V213.89
+	C192.742,207.948,187.925,203.13,181.983,203.13z"/>
+<path style="fill:#A56200;" d="M281.6,203.13h-26.246v208.882H281.6c5.943,0,10.76-4.817,10.76-10.76V213.89
+	C292.36,207.948,287.543,203.13,281.6,203.13z"/>
+<path style="fill:#D6AF00;" d="M381.217,203.13h-25.6v242.273h25.6c5.943,0,10.76-4.817,10.76-10.76V213.89
+	C391.977,207.948,387.16,203.13,381.217,203.13z"/>
+<path style="fill:#A56200;" d="M480.835,203.13h-25.6v275.664h25.6c5.943,0,10.76-4.817,10.76-10.76V213.89
+	C491.595,207.948,486.777,203.13,480.835,203.13z"/>
 </svg>

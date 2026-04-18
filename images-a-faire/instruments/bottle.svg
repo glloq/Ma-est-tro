@@ -1,25 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- Bouteille soufflee - GM 76 -->
-  <g transform="rotate(20, 64, 64)">
-
-    <!-- Goulot -->
-    <rect x="58" y="10" width="12" height="28" rx="5" fill="#7CB9E8" stroke="#4A90C4" stroke-width="1.5" opacity="0.7"/>
-
-    <!-- Epaule -->
-    <path d="M 58 38 C 58 42, 46 48, 42 56" fill="none" stroke="#4A90C4" stroke-width="1.5" opacity="0.7"/>
-    <path d="M 70 38 C 70 42, 82 48, 86 56" fill="none" stroke="#4A90C4" stroke-width="1.5" opacity="0.7"/>
-
-    <!-- Corps de la bouteille -->
-    <rect x="40" y="48" width="48" height="60" rx="6" fill="#7CB9E8" stroke="#4A90C4" stroke-width="1.5" opacity="0.7"/>
-
-    <!-- Fond arrondi -->
-    <path d="M 40 108 C 40 116, 52 120, 64 120 C 76 120, 88 116, 88 108" fill="#7CB9E8" stroke="#4A90C4" stroke-width="1.5" opacity="0.7"/>
-
-    <!-- Reflet (ligne brillante) -->
-    <line x1="50" y1="54" x2="50" y2="100" stroke="#B8DCF0" stroke-width="2" opacity="0.5" stroke-linecap="round"/>
-
-    <!-- Ouverture -->
-    <ellipse cx="64" cy="10" rx="5" ry="2" fill="#4A90C4" opacity="0.5"/>
-
-  </g>
+<?xml version="1.0" encoding="utf-8"?><!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+<svg width="800px" height="800px" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M15 30C15 28.0527 15.6316 26.1579 16.8 24.6L20.4 19.8C20.7895 19.2807 21 18.6491 21 18V4H27V18C27 18.6491 27.2105 19.2807 27.6 19.8L31.2 24.6C32.3684 26.1579 33 28.0527 33 30V42C33 43.1046 32.1046 44 31 44H17C15.8954 44 15 43.1046 15 42V30Z" fill="#2F88FF" stroke="#000000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M21 10L27 10" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M21 12V8" stroke="#000000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M27 12V8" stroke="#000000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
