@@ -1,8 +1,8 @@
 # Contrats WebSocket — Méthode de capture et validation
 
 > Ce document définit le processus de génération, stockage et validation
-> des snapshots de contrats WS utilisés comme filet de sécurité pendant la
-> refactorisation. Référence : [`REFACTORING_PLAN.md` §6 Phase 0](../../REFACTORING_PLAN.md).
+> des snapshots de contrats WS utilisés comme filet de sécurité de
+> non-régression.
 
 ## 1. Objectif
 
@@ -54,7 +54,7 @@ Champs dynamiques (exclus des snapshots) : `timestamp`, `duration`, `id`.
 
 ## 3. Format d'un snapshot de contrat
 
-Chaque contrat est un fichier JSON dans `docs/refactor/contracts/<domaine>/`.
+Chaque contrat est un fichier JSON dans `tests/contracts/fixtures/<domaine>/`.
 
 ```
 contracts/
@@ -150,7 +150,7 @@ réels avec des mocks contrôlés, puis exportent le résultat.
 ```js
 // tests/contracts/playback.contract.test.js
 import { jest, describe, test, expect } from '@jest/globals';
-import contract from '../../docs/refactor/contracts/playback/playback_start.contract.json';
+import contract from '../../tests/contracts/fixtures/playback/playback_start.contract.json';
 
 // Helpers réutilisables
 function createMockApp() {

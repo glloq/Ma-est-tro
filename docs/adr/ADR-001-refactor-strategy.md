@@ -3,7 +3,6 @@
 - **Statut** : Accepté
 - **Date** : 2026-04-17
 - **Références** :
-  [`docs/REFACTORING_PLAN.md`](../REFACTORING_PLAN.md) §3 §5,
   [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)
 
 ## Contexte
