@@ -1,10 +1,10 @@
 /**
- * @file src/storage/InstrumentSettingsDB.js
+ * @file src/persistence/tables/InstrumentSettingsDB.js
  * @description Per-channel persisted instrument settings (custom name,
  * sync delay, GM program, octave mode, comm timeout). Sub-module of
  * {@link InstrumentDatabase}; consumed via `InstrumentRepository`.
  */
-import { buildDynamicUpdate } from './dbHelpers.js';
+import { buildDynamicUpdate } from '../dbHelpers.js';
 
 class InstrumentSettingsDB {
   /**

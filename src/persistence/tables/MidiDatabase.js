@@ -1,5 +1,5 @@
 /**
- * @file src/storage/MidiDatabase.js
+ * @file src/persistence/tables/MidiDatabase.js
  * @description SQLite access layer for MIDI files and their analyzed
  * channel metadata. Owns four tables:
  *   - `midi_files`             — file rows (header + binary BLOB).
@@ -13,7 +13,7 @@
  * The file is large (~830 LOC); only public CRUD entry points carry
  * full JSDoc — SQL is colocated with each method.
  */
-import { buildDynamicUpdate } from './dbHelpers.js';
+import { buildDynamicUpdate } from '../dbHelpers.js';
 
 /**
  * SELECT projection used by every list-style query. Excludes the heavy

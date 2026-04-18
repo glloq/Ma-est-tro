@@ -1,5 +1,5 @@
 /**
- * @file src/storage/dbHelpers.js
+ * @file src/persistence/dbHelpers.js
  * @description Tiny SQL helper used by every database sub-module.
  * Centralises the "build a dynamic UPDATE from an arbitrary patch"
  * pattern with an explicit allow-list to defeat field injection from

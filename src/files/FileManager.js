@@ -1,5 +1,5 @@
 /**
- * @file src/storage/FileManager.js
+ * @file src/files/FileManager.js
  * @description High-level file-library service. Wraps the lower-level
  * {@link MidiDatabase} with workflows for upload (with size check, parse,
  * validate, metadata extraction), edit/save, rename/move, duplicate,

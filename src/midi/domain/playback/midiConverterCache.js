@@ -5,7 +5,7 @@
  * (P0-1.2). One converter per `app` instance — the WeakMap lets the
  * converter be GC'd alongside the app facade in tests.
  */
-import JsonMidiConverter from '../../../storage/JsonMidiConverter.js';
+import JsonMidiConverter from '../../../files/JsonMidiConverter.js';
 
 /** @type {WeakMap<Object, JsonMidiConverter>} app facade → converter. */
 const converterCache = new WeakMap();

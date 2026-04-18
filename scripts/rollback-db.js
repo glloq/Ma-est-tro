@@ -5,7 +5,7 @@
 
 import Config from '../src/core/Config.js';
 import Logger from '../src/core/Logger.js';
-import Database from '../src/storage/Database.js';
+import Database from '../src/persistence/Database.js';
 
 const steps = parseInt(process.argv[2]) || 1;
 

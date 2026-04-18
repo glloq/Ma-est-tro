@@ -1,5 +1,5 @@
 /**
- * @file src/storage/InstrumentDatabase.js
+ * @file src/persistence/tables/InstrumentDatabase.js
  * @description SQLite access layer for the core `instruments`,
  * `latency_profiles` and `presets` tables. Composes four sub-modules
  * for the larger feature areas:
@@ -13,7 +13,7 @@
  */
 import InstrumentSettingsDB from './InstrumentSettingsDB.js';
 import InstrumentCapabilitiesDB from './InstrumentCapabilitiesDB.js';
-import { buildDynamicUpdate } from './dbHelpers.js';
+import { buildDynamicUpdate } from '../dbHelpers.js';
 import RoutingPersistenceDB from './RoutingPersistenceDB.js';
 import DeviceSettingsDB from './DeviceSettingsDB.js';
 

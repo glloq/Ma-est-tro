@@ -1,12 +1,12 @@
 /**
- * @file src/storage/InstrumentCapabilitiesDB.js
+ * @file src/persistence/tables/InstrumentCapabilitiesDB.js
  * @description SQLite access layer for the per-channel capabilities
  * matrix (polyphony, note range, supported CCs, instrument type).
  * Sub-module of {@link InstrumentDatabase}; consumed via the
  * `InstrumentRepository` and the {@link InstrumentMatcher} scoring
  * code path.
  */
-import { buildDynamicUpdate } from './dbHelpers.js';
+import { buildDynamicUpdate } from '../dbHelpers.js';
 
 class InstrumentCapabilitiesDB {
   constructor(db, logger) {

@@ -1,5 +1,5 @@
 /**
- * @file src/storage/BackupScheduler.js
+ * @file src/persistence/BackupScheduler.js
  * @description Periodic SQLite backup scheduler. Uses `node-schedule`
  * cron expressions to snapshot the database file into `backups/` and
  * prune older backups beyond a configurable retention count. Started

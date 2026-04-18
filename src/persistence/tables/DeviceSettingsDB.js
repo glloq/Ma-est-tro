@@ -1,10 +1,10 @@
 /**
- * @file src/storage/DeviceSettingsDB.js
+ * @file src/persistence/tables/DeviceSettingsDB.js
  * @description CRUD for the `devices` table — per-device settings
  * (custom display name, MIDI Clock enable, outbound rate limit).
  * Sub-module of {@link Database}; consumed via `DeviceSettingsRepository`.
  */
-import { buildDynamicUpdate } from './dbHelpers.js';
+import { buildDynamicUpdate } from '../dbHelpers.js';
 
 class DeviceSettingsDB {
   /**

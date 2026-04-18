@@ -1,5 +1,5 @@
 /**
- * @file src/storage/DatabaseLifecycle.js
+ * @file src/persistence/DatabaseLifecycle.js
  * @description Connection bootstrap helpers extracted from
  * `Database.js`. Owns the dance of opening the SQLite file with the
  * right pragmas (WAL, foreign keys), applying schema migrations, and

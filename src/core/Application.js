@@ -26,13 +26,13 @@ import Config from './Config.js';
 import Logger from './Logger.js';
 import EventBus from './EventBus.js';
 import ServiceContainer from './ServiceContainer.js';
-import Database from '../storage/Database.js';
+import Database from '../persistence/Database.js';
 import DeviceManager from '../midi/DeviceManager.js';
 import MidiRouter from '../midi/MidiRouter.js';
 import MidiPlayer from '../midi/MidiPlayer.js';
 import LatencyCompensator from '../midi/LatencyCompensator.js';
 import DelayCalibrator from '../audio/DelayCalibrator.js';
-import FileManager from '../storage/FileManager.js';
+import FileManager from '../files/FileManager.js';
 import BluetoothManager from '../transports/BluetoothManager.js';
 import NetworkManager from '../transports/NetworkManager.js';
 import WebSocketServer from '../api/WebSocketServer.js';
@@ -53,7 +53,7 @@ import FileRoutingSyncService from '../midi/domain/routing/FileRoutingSyncServic
 import DeviceReconciliationService from '../midi/domain/devices/DeviceReconciliationService.js';
 import FileRoutingStatusService from '../midi/domain/files/FileRoutingStatusService.js';
 import MidiClockGenerator from '../midi/MidiClockGenerator.js';
-import BackupScheduler from '../storage/BackupScheduler.js';
+import BackupScheduler from '../persistence/BackupScheduler.js';
 
 /**
  * Application root. One instance per process — see `server.js`.

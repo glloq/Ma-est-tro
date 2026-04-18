@@ -17,7 +17,7 @@
  * Validation: imperative inside each handler (range checks for MIDI
  * fields, length cap for free-text custom names).
  */
-import InstrumentDatabase from '../../storage/InstrumentDatabase.js';
+import InstrumentDatabase from '../../persistence/tables/InstrumentDatabase.js';
 import InstrumentTypeConfig from '../../midi/InstrumentTypeConfig.js';
 import { ValidationError, ConfigurationError } from '../../core/errors/index.js';
 

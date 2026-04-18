@@ -1,5 +1,5 @@
 /**
- * @file src/storage/LightingDatabase.js
+ * @file src/persistence/tables/LightingDatabase.js
  * @description SQLite access layer for the lighting subsystem:
  *   - `lighting_devices`  — physical / virtual lighting devices.
  *   - `lighting_rules`    — condition→action rules (MIDI → light).
@@ -9,7 +9,7 @@
  * Sub-module of {@link Database}; consumed via `LightingRepository`
  * and the LightingManager.
  */
-import { buildDynamicUpdate } from './dbHelpers.js';
+import { buildDynamicUpdate } from '../dbHelpers.js';
 
 class LightingDatabase {
   /**

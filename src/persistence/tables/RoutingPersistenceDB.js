@@ -1,5 +1,5 @@
 /**
- * @file src/storage/RoutingPersistenceDB.js
+ * @file src/persistence/tables/RoutingPersistenceDB.js
  * @description SQLite access layer for the `midi_file_routings` table.
  * Owns the persisted file/channel → device routing rows including the
  * split-routing variant (multiple instruments per channel keyed by

@@ -1,5 +1,5 @@
 /**
- * @file src/storage/MidiFileValidator.js
+ * @file src/files/MidiFileValidator.js
  * @description Non-blocking, post-parse validation pass for MIDI files.
  * Walks the AST after `midi-file` has accepted it and produces a list
  * of warnings / structural anomalies (orphan note-offs, ridiculous

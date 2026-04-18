@@ -1,5 +1,5 @@
 /**
- * @file src/storage/Database.js
+ * @file src/persistence/Database.js
  * @description Top-level SQLite façade. Owns the single
  * `better-sqlite3` connection, runs schema migrations, and instantiates
  * the per-domain sub-modules ({@link MidiDatabase},
@@ -26,11 +26,11 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import MidiDatabase from './MidiDatabase.js';
-import InstrumentDatabase from './InstrumentDatabase.js';
-import LightingDatabase from './LightingDatabase.js';
-import StringInstrumentDatabase from './StringInstrumentDatabase.js';
-import DeviceSettingsDB from './DeviceSettingsDB.js';
+import MidiDatabase from './tables/MidiDatabase.js';
+import InstrumentDatabase from './tables/InstrumentDatabase.js';
+import LightingDatabase from './tables/LightingDatabase.js';
+import StringInstrumentDatabase from './tables/StringInstrumentDatabase.js';
+import DeviceSettingsDB from './tables/DeviceSettingsDB.js';
 import { buildDynamicUpdate } from './dbHelpers.js';
 
 const __filename = fileURLToPath(import.meta.url);

@@ -1,5 +1,5 @@
 /**
- * @file src/storage/MidiFileParser.js
+ * @file src/files/MidiFileParser.js
  * @description Header / metadata extraction helpers used by
  * {@link FileManager} during upload. Extracts:
  *   - File-level metadata (track count, duration, tempo, ppq).
