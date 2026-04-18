@@ -1,37 +1,30 @@
 // ============================================================================
 // File: public/js/views/components/midi-editor/MidiEditorTablature.js
-// Description: Tablature/Drum/Wind editor bridges
-//   Mixin: methods added to MidiEditorModal.prototype
+// Description: Tablature / drum pattern / wind editor bridges for the MIDI
+//   editor. Sub-component class ; called via `modal.tablatureOps.<method>(...)`.
+//   (P2-F.10k body rewrite — no longer a prototype mixin.)
+//   Class name is `MidiEditorTablatureFacade` to avoid collision with the
+//   `TablatureEditor` UI component defined elsewhere.
 // ============================================================================
 
 (function() {
     'use strict';
 
-    const MidiEditorTablatureMixin = {};
+    class MidiEditorTablatureFacade {
+        constructor(modal) {
+            this.modal = modal;
+        }
 
-    // ========================================================================
-    // TABLATURE EDITOR
-    // ========================================================================
-
-    /**
-    * Get the effective device ID for string instrument operations.
-    * Returns '_editor' to allow tablature editing without a physical device.
-    * @returns {string}
-    */
-    MidiEditorTablatureMixin.getEffectiveDeviceId = function() {
+    getEffectiveDeviceId() {
         return '_editor';
     }
 
-    /**
-    * Get the routed instrument display name for a channel.
-    * Returns null if no routing is set for this channel.
-    */
-    MidiEditorTablatureMixin.getRoutedInstrumentName = function(channel) {
-        const routedValue = this.channelRouting.get(channel);
+    getRoutedInstrumentName(channel) {
+        const routedValue = this.modal.channelRouting.get(channel);
         if (!routedValue) return null;
 
     // Find the matching device in connectedDevices
-        for (const device of this.connectedDevices) {
+        for (const device of this.modal.connectedDevices) {
             let value;
             if (device._multiInstrument) {
                 value = `${device.id}::${device._channel}`;
@@ -45,44 +38,41 @@
         return null;
     }
 
-    /**
-    * Set channel routing to a specific connected device
-    */
-    MidiEditorTablatureMixin.setChannelRouting = async function(channel, deviceValue) {
+    async setChannelRouting(channel, deviceValue) {
     // Close the settings popover to prevent its capture-phase mousedown
     // handler from interfering with subsequent button clicks.
         this._closeChannelSettingsPopover();
 
         if (deviceValue) {
-            this.channelRouting.set(channel, deviceValue);
+            this.modal.channelRouting.set(channel, deviceValue);
         } else {
-            this.channelRouting.delete(channel);
-            this._routedGmPrograms.delete(channel);
+            this.modal.channelRouting.delete(channel);
+            this.modal._routedGmPrograms.delete(channel);
         }
     // Clear stale playable note highlights — the old device capabilities
     // no longer apply to the new routing target.
-        if (this.channelPlayableHighlights.has(channel)) {
+        if (this.modal.channelPlayableHighlights.has(channel)) {
             this._clearChannelPlayableHighlight(channel);
         }
     // Close TAB/WIND editors if open for this channel (routed instrument type may differ)
-        if (this.tablatureEditor && this.tablatureEditor.isVisible && this.tablatureEditor.channel === channel) {
-            this.tablatureEditor.hide();
+        if (this.modal.tablatureEditor && this.modal.tablatureEditor.isVisible && this.modal.tablatureEditor.channel === channel) {
+            this.modal.tablatureEditor.hide();
             this._updateTabButtonState(false);
         }
-        if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible && this.windInstrumentEditor.channel === channel) {
-            this.windInstrumentEditor.hide();
+        if (this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible && this.modal.windInstrumentEditor.channel === channel) {
+            this.modal.windInstrumentEditor.hide();
             this._updateWindButtonState(false);
         }
     // Fetch routed instrument gm_program for TAB/WIND button logic
         if (deviceValue) {
-            await this.routingOps._fetchAndCacheRoutedGmProgram(channel, deviceValue);
+            await this.modal.routingOps._fetchAndCacheRoutedGmProgram(channel, deviceValue);
         }
     // Update only the affected chip routing label, then refresh TAB/WIND buttons
         this._updateChipRouting(channel);
         this._refreshStringInstrumentChannels();
 
     // Auto-enable playable notes highlight if global toggle is ON
-        if (this.showPlayableNotes && deviceValue && !this.channelPlayableHighlights.has(channel)) {
+        if (this.modal.showPlayableNotes && deviceValue && !this.modal.channelPlayableHighlights.has(channel)) {
             this._toggleChannelPlayableHighlight(channel);
         }
 
@@ -93,24 +83,20 @@
         });
     }
 
-    /**
-    * Load saved routings from the database and populate channelRouting Map.
-    * Must be called after loadConnectedDevices() so we can build correct routing keys.
-    */
-    MidiEditorTablatureMixin._loadSavedRoutings = async function() {
-        if (!this.currentFile) return;
+    async _loadSavedRoutings() {
+        if (!this.modal.currentFile) return;
         try {
-            const result = await this.api.sendCommand('get_file_routings', { fileId: this.currentFile });
+            const result = await this.modal.api.sendCommand('get_file_routings', { fileId: this.modal.currentFile });
 
     // Clear previous routing state before repopulating
-            this.channelRouting.clear();
-            if (!this._splitChannelNames) this._splitChannelNames = new Map();
-            this._splitChannelNames.clear();
+            this.modal.channelRouting.clear();
+            if (!this.modal._splitChannelNames) this.modal._splitChannelNames = new Map();
+            this.modal._splitChannelNames.clear();
 
             if (result && result.routings && result.routings.length > 0) {
     // Build a lookup of multi-instrument devices
                 const multiInstrumentDevices = new Set();
-                for (const device of this.connectedDevices) {
+                for (const device of this.modal.connectedDevices) {
                     if (device._multiInstrument) {
                         multiInstrumentDevices.add(device.id);
                     }
@@ -127,7 +113,7 @@
                 }
                 for (const [ch, count] of Object.entries(channelRoutingCount)) {
                     if (count > 1) {
-                        this._splitChannelNames.set(parseInt(ch), channelInstrumentNames[ch] || []);
+                        this.modal._splitChannelNames.set(parseInt(ch), channelInstrumentNames[ch] || []);
                     }
                 }
 
@@ -138,119 +124,103 @@
                     const routingKey = isMulti
                         ? `${routing.device_id}::${routing.target_channel != null ? routing.target_channel : routing.channel}`
                         : routing.device_id;
-                    this.channelRouting.set(routing.channel, routingKey);
+                    this.modal.channelRouting.set(routing.channel, routingKey);
                 }
 
-                this.log('info', `Restored ${this.channelRouting.size} saved channel routing(s) from database`);
+                this.modal.log('info', `Restored ${this.modal.channelRouting.size} saved channel routing(s) from database`);
             }
 
     // Fetch gm_programs for all routed instruments (needed for TAB/WIND buttons & preview)
-            await this.routingOps._loadRoutedGmPrograms();
+            await this.modal.routingOps._loadRoutedGmPrograms();
 
     // Use non-destructive DOM updates instead of refreshChannelButtons()
     // which uses innerHTML and destroys elements under the cursor,
     // breaking hover/click state on all channel buttons.
             this._updateAllChipRoutings();
-            this.routingOps.updateChannelButtons();
+            this.modal.routingOps.updateChannelButtons();
             this._refreshStringInstrumentChannels();
 
-            if (this.channelRouting.size > 0) {
+            if (this.modal.channelRouting.size > 0) {
                 this._emitRoutingChanged();
             }
         } catch (error) {
-            this.log('warn', 'Failed to load saved routings:', error);
+            this.modal.log('warn', 'Failed to load saved routings:', error);
         }
     }
 
-    /**
-    * Persist current channelRouting Map to the database via file_routing_sync.
-    */
-    MidiEditorTablatureMixin._syncRoutingToDB = function() {
-        if (!this.currentFile) return Promise.resolve();
+    _syncRoutingToDB() {
+        if (!this.modal.currentFile) return Promise.resolve();
         const channels = {};
-        this.channelRouting.forEach((deviceValue, ch) => {
+        this.modal.channelRouting.forEach((deviceValue, ch) => {
     // Routing key may be "deviceId::targetChannel" for multi-instrument devices
             channels[String(ch)] = deviceValue;
         });
-        return this.api.sendCommand('file_routing_sync', {
-            fileId: this.currentFile,
+        return this.modal.api.sendCommand('file_routing_sync', {
+            fileId: this.modal.currentFile,
             channels
         }).catch(err => {
-            this.log('warn', 'Failed to sync routing to DB:', err);
+            this.modal.log('warn', 'Failed to sync routing to DB:', err);
         });
     }
 
-    /**
-    * Emit routing:changed event so external components (file list, routing modal)
-    * can update their state. Builds a channels object from channelRouting Map.
-    */
-    MidiEditorTablatureMixin._emitRoutingChanged = function() {
-        if (!this.currentFile) return;
+    _emitRoutingChanged() {
+        if (!this.modal.currentFile) return;
         const channels = {};
-        this.channelRouting.forEach((deviceValue, ch) => {
+        this.modal.channelRouting.forEach((deviceValue, ch) => {
             channels[String(ch)] = deviceValue;
         });
-        if (this.eventBus) {
-            this._isEmittingRouting = true;
-            this.eventBus.emit('routing:changed', {
-                fileId: this.currentFile,
+        if (this.modal.eventBus) {
+            this.modal._isEmittingRouting = true;
+            this.modal.eventBus.emit('routing:changed', {
+                fileId: this.modal.currentFile,
                 channels
             });
-            this._isEmittingRouting = false;
+            this.modal._isEmittingRouting = false;
         }
     }
 
-    /**
-    * Toggle channel disabled state
-    */
-    MidiEditorTablatureMixin.toggleChannelDisabled = function(channel) {
-        const previousActiveChannels = new Set(this.activeChannels);
-        if (this.channelDisabled.has(channel)) {
-            this.channelDisabled.delete(channel);
-            this.activeChannels.add(channel);
+    toggleChannelDisabled(channel) {
+        const previousActiveChannels = new Set(this.modal.activeChannels);
+        if (this.modal.channelDisabled.has(channel)) {
+            this.modal.channelDisabled.delete(channel);
+            this.modal.activeChannels.add(channel);
         } else {
-            this.channelDisabled.add(channel);
-            this.activeChannels.delete(channel);
+            this.modal.channelDisabled.add(channel);
+            this.modal.activeChannels.delete(channel);
         }
     // Sync with playback muting
-        if (this.playbackManager) {
-            this.playbackManager.syncMutedChannels();
+        if (this.modal.playbackManager) {
+            this.modal.playbackManager.syncMutedChannels();
         }
-        this.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
-        this.editActions.refreshChannelButtons();
+        this.modal.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
+        this.modal.editActions.refreshChannelButtons();
     }
 
-    /**
-    * Open/close channel settings popover
-    */
-    /**
-    * Close channel settings popover and clean up its outside-click handler.
-    */
-    MidiEditorTablatureMixin._closeChannelSettingsPopover = function() {
-        if (this._channelSettingsPopoverEl) {
-            this._channelSettingsPopoverEl.remove();
-            this._channelSettingsPopoverEl = null;
+    _closeChannelSettingsPopover() {
+        if (this.modal._channelSettingsPopoverEl) {
+            this.modal._channelSettingsPopoverEl.remove();
+            this.modal._channelSettingsPopoverEl = null;
         }
     // Also remove any stale popover from document.body (defensive)
         const stale = document.body.querySelector('.channel-settings-popover');
         if (stale) stale.remove();
 
     // Clean up global mousedown listener
-        if (this._popoverOutsideClickHandler) {
-            document.removeEventListener('mousedown', this._popoverOutsideClickHandler, true);
-            this._popoverOutsideClickHandler = null;
+        if (this.modal._popoverOutsideClickHandler) {
+            document.removeEventListener('mousedown', this.modal._popoverOutsideClickHandler, true);
+            this.modal._popoverOutsideClickHandler = null;
         }
     // Clean up toolbar scroll listener
-        if (this._popoverScrollHandler) {
-            const toolbar = this.container?.querySelector('.channels-toolbar');
-            if (toolbar) toolbar.removeEventListener('scroll', this._popoverScrollHandler);
-            this._popoverScrollHandler = null;
+        if (this.modal._popoverScrollHandler) {
+            const toolbar = this.modal.container?.querySelector('.channels-toolbar');
+            if (toolbar) toolbar.removeEventListener('scroll', this.modal._popoverScrollHandler);
+            this.modal._popoverScrollHandler = null;
         }
-        this._channelSettingsOpen = -1;
+        this.modal._channelSettingsOpen = -1;
     }
 
-    MidiEditorTablatureMixin._toggleChannelSettingsPopover = function(channel, buttonEl) {
-        const wasOpen = this._channelSettingsOpen === channel;
+    _toggleChannelSettingsPopover(channel, buttonEl) {
+        const wasOpen = this.modal._channelSettingsOpen === channel;
         this._closeChannelSettingsPopover();
 
     // If same channel, just close (already done above)
@@ -258,15 +228,15 @@
             return;
         }
 
-        this._channelSettingsOpen = channel;
+        this.modal._channelSettingsOpen = channel;
 
-        const isDisabled = this.channelDisabled.has(channel);
-        const currentRouting = this.channelRouting.get(channel) || '';
-        const isHighlighted = this.channelPlayableHighlights.has(channel);
+        const isDisabled = this.modal.channelDisabled.has(channel);
+        const currentRouting = this.modal.channelRouting.get(channel) || '';
+        const isHighlighted = this.modal.channelPlayableHighlights.has(channel);
 
     // Build device options
-        let deviceOptions = `<option value="">${this.t('midiEditor.noRouting')}</option>`;
-        this.connectedDevices.forEach(device => {
+        let deviceOptions = `<option value="">${this.modal.t('midiEditor.noRouting')}</option>`;
+        this.modal.connectedDevices.forEach(device => {
             let value, name;
             if (device._multiInstrument) {
                 value = `${device.id}::${device._channel}`;
@@ -281,40 +251,40 @@
         });
 
         const hasRouting = !!currentRouting;
-        const color = this.channelColors[channel % this.channelColors.length];
+        const color = this.modal.channelColors[channel % this.modal.channelColors.length];
 
         const popover = document.createElement('div');
         popover.className = 'channel-settings-popover';
         popover.innerHTML = `
             <div class="channel-settings-header">
-                <span>⚙ ${this.t('midiEditor.channelSettingsTitle', { channel: channel + 1 })}</span>
-                <button class="channel-settings-delete-btn" title="${this.t('midiEditor.deleteChannel')}" aria-label="${this.t('midiEditor.deleteChannel')}">🗑</button>
+                <span>⚙ ${this.modal.t('midiEditor.channelSettingsTitle', { channel: channel + 1 })}</span>
+                <button class="channel-settings-delete-btn" title="${this.modal.t('midiEditor.deleteChannel')}" aria-label="${this.modal.t('midiEditor.deleteChannel')}">🗑</button>
             </div>
             <div class="channel-settings-section">
                 <label class="channel-settings-toggle">
                     <input type="checkbox" class="channel-enabled-checkbox" ${!isDisabled ? 'checked' : ''}>
                     <span>🔊</span>
-                    <span>${this.t('midiEditor.channelEnabled')}</span>
+                    <span>${this.modal.t('midiEditor.channelEnabled')}</span>
                 </label>
             </div>
             <div class="channel-settings-section">
                 <label class="channel-settings-toggle">
                     <input type="checkbox" class="channel-playable-checkbox" ${isHighlighted ? 'checked' : ''} ${!hasRouting ? 'disabled' : ''}>
                     <span class="playable-color-dot" style="background: ${color}"></span>
-                    <span>${this.t('midiEditor.showPlayableNotes')}</span>
+                    <span>${this.modal.t('midiEditor.showPlayableNotes')}</span>
                 </label>
-                ${!hasRouting ? `<span class="channel-settings-hint">${this.t('midiEditor.playableRequiresRouting')}</span>` : ''}
+                ${!hasRouting ? `<span class="channel-settings-hint">${this.modal.t('midiEditor.playableRequiresRouting')}</span>` : ''}
             </div>
             <div class="channel-settings-section">
-                <label class="channel-settings-label">🔌 ${this.t('midiEditor.channelRoutingLabel')}</label>
-                <span class="channel-settings-hint">${this.t('midiEditor.channelRoutingHint')}</span>
+                <label class="channel-settings-label">🔌 ${this.modal.t('midiEditor.channelRoutingLabel')}</label>
+                <span class="channel-settings-hint">${this.modal.t('midiEditor.channelRoutingHint')}</span>
                 <select class="channel-routing-select">${deviceOptions}</select>
             </div>
             <div class="channel-settings-section channel-visibility-actions">
-                <label class="channel-settings-label">👁 ${this.t('midiEditor.visibilityTitle')}</label>
+                <label class="channel-settings-label">👁 ${this.modal.t('midiEditor.visibilityTitle')}</label>
                 <div class="channel-visibility-btns">
-                    <button class="channel-hide-others-btn">👁 ${this.t('midiEditor.hideOtherChannels')}</button>
-                    <button class="channel-show-all-btn">👁 ${this.t('midiEditor.showAllChannels')}</button>
+                    <button class="channel-hide-others-btn">👁 ${this.modal.t('midiEditor.hideOtherChannels')}</button>
+                    <button class="channel-show-all-btn">👁 ${this.modal.t('midiEditor.showAllChannels')}</button>
                 </div>
             </div>
         `;
@@ -327,21 +297,21 @@
         popover.style.left = `${rect.left + rect.width / 2}px`;
         popover.style.transform = 'translateX(-50%)';
         document.body.appendChild(popover);
-        this._channelSettingsPopoverEl = popover;
+        this.modal._channelSettingsPopoverEl = popover;
 
     // Close popover on any outside click (global listener on document)
-        this._popoverOutsideClickHandler = (e) => {
+        this.modal._popoverOutsideClickHandler = (e) => {
             if (popover.contains(e.target)) return;
             if (e.target.closest('.chip-settings-btn')) return;
             this._closeChannelSettingsPopover();
         };
-        document.addEventListener('mousedown', this._popoverOutsideClickHandler, true);
+        document.addEventListener('mousedown', this.modal._popoverOutsideClickHandler, true);
 
     // Close popover when toolbar scrolls (button moves but popover stays fixed)
-        const toolbar = this.container?.querySelector('.channels-toolbar');
+        const toolbar = this.modal.container?.querySelector('.channels-toolbar');
         if (toolbar) {
-            this._popoverScrollHandler = () => this._closeChannelSettingsPopover();
-            toolbar.addEventListener('scroll', this._popoverScrollHandler);
+            this.modal._popoverScrollHandler = () => this._closeChannelSettingsPopover();
+            toolbar.addEventListener('scroll', this.modal._popoverScrollHandler);
         }
 
     // Event: delete channel button
@@ -357,7 +327,7 @@
         const checkbox = popover.querySelector('.channel-enabled-checkbox');
         checkbox.addEventListener('change', () => {
             this.toggleChannelDisabled(channel);
-            checkbox.checked = !this.channelDisabled.has(channel);
+            checkbox.checked = !this.modal.channelDisabled.has(channel);
         });
 
     // Event: playable notes toggle checkbox
@@ -365,9 +335,9 @@
         playableCheckbox.addEventListener('change', async () => {
             if (playableCheckbox.disabled) return;
             await this._toggleChannelPlayableHighlight(channel);
-            playableCheckbox.checked = this.channelPlayableHighlights.has(channel);
+            playableCheckbox.checked = this.modal.channelPlayableHighlights.has(channel);
     // Update chip visual
-            this.routingOps.updateChannelButtons();
+            this.modal.routingOps.updateChannelButtons();
         });
 
     // Event: routing select
@@ -381,7 +351,7 @@
                 if (!newValue) {
                     this._clearChannelPlayableHighlight(channel);
                     playableCheckbox.checked = false;
-                    this.routingOps.updateChannelButtons();
+                    this.modal.routingOps.updateChannelButtons();
                 }
             }
         });
@@ -389,93 +359,81 @@
     // Event: hide other channels (solo this one)
         const hideOthersBtn = popover.querySelector('.channel-hide-others-btn');
         hideOthersBtn.addEventListener('click', () => {
-            const previousActiveChannels = new Set(this.activeChannels);
-            this.activeChannels.clear();
-            this.activeChannels.add(channel);
-            this.channels.forEach(ch => {
+            const previousActiveChannels = new Set(this.modal.activeChannels);
+            this.modal.activeChannels.clear();
+            this.modal.activeChannels.add(channel);
+            this.modal.channels.forEach(ch => {
                 if (ch.channel === channel) {
-                    this.channelDisabled.delete(ch.channel);
+                    this.modal.channelDisabled.delete(ch.channel);
                 } else {
-                    this.channelDisabled.add(ch.channel);
+                    this.modal.channelDisabled.add(ch.channel);
                 }
             });
-            this.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
-            this.routingOps.updateChannelButtons();
-            this.renderer.updateInstrumentSelector();
-            this.syncMutedChannels();
+            this.modal.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
+            this.modal.routingOps.updateChannelButtons();
+            this.modal.renderer.updateInstrumentSelector();
+            this.modal.syncMutedChannels();
         });
 
     // Event: show all channels
         const showAllBtn = popover.querySelector('.channel-show-all-btn');
         showAllBtn.addEventListener('click', () => {
-            const previousActiveChannels = new Set(this.activeChannels);
-            this.channels.forEach(ch => {
-                this.activeChannels.add(ch.channel);
-                this.channelDisabled.delete(ch.channel);
+            const previousActiveChannels = new Set(this.modal.activeChannels);
+            this.modal.channels.forEach(ch => {
+                this.modal.activeChannels.add(ch.channel);
+                this.modal.channelDisabled.delete(ch.channel);
             });
-            this.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
-            this.routingOps.updateChannelButtons();
-            this.renderer.updateInstrumentSelector();
-            this.syncMutedChannels();
+            this.modal.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
+            this.modal.routingOps.updateChannelButtons();
+            this.modal.renderer.updateInstrumentSelector();
+            this.modal.syncMutedChannels();
         });
 
     }
 
-    /**
-    * Supprimer entierement un canal : ses notes, son routage et ses configs associees.
-    */
-    MidiEditorTablatureMixin._deleteChannel = function(channel) {
-        if (Array.isArray(this.fullSequence)) {
-            this.fullSequence = this.fullSequence.filter(n => n.c !== channel);
+    _deleteChannel(channel) {
+        if (Array.isArray(this.modal.fullSequence)) {
+            this.modal.fullSequence = this.modal.fullSequence.filter(n => n.c !== channel);
         }
-        if (Array.isArray(this.sequence)) {
-            this.sequence = this.sequence.filter(n => n.c !== channel);
+        if (Array.isArray(this.modal.sequence)) {
+            this.modal.sequence = this.modal.sequence.filter(n => n.c !== channel);
         }
 
-        this.channels = (this.channels || []).filter(ch => ch.channel !== channel);
-        this.activeChannels?.delete(channel);
-        this.channelDisabled?.delete(channel);
-        this.channelRouting?.delete(channel);
-        this.channelPlayableHighlights?.delete(channel);
-        this._routedGmPrograms?.delete(channel);
-        this._splitChannelNames?.delete(channel);
-        this._stringInstrumentChannels?.delete(channel);
-        this._stringInstrumentCCEnabled?.delete(channel);
+        this.modal.channels = (this.modal.channels || []).filter(ch => ch.channel !== channel);
+        this.modal.activeChannels?.delete(channel);
+        this.modal.channelDisabled?.delete(channel);
+        this.modal.channelRouting?.delete(channel);
+        this.modal.channelPlayableHighlights?.delete(channel);
+        this.modal._routedGmPrograms?.delete(channel);
+        this.modal._splitChannelNames?.delete(channel);
+        this.modal._stringInstrumentChannels?.delete(channel);
+        this.modal._stringInstrumentCCEnabled?.delete(channel);
 
         this._closeChannelSettingsPopover();
 
-        if (typeof this.sequenceOps.updateSequenceFromActiveChannels === 'function') {
-            this.sequenceOps.updateSequenceFromActiveChannels(null, true);
+        if (typeof this.modal.sequenceOps.updateSequenceFromActiveChannels === 'function') {
+            this.modal.sequenceOps.updateSequenceFromActiveChannels(null, true);
         }
-        if (typeof this.editActions.refreshChannelButtons === 'function') this.editActions.refreshChannelButtons();
-        if (typeof this.renderer.updateInstrumentSelector === 'function') this.renderer.updateInstrumentSelector();
-        if (typeof this.syncMutedChannels === 'function') this.syncMutedChannels();
+        if (typeof this.modal.editActions.refreshChannelButtons === 'function') this.modal.editActions.refreshChannelButtons();
+        if (typeof this.modal.renderer.updateInstrumentSelector === 'function') this.modal.renderer.updateInstrumentSelector();
+        if (typeof this.modal.syncMutedChannels === 'function') this.modal.syncMutedChannels();
 
-        this.isDirty = true;
-        if (typeof this.routingOps.updateSaveButton === 'function') this.routingOps.updateSaveButton();
+        this.modal.isDirty = true;
+        if (typeof this.modal.routingOps.updateSaveButton === 'function') this.modal.routingOps.updateSaveButton();
     }
 
-    /**
-    * Update visual state of a disabled channel button
-    */
-    MidiEditorTablatureMixin._updateChannelDisabledVisual = function(channel) {
-        const chip = this.container?.querySelector(`.channel-chip[data-channel="${channel}"]`);
+    _updateChannelDisabledVisual(channel) {
+        const chip = this.modal.container?.querySelector(`.channel-chip[data-channel="${channel}"]`);
         if (!chip) return;
-        if (this.channelDisabled.has(channel)) {
+        if (this.modal.channelDisabled.has(channel)) {
             chip.classList.add('channel-disabled');
         } else {
             chip.classList.remove('channel-disabled');
         }
     }
 
-    /**
-    * Update routing indicator on a single channel chip (non-destructive).
-    * Avoids refreshChannelButtons() which would rebuild all DOM and break hover/click.
-    * Only updates the routing label — TAB/WIND buttons are managed centrally
-    * by _refreshStringInstrumentChannels() using _routedGmPrograms cache.
-    */
-    MidiEditorTablatureMixin._updateChipRouting = function(channel) {
-        const chip = this.container?.querySelector(`.channel-chip[data-channel="${channel}"]`);
+    _updateChipRouting(channel) {
+        const chip = this.modal.container?.querySelector(`.channel-chip[data-channel="${channel}"]`);
         if (!chip) return;
 
         const content = chip.querySelector('.chip-content');
@@ -498,13 +456,8 @@
         }
     }
 
-    /**
-    * Non-destructive update of routing indicators on ALL channel chips.
-    * Iterates through every chip group and calls _updateChipRouting for each,
-    * preserving existing DOM elements (no innerHTML rebuild).
-    */
-    MidiEditorTablatureMixin._updateAllChipRoutings = function() {
-        const chipGroups = this.container?.querySelectorAll('.channel-chip-group');
+    _updateAllChipRoutings() {
+        const chipGroups = this.modal.container?.querySelectorAll('.channel-chip-group');
         if (!chipGroups) return;
 
         chipGroups.forEach(group => {
@@ -517,18 +470,14 @@
         });
     }
 
-    /**
-    * Toggle playable notes highlight for a specific channel.
-    * Loads capabilities from the routed device and highlights playable rows on the piano roll.
-    */
-    MidiEditorTablatureMixin._toggleChannelPlayableHighlight = async function(channel) {
-        if (this.channelPlayableHighlights.has(channel)) {
+    async _toggleChannelPlayableHighlight(channel) {
+        if (this.modal.channelPlayableHighlights.has(channel)) {
     // Turn off
             this._clearChannelPlayableHighlight(channel);
             return;
         }
 
-        const routedValue = this.channelRouting.get(channel);
+        const routedValue = this.modal.channelRouting.get(channel);
         if (!routedValue) return;
 
     // Parse deviceId and optional sub-channel
@@ -543,7 +492,7 @@
         try {
             const params = { deviceId };
             if (devChannel !== undefined) params.channel = devChannel;
-            const response = await this.api.sendCommand('instrument_get_capabilities', params);
+            const response = await this.modal.api.sendCommand('instrument_get_capabilities', params);
 
             if (response && response.capabilities) {
                 const caps = response.capabilities;
@@ -562,87 +511,78 @@
                 }
 
                 if (notes && notes.size > 0) {
-                    this.channelPlayableHighlights.set(channel, notes);
+                    this.modal.channelPlayableHighlights.set(channel, notes);
                 } else {
     // Full range = highlight all (store null to mean "all notes")
-                    this.channelPlayableHighlights.set(channel, null);
+                    this.modal.channelPlayableHighlights.set(channel, null);
                 }
             } else {
     // No capabilities = highlight all notes
-                this.channelPlayableHighlights.set(channel, null);
+                this.modal.channelPlayableHighlights.set(channel, null);
             }
         } catch (error) {
-            this.log('error', `Failed to load capabilities for channel ${channel}:`, error);
+            this.modal.log('error', `Failed to load capabilities for channel ${channel}:`, error);
     // Fallback: highlight all notes
-            this.channelPlayableHighlights.set(channel, null);
+            this.modal.channelPlayableHighlights.set(channel, null);
         }
 
         this._syncPianoRollHighlights();
     }
 
-    /**
-    * Remove playable notes highlight for a channel
-    */
-    MidiEditorTablatureMixin._clearChannelPlayableHighlight = function(channel) {
-        this.channelPlayableHighlights.delete(channel);
+    _clearChannelPlayableHighlight(channel) {
+        this.modal.channelPlayableHighlights.delete(channel);
         this._syncPianoRollHighlights();
     }
 
-    /**
-    * Push channel playable highlights to the piano roll and redraw
-    */
-    MidiEditorTablatureMixin._syncPianoRollHighlights = function() {
-        if (!this.pianoRoll) return;
+    _syncPianoRollHighlights() {
+        if (!this.modal.pianoRoll) return;
 
     // Build a structure the piano roll can use: Map<channel, {notes: Set|null, color: string}>
     // Only include highlights for visible (active) channels
         const highlights = new Map();
-        this.channelPlayableHighlights.forEach((notes, ch) => {
-            if (!this.activeChannels.has(ch)) return;
-            const color = this.channelColors[ch % this.channelColors.length];
+        this.modal.channelPlayableHighlights.forEach((notes, ch) => {
+            if (!this.modal.activeChannels.has(ch)) return;
+            const color = this.modal.channelColors[ch % this.modal.channelColors.length];
             highlights.set(ch, { notes, color });
         });
 
-        this.pianoRoll.channelPlayableHighlights = highlights;
-        this.pianoRoll._highlightsDirty = true;
+        this.modal.pianoRoll.channelPlayableHighlights = highlights;
+        this.modal.pianoRoll._highlightsDirty = true;
 
-        if (typeof this.pianoRoll.invalidateGridBuffer === 'function') {
-            this.pianoRoll.invalidateGridBuffer();
+        if (typeof this.modal.pianoRoll.invalidateGridBuffer === 'function') {
+            this.modal.pianoRoll.invalidateGridBuffer();
         }
-        if (typeof this.pianoRoll.redraw === 'function') {
-            this.pianoRoll.redraw();
+        if (typeof this.modal.pianoRoll.redraw === 'function') {
+            this.modal.pianoRoll.redraw();
         }
 
     // Sync drum editor: auto-mute non-playable notes
-        if (this.drumPatternEditor && this.drumPatternEditor.isVisible) {
-            this.drumPatternEditor.syncPlayableNoteMutes();
+        if (this.modal.drumPatternEditor && this.modal.drumPatternEditor.isVisible) {
+            this.modal.drumPatternEditor.syncPlayableNoteMutes();
         }
     }
 
-    /**
-    * Toggle tablature editor for the active channel's string instrument
-    */
-    MidiEditorTablatureMixin.toggleTablature = async function() {
+    async toggleTablature() {
     // If tablature is visible, hide it and restore piano roll
-        if (this.tablatureEditor && this.tablatureEditor.isVisible) {
-            this.tablatureEditor.hide();
+        if (this.modal.tablatureEditor && this.modal.tablatureEditor.isVisible) {
+            this.modal.tablatureEditor.hide();
             this._updateTabButtonState(false);
             return;
         }
 
     // Require exactly one active channel
-        if (this.activeChannels.size !== 1) {
-            this.log('warn', 'Tablature requires exactly one active channel');
+        if (this.modal.activeChannels.size !== 1) {
+            this.modal.log('warn', 'Tablature requires exactly one active channel');
             return;
         }
 
-        const activeChannel = Array.from(this.activeChannels)[0];
+        const activeChannel = Array.from(this.modal.activeChannels)[0];
 
         try {
     // If channel is routed to a device, try its string instrument config first
             let stringInstrument = null;
-            if (this.channelRouting.has(activeChannel)) {
-                const routedValue = this.channelRouting.get(activeChannel);
+            if (this.modal.channelRouting.has(activeChannel)) {
+                const routedValue = this.modal.channelRouting.get(activeChannel);
                 let routedDeviceId = routedValue;
                 let routedChannel = activeChannel;
                 if (routedValue.includes('::')) {
@@ -651,7 +591,7 @@
                     routedChannel = parseInt(parts[1]);
                 }
                 try {
-                    const resp = await this.api.sendCommand('string_instrument_get', {
+                    const resp = await this.modal.api.sendCommand('string_instrument_get', {
                         device_id: routedDeviceId,
                         channel: routedChannel
                     });
@@ -661,78 +601,70 @@
 
     // Fallback: sync with GM preset when no routed config found
             if (!stringInstrument) {
-                const channelInfo = this.channels.find(ch => ch.channel === activeChannel);
-                const hasRouting = this.channelRouting.has(activeChannel);
-                const routedGm = this._routedGmPrograms.get(activeChannel);
+                const channelInfo = this.modal.channels.find(ch => ch.channel === activeChannel);
+                const hasRouting = this.modal.channelRouting.has(activeChannel);
+                const routedGm = this.modal._routedGmPrograms.get(activeChannel);
                 const effectiveProgram = (hasRouting && routedGm != null) ? routedGm : (channelInfo?.program ?? null);
                 const gmMatch = effectiveProgram != null ? MidiEditorChannelPanel.getStringInstrumentCategory(effectiveProgram) : null;
 
                 if (gmMatch) {
-                    await this.api.sendCommand('string_instrument_create_from_preset', {
+                    await this.modal.api.sendCommand('string_instrument_create_from_preset', {
                         device_id: this.getEffectiveDeviceId(),
                         channel: activeChannel,
                         preset: gmMatch.preset
                     });
-                    this.log('info', `Synced ${gmMatch.category} preset for channel ${activeChannel + 1}`);
+                    this.modal.log('info', `Synced ${gmMatch.category} preset for channel ${activeChannel + 1}`);
                 }
 
                 stringInstrument = await this.findStringInstrument(activeChannel);
             }
 
             if (!stringInstrument) {
-                this.log('info', 'No string instrument configured for this channel');
-                this.showNotification(
-                    this.t('tablature.noStringInstrument') || 'Configure this channel as a string instrument in the instrument settings first.',
+                this.modal.log('info', 'No string instrument configured for this channel');
+                this.modal.showNotification(
+                    this.modal.t('tablature.noStringInstrument') || 'Configure this channel as a string instrument in the instrument settings first.',
                     'info'
                 );
                 return;
             }
 
     // Get notes for this channel
-            const channelNotes = (this.fullSequence || []).filter(n => n.c === activeChannel);
+            const channelNotes = (this.modal.fullSequence || []).filter(n => n.c === activeChannel);
 
     // Hide wind editor if visible
-            if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) {
-                this.windInstrumentEditor.hide();
+            if (this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible) {
+                this.modal.windInstrumentEditor.hide();
                 this._updateWindButtonState(false);
             }
 
     // Hide drum editor if visible
-            if (this.drumPatternEditor && this.drumPatternEditor.isVisible) {
-                this.drumPatternEditor.hide();
+            if (this.modal.drumPatternEditor && this.modal.drumPatternEditor.isVisible) {
+                this.modal.drumPatternEditor.hide();
                 this._updateDrumButtonState(false);
             }
 
     // Create or show tablature editor (replaces piano roll in the same space)
-            if (!this.tablatureEditor) {
-                this.tablatureEditor = new TablatureEditor(this);
+            if (!this.modal.tablatureEditor) {
+                this.modal.tablatureEditor = new TablatureEditor(this);
             }
 
-            await this.tablatureEditor.show(stringInstrument, channelNotes, activeChannel);
+            await this.modal.tablatureEditor.show(stringInstrument, channelNotes, activeChannel);
             this._updateTabButtonState(true);
 
         } catch (error) {
-            this.log('error', 'Failed to toggle tablature:', error);
+            this.modal.log('error', 'Failed to toggle tablature:', error);
         }
     }
 
-    /**
-    * Update the TAB button active state on channel buttons
-    * @param {boolean} active
-    */
-    MidiEditorTablatureMixin._updateTabButtonState = function(_active) {
+    _updateTabButtonState(_active) {
         this._updateChannelTabButtons();
     }
 
-    /**
-    * Open tablature for a specific channel (called from channel TAB sub-buttons)
-    * @param {number} channel
-    */
-    MidiEditorTablatureMixin._openTablatureForChannel = async function(channel) {
+    async _openTablatureForChannel(channel) {
     // If tablature is already visible for this channel, toggle it off and restore channels
-        if (this.tablatureEditor && this.tablatureEditor.isVisible
-            && this.tablatureEditor.channel === channel) {
-            this.tablatureEditor.hide();
+        if (this.modal.tablatureEditor && this.modal.tablatureEditor.isVisible
+            && this.modal.tablatureEditor.channel === channel) {
+            this.modal.tablatureEditor.hide();
             this._updateTabButtonState(false);
             this._restoreActiveChannels();
             return;
@@ -742,31 +674,31 @@
         this._saveActiveChannels();
 
     // Ensure only this channel is active
-        const previousActiveChannels = new Set(this.activeChannels);
-        this.activeChannels.clear();
-        this.activeChannels.add(channel);
-        this._pianoRollSoloChannel = null;
+        const previousActiveChannels = new Set(this.modal.activeChannels);
+        this.modal.activeChannels.clear();
+        this.modal.activeChannels.add(channel);
+        this.modal._pianoRollSoloChannel = null;
 
-        this.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
-        if (this.channelPanel) {
-            this.channelPanel.updateChannelButtons();
-            this.channelPanel.updateInstrumentSelector();
+        this.modal.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
+        if (this.modal.channelPanel) {
+            this.modal.channelPanel.updateChannelButtons();
+            this.modal.channelPanel.updateInstrumentSelector();
         }
 
     // If tablature is visible for a different channel, hide it first
-        if (this.tablatureEditor && this.tablatureEditor.isVisible) {
-            this.tablatureEditor.hide();
+        if (this.modal.tablatureEditor && this.modal.tablatureEditor.isVisible) {
+            this.modal.tablatureEditor.hide();
         }
 
     // Hide drum pattern editor if visible (mutually exclusive)
-        if (this.drumPatternEditor && this.drumPatternEditor.isVisible) {
-            this.drumPatternEditor.hide();
+        if (this.modal.drumPatternEditor && this.modal.drumPatternEditor.isVisible) {
+            this.modal.drumPatternEditor.hide();
             this._updateDrumButtonState(false);
         }
 
     // Hide wind editor if visible (mutually exclusive)
-        if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) {
-            this.windInstrumentEditor.hide();
+        if (this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible) {
+            this.modal.windInstrumentEditor.hide();
             this._updateWindButtonState(false);
         }
 
@@ -774,47 +706,43 @@
         await this.toggleTablature();
     }
 
-    /**
-    * Scan database for channels with string instrument configs and reveal their TAB buttons.
-    * Called after channel list changes or device selection changes.
-    */
-    MidiEditorTablatureMixin._refreshStringInstrumentChannels = async function() {
-        if (!this._stringInstrumentChannels) {
-            this._stringInstrumentChannels = new Set();
+    async _refreshStringInstrumentChannels() {
+        if (!this.modal._stringInstrumentChannels) {
+            this.modal._stringInstrumentChannels = new Set();
         }
-        if (!this._stringInstrumentCCEnabled) {
-            this._stringInstrumentCCEnabled = new Map();
+        if (!this.modal._stringInstrumentCCEnabled) {
+            this.modal._stringInstrumentCCEnabled = new Map();
         }
 
     // Guard against concurrent calls — if a refresh is already in flight,
     // mark that another one was requested and return. The running call will
     // re-run once it finishes.
-        if (this._refreshStringInstrumentPending) {
-            this._refreshStringInstrumentQueued = true;
+        if (this.modal._refreshStringInstrumentPending) {
+            this.modal._refreshStringInstrumentQueued = true;
             return;
         }
-        this._refreshStringInstrumentPending = true;
+        this.modal._refreshStringInstrumentPending = true;
 
         try { // outer try for concurrency guard
         try {
     // Filter by effective device to avoid showing TAB for instruments
     // configured on other devices
             const deviceId = this.getEffectiveDeviceId();
-            const resp = await this.api.sendCommand('string_instrument_list', {
+            const resp = await this.modal.api.sendCommand('string_instrument_list', {
                 device_id: deviceId
             });
             if (resp?.instruments) {
-                this._stringInstrumentChannels.clear();
-                this._stringInstrumentCCEnabled.clear();
+                this.modal._stringInstrumentChannels.clear();
+                this.modal._stringInstrumentCCEnabled.clear();
                 for (const si of resp.instruments) {
-                    this._stringInstrumentChannels.add(si.channel);
-                    this._stringInstrumentCCEnabled.set(si.channel, si.cc_enabled !== false);
+                    this.modal._stringInstrumentChannels.add(si.channel);
+                    this.modal._stringInstrumentCCEnabled.set(si.channel, si.cc_enabled !== false);
                 }
             }
         } catch { /* ignore */ }
 
     // Add/remove TAB buttons per channel based on string instrument detection
-        const chipGroups = this.container?.querySelectorAll('.channel-chip-group');
+        const chipGroups = this.modal.container?.querySelectorAll('.channel-chip-group');
         if (!chipGroups) return;
 
         chipGroups.forEach(group => {
@@ -830,8 +758,8 @@
                     const btn = document.createElement('button');
                     btn.className = 'channel-drum-btn';
                     btn.dataset.channel = ch;
-                    btn.title = this.t('drumPattern.toggleEditor');
-                    btn.textContent = this.t('midiEditor.drumButton');
+                    btn.title = this.modal.t('drumPattern.toggleEditor');
+                    btn.textContent = this.modal.t('midiEditor.drumButton');
                     btn.addEventListener('click', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -842,17 +770,17 @@
                 return;
             }
 
-            const channelInfo = this.channels?.find(c => c.channel === ch);
+            const channelInfo = this.modal.channels?.find(c => c.channel === ch);
     // Determine effective GM program: use routed instrument's gm_program if available
-            const hasRouting = this.channelRouting.has(ch);
-            const routedGm = this._routedGmPrograms.get(ch);
+            const hasRouting = this.modal.channelRouting.has(ch);
+            const routedGm = this.modal._routedGmPrograms.get(ch);
             const effectiveProgram = (hasRouting && routedGm != null) ? routedGm : (channelInfo?.program ?? null);
 
     // String instrument detection: check effective program (routed or GM)
             const isGmString = effectiveProgram != null &&
                 typeof MidiEditorChannelPanel !== 'undefined' &&
                 MidiEditorChannelPanel.getStringInstrumentCategory(effectiveProgram) !== null;
-            const ccEnabled = this._stringInstrumentCCEnabled.get(ch);
+            const ccEnabled = this.modal._stringInstrumentCCEnabled.get(ch);
             const isStringInstrument = isGmString && ccEnabled !== false;
 
             const existingTabBtn = group.querySelector('.channel-tab-btn');
@@ -864,8 +792,8 @@
                 btn.className = 'channel-tab-btn';
                 btn.dataset.channel = ch;
                 btn.dataset.color = color;
-                btn.title = this.t('tablature.tabButton', { instrument: channelInfo?.instrument || this.t('stringInstrument.string') });
-                btn.textContent = this.t('midiEditor.tabButton');
+                btn.title = this.modal.t('tablature.tabButton', { instrument: channelInfo?.instrument || this.modal.t('stringInstrument.string') });
+                btn.textContent = this.modal.t('midiEditor.tabButton');
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -887,8 +815,8 @@
                     const windBtn = document.createElement('button');
                     windBtn.className = 'channel-wind-btn';
                     windBtn.dataset.channel = ch;
-                    windBtn.title = this.t('windEditor.windEditorTitle', { name: WindInstrumentDatabase.getPresetByProgram(effectiveProgram)?.name || this.t('windEditor.icon') });
-                    windBtn.textContent = this.t('midiEditor.windButton');
+                    windBtn.title = this.modal.t('windEditor.windEditorTitle', { name: WindInstrumentDatabase.getPresetByProgram(effectiveProgram)?.name || this.modal.t('windEditor.icon') });
+                    windBtn.textContent = this.modal.t('midiEditor.windButton');
                     windBtn.addEventListener('click', (ev) => {
                         ev.preventDefault();
                         ev.stopPropagation();
@@ -910,8 +838,8 @@
                 const editBtn = document.createElement('button');
                 editBtn.className = 'channel-edit-btn';
                 editBtn.dataset.channel = ch;
-                editBtn.title = this.t('midiEditor.editChannel');
-                editBtn.textContent = this.t('midiEditor.editButton');
+                editBtn.title = this.modal.t('midiEditor.editChannel');
+                editBtn.textContent = this.modal.t('midiEditor.editButton');
                 editBtn.addEventListener('click', (ev) => {
                     ev.preventDefault();
                     ev.stopPropagation();
@@ -923,25 +851,22 @@
             }
         });
         } finally {
-            this._refreshStringInstrumentPending = false;
+            this.modal._refreshStringInstrumentPending = false;
     // If another refresh was requested while we were running, re-run now
     // with fresh DOM state.
-            if (this._refreshStringInstrumentQueued) {
-                this._refreshStringInstrumentQueued = false;
+            if (this.modal._refreshStringInstrumentQueued) {
+                this.modal._refreshStringInstrumentQueued = false;
                 this._refreshStringInstrumentChannels();
             }
         }
     }
 
-    /**
-    * Update active state of all channel TAB sub-buttons
-    */
-    MidiEditorTablatureMixin._updateChannelTabButtons = function() {
-        const tabBtns = this.container?.querySelectorAll('.channel-tab-btn');
+    _updateChannelTabButtons() {
+        const tabBtns = this.modal.container?.querySelectorAll('.channel-tab-btn');
         if (!tabBtns) return;
 
-        const isTabVisible = this.tablatureEditor && this.tablatureEditor.isVisible;
-        const tabChannel = isTabVisible ? this.tablatureEditor.channel : -1;
+        const isTabVisible = this.modal.tablatureEditor && this.modal.tablatureEditor.isVisible;
+        const tabChannel = isTabVisible ? this.modal.tablatureEditor.channel : -1;
 
         tabBtns.forEach(btn => {
             const ch = parseInt(btn.dataset.channel);
@@ -949,18 +874,10 @@
         });
     }
 
-    // ========================================================================
-    // DRUM PATTERN EDITOR
-    // ========================================================================
-
-    /**
-    * Open drum pattern editor for a specific channel
-    * @param {number} channel - MIDI channel (typically 9)
-    */
-    MidiEditorTablatureMixin._openDrumPatternForChannel = function(channel) {
+    _openDrumPatternForChannel(channel) {
     // Toggle off if already visible for this channel — restore saved channels
-        if (this.drumPatternEditor && this.drumPatternEditor.isVisible && this.drumPatternEditor.channel === channel) {
-            this.drumPatternEditor.hide();
+        if (this.modal.drumPatternEditor && this.modal.drumPatternEditor.isVisible && this.modal.drumPatternEditor.channel === channel) {
+            this.modal.drumPatternEditor.hide();
             this._updateDrumButtonState(false);
             this._restoreActiveChannels();
             return;
@@ -971,67 +888,55 @@
 
     // Check if a specialty editor is currently managing notes (piano roll is stale)
         const specialtyEditorWasActive =
-            (this.tablatureEditor && this.tablatureEditor.isVisible) ||
-            (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) ||
-            (this.drumPatternEditor && this.drumPatternEditor.isVisible);
+            (this.modal.tablatureEditor && this.modal.tablatureEditor.isVisible) ||
+            (this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible) ||
+            (this.modal.drumPatternEditor && this.modal.drumPatternEditor.isVisible);
 
     // Hide other specialty editors FIRST (they already synced to fullSequence)
-        if (this.tablatureEditor && this.tablatureEditor.isVisible) {
-            this.tablatureEditor.hide();
+        if (this.modal.tablatureEditor && this.modal.tablatureEditor.isVisible) {
+            this.modal.tablatureEditor.hide();
             this._updateChannelTabButtons();
         }
-        if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) {
-            this.windInstrumentEditor.hide();
+        if (this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible) {
+            this.modal.windInstrumentEditor.hide();
             this._updateWindButtonState(false);
         }
 
     // Ensure only this channel is active
     // Skip piano roll sync if a specialty editor was active (fullSequence is already current)
-        this.activeChannels.clear();
-        this.activeChannels.add(channel);
-        this._pianoRollSoloChannel = null;
-        this.sequenceOps.updateSequenceFromActiveChannels(new Set([channel]), specialtyEditorWasActive);
-        this.editActions.refreshChannelButtons();
+        this.modal.activeChannels.clear();
+        this.modal.activeChannels.add(channel);
+        this.modal._pianoRollSoloChannel = null;
+        this.modal.sequenceOps.updateSequenceFromActiveChannels(new Set([channel]), specialtyEditorWasActive);
+        this.modal.editActions.refreshChannelButtons();
 
     // Get MIDI notes for this channel
-        const channelNotes = (this.fullSequence || []).filter(n => n.c === channel);
+        const channelNotes = (this.modal.fullSequence || []).filter(n => n.c === channel);
 
     // Create editor on first use
-        if (!this.drumPatternEditor) {
-            this.drumPatternEditor = new DrumPatternEditor(this);
+        if (!this.modal.drumPatternEditor) {
+            this.modal.drumPatternEditor = new DrumPatternEditor(this);
         }
 
-        this.drumPatternEditor.show(channelNotes, channel);
+        this.modal.drumPatternEditor.show(channelNotes, channel);
         this._updateDrumButtonState(true);
     }
 
-    /**
-    * Update active state of DRUM buttons
-    * @param {boolean} active
-    */
-    MidiEditorTablatureMixin._updateDrumButtonState = function(active) {
-        const drumBtns = this.container?.querySelectorAll('.channel-drum-btn');
+    _updateDrumButtonState(active) {
+        const drumBtns = this.modal.container?.querySelectorAll('.channel-drum-btn');
         if (!drumBtns) return;
 
-        const drumChannel = this.drumPatternEditor?.channel;
+        const drumChannel = this.modal.drumPatternEditor?.channel;
         drumBtns.forEach(btn => {
             const ch = parseInt(btn.dataset.channel);
             btn.classList.toggle('active', active && ch === drumChannel);
         });
     }
 
-    // ========================================================================
-    // WIND INSTRUMENT EDITOR
-    // ========================================================================
-
-    /**
-    * Open wind instrument editor for a specific channel
-    * @param {number} channel - MIDI channel with brass/reed/pipe program
-    */
-    MidiEditorTablatureMixin._openWindEditorForChannel = function(channel) {
+    _openWindEditorForChannel(channel) {
     // Toggle off if already visible for this channel — restore saved channels
-        if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible && this.windInstrumentEditor.channel === channel) {
-            this.windInstrumentEditor.hide();
+        if (this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible && this.modal.windInstrumentEditor.channel === channel) {
+            this.modal.windInstrumentEditor.hide();
             this._updateWindButtonState(false);
             this._restoreActiveChannels();
             return;
@@ -1042,179 +947,148 @@
 
     // Check if a specialty editor is currently managing notes (piano roll is stale)
         const specialtyEditorWasActive =
-            (this.tablatureEditor && this.tablatureEditor.isVisible) ||
-            (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) ||
-            (this.drumPatternEditor && this.drumPatternEditor.isVisible);
+            (this.modal.tablatureEditor && this.modal.tablatureEditor.isVisible) ||
+            (this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible) ||
+            (this.modal.drumPatternEditor && this.modal.drumPatternEditor.isVisible);
 
     // Hide other specialty editors FIRST (they already synced to fullSequence)
-        if (this.tablatureEditor && this.tablatureEditor.isVisible) {
-            this.tablatureEditor.hide();
+        if (this.modal.tablatureEditor && this.modal.tablatureEditor.isVisible) {
+            this.modal.tablatureEditor.hide();
             this._updateChannelTabButtons();
         }
-        if (this.drumPatternEditor && this.drumPatternEditor.isVisible) {
-            this.drumPatternEditor.hide();
+        if (this.modal.drumPatternEditor && this.modal.drumPatternEditor.isVisible) {
+            this.modal.drumPatternEditor.hide();
             this._updateDrumButtonState(false);
         }
 
     // Ensure only this channel is active
     // Skip piano roll sync if a specialty editor was active (fullSequence is already current)
-        this.activeChannels.clear();
-        this.activeChannels.add(channel);
-        this._pianoRollSoloChannel = null;
-        this.sequenceOps.updateSequenceFromActiveChannels(new Set([channel]), specialtyEditorWasActive);
-        this.editActions.refreshChannelButtons();
+        this.modal.activeChannels.clear();
+        this.modal.activeChannels.add(channel);
+        this.modal._pianoRollSoloChannel = null;
+        this.modal.sequenceOps.updateSequenceFromActiveChannels(new Set([channel]), specialtyEditorWasActive);
+        this.modal.editActions.refreshChannelButtons();
 
     // Determine wind preset from channel's GM program
-        const channelInfo = this.channels?.find(c => c.channel === channel);
+        const channelInfo = this.modal.channels?.find(c => c.channel === channel);
         const gmProgram = channelInfo?.program;
         const windPreset = typeof WindInstrumentDatabase !== 'undefined'
             ? WindInstrumentDatabase.getPresetByProgram(gmProgram)
             : null;
 
         if (!windPreset) {
-            this.log('warn', `No wind preset for program ${gmProgram} on channel ${channel}`);
+            this.modal.log('warn', `No wind preset for program ${gmProgram} on channel ${channel}`);
             return;
         }
 
     // Get MIDI notes for this channel
-        const channelNotes = (this.fullSequence || []).filter(n => n.c === channel);
+        const channelNotes = (this.modal.fullSequence || []).filter(n => n.c === channel);
 
     // Create editor on first use
-        if (!this.windInstrumentEditor) {
-            this.windInstrumentEditor = new WindInstrumentEditor(this);
+        if (!this.modal.windInstrumentEditor) {
+            this.modal.windInstrumentEditor = new WindInstrumentEditor(this);
         }
 
-        this.windInstrumentEditor.show(windPreset, channelNotes, channel);
+        this.modal.windInstrumentEditor.show(windPreset, channelNotes, channel);
         this._updateWindButtonState(true);
     }
 
-    /**
-    * Update active state of WIND buttons
-    * @param {boolean} active
-    */
-    MidiEditorTablatureMixin._updateWindButtonState = function(active) {
-        const windBtns = this.container?.querySelectorAll('.channel-wind-btn');
+    _updateWindButtonState(active) {
+        const windBtns = this.modal.container?.querySelectorAll('.channel-wind-btn');
         if (!windBtns) return;
 
-        const windChannel = this.windInstrumentEditor?.channel;
+        const windChannel = this.modal.windInstrumentEditor?.channel;
         windBtns.forEach(btn => {
             const ch = parseInt(btn.dataset.channel);
             btn.classList.toggle('active', active && ch === windChannel);
         });
     }
 
-    // ========================================================================
-    // SAVE / RESTORE ACTIVE CHANNELS
-    // ========================================================================
-
-    /**
-    * Save current active channels before opening a specialized editor.
-    * Does NOT overwrite if already saved (supports direct editor-to-editor switches).
-    */
-    MidiEditorTablatureMixin._saveActiveChannels = function() {
-        if (!this._savedActiveChannels) {
-            this._savedActiveChannels = new Set(this.activeChannels);
+    _saveActiveChannels() {
+        if (!this.modal._savedActiveChannels) {
+            this.modal._savedActiveChannels = new Set(this.modal.activeChannels);
         }
     }
 
-    /**
-    * Restore previously saved active channels after closing a specialized editor.
-    */
-    MidiEditorTablatureMixin._restoreActiveChannels = function() {
-        if (!this._savedActiveChannels) return;
+    _restoreActiveChannels() {
+        if (!this.modal._savedActiveChannels) return;
 
-        const previousActiveChannels = new Set(this.activeChannels);
-        this.activeChannels = new Set(this._savedActiveChannels);
-        this._savedActiveChannels = null;
-        this._pianoRollSoloChannel = null;
+        const previousActiveChannels = new Set(this.modal.activeChannels);
+        this.modal.activeChannels = new Set(this.modal._savedActiveChannels);
+        this.modal._savedActiveChannels = null;
+        this.modal._pianoRollSoloChannel = null;
 
-        this.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
-        if (this.channelPanel) {
-            this.channelPanel.updateChannelButtons();
-            this.channelPanel.updateInstrumentSelector();
+        this.modal.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
+        if (this.modal.channelPanel) {
+            this.modal.channelPanel.updateChannelButtons();
+            this.modal.channelPanel.updateInstrumentSelector();
         }
-        if (this.playbackManager) {
-            this.playbackManager.syncMutedChannels();
+        if (this.modal.playbackManager) {
+            this.modal.playbackManager.syncMutedChannels();
         }
     }
 
-    // ========================================================================
-    // PIANO ROLL SOLO EDIT (for channels without specialized editors)
-    // ========================================================================
-
-    /**
-    * Open piano roll focused on a single channel (solo edit mode).
-    * Used for channels that don't have TAB/WIND/DRUM specialized editors.
-    * @param {number} channel - MIDI channel to solo-edit
-    */
-    MidiEditorTablatureMixin._openPianoRollForChannel = function(channel) {
+    _openPianoRollForChannel(channel) {
         // Toggle off if already in solo mode for this channel
-        if (this._pianoRollSoloChannel === channel) {
-            this._pianoRollSoloChannel = null;
+        if (this.modal._pianoRollSoloChannel === channel) {
+            this.modal._pianoRollSoloChannel = null;
             this._restoreActiveChannels();
             this._updateEditButtonState(false);
             return;
         }
 
         // Hide any open specialized editor
-        if (this.tablatureEditor && this.tablatureEditor.isVisible) {
-            this.tablatureEditor.hide();
+        if (this.modal.tablatureEditor && this.modal.tablatureEditor.isVisible) {
+            this.modal.tablatureEditor.hide();
             this._updateChannelTabButtons();
         }
-        if (this.drumPatternEditor && this.drumPatternEditor.isVisible) {
-            this.drumPatternEditor.hide();
+        if (this.modal.drumPatternEditor && this.modal.drumPatternEditor.isVisible) {
+            this.modal.drumPatternEditor.hide();
             this._updateDrumButtonState(false);
         }
-        if (this.windInstrumentEditor && this.windInstrumentEditor.isVisible) {
-            this.windInstrumentEditor.hide();
+        if (this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible) {
+            this.modal.windInstrumentEditor.hide();
             this._updateWindButtonState(false);
         }
 
         this._saveActiveChannels();
 
-        const previousActiveChannels = new Set(this.activeChannels);
-        this.activeChannels.clear();
-        this.activeChannels.add(channel);
-        this._pianoRollSoloChannel = channel;
+        const previousActiveChannels = new Set(this.modal.activeChannels);
+        this.modal.activeChannels.clear();
+        this.modal.activeChannels.add(channel);
+        this.modal._pianoRollSoloChannel = channel;
 
-        this.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
-        this.editActions.refreshChannelButtons();
+        this.modal.sequenceOps.updateSequenceFromActiveChannels(previousActiveChannels);
+        this.modal.editActions.refreshChannelButtons();
         this._updateEditButtonState(true);
     }
 
-    /**
-    * Update active state of EDIT buttons
-    * @param {boolean} active
-    */
-    MidiEditorTablatureMixin._updateEditButtonState = function(active) {
-        const editBtns = this.container?.querySelectorAll('.channel-edit-btn');
+    _updateEditButtonState(active) {
+        const editBtns = this.modal.container?.querySelectorAll('.channel-edit-btn');
         if (!editBtns) return;
 
-        const soloChannel = this._pianoRollSoloChannel;
+        const soloChannel = this.modal._pianoRollSoloChannel;
         editBtns.forEach(btn => {
             const ch = parseInt(btn.dataset.channel);
             btn.classList.toggle('active', active && ch === soloChannel);
         });
     }
 
-    /**
-    * Open the string instrument configuration modal
-    */
-    MidiEditorTablatureMixin.showStringInstrumentConfig = async function() {
-        if (this.activeChannels.size !== 1) return;
+    async showStringInstrumentConfig() {
+        if (this.modal.activeChannels.size !== 1) return;
 
-        const activeChannel = Array.from(this.activeChannels)[0];
+        const activeChannel = Array.from(this.modal.activeChannels)[0];
         const deviceId = this.getEffectiveDeviceId();
-        const modal = new StringInstrumentConfigModal(this.api, {
+        const modal = new StringInstrumentConfigModal(this.modal.api, {
             deviceId: deviceId,
             channel: activeChannel,
             onSave: () => {
     // Refresh tablature button visibility
-                if (this.channelPanel) {
-                    this.channelPanel.updateTablatureButton();
+                if (this.modal.channelPanel) {
+                    this.modal.channelPanel.updateTablatureButton();
                 }
     // Refresh tablature editor if visible
-                if (this.tablatureEditor && this.tablatureEditor.isVisible) {
+                if (this.modal.tablatureEditor && this.modal.tablatureEditor.isVisible) {
                     this.toggleTablature(); // hide
                     this.toggleTablature(); // re-show with new config
                 }
@@ -1223,17 +1097,13 @@
         await modal.showForDevice(deviceId, activeChannel);
     }
 
-    /**
-    * Check if the active channel has a string instrument configured
-    * @returns {Promise<boolean>}
-    */
-    MidiEditorTablatureMixin.hasStringInstrument = async function() {
-        if (this.activeChannels.size !== 1) {
+    async hasStringInstrument() {
+        if (this.modal.activeChannels.size !== 1) {
             return false;
         }
 
         try {
-            const activeChannel = Array.from(this.activeChannels)[0];
+            const activeChannel = Array.from(this.modal.activeChannels)[0];
             const result = await this.findStringInstrument(activeChannel);
             return !!result;
         } catch {
@@ -1241,16 +1111,10 @@
         }
     }
 
-    /**
-    * Find a string instrument config for a channel, searching multiple device IDs.
-    * Priority: routed device > selected device > '_editor' > any device with matching channel.
-    * @param {number} channel - MIDI channel
-    * @returns {Promise<Object|null>} The instrument config, or null
-    */
-    MidiEditorTablatureMixin.findStringInstrument = async function(channel) {
+    async findStringInstrument(channel) {
     // 1. If channel is routed, try the routed device's string instrument first
-        if (this.channelRouting.has(channel)) {
-            const routedValue = this.channelRouting.get(channel);
+        if (this.modal.channelRouting.has(channel)) {
+            const routedValue = this.modal.channelRouting.get(channel);
             let routedDeviceId = routedValue;
             let routedChannel = channel;
             if (routedValue.includes('::')) {
@@ -1259,7 +1123,7 @@
                 routedChannel = parseInt(parts[1]);
             }
             try {
-                const resp = await this.api.sendCommand('string_instrument_get', {
+                const resp = await this.modal.api.sendCommand('string_instrument_get', {
                     device_id: routedDeviceId,
                     channel: routedChannel
                 });
@@ -1270,7 +1134,7 @@
     // 2. Try with the effective device ID (selected device or '_editor')
         const primaryDeviceId = this.getEffectiveDeviceId();
         try {
-            const resp = await this.api.sendCommand('string_instrument_get', {
+            const resp = await this.modal.api.sendCommand('string_instrument_get', {
                 device_id: primaryDeviceId,
                 channel: channel
             });
@@ -1280,7 +1144,7 @@
     // 3. If effective was a real device, also try '_editor'
         if (primaryDeviceId !== '_editor') {
             try {
-                const resp = await this.api.sendCommand('string_instrument_get', {
+                const resp = await this.modal.api.sendCommand('string_instrument_get', {
                     device_id: '_editor',
                     channel: channel
                 });
@@ -1290,7 +1154,7 @@
 
     // 3. Search across all configured string instruments for this channel
         try {
-            const resp = await this.api.sendCommand('string_instrument_list', {});
+            const resp = await this.modal.api.sendCommand('string_instrument_list', {});
             if (resp?.instruments) {
                 const match = resp.instruments.find(si => si.channel === channel);
                 if (match) return match;
@@ -1299,22 +1163,9 @@
 
         return null;
     }
-
-
-    // Facade sub-component (P2-F.10c-batch).
-    class MidiEditorTablatureFacade {
-        constructor(modal) { this.modal = modal; }
     }
-    Object.keys(MidiEditorTablatureMixin).forEach((key) => {
-        MidiEditorTablatureFacade.prototype[key] = function(...args) {
-            return MidiEditorTablatureMixin[key].apply(this.modal, args);
-        };
-    });
 
     if (typeof window !== 'undefined') {
-        window.MidiEditorTablatureMixin = MidiEditorTablatureMixin;
-        // Named *Facade to avoid collision with the UI component class
-        // `MidiEditorTablature` exported elsewhere (string-instrument editor).
         window.MidiEditorTablatureFacade = MidiEditorTablatureFacade;
     }
 })();

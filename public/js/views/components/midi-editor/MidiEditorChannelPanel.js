@@ -48,7 +48,7 @@ class MidiEditorChannelPanel {
         if (m.playbackManager) {
             m.playbackManager.syncMutedChannels();
         }
-        m._updateChannelDisabledVisual(channel);
+        m.tablatureOps._updateChannelDisabledVisual(channel);
 
         // Sync popover checkbox if open for this channel
         if (m._channelSettingsOpen === channel && m._channelSettingsPopoverEl) {
@@ -237,8 +237,8 @@ class MidiEditorChannelPanel {
         const m = this.modal;
 
         // Update per-channel TAB button active states
-        if (m._updateChannelTabButtons) {
-            m._updateChannelTabButtons();
+        if (m.tablatureOps._updateChannelTabButtons) {
+            m.tablatureOps._updateChannelTabButtons();
         }
 
         // Auto-suggest string instrument config for GM string instruments
@@ -249,8 +249,8 @@ class MidiEditorChannelPanel {
 
             if (gmMatch) {
                 try {
-                    const existingConfig = m.findStringInstrument
-                        ? await m.findStringInstrument(activeChannel)
+                    const existingConfig = m.tablatureOps.findStringInstrument
+                        ? await m.tablatureOps.findStringInstrument(activeChannel)
                         : null;
                     if (!existingConfig) {
                         this._suggestStringInstrumentConfig(activeChannel, gmMatch, channelInfo);
@@ -283,7 +283,7 @@ class MidiEditorChannelPanel {
             banner.remove();
             try {
                 await m.api.sendCommand('string_instrument_create_from_preset', {
-                    device_id: m.getEffectiveDeviceId(),
+                    device_id: m.tablatureOps.getEffectiveDeviceId(),
                     channel: channel,
                     preset: gmMatch.preset
                 });

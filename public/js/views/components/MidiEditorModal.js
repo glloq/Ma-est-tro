@@ -198,7 +198,7 @@ class MidiEditorModal {
             await this.routingOps.initPianoRoll();
 
             // Scan for string instrument configs to reveal TAB buttons
-            await this._refreshStringInstrumentChannels();
+            await this.tablatureOps._refreshStringInstrumentChannels();
 
             this.isOpen = true;
 
@@ -206,7 +206,7 @@ class MidiEditorModal {
             if (this.eventBus) {
                 this._onExternalRoutingChanged = (data) => {
                     if (data.fileId === this.currentFile && !this._isEmittingRouting) {
-                        this._loadSavedRoutings();
+                        this.tablatureOps._loadSavedRoutings();
                     }
                 };
                 this.eventBus.on('routing:changed', this._onExternalRoutingChanged);
@@ -377,7 +377,7 @@ const _mixins = [
     // MidiEditorEditActionsMixin retiré — remplacé par this.editActions (P2-F.10j body-rewrite).
     // MidiEditorDialogsMixin retiré — remplacé par this.dialogs (P2-F.10a-cleanup).
     // MidiEditorEventsMixin retiré — remplacé par this.events (P2-F.10f body-rewrite).
-    typeof MidiEditorTablatureMixin !== 'undefined' ? MidiEditorTablatureMixin : null,
+    // MidiEditorTablatureMixin retiré — remplacé par this.tablatureOps (P2-F.10k body-rewrite).
     typeof MidiEditorLifecycleMixin !== 'undefined' ? MidiEditorLifecycleMixin : null,
 ];
 

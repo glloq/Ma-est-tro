@@ -250,7 +250,7 @@ class WindInstrumentEditor {
                     break;
                 case 'wind-close':
                     this.hide();
-                    this.modal._updateWindButtonState?.(false);
+                    this.modal.tablatureOps._updateWindButtonState?.(false);
                     break;
             }
         });

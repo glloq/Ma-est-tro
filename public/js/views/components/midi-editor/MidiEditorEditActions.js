@@ -397,7 +397,7 @@
 
     refreshChannelButtons(keepPopover = false) {
         if (!keepPopover) {
-            this.modal._closeChannelSettingsPopover();
+            this.modal.tablatureOps._closeChannelSettingsPopover();
         }
 
         const channelsToolbar = this.modal.container?.querySelector('.channels-toolbar');
@@ -415,24 +415,24 @@
 
     // Update disabled visual states
             this.modal.channelDisabled.forEach(ch => {
-                this.modal._updateChannelDisabledVisual(ch);
+                this.modal.tablatureOps._updateChannelDisabledVisual(ch);
             });
 
     // Update TAB button active states
-            this.modal._updateChannelTabButtons();
+            this.modal.tablatureOps._updateChannelTabButtons();
 
     // Update DRUM button active states
-            this.modal._updateDrumButtonState(
+            this.modal.tablatureOps._updateDrumButtonState(
                 this.modal.drumPatternEditor && this.modal.drumPatternEditor.isVisible
             );
 
     // Update WIND button active states
-            this.modal._updateWindButtonState(
+            this.modal.tablatureOps._updateWindButtonState(
                 this.modal.windInstrumentEditor && this.modal.windInstrumentEditor.isVisible
             );
 
     // Async: adjust TAB buttons based on DB cc_enabled setting
-            this.modal._refreshStringInstrumentChannels();
+            this.modal.tablatureOps._refreshStringInstrumentChannels();
         }
     }
 
@@ -567,7 +567,7 @@
         this.modal.sequenceOps.updateSequenceFromActiveChannels(null, true);
 
         this.refreshChannelButtons();
-        this.modal._refreshStringInstrumentChannels();
+        this.modal.tablatureOps._refreshStringInstrumentChannels();
         this.modal.renderer.updateInstrumentSelector();
         this.updateEditButtons();
     }
@@ -594,13 +594,13 @@
         if (!gmMatch) {
     // Delete stale DB record for this channel so TAB doesn't reappear
             this.modal.api.sendCommand('string_instrument_delete', {
-                device_id: this.modal.getEffectiveDeviceId(),
+                device_id: this.modal.tablatureOps.getEffectiveDeviceId(),
                 channel: channel
             }).catch(() => { /* ignore if no record existed */ });
         }
 
     // Update tablature buttons (string instrument detection may change)
-        this.modal._refreshStringInstrumentChannels();
+        this.modal.tablatureOps._refreshStringInstrumentChannels();
         if (this.modal.channelPanel) {
             this.modal.channelPanel.updateTablatureButton();
         }

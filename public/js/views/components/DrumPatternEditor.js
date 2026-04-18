@@ -250,7 +250,7 @@ class DrumPatternEditor {
                     break;
                 case 'drum-close':
                     this.hide();
-                    this.modal._updateDrumButtonState?.(false);
+                    this.modal.tablatureOps._updateDrumButtonState?.(false);
                     break;
             }
         });

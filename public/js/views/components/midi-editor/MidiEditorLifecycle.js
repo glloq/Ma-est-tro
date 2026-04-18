@@ -178,7 +178,7 @@
     */
     MidiEditorLifecycleMixin.doClose = function() {
     // Clean up channel settings popover (now in document.body)
-        this._closeChannelSettingsPopover();
+        this.tablatureOps._closeChannelSettingsPopover();
 
     // Unsubscribe from locale changes
         if (this.localeUnsubscribe) {
