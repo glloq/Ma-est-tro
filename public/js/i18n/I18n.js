@@ -271,7 +271,7 @@
         }
 
         /**
-         * Formate un nombre selon la locale courante
+         * Format a number according to the current locale
          * @param {number} number
          * @param {Object} options - Options Intl.NumberFormat
          */
@@ -280,7 +280,7 @@
         }
 
         /**
-         * Formate une date selon la locale courante
+         * Format a date according to the current locale
          * @param {Date} date
          * @param {Object} options - Options Intl.DateTimeFormat
          */
@@ -292,7 +292,7 @@
     // Singleton instance exposed globally
     global.i18n = new I18n();
 
-    // Export pour ES modules si disponible
+    // Export for ES modules if available
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = { i18n: global.i18n, I18n };
     }
