@@ -506,66 +506,24 @@ class MidiSynthesizer {
      * Convertir ticks en secondes (avec support du tempo map)
      */
     ticksToSeconds(ticks) {
-        if (this.tempoMap.length === 0) {
-            return ticks * this._secondsPerTick;
-        }
-
-        let seconds = 0;
-        let prevTick = 0;
-        let currentTempo = this.tempoMap[0].tempo;
-
-        for (let i = 0; i < this.tempoMap.length; i++) {
-            const entry = this.tempoMap[i];
-            if (entry.ticks >= ticks) break;
-
-            const segmentTicks = entry.ticks - prevTick;
-            const ticksPerSecond = (currentTempo / 60) * this.ticksPerBeat;
-            seconds += segmentTicks / ticksPerSecond;
-
-            prevTick = entry.ticks;
-            currentTempo = entry.tempo;
-        }
-
-        // Segment restant après le dernier point de tempo
-        const remainingTicks = ticks - prevTick;
-        const ticksPerSecond = (currentTempo / 60) * this.ticksPerBeat;
-        seconds += remainingTicks / ticksPerSecond;
-
-        return seconds;
+        return window.MidiSynthesizerTempoMap.ticksToSeconds({
+            ticks,
+            tempoMap: this.tempoMap,
+            ticksPerBeat: this.ticksPerBeat,
+            secondsPerTick: this._secondsPerTick
+        });
     }
 
     /**
      * Convertir secondes en ticks (avec support du tempo map)
      */
     secondsToTicks(seconds) {
-        if (this.tempoMap.length === 0) {
-            return Math.round(seconds * this._ticksPerSecond);
-        }
-
-        let accumulatedSeconds = 0;
-        let prevTick = 0;
-        let currentTempo = this.tempoMap[0].tempo;
-
-        for (let i = 0; i < this.tempoMap.length; i++) {
-            const entry = this.tempoMap[i];
-            const segmentTicks = entry.ticks - prevTick;
-            const ticksPerSecond = (currentTempo / 60) * this.ticksPerBeat;
-            const segmentDuration = segmentTicks / ticksPerSecond;
-
-            if (accumulatedSeconds + segmentDuration >= seconds) {
-                const remainingSeconds = seconds - accumulatedSeconds;
-                return Math.round(prevTick + remainingSeconds * ticksPerSecond);
-            }
-
-            accumulatedSeconds += segmentDuration;
-            prevTick = entry.ticks;
-            currentTempo = entry.tempo;
-        }
-
-        // Au-delà du dernier point de tempo
-        const remainingSeconds = seconds - accumulatedSeconds;
-        const ticksPerSecond = (currentTempo / 60) * this.ticksPerBeat;
-        return Math.round(prevTick + remainingSeconds * ticksPerSecond);
+        return window.MidiSynthesizerTempoMap.secondsToTicks({
+            seconds,
+            tempoMap: this.tempoMap,
+            ticksPerBeat: this.ticksPerBeat,
+            ticksPerSecond: this._ticksPerSecond
+        });
     }
 
     /**
@@ -1004,14 +962,7 @@ class MidiSynthesizer {
      * Binary search: find the index of the first note with t > tick.
      */
     _findNoteIndex(tick) {
-        const seq = this.sequence;
-        let lo = 0, hi = seq.length;
-        while (lo < hi) {
-            const mid = (lo + hi) >>> 1;
-            if (seq[mid].t <= tick) lo = mid + 1;
-            else hi = mid;
-        }
-        return lo;
+        return window.MidiSynthesizerTempoMap.findNoteIndex(this.sequence, tick);
     }
 
     /**
