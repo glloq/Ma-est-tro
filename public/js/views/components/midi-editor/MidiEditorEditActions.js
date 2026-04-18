@@ -48,7 +48,7 @@
                     editor._syncToMidi();
                 }
                 this.isDirty = true;
-                this.updateSaveButton();
+                this.routingOps.updateSaveButton();
                 this.updateUndoRedoButtonsState();
                 this.updateEditButtons();
             }
@@ -63,7 +63,7 @@
         if (this.pianoRoll.undo()) {
             this.log('info', 'Undo successful');
             this.isDirty = true;
-            this.updateSaveButton();
+            this.routingOps.updateSaveButton();
             this.syncFullSequenceFromPianoRoll();
             this.updateUndoRedoButtonsState();
         }
@@ -84,7 +84,7 @@
                     editor._syncToMidi();
                 }
                 this.isDirty = true;
-                this.updateSaveButton();
+                this.routingOps.updateSaveButton();
                 this.updateUndoRedoButtonsState();
                 this.updateEditButtons();
             }
@@ -99,7 +99,7 @@
         if (this.pianoRoll.redo()) {
             this.log('info', 'Redo successful');
             this.isDirty = true;
-            this.updateSaveButton();
+            this.routingOps.updateSaveButton();
             this.syncFullSequenceFromPianoRoll();
             this.updateUndoRedoButtonsState();
         }
@@ -218,7 +218,7 @@
                     editor._syncToMidi();
                 }
                 this.isDirty = true;
-                this.updateSaveButton();
+                this.routingOps.updateSaveButton();
                 this.updateEditButtons();
             }
             return;
@@ -244,7 +244,7 @@
         this.showNotification(this.t('midiEditor.notesPasted', { count: this.clipboard.length }), 'success');
 
         this.isDirty = true;
-        this.updateSaveButton();
+        this.routingOps.updateSaveButton();
         this.syncFullSequenceFromPianoRoll();
         this.updateEditButtons();
     }
@@ -262,7 +262,7 @@
                         editor._syncToMidi();
                     }
                     this.isDirty = true;
-                    this.updateSaveButton();
+                    this.routingOps.updateSaveButton();
                     this.updateEditButtons();
                 }
             }
@@ -293,7 +293,7 @@
         this.showNotification(this.t('midiEditor.notesDeleted', { count }), 'success');
 
         this.isDirty = true;
-        this.updateSaveButton();
+        this.routingOps.updateSaveButton();
         this.syncFullSequenceFromPianoRoll();
         this.updateEditButtons();
     }
@@ -397,7 +397,7 @@
         this.showNotification(this.t('midiEditor.channelChanged', { count }), 'success');
 
         this.isDirty = true;
-        this.updateSaveButton();
+        this.routingOps.updateSaveButton();
         this.syncFullSequenceFromPianoRoll();
 
     // Update the channel list (automatically drops empty channels)
@@ -589,7 +589,7 @@
         );
 
         this.isDirty = true;
-        this.updateSaveButton();
+        this.routingOps.updateSaveButton();
         this.syncFullSequenceFromPianoRoll();
         this.ccPicker.updateChannelsFromSequence();
 
@@ -636,7 +636,7 @@
 
         this.refreshChannelButtons();
         this.isDirty = true;
-        this.updateSaveButton();
+        this.routingOps.updateSaveButton();
 
     // Clean up stale string instrument config if program changed to non-string
         const gmMatch = typeof MidiEditorChannelPanel !== 'undefined'
@@ -729,7 +729,7 @@
 
         this.tempo = newTempo;
         this.isDirty = true;
-        this.updateSaveButton();
+        this.routingOps.updateSaveButton();
 
     // Update the piano roll
         if (this.pianoRoll) {

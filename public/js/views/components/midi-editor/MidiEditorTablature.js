@@ -75,7 +75,7 @@
         }
     // Fetch routed instrument gm_program for TAB/WIND button logic
         if (deviceValue) {
-            await this._fetchAndCacheRoutedGmProgram(channel, deviceValue);
+            await this.routingOps._fetchAndCacheRoutedGmProgram(channel, deviceValue);
         }
     // Update only the affected chip routing label, then refresh TAB/WIND buttons
         this._updateChipRouting(channel);
@@ -145,13 +145,13 @@
             }
 
     // Fetch gm_programs for all routed instruments (needed for TAB/WIND buttons & preview)
-            await this._loadRoutedGmPrograms();
+            await this.routingOps._loadRoutedGmPrograms();
 
     // Use non-destructive DOM updates instead of refreshChannelButtons()
     // which uses innerHTML and destroys elements under the cursor,
     // breaking hover/click state on all channel buttons.
             this._updateAllChipRoutings();
-            this.updateChannelButtons();
+            this.routingOps.updateChannelButtons();
             this._refreshStringInstrumentChannels();
 
             if (this.channelRouting.size > 0) {
@@ -367,7 +367,7 @@
             await this._toggleChannelPlayableHighlight(channel);
             playableCheckbox.checked = this.channelPlayableHighlights.has(channel);
     // Update chip visual
-            this.updateChannelButtons();
+            this.routingOps.updateChannelButtons();
         });
 
     // Event: routing select
@@ -381,7 +381,7 @@
                 if (!newValue) {
                     this._clearChannelPlayableHighlight(channel);
                     playableCheckbox.checked = false;
-                    this.updateChannelButtons();
+                    this.routingOps.updateChannelButtons();
                 }
             }
         });
@@ -400,7 +400,7 @@
                 }
             });
             this.updateSequenceFromActiveChannels(previousActiveChannels);
-            this.updateChannelButtons();
+            this.routingOps.updateChannelButtons();
             this.renderer.updateInstrumentSelector();
             this.syncMutedChannels();
         });
@@ -414,7 +414,7 @@
                 this.channelDisabled.delete(ch.channel);
             });
             this.updateSequenceFromActiveChannels(previousActiveChannels);
-            this.updateChannelButtons();
+            this.routingOps.updateChannelButtons();
             this.renderer.updateInstrumentSelector();
             this.syncMutedChannels();
         });
@@ -452,7 +452,7 @@
         if (typeof this.syncMutedChannels === 'function') this.syncMutedChannels();
 
         this.isDirty = true;
-        if (typeof this.updateSaveButton === 'function') this.updateSaveButton();
+        if (typeof this.routingOps.updateSaveButton === 'function') this.routingOps.updateSaveButton();
     }
 
     /**

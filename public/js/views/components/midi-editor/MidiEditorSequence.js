@@ -214,7 +214,7 @@
             }
 
             this.updateSequenceFromActiveChannels(previousActiveChannels);
-            this.updateChannelButtons();
+            this.routingOps.updateChannelButtons();
             this.renderer.updateInstrumentSelector();
 
             if (this.channelPanel) {

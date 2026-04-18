@@ -192,10 +192,10 @@ class MidiEditorModal {
             await this.loadMidiFile(fileId);
 
             // Afficher la modale
-            this.render();
+            this.routingOps.render();
 
             // Initialiser le piano roll
-            await this.initPianoRoll();
+            await this.routingOps.initPianoRoll();
 
             // Scan for string instrument configs to reveal TAB buttons
             await this._refreshStringInstrumentChannels();
@@ -372,7 +372,7 @@ const _mixins = [
     // MidiEditorCCPickerMixin retiré — remplacé par this.ccPicker (P2-F.10c body-rewrite).
     // MidiEditorFileOpsMixin retiré — remplacé par this.fileOps (P2-F.10d body-rewrite).
     // MidiEditorRendererMixin retiré — remplacé par this.renderer (P2-F.10e body-rewrite).
-    typeof MidiEditorRoutingMixin !== 'undefined' ? MidiEditorRoutingMixin : null,
+    // MidiEditorRoutingMixin retiré — remplacé par this.routingOps (P2-F.10g body-rewrite).
     typeof MidiEditorEditActionsMixin !== 'undefined' ? MidiEditorEditActionsMixin : null,
     // MidiEditorDialogsMixin retiré — remplacé par this.dialogs (P2-F.10a-cleanup).
     // MidiEditorEventsMixin retiré — remplacé par this.events (P2-F.10f body-rewrite).

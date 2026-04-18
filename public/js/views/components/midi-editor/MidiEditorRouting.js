@@ -1,24 +1,21 @@
 // ============================================================================
 // File: public/js/views/components/midi-editor/MidiEditorRouting.js
-// Description: Channel routing and connected instruments
-//   Mixin: methods added to MidiEditorModal.prototype
+// Description: Routing, connected devices, preview source, piano-roll boot.
+//   Sub-component class ; called via `modal.routingOps.<method>(...)`.
+//   (P2-F.10g body rewrite — no longer a prototype mixin.)
 // ============================================================================
 
 (function() {
     'use strict';
 
-    const MidiEditorRoutingMixin = {};
+    class MidiEditorRouting {
+        constructor(modal) {
+            this.modal = modal;
+        }
 
-    // ========================================================================
-    // CONNECTED INSTRUMENTS (pour visualiser les notes jouables)
-    // ========================================================================
-
-    /**
-    * Load the list of connected MIDI devices
-    */
-    MidiEditorRoutingMixin.loadConnectedDevices = async function() {
+    async loadConnectedDevices() {
         try {
-            const result = await this.api.sendCommand('device_list');
+            const result = await this.modal.api.sendCommand('device_list');
             if (result && result.devices) {
     // Keep only devices that expose an output (output: true)
                 const outputDevices = result.devices.filter(d => d.output === true);
@@ -39,28 +36,25 @@
                         expandedDevices.push(device);
                     }
                 }
-                this.connectedDevices = expandedDevices;
-                this.log('info', `Loaded ${outputDevices.length} connected output devices (${expandedDevices.length} instruments)`);
+                this.modal.connectedDevices = expandedDevices;
+                this.modal.log('info', `Loaded ${outputDevices.length} connected output devices (${expandedDevices.length} instruments)`);
             }
         } catch (error) {
-            this.log('error', 'Failed to load connected devices:', error);
-            this.connectedDevices = [];
+            this.modal.log('error', 'Failed to load connected devices:', error);
+            this.modal.connectedDevices = [];
         }
     }
 
-    /**
-    * Update the channel buttons' visual state
-    */
-    MidiEditorRoutingMixin.updateChannelButtons = function() {
-        const chips = this.container?.querySelectorAll('.channel-chip');
+    updateChannelButtons() {
+        const chips = this.modal.container?.querySelectorAll('.channel-chip');
         if (!chips) return;
 
-        const specializedActive = this._isSpecializedEditorActive();
+        const specializedActive = this.modal._isSpecializedEditorActive();
 
         chips.forEach(chip => {
             const channel = parseInt(chip.dataset.channel);
             const color = chip.dataset.color;
-            const isActive = this.activeChannels.has(channel);
+            const isActive = this.modal.activeChannels.has(channel);
 
             if (isActive) {
                 chip.classList.add('active');
@@ -78,16 +72,16 @@
             }
 
     // Update playable notes indicator
-            const isPlayableHighlighted = this.channelPlayableHighlights?.has(channel);
+            const isPlayableHighlighted = this.modal.channelPlayableHighlights?.has(channel);
             chip.classList.toggle('playable-active', !!isPlayableHighlighted);
         });
 
     // Also update gear button border colors to match chip
-        const gears = this.container?.querySelectorAll('.chip-settings-btn');
+        const gears = this.modal.container?.querySelectorAll('.chip-settings-btn');
         if (gears) {
             gears.forEach(gear => {
                 const channel = parseInt(gear.dataset.channel);
-                const chip = this.container?.querySelector(`.channel-chip[data-channel="${channel}"]`);
+                const chip = this.modal.container?.querySelector(`.channel-chip[data-channel="${channel}"]`);
                 if (chip) {
                     gear.style.setProperty('--chip-border', chip.style.getPropertyValue('--chip-border'));
                 }
@@ -96,7 +90,7 @@
 
     // "Show All" stays enabled even during specialized editing — it closes
     // the specialized editor and restores the full channel view.
-        const showAllBtn = this.container?.querySelector('.btn-show-all-channels');
+        const showAllBtn = this.modal.container?.querySelector('.btn-show-all-channels');
         if (showAllBtn) {
             showAllBtn.disabled = false;
             showAllBtn.classList.remove('channel-locked');
@@ -106,33 +100,33 @@
         this.updateStats();
     }
 
-    MidiEditorRoutingMixin.render = function() {
+    render() {
     // Create the modal container
-        this.container = document.createElement('div');
-        this.container.className = 'modal-overlay midi-editor-modal';
-        this.container.innerHTML = `
+        this.modal.container = document.createElement('div');
+        this.modal.container.className = 'modal-overlay midi-editor-modal';
+        this.modal.container.innerHTML = `
             <div class="modal-dialog modal-xl">
                 <div class="modal-header">
                     <div class="modal-title">
                         <h3>🎹 ÉDIB∞P</h3>
                         <span class="title-separator">—</span>
-                        <span class="file-name" id="editor-file-name">${escapeHtml(this.currentFilename || this.currentFile || '')}</span>
-                        <button class="btn-rename-file" data-action="rename-file" title="${this.t('midiEditor.renameFile')}">✏️</button>
+                        <span class="file-name" id="editor-file-name">${escapeHtml(this.modal.currentFilename || this.modal.currentFile || '')}</span>
+                        <button class="btn-rename-file" data-action="rename-file" title="${this.modal.t('midiEditor.renameFile')}">✏️</button>
                     </div>
                     <div class="tempo-control">
                         <span class="tempo-label">♩</span>
-                        <input type="number" id="tempo-input" class="tempo-input" min="20" max="300" step="1" value="${this.tempo || 120}" title="${this.t('midiEditor.tempoTip')}">
+                        <input type="number" id="tempo-input" class="tempo-input" min="20" max="300" step="1" value="${this.modal.tempo || 120}" title="${this.modal.t('midiEditor.tempoTip')}">
                         <span class="tempo-unit">BPM</span>
                     </div>
                     <div class="header-right-actions">
-                        <button class="header-save-btn" data-action="save" id="save-btn" title="${this.t('midiEditor.save')}">
-                            💾 ${this.t('midiEditor.save')}
+                        <button class="header-save-btn" data-action="save" id="save-btn" title="${this.modal.t('midiEditor.save')}">
+                            💾 ${this.modal.t('midiEditor.save')}
                         </button>
-                        <button class="header-save-as-btn" data-action="save-as" id="save-as-btn" title="${this.t('midiEditor.saveAs')}">
-                            📄 ${this.t('midiEditor.saveAs')}
+                        <button class="header-save-as-btn" data-action="save-as" id="save-as-btn" title="${this.modal.t('midiEditor.saveAs')}">
+                            📄 ${this.modal.t('midiEditor.saveAs')}
                         </button>
-                        <button class="header-auto-assign-btn" data-action="auto-assign" title="${this.t('autoAssign.title')}">
-                            🎯 ${this.t('midiEditor.autoAssign')}
+                        <button class="header-auto-assign-btn" data-action="auto-assign" title="${this.modal.t('autoAssign.title')}">
+                            🎯 ${this.modal.t('midiEditor.autoAssign')}
                         </button>
                     </div>
                     <button class="modal-close" data-action="close">&times;</button>
@@ -141,10 +135,10 @@
                     <!-- Channel toolbar (just below the header) -->
                     <div class="channels-toolbar-wrapper">
                         <div class="channels-toolbar">
-                            ${this.renderer.renderChannelButtons()}
+                            ${this.modal.renderer.renderChannelButtons()}
                         </div>
                         <div class="channel-global-actions">
-                            <button class="btn-show-all-channels" title="${this.t('midiEditor.showAllChannels')}">👁️</button>
+                            <button class="btn-show-all-channels" title="${this.modal.t('midiEditor.showAllChannels')}">👁️</button>
                         </div>
                     </div>
 
@@ -152,18 +146,18 @@
                     <div class="editor-toolbar">
                         <!-- Section Playback -->
                         <div class="toolbar-section playback-section">
-                            <button class="tool-btn playback-btn" data-action="playback-play" id="play-btn" title="${this.t('midiEditor.play')} (Space)">
+                            <button class="tool-btn playback-btn" data-action="playback-play" id="play-btn" title="${this.modal.t('midiEditor.play')} (Space)">
                                 <span class="icon play-icon">▶</span>
                             </button>
-                            <button class="tool-btn playback-btn" data-action="playback-pause" id="pause-btn" title="${this.t('midiEditor.pause')}" style="display: none;">
+                            <button class="tool-btn playback-btn" data-action="playback-pause" id="pause-btn" title="${this.modal.t('midiEditor.pause')}" style="display: none;">
                                 <span class="icon pause-icon">⏸</span>
                             </button>
-                            <button class="tool-btn playback-btn" data-action="playback-stop" id="stop-btn" title="${this.t('midiEditor.stop')}" disabled>
+                            <button class="tool-btn playback-btn" data-action="playback-stop" id="stop-btn" title="${this.modal.t('midiEditor.stop')}" disabled>
                                 <span class="icon stop-icon">⏹</span>
                             </button>
                             <button class="tool-btn-compact preview-source-toggle" id="preview-source-toggle"
                                 data-source="gm"
-                                title="${this.t('midiEditor.previewSourceHint')}">
+                                title="${this.modal.t('midiEditor.previewSourceHint')}">
                                 🔊 GM
                             </button>
                         </div>
@@ -172,11 +166,11 @@
 
                         <!-- Section Undo/Redo -->
                         <div class="toolbar-section">
-                            <button class="tool-btn" data-action="undo" id="undo-btn" title="${this.t('midiEditor.undo')} (Ctrl+Z)" disabled>
+                            <button class="tool-btn" data-action="undo" id="undo-btn" title="${this.modal.t('midiEditor.undo')} (Ctrl+Z)" disabled>
                                 <span class="icon">↶</span>
                                 <span class="btn-shortcut">Ctrl+Z</span>
                             </button>
-                            <button class="tool-btn" data-action="redo" id="redo-btn" title="${this.t('midiEditor.redo')} (Ctrl+Y)" disabled>
+                            <button class="tool-btn" data-action="redo" id="redo-btn" title="${this.modal.t('midiEditor.redo')} (Ctrl+Y)" disabled>
                                 <span class="icon">↷</span>
                                 <span class="btn-shortcut">Ctrl+Y</span>
                             </button>
@@ -186,8 +180,8 @@
 
                         <!-- Section Grille/Snap -->
                         <div class="toolbar-section">
-                            <label class="snap-label">${this.t('midiEditor.grid')}</label>
-                            <button class="tool-btn-snap" data-action="cycle-snap" id="snap-btn" title="${this.t('midiEditor.gridTip')}">
+                            <label class="snap-label">${this.modal.t('midiEditor.grid')}</label>
+                            <button class="tool-btn-snap" data-action="cycle-snap" id="snap-btn" title="${this.modal.t('midiEditor.gridTip')}">
                                 <span class="snap-value" id="snap-value">1/8</span>
                             </button>
                         </div>
@@ -196,24 +190,24 @@
 
                         <!-- Edit-modes section -->
                         <div class="toolbar-section edit-modes-section">
-                            <button class="tool-btn active" data-action="mode-drag-view" data-mode="drag-view" title="${this.t('midiEditor.viewModeTip')}">
+                            <button class="tool-btn active" data-action="mode-drag-view" data-mode="drag-view" title="${this.modal.t('midiEditor.viewModeTip')}">
                                 <span class="icon">👁️</span>
                             </button>
-                            <button class="tool-btn" data-action="mode-select" data-mode="select" title="${this.t('midiEditor.selectModeTip')}">
+                            <button class="tool-btn" data-action="mode-select" data-mode="select" title="${this.modal.t('midiEditor.selectModeTip')}">
                                 <span class="icon">◻</span>
                             </button>
                             <!-- Unified Edit button (visible outside touch mode) -->
-                            <button class="tool-btn edit-unified-btn${this.touchMode ? ' hidden' : ''}" data-action="mode-edit" data-mode="edit" title="${this.t('midiEditor.editModeTip')}">
+                            <button class="tool-btn edit-unified-btn${this.modal.touchMode ? ' hidden' : ''}" data-action="mode-edit" data-mode="edit" title="${this.modal.t('midiEditor.editModeTip')}">
                                 <span class="icon">✏️</span>
                             </button>
                             <!-- Boutons tactiles (visibles en mode tactile uniquement) -->
-                            <button class="tool-btn touch-edit-btn${this.touchMode ? '' : ' hidden'}" data-action="mode-drag-notes" data-mode="drag-notes" title="${this.t('midiEditor.moveNotesTip')}">
+                            <button class="tool-btn touch-edit-btn${this.modal.touchMode ? '' : ' hidden'}" data-action="mode-drag-notes" data-mode="drag-notes" title="${this.modal.t('midiEditor.moveNotesTip')}">
                                 <span class="icon">✋</span>
                             </button>
-                            <button class="tool-btn touch-edit-btn${this.touchMode ? '' : ' hidden'}" data-action="mode-add-note" data-mode="add-note" title="${this.t('midiEditor.addNoteTip')}">
+                            <button class="tool-btn touch-edit-btn${this.modal.touchMode ? '' : ' hidden'}" data-action="mode-add-note" data-mode="add-note" title="${this.modal.t('midiEditor.addNoteTip')}">
                                 <span class="icon">➕</span>
                             </button>
-                            <button class="tool-btn touch-edit-btn${this.touchMode ? '' : ' hidden'}" data-action="mode-resize-note" data-mode="resize-note" title="${this.t('midiEditor.durationTip')}">
+                            <button class="tool-btn touch-edit-btn${this.modal.touchMode ? '' : ' hidden'}" data-action="mode-resize-note" data-mode="resize-note" title="${this.modal.t('midiEditor.durationTip')}">
                                 <span class="icon">↔</span>
                             </button>
                         </div>
@@ -222,19 +216,19 @@
 
                         <!-- Edit section (Copy / Paste / Delete) -->
                         <div class="toolbar-section">
-                            <button class="tool-btn" data-action="copy" id="copy-btn" title="${this.t('midiEditor.copy')} (Ctrl+C)" disabled>
+                            <button class="tool-btn" data-action="copy" id="copy-btn" title="${this.modal.t('midiEditor.copy')} (Ctrl+C)" disabled>
                                 <span class="icon">📋</span>
                                 <span class="btn-shortcut">Ctrl+C</span>
                             </button>
-                            <button class="tool-btn" data-action="paste" id="paste-btn" title="${this.t('midiEditor.paste')} (Ctrl+V)" disabled>
+                            <button class="tool-btn" data-action="paste" id="paste-btn" title="${this.modal.t('midiEditor.paste')} (Ctrl+V)" disabled>
                                 <span class="icon">📄</span>
                                 <span class="btn-shortcut">Ctrl+V</span>
                             </button>
-                            <button class="tool-btn" data-action="delete" id="delete-btn" title="${this.t('midiEditor.delete')} (Del)" disabled>
+                            <button class="tool-btn" data-action="delete" id="delete-btn" title="${this.modal.t('midiEditor.delete')} (Del)" disabled>
                                 <span class="icon">🗑</span>
                                 <span class="btn-shortcut">Suppr</span>
                             </button>
-                            <button class="tool-btn" data-action="select-all" id="select-all-btn" title="${this.t('midiEditor.selectAll', { defaultValue: 'Select All' })} (Ctrl+A)">
+                            <button class="tool-btn" data-action="select-all" id="select-all-btn" title="${this.modal.t('midiEditor.selectAll', { defaultValue: 'Select All' })} (Ctrl+A)">
                                 <span class="icon">▣</span>
                                 <span class="btn-shortcut">Ctrl+A</span>
                             </button>
@@ -244,17 +238,17 @@
 
                         <!-- Section Zoom -->
                         <div class="toolbar-section">
-                            <button class="tool-btn-compact" data-action="zoom-h-out" title="${this.t('midiEditor.zoomHOut')}">H−</button>
-                            <button class="tool-btn-compact" data-action="zoom-h-in" title="${this.t('midiEditor.zoomHIn')}">H+</button>
-                            <button class="tool-btn-compact" data-action="zoom-v-out" title="${this.t('midiEditor.zoomVOut')}">V−</button>
-                            <button class="tool-btn-compact" data-action="zoom-v-in" title="${this.t('midiEditor.zoomVIn')}">V+</button>
+                            <button class="tool-btn-compact" data-action="zoom-h-out" title="${this.modal.t('midiEditor.zoomHOut')}">H−</button>
+                            <button class="tool-btn-compact" data-action="zoom-h-in" title="${this.modal.t('midiEditor.zoomHIn')}">H+</button>
+                            <button class="tool-btn-compact" data-action="zoom-v-out" title="${this.modal.t('midiEditor.zoomVOut')}">V−</button>
+                            <button class="tool-btn-compact" data-action="zoom-v-in" title="${this.modal.t('midiEditor.zoomVIn')}">V+</button>
                         </div>
 
                         <div class="toolbar-divider"></div>
 
                         <!-- Settings button (opens Channel / Instrument / Device popover) -->
                         <div class="toolbar-section">
-                            <button class="tool-btn" data-action="toggle-settings-popover" id="settings-popover-btn" title="${this.t('midiEditor.settingsPopover')}">
+                            <button class="tool-btn" data-action="toggle-settings-popover" id="settings-popover-btn" title="${this.modal.t('midiEditor.settingsPopover')}">
                                 <span class="icon">⚙️</span>
                             </button>
                         </div>
@@ -262,85 +256,85 @@
                         <!-- Settings popover (Channel, Instrument, connected Device) -->
                         <div class="settings-popover" id="settings-popover" style="display: none;">
                             <div class="settings-popover-header">
-                                <span class="settings-popover-title">⚙️ ${this.t('midiEditor.settingsPopoverTitle')}</span>
+                                <span class="settings-popover-title">⚙️ ${this.modal.t('midiEditor.settingsPopoverTitle')}</span>
                             </div>
 
                             <div class="settings-group" data-group="actions">
-                                <div class="settings-group-header">${this.t('midiEditor.settingsGroupActions')}</div>
+                                <div class="settings-group-header">${this.modal.t('midiEditor.settingsGroupActions')}</div>
                                 <div class="settings-popover-section">
-                                    <label class="settings-label">🔀 ${this.t('midiEditor.moveToChannelTitle')}</label>
-                                    <span class="settings-popover-hint">${this.t('midiEditor.moveToChannelHint')}</span>
+                                    <label class="settings-label">🔀 ${this.modal.t('midiEditor.moveToChannelTitle')}</label>
+                                    <span class="settings-popover-hint">${this.modal.t('midiEditor.moveToChannelHint')}</span>
                                     <div class="settings-row">
-                                        <select class="snap-select" id="channel-selector" title="${this.t('midiEditor.changeChannelTip')}">
-                                            ${this.renderer.renderChannelOptions()}
+                                        <select class="snap-select" id="channel-selector" title="${this.modal.t('midiEditor.changeChannelTip')}">
+                                            ${this.modal.renderer.renderChannelOptions()}
                                         </select>
-                                        <button class="tool-btn-apply" data-action="change-channel" id="change-channel-btn" title="${this.t('midiEditor.applyChannel')}" disabled>${this.t('midiEditor.applyBtn')}</button>
+                                        <button class="tool-btn-apply" data-action="change-channel" id="change-channel-btn" title="${this.modal.t('midiEditor.applyChannel')}" disabled>${this.modal.t('midiEditor.applyBtn')}</button>
                                     </div>
                                 </div>
                                 <div class="settings-popover-section">
-                                    <label class="settings-label" id="instrument-label">🎵 ${this.t('midiEditor.changeInstrumentTitle')}</label>
-                                    <span class="settings-popover-hint">${this.t('midiEditor.changeInstrumentHint')}</span>
+                                    <label class="settings-label" id="instrument-label">🎵 ${this.modal.t('midiEditor.changeInstrumentTitle')}</label>
+                                    <span class="settings-popover-hint">${this.modal.t('midiEditor.changeInstrumentHint')}</span>
                                     <div class="settings-row">
-                                        <select class="snap-select" id="instrument-selector" title="${this.t('midiEditor.selectInstrument')}">
-                                            ${this.renderer.renderInstrumentOptions()}
+                                        <select class="snap-select" id="instrument-selector" title="${this.modal.t('midiEditor.selectInstrument')}">
+                                            ${this.modal.renderer.renderInstrumentOptions()}
                                         </select>
-                                        <button class="tool-btn-apply" data-action="apply-instrument" id="apply-instrument-btn" title="${this.t('midiEditor.applyInstrument')}">${this.t('midiEditor.applyBtn')}</button>
+                                        <button class="tool-btn-apply" data-action="apply-instrument" id="apply-instrument-btn" title="${this.modal.t('midiEditor.applyInstrument')}">${this.modal.t('midiEditor.applyBtn')}</button>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="settings-group" data-group="display">
-                                <div class="settings-group-header">${this.t('midiEditor.settingsGroupDisplay')}</div>
-                                <div class="settings-switch-row" title="${this.t('midiEditor.playableNotesHint')}">
+                                <div class="settings-group-header">${this.modal.t('midiEditor.settingsGroupDisplay')}</div>
+                                <div class="settings-switch-row" title="${this.modal.t('midiEditor.playableNotesHint')}">
                                     <div class="settings-switch-info">
-                                        <span class="settings-switch-label">🎹 ${this.t('midiEditor.playableNotesTitle')}</span>
+                                        <span class="settings-switch-label">🎹 ${this.modal.t('midiEditor.playableNotesTitle')}</span>
                                     </div>
                                     <button class="settings-switch playable-notes-toggle" id="playable-notes-toggle"
                                         data-active="false"
-                                        aria-label="${this.t('midiEditor.playableNotesTitle')}"
-                                        title="${this.t('midiEditor.playableNotesHint')}">
+                                        aria-label="${this.modal.t('midiEditor.playableNotesTitle')}"
+                                        title="${this.modal.t('midiEditor.playableNotesHint')}">
                                         <span class="sr-only">OFF</span>
                                     </button>
                                 </div>
                             </div>
 
                             <div class="settings-group" data-group="interface">
-                                <div class="settings-group-header">${this.t('midiEditor.settingsGroupInterface')}</div>
-                                <div class="settings-switch-row" title="${this.t('midiEditor.touchModeHint')}">
+                                <div class="settings-group-header">${this.modal.t('midiEditor.settingsGroupInterface')}</div>
+                                <div class="settings-switch-row" title="${this.modal.t('midiEditor.touchModeHint')}">
                                     <div class="settings-switch-info">
-                                        <span class="settings-switch-label">👆 ${this.t('midiEditor.touchModeTitle')}</span>
+                                        <span class="settings-switch-label">👆 ${this.modal.t('midiEditor.touchModeTitle')}</span>
                                     </div>
                                     <button class="settings-switch touch-mode-toggle" id="touch-mode-toggle"
-                                        data-active="${this.touchMode ? 'true' : 'false'}"
-                                        aria-label="${this.t('midiEditor.touchModeTitle')}"
-                                        title="${this.t('midiEditor.touchModeHint')}">
-                                        <span class="sr-only">${this.touchMode ? 'ON' : 'OFF'}</span>
+                                        data-active="${this.modal.touchMode ? 'true' : 'false'}"
+                                        aria-label="${this.modal.t('midiEditor.touchModeTitle')}"
+                                        title="${this.modal.t('midiEditor.touchModeHint')}">
+                                        <span class="sr-only">${this.modal.touchMode ? 'ON' : 'OFF'}</span>
                                     </button>
                                 </div>
                             </div>
 
                             <div class="settings-group" data-group="playback">
-                                <div class="settings-group-header">${this.t('midiEditor.settingsGroupPlayback')}</div>
-                                <div class="settings-switch-row" title="${this.t('midiEditor.keyboardPlaybackHint')}">
+                                <div class="settings-group-header">${this.modal.t('midiEditor.settingsGroupPlayback')}</div>
+                                <div class="settings-switch-row" title="${this.modal.t('midiEditor.keyboardPlaybackHint')}">
                                     <div class="settings-switch-info">
-                                        <span class="settings-switch-label">🎹 ${this.t('midiEditor.keyboardPlaybackTitle')}</span>
+                                        <span class="settings-switch-label">🎹 ${this.modal.t('midiEditor.keyboardPlaybackTitle')}</span>
                                     </div>
                                     <button class="settings-switch" id="keyboard-playback-toggle"
-                                        data-active="${this.keyboardPlaybackEnabled ? 'true' : 'false'}"
-                                        aria-label="${this.t('midiEditor.keyboardPlaybackTitle')}"
-                                        title="${this.t('midiEditor.keyboardPlaybackHint')}">
-                                        <span class="sr-only">${this.keyboardPlaybackEnabled ? 'ON' : 'OFF'}</span>
+                                        data-active="${this.modal.keyboardPlaybackEnabled ? 'true' : 'false'}"
+                                        aria-label="${this.modal.t('midiEditor.keyboardPlaybackTitle')}"
+                                        title="${this.modal.t('midiEditor.keyboardPlaybackHint')}">
+                                        <span class="sr-only">${this.modal.keyboardPlaybackEnabled ? 'ON' : 'OFF'}</span>
                                     </button>
                                 </div>
-                                <div class="settings-switch-row" title="${this.t('midiEditor.dragPlaybackHint')}">
+                                <div class="settings-switch-row" title="${this.modal.t('midiEditor.dragPlaybackHint')}">
                                     <div class="settings-switch-info">
-                                        <span class="settings-switch-label">🔊 ${this.t('midiEditor.dragPlaybackTitle')}</span>
+                                        <span class="settings-switch-label">🔊 ${this.modal.t('midiEditor.dragPlaybackTitle')}</span>
                                     </div>
                                     <button class="settings-switch" id="drag-playback-toggle"
-                                        data-active="${this.dragPlaybackEnabled ? 'true' : 'false'}"
-                                        aria-label="${this.t('midiEditor.dragPlaybackTitle')}"
-                                        title="${this.t('midiEditor.dragPlaybackHint')}">
-                                        <span class="sr-only">${this.dragPlaybackEnabled ? 'ON' : 'OFF'}</span>
+                                        data-active="${this.modal.dragPlaybackEnabled ? 'true' : 'false'}"
+                                        aria-label="${this.modal.t('midiEditor.dragPlaybackTitle')}"
+                                        title="${this.modal.t('midiEditor.dragPlaybackHint')}">
+                                        <span class="sr-only">${this.modal.dragPlaybackEnabled ? 'ON' : 'OFF'}</span>
                                     </button>
                                 </div>
                             </div>
@@ -363,7 +357,7 @@
                         </div>
 
                         <!-- Barre de resize entre notes et CC -->
-                        <div class="cc-resize-bar" id="cc-resize-btn" title="${this.t('midiEditor.dragToResize')}">
+                        <div class="cc-resize-bar" id="cc-resize-btn" title="${this.modal.t('midiEditor.dragToResize')}">
                             <span class="resize-grip">⋮⋮⋮</span>
                         </div>
 
@@ -373,53 +367,53 @@
                             <div class="cc-section-header collapsed" id="cc-section-header">
                                 <div class="cc-section-title">
                                     <span class="cc-collapse-icon">▼</span>
-                                    <span>${this.t('midiEditor.ccSection')}</span>
+                                    <span>${this.modal.t('midiEditor.ccSection')}</span>
                                 </div>
                                 <div class="cc-header-channels" id="editor-channel-selector">
                                     <!-- Channels are added dynamically -->
                                 </div>
-                                <button class="cc-settings-btn" id="cc-draw-settings-btn" title="${this.t('midiEditor.drawSettings') || 'Réglages de dessin'}">⚙</button>
+                                <button class="cc-settings-btn" id="cc-draw-settings-btn" title="${this.modal.t('midiEditor.drawSettings') || 'Réglages de dessin'}">⚙</button>
                             </div>
 
                             <!-- CC/Velocity editor content -->
                             <div class="cc-section-content" id="cc-section-content">
                                 <!-- Horizontal toolbar to pick the type (CC / PB / Velocity) -->
                                 <div class="cc-type-toolbar">
-                                    <label class="cc-toolbar-label">${this.t('midiEditor.type')}</label>
+                                    <label class="cc-toolbar-label">${this.modal.t('midiEditor.type')}</label>
                                     <div class="cc-type-buttons-horizontal">
                                         <!-- Groupe Performance -->
                                         <div class="cc-btn-group" data-group="perf">
-                                            <span class="cc-group-label">${this.t('midiEditor.groupPerf')}</span>
+                                            <span class="cc-group-label">${this.modal.t('midiEditor.groupPerf')}</span>
                                             <div class="cc-btn-group-buttons">
-                                                <button class="cc-type-btn active" data-cc-type="cc1" title="${this.t('midiEditor.ccModulationWheel')}">CC1</button>
-                                                <button class="cc-type-btn" data-cc-type="cc2" title="${this.t('midiEditor.ccBreathController')}">CC2</button>
-                                                <button class="cc-type-btn" data-cc-type="cc11" title="${this.t('midiEditor.ccExpressionController')}">CC11</button>
+                                                <button class="cc-type-btn active" data-cc-type="cc1" title="${this.modal.t('midiEditor.ccModulationWheel')}">CC1</button>
+                                                <button class="cc-type-btn" data-cc-type="cc2" title="${this.modal.t('midiEditor.ccBreathController')}">CC2</button>
+                                                <button class="cc-type-btn" data-cc-type="cc11" title="${this.modal.t('midiEditor.ccExpressionController')}">CC11</button>
                                             </div>
                                         </div>
                                         <!-- Groupe Vibrato -->
                                         <div class="cc-btn-group" data-group="vib">
-                                            <span class="cc-group-label">${this.t('midiEditor.groupVib')}</span>
+                                            <span class="cc-group-label">${this.modal.t('midiEditor.groupVib')}</span>
                                             <div class="cc-btn-group-buttons">
-                                                <button class="cc-type-btn" data-cc-type="cc76" title="${this.t('midiEditor.ccVibratoRate')}">CC76</button>
-                                                <button class="cc-type-btn" data-cc-type="cc77" title="${this.t('midiEditor.ccVibratoDepth')}">CC77</button>
-                                                <button class="cc-type-btn" data-cc-type="cc78" title="${this.t('midiEditor.ccVibratoDelay')}">CC78</button>
+                                                <button class="cc-type-btn" data-cc-type="cc76" title="${this.modal.t('midiEditor.ccVibratoRate')}">CC76</button>
+                                                <button class="cc-type-btn" data-cc-type="cc77" title="${this.modal.t('midiEditor.ccVibratoDepth')}">CC77</button>
+                                                <button class="cc-type-btn" data-cc-type="cc78" title="${this.modal.t('midiEditor.ccVibratoDelay')}">CC78</button>
                                             </div>
                                         </div>
                                         <!-- Groupe Mix -->
                                         <div class="cc-btn-group" data-group="mix">
-                                            <span class="cc-group-label">${this.t('midiEditor.groupMix')}</span>
+                                            <span class="cc-group-label">${this.modal.t('midiEditor.groupMix')}</span>
                                             <div class="cc-btn-group-buttons">
-                                                <button class="cc-type-btn" data-cc-type="cc7" title="${this.t('midiEditor.ccChannelVolume')}">CC7</button>
-                                                <button class="cc-type-btn" data-cc-type="cc10" title="${this.t('midiEditor.ccPanPosition')}">CC10</button>
-                                                <button class="cc-type-btn" data-cc-type="cc91" title="${this.t('midiEditor.ccReverbSend')}">CC91</button>
+                                                <button class="cc-type-btn" data-cc-type="cc7" title="${this.modal.t('midiEditor.ccChannelVolume')}">CC7</button>
+                                                <button class="cc-type-btn" data-cc-type="cc10" title="${this.modal.t('midiEditor.ccPanPosition')}">CC10</button>
+                                                <button class="cc-type-btn" data-cc-type="cc91" title="${this.modal.t('midiEditor.ccReverbSend')}">CC91</button>
                                             </div>
                                         </div>
                                         <!-- Groupe Tone -->
                                         <div class="cc-btn-group" data-group="tone">
-                                            <span class="cc-group-label">${this.t('midiEditor.groupTone')}</span>
+                                            <span class="cc-group-label">${this.modal.t('midiEditor.groupTone')}</span>
                                             <div class="cc-btn-group-buttons">
-                                                <button class="cc-type-btn" data-cc-type="cc74" title="${this.t('midiEditor.ccBrightnessCutoff')}">CC74</button>
-                                                <button class="cc-type-btn" data-cc-type="cc5" title="${this.t('midiEditor.ccPortamentoTime')}">CC5</button>
+                                                <button class="cc-type-btn" data-cc-type="cc74" title="${this.modal.t('midiEditor.ccBrightnessCutoff')}">CC74</button>
+                                                <button class="cc-type-btn" data-cc-type="cc5" title="${this.modal.t('midiEditor.ccPortamentoTime')}">CC5</button>
                                             </div>
                                         </div>
                                         <!-- Dynamic group (detected non-static CCs) -->
@@ -431,7 +425,7 @@
                                         <div class="cc-btn-group" data-group="custom">
                                             <span class="cc-group-label">&nbsp;</span>
                                             <div class="cc-btn-group-buttons">
-                                                <button class="cc-type-btn cc-add-btn" id="cc-add-btn" title="${this.t('midiEditor.addCC') || 'Ajouter un CC'}">+</button>
+                                                <button class="cc-type-btn cc-add-btn" id="cc-add-btn" title="${this.modal.t('midiEditor.addCC') || 'Ajouter un CC'}">+</button>
                                             </div>
                                         </div>
 
@@ -439,25 +433,25 @@
 
                                         <!-- Boutons standalone -->
                                         <div class="cc-standalone-buttons">
-                                            <button class="cc-type-btn cc-standalone-btn" data-cc-type="pitchbend" title="${this.t('midiEditor.ccPitchWheel')}">PB</button>
-                                            <button class="cc-type-btn cc-standalone-btn" data-cc-type="aftertouch" title="${this.t('midiEditor.ccAftertouch')}">AT</button>
-                                            <button class="cc-type-btn cc-standalone-btn" data-cc-type="polyAftertouch" title="${this.t('midiEditor.ccPolyAftertouch')}">PolyAT</button>
-                                            <button class="cc-type-btn cc-standalone-btn" data-cc-type="velocity" title="${this.t('midiEditor.ccNoteVelocity')}">VEL</button>
-                                            <button class="cc-type-btn cc-standalone-btn cc-tempo-btn" data-cc-type="tempo" title="${this.t('midiEditor.ccTempoAutomation')}">🕐 BPM</button>
+                                            <button class="cc-type-btn cc-standalone-btn" data-cc-type="pitchbend" title="${this.modal.t('midiEditor.ccPitchWheel')}">PB</button>
+                                            <button class="cc-type-btn cc-standalone-btn" data-cc-type="aftertouch" title="${this.modal.t('midiEditor.ccAftertouch')}">AT</button>
+                                            <button class="cc-type-btn cc-standalone-btn" data-cc-type="polyAftertouch" title="${this.modal.t('midiEditor.ccPolyAftertouch')}">PolyAT</button>
+                                            <button class="cc-type-btn cc-standalone-btn" data-cc-type="velocity" title="${this.modal.t('midiEditor.ccNoteVelocity')}">VEL</button>
+                                            <button class="cc-type-btn cc-standalone-btn cc-tempo-btn" data-cc-type="tempo" title="${this.modal.t('midiEditor.ccTempoAutomation')}">🕐 BPM</button>
                                         </div>
                                     </div>
 
                                     <div class="cc-toolbar-divider"></div>
 
-                                    <label class="cc-toolbar-label">${this.t('midiEditor.tools')}</label>
+                                    <label class="cc-toolbar-label">${this.modal.t('midiEditor.tools')}</label>
                                     <div class="cc-tool-buttons-horizontal">
-                                        <button class="cc-tool-btn" data-tool="line" title="${this.t('midiEditor.lineTool')}">╱</button>
-                                        <button class="cc-tool-btn" data-tool="draw" title="${this.t('midiEditor.drawTool')}">✎</button>
+                                        <button class="cc-tool-btn" data-tool="line" title="${this.modal.t('midiEditor.lineTool')}">╱</button>
+                                        <button class="cc-tool-btn" data-tool="draw" title="${this.modal.t('midiEditor.drawTool')}">✎</button>
                                     </div>
 
                                     <div class="cc-toolbar-divider"></div>
 
-                                    <button class="cc-delete-btn" id="cc-delete-btn" title="${this.t('midiEditor.deleteSelection')}" disabled>
+                                    <button class="cc-delete-btn" id="cc-delete-btn" title="${this.modal.t('midiEditor.deleteSelection')}" disabled>
                                         🗑️
                                     </button>
 
@@ -478,39 +472,36 @@
             </div>
         `;
 
-        document.body.appendChild(this.container);
+        document.body.appendChild(this.modal.container);
 
     // Attach events
-        this.events.attachEvents();
+        this.modal.events.attachEvents();
 
     // Fermer avec Escape
-        this.escapeHandler = (e) => {
-            if (e.key === 'Escape') this.close();
+        this.modal.escapeHandler = (e) => {
+            if (e.key === 'Escape') this.modal.close();
         };
-        document.addEventListener('keydown', this.escapeHandler);
+        document.addEventListener('keydown', this.modal.escapeHandler);
 
     // Raccourcis clavier
-        this.setupKeyboardShortcuts();
+        this.modal.setupKeyboardShortcuts();
     }
 
-    /**
-    * Initialiser le piano roll avec webaudio-pianoroll
-    */
-    MidiEditorRoutingMixin.initPianoRoll = async function() {
+    async initPianoRoll() {
         const container = document.getElementById('piano-roll-container');
         if (!container) {
-            this.log('error', 'Piano roll container not found');
+            this.modal.log('error', 'Piano roll container not found');
             return;
         }
 
     // Ensure webaudio-pianoroll is loaded
         if (typeof customElements.get('webaudio-pianoroll') === 'undefined') {
-            this.showError(this.t('midiEditor.libraryNotLoaded'));
+            this.modal.showError(this.modal.t('midiEditor.libraryNotLoaded'));
             return;
         }
 
     // Create the webaudio-pianoroll element
-        this.pianoRoll = document.createElement('webaudio-pianoroll');
+        this.modal.pianoRoll = document.createElement('webaudio-pianoroll');
 
     // Configuration
         const width = container.clientWidth || 1000;
@@ -521,24 +512,24 @@
         let minNote = 127;
         let maxNote = 0;
 
-        if (this.sequence && this.sequence.length > 0) {
-            this.sequence.forEach(note => {
+        if (this.modal.sequence && this.modal.sequence.length > 0) {
+            this.modal.sequence.forEach(note => {
                 const endTick = note.t + note.g;
                 if (endTick > maxTick) maxTick = endTick;
                 if (note.n < minNote) minNote = note.n;
                 if (note.n > maxNote) maxNote = note.n;
             });
 
-            this.log('info', `Sequence range: ticks 0-${maxTick}, notes ${minNote}-${maxNote}`);
+            this.modal.log('info', `Sequence range: ticks 0-${maxTick}, notes ${minNote}-${maxNote}`);
         }
 
     // Store maxTick for the sliders
-        if (!this.midiData) this.midiData = {};
-        this.midiData.maxTick = maxTick;
+        if (!this.modal.midiData) this.modal.midiData = {};
+        this.modal.midiData.maxTick = maxTick;
 
     // Default zoom that shows ~20 seconds
     // At 480 ticks/beat and 120 BPM: 20s = 9600 ticks
-        const ticksPerBeat = this.midiData.header?.ticksPerBeat || 480;
+        const ticksPerBeat = this.modal.midiData.header?.ticksPerBeat || 480;
         const twentySeconds = ticksPerBeat * 40; // ~20 secondes à 120 BPM
         const xrange = Math.max(twentySeconds, Math.min(maxTick, twentySeconds)); // Vue sur 20 premières secondes
 
@@ -547,34 +538,34 @@
         const centerNote = Math.floor((minNote + maxNote) / 2);
         const yoffset = Math.max(0, centerNote - Math.floor(noteRange / 2)); // Centrer verticalement
 
-        this.pianoRoll.setAttribute('width', width);
-        this.pianoRoll.setAttribute('height', height);
-        this.pianoRoll.setAttribute('editmode', 'dragpoly');
-        this.pianoRoll.setAttribute('xrange', xrange.toString());
-        this.pianoRoll.setAttribute('yrange', noteRange.toString());
-        this.pianoRoll.setAttribute('yoffset', yoffset.toString());
-        this.pianoRoll.setAttribute('wheelzoom', '1');
-        this.pianoRoll.setAttribute('xscroll', '1');
-        this.pianoRoll.setAttribute('yscroll', '1');
+        this.modal.pianoRoll.setAttribute('width', width);
+        this.modal.pianoRoll.setAttribute('height', height);
+        this.modal.pianoRoll.setAttribute('editmode', 'dragpoly');
+        this.modal.pianoRoll.setAttribute('xrange', xrange.toString());
+        this.modal.pianoRoll.setAttribute('yrange', noteRange.toString());
+        this.modal.pianoRoll.setAttribute('yoffset', yoffset.toString());
+        this.modal.pianoRoll.setAttribute('wheelzoom', '1');
+        this.modal.pianoRoll.setAttribute('xscroll', '1');
+        this.modal.pianoRoll.setAttribute('yscroll', '1');
     // Disable the piano roll's native xruler (replaced by PlaybackTimelineBar)
-        this.pianoRoll.setAttribute('xruler', '0');
+        this.modal.pianoRoll.setAttribute('xruler', '0');
     // Playback markers — kept internal for state but hidden visually
-        this.pianoRoll.setAttribute('markstart', '0');
-        this.pianoRoll.setAttribute('markend', maxTick.toString());
-        this.pianoRoll.setAttribute('cursor', '0');
+        this.modal.pianoRoll.setAttribute('markstart', '0');
+        this.modal.pianoRoll.setAttribute('markend', maxTick.toString());
+        this.modal.pianoRoll.setAttribute('cursor', '0');
 
     // Clean, modern piano roll colors (theme-aware)
-        this.events._applyPianoRollTheme();
+        this.modal.events._applyPianoRollTheme();
 
-        this.log('info', `Piano roll configured: xrange=${xrange}, yrange=${noteRange}, yoffset=${yoffset} (centered), tempo=${this.tempo || 120} BPM, timebase=${this.ticksPerBeat || 480} ticks/beat`);
+        this.modal.log('info', `Piano roll configured: xrange=${xrange}, yrange=${noteRange}, yoffset=${yoffset} (centered), tempo=${this.modal.tempo || 120} BPM, timebase=${this.modal.ticksPerBeat || 480} ticks/beat`);
 
     // Ajouter au conteneur AVANT de charger la sequence
-        container.appendChild(this.pianoRoll);
+        container.appendChild(this.modal.pianoRoll);
 
     // Hide the piano roll's native SVG markers (replaced by PlaybackTimelineBar)
-        const cursorImg = this.pianoRoll.querySelector('#wac-cursor');
-        const markStartImg = this.pianoRoll.querySelector('#wac-markstart');
-        const markEndImg = this.pianoRoll.querySelector('#wac-markend');
+        const cursorImg = this.modal.pianoRoll.querySelector('#wac-cursor');
+        const markStartImg = this.modal.pianoRoll.querySelector('#wac-markstart');
+        const markEndImg = this.modal.pianoRoll.querySelector('#wac-markend');
         if (cursorImg) cursorImg.style.display = 'none';
         if (markStartImg) markStartImg.style.display = 'none';
         if (markEndImg) markEndImg.style.display = 'none';
@@ -582,68 +573,68 @@
     // OPTIMIZATION: batch property assignments to avoid multiple redraws
     // Each property with a 'layout' observer triggers layout() → redraw()
     // Without batching: 3+ unnecessary redraws. With batching: a single redraw at the end.
-        this.pianoRoll.beginBatchUpdate();
+        this.modal.pianoRoll.beginBatchUpdate();
 
-        this.pianoRoll.tempo = this.tempo || 120;
-        this.pianoRoll.timebase = this.ticksPerBeat || 480;
-        this.pianoRoll.grid = 120;
+        this.modal.pianoRoll.tempo = this.modal.tempo || 120;
+        this.modal.pianoRoll.timebase = this.modal.ticksPerBeat || 480;
+        this.modal.pianoRoll.grid = 120;
 
-        const currentSnap = this.snapValues[this.currentSnapIndex];
-        this.pianoRoll.snap = currentSnap.ticks;
+        const currentSnap = this.modal.snapValues[this.modal.currentSnapIndex];
+        this.modal.pianoRoll.snap = currentSnap.ticks;
 
-        this.pianoRoll.endBatchUpdate();
+        this.modal.pianoRoll.endBatchUpdate();
 
-        this.log('info', `Piano roll grid/snap: grid=${this.pianoRoll.grid} ticks, snap=${this.pianoRoll.snap} ticks (${currentSnap.label})`);
+        this.modal.log('info', `Piano roll grid/snap: grid=${this.modal.pianoRoll.grid} ticks, snap=${this.modal.pianoRoll.snap} ticks (${currentSnap.label})`);
 
     // OPTIMISATION: Remplacer setTimeout(100ms) par un seul RAF
     // The component is already mounted after appendChild — no 100ms wait needed
         await new Promise(resolve => requestAnimationFrame(resolve));
 
     // Set the MIDI channel colors on the piano roll BEFORE loading the sequence
-        this.pianoRoll.channelColors = this.channelColors;
+        this.modal.pianoRoll.channelColors = this.modal.channelColors;
 
     // Pick the default channel for new notes (first active channel)
-        if (this.activeChannels.size > 0) {
-            this.pianoRoll.defaultChannel = Array.from(this.activeChannels)[0];
+        if (this.modal.activeChannels.size > 0) {
+            this.modal.pianoRoll.defaultChannel = Array.from(this.modal.activeChannels)[0];
         }
 
     // Initialiser la barre de navigation overview
-        this.events._initNavigationOverview(maxTick, xrange);
+        this.modal.events._initNavigationOverview(maxTick, xrange);
 
     // Synchroniser les sliders avec la navigation native du piano roll
-        this.events.setupScrollSynchronization();
+        this.modal.events.setupScrollSynchronization();
 
     // Initialize PlaybackTimelineBar
-        this.events._initTimelineBar(maxTick, ticksPerBeat, xrange);
+        this.modal.events._initTimelineBar(maxTick, ticksPerBeat, xrange);
 
         // Load the sequence only when it exists and is non-empty
-        if (this.sequence && this.sequence.length > 0) {
-            this.log('info', `Loading ${this.sequence.length} notes into piano roll`);
-            this.log('debug', 'First 3 notes:', JSON.stringify(this.sequence.slice(0, 3)));
+        if (this.modal.sequence && this.modal.sequence.length > 0) {
+            this.modal.log('info', `Loading ${this.modal.sequence.length} notes into piano roll`);
+            this.modal.log('debug', 'First 3 notes:', JSON.stringify(this.modal.sequence.slice(0, 3)));
 
         // Assign the sequence to the piano roll
-            this.pianoRoll.sequence = this.sequence;
+            this.modal.pianoRoll.sequence = this.modal.sequence;
 
     // OPTIMISATION: redraw direct via RAF au lieu de setTimeout(50ms)
-            if (typeof this.pianoRoll.redraw === 'function') {
-                this.pianoRoll.redraw();
-                this.log('info', 'Piano roll redrawn with channel colors');
+            if (typeof this.modal.pianoRoll.redraw === 'function') {
+                this.modal.pianoRoll.redraw();
+                this.modal.log('info', 'Piano roll redrawn with channel colors');
             }
 
     // Verify the sequence was correctly assigned
-            this.log('debug', `Piano roll sequence length: ${this.pianoRoll.sequence?.length || 0}`);
+            this.modal.log('debug', `Piano roll sequence length: ${this.modal.pianoRoll.sequence?.length || 0}`);
         } else {
-            this.log('warn', 'No notes to display in piano roll - adding test notes');
+            this.modal.log('warn', 'No notes to display in piano roll - adding test notes');
 
     // Add a few test notes to confirm the piano roll works
-            this.pianoRoll.sequence = [
+            this.modal.pianoRoll.sequence = [
                 { t: 0, g: 480, n: 60 },   // C4
                 { t: 480, g: 480, n: 64 }, // E4
                 { t: 960, g: 480, n: 67 }  // G4
             ];
 
-            if (typeof this.pianoRoll.redraw === 'function') {
-                this.pianoRoll.redraw();
+            if (typeof this.modal.pianoRoll.redraw === 'function') {
+                this.modal.pianoRoll.redraw();
             }
         }
 
@@ -654,58 +645,58 @@
         let changeTimeout = null;
         const handleChange = () => {
     // Instant audio feedback before the debounce
-            this.handleNoteFeedback(previousSequence);
+            this.modal.handleNoteFeedback(previousSequence);
 
             if (changeTimeout) clearTimeout(changeTimeout);
             changeTimeout = setTimeout(() => {
-                this.isDirty = true;
+                this.modal.isDirty = true;
                 this.updateSaveButton();
-                this.syncFullSequenceFromPianoRoll();
-                this.updateUndoRedoButtonsState(); // Mettre à jour undo/redo quand la séquence change
-                this.updateEditButtons(); // Mettre à jour copy/paste/delete quand la sélection change
+                this.modal.syncFullSequenceFromPianoRoll();
+                this.modal.updateUndoRedoButtonsState(); // Mettre à jour undo/redo quand la séquence change
+                this.modal.updateEditButtons(); // Mettre à jour copy/paste/delete quand la sélection change
 
     // Update the sequence copy after the sync
-                previousSequence = this.copySequence(this.pianoRoll.sequence);
+                previousSequence = this.copySequence(this.modal.pianoRoll.sequence);
             }, 100); // Debounce de 100ms
         };
 
     // Initialize the sequence copy
-        previousSequence = this.copySequence(this.pianoRoll.sequence);
+        previousSequence = this.copySequence(this.modal.pianoRoll.sequence);
 
     // Listen for changes with a debounce
-        this.pianoRoll.addEventListener('change', handleChange);
-        this.pianoRoll.addEventListener('selectionchange', () => {
-            this.updateEditButtons();
+        this.modal.pianoRoll.addEventListener('change', handleChange);
+        this.modal.pianoRoll.addEventListener('selectionchange', () => {
+            this.modal.updateEditButtons();
         });
 
     // Jouer la note au clic sur le clavier piano
-        this.pianoRoll.addEventListener('pianokey', (e) => {
-            if (!this.keyboardPlaybackEnabled) return;
+        this.modal.pianoRoll.addEventListener('pianokey', (e) => {
+            if (!this.modal.keyboardPlaybackEnabled) return;
             const note = e.detail.note;
-            const channel = this.pianoRoll.defaultChannel || 0;
-            this.playNoteFeedback(note, 100, channel);
+            const channel = this.modal.pianoRoll.defaultChannel || 0;
+            this.modal.playNoteFeedback(note, 100, channel);
         });
 
     // Jouer les notes pendant le deplacement par drag
-        this.pianoRoll.addEventListener('notedragmove', (e) => {
-            if (!this.dragPlaybackEnabled) return;
+        this.modal.pianoRoll.addEventListener('notedragmove', (e) => {
+            if (!this.modal.dragPlaybackEnabled) return;
             const notes = e.detail.notes;
             if (notes.length > 0 && notes.length <= 6) {
                 notes.forEach(note => {
-                    this.playNoteFeedback(note.n, note.v || 100, note.c || 0);
+                    this.modal.playNoteFeedback(note.n, note.v || 100, note.c || 0);
                 });
             }
         });
 
         this.updateStats();
-        this.updateEditButtons(); // État initial
-        this.updateUndoRedoButtonsState(); // État initial undo/redo
-        this.renderer.updateInstrumentSelector(); // État initial sélecteur d'instrument
+        this.modal.updateEditButtons(); // État initial
+        this.modal.updateUndoRedoButtonsState(); // État initial undo/redo
+        this.modal.renderer.updateInstrumentSelector(); // État initial sélecteur d'instrument
 
     // Pick the default mode (drag-view for navigation)
-        if (this.pianoRoll && typeof this.pianoRoll.setUIMode === 'function') {
-            this.pianoRoll.setUIMode(this.editMode); // 'drag-view' par défaut
-            this.log('info', `Piano roll UI mode set to: ${this.editMode}`);
+        if (this.modal.pianoRoll && typeof this.modal.pianoRoll.setUIMode === 'function') {
+            this.modal.pianoRoll.setUIMode(this.modal.editMode); // 'drag-view' par défaut
+            this.modal.log('info', `Piano roll UI mode set to: ${this.modal.editMode}`);
         }
 
     // The CC/pitch-bend editor is initialized when the section opens
@@ -715,77 +706,58 @@
         await this.loadConnectedDevices();
 
     // Restore the routings saved in DB for this file
-        await this._loadSavedRoutings();
+        await this.modal._loadSavedRoutings();
 
     // Update tablature button visibility for initial channel selection
-        if (this.channelPanel) {
-            this.channelPanel.updateTablatureButton();
+        if (this.modal.channelPanel) {
+            this.modal.channelPanel.updateTablatureButton();
         }
     }
 
-    /**
-    * Mettre à jour les statistiques affichées
-    * Note: Fonction simplifiée - l'élément note-count a été retiré pour plus d'espace
-    */
-    MidiEditorRoutingMixin.updateStats = function() {
+    updateStats() {
     // Previously showed the note count — removed to save space
     // L'information est toujours visible dans le tooltip des boutons de canal
     }
 
-    /**
-    * Mettre à jour le bouton de sauvegarde
-    */
-    MidiEditorRoutingMixin.updateSaveButton = function() {
+    updateSaveButton() {
         const saveBtn = document.getElementById('save-btn');
         if (saveBtn) {
-            if (this.isDirty) {
+            if (this.modal.isDirty) {
                 saveBtn.classList.add('btn-warning');
-                saveBtn.innerHTML = `💾 ${this.t('midiEditor.saveModified')}`;
+                saveBtn.innerHTML = `💾 ${this.modal.t('midiEditor.saveModified')}`;
             } else {
                 saveBtn.classList.remove('btn-warning');
-                saveBtn.innerHTML = `💾 ${this.t('midiEditor.save')}`;
+                saveBtn.innerHTML = `💾 ${this.modal.t('midiEditor.save')}`;
             }
         }
     }
 
-
-    /**
-     * Copier une sequence de notes (deep copy)
-     */
-    MidiEditorRoutingMixin.copySequence = function(sequence) {
+    copySequence(sequence) {
         if (!sequence || sequence.length === 0) return [];
         return sequence.map(note => ({ t: note.t, g: note.g, n: note.n, c: note.c, v: note.v }));
     }
 
-    // === METHODS RESTORED FROM PLAYBACK SECTION ===
-
-    /**
-     * Toggle preview source between GM original and routed instrument
-     */
-    MidiEditorRoutingMixin.togglePreviewSource = async function() {
-        const btn = this.container?.querySelector('#preview-source-toggle');
-        if (this.previewSource === 'gm') {
-            this.previewSource = 'routed';
-            if (btn) { btn.dataset.source = 'routed'; btn.textContent = this.t('midiEditor.routedSource') || '🔊 Routé'; }
+    async togglePreviewSource() {
+        const btn = this.modal.container?.querySelector('#preview-source-toggle');
+        if (this.modal.previewSource === 'gm') {
+            this.modal.previewSource = 'routed';
+            if (btn) { btn.dataset.source = 'routed'; btn.textContent = this.modal.t('midiEditor.routedSource') || '🔊 Routé'; }
             // Fetch playable note ranges for all routed channels
             await this._loadRoutedPlayableNotes();
         } else {
-            this.previewSource = 'gm';
-            if (btn) { btn.dataset.source = 'gm'; btn.textContent = this.t('midiEditor.gmSource') || '🔊 GM'; }
-            this._routedPlayableNotes.clear();
+            this.modal.previewSource = 'gm';
+            if (btn) { btn.dataset.source = 'gm'; btn.textContent = this.modal.t('midiEditor.gmSource') || '🔊 GM'; }
+            this.modal._routedPlayableNotes.clear();
         }
-        if (this._playback) this._playback._feedbackInstrumentsLoaded = false;
-        if (this.synthesizer) this.loadSequenceForPlayback();
-        this.log('info', `Preview source switched to: ${this.previewSource}`);
+        if (this.modal._playback) this.modal._playback._feedbackInstrumentsLoaded = false;
+        if (this.modal.synthesizer) this.modal.loadSequenceForPlayback();
+        this.modal.log('info', `Preview source switched to: ${this.modal.previewSource}`);
     }
 
-    /**
-     * Fetch playable note ranges from routed device capabilities for preview filtering.
-     */
-    MidiEditorRoutingMixin._loadRoutedPlayableNotes = async function() {
-        this._routedPlayableNotes.clear();
+    async _loadRoutedPlayableNotes() {
+        this.modal._routedPlayableNotes.clear();
         const promises = [];
-        for (const [channel, routedValue] of this.channelRouting) {
+        for (const [channel, routedValue] of this.modal.channelRouting) {
             promises.push((async () => {
                 let deviceId = routedValue;
                 let devChannel = undefined;
@@ -797,7 +769,7 @@
                 try {
                     const params = { deviceId };
                     if (devChannel !== undefined) params.channel = devChannel;
-                    const response = await this.api.sendCommand('instrument_get_capabilities', params);
+                    const response = await this.modal.api.sendCommand('instrument_get_capabilities', params);
                     if (response && response.capabilities) {
                         const caps = response.capabilities;
                         const mode = caps.note_selection_mode || 'range';
@@ -812,78 +784,66 @@
                                 for (let n = minNote; n <= maxNote; n++) notes.add(n);
                             }
                         }
-                        this._routedPlayableNotes.set(channel, notes);
+                        this.modal._routedPlayableNotes.set(channel, notes);
                     }
                 } catch (err) {
-                    this.log('warn', `Failed to fetch capabilities for routed channel ${channel}:`, err);
+                    this.modal.log('warn', `Failed to fetch capabilities for routed channel ${channel}:`, err);
                 }
             })());
         }
         await Promise.all(promises);
     }
 
-    /**
-     * Toggle global display of playable notes for all routed channels
-     */
-    MidiEditorRoutingMixin.togglePlayableNotesGlobal = async function() {
-        this.showPlayableNotes = !this.showPlayableNotes;
+    async togglePlayableNotesGlobal() {
+        this.modal.showPlayableNotes = !this.modal.showPlayableNotes;
 
-        const btn = this.container?.querySelector('#playable-notes-toggle');
+        const btn = this.modal.container?.querySelector('#playable-notes-toggle');
         if (btn) {
-            btn.dataset.active = String(this.showPlayableNotes);
-            const onLabel = this.t('midiEditor.playableOn') || 'ON';
-            const offLabel = this.t('midiEditor.playableOff') || 'OFF';
+            btn.dataset.active = String(this.modal.showPlayableNotes);
+            const onLabel = this.modal.t('midiEditor.playableOn') || 'ON';
+            const offLabel = this.modal.t('midiEditor.playableOff') || 'OFF';
             const srLabel = btn.querySelector('.sr-only');
             if (srLabel) {
-                srLabel.textContent = this.showPlayableNotes ? onLabel : offLabel;
+                srLabel.textContent = this.modal.showPlayableNotes ? onLabel : offLabel;
             } else {
-                btn.textContent = this.showPlayableNotes ? onLabel : offLabel;
+                btn.textContent = this.modal.showPlayableNotes ? onLabel : offLabel;
             }
         }
 
-        if (this.showPlayableNotes) {
+        if (this.modal.showPlayableNotes) {
             const promises = [];
-            for (const [channel] of this.channelRouting) {
-                if (!this.channelPlayableHighlights.has(channel)) {
-                    promises.push(this._toggleChannelPlayableHighlight(channel));
+            for (const [channel] of this.modal.channelRouting) {
+                if (!this.modal.channelPlayableHighlights.has(channel)) {
+                    promises.push(this.modal._toggleChannelPlayableHighlight(channel));
                 }
             }
             await Promise.all(promises);
         } else {
-            this.channelPlayableHighlights.clear();
-            this._syncPianoRollHighlights();
+            this.modal.channelPlayableHighlights.clear();
+            this.modal._syncPianoRollHighlights();
         }
 
         this.updateChannelButtons();
-        this.log('info', `Playable notes global: ${this.showPlayableNotes ? 'ON' : 'OFF'}`);
+        this.modal.log('info', `Playable notes global: ${this.modal.showPlayableNotes ? 'ON' : 'OFF'}`);
     }
 
-    /**
-     * Get the routed instrument's gm_program for a channel from cache.
-     */
-    MidiEditorRoutingMixin._getRoutedGmProgram = function(channel) {
-        const gm = this._routedGmPrograms.get(channel);
+    _getRoutedGmProgram(channel) {
+        const gm = this.modal._routedGmPrograms.get(channel);
         return gm != null ? gm : null;
     }
 
-    /**
-     * Fetch and cache routed instrument gm_programs for all routed channels.
-     */
-    MidiEditorRoutingMixin._loadRoutedGmPrograms = async function() {
-        this._routedGmPrograms.clear();
+    async _loadRoutedGmPrograms() {
+        this.modal._routedGmPrograms.clear();
         const promises = [];
-        for (const [channel, routedValue] of this.channelRouting.entries()) {
+        for (const [channel, routedValue] of this.modal.channelRouting.entries()) {
             promises.push(this._fetchAndCacheRoutedGmProgram(channel, routedValue));
         }
         await Promise.all(promises);
     }
 
-    /**
-     * Fetch gm_program for a single routed device and cache it.
-     */
-    MidiEditorRoutingMixin._fetchAndCacheRoutedGmProgram = async function(channel, routedValue) {
+    async _fetchAndCacheRoutedGmProgram(channel, routedValue) {
         if (!routedValue) {
-            this._routedGmPrograms.delete(channel);
+            this.modal._routedGmPrograms.delete(channel);
             return;
         }
         let deviceId = routedValue;
@@ -896,27 +856,17 @@
         try {
             const params = { deviceId };
             if (devChannel !== undefined) params.channel = devChannel;
-            const response = await this.api.sendCommand('instrument_get_capabilities', params);
+            const response = await this.modal.api.sendCommand('instrument_get_capabilities', params);
             if (response && response.capabilities && response.capabilities.gm_program != null) {
-                this._routedGmPrograms.set(channel, response.capabilities.gm_program);
+                this.modal._routedGmPrograms.set(channel, response.capabilities.gm_program);
             }
         } catch (err) {
-            this.log('warn', `Failed to fetch gm_program for routed device ${deviceId}:`, err);
+            this.modal.log('warn', `Failed to fetch gm_program for routed device ${deviceId}:`, err);
         }
     }
-
-    // Facade sub-component (P2-F.10c-batch).
-    class MidiEditorRouting {
-        constructor(modal) { this.modal = modal; }
     }
-    Object.keys(MidiEditorRoutingMixin).forEach((key) => {
-        MidiEditorRouting.prototype[key] = function(...args) {
-            return MidiEditorRoutingMixin[key].apply(this.modal, args);
-        };
-    });
 
     if (typeof window !== 'undefined') {
-        window.MidiEditorRoutingMixin = MidiEditorRoutingMixin;
         window.MidiEditorRouting = MidiEditorRouting;
     }
 })();
