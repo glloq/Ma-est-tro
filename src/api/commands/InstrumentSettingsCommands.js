@@ -18,7 +18,7 @@
  * fields, length cap for free-text custom names).
  */
 import InstrumentDatabase from '../../persistence/tables/InstrumentDatabase.js';
-import InstrumentTypeConfig from '../../midi/InstrumentTypeConfig.js';
+import InstrumentTypeConfig from '../../midi/adaptation/InstrumentTypeConfig.js';
 import { ValidationError, ConfigurationError } from '../../core/errors/index.js';
 
 /**

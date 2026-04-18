@@ -12,7 +12,7 @@
  */
 
 import { parseMidi } from 'midi-file';
-import ChannelAnalyzer from '../midi/ChannelAnalyzer.js';
+import ChannelAnalyzer from '../midi/routing/ChannelAnalyzer.js';
 import MidiUtils from '../utils/MidiUtils.js';
 
 class MidiFileParser {

@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import CommandRegistry from '../../src/api/CommandRegistry.js';
 import { register as registerRoutingCommands } from '../../src/api/commands/RoutingCommands.js';
-import FileRoutingSyncService from '../../src/midi/domain/routing/FileRoutingSyncService.js';
+import FileRoutingSyncService from '../../src/midi/routing/FileRoutingSyncService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

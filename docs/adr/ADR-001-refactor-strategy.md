@@ -12,7 +12,7 @@ devenus des « god files » qui mélangent transport API, orchestration métier,
 adaptation MIDI et persistance :
 
 - `src/api/commands/PlaybackCommands.js` (~1124 LOC, 23 handlers)
-- `src/midi/MidiPlayer.js` (~1312 LOC, scheduling + routing + modes)
+- `src/midi/playback/MidiPlayer.js` (~1312 LOC, scheduling + routing + modes)
 - cluster d'adaptation MIDI (`TablatureConverter` 1250 LOC,
   `InstrumentMatcher` 1178 LOC, `DrumNoteMapper` 947 LOC,
   `ChannelSplitter` 871 LOC)
