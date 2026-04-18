@@ -2390,127 +2390,24 @@ class RoutingSummaryPage {
 
       for (const mapping of splitChannelMappings) {
         const { sourceChannel, segments, semitones } = mapping;
-        // Allocate free channels for segments 1..N
-        const segChannels = [sourceChannel];
-        for (let si = 1; si < segments.length; si++) {
-          for (let c = 0; c < 16; c++) {
-            if (c === 9 || usedCh.has(c)) continue;
-            segChannels.push(c);
-            usedCh.add(c);
-            break;
-          }
-        }
-        // Redistribute notes by range, with overlap strategy handling
-        // Also duplicate CC events to each segment channel, respecting per-segment mutes
-        const overlapStrat = this.splitAssignments[sourceChannel]?.overlapStrategy;
-        const chRemap = this.ccRemapping[String(sourceChannel)] || {};
-        const chSegMute = this.ccSegmentMute[sourceChannel] || {};
-        let alternateCounter = 0; // for 'alternate' round-robin
-        const activeNotes = new Map(); // for 'overflow': segChannel -> count of active notes
-        for (const sCh of segChannels) activeNotes.set(sCh, 0);
-        const segPolyphony = segments.map(seg => seg.polyphonyShare || seg.fullRange?.polyphony || 16);
+        const free = window.RoutingSummaryPreview.allocateFreeChannels({
+          count: segments.length - 1,
+          usedChannels: usedCh,
+          excluded: new Set([sourceChannel])
+        });
+        for (const c of free) usedCh.add(c);
+        const segChannels = [sourceChannel, ...free];
 
-        for (const track of (previewMidi.tracks || [])) {
-          const dupes = [];
-          const evtsToRemove = [];
-          let tick = 0;
-          for (let ei = 0; ei < track.events.length; ei++) {
-            const evt = track.events[ei];
-            if (evt.deltaTime !== undefined) tick += evt.deltaTime;
-            evt._absTick = tick;
-            if ((evt.type === 'noteOn' || evt.type === 'noteOff') && (evt.channel ?? 0) === sourceChannel) {
-              const note = evt.note ?? evt.noteNumber ?? 60;
-              const isNoteOn = evt.type === 'noteOn' && (evt.velocity ?? 0) > 0;
-              const matches = [];
-              for (let si = 0; si < segments.length; si++) {
-                const rMin = segments[si].noteRange?.min ?? 0;
-                const rMax = segments[si].noteRange?.max ?? 127;
-                if (note >= rMin && note <= rMax && si < segChannels.length) matches.push(si);
-              }
-              if (matches.length > 0) {
-                if (matches.length === 1 || overlapStrat === 'shared') {
-                  // No overlap or shared: send to first match + duplicate to others
-                  evt.channel = segChannels[matches[0]];
-                  if (overlapStrat === 'shared' && matches.length > 1) {
-                    for (let mi = 1; mi < matches.length; mi++) {
-                      dupes.push({ ...evt, channel: segChannels[matches[mi]], _absTick: tick });
-                    }
-                  }
-                } else if (overlapStrat === 'alternate') {
-                  // Round-robin: assign each note-on to next segment in rotation
-                  if (isNoteOn) {
-                    const target = matches[alternateCounter % matches.length];
-                    evt.channel = segChannels[target];
-                    alternateCounter++;
-                  } else {
-                    // noteOff: send to all matching segments (don't know which got the noteOn)
-                    evt.channel = segChannels[matches[0]];
-                    for (let mi = 1; mi < matches.length; mi++) {
-                      dupes.push({ ...evt, channel: segChannels[matches[mi]], _absTick: tick });
-                    }
-                  }
-                } else if (overlapStrat === 'overflow') {
-                  // Primary plays until polyphony full, then overflow to secondary
-                  if (isNoteOn) {
-                    let assigned = false;
-                    for (const si of matches) {
-                      const sCh = segChannels[si];
-                      if ((activeNotes.get(sCh) || 0) < segPolyphony[si]) {
-                        evt.channel = sCh;
-                        activeNotes.set(sCh, (activeNotes.get(sCh) || 0) + 1);
-                        assigned = true;
-                        break;
-                      }
-                    }
-                    if (!assigned) evt.channel = segChannels[matches[0]]; // fallback
-                  } else {
-                    // noteOff: decrement on the segment that has it, send to all
-                    evt.channel = segChannels[matches[0]];
-                    for (const si of matches) {
-                      const sCh = segChannels[si];
-                      if ((activeNotes.get(sCh) || 0) > 0) activeNotes.set(sCh, activeNotes.get(sCh) - 1);
-                    }
-                    for (let mi = 1; mi < matches.length; mi++) {
-                      dupes.push({ ...evt, channel: segChannels[matches[mi]], _absTick: tick });
-                    }
-                  }
-                } else {
-                  // Default: first match only
-                  evt.channel = segChannels[matches[0]];
-                }
-              }
-            } else if ((evt.type === 'controlChange' || evt.type === 'cc') && (evt.channel ?? 0) === sourceChannel) {
-              const cc = evt.controllerNumber ?? evt.controller ?? evt.cc;
-              // Global suppress: remove CC entirely
-              if (chRemap[cc] === -1) { evtsToRemove.push(ei); continue; }
-              // Duplicate CC to each non-muted segment channel
-              const mutedSegs = chSegMute[cc];
-              // Segment 0 keeps the original event (unless muted)
-              if (mutedSegs?.has(0)) {
-                evtsToRemove.push(ei);
-              } else {
-                evt.channel = segChannels[0];
-              }
-              for (let si = 1; si < segChannels.length; si++) {
-                if (mutedSegs?.has(si)) continue;
-                dupes.push({ ...evt, channel: segChannels[si], _absTick: tick });
-              }
-            }
-          }
-          // Remove suppressed events (reverse order)
-          for (let ri = evtsToRemove.length - 1; ri >= 0; ri--) {
-            track.events.splice(evtsToRemove[ri], 1);
-          }
-          if (dupes.length > 0) {
-            const allEvts = [...track.events, ...dupes];
-            allEvts.sort((a, b) => a._absTick - b._absTick);
-            let prev = 0;
-            for (const e of allEvts) { e.deltaTime = e._absTick - prev; prev = e._absTick; }
-            track.events = allEvts;
-          }
-          for (const evt of track.events) delete evt._absTick;
-        }
-        // Config for each segment channel
+        window.RoutingSummaryPreview.redistributeSplitChannel({
+          midiData: previewMidi,
+          sourceChannel,
+          segments,
+          segChannels,
+          overlapStrategy: this.splitAssignments[sourceChannel]?.overlapStrategy,
+          chRemap: this.ccRemapping[String(sourceChannel)] || {},
+          chSegMute: this.ccSegmentMute[sourceChannel] || {}
+        });
+
         segments.forEach((seg, i) => {
           if (i >= segChannels.length) return;
           channelConfigs[segChannels[i]] = {
@@ -2563,134 +2460,24 @@ class RoutingSummaryPage {
     if (this.splitChannels.has(channel) && this.splitAssignments[channel]) {
       const segs = this.splitAssignments[channel].segments || [];
       if (segs.length > 1) {
-        // Find free channels for segments 1..N (segment 0 keeps source channel)
-        const usedChannels = new Set();
-        if (this.midiData?.tracks) {
-          for (const track of this.midiData.tracks) {
-            for (const evt of (track.events || [])) {
-              if (evt.type === 'noteOn' && evt.channel != null) usedChannels.add(evt.channel);
-            }
-          }
-        }
-        const freeChannels = [];
-        for (let c = 0; c < 16; c++) {
-          if (c === 9) continue; // skip drums
-          if (c === channel) continue;
-          if (!usedChannels.has(c)) freeChannels.push(c);
-          if (freeChannels.length >= segs.length - 1) break;
-        }
-
-        // Map segments to target channels
-        const segChannels = [channel, ...freeChannels.slice(0, segs.length - 1)];
-
-        // Build modified MIDI data: redistribute notes by range with overlap strategy
-        // Also duplicate CC events to segment channels, respecting per-segment mutes
-        const overlapStrategy = this.splitAssignments[channel]?.overlapStrategy;
-        const chRemap = this.ccRemapping[ch] || {};
-        const chSegMute = this.ccSegmentMute[channel] || {};
-        let chAlternateCounter = 0;
-        const chActiveNotes = new Map();
-        for (const sCh of segChannels) chActiveNotes.set(sCh, 0);
-        const chSegPoly = segs.map(seg => seg.polyphonyShare || seg.fullRange?.polyphony || 16);
+        const usedChannels = window.RoutingSummaryPreview.collectUsedChannels(this.midiData);
+        const freeChannels = window.RoutingSummaryPreview.allocateFreeChannels({
+          count: segs.length - 1,
+          usedChannels,
+          excluded: new Set([channel])
+        });
+        const segChannels = [channel, ...freeChannels];
 
         const splitMidi = JSON.parse(JSON.stringify(this.midiData));
-        for (const track of (splitMidi.tracks || [])) {
-          const dupes = [];
-          const evtsToRemove = [];
-          let tick = 0;
-          for (let ei = 0; ei < track.events.length; ei++) {
-            const evt = track.events[ei];
-            if (evt.deltaTime !== undefined) tick += evt.deltaTime;
-            evt._absTick = tick;
-
-            if ((evt.type === 'noteOn' || evt.type === 'noteOff') && (evt.channel ?? 0) === channel) {
-              const note = evt.note ?? evt.noteNumber ?? 60;
-              const isNoteOn = evt.type === 'noteOn' && (evt.velocity ?? 0) > 0;
-              const matches = [];
-              for (let si = 0; si < segs.length; si++) {
-                const rMin = segs[si].noteRange?.min ?? 0;
-                const rMax = segs[si].noteRange?.max ?? 127;
-                if (note >= rMin && note <= rMax && si < segChannels.length) matches.push(si);
-              }
-              if (matches.length > 0) {
-                if (matches.length === 1 || overlapStrategy === 'shared') {
-                  evt.channel = segChannels[matches[0]];
-                  if (overlapStrategy === 'shared' && matches.length > 1) {
-                    for (let mi = 1; mi < matches.length; mi++) {
-                      dupes.push({ ...evt, channel: segChannels[matches[mi]], _absTick: tick });
-                    }
-                  }
-                } else if (overlapStrategy === 'alternate') {
-                  if (isNoteOn) {
-                    const target = matches[chAlternateCounter % matches.length];
-                    evt.channel = segChannels[target];
-                    chAlternateCounter++;
-                  } else {
-                    evt.channel = segChannels[matches[0]];
-                    for (let mi = 1; mi < matches.length; mi++) {
-                      dupes.push({ ...evt, channel: segChannels[matches[mi]], _absTick: tick });
-                    }
-                  }
-                } else if (overlapStrategy === 'overflow') {
-                  if (isNoteOn) {
-                    let assigned = false;
-                    for (const si of matches) {
-                      const sCh = segChannels[si];
-                      if ((chActiveNotes.get(sCh) || 0) < chSegPoly[si]) {
-                        evt.channel = sCh;
-                        chActiveNotes.set(sCh, (chActiveNotes.get(sCh) || 0) + 1);
-                        assigned = true;
-                        break;
-                      }
-                    }
-                    if (!assigned) evt.channel = segChannels[matches[0]];
-                  } else {
-                    evt.channel = segChannels[matches[0]];
-                    for (const si of matches) {
-                      const sCh = segChannels[si];
-                      if ((chActiveNotes.get(sCh) || 0) > 0) chActiveNotes.set(sCh, chActiveNotes.get(sCh) - 1);
-                    }
-                    for (let mi = 1; mi < matches.length; mi++) {
-                      dupes.push({ ...evt, channel: segChannels[matches[mi]], _absTick: tick });
-                    }
-                  }
-                } else {
-                  evt.channel = segChannels[matches[0]];
-                }
-              }
-            } else if ((evt.type === 'controlChange' || evt.type === 'cc') && (evt.channel ?? 0) === channel) {
-              const cc = evt.controllerNumber ?? evt.controller ?? evt.cc;
-              if (chRemap[cc] === -1) { evtsToRemove.push(ei); continue; }
-              const mutedSegs = chSegMute[cc];
-              if (mutedSegs?.has(0)) {
-                evtsToRemove.push(ei);
-              } else {
-                evt.channel = segChannels[0];
-              }
-              for (let si = 1; si < segChannels.length; si++) {
-                if (mutedSegs?.has(si)) continue;
-                dupes.push({ ...evt, channel: segChannels[si], _absTick: tick });
-              }
-            }
-          }
-          // Remove suppressed events (reverse order)
-          for (let ri = evtsToRemove.length - 1; ri >= 0; ri--) {
-            track.events.splice(evtsToRemove[ri], 1);
-          }
-          // Second pass: merge duplicates back, re-sort by absolute tick, recompute deltas
-          if (dupes.length > 0) {
-            const allEvents = [...track.events, ...dupes];
-            allEvents.sort((a, b) => a._absTick - b._absTick);
-            let prevTick = 0;
-            for (const evt of allEvents) {
-              evt.deltaTime = evt._absTick - prevTick;
-              prevTick = evt._absTick;
-            }
-            track.events = allEvents;
-          }
-          // Clean up temp field
-          for (const evt of track.events) delete evt._absTick;
-        }
+        window.RoutingSummaryPreview.redistributeSplitChannel({
+          midiData: splitMidi,
+          sourceChannel: channel,
+          segments: segs,
+          segChannels,
+          overlapStrategy: this.splitAssignments[channel]?.overlapStrategy,
+          chRemap: this.ccRemapping[ch] || {},
+          chSegMute: this.ccSegmentMute[channel] || {}
+        });
 
         // Build configs: one per segment with its own gmProgram and range
         // Mark all other channels as skipped so only segments are heard
