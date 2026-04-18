@@ -585,28 +585,12 @@ class RoutingSummaryPage {
    * Based on what percentage of channel notes are covered by at least one segment.
    */
   _computeSplitCoverageScore(channel) {
-    const ch = String(channel);
-    const splitData = this.splitAssignments[channel];
-    if (!splitData?.segments?.length) return 0;
-    const analysis = this.channelAnalyses[channel];
-    const dist = analysis?.noteDistribution;
-    if (!dist) return splitData.quality || 0;
-
-    const adapt = this.adaptationSettings[ch] || {};
-    const semi = (this.autoAdaptation && adapt.pitchShift !== 'none') ? (adapt.transpositionSemitones || 0) : 0;
-    let covered = 0;
-    let total = 0;
-    for (const [note, count] of Object.entries(dist)) {
-      const shifted = parseInt(note) + semi;
-      total += count;
-      const inRange = splitData.segments.some(seg => {
-        const rMin = seg.noteRange?.min ?? 0;
-        const rMax = seg.noteRange?.max ?? 127;
-        return shifted >= rMin && shifted <= rMax;
-      });
-      if (inRange) covered += count;
-    }
-    return total > 0 ? Math.round((covered / total) * 100) : 0;
+    return window.RoutingSummaryHelpers.computeSplitCoverageScore({
+      splitData: this.splitAssignments[channel],
+      analysis: this.channelAnalyses[channel],
+      adapt: this.adaptationSettings[String(channel)] || {},
+      autoAdaptation: this.autoAdaptation
+    });
   }
 
   /**
@@ -1679,21 +1663,7 @@ class RoutingSummaryPage {
    * Detect overlapping note ranges between segments.
    */
   _detectOverlaps(segments) {
-    if (!segments || segments.length < 2) return [];
-    const overlaps = [];
-    for (let a = 0; a < segments.length; a++) {
-      for (let b = a + 1; b < segments.length; b++) {
-        const rA = segments[a].noteRange;
-        const rB = segments[b].noteRange;
-        if (!rA || !rB) continue;
-        const oMin = Math.max(rA.min, rB.min);
-        const oMax = Math.min(rA.max, rB.max);
-        if (oMin <= oMax) {
-          overlaps.push({ min: oMin, max: oMax, segA: a, segB: b });
-        }
-      }
-    }
-    return overlaps;
+    return window.RoutingSummaryHelpers.detectOverlaps(segments);
   }
 
   /**
@@ -2114,14 +2084,7 @@ class RoutingSummaryPage {
    * Merge two render hints into the most inclusive one.
    */
   _mergeHints(a, b) {
-    if (!a) return b;
-    if (!b) return a;
-    if (a === 'all' || b === 'all') return 'all';
-    if (a === b) return a;
-    if (a === 'both-panels' || b === 'both-panels') return 'both-panels';
-    // summary + detail = both-panels
-    if ((a === 'summary' && b === 'detail') || (a === 'detail' && b === 'summary')) return 'both-panels';
-    return 'all';
+    return window.RoutingSummaryHelpers.mergeHints(a, b);
   }
 
   /**
@@ -2238,20 +2201,8 @@ class RoutingSummaryPage {
    * Get CC name from InstrumentSettingsModal.CC_GROUPS lookup
    */
   _getCCName(ccNum) {
-    // Memoize: CC names are static per session
-    if (this._ccNameCache?.[ccNum] !== undefined) return this._ccNameCache[ccNum];
-    let name = `CC ${ccNum}`;
-    if (typeof InstrumentSettingsModal !== 'undefined' && InstrumentSettingsModal.CC_GROUPS) {
-      for (const group of Object.values(InstrumentSettingsModal.CC_GROUPS)) {
-        if (group.ccs && group.ccs[ccNum]) {
-          name = group.ccs[ccNum].name;
-          break;
-        }
-      }
-    }
     if (!this._ccNameCache) this._ccNameCache = {};
-    this._ccNameCache[ccNum] = name;
-    return name;
+    return window.RoutingSummaryHelpers.getCCName(ccNum, this._ccNameCache);
   }
 
   /**
@@ -2282,19 +2233,11 @@ class RoutingSummaryPage {
    * @returns {number[]|null} Array of CC numbers, or null if unknown
    */
   _getInstrumentCCs(instrumentId) {
-    // Priority 1: allInstruments (always has full DB data)
-    const fullInst = (this.allInstruments || []).find(i => i.id === instrumentId);
-    if (fullInst?.supported_ccs) {
-      if (Array.isArray(fullInst.supported_ccs)) return fullInst.supported_ccs;
-      try { return JSON.parse(fullInst.supported_ccs || '[]'); } catch { return null; }
-    }
-    // Priority 2: suggestions
-    const found = this._findInstrumentById(instrumentId);
-    if (found?.supported_ccs) {
-      if (Array.isArray(found.supported_ccs)) return found.supported_ccs;
-      try { return JSON.parse(found.supported_ccs || '[]'); } catch { return null; }
-    }
-    return null;
+    return window.RoutingSummaryHelpers.getInstrumentCCs(
+      instrumentId,
+      this.allInstruments || [],
+      (id) => this._findInstrumentById(id)
+    );
   }
 
   /**
@@ -2302,63 +2245,15 @@ class RoutingSummaryPage {
    * Returns { summaryHTML, supportedCount, unsupportedCount, allUnknown }.
    */
   _computeCCSummary(channel) {
-    const ch = String(channel);
-    const analysis = this.channelAnalyses[channel];
-    const channelCCs = analysis?.usedCCs || [];
-    const assignment = this.selectedAssignments[ch];
-    const isSplit = this.splitChannels.has(channel);
-    const currentRemap = this.ccRemapping[ch] || {};
-
-    if (isSplit && this.splitAssignments[channel]) {
-      const segs = this.splitAssignments[channel].segments || [];
-      const segCCs = segs.map(seg => this._getInstrumentCCs(seg.instrumentId));
-      const allUnknown = segCCs.every(ccs => ccs === null);
-
-      let supportedByAll = 0, unsupportedByAny = 0;
-      for (const ccNum of channelCCs) {
-        const isDisabled = currentRemap[ccNum] === -1;
-        const anyUnsupported = !isDisabled && segCCs.some(ccs => ccs !== null && !ccs.includes(ccNum));
-        if (isDisabled || anyUnsupported) unsupportedByAny++;
-        else supportedByAll++;
-      }
-
-      let summaryHTML;
-      if (allUnknown) {
-        summaryHTML = `<span class="rs-cc-summary rs-cc-unknown-summary">${_t('routingSummary.ccUnknown') || 'CC non configurés \u2014 supposés tous supportés'}</span>`;
-      } else if (unsupportedByAny === 0) {
-        summaryHTML = `<span class="rs-cc-summary rs-cc-ok-summary">\u2713 ${_t('routingSummary.ccAllSupported') || 'Tous les CC supportés'} (${supportedByAll})</span>`;
-      } else {
-        summaryHTML = `<span class="rs-cc-summary rs-cc-warn-summary">${supportedByAll}/${channelCCs.length} ${_t('routingSummary.ccSupported') || 'CC supportés'} \u2014 ${unsupportedByAny} ${_t('routingSummary.ccUnsupported') || 'non supportés'}</span>`;
-      }
-      return { summaryHTML, supportedCount: supportedByAll, unsupportedCount: unsupportedByAny, allUnknown };
-    }
-
-    // Single instrument mode
-    let instrumentCCs = assignment?.supportedCcs ?? null;
-    if (instrumentCCs && typeof instrumentCCs === 'string') {
-      try { instrumentCCs = JSON.parse(instrumentCCs); } catch { instrumentCCs = null; }
-    }
-    if (instrumentCCs == null && assignment?.instrumentId) {
-      instrumentCCs = this._getInstrumentCCs(assignment.instrumentId);
-    }
-
-    let supportedCount = 0, unsupportedCount = 0;
-    for (const ccNum of channelCCs) {
-      const isDisabled = currentRemap[ccNum] === -1;
-      if (isDisabled) { unsupportedCount++; }
-      else if (instrumentCCs === null || instrumentCCs.includes(ccNum)) { supportedCount++; }
-      else { unsupportedCount++; }
-    }
-
-    let summaryHTML;
-    if (instrumentCCs === null) {
-      summaryHTML = `<span class="rs-cc-summary rs-cc-unknown-summary">${_t('routingSummary.ccUnknown') || 'CC non configurés \u2014 supposés tous supportés'}</span>`;
-    } else if (unsupportedCount === 0) {
-      summaryHTML = `<span class="rs-cc-summary rs-cc-ok-summary">\u2713 ${_t('routingSummary.ccAllSupported') || 'Tous les CC supportés'} (${supportedCount})</span>`;
-    } else {
-      summaryHTML = `<span class="rs-cc-summary rs-cc-warn-summary">${supportedCount}/${channelCCs.length} ${_t('routingSummary.ccSupported') || 'CC supportés'} \u2014 ${unsupportedCount} ${_t('routingSummary.ccUnsupported') || 'non supportés'}</span>`;
-    }
-    return { summaryHTML, supportedCount, unsupportedCount, allUnknown: instrumentCCs === null };
+    return window.RoutingSummaryHelpers.computeCCSummary({
+      channel,
+      channelAnalyses: this.channelAnalyses,
+      selectedAssignments: this.selectedAssignments,
+      splitChannels: this.splitChannels,
+      splitAssignments: this.splitAssignments,
+      ccRemapping: this.ccRemapping,
+      getInstrumentCCs: (id) => this._getInstrumentCCs(id)
+    });
   }
 
   _renderCCSection(channel) {

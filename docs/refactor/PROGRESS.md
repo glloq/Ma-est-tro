@@ -9,9 +9,9 @@
 |---|---|
 | Phase active | **Phase 2 — Persistance (migration handlers)** |
 | Branche de travail | `claude/refactor-maestro-project-L6ptg` |
-| Dernier lot terminé | P2-F.4t (detail container) |
+| Dernier lot terminé | P2-F.4u (pure helpers — mergeHints, detectOverlaps, computeSplitCoverageScore, CC helpers) |
 | Prochain lot suggéré | continuer sur comportements (_bindDetailEvents, _applyPreviewVolumes) ou **P1-4.5c**. |
-| Date dernière mise à jour | 2026-04-17 |
+| Date dernière mise à jour | 2026-04-18 |
 | Agent ayant mis à jour | Claude (agent refactoring) |
 
 ## Règles de mise à jour
@@ -135,6 +135,7 @@ Format d'une ligne : date ISO — agent — identifiant lot — résumé — fic
 
 | Date | Agent | Lot | Résumé | Fichiers touchés | Commit | Notes |
 |---|---|---|---|---|---|---|
+| 2026-04-18 | Claude (refactoring) | P2-F.4u | Extraction des helpers purs (`mergeHints`, `detectOverlaps`, `computeSplitCoverageScore`, `getCCName`, `getInstrumentCCs`, `computeCCSummary`) vers nouveau module `RoutingSummaryHelpers.js`. Inversion de contrôle : cache CC name et `findInstrumentById` passés en paramètres. Les 6 méthodes de la classe deviennent 1-liners. | `public/js/views/components/auto-assign/RoutingSummaryHelpers.js` (+163 LOC, nouveau), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-105 LOC), `public/index.html` (+1 script tag) | (ce commit) | Cumul F.1→F.4u : 4748→3149 (**-1599, -33.7%**) → 84% du chemin vers KPI -40%. |
 | 2026-04-17 | Claude (refactoring) | P2-F.4t | Extraction du container HTML du detail panel (~23 LOC template) vers `renderDetailContainer({ ... })`. 18e renderer pur. Header composite (typeIcon + route + score + poly + playable + close button) + ordonnancement des sections pre-rendues. | `public/js/views/components/auto-assign/RoutingSummaryRenderers.js` (+71 LOC), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-4 LOC nets) | (ce commit) | 437/437 tests verts. Cumul F.1→F.4t : 4748→3254 (**-1494, -31.5%**). |
 | 2026-04-17 | Claude (refactoring) | P2-F.4s | Extraction du template HTML du modal (`_renderContent` full-rebuild mode, ~56 LOC) vers `renderContentShell({ ... })` (~85 LOC). 17e renderer pur. Le contrôle-flow reste dans la page (_bindGlobalEvents, scroll-save, partial updates) mais le HTML structurel est isolé. | `public/js/views/components/auto-assign/RoutingSummaryRenderers.js` (+90 LOC), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-36 LOC) | (ce commit) | 437/437 tests verts. Cumul F.1→F.4s : 4748→3258 (**-1490, -31.4%**) → 79% du chemin vers KPI -40%. |
 | 2026-04-17 | Claude (refactoring) | P2-F.4r | Extraction de la section split de `_renderDetailPanel` (~152 LOC) vers `renderSplitSection({ ... })`. Table multi-instrument avec range slider per-segment, overlap zones (resolve buttons), uncovered notes warning. 3 callbacks injectés : `getCompatibleInstrumentsForSegment`, `getDisplayName`, `detectOverlaps`. | `public/js/views/components/auto-assign/RoutingSummaryRenderers.js` (+166 LOC), `public/js/views/components/auto-assign/RoutingSummaryPage.js` (-134 LOC) | (ce commit) | 437/437 tests verts. Cumul F.1→F.4r : 4748→3294 (**-1454, -30.6%**) → 76% du chemin vers KPI -40%. |
