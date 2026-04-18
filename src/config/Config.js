@@ -274,15 +274,14 @@ class Config {
   }
 
   /**
-   * Re-read the config file from disk. Env overrides are NOT re-applied
-   * here — they are static at process start.
-   * TODO: reapply `_applyEnvOverrides` after reload to make hot-reload
-   * symmetric with initial boot.
+   * Re-read the config file from disk and re-apply the environment
+   * overrides so a hot-reload behaves exactly like a fresh boot.
    *
    * @returns {void}
    */
   reload() {
     this.config = this.loadConfig();
+    this._applyEnvOverrides();
   }
 
   /**

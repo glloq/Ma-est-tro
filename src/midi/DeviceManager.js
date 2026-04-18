@@ -391,8 +391,8 @@ class DeviceManager {
    * @returns {boolean} True on successful enqueue.
    */
   sendMessage(deviceName, type, data) {
-    // Skip rate limiting for real-time messages (clock, transport)
-    const isRealTime = type === 'clock' || type === 'start' || type === 'stop' || type === 'continue';
+    // Skip rate limiting for real-time messages (clock, transport, reset)
+    const isRealTime = type === 'clock' || type === 'start' || type === 'stop' || type === 'continue' || type === 'reset';
     if (!isRealTime && this._isRateLimited(deviceName)) {
       return false;
     }

@@ -12,8 +12,8 @@
  *   - `system_update`        — spawn detached `scripts/update.sh`
  *   - `system_backup`        — copy DB to `backups/<filename>.db`
  *   - `system_restore`       — placeholder
- *   - `system_logs`          — placeholder
- *   - `system_clear_logs`    — placeholder
+ *   - `system_logs`          — tail the active log file (cap {@link LOG_TAIL_MAX_LINES})
+ *   - `system_clear_logs`    — truncate the active log file
  *
  * Mutating commands (restart/shutdown/update) are gated by
  * {@link requireTokenConfigured} so they are unreachable when API token
@@ -23,10 +23,15 @@
  * `JsonValidator.validateSystemCommand`; the rest take no payload.
  */
 import os from 'os';
-import { readFileSync, accessSync, openSync, closeSync, mkdirSync, unlinkSync, constants as fsConstants } from 'fs';
+import { readFileSync, accessSync, openSync, closeSync, mkdirSync, unlinkSync, existsSync, constants as fsConstants } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
 import { AuthenticationError, ValidationError } from '../../core/errors/index.js';
+
+/** Default number of log lines returned when `data.lines` is absent. */
+const LOG_TAIL_DEFAULT_LINES = 200;
+/** Hard cap on `data.lines` so a large request cannot OOM the server. */
+const LOG_TAIL_MAX_LINES = 5000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -384,24 +389,73 @@ async function systemRestore(_app, _data) {
 }
 
 /**
- * Placeholder for streaming recent logs to the client.
- * TODO: tail `logs/midimind.log` and return the last N lines (or stream
- * them as events).
+ * Resolve the active log file path from config, falling back to the
+ * legacy default used by older installs.
  *
- * @returns {Promise<{logs: Array}>}
+ * @param {Object} app
+ * @returns {string} Absolute path (resolved against the project root).
+ * @private
  */
-async function systemLogs(_app, _data) {
-  return { logs: [] };
+function _resolveLogPath(app) {
+  const configured = app.config?.logging?.file || './logs/midimind.log';
+  return resolve(PROJECT_ROOT, configured);
 }
 
 /**
- * Placeholder for log truncation.
- * TODO: rotate `logs/midimind.log` and unlink any rotated files older
- * than the configured retention window.
+ * Return the last `data.lines` lines of the log file (default
+ * {@link LOG_TAIL_DEFAULT_LINES}, capped at {@link LOG_TAIL_MAX_LINES}).
+ * Returns `{logs: []}` when no log file is configured or the file does
+ * not exist yet (fresh install).
  *
- * @returns {Promise<{success:true}>}
+ * @param {Object} app
+ * @param {?{lines?:number}} data
+ * @returns {Promise<{logs:string[], path:string, truncated:boolean}>}
+ *   `truncated:true` indicates the file had more lines than returned.
  */
-async function systemClearLogs(_app) {
+async function systemLogs(app, data) {
+  const requested = Number.isInteger(data?.lines) && data.lines > 0 ? data.lines : LOG_TAIL_DEFAULT_LINES;
+  const lineLimit = Math.min(requested, LOG_TAIL_MAX_LINES);
+  const logPath = _resolveLogPath(app);
+
+  if (!existsSync(logPath)) {
+    return { logs: [], path: logPath, truncated: false };
+  }
+
+  let content;
+  try {
+    content = readFileSync(logPath, 'utf8');
+  } catch (err) {
+    app.logger.warn(`system_logs read failed: ${err.message}`);
+    return { logs: [], path: logPath, truncated: false };
+  }
+
+  // Split and drop a trailing empty line (normal when file ends with \n).
+  const allLines = content.split('\n');
+  if (allLines.length > 0 && allLines[allLines.length - 1] === '') allLines.pop();
+
+  const tail = allLines.slice(-lineLimit);
+  return {
+    logs: tail,
+    path: logPath,
+    truncated: allLines.length > tail.length
+  };
+}
+
+/**
+ * Truncate the active log file to zero bytes. Delegates to
+ * `Logger.clear()` so the logger's write stream stays coherent with
+ * the on-disk file across the operation.
+ *
+ * @param {Object} app
+ * @returns {Promise<{success:boolean, path?:string}>}
+ */
+async function systemClearLogs(app) {
+  if (typeof app.logger?.clear === 'function') {
+    const ok = app.logger.clear();
+    return { success: ok, path: _resolveLogPath(app) };
+  }
+
+  // Console-only logger (no file sink) — nothing to clear but not an error.
   return { success: true };
 }
 
