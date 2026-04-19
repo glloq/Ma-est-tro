@@ -643,7 +643,7 @@
 
     // Create or show tablature editor (replaces piano roll in the same space)
             if (!this.modal.tablatureEditor) {
-                this.modal.tablatureEditor = new TablatureEditor(this);
+                this.modal.tablatureEditor = new TablatureEditor(this.modal);
             }
 
             await this.modal.tablatureEditor.show(stringInstrument, channelNotes, activeChannel);
@@ -913,7 +913,7 @@
 
     // Create editor on first use
         if (!this.modal.drumPatternEditor) {
-            this.modal.drumPatternEditor = new DrumPatternEditor(this);
+            this.modal.drumPatternEditor = new DrumPatternEditor(this.modal);
         }
 
         this.modal.drumPatternEditor.show(channelNotes, channel);
@@ -984,7 +984,7 @@
 
     // Create editor on first use
         if (!this.modal.windInstrumentEditor) {
-            this.modal.windInstrumentEditor = new WindInstrumentEditor(this);
+            this.modal.windInstrumentEditor = new WindInstrumentEditor(this.modal);
         }
 
         this.modal.windInstrumentEditor.show(windPreset, channelNotes, channel);
