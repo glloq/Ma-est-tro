@@ -595,7 +595,7 @@
         }
 
     // Update the stats
-        this.modal.updateStats();
+        this.modal.routingOps?.updateStats();
 
         this.modal.log('info', `Piano roll reloaded: ${this.modal.sequence.length} notes, xrange=${xrange}, yrange=${noteRange}`);
     }

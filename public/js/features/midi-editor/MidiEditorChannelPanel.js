@@ -157,7 +157,7 @@ class MidiEditorChannelPanel {
             });
         }
 
-        m.updateStats();
+        m.routingOps?.updateStats();
     }
 
     /**
