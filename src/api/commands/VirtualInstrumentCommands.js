@@ -97,6 +97,13 @@ async function instrumentCreateVirtual(app, data) {
     throw new ValidationError('channel must be between 0 and 15', 'channel');
   }
 
+  // `instruments_latency.device_id` has a FK to `devices(id)`, so the
+  // devices row must exist before we can insert any instrument settings
+  // for it — otherwise better-sqlite3 raises SQLITE_CONSTRAINT.
+  if (app.deviceSettingsRepository) {
+    app.deviceSettingsRepository.ensureDevice(deviceId, name, 'virtual');
+  }
+
   // Create instrument settings entry
   const id = app.instrumentRepository.updateSettings(deviceId, channel, {
     custom_name: name,
