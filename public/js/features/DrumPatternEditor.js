@@ -112,6 +112,9 @@ class DrumPatternEditor {
         if (this.modal.editActions.updateModeButtons) this.modal.editActions.updateModeButtons();
         if (this.modal.editActions.updateEditButtons) this.modal.editActions.updateEditButtons();
         if (this.modal.editActions.updateUndoRedoButtonsState) this.modal.editActions.updateUndoRedoButtonsState();
+
+        // Refresh timeline / navigation bar to piano-roll viewport.
+        if (this.modal.ccPicker?.syncAllEditors) this.modal.ccPicker.syncAllEditors();
     }
 
     _setPianoRollVisible(visible) {

@@ -114,6 +114,11 @@ class WindInstrumentEditor {
         if (this.modal.editActions.updateModeButtons) this.modal.editActions.updateModeButtons();
         if (this.modal.editActions.updateEditButtons) this.modal.editActions.updateEditButtons();
         if (this.modal.editActions.updateUndoRedoButtonsState) this.modal.editActions.updateUndoRedoButtonsState();
+
+        // Refresh timeline / navigation bar so they switch from wind's
+        // viewport (scrollX / ticksPerPixel) back to the piano roll's
+        // xoffset / xrange. Without this, nav bar keeps stale wind state.
+        if (this.modal.ccPicker?.syncAllEditors) this.modal.ccPicker.syncAllEditors();
     }
 
     _setPianoRollVisible(visible) {
