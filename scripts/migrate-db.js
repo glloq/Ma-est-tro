@@ -4,7 +4,7 @@
 
 import { openDatabase } from '../src/persistence/DatabaseLifecycle.js';
 
-const DB_PATH = process.env.DB_PATH || './data/midimind.db';
+const DB_PATH = process.env.DB_PATH || './data/gmboop.db';
 
 const logger = {
   info: (m) => console.log(`[info] ${m}`),
@@ -14,7 +14,7 @@ const logger = {
 };
 
 function main() {
-  console.log('=== Ma-est-tro Database Migration ===\n');
+  console.log('=== Général Midi Boop Database Migration ===\n');
   try {
     const db = openDatabase(DB_PATH, logger);
     db.close();

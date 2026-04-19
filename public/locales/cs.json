@@ -31,7 +31,7 @@
         "off": "Vyp."
     },
     "app": {
-        "title": "MidiMind 5.0 - MIDI Orchestrační systém",
+        "title": "GeneralMidiBoop 5.0 - MIDI Orchestrační systém",
         "subtitle": "MIDI Orchestrační systém"
     },
     "settings": {
@@ -471,7 +471,7 @@
         "saveFailed": "Chyba ukládání"
     },
     "logs": {
-        "applicationStarting": "=== MidiMind 5.0 Spouštění ===",
+        "applicationStarting": "=== GeneralMidiBoop 5.0 Spouštění ===",
         "initializing": "Inicializace aplikace...",
         "bluetoothInitialized": "Bluetooth inicializován",
         "bluetoothNotAvailable": "Bluetooth není dostupný",
@@ -481,7 +481,7 @@
         "commandCompleted": "Příkaz {command} dokončen za {time}ms"
     },
     "ui": {
-        "loading": "Načítání MidiMind...",
+        "loading": "Načítání GeneralMidiBoop...",
         "openKeyboard": "Otevřít MIDI klávesnici",
         "settings": "Nastavení",
         "toggleLogs": "Zobrazit/Skrýt protokoly",

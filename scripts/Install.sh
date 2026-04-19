@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# MidiMind 5.0 - Complete Installation Script
+# GeneralMidiBoop 5.0 - Complete Installation Script
 # Raspberry Pi / Linux / macOS
 # =============================================================================
 
@@ -8,7 +8,7 @@ set -e
 
 echo "╔═══════════════════════════════════════════════════════════════╗"
 echo "║                                                               ║"
-echo "║              🎹 MidiMind 5.0 Installation 🎹                  ║"
+echo "║              🎹 GeneralMidiBoop 5.0 Installation 🎹                  ║"
 echo "║                                                               ║"
 echo "║  Complete MIDI orchestration system with modern web UI        ║"
 echo "║                                                               ║"
@@ -176,9 +176,9 @@ print_success "Dependencies installed"
 
 print_step "5. Initializing Database"
 
-if [ -f "data/midimind.db" ]; then
+if [ -f "data/gmboop.db" ]; then
     print_warning "Database already exists, skipping migration"
-    print_info "To reset database: rm data/midimind.db && npm run migrate"
+    print_info "To reset database: rm data/gmboop.db && npm run migrate"
 else
     print_info "Running database migrations..."
     npm run migrate
@@ -209,11 +209,11 @@ if [ ! -f config.json ]; then
     "enableVirtual": true
   },
   "database": {
-    "path": "./data/midimind.db"
+    "path": "./data/gmboop.db"
   },
   "logging": {
     "level": "info",
-    "file": "./logs/midimind.log"
+    "file": "./logs/gmboop.log"
   },
   "uploads": {
     "maxSize": 10485760,
@@ -306,7 +306,7 @@ if [ "$OS" == "linux" ]; then
     # Sur Linux/Raspberry Pi, on configure automatiquement systemd
     print_info "Configuration de systemd pour le démarrage automatique..."
 
-    SERVICE_FILE="/etc/systemd/system/midimind.service"
+    SERVICE_FILE="/etc/systemd/system/gmboop.service"
 
     # Détecter le chemin absolu de Node.js
     NODE_PATH=$(which node)
@@ -314,7 +314,7 @@ if [ "$OS" == "linux" ]; then
 
     sudo tee $SERVICE_FILE > /dev/null <<EOF
 [Unit]
-Description=MidiMind 5.0 MIDI Orchestration System
+Description=GeneralMidiBoop 5.0 MIDI Orchestration System
 After=network.target
 
 [Service]
@@ -326,7 +326,7 @@ Restart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=midimind
+SyslogIdentifier=gmboop
 
 Environment=NODE_ENV=production
 
@@ -336,35 +336,35 @@ EOF
 
     # Recharger systemd et activer le service
     sudo systemctl daemon-reload
-    sudo systemctl enable midimind
+    sudo systemctl enable gmboop
 
     print_success "Service systemd configuré et activé"
-    print_info "Le service MidiMind démarrera automatiquement au boot"
+    print_info "Le service GeneralMidiBoop démarrera automatiquement au boot"
 
     echo ""
     print_info "Commandes utiles :"
-    echo "    ${GREEN}sudo systemctl start midimind${NC}     - Démarrer le service"
-    echo "    ${GREEN}sudo systemctl stop midimind${NC}      - Arrêter le service"
-    echo "    ${GREEN}sudo systemctl restart midimind${NC}   - Redémarrer le service"
-    echo "    ${GREEN}sudo systemctl status midimind${NC}    - Voir le statut"
-    echo "    ${GREEN}sudo journalctl -u midimind -f${NC}    - Voir les logs en temps réel"
+    echo "    ${GREEN}sudo systemctl start gmboop${NC}     - Démarrer le service"
+    echo "    ${GREEN}sudo systemctl stop gmboop${NC}      - Arrêter le service"
+    echo "    ${GREEN}sudo systemctl restart gmboop${NC}   - Redémarrer le service"
+    echo "    ${GREEN}sudo systemctl status gmboop${NC}    - Voir le statut"
+    echo "    ${GREEN}sudo journalctl -u gmboop -f${NC}    - Voir les logs en temps réel"
     echo ""
 
     # Demander si on veut démarrer le service maintenant
     echo ""
-    read -p "Démarrer le service MidiMind maintenant ? (y/n) " -n 1 -r
+    read -p "Démarrer le service GeneralMidiBoop maintenant ? (y/n) " -n 1 -r
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        sudo systemctl start midimind
+        sudo systemctl start gmboop
         sleep 2
-        if sudo systemctl is-active --quiet midimind; then
-            print_success "Service MidiMind démarré avec succès !"
+        if sudo systemctl is-active --quiet gmboop; then
+            print_success "Service GeneralMidiBoop démarré avec succès !"
         else
             print_error "Erreur lors du démarrage du service"
-            print_info "Vérifiez les logs avec : sudo journalctl -u midimind -n 50"
+            print_info "Vérifiez les logs avec : sudo journalctl -u gmboop -n 50"
         fi
     else
-        print_info "Vous pouvez démarrer le service plus tard avec : sudo systemctl start midimind"
+        print_info "Vous pouvez démarrer le service plus tard avec : sudo systemctl start gmboop"
     fi
 
 elif [ "$OS" == "macos" ]; then
@@ -372,16 +372,16 @@ elif [ "$OS" == "macos" ]; then
     print_warning "Systemd n'est pas disponible sur macOS"
     print_info "Configuration de PM2 pour le démarrage automatique..."
 
-    pm2 delete midimind 2>/dev/null || true
+    pm2 delete gmboop 2>/dev/null || true
     pm2 start ecosystem.config.cjs
     pm2 save
 
     print_success "PM2 configuré"
     print_info "Commandes utiles :"
-    echo "    ${GREEN}pm2 start midimind${NC}    - Démarrer"
-    echo "    ${GREEN}pm2 stop midimind${NC}     - Arrêter"
-    echo "    ${GREEN}pm2 restart midimind${NC}  - Redémarrer"
-    echo "    ${GREEN}pm2 logs midimind${NC}     - Voir les logs"
+    echo "    ${GREEN}pm2 start gmboop${NC}    - Démarrer"
+    echo "    ${GREEN}pm2 stop gmboop${NC}     - Arrêter"
+    echo "    ${GREEN}pm2 restart gmboop${NC}  - Redémarrer"
+    echo "    ${GREEN}pm2 logs gmboop${NC}     - Voir les logs"
     echo ""
 
     read -p "Configurer PM2 pour démarrer au boot ? (y/n) " -n 1 -r
@@ -451,15 +451,15 @@ echo "║                                                               ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo ""
 
-print_success "MidiMind 5.0 est prêt à l'emploi !"
+print_success "GeneralMidiBoop 5.0 est prêt à l'emploi !"
 echo ""
 
 if [ "$OS" == "linux" ]; then
     print_info "Gestion du Service :"
-    echo "  ${GREEN}sudo systemctl start midimind${NC}     - Démarrer MidiMind"
-    echo "  ${GREEN}sudo systemctl stop midimind${NC}      - Arrêter MidiMind"
-    echo "  ${GREEN}sudo systemctl status midimind${NC}    - Voir l'état"
-    echo "  ${GREEN}sudo journalctl -u midimind -f${NC}    - Voir les logs"
+    echo "  ${GREEN}sudo systemctl start gmboop${NC}     - Démarrer GeneralMidiBoop"
+    echo "  ${GREEN}sudo systemctl stop gmboop${NC}      - Arrêter GeneralMidiBoop"
+    echo "  ${GREEN}sudo systemctl status gmboop${NC}    - Voir l'état"
+    echo "  ${GREEN}sudo journalctl -u gmboop -f${NC}    - Voir les logs"
     echo ""
     print_info "Le service démarre automatiquement au démarrage du Raspberry Pi"
     echo ""
@@ -519,7 +519,7 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "  Besoin d'aide ? Consultez la documentation ou ouvrez une issue"
-echo "  GitHub : https://github.com/glloq/Ma-est-tro"
+echo "  GitHub : https://github.com/glloq/General-Midi-Boop"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""

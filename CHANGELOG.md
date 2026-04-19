@@ -1,6 +1,55 @@
 # Changelog
 
-All notable changes to Ma-est-tro are documented in this file.
+All notable changes to Général Midi Boop are documented in this file.
+
+## [0.7.0] - 2026-04-18
+
+### Changed — Project rebrand
+- **Renamed** project from `Ma-est-tro` / `MidiMind` to **Général Midi Boop**.
+- **[breaking]** npm package `midimind` → `gmboop`.
+- **[breaking]** Environment variables: `MAESTRO_*` → `GMBOOP_*`
+  (`GMBOOP_SERVER_PORT`, `GMBOOP_DATABASE_PATH`, `GMBOOP_LOG_LEVEL`,
+  `GMBOOP_BLE_ENABLED`, `GMBOOP_SERIAL_ENABLED`, `GMBOOP_API_TOKEN`, etc.).
+- **[breaking]** localStorage keys: `maestro_settings` → `gmboop_settings`,
+  `maestro_filter_sections` → `gmboop_filter_sections`,
+  `maestro_locale` → `gmboop_locale`,
+  `midimind_update_completed` → `gmboop_update_completed`.
+- **[breaking]** Prometheus metrics: `maestro_*` → `gmboop_*`
+  (`gmboop_uptime_seconds`, `gmboop_websocket_clients`,
+  `gmboop_memory_heap_used_bytes`, `gmboop_memory_rss_bytes`, `gmboop_info`).
+- **[breaking]** Default runtime paths: `data/midimind.db` → `data/gmboop.db`,
+  `logs/midimind.log` → `logs/gmboop.log`.
+- **[breaking]** systemd unit `midimind.service` → `gmboop.service`;
+  PM2 app name `midimind` → `gmboop`.
+- **[breaking]** Docker service `maestro` → `gmboop`, volumes `maestro-*` → `gmboop-*`.
+- **[breaking]** MQTT default topics: `wled/maestro` → `wled/gmboop`,
+  `maestro/light` → `gmboop/light`.
+- **[breaking]** RTP-MIDI / network manufacturer label: `MidiMind` →
+  `GeneralMidiBoop`; SysEx manufacturer label `MidiMind Manufacturer` →
+  `GMB Manufacturer` (binary ID `0x00` unchanged — hardware compatibility
+  preserved).
+- **[breaking]** GitHub repository: `glloq/Ma-est-tro` → `glloq/General-Midi-Boop`.
+
+### Added
+- `scripts/rename-project.js` — automated rebrand tool (one-shot).
+- `scripts/migrate-from-v5.sh` — helper for v5.x deployments: stops legacy
+  PM2/systemd services, rewrites `.env` prefixes, renames runtime artifacts.
+- `public/js/migrateLegacy.js` — one-shot frontend migration copying
+  `maestro_*` / `midimind_*` localStorage values into `gmboop_*` keys on
+  first boot; scheduled for removal in 0.8.0.
+- `Application#_migrateLegacyArtifacts()` — one-shot backend step that
+  renames `data/midimind.db` and `logs/midimind.log` to their `gmboop.*`
+  equivalents on first boot; scheduled for removal in 0.8.0.
+
+### Migration guide
+Existing v5.x operators should:
+1. `bash scripts/migrate-from-v5.sh` (stops legacy service, rewrites `.env`).
+2. `npm install` (regenerates `package-lock.json` under the new name).
+3. `scripts/Install.sh` to register the new `gmboop.service` / PM2 app.
+4. Old Prometheus dashboards querying `maestro_*` need to be updated to
+   `gmboop_*` — no transitional alias is exported (clean-rename policy).
+
+## Previous history (as Ma-est-tro / MidiMind)
 
 ## [Unreleased]
 
@@ -169,7 +218,7 @@ All notable changes to Ma-est-tro are documented in this file.
 - GitHub Actions CI workflow (lint + test + coverage)
 - Environment variable overrides in Config.js (dotenv support)
 - `.env.example` template with all supported variables
-- Optional token authentication for HTTP and WebSocket (`MAESTRO_API_TOKEN`)
+- Optional token authentication for HTTP and WebSocket (`GMBOOP_API_TOKEN`)
 - Helmet.js security headers
 - Log file rotation (10 MB max, 5 rotated files)
 - Structured JSON logging format option (`logging.jsonFormat`)

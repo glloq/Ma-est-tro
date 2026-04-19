@@ -1,7 +1,7 @@
 /**
  * @file src/core/ServiceContainer.js
  * @description ServiceContainer v1.0.0 — lightweight dependency-injection
- * container for the MidiMind backend. Replaces the legacy
+ * container for the GeneralMidiBoop backend. Replaces the legacy
  * "Application-as-service-locator" anti-pattern by giving each service only
  * the dependencies it actually needs instead of the entire Application
  * instance.

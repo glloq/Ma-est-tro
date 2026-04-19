@@ -1,19 +1,19 @@
 services:
-  maestro:
+  gmboop:
     build: .
     ports:
       - "${PORT:-8080}:8080"
     volumes:
-      - maestro-data:/app/data
-      - maestro-logs:/app/logs
-      - maestro-backups:/app/backups
+      - gmboop-data:/app/data
+      - gmboop-logs:/app/logs
+      - gmboop-backups:/app/backups
     environment:
       - NODE_ENV=production
       - PORT=8080
-      - MAESTRO_LOG_LEVEL=${MAESTRO_LOG_LEVEL:-info}
-      # Set MAESTRO_API_TOKEN in .env to enable authentication.
+      - GMBOOP_LOG_LEVEL=${GMBOOP_LOG_LEVEL:-info}
+      # Set GMBOOP_API_TOKEN in .env to enable authentication.
       # WARNING: If unset, API and WebSocket have no authentication.
-      - MAESTRO_API_TOKEN=${MAESTRO_API_TOKEN:-}
+      - GMBOOP_API_TOKEN=${GMBOOP_API_TOKEN:-}
     deploy:
       resources:
         limits:
@@ -27,6 +27,6 @@ services:
         max-file: "3"
 
 volumes:
-  maestro-data:
-  maestro-logs:
-  maestro-backups:
+  gmboop-data:
+  gmboop-logs:
+  gmboop-backups:

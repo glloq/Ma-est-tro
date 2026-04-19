@@ -1,6 +1,6 @@
 # Images a faire - Instruments General MIDI
 
-Checklist de toutes les images d'instruments a creer pour Ma-est-tro.
+Checklist de toutes les images d'instruments a creer pour Général Midi Boop.
 Les images serviront a identifier visuellement chaque instrument dans l'interface web.
 
 **Classification retenue** : tous les instruments ayant une forme physique reelle (acoustiques + electro-acoustiques). Seuls les sons purement synthetiques et effets sonores sont exclus.

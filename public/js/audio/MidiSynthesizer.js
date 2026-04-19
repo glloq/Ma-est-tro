@@ -216,7 +216,7 @@ class MidiSynthesizer {
      */
     static getSavedBank() {
         try {
-            const saved = localStorage.getItem('maestro_settings');
+            const saved = localStorage.getItem('gmboop_settings');
             if (saved) {
                 const parsed = JSON.parse(saved);
                 return parsed.soundBank || DEFAULT_BANK_ID;

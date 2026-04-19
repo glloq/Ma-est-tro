@@ -16,7 +16,7 @@ describe('Config', () => {
     test('loads default config values', () => {
       const config = new Config('/nonexistent/path.json');
       expect(config.server.port).toBe(8080);
-      expect(config.database.path).toBe('./data/midimind.db');
+      expect(config.database.path).toBe('./data/gmboop.db');
       expect(config.logging.level).toBe('info');
     });
   });
@@ -52,14 +52,14 @@ describe('Config', () => {
       expect(config.get('server.port')).toBe(3000);
     });
 
-    test('MAESTRO_LOG_LEVEL overrides logging.level', () => {
-      process.env.MAESTRO_LOG_LEVEL = 'debug';
+    test('GMBOOP_LOG_LEVEL overrides logging.level', () => {
+      process.env.GMBOOP_LOG_LEVEL = 'debug';
       const config = new Config('/nonexistent/path.json');
       expect(config.get('logging.level')).toBe('debug');
     });
 
-    test('MAESTRO_BLE_ENABLED overrides ble.enabled', () => {
-      process.env.MAESTRO_BLE_ENABLED = 'true';
+    test('GMBOOP_BLE_ENABLED overrides ble.enabled', () => {
+      process.env.GMBOOP_BLE_ENABLED = 'true';
       const config = new Config('/nonexistent/path.json');
       expect(config.get('ble.enabled')).toBe(true);
     });

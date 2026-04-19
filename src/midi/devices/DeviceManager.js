@@ -493,7 +493,7 @@ class DeviceManager {
   }
 
   /**
-   * Send SysEx Identity Request to a device using MidiMind Block 1 protocol
+   * Send SysEx Identity Request to a device using GMB Block 1 protocol
    */
   /**
    * Send a MIDI Universal Identity Request (SysEx F0 7E <id> 06 01 F7)
@@ -525,14 +525,14 @@ class DeviceManager {
       const sysexData = [
         0xF0,        // SysEx Start
         0x7D,        // Custom SysEx (Educational/Development)
-        0x00,        // MidiMind Manufacturer ID
+        0x00,        // GMB Manufacturer ID
         0x01,        // Block 1 (Identification)
         0x00,        // Request flag (00=request, 01=response)
         0xF7         // SysEx End
       ];
 
       output.send('sysex', sysexData);
-      this.app.logger.info(`MidiMind Block 1 Identity Request sent to ${deviceName}`);
+      this.app.logger.info(`GMB Block 1 Identity Request sent to ${deviceName}`);
       return true;
     } catch (error) {
       this.app.logger.error(`Failed to send Identity Request: ${error.message}`);
@@ -621,7 +621,7 @@ class DeviceManager {
   }
 
   /**
-   * Parse SysEx Identity Reply message using MidiMind Block 1 protocol
+   * Parse SysEx Identity Reply message using GMB Block 1 protocol
    */
   /**
    * Decode a SysEx Universal Identity Reply (F0 7E <ch> 06 02 ...) into
@@ -679,12 +679,12 @@ class DeviceManager {
     };
 
     return {
-      protocol: 'MidiMind Block 1',
+      protocol: 'GMB Block 1',
       blockVersion: blockVersion,
       deviceId: `0x${deviceId.toString(16).padStart(8, '0').toUpperCase()}`,
       deviceIdDecimal: deviceId,
       deviceName: deviceName,
-      manufacturerName: 'MidiMind',
+      manufacturerName: 'GeneralMidiBoop',
       firmwareVersion: firmwareVersion,
       firmware: {
         major: firmwareMajor,

@@ -110,7 +110,7 @@
             <label style="font-size:12px;font-weight:600;color:${t.text};display:block;margin-bottom:3px;">URL du Broker MQTT</label>
             <input id="ldFormMqttBroker" type="text" value="mqtt://localhost:1883" placeholder="mqtt://host:1883" style="width:100%;padding:7px 10px;border:1px solid ${t.inputBorder};border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;background:${t.inputBg};color:${t.inputText};">
             <div style="display:flex;gap:8px;margin-bottom:8px;">
-              <div style="flex:1;"><label style="font-size:11px;color:${t.textSec};display:block;margin-bottom:2px;">Topic de base</label><input id="ldFormMqttTopic" type="text" value="wled/maestro" placeholder="wled/all" style="width:100%;padding:6px;border:1px solid ${t.inputBorder};border-radius:6px;font-size:12px;box-sizing:border-box;background:${t.inputBg};color:${t.inputText};"></div>
+              <div style="flex:1;"><label style="font-size:11px;color:${t.textSec};display:block;margin-bottom:2px;">Topic de base</label><input id="ldFormMqttTopic" type="text" value="wled/gmboop" placeholder="wled/all" style="width:100%;padding:6px;border:1px solid ${t.inputBorder};border-radius:6px;font-size:12px;box-sizing:border-box;background:${t.inputBg};color:${t.inputText};"></div>
               <div style="flex:1;"><label style="font-size:11px;color:${t.textSec};display:block;margin-bottom:2px;">Firmware</label>
                 <select id="ldFormMqttFirmware" style="width:100%;padding:6px;border:1px solid ${t.inputBorder};border-radius:6px;font-size:12px;background:${t.inputBg};color:${t.inputText};">
                   <option value="wled">WLED</option>
@@ -310,7 +310,7 @@
     } else if (type === 'mqtt') {
       connectionConfig = {
         broker_url: document.getElementById('ldFormMqttBroker')?.value || 'mqtt://localhost:1883',
-        base_topic: document.getElementById('ldFormMqttTopic')?.value || 'wled/maestro',
+        base_topic: document.getElementById('ldFormMqttTopic')?.value || 'wled/gmboop',
         firmware: document.getElementById('ldFormMqttFirmware')?.value || 'wled',
         username: document.getElementById('ldFormMqttUser')?.value || undefined,
         password: document.getElementById('ldFormMqttPass')?.value || undefined
@@ -446,7 +446,7 @@
         const brokerEl = document.getElementById('ldFormMqttBroker');
         if (brokerEl) brokerEl.value = cfg.broker_url || 'mqtt://localhost:1883';
         const topicEl = document.getElementById('ldFormMqttTopic');
-        if (topicEl) topicEl.value = cfg.base_topic || 'wled/maestro';
+        if (topicEl) topicEl.value = cfg.base_topic || 'wled/gmboop';
         const fwEl = document.getElementById('ldFormMqttFirmware');
         if (fwEl) fwEl.value = cfg.firmware || 'wled';
         const userEl = document.getElementById('ldFormMqttUser');
@@ -572,7 +572,7 @@
     } else if (type === 'mqtt') {
       connectionConfig = {
         broker_url: document.getElementById('ldFormMqttBroker')?.value || 'mqtt://localhost:1883',
-        base_topic: document.getElementById('ldFormMqttTopic')?.value || 'wled/maestro',
+        base_topic: document.getElementById('ldFormMqttTopic')?.value || 'wled/gmboop',
         firmware: document.getElementById('ldFormMqttFirmware')?.value || 'wled',
         username: document.getElementById('ldFormMqttUser')?.value || undefined,
         password: document.getElementById('ldFormMqttPass')?.value || undefined

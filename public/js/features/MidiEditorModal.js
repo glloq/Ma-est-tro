@@ -330,12 +330,12 @@ if (typeof window !== 'undefined') {
 }
 
 // ============================================================================
-// Preferences (localStorage via maestro_settings)
+// Preferences (localStorage via gmboop_settings)
 // ============================================================================
 
 MidiEditorModal.prototype._getPreference = function(key, defaultValue) {
     try {
-        const saved = localStorage.getItem('maestro_settings');
+        const saved = localStorage.getItem('gmboop_settings');
         if (!saved) return defaultValue;
         const value = JSON.parse(saved)[key];
         return value === undefined ? defaultValue : value;
@@ -346,10 +346,10 @@ MidiEditorModal.prototype._getPreference = function(key, defaultValue) {
 
 MidiEditorModal.prototype._setPreference = function(key, value) {
     try {
-        const saved = localStorage.getItem('maestro_settings');
+        const saved = localStorage.getItem('gmboop_settings');
         const settings = saved ? JSON.parse(saved) : {};
         settings[key] = value;
-        localStorage.setItem('maestro_settings', JSON.stringify(settings));
+        localStorage.setItem('gmboop_settings', JSON.stringify(settings));
     } catch (e) {}
 };
 

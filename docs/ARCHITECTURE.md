@@ -1,8 +1,8 @@
-# Architecture - Ma-est-tro v5.0.0
+# Architecture - Général Midi Boop v5.0.0
 
 ## Overview
 
-Ma-est-tro is a real-time MIDI orchestration system for Raspberry Pi. It manages MIDI devices, routes MIDI messages, plays MIDI files, and provides a web-based control interface.
+Général Midi Boop is a real-time MIDI orchestration system for Raspberry Pi. It manages MIDI devices, routes MIDI messages, plays MIDI files, and provides a web-based control interface.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -42,7 +42,7 @@ Ma-est-tro is a real-time MIDI orchestration system for Raspberry Pi. It manages
 ## Directory Structure
 
 ```
-Ma-est-tro/
+General-Midi-Boop/
 ├── server.js                  # Entry point
 ├── config.json                # Default configuration
 ├── ecosystem.config.cjs       # PM2 process manager config
@@ -161,14 +161,14 @@ MIDI Device → DeviceManager → EventBus → MidiRouter → Output Device
 Configuration follows a layered approach:
 1. `config.json` (defaults, committed)
 2. `.env` file (local overrides via dotenv)
-3. Environment variables (`MAESTRO_*` prefix)
+3. Environment variables (`GMBOOP_*` prefix)
 
 See `.env.example` for all supported variables.
 
 ## Security
 
 - **Helmet.js** for HTTP security headers
-- **Optional token auth** via `MAESTRO_API_TOKEN` (HTTP Bearer + WS query param)
+- **Optional token auth** via `GMBOOP_API_TOKEN` (HTTP Bearer + WS query param)
 - Health check (`/api/health`) always public
 
 ## CI/CD

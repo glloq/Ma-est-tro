@@ -80,7 +80,7 @@ async function systemInfo(_app) {
 }
 
 /**
- * Guard for critical system commands. Requires `MAESTRO_API_TOKEN` to
+ * Guard for critical system commands. Requires `GMBOOP_API_TOKEN` to
  * be configured so destructive operations cannot be invoked through an
  * unauthenticated server.
  *
@@ -88,8 +88,8 @@ async function systemInfo(_app) {
  * @throws {AuthenticationError}
  */
 function requireTokenConfigured() {
-  if (!process.env.MAESTRO_API_TOKEN) {
-    throw new AuthenticationError('System commands require MAESTRO_API_TOKEN to be configured');
+  if (!process.env.GMBOOP_API_TOKEN) {
+    throw new AuthenticationError('System commands require GMBOOP_API_TOKEN to be configured');
   }
 }
 
@@ -397,7 +397,7 @@ async function systemRestore(_app, _data) {
  * @private
  */
 function _resolveLogPath(app) {
-  const configured = app.config?.logging?.file || './logs/midimind.log';
+  const configured = app.config?.logging?.file || './logs/gmboop.log';
   return resolve(PROJECT_ROOT, configured);
 }
 

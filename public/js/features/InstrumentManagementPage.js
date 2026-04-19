@@ -330,7 +330,7 @@ class InstrumentManagementPage {
    */
   _isVirtualEnabled() {
     try {
-      const saved = localStorage.getItem('maestro_settings');
+      const saved = localStorage.getItem('gmboop_settings');
       if (saved) {
         return !!JSON.parse(saved).virtualInstrument;
       }

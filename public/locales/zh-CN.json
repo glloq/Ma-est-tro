@@ -31,7 +31,7 @@
         "off": "关"
     },
     "app": {
-        "title": "MidiMind 5.0 - MIDI Orchestration System",
+        "title": "GeneralMidiBoop 5.0 - MIDI Orchestration System",
         "subtitle": "MIDI编曲系统"
     },
     "settings": {
@@ -471,7 +471,7 @@
         "saveFailed": "保存错误"
     },
     "logs": {
-        "applicationStarting": "=== MidiMind 5.0 启动 ===",
+        "applicationStarting": "=== GeneralMidiBoop 5.0 启动 ===",
         "initializing": "正在初始化应用程序...",
         "bluetoothInitialized": "蓝牙已初始化",
         "bluetoothNotAvailable": "蓝牙不可用",
@@ -481,7 +481,7 @@
         "commandCompleted": "命令 {command} 在{time}毫秒内完成"
     },
     "ui": {
-        "loading": "正在加载MidiMind...",
+        "loading": "正在加载GeneralMidiBoop...",
         "openKeyboard": "打开MIDI键盘",
         "settings": "设置",
         "toggleLogs": "显示/隐藏日志",

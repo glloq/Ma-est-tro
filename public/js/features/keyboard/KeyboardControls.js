@@ -169,7 +169,7 @@
      */
     KeyboardControlsMixin.loadSettings = function() {
         try {
-            const saved = localStorage.getItem('maestro_settings');
+            const saved = localStorage.getItem('gmboop_settings');
             if (saved) {
                 const settings = JSON.parse(saved);
 
@@ -233,7 +233,7 @@
             // Respect the "virtualInstrument" setting from SettingsModal
             let virtualEnabled = false;
             try {
-                const savedSettings = localStorage.getItem('maestro_settings');
+                const savedSettings = localStorage.getItem('gmboop_settings');
                 if (savedSettings) {
                     const parsed = JSON.parse(savedSettings);
                     virtualEnabled = !!parsed.virtualInstrument;

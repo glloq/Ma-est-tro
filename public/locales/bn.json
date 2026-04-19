@@ -31,7 +31,7 @@
         "off": "বন্ধ"
     },
     "app": {
-        "title": "MidiMind 5.0 - MIDI অর্কেস্ট্রেশন সিস্টেম",
+        "title": "GeneralMidiBoop 5.0 - MIDI অর্কেস্ট্রেশন সিস্টেম",
         "subtitle": "MIDI অর্কেস্ট্রেশন সিস্টেম"
     },
     "settings": {
@@ -471,7 +471,7 @@
         "saveFailed": "সংরক্ষণ ত্রুটি"
     },
     "logs": {
-        "applicationStarting": "=== MidiMind 5.0 শুরু হচ্ছে ===",
+        "applicationStarting": "=== GeneralMidiBoop 5.0 শুরু হচ্ছে ===",
         "initializing": "অ্যাপ্লিকেশন শুরু হচ্ছে...",
         "bluetoothInitialized": "ব্লুটুথ শুরু হয়েছে",
         "bluetoothNotAvailable": "ব্লুটুথ উপলব্ধ নয়",
@@ -481,7 +481,7 @@
         "commandCompleted": "কমান্ড {command} {time}ms-এ সম্পন্ন হয়েছে"
     },
     "ui": {
-        "loading": "MidiMind লোড হচ্ছে...",
+        "loading": "GeneralMidiBoop লোড হচ্ছে...",
         "openKeyboard": "MIDI কীবোর্ড খুলুন",
         "settings": "সেটিংস",
         "toggleLogs": "লগ দেখান/লুকান",

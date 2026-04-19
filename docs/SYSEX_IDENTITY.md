@@ -1,11 +1,11 @@
-# MidiMind SysEx Protocol - Instrument Developer Guide
+# GeneralMidiBoop SysEx Protocol - Instrument Developer Guide
 
 ## Overview
 
-The MidiMind SysEx protocol enables custom identification and automatic configuration of DIY instruments via the SysEx 0x7D protocol. It supports both single-instrument devices and multi-instrument controllers.
+The GeneralMidiBoop SysEx protocol enables custom identification and automatic configuration of DIY instruments via the SysEx 0x7D protocol. It supports both single-instrument devices and multi-instrument controllers.
 
 **Protocol**: Custom SysEx (Educational/Development use)
-**Manufacturer ID**: 0x00 (MidiMind)
+**Manufacturer ID**: 0x00 (GeneralMidiBoop)
 
 ### Block Summary
 
@@ -21,13 +21,13 @@ The MidiMind SysEx protocol enables custom identification and automatic configur
 
 ### Common Header Format
 
-All MidiMind SysEx messages share this header structure:
+All GeneralMidiBoop SysEx messages share this header structure:
 ```
 F0 7D 00 <block_id> <direction> [<data>...] F7
 ```
 - `F0` : SysEx start
 - `7D` : Custom SysEx (Educational/Development)
-- `00` : MidiMind Manufacturer ID
+- `00` : GMB Manufacturer ID
 - `<block_id>` : Block number (01-07)
 - `<direction>` : 00=request, 01=response
 
@@ -45,7 +45,7 @@ F0 7D 00 01 00 F7
 |------|-------|-------------|
 | 0 | `F0` | Start SysEx |
 | 1 | `7D` | Custom SysEx (Educational/Development) |
-| 2 | `00` | MidiMind Manufacturer ID |
+| 2 | `00` | GMB Manufacturer ID |
 | 3 | `01` | Block 1 (Identification) |
 | 4 | `00` | Request flag (00=request, 01=response) |
 | 5 | `F7` | End SysEx |
@@ -67,7 +67,7 @@ F0 7D 00 01 01 <version> <deviceId[5]> <name[32]> <firmware[3]> <features[5]> F7
 |--------|------|-------|------|-------------|
 | 0 | 1 | Start | `F0` | SysEx start |
 | 1 | 1 | Protocol | `7D` | Custom SysEx |
-| 2 | 1 | Manufacturer | `00` | MidiMind |
+| 2 | 1 | Manufacturer | `00` | GeneralMidiBoop |
 | 3 | 1 | Block ID | `01` | Identification |
 | 4 | 1 | Reply Flag | `01` | Response (always 01) |
 | 5 | 1 | Block Version | `uint8` | Format version (currently 01) |
@@ -99,7 +99,7 @@ void encode32BitTo7Bit(uint32_t value, uint8_t* output) {
 }
 ```
 
-### Decoding (MidiMind side - reference)
+### Decoding (GeneralMidiBoop side - reference)
 ```cpp
 uint32_t value = 0;
 value |= (data[0] & 0x7F);
@@ -193,7 +193,7 @@ void handleIdentityRequest() {
     // Header
     response[pos++] = 0xF0;  // Start
     response[pos++] = 0x7D;  // Custom SysEx
-    response[pos++] = 0x00;  // MidiMind Manufacturer
+    response[pos++] = 0x00;  // GMB Manufacturer
     response[pos++] = 0x01;  // Block 1
     response[pos++] = 0x01;  // Reply flag
 
@@ -292,8 +292,8 @@ Features: 0x00000001 (Note Map supported)
 
 Block 5 allows a device to declare how many instruments it manages and on which MIDI channels. This is the **discovery mechanism** for multi-instrument devices.
 
-- A device with **one instrument** does NOT need Block 5 (Ma-est-tro assumes channel 0)
-- A device with **multiple instruments** SHOULD implement Block 5 so Ma-est-tro can discover them all
+- A device with **one instrument** does NOT need Block 5 (Général Midi Boop assumes channel 0)
+- A device with **multiple instruments** SHOULD implement Block 5 so Général Midi Boop can discover them all
 
 ## 10. Instrument Descriptor Request
 
@@ -307,7 +307,7 @@ F0 7D 00 05 00 F7
 |------|-------|-------------|
 | 0 | `F0` | Start SysEx |
 | 1 | `7D` | Custom SysEx |
-| 2 | `00` | MidiMind Manufacturer ID |
+| 2 | `00` | GMB Manufacturer ID |
 | 3 | `05` | Block 5 (Instrument Descriptor) |
 | 4 | `00` | Request flag |
 | 5 | `F7` | End SysEx |
@@ -329,7 +329,7 @@ Each `<entry>` = 3 bytes: `<channel> <gm_program> <type_id>`
 |--------|------|-------|------|-------------|
 | 0 | 1 | Start | `F0` | SysEx start |
 | 1 | 1 | Protocol | `7D` | Custom SysEx |
-| 2 | 1 | Manufacturer | `00` | MidiMind |
+| 2 | 1 | Manufacturer | `00` | GeneralMidiBoop |
 | 3 | 1 | Block ID | `05` | Instrument Descriptor |
 | 4 | 1 | Reply Flag | `01` | Response |
 | 5 | 1 | Block Version | `uint8` | Format version (currently 01) |
@@ -456,12 +456,12 @@ Decoded: 1 instrument — Piano on channel 0, GM program 0.
 
 ## 15. Purpose
 
-Block 6 provides detailed capabilities for a specific instrument identified by its MIDI channel. Ma-est-tro uses this to auto-configure instruments without user intervention.
+Block 6 provides detailed capabilities for a specific instrument identified by its MIDI channel. Général Midi Boop uses this to auto-configure instruments without user intervention.
 
-- If the device supports Block 5, Ma-est-tro queries Block 6 for each declared channel
-- If the device does NOT support Block 5, Ma-est-tro queries Block 6 for **channel 0** (default)
+- If the device supports Block 5, Général Midi Boop queries Block 6 for each declared channel
+- If the device does NOT support Block 5, Général Midi Boop queries Block 6 for **channel 0** (default)
 
-> **Note**: `octave_mode` (chromatic/diatonic/pentatonic) and `sync_delay` are Ma-est-tro-side settings, NOT transmitted via SysEx.
+> **Note**: `octave_mode` (chromatic/diatonic/pentatonic) and `sync_delay` are Général Midi Boop-side settings, NOT transmitted via SysEx.
 
 ## 16. Instrument Capabilities Request
 
@@ -475,7 +475,7 @@ F0 7D 00 06 00 <channel> F7
 |------|-------|-------------|
 | 0 | `F0` | Start SysEx |
 | 1 | `7D` | Custom SysEx |
-| 2 | `00` | MidiMind Manufacturer ID |
+| 2 | `00` | GMB Manufacturer ID |
 | 3 | `06` | Block 6 (Instrument Capabilities) |
 | 4 | `00` | Request flag |
 | 5 | `0x00-0x0F` | Target MIDI channel (0-15) |
@@ -502,7 +502,7 @@ F7
 |--------|------|-------|------|-------------|
 | 0 | 1 | Start | `F0` | SysEx start |
 | 1 | 1 | Protocol | `7D` | Custom SysEx |
-| 2 | 1 | Manufacturer | `00` | MidiMind |
+| 2 | 1 | Manufacturer | `00` | GeneralMidiBoop |
 | 3 | 1 | Block ID | `06` | Instrument Capabilities |
 | 4 | 1 | Reply Flag | `01` | Response |
 | 5 | 1 | Block Version | `uint8` | Format version (currently 01) |
@@ -945,7 +945,7 @@ F0 7D 00 07 00 <channel> F7
 |------|-------|-------------|
 | 0 | `F0` | Start SysEx |
 | 1 | `7D` | Custom SysEx |
-| 2 | `00` | MidiMind Manufacturer ID |
+| 2 | `00` | GMB Manufacturer ID |
 | 3 | `07` | Block 7 (String Instrument Config) |
 | 4 | `00` | Request flag |
 | 5 | `0x00-0x0F` | Target MIDI channel (0-15) |
@@ -970,7 +970,7 @@ F7
 |--------|------|-------|------|-------------|
 | 0 | 1 | Start | `F0` | SysEx start |
 | 1 | 1 | Protocol | `7D` | Custom SysEx |
-| 2 | 1 | Manufacturer | `00` | MidiMind |
+| 2 | 1 | Manufacturer | `00` | GeneralMidiBoop |
 | 3 | 1 | Block ID | `07` | String Instrument Config |
 | 4 | 1 | Reply Flag | `01` | Response |
 | 5 | 1 | Block Version | `uint8` | Format version (currently 01) |
@@ -1097,14 +1097,14 @@ Decoded: 4-string bass, 24 frets, standard tuning, CC control on CC20/CC21.
 
 ## 26. Overview
 
-Ma-est-tro supports three levels of auto-configuration depending on which blocks the device implements. The protocol is designed so that simpler devices need less code.
+Général Midi Boop supports three levels of auto-configuration depending on which blocks the device implements. The protocol is designed so that simpler devices need less code.
 
 ### Level 1 — Identity only (Block 1)
 
-Simplest implementation. The device identifies itself but Ma-est-tro cannot auto-configure instruments.
+Simplest implementation. The device identifies itself but Général Midi Boop cannot auto-configure instruments.
 
 ```
-Ma-est-tro ──► Block 1 Request (F0 7D 00 01 00 F7)
+Général Midi Boop ──► Block 1 Request (F0 7D 00 01 00 F7)
            ◄── Block 1 Response (52 bytes, features = 0x00)
            → Registers device
            → Assumes 1 instrument on channel 0
@@ -1113,10 +1113,10 @@ Ma-est-tro ──► Block 1 Request (F0 7D 00 01 00 F7)
 
 ### Level 2 — Single instrument auto-config (Block 1 + Block 6)
 
-The device declares its capabilities. Ma-est-tro auto-configures without user intervention.
+The device declares its capabilities. Général Midi Boop auto-configures without user intervention.
 
 ```
-Ma-est-tro ──► Block 1 Request
+Général Midi Boop ──► Block 1 Request
            ◄── Block 1 Response (features bit 4 = INSTRUMENT_CAPABILITIES)
            ──► Block 6 Request (channel = 0, default)
            ◄── Block 6 Response (capabilities for channel 0)
@@ -1129,7 +1129,7 @@ Ma-est-tro ──► Block 1 Request
 Full discovery and configuration of all instruments on the device.
 
 ```
-Ma-est-tro ──► Block 1 Request
+Général Midi Boop ──► Block 1 Request
            ◄── Block 1 Response (features bits 3,4,5)
            ──► Block 5 Request
            ◄── Block 5 Response (N instruments with channels, types)
@@ -1141,12 +1141,12 @@ Ma-est-tro ──► Block 1 Request
            → capabilities_source = 'sysex'
 ```
 
-## 27. Ma-est-tro Decision Logic
+## 27. Général Midi Boop Decision Logic
 
 ```
 1. Send Block 1 Identity Request
 2. Wait for response (timeout = comm_timeout, default 5000ms)
-3. If no response → device is not MidiMind-compatible, STOP
+3. If no response → device is not GeneralMidiBoop-compatible, STOP
 
 4. Parse Block 1 response, read feature flags
 
@@ -1184,7 +1184,7 @@ Ma-est-tro ──► Block 1 Request
 
 ## 28. Backward Compatibility
 
-| Device supports | Ma-est-tro behavior |
+| Device supports | Général Midi Boop behavior |
 |-----------------|---------------------|
 | Block 1 only | Identity only, manual config. No change from current behavior. |
 | Block 1 + Block 6 | Single instrument auto-configured on channel 0 |
@@ -1192,20 +1192,20 @@ Ma-est-tro ──► Block 1 Request
 | Block 1 + Block 5 + Block 6 | Full multi-instrument auto-config |
 | Block 1 + Block 5 + Block 6 + Block 7 | Full auto-config including string instruments |
 
-Feature flags in Block 1 guarantee that Ma-est-tro **never requests a block the device doesn't support**.
+Feature flags in Block 1 guarantee that Général Midi Boop **never requests a block the device doesn't support**.
 
 ## 29. Fields NOT transmitted via SysEx
 
-These fields are Ma-est-tro-side settings, configured by the user or measured by the system:
+These fields are Général Midi Boop-side settings, configured by the user or measured by the system:
 
 | Field | Reason |
 |-------|--------|
-| `sync_delay` | Measured/set by Ma-est-tro latency compensation system |
-| `comm_timeout` | Ma-est-tro internal communication setting |
+| `sync_delay` | Measured/set by Général Midi Boop latency compensation system |
+| `comm_timeout` | Général Midi Boop internal communication setting |
 | `octave_mode` | User preference (chromatic/diatonic/pentatonic display) |
 | `mac_address` | Discovered by system Bluetooth stack |
 | `usb_serial_number` | Discovered by system USB enumeration |
-| `tab_algorithm` | Ma-est-tro tablature processing preference |
+| `tab_algorithm` | Général Midi Boop tablature processing preference |
 | `capabilities_source` | Set automatically to 'sysex' when received via SysEx |
 
 ## 30. Complete Example — Multi-Instrument SysEx Dispatch
@@ -1221,7 +1221,7 @@ void checkSysExRequest() {
     uint8_t* data = usbMIDI.getSysExArray();
     int length = usbMIDI.getSysExArrayLength();
 
-    // Validate MidiMind header: F0 7D 00 <block> <request=00>
+    // Validate GeneralMidiBoop header: F0 7D 00 <block> <request=00>
     if (length < 6 || data[0] != 0xF0 || data[1] != 0x7D || data[2] != 0x00) return;
 
     uint8_t blockId = data[3];
@@ -1267,7 +1267,7 @@ void checkSysExRequest() {
 - [ ] **SysEx dispatch**: Route requests to correct handler based on block ID
 - [ ] **All data bytes**: 0-127 (7-bit safe for SysEx)
 
-### Ma-est-tro side
+### Général Midi Boop side
 
 - [ ] Parse Block 1 and read feature flags
 - [ ] If bit 3: send Block 5 request, parse instrument list

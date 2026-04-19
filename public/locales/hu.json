@@ -31,7 +31,7 @@
         "off": "Ki"
     },
     "app": {
-        "title": "MidiMind 5.0 - MIDI Hangszerelési rendszer",
+        "title": "GeneralMidiBoop 5.0 - MIDI Hangszerelési rendszer",
         "subtitle": "MIDI Hangszerelési rendszer"
     },
     "settings": {
@@ -471,7 +471,7 @@
         "saveFailed": "Mentési hiba"
     },
     "logs": {
-        "applicationStarting": "=== MidiMind 5.0 Indítás ===",
+        "applicationStarting": "=== GeneralMidiBoop 5.0 Indítás ===",
         "initializing": "Alkalmazás inicializálása...",
         "bluetoothInitialized": "Bluetooth inicializálva",
         "bluetoothNotAvailable": "Bluetooth nem elérhető",
@@ -481,7 +481,7 @@
         "commandCompleted": "{command} parancs befejezve {time}ms alatt"
     },
     "ui": {
-        "loading": "MidiMind betöltése...",
+        "loading": "GeneralMidiBoop betöltése...",
         "openKeyboard": "MIDI billentyűzet megnyitása",
         "settings": "Beállítások",
         "toggleLogs": "Napló megjelenítése/elrejtése",

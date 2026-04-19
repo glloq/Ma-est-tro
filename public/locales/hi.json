@@ -31,7 +31,7 @@
         "off": "बंद"
     },
     "app": {
-        "title": "MidiMind 5.0 - MIDI ऑर्केस्ट्रेशन सिस्टम",
+        "title": "GeneralMidiBoop 5.0 - MIDI ऑर्केस्ट्रेशन सिस्टम",
         "subtitle": "MIDI ऑर्केस्ट्रेशन सिस्टम"
     },
     "settings": {
@@ -471,7 +471,7 @@
         "saveFailed": "सहेजने में त्रुटि"
     },
     "logs": {
-        "applicationStarting": "=== MidiMind 5.0 शुरू हो रहा है ===",
+        "applicationStarting": "=== GeneralMidiBoop 5.0 शुरू हो रहा है ===",
         "initializing": "एप्लिकेशन प्रारंभ हो रहा है...",
         "bluetoothInitialized": "ब्लूटूथ प्रारंभ हुआ",
         "bluetoothNotAvailable": "ब्लूटूथ उपलब्ध नहीं",
@@ -481,7 +481,7 @@
         "commandCompleted": "कमांड {command} {time}ms में पूर्ण हुई"
     },
     "ui": {
-        "loading": "MidiMind लोड हो रहा है...",
+        "loading": "GeneralMidiBoop लोड हो रहा है...",
         "openKeyboard": "MIDI कीबोर्ड खोलें",
         "settings": "सेटिंग्स",
         "toggleLogs": "लॉग दिखाएं/छुपाएं",

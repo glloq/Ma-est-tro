@@ -1,6 +1,6 @@
 # MIDI Auto-Assignment & Adaptation System
 
-> Comprehensive guide to Ma-est-tro's automatic MIDI channel assignment and instrument adaptation system.
+> Comprehensive guide to Général Midi Boop's automatic MIDI channel assignment and instrument adaptation system.
 
 ## Table of Contents
 
@@ -22,7 +22,7 @@
 
 ## Overview
 
-Ma-est-tro can automatically analyze a MIDI file and assign each channel to the best-suited connected instrument. The system evaluates instrument capabilities, generates compatibility scores (0-100), and can adapt MIDI data (transposition, octave wrapping, drum remapping) to fit available hardware.
+Général Midi Boop can automatically analyze a MIDI file and assign each channel to the best-suited connected instrument. The system evaluates instrument capabilities, generates compatibility scores (0-100), and can adapt MIDI data (transposition, octave wrapping, drum remapping) to fit available hardware.
 
 ### Components
 

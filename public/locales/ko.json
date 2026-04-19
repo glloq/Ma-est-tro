@@ -31,7 +31,7 @@
         "off": "꺼짐"
     },
     "app": {
-        "title": "MidiMind 5.0 - MIDI 오케스트레이션 시스템",
+        "title": "GeneralMidiBoop 5.0 - MIDI 오케스트레이션 시스템",
         "subtitle": "MIDI 오케스트레이션 시스템"
     },
     "settings": {
@@ -471,7 +471,7 @@
         "saveFailed": "저장 오류"
     },
     "logs": {
-        "applicationStarting": "=== MidiMind 5.0 시작 ===",
+        "applicationStarting": "=== GeneralMidiBoop 5.0 시작 ===",
         "initializing": "애플리케이션 초기화 중...",
         "bluetoothInitialized": "블루투스 초기화됨",
         "bluetoothNotAvailable": "블루투스를 사용할 수 없음",
@@ -481,7 +481,7 @@
         "commandCompleted": "명령 {command}이(가) {time}ms에 완료됨"
     },
     "ui": {
-        "loading": "MidiMind 로딩 중...",
+        "loading": "GeneralMidiBoop 로딩 중...",
         "openKeyboard": "MIDI 키보드 열기",
         "settings": "설정",
         "toggleLogs": "로그 표시/숨기기",

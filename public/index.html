@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MidiMind 5.0 - MIDI Orchestration System</title>
+    <title>GeneralMidiBoop 5.0 - MIDI Orchestration System</title>
     <style>
         * {
             margin: 0;
@@ -4932,7 +4932,7 @@
             <div class="loading-progress-container">
                 <div class="loading-progress-bar" id="loadingProgressBar"></div>
             </div>
-            <p class="loading-text" data-i18n="ui.loading">Chargement de MidiMind...</p>
+            <p class="loading-text" data-i18n="ui.loading">Chargement de GeneralMidiBoop...</p>
         </div>
     </div>
 
@@ -5351,6 +5351,7 @@
     <!-- Delay Calibration Modal: now handled by CalibrationModal.js -->
 
     <!-- Scripts -->
+    <script src="js/migrateLegacy.js"></script>
     <script src="js/utils/MidiConstants.js"></script>
     <script src="js/utils/escapeHtml.js"></script>
     <script src="js/utils/FilterManager.js"></script>
@@ -6269,7 +6270,7 @@
             // Vérifier si les instruments virtuels sont activés
             let virtualEnabled = false;
             try {
-                const saved = localStorage.getItem('maestro_settings');
+                const saved = localStorage.getItem('gmboop_settings');
                 if (saved) {
                     const parsed = JSON.parse(saved);
                     virtualEnabled = !!parsed.virtualInstrument;
@@ -8612,7 +8613,7 @@
                 // Respecter le réglage "virtualInstrument" de SettingsModal
                 let virtualEnabled = false;
                 try {
-                    const savedSettings = localStorage.getItem('maestro_settings');
+                    const savedSettings = localStorage.getItem('gmboop_settings');
                     if (savedSettings) {
                         const parsed = JSON.parse(savedSettings);
                         virtualEnabled = !!parsed.virtualInstrument;
@@ -9159,7 +9160,7 @@
                     // Essayer de charger l'instrument virtuel depuis localStorage
                     let virtualInstrumentEnabled = false;
                     try {
-                        const saved = localStorage.getItem('maestro_settings');
+                        const saved = localStorage.getItem('gmboop_settings');
                         if (saved) {
                             const settings = JSON.parse(saved);
                             virtualInstrumentEnabled = settings.virtualInstrument || false;
@@ -12009,7 +12010,7 @@
             const accordionSections = document.querySelectorAll('.filter-accordion-section');
             // Restore saved accordion state
             try {
-                const savedState = JSON.parse(localStorage.getItem('maestro_filter_sections') || '{}');
+                const savedState = JSON.parse(localStorage.getItem('gmboop_filter_sections') || '{}');
                 accordionSections.forEach(section => {
                     const key = section.dataset.section;
                     if (savedState[key] !== undefined) {
@@ -12030,7 +12031,7 @@
                 // Save state
                 const state = {};
                 accordionSections.forEach(s => { state[s.dataset.section] = s.classList.contains('collapsed'); });
-                try { localStorage.setItem('maestro_filter_sections', JSON.stringify(state)); } catch (e) { /* ignore */ }
+                try { localStorage.setItem('gmboop_filter_sections', JSON.stringify(state)); } catch (e) { /* ignore */ }
             });
 
             // ==================== SECTION BADGE COUNTER ====================
@@ -12174,7 +12175,7 @@
                     // Exclure les instruments virtuels si désactivés dans les réglages
                     let virtualEnabled = false;
                     try {
-                        const saved = localStorage.getItem('maestro_settings');
+                        const saved = localStorage.getItem('gmboop_settings');
                         if (saved) virtualEnabled = !!JSON.parse(saved).virtualInstrument;
                     } catch (e) { /* ignore */ }
 
@@ -12662,12 +12663,12 @@
 
         // Initialisation
         window.addEventListener('load', async () => {
-            log('🚀 Démarrage de MidiMind 5.0');
+            log('🚀 Démarrage de GeneralMidiBoop 5.0');
 
             // 🎬 Déterminer si on affiche la mascotte du loading screen
-            const CACHE_SENTINEL = 'midimind_loaded';
+            const CACHE_SENTINEL = 'gmboop_loaded';
             const isCacheCleared = !localStorage.getItem(CACHE_SENTINEL);
-            const savedSettings = localStorage.getItem('maestro_settings');
+            const savedSettings = localStorage.getItem('gmboop_settings');
             let showMascot = true;
 
             if (savedSettings) {
@@ -12822,9 +12823,9 @@
 
             // Check if we just completed an update (post-reload notification)
             try {
-                const updateTs = localStorage.getItem('midimind_update_completed');
+                const updateTs = localStorage.getItem('gmboop_update_completed');
                 if (updateTs && (Date.now() - parseInt(updateTs)) < 120000) {
-                    localStorage.removeItem('midimind_update_completed');
+                    localStorage.removeItem('gmboop_update_completed');
                     // Remove _updated query param if present
                     if (window.location.search.includes('_updated')) {
                         window.history.replaceState({}, '', window.location.pathname);
@@ -13172,7 +13173,7 @@
             // Charger et appliquer les paramètres sauvegardés
             const loadSavedSettings = () => {
                 try {
-                    const saved = localStorage.getItem('maestro_settings');
+                    const saved = localStorage.getItem('gmboop_settings');
                     if (saved) {
                         const settings = JSON.parse(saved);
 

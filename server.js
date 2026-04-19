@@ -1,6 +1,6 @@
 /**
  * @file server.js
- * @description Process entry point for MidiMind 5.0.
+ * @description Process entry point for GeneralMidiBoop 5.0.
  *
  * Boots an {@link Application} instance, wires graceful shutdown handlers,
  * starts the HTTP/WebSocket servers and prints a one-shot status summary.

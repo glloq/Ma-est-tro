@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# MidiMind Database Reset Script
+# GeneralMidiBoop Database Reset Script
 # Deletes the database and restarts the server to recreate it with migrations
 # ============================================================================
 
@@ -75,9 +75,9 @@ print_header "1. Stopping Server"
 
 # Stop PM2
 if command -v pm2 &> /dev/null; then
-    if pm2 list | grep -q "midimind"; then
+    if pm2 list | grep -q "gmboop"; then
         print_info "Stopping PM2 process..."
-        pm2 delete midimind 2>/dev/null || true
+        pm2 delete gmboop 2>/dev/null || true
         print_success "PM2 process stopped"
     fi
 fi
@@ -96,9 +96,9 @@ fi
 
 print_header "2. Backing Up Current Database"
 
-DB_PATH="data/midimind.db"
+DB_PATH="data/gmboop.db"
 BACKUP_DIR="data/backups"
-BACKUP_FILE="$BACKUP_DIR/midimind_$(date +%Y%m%d_%H%M%S).db"
+BACKUP_FILE="$BACKUP_DIR/gmboop_$(date +%Y%m%d_%H%M%S).db"
 
 if [ -f "$DB_PATH" ]; then
     mkdir -p "$BACKUP_DIR"
@@ -142,7 +142,7 @@ if command -v pm2 &> /dev/null; then
 
         # Show logs
         print_info "Recent logs:"
-        pm2 logs midimind --lines 20 --nostream
+        pm2 logs gmboop --lines 20 --nostream
     else
         print_error "Failed to start PM2 process"
         exit 1

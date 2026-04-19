@@ -20,7 +20,7 @@ class RtpMidiSession extends EventEmitter {
   constructor(options = {}) {
     super();
 
-    this.localName = options.localName || 'MidiMind';
+    this.localName = options.localName || 'GeneralMidiBoop';
     this.localPort = options.localPort || 0; // 0 = OS assigns random available port
     this.remoteHost = null;
     this.remotePort = null;

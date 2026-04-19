@@ -30,7 +30,7 @@ class SacnDriver extends BaseLightingDriver {
       this.universe = config.universe || 1;
       this.priority = config.priority || 100;
       this.channelsPerLed = config.channels_per_led || 3;
-      this.sourceName = config.source_name || 'Ma-est-tro';
+      this.sourceName = config.source_name || 'GeneralMidiBoop';
       this.multicast = config.multicast !== false;
       this.unicastHost = config.host || null;
 

@@ -1,6 +1,6 @@
 -- ============================================================================
--- Ma-est-tro consolidated baseline schema
--- Version: 6.0.0 (fresh-install baseline)
+-- Général Midi Boop consolidated baseline schema
+-- Version: 0.7.0 (fresh-install baseline)
 -- ============================================================================
 --
 -- Replaces legacy migrations 001..040 with a single, clean schema:

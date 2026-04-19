@@ -346,7 +346,7 @@
             `;
         }
 
-        try { localStorage.setItem('midimind_update_completed', Date.now()); } catch(e) {}
+        try { localStorage.setItem('gmboop_update_completed', Date.now()); } catch(e) {}
 
         setTimeout(async () => {
             try {

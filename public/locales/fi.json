@@ -31,7 +31,7 @@
         "off": "Pois"
     },
     "app": {
-        "title": "MidiMind 5.0 - MIDI-orkesterointijärjestelmä",
+        "title": "GeneralMidiBoop 5.0 - MIDI-orkesterointijärjestelmä",
         "subtitle": "MIDI-orkesterointijärjestelmä"
     },
     "settings": {
@@ -471,7 +471,7 @@
         "saveFailed": "Tallennusvirhe"
     },
     "logs": {
-        "applicationStarting": "=== MidiMind 5.0 Käynnistyy ===",
+        "applicationStarting": "=== GeneralMidiBoop 5.0 Käynnistyy ===",
         "initializing": "Alustetaan sovellusta...",
         "bluetoothInitialized": "Bluetooth alustettu",
         "bluetoothNotAvailable": "Bluetooth ei ole käytettävissä",
@@ -481,7 +481,7 @@
         "commandCompleted": "Komento {command} valmis {time}ms"
     },
     "ui": {
-        "loading": "Ladataan MidiMind...",
+        "loading": "Ladataan GeneralMidiBoop...",
         "openKeyboard": "Avaa MIDI-näppäimistö",
         "settings": "Asetukset",
         "toggleLogs": "Näytä/Piilota lokit",

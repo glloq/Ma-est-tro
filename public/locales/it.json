@@ -31,7 +31,7 @@
         "off": "Disattivato"
     },
     "app": {
-        "title": "MidiMind 5.0 - Sistema di orchestrazione MIDI",
+        "title": "GeneralMidiBoop 5.0 - Sistema di orchestrazione MIDI",
         "subtitle": "Sistema di orchestrazione MIDI"
     },
     "settings": {
@@ -129,11 +129,11 @@
         },
         "update": {
             "title": "Aggiornamento sistema",
-            "description": "Aggiorna MidiMind all'ultima versione",
+            "description": "Aggiorna GeneralMidiBoop all'ultima versione",
             "warning": "L'aggiornamento riavvierà il sistema. Assicurati che nessuna riproduzione sia in corso.",
             "button": "Aggiorna ora",
             "confirmTitle": "Conferma aggiornamento",
-            "confirmMessage": "Vuoi aggiornare MidiMind? Il sistema sarà riavviato.",
+            "confirmMessage": "Vuoi aggiornare GeneralMidiBoop? Il sistema sarà riavviato.",
             "confirmOk": "Aggiorna",
             "inProgress": "Aggiornamento in corso...",
             "running": "Aggiornamento in esecuzione...",
@@ -471,7 +471,7 @@
         "saveFailed": "Errore di salvataggio"
     },
     "logs": {
-        "applicationStarting": "=== MidiMind 5.0 Avvio ===",
+        "applicationStarting": "=== GeneralMidiBoop 5.0 Avvio ===",
         "initializing": "Inizializzazione applicazione...",
         "bluetoothInitialized": "Bluetooth inizializzato",
         "bluetoothNotAvailable": "Bluetooth non disponibile",
@@ -481,7 +481,7 @@
         "commandCompleted": "Comando {command} completato in {time}ms"
     },
     "ui": {
-        "loading": "Caricamento MidiMind...",
+        "loading": "Caricamento GeneralMidiBoop...",
         "openKeyboard": "Apri tastiera MIDI",
         "settings": "Impostazioni",
         "toggleLogs": "Mostra/Nascondi log",

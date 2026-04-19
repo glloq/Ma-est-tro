@@ -22,7 +22,7 @@ class MqttLightDriver extends BaseLightingDriver {
       const config = this.device.connection_config;
 
       this.brokerUrl = config.broker_url || 'mqtt://localhost:1883';
-      this.baseTopic = (config.base_topic || 'maestro/light').replace(/\/$/, '');
+      this.baseTopic = (config.base_topic || 'gmboop/light').replace(/\/$/, '');
       this.firmware = config.firmware || 'generic'; // 'wled', 'tasmota', 'esphome', 'generic'
       this.username = config.username || undefined;
       this.password = config.password || undefined;

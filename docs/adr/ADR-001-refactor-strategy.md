@@ -7,7 +7,7 @@
 
 ## Contexte
 
-Ma-est-tro est en production et fonctionne, mais plusieurs modules sont
+Général Midi Boop est en production et fonctionne, mais plusieurs modules sont
 devenus des « god files » qui mélangent transport API, orchestration métier,
 adaptation MIDI et persistance :
 

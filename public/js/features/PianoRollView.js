@@ -88,7 +88,7 @@ class PianoRollView {
 
     loadSettings() {
         try {
-            const saved = localStorage.getItem('maestro_settings');
+            const saved = localStorage.getItem('gmboop_settings');
             if (saved) {
                 const s = JSON.parse(saved);
                 this.isEnabled = s.showPianoRoll || false;

@@ -1,6 +1,6 @@
 /**
  * @file src/core/Config.js
- * @description Runtime configuration loader for MidiMind.
+ * @description Runtime configuration loader for GeneralMidiBoop.
  *
  * Resolution order (lowest to highest priority):
  *   1. {@link Config#getDefaultConfig} hard-coded defaults.
@@ -85,11 +85,11 @@ class Config {
         defaultLatency: 10
       },
       database: {
-        path: './data/midimind.db'
+        path: './data/gmboop.db'
       },
       logging: {
         level: 'info',
-        file: './logs/midimind.log',
+        file: './logs/gmboop.log',
         console: true
       },
       playback: {
@@ -122,8 +122,8 @@ class Config {
    * string). Invalid coercions are logged and skipped — they never abort
    * boot.
    *
-   * Convention: env var names follow `MAESTRO_SECTION_KEY`
-   * (e.g. `MAESTRO_SERVER_PORT=3000`). The bare `PORT` alias is preserved
+   * Convention: env var names follow `GMBOOP_SECTION_KEY`
+   * (e.g. `GMBOOP_SERVER_PORT=3000`). The bare `PORT` alias is preserved
    * for hosting platforms that always inject it.
    *
    * @returns {void}
@@ -132,16 +132,16 @@ class Config {
   _applyEnvOverrides() {
     const envMap = {
       PORT: 'server.port',
-      MAESTRO_SERVER_PORT: 'server.port',
-      MAESTRO_SERVER_WS_PORT: 'server.wsPort',
-      MAESTRO_DATABASE_PATH: 'database.path',
-      MAESTRO_LOG_LEVEL: 'logging.level',
-      MAESTRO_LOG_FILE: 'logging.file',
-      MAESTRO_BLE_ENABLED: 'ble.enabled',
-      MAESTRO_SERIAL_ENABLED: 'serial.enabled',
-      MAESTRO_SERIAL_BAUD_RATE: 'serial.baudRate',
-      MAESTRO_SSL_CERT: 'server.sslCert',
-      MAESTRO_SSL_KEY: 'server.sslKey'
+      GMBOOP_SERVER_PORT: 'server.port',
+      GMBOOP_SERVER_WS_PORT: 'server.wsPort',
+      GMBOOP_DATABASE_PATH: 'database.path',
+      GMBOOP_LOG_LEVEL: 'logging.level',
+      GMBOOP_LOG_FILE: 'logging.file',
+      GMBOOP_BLE_ENABLED: 'ble.enabled',
+      GMBOOP_SERIAL_ENABLED: 'serial.enabled',
+      GMBOOP_SERIAL_BAUD_RATE: 'serial.baudRate',
+      GMBOOP_SSL_CERT: 'server.sslCert',
+      GMBOOP_SSL_KEY: 'server.sslKey'
     };
 
     for (const [envKey, configKey] of Object.entries(envMap)) {

@@ -59,7 +59,7 @@ class SettingsModal {
         };
 
         try {
-            const saved = localStorage.getItem('maestro_settings');
+            const saved = localStorage.getItem('gmboop_settings');
             if (saved) {
                 const parsed = JSON.parse(saved);
 
@@ -91,7 +91,7 @@ class SettingsModal {
      */
     saveSettings() {
         try {
-            localStorage.setItem('maestro_settings', JSON.stringify(this.settings));
+            localStorage.setItem('gmboop_settings', JSON.stringify(this.settings));
             this.logger?.info('Settings saved');
         } catch (error) {
             this.logger?.error('Failed to save settings:', error);

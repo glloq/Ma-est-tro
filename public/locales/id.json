@@ -31,7 +31,7 @@
         "off": "Nonaktif"
     },
     "app": {
-        "title": "MidiMind 5.0 - Sistem Orkestrasi MIDI",
+        "title": "GeneralMidiBoop 5.0 - Sistem Orkestrasi MIDI",
         "subtitle": "Sistem Orkestrasi MIDI"
     },
     "settings": {
@@ -471,7 +471,7 @@
         "saveFailed": "Kesalahan penyimpanan"
     },
     "logs": {
-        "applicationStarting": "=== MidiMind 5.0 Memulai ===",
+        "applicationStarting": "=== GeneralMidiBoop 5.0 Memulai ===",
         "initializing": "Menginisialisasi aplikasi...",
         "bluetoothInitialized": "Bluetooth diinisialisasi",
         "bluetoothNotAvailable": "Bluetooth tidak tersedia",
@@ -481,7 +481,7 @@
         "commandCompleted": "Perintah {command} selesai dalam {time}ms"
     },
     "ui": {
-        "loading": "Memuat MidiMind...",
+        "loading": "Memuat GeneralMidiBoop...",
         "openKeyboard": "Buka keyboard MIDI",
         "settings": "Pengaturan",
         "toggleLogs": "Tampilkan/Sembunyikan log",

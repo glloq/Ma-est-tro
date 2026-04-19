@@ -80,8 +80,8 @@ class BackupScheduler {
     this._running = true;
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupPath = path.join(this.backupDir, `midimind-${timestamp}.db`);
-    const manifestPath = path.join(this.backupDir, `midimind-${timestamp}.manifest.json`);
+    const backupPath = path.join(this.backupDir, `gmboop-${timestamp}.db`);
+    const manifestPath = path.join(this.backupDir, `gmboop-${timestamp}.manifest.json`);
 
     try {
       await this.database.backup(backupPath);
@@ -170,7 +170,7 @@ class BackupScheduler {
     try {
       const files = [];
       for (const name of fs.readdirSync(this.backupDir)) {
-        if (!name.startsWith('midimind-') || !name.endsWith('.db')) continue;
+        if (!name.startsWith('gmboop-') || !name.endsWith('.db')) continue;
         const filePath = path.join(this.backupDir, name);
         try {
           const stat = fs.statSync(filePath);
