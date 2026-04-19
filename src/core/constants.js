@@ -1,5 +1,5 @@
 /**
- * Ma-est-tro - Centralized Constants
+ * Général Midi Boop - Centralized Constants
  * Single source of truth for all magic numbers and enums
  */
 

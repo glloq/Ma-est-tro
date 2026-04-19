@@ -1,4 +1,4 @@
-# Contributing to Ma-est-tro
+# Contributing to Général Midi Boop
 
 ## Getting Started
 
@@ -10,8 +10,8 @@
 ### Setup
 
 ```bash
-git clone https://github.com/glloq/Ma-est-tro.git
-cd Ma-est-tro
+git clone https://github.com/glloq/General-Midi-Boop.git
+cd General-Midi-Boop
 npm install
 cp .env.example .env  # Configure local settings
 npm run dev            # Start with hot-reload
@@ -73,12 +73,12 @@ npm run test:frontend   # Run frontend tests (Vitest)
 Configuration can be overridden via environment variables (highest priority) or a `.env` file. See `.env.example` for all supported variables.
 
 Key variables:
-- `MAESTRO_SERVER_PORT` - HTTP/WebSocket port (default: 8080)
-- `MAESTRO_DATABASE_PATH` - SQLite file path
-- `MAESTRO_LOG_LEVEL` - Log level (debug, info, warn, error)
-- `MAESTRO_BLE_ENABLED` - Enable Bluetooth LE MIDI
-- `MAESTRO_SERIAL_ENABLED` - Enable Serial/GPIO MIDI
-- `MAESTRO_API_TOKEN` - Optional authentication token
+- `GMBOOP_SERVER_PORT` - HTTP/WebSocket port (default: 8080)
+- `GMBOOP_DATABASE_PATH` - SQLite file path
+- `GMBOOP_LOG_LEVEL` - Log level (debug, info, warn, error)
+- `GMBOOP_BLE_ENABLED` - Enable Bluetooth LE MIDI
+- `GMBOOP_SERIAL_ENABLED` - Enable Serial/GPIO MIDI
+- `GMBOOP_API_TOKEN` - Optional authentication token
 
 ## Database Migrations
 

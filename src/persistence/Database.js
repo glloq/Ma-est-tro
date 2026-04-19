@@ -35,7 +35,7 @@ class DatabaseManager {
   constructor(deps) {
     this.logger = deps.logger;
     this.config = deps.config;
-    this.dbPath = deps.config.database.path || './data/midimind.db';
+    this.dbPath = deps.config.database.path || './data/gmboop.db';
     this.db = null;
     this.midiDB = null;
     this.instrumentDB = null;

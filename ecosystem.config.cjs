@@ -2,7 +2,7 @@
 module.exports = {
   apps: [
     {
-      name: 'midimind',
+      name: 'gmboop',
       cwd: __dirname,
       script: './server.js',
       node_args: '--max-old-space-size=384',

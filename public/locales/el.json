@@ -31,7 +31,7 @@
         "off": "Ανενεργό"
     },
     "app": {
-        "title": "MidiMind 5.0 - Σύστημα Ενορχήστρωσης MIDI",
+        "title": "GeneralMidiBoop 5.0 - Σύστημα Ενορχήστρωσης MIDI",
         "subtitle": "Σύστημα Ενορχήστρωσης MIDI"
     },
     "settings": {
@@ -471,7 +471,7 @@
         "saveFailed": "Σφάλμα αποθήκευσης"
     },
     "logs": {
-        "applicationStarting": "=== MidiMind 5.0 Εκκίνηση ===",
+        "applicationStarting": "=== GeneralMidiBoop 5.0 Εκκίνηση ===",
         "initializing": "Αρχικοποίηση εφαρμογής...",
         "bluetoothInitialized": "Το Bluetooth αρχικοποιήθηκε",
         "bluetoothNotAvailable": "Το Bluetooth δεν είναι διαθέσιμο",
@@ -481,7 +481,7 @@
         "commandCompleted": "Η εντολή {command} ολοκληρώθηκε σε {time}ms"
     },
     "ui": {
-        "loading": "Φόρτωση MidiMind...",
+        "loading": "Φόρτωση GeneralMidiBoop...",
         "openKeyboard": "Άνοιγμα πληκτρολογίου MIDI",
         "settings": "Ρυθμίσεις",
         "toggleLogs": "Εμφάνιση/Απόκρυψη αρχείων καταγραφής",

@@ -31,7 +31,7 @@
         "off": "Tắt"
     },
     "app": {
-        "title": "MidiMind 5.0 - Hệ thống Phối khí MIDI",
+        "title": "GeneralMidiBoop 5.0 - Hệ thống Phối khí MIDI",
         "subtitle": "Hệ thống Phối khí MIDI"
     },
     "settings": {
@@ -471,7 +471,7 @@
         "saveFailed": "Lỗi lưu"
     },
     "logs": {
-        "applicationStarting": "=== MidiMind 5.0 Đang khởi động ===",
+        "applicationStarting": "=== GeneralMidiBoop 5.0 Đang khởi động ===",
         "initializing": "Đang khởi tạo ứng dụng...",
         "bluetoothInitialized": "Bluetooth đã khởi tạo",
         "bluetoothNotAvailable": "Bluetooth không khả dụng",
@@ -481,7 +481,7 @@
         "commandCompleted": "Lệnh {command} hoàn thành trong {time}ms"
     },
     "ui": {
-        "loading": "Đang tải MidiMind...",
+        "loading": "Đang tải GeneralMidiBoop...",
         "openKeyboard": "Mở bàn phím MIDI",
         "settings": "Cài đặt",
         "toggleLogs": "Hiện/Ẩn nhật ký",

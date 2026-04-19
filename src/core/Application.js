@@ -1,6 +1,6 @@
 /**
  * @file src/core/Application.js
- * @description Top-level orchestrator for the MidiMind backend. Owns the
+ * @description Top-level orchestrator for the GeneralMidiBoop backend. Owns the
  * lifecycle of every long-lived service (database, MIDI router/player,
  * managers, HTTP/WS servers) and the {@link ServiceContainer} used by
  * everyone else for dependency lookup.
@@ -20,7 +20,7 @@
  * given host are logged as warnings, not fatal errors.
  */
 import { randomBytes } from 'crypto';
-import { existsSync, readFileSync, appendFileSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, appendFileSync, writeFileSync, renameSync } from 'fs';
 import { resolve } from 'path';
 import Config from './Config.js';
 import Logger from './Logger.js';
@@ -104,7 +104,7 @@ class Application {
     // Track bound event handlers for cleanup
     this._eventHandlers = [];
 
-    this.logger.info('=== MidiMind 5.0 Starting ===');
+    this.logger.info('=== GeneralMidiBoop 5.0 Starting ===');
   }
 
   /**
@@ -149,7 +149,7 @@ class Application {
   }
 
   /**
-   * Ensure an API bearer token exists. If `MAESTRO_API_TOKEN` is not set,
+   * Ensure an API bearer token exists. If `GMBOOP_API_TOKEN` is not set,
    * a 32-byte random hex token is generated, written to `.env`, exported
    * via `process.env` so the HTTP / WebSocket servers pick it up, and
    * logged as a one-shot warning so the operator can copy it.
@@ -157,8 +157,25 @@ class Application {
    * @returns {void}
    * @private
    */
+  _migrateLegacyArtifacts() {
+    const pairs = [
+      ['./data/midimind.db', './data/gmboop.db'],
+      ['./logs/midimind.log', './logs/gmboop.log'],
+    ];
+    for (const [oldPath, newPath] of pairs) {
+      if (existsSync(oldPath) && !existsSync(newPath)) {
+        try {
+          renameSync(oldPath, newPath);
+          this.logger.warn(`Migrated legacy artifact ${oldPath} -> ${newPath}`);
+        } catch (error) {
+          this.logger.warn(`Legacy migration failed for ${oldPath}: ${error.message}`);
+        }
+      }
+    }
+  }
+
   _ensureApiToken() {
-    if (process.env.MAESTRO_API_TOKEN) {
+    if (process.env.GMBOOP_API_TOKEN) {
       this.logger.info('API token already configured');
       return;
     }
@@ -169,22 +186,22 @@ class Application {
     try {
       if (existsSync(envPath)) {
         const content = readFileSync(envPath, 'utf8');
-        if (content.includes('MAESTRO_API_TOKEN')) {
+        if (content.includes('GMBOOP_API_TOKEN')) {
           // Variable already declared (likely empty after `.env.example`
           // copy) — overwrite the existing line in place.
-          const updated = content.replace(/^MAESTRO_API_TOKEN=.*$/m, `MAESTRO_API_TOKEN=${token}`);
+          const updated = content.replace(/^GMBOOP_API_TOKEN=.*$/m, `GMBOOP_API_TOKEN=${token}`);
           writeFileSync(envPath, updated, 'utf8');
         } else {
-          appendFileSync(envPath, `\nMAESTRO_API_TOKEN=${token}\n`, 'utf8');
+          appendFileSync(envPath, `\nGMBOOP_API_TOKEN=${token}\n`, 'utf8');
         }
       } else {
-        writeFileSync(envPath, `MAESTRO_API_TOKEN=${token}\n`, 'utf8');
+        writeFileSync(envPath, `GMBOOP_API_TOKEN=${token}\n`, 'utf8');
       }
     } catch (err) {
       this.logger.warn(`Could not persist API token to .env: ${err.message}`);
     }
 
-    process.env.MAESTRO_API_TOKEN = token;
+    process.env.GMBOOP_API_TOKEN = token;
     this.logger.warn(`=== AUTO-GENERATED API TOKEN ===`);
     this.logger.warn(`Token: ${token}`);
     this.logger.warn(`Save this token — it is required to access the API.`);
@@ -209,6 +226,9 @@ class Application {
   async initialize() {
     try {
       this.logger.info('Initializing application...');
+
+      // One-shot rebrand migration (v5.x -> 0.7.x). Remove in 0.8.0.
+      this._migrateLegacyArtifacts();
 
       // Ensure API authentication is configured
       this._ensureApiToken();
@@ -235,7 +255,7 @@ class Application {
       );
 
       // Initialize storage: BlobStore lives next to the SQLite file.
-      const dataDir = path.dirname(this.config.database.path || './data/midimind.db');
+      const dataDir = path.dirname(this.config.database.path || './data/gmboop.db');
       this._registerService('blobStore', new BlobStore({ baseDir: dataDir, logger: this.logger }));
       this._registerService('uploadQueue', new UploadQueue({
         logger: this.logger,
@@ -445,7 +465,7 @@ class Application {
       this.backupScheduler.start();
 
       this.running = true;
-      this.logger.info('=== MidiMind 5.0 Running ===');
+      this.logger.info('=== GeneralMidiBoop 5.0 Running ===');
       this.logger.info(`HTTP/WebSocket server: http://localhost:${this.config.server.port}`);
 
       // Auto-reanalyze files missing channel data (needed for GM instrument filters)
@@ -548,7 +568,7 @@ class Application {
         this.database.close();
       }
 
-      this.logger.info('=== MidiMind 5.0 Stopped ===');
+      this.logger.info('=== GeneralMidiBoop 5.0 Stopped ===');
     } catch (error) {
       this.logger.error(`Stop failed: ${error.message}`);
       throw error;

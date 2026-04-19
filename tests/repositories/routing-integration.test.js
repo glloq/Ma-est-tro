@@ -24,7 +24,7 @@ describe('P0-2.6 — RoutingRepository integration (real SQLite)', () => {
   let fileId;
 
   beforeAll(() => {
-    tempDir = mkdtempSync(join(tmpdir(), 'maestro-routing-test-'));
+    tempDir = mkdtempSync(join(tmpdir(), 'gmboop-routing-test-'));
     database = new Database({
       logger: silentLogger(),
       config: { database: { path: join(tempDir, 'test.db') } }

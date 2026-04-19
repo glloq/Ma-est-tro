@@ -10,11 +10,11 @@
     "defaultLatency": 10
   },
   "database": {
-    "path": "./data/midimind.db"
+    "path": "./data/gmboop.db"
   },
   "logging": {
     "level": "info",
-    "file": "./logs/midimind.log",
+    "file": "./logs/gmboop.log",
     "console": true
   },
   "playback": {

@@ -31,7 +31,7 @@
         "off": "Desactivado"
     },
     "app": {
-        "title": "MidiMind 5.0 - Sistema de orquestación MIDI",
+        "title": "GeneralMidiBoop 5.0 - Sistema de orquestación MIDI",
         "subtitle": "Sistema de Orquestación MIDI"
     },
     "settings": {
@@ -471,7 +471,7 @@
         "saveFailed": "Error al guardar"
     },
     "logs": {
-        "applicationStarting": "=== MidiMind 5.0 Iniciando ===",
+        "applicationStarting": "=== GeneralMidiBoop 5.0 Iniciando ===",
         "initializing": "Inicializando aplicación...",
         "bluetoothInitialized": "Bluetooth inicializado",
         "bluetoothNotAvailable": "Bluetooth no disponible",
@@ -481,7 +481,7 @@
         "commandCompleted": "Comando {command} completado en {time}ms"
     },
     "ui": {
-        "loading": "Cargando MidiMind...",
+        "loading": "Cargando GeneralMidiBoop...",
         "openKeyboard": "Abrir teclado MIDI",
         "settings": "Ajustes",
         "toggleLogs": "Mostrar/Ocultar logs",

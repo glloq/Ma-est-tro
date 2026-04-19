@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# MidiMind Update Script
+# GeneralMidiBoop Update Script
 # Pulls latest changes from GitHub and updates the system
 #
 # Key design: the server stays RUNNING during git pull + npm install.
@@ -32,8 +32,8 @@ echo "$(date '+%Y-%m-%d %H:%M:%S') script_started pid=$$ non_interactive=$NON_IN
 # an orphan (PPID=1) that PM2 cannot find.
 # Only detach in non-interactive mode (web UI) — in SSH, run directly so the
 # user can see output in the terminal.
-if [ "$NON_INTERACTIVE" = "1" ] && [ -z "$_MIDIMIND_UPDATE_DETACHED" ]; then
-    export _MIDIMIND_UPDATE_DETACHED=1
+if [ "$NON_INTERACTIVE" = "1" ] && [ -z "$_GMBOOP_UPDATE_DETACHED" ]; then
+    export _GMBOOP_UPDATE_DETACHED=1
     setsid "$0" "$@" &
     exit 0
 fi
@@ -93,9 +93,9 @@ _restart_server() {
 
     if [ "$PM2_MANAGED" = true ]; then
         print_info "Restarting with PM2 (atomic restart)..."
-        if pm2 restart midimind --update-env 2>&1; then
+        if pm2 restart gmboop --update-env 2>&1; then
             sleep 3
-            if pm2 list | grep -q "online.*midimind"; then
+            if pm2 list | grep -q "online.*gmboop"; then
                 RESTART_OK=true
                 print_success "PM2 restart successful"
             fi
@@ -103,26 +103,26 @@ _restart_server() {
         # Fallback: delete + start from ecosystem file
         if [ "$RESTART_OK" = false ]; then
             print_warning "PM2 restart failed, trying delete + start..."
-            pm2 delete midimind 2>/dev/null || true
+            pm2 delete gmboop 2>/dev/null || true
             sleep 1
             if pm2 start ecosystem.config.cjs 2>&1; then
                 pm2 save 2>/dev/null || true
                 sleep 5
-                if pm2 list | grep -q "online.*midimind"; then
+                if pm2 list | grep -q "online.*gmboop"; then
                     RESTART_OK=true
                     print_success "PM2 delete+start successful"
                 else
                     print_warning "PM2 process not online after start"
                     pm2 list || true
-                    pm2 logs midimind --lines 20 --nostream 2>/dev/null || true
+                    pm2 logs gmboop --lines 20 --nostream 2>/dev/null || true
                 fi
             fi
         fi
     elif [ "$SYSTEMD_MANAGED" = true ]; then
         print_info "Restarting with systemd..."
-        if timeout 10 sudo -n systemctl restart midimind 2>/dev/null; then
+        if timeout 10 sudo -n systemctl restart gmboop 2>/dev/null; then
             sleep 3
-            if systemctl is-active --quiet midimind 2>/dev/null; then
+            if systemctl is-active --quiet gmboop 2>/dev/null; then
                 RESTART_OK=true
                 print_success "Systemd restart successful"
             else
@@ -133,18 +133,18 @@ _restart_server() {
         fi
     elif [ "$PM2_AVAILABLE" = true ]; then
         print_info "Starting fresh with PM2..."
-        pm2 delete midimind 2>/dev/null || true
+        pm2 delete gmboop 2>/dev/null || true
         sleep 1
         if pm2 start ecosystem.config.cjs 2>&1; then
             pm2 save 2>/dev/null || true
             sleep 5
-            if pm2 list | grep -q "online.*midimind"; then
+            if pm2 list | grep -q "online.*gmboop"; then
                 RESTART_OK=true
                 print_success "PM2 start successful"
             else
                 print_warning "PM2 start may have failed"
                 pm2 list || true
-                pm2 logs midimind --lines 20 --nostream 2>/dev/null || true
+                pm2 logs gmboop --lines 20 --nostream 2>/dev/null || true
             fi
         fi
     fi
@@ -160,7 +160,7 @@ _restart_server() {
         print_info "Fallback: stopping old process and starting directly..."
         # Stop any old process on the port
         if command -v pm2 &> /dev/null; then
-            pm2 stop midimind 2>/dev/null || true
+            pm2 stop gmboop 2>/dev/null || true
         fi
         if command -v lsof &> /dev/null && lsof -ti:$SERVER_PORT &> /dev/null; then
             lsof -ti:$SERVER_PORT | xargs -r kill 2>/dev/null || true
@@ -174,7 +174,7 @@ _restart_server() {
         cd "$PROJECT_DIR"
         local SERVER_LOG="$PROJECT_DIR/logs/server-start.log"
         mkdir -p "$PROJECT_DIR/logs" 2>/dev/null || true
-        echo "=== Server start at $(date) ===" > "$SERVER_LOG" 2>/dev/null || SERVER_LOG="/tmp/midimind-server.log"
+        echo "=== Server start at $(date) ===" > "$SERVER_LOG" 2>/dev/null || SERVER_LOG="/tmp/gmboop-server.log"
 
         NODE_BIN="$(which node 2>/dev/null)"
         if [ -z "$NODE_BIN" ]; then
@@ -242,12 +242,12 @@ SYSTEMD_MANAGED=false
 
 if command -v pm2 &> /dev/null; then
     PM2_AVAILABLE=true
-    if pm2 list 2>/dev/null | grep -q "midimind"; then
+    if pm2 list 2>/dev/null | grep -q "gmboop"; then
         PM2_MANAGED=true
     fi
 fi
 
-if systemctl is-active --quiet midimind 2>/dev/null; then
+if systemctl is-active --quiet gmboop 2>/dev/null; then
     SYSTEMD_MANAGED=true
 fi
 
@@ -398,7 +398,7 @@ sleep 5
 
 # Check PM2 status
 if [ "$PM2_AVAILABLE" = true ]; then
-    if pm2 list 2>/dev/null | grep -q "online.*midimind"; then
+    if pm2 list 2>/dev/null | grep -q "online.*gmboop"; then
         print_success "PM2 process is online"
     else
         print_warning "PM2 process may not be running correctly"
@@ -459,8 +459,8 @@ if [ -f "package.json" ]; then
 fi
 
 # Show database version
-if [ -f "data/midimind.db" ]; then
-    print_info "Database exists: data/midimind.db"
+if [ -f "data/gmboop.db" ]; then
+    print_info "Database exists: data/gmboop.db"
 fi
 
 # ============================================================================
@@ -470,7 +470,7 @@ fi
 print_header "Update Complete"
 _update_status "done"
 
-print_success "MidiMind has been updated successfully!"
+print_success "GeneralMidiBoop has been updated successfully!"
 echo ""
 print_info "Access the interface at: http://localhost:$SERVER_PORT"
 HOSTNAME_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
@@ -489,7 +489,7 @@ echo ""
 print_info "Useful commands:"
 echo "  npm run pm2:logs    # View PM2 logs"
 echo "  npm run pm2:status  # Check PM2 status"
-echo "  sudo systemctl status midimind  # Check systemd status"
+echo "  sudo systemctl status gmboop  # Check systemd status"
 echo ""
 
 exit 0

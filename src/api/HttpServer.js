@@ -93,10 +93,10 @@ class HttpServer {
       next();
     });
 
-    // Bearer-token auth, enabled when MAESTRO_API_TOKEN is set.
+    // Bearer-token auth, enabled when GMBOOP_API_TOKEN is set.
     // `Application#_ensureApiToken` guarantees this is the case in normal
     // runs, so the `if` is mostly for tests that intentionally clear it.
-    const apiToken = process.env.MAESTRO_API_TOKEN;
+    const apiToken = process.env.GMBOOP_API_TOKEN;
     if (apiToken) {
       const apiTokenBuf = Buffer.from(apiToken);
       this.expressApp.use('/api', (req, res, next) => {

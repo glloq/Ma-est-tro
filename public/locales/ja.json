@@ -31,7 +31,7 @@
         "off": "オフ"
     },
     "app": {
-        "title": "MidiMind 5.0 - MIDI Orchestration System",
+        "title": "GeneralMidiBoop 5.0 - MIDI Orchestration System",
         "subtitle": "MIDIオーケストレーションシステム"
     },
     "settings": {
@@ -471,7 +471,7 @@
         "saveFailed": "保存エラー"
     },
     "logs": {
-        "applicationStarting": "=== MidiMind 5.0 起動 ===",
+        "applicationStarting": "=== GeneralMidiBoop 5.0 起動 ===",
         "initializing": "アプリケーションを初期化中...",
         "bluetoothInitialized": "Bluetooth初期化完了",
         "bluetoothNotAvailable": "Bluetoothは利用できません",
@@ -481,7 +481,7 @@
         "commandCompleted": "コマンド {command} が{time}msで完了しました"
     },
     "ui": {
-        "loading": "MidiMindを読み込み中...",
+        "loading": "GeneralMidiBoopを読み込み中...",
         "openKeyboard": "MIDIキーボードを開く",
         "settings": "設定",
         "toggleLogs": "ログを表示/非表示",

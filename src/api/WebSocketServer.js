@@ -13,7 +13,7 @@
  *   - ping/pong heartbeat that terminates dead sockets after a missed
  *     beat.
  *
- * Auth: same `MAESTRO_API_TOKEN` as the HTTP layer; same-origin browsers
+ * Auth: same `GMBOOP_API_TOKEN` as the HTTP layer; same-origin browsers
  * connect without a token because the SPA is served from the same host.
  */
 import { WebSocketServer as WSServer } from 'ws';
@@ -75,7 +75,7 @@ class WebSocketServer {
    * @returns {void}
    */
   start() {
-    const apiToken = process.env.MAESTRO_API_TOKEN;
+    const apiToken = process.env.GMBOOP_API_TOKEN;
     const serverPort = this.config?.server?.port || 8080;
 
     // Attach WebSocket server to existing HTTP server

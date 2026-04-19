@@ -4,7 +4,7 @@
 
     KeyboardDevices.loadSettings = function() {
         try {
-            const saved = localStorage.getItem('maestro_settings');
+            const saved = localStorage.getItem('gmboop_settings');
             if (saved) {
                 const settings = JSON.parse(saved);
                 // Apply octave count (new format)
@@ -66,7 +66,7 @@
             // Load virtual DB instruments (created via Instrument Management)
             let virtualEnabled = false;
             try {
-                const savedSettings = localStorage.getItem('maestro_settings');
+                const savedSettings = localStorage.getItem('gmboop_settings');
                 if (savedSettings) {
                     const parsed = JSON.parse(savedSettings);
                     virtualEnabled = !!parsed.virtualInstrument;

@@ -1,4 +1,4 @@
-# API Reference - Ma-est-tro v5.0.0
+# API Reference - Général Midi Boop v5.0.0
 
 ## Transport
 
@@ -16,7 +16,7 @@ Responses include the matching `id` for correlation:
 
 ### Authentication
 
-When `MAESTRO_API_TOKEN` is set, connect with:
+When `GMBOOP_API_TOKEN` is set, connect with:
 - **WebSocket**: `ws://host:port?token=YOUR_TOKEN`
 - **HTTP**: `Authorization: Bearer YOUR_TOKEN` header
 
@@ -106,7 +106,7 @@ When `MAESTRO_API_TOKEN` is set, connect with:
 | `GET` | `/api/files/:id/blob[?dl=1]` | — | `200` streaming `audio/midi`; `ETag` is the SHA-256 content hash |
 
 Same-origin browser requests skip the bearer-token check; external
-clients must send `Authorization: Bearer <MAESTRO_API_TOKEN>`.
+clients must send `Authorization: Bearer <GMBOOP_API_TOKEN>`.
 
 ### WS events (server → client)
 

@@ -1,6 +1,6 @@
 # Installation Guide
 
-Complete installation and configuration guide for Ma-est-tro.
+Complete installation and configuration guide for Général Midi Boop.
 
 ---
 
@@ -43,8 +43,8 @@ Complete installation and configuration guide for Ma-est-tro.
 
 ```bash
 # Clone the repository
-git clone https://github.com/glloq/Ma-est-tro.git
-cd Ma-est-tro
+git clone https://github.com/glloq/General-Midi-Boop.git
+cd General-Midi-Boop
 
 # Run the installation script
 chmod +x scripts/Install.sh
@@ -143,8 +143,8 @@ Edit `config.json` to customize settings:
 {
   "server": { "port": 8080, "wsPort": 8080, "staticPath": "./public" },
   "midi": { "bufferSize": 1024, "sampleRate": 44100, "defaultLatency": 10 },
-  "database": { "path": "./data/midimind.db" },
-  "logging": { "level": "info", "file": "./logs/midimind.log", "console": true },
+  "database": { "path": "./data/gmboop.db" },
+  "logging": { "level": "info", "file": "./logs/gmboop.log", "console": true },
   "playback": { "defaultTempo": 120, "defaultVolume": 100, "lookahead": 100 },
   "latency": { "defaultIterations": 5, "recalibrationDays": 7 },
   "ble": { "enabled": false, "scanDuration": 10000 },
@@ -187,14 +187,14 @@ Edit `config.json` to customize settings:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `database.path` | ./data/midimind.db | Path to SQLite database file |
+| `database.path` | ./data/gmboop.db | Path to SQLite database file |
 
 ### Logging
 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `logging.level` | info | Log level: debug, info, warn, error |
-| `logging.file` | ./logs/midimind.log | Log file path |
+| `logging.file` | ./logs/gmboop.log | Log file path |
 | `logging.console` | true | Enable console logging |
 
 ### BLE (Bluetooth Low Energy)
@@ -221,24 +221,24 @@ All configuration values can be overridden with environment variables. Create a 
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MAESTRO_SERVER_PORT` | 8080 | HTTP server port |
-| `MAESTRO_SERVER_WS_PORT` | 8080 | WebSocket server port |
-| `MAESTRO_DATABASE_PATH` | ./data/midimind.db | Path to SQLite database |
-| `MAESTRO_LOG_LEVEL` | info | Log level: debug, info, warn, error |
-| `MAESTRO_LOG_FILE` | ./logs/midimind.log | Log file path |
-| `MAESTRO_BLE_ENABLED` | false | Enable Bluetooth LE MIDI |
-| `MAESTRO_SERIAL_ENABLED` | false | Enable serial MIDI |
-| `MAESTRO_SERIAL_BAUD_RATE` | 31250 | Serial baud rate |
-| `MAESTRO_API_TOKEN` | *(none)* | Optional API authentication token |
-| `PORT` | 8080 | Legacy alias for `MAESTRO_SERVER_PORT` |
+| `GMBOOP_SERVER_PORT` | 8080 | HTTP server port |
+| `GMBOOP_SERVER_WS_PORT` | 8080 | WebSocket server port |
+| `GMBOOP_DATABASE_PATH` | ./data/gmboop.db | Path to SQLite database |
+| `GMBOOP_LOG_LEVEL` | info | Log level: debug, info, warn, error |
+| `GMBOOP_LOG_FILE` | ./logs/gmboop.log | Log file path |
+| `GMBOOP_BLE_ENABLED` | false | Enable Bluetooth LE MIDI |
+| `GMBOOP_SERIAL_ENABLED` | false | Enable serial MIDI |
+| `GMBOOP_SERIAL_BAUD_RATE` | 31250 | Serial baud rate |
+| `GMBOOP_API_TOKEN` | *(none)* | Optional API authentication token |
+| `PORT` | 8080 | Legacy alias for `GMBOOP_SERVER_PORT` |
 
 Example `.env` file:
 
 ```bash
-MAESTRO_SERVER_PORT=3000
-MAESTRO_LOG_LEVEL=debug
-MAESTRO_BLE_ENABLED=true
-MAESTRO_API_TOKEN=my-secret-token
+GMBOOP_SERVER_PORT=3000
+GMBOOP_LOG_LEVEL=debug
+GMBOOP_BLE_ENABLED=true
+GMBOOP_API_TOKEN=my-secret-token
 ```
 
 Environment variables take precedence over values in `config.json`.
@@ -247,7 +247,7 @@ Environment variables take precedence over values in `config.json`.
 
 ## Bluetooth LE MIDI Setup
 
-Ma-est-tro supports Bluetooth Low Energy (BLE) MIDI devices using the BLE MIDI Service UUID `03b80e5a-ede8-4b33-a751-6ce34ec4c700`. The integration uses node-ble, which communicates with Bluez via D-Bus.
+Général Midi Boop supports Bluetooth Low Energy (BLE) MIDI devices using the BLE MIDI Service UUID `03b80e5a-ede8-4b33-a751-6ce34ec4c700`. The integration uses node-ble, which communicates with Bluez via D-Bus.
 
 ### Prerequisites
 
@@ -270,7 +270,7 @@ Enable BLE MIDI in `config.json`:
 Or via environment variable:
 
 ```bash
-MAESTRO_BLE_ENABLED=true
+GMBOOP_BLE_ENABLED=true
 ```
 
 ### User Permissions
@@ -285,13 +285,13 @@ Log out and log back in for the group change to take effect.
 
 ### Scanning and Pairing
 
-Once BLE is enabled, scan for and pair Bluetooth MIDI devices directly from the Ma-est-tro web interface. The interface will discover nearby BLE MIDI instruments and allow you to connect to them.
+Once BLE is enabled, scan for and pair Bluetooth MIDI devices directly from the Général Midi Boop web interface. The interface will discover nearby BLE MIDI instruments and allow you to connect to them.
 
 ---
 
 ## Network MIDI (RTP-MIDI) Setup
 
-Ma-est-tro supports RTP-MIDI, a session-based protocol for sending MIDI data over a network connection.
+Général Midi Boop supports RTP-MIDI, a session-based protocol for sending MIDI data over a network connection.
 
 ### How It Works
 
@@ -299,15 +299,15 @@ RTP-MIDI uses `RtpMidiSession` for connection management, allowing you to connec
 
 ### Usage
 
-From the Ma-est-tro web interface, you can scan the local network for available RTP-MIDI instruments. Discovered instruments can be connected and used just like locally attached MIDI devices.
+From the Général Midi Boop web interface, you can scan the local network for available RTP-MIDI instruments. Discovered instruments can be connected and used just like locally attached MIDI devices.
 
-No additional configuration is required beyond having network connectivity between Ma-est-tro and the target instruments.
+No additional configuration is required beyond having network connectivity between Général Midi Boop and the target instruments.
 
 ---
 
 ## Docker Deployment
 
-Ma-est-tro can be deployed using Docker for simplified setup and isolation.
+Général Midi Boop can be deployed using Docker for simplified setup and isolation.
 
 ### Quick Start
 
@@ -348,12 +348,12 @@ npm run pm2:status    # Check status
 ### With systemd
 
 ```bash
-sudo systemctl start midimind     # Start
-sudo systemctl stop midimind      # Stop
-sudo systemctl restart midimind   # Restart
-sudo systemctl status midimind    # Check status
-sudo systemctl enable midimind    # Enable on boot
-sudo systemctl disable midimind   # Disable on boot
+sudo systemctl start gmboop     # Start
+sudo systemctl stop gmboop      # Stop
+sudo systemctl restart gmboop   # Restart
+sudo systemctl status gmboop    # Check status
+sudo systemctl enable gmboop    # Enable on boot
+sudo systemctl disable gmboop   # Disable on boot
 ```
 
 ### View Logs
@@ -363,10 +363,10 @@ sudo systemctl disable midimind   # Disable on boot
 npm run pm2:logs
 
 # Systemd logs
-sudo journalctl -u midimind -f
+sudo journalctl -u gmboop -f
 
 # Application logs
-tail -f logs/midimind.log
+tail -f logs/gmboop.log
 ```
 
 ---
@@ -376,7 +376,7 @@ tail -f logs/midimind.log
 ### Automatic Update
 
 ```bash
-cd ~/Ma-est-tro
+cd ~/General-Midi-Boop
 ./scripts/update.sh
 ```
 
@@ -389,7 +389,7 @@ The script:
 ### Manual Update
 
 ```bash
-cd ~/Ma-est-tro
+cd ~/General-Midi-Boop
 git pull origin main
 npm install
 npm run pm2:restart
@@ -454,7 +454,7 @@ sudo usermod -a -G audio,bluetooth $USER
 ## Project Structure
 
 ```
-Ma-est-tro/
+General-Midi-Boop/
 ├── server.js                  # Entry point
 ├── config.json                # Default configuration
 ├── .env.example               # Environment variable template

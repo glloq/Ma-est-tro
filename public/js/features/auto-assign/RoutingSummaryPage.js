@@ -135,7 +135,7 @@ class RoutingSummaryPage {
 
   _loadScoringOverrides() {
     try {
-      const saved = JSON.parse(localStorage.getItem('maestro_settings') || '{}');
+      const saved = JSON.parse(localStorage.getItem('gmboop_settings') || '{}');
       if (saved.scoringConfig) return saved.scoringConfig;
     } catch (e) { /* ignore */ }
     return this._getDefaultOverrides();
@@ -143,9 +143,9 @@ class RoutingSummaryPage {
 
   _saveScoringOverrides() {
     try {
-      const settings = JSON.parse(localStorage.getItem('maestro_settings') || '{}');
+      const settings = JSON.parse(localStorage.getItem('gmboop_settings') || '{}');
       settings.scoringConfig = this.scoringOverrides;
-      localStorage.setItem('maestro_settings', JSON.stringify(settings));
+      localStorage.setItem('gmboop_settings', JSON.stringify(settings));
     } catch (e) { console.warn('[RoutingSummary] Failed to save scoring config:', e); }
   }
 
@@ -177,7 +177,7 @@ class RoutingSummaryPage {
       // Check if virtual instruments are enabled
       let excludeVirtual = true;
       try {
-        const saved = localStorage.getItem('maestro_settings');
+        const saved = localStorage.getItem('gmboop_settings');
         if (saved && JSON.parse(saved).virtualInstrument) excludeVirtual = false;
       } catch (e) { /* ignore */ }
 
@@ -2665,7 +2665,7 @@ class RoutingSummaryPage {
     try {
       let excludeVirtual = true;
       try {
-        const saved = JSON.parse(localStorage.getItem('maestro_settings') || '{}');
+        const saved = JSON.parse(localStorage.getItem('gmboop_settings') || '{}');
         if (saved.virtualInstrument) excludeVirtual = false;
       } catch (e) { /* ignore */ }
 

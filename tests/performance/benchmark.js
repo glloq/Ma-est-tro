@@ -41,7 +41,7 @@ async function benchAsync(name, fn, iterations = 1000) { // eslint-disable-line 
 
 // ── Benchmarks ───────────────────────────────────────────────────────────
 
-console.log('\n=== Ma-est-tro Performance Benchmarks ===\n');
+console.log('\n=== Général Midi Boop Performance Benchmarks ===\n');
 const results = [];
 
 // 1. EventBus throughput

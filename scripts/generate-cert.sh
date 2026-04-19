@@ -9,7 +9,7 @@ KEY_FILE="$CERT_DIR/server.key"
 ENV_FILE=".env"
 DAYS=365
 
-echo "=== Maestro SSL Certificate Generator ==="
+echo "=== GeneralMidiBoop SSL Certificate Generator ==="
 
 # Check for openssl
 if ! command -v openssl &>/dev/null; then
@@ -44,7 +44,7 @@ openssl req -x509 -nodes -days $DAYS \
   -newkey rsa:2048 \
   -keyout "$KEY_FILE" \
   -out "$CERT_FILE" \
-  -subj "/CN=$HOSTNAME/O=Maestro/C=FR" \
+  -subj "/CN=$HOSTNAME/O=GeneralMidiBoop/C=FR" \
   -addext "subjectAltName=IP:$HOSTNAME,DNS:localhost,IP:127.0.0.1"
 
 chmod 600 "$KEY_FILE"
@@ -57,17 +57,17 @@ echo "  Valid for: $DAYS days"
 
 # Add to .env if not already set
 if [ -f "$ENV_FILE" ]; then
-  if grep -q "MAESTRO_SSL_CERT" "$ENV_FILE"; then
-    sed -i "s|^MAESTRO_SSL_CERT=.*|MAESTRO_SSL_CERT=$CERT_FILE|" "$ENV_FILE"
-    sed -i "s|^MAESTRO_SSL_KEY=.*|MAESTRO_SSL_KEY=$KEY_FILE|" "$ENV_FILE"
+  if grep -q "GMBOOP_SSL_CERT" "$ENV_FILE"; then
+    sed -i "s|^GMBOOP_SSL_CERT=.*|GMBOOP_SSL_CERT=$CERT_FILE|" "$ENV_FILE"
+    sed -i "s|^GMBOOP_SSL_KEY=.*|GMBOOP_SSL_KEY=$KEY_FILE|" "$ENV_FILE"
   else
     echo "" >> "$ENV_FILE"
-    echo "MAESTRO_SSL_CERT=$CERT_FILE" >> "$ENV_FILE"
-    echo "MAESTRO_SSL_KEY=$KEY_FILE" >> "$ENV_FILE"
+    echo "GMBOOP_SSL_CERT=$CERT_FILE" >> "$ENV_FILE"
+    echo "GMBOOP_SSL_KEY=$KEY_FILE" >> "$ENV_FILE"
   fi
 else
-  echo "MAESTRO_SSL_CERT=$CERT_FILE" >> "$ENV_FILE"
-  echo "MAESTRO_SSL_KEY=$KEY_FILE" >> "$ENV_FILE"
+  echo "GMBOOP_SSL_CERT=$CERT_FILE" >> "$ENV_FILE"
+  echo "GMBOOP_SSL_KEY=$KEY_FILE" >> "$ENV_FILE"
 fi
 
 echo ""

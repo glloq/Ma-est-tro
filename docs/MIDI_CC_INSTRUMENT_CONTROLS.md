@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Ma-est-tro utilise des CC (Control Change) MIDI dedies pour le controle fin des instruments au-dela des CC standards (volume, pan, expression, etc.). Ce document recense les CC reserves et planifies pour chaque famille d'instruments.
+Général Midi Boop utilise des CC (Control Change) MIDI dedies pour le controle fin des instruments au-dela des CC standards (volume, pan, expression, etc.). Ce document recense les CC reserves et planifies pour chaque famille d'instruments.
 
 ### Etat actuel
 

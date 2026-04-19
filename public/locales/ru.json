@@ -31,7 +31,7 @@
         "off": "Выкл"
     },
     "app": {
-        "title": "MidiMind 5.0 - MIDI Orchestration System",
+        "title": "GeneralMidiBoop 5.0 - MIDI Orchestration System",
         "subtitle": "Система MIDI-оркестровки"
     },
     "settings": {
@@ -471,7 +471,7 @@
         "saveFailed": "Ошибка сохранения"
     },
     "logs": {
-        "applicationStarting": "=== MidiMind 5.0 Запуск ===",
+        "applicationStarting": "=== GeneralMidiBoop 5.0 Запуск ===",
         "initializing": "Инициализация приложения...",
         "bluetoothInitialized": "Bluetooth инициализирован",
         "bluetoothNotAvailable": "Bluetooth недоступен",
@@ -481,7 +481,7 @@
         "commandCompleted": "Команда {command} выполнена за {time}мс"
     },
     "ui": {
-        "loading": "Загрузка MidiMind...",
+        "loading": "Загрузка GeneralMidiBoop...",
         "openKeyboard": "Открыть MIDI-клавиатуру",
         "settings": "Настройки",
         "toggleLogs": "Показать/Скрыть логи",

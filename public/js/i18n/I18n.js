@@ -1,5 +1,5 @@
 /**
- * I18n - Lightweight internationalization manager for Ma-est-tro
+ * I18n - Lightweight internationalization manager for Général Midi Boop
  *
  * Supports: French (fr), English (en), Spanish (es)
  *
@@ -63,7 +63,7 @@
             }
 
             // Read the saved locale or auto-detect from the browser
-            const savedLocale = localStorage.getItem('maestro_locale');
+            const savedLocale = localStorage.getItem('gmboop_locale');
             const browserLocale = navigator.language?.split('-')[0];
 
             let locale = savedLocale || browserLocale || this.fallbackLocale;
@@ -95,7 +95,7 @@
                 this.translations = await response.json();
                 this.currentLocale = locale;
                 this._translationCache = new Map(); // Invalidate cache on locale change
-                localStorage.setItem('maestro_locale', locale);
+                localStorage.setItem('gmboop_locale', locale);
 
                 // Update the HTML lang attribute
                 document.documentElement.lang = locale;

@@ -1,6 +1,6 @@
 {
-  "name": "midimind",
-  "version": "5.0.0",
+  "name": "gmboop",
+  "version": "0.7.0",
   "description": "MIDI orchestration system for Raspberry Pi",
   "type": "module",
   "main": "server.js",
@@ -21,9 +21,9 @@
     "preview": "vite preview",
     "dev:frontend": "vite",
     "pm2:start": "pm2 start ecosystem.config.cjs",
-    "pm2:stop": "pm2 stop midimind",
-    "pm2:restart": "pm2 restart midimind",
-    "pm2:logs": "pm2 logs midimind",
+    "pm2:stop": "pm2 stop gmboop",
+    "pm2:restart": "pm2 restart gmboop",
+    "pm2:logs": "pm2 logs gmboop",
     "pm2:status": "pm2 status",
     "prepare": "husky"
   },
@@ -33,7 +33,7 @@
     "raspberry-pi",
     "orchestration"
   ],
-  "author": "MidiMind Team",
+  "author": "GeneralMidiBoop Team",
   "license": "MIT",
   "dependencies": {
     "better-sqlite3": "^11.10.0",

@@ -582,9 +582,9 @@
         // Check calibration button visibility
         let showCalibration = false;
         try {
-            const maestroSettings = localStorage.getItem('maestro_settings');
-            if (maestroSettings) {
-                const parsed = JSON.parse(maestroSettings);
+            const gmboopSettings = localStorage.getItem('gmboop_settings');
+            if (gmboopSettings) {
+                const parsed = JSON.parse(gmboopSettings);
                 showCalibration = !!parsed.showCalibrationButton;
             }
         } catch (e) { /* ignore */ }

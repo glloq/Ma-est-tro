@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# MidiMind 5.0 - Bluetooth BLE MIDI Setup
+# GeneralMidiBoop 5.0 - Bluetooth BLE MIDI Setup
 # Configure Bluetooth permissions for Noble on Raspberry Pi / Linux
 # =============================================================================
 
@@ -296,10 +296,10 @@ echo ""
 print_warning "IMPORTANT: If you were added to the bluetooth group, you must:"
 echo "  1. Logout and login again, OR"
 echo "  2. Run: newgrp bluetooth"
-echo "  3. Then restart the MidiMind server"
+echo "  3. Then restart the GeneralMidiBoop server"
 echo ""
 print_info "Testing BLE scan:"
-echo "  1. Start MidiMind: npm start"
+echo "  1. Start GeneralMidiBoop: npm start"
 echo "  2. Open web interface: http://localhost:8080"
 echo "  3. Click 'Scan Bluetooth' button"
 echo ""

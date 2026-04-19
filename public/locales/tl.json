@@ -31,7 +31,7 @@
         "off": "Nakapatay"
     },
     "app": {
-        "title": "MidiMind 5.0 - MIDI Orchestration System",
+        "title": "GeneralMidiBoop 5.0 - MIDI Orchestration System",
         "subtitle": "MIDI Orchestration System"
     },
     "settings": {
@@ -471,7 +471,7 @@
         "saveFailed": "Error sa pag-save"
     },
     "logs": {
-        "applicationStarting": "=== MidiMind 5.0 Nagsisimula ===",
+        "applicationStarting": "=== GeneralMidiBoop 5.0 Nagsisimula ===",
         "initializing": "Sinisimulan ang application...",
         "bluetoothInitialized": "Na-initialize ang Bluetooth",
         "bluetoothNotAvailable": "Hindi available ang Bluetooth",
@@ -481,7 +481,7 @@
         "commandCompleted": "Natapos ang command {command} sa {time}ms"
     },
     "ui": {
-        "loading": "Naglo-load ang MidiMind...",
+        "loading": "Naglo-load ang GeneralMidiBoop...",
         "openKeyboard": "Buksan ang MIDI keyboard",
         "settings": "Mga Setting",
         "toggleLogs": "Ipakita/Itago ang mga log",

@@ -25,7 +25,7 @@
 
 ## Overview
 
-The MIDI editor is the most complex frontend feature of Ma-est-tro (~11 000 lines across
+The MIDI editor is the most complex frontend feature of Général Midi Boop (~11 000 lines across
 20 files, 215 `midiEditor.*` i18n keys). It is a single modal that hosts **four
 editing modes** sharing a common transport, channel panel, and backend persistence:
 
@@ -332,7 +332,7 @@ an `<input>` / `<textarea>`).
 
 ## User preferences
 
-Three boolean preferences are persisted in the `maestro_settings` key of `localStorage`,
+Three boolean preferences are persisted in the `gmboop_settings` key of `localStorage`,
 read and written through the generic helpers `MidiEditorModal.prototype._getPreference`
 and `_setPreference` (`MidiEditorModal.js:289-314`):
 

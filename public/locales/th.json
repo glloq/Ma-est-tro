@@ -31,7 +31,7 @@
         "off": "ปิด"
     },
     "app": {
-        "title": "MidiMind 5.0 - ระบบออร์เคสตร้า MIDI",
+        "title": "GeneralMidiBoop 5.0 - ระบบออร์เคสตร้า MIDI",
         "subtitle": "ระบบออร์เคสตร้า MIDI"
     },
     "settings": {
@@ -471,7 +471,7 @@
         "saveFailed": "ข้อผิดพลาดในการบันทึก"
     },
     "logs": {
-        "applicationStarting": "=== MidiMind 5.0 กำลังเริ่มต้น ===",
+        "applicationStarting": "=== GeneralMidiBoop 5.0 กำลังเริ่มต้น ===",
         "initializing": "กำลังเริ่มต้นแอปพลิเคชัน...",
         "bluetoothInitialized": "Bluetooth เริ่มต้นแล้ว",
         "bluetoothNotAvailable": "Bluetooth ไม่พร้อมใช้งาน",
@@ -481,7 +481,7 @@
         "commandCompleted": "คำสั่ง {command} เสร็จสิ้นใน {time}ms"
     },
     "ui": {
-        "loading": "กำลังโหลด MidiMind...",
+        "loading": "กำลังโหลด GeneralMidiBoop...",
         "openKeyboard": "เปิดคีย์บอร์ด MIDI",
         "settings": "การตั้งค่า",
         "toggleLogs": "แสดง/ซ่อนบันทึก",

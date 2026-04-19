@@ -1,4 +1,4 @@
-# Ma-est-tro
+# Général Midi Boop
 
 
 > [!WARNING]
@@ -11,15 +11,15 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-3B%2B%2F4%2F5-red)](https://www.raspberrypi.org/)
 
-Ma-est-tro is a MIDI management system that allows you to manage your MIDI devices, edit and play MIDI files with latency compensation, all from a modern web interface. It can automatically adapt MIDI files to the capabilities of your connected instruments.
+Général Midi Boop is a MIDI management system that allows you to manage your MIDI devices, edit and play MIDI files with latency compensation, all from a modern web interface. It can automatically adapt MIDI files to the capabilities of your connected instruments.
 
 ![Main Interface](docs/images/accueil.png)
 
 ## Installation
 
 ```bash
-git clone https://github.com/glloq/Ma-est-tro.git
-cd Ma-est-tro
+git clone https://github.com/glloq/General-Midi-Boop.git
+cd General-Midi-Boop
 chmod +x scripts/Install.sh
 ./scripts/Install.sh
 ```
@@ -58,7 +58,7 @@ Includes a lighting effects engine, DMX fixture profiles, and full synchronizati
 
 ![Auto-Adaptation](docs/images/auto%20assign.png)
 
-Ma-est-tro can automatically analyze a MIDI file and assign each channel to the best-suited connected instrument:
+Général Midi Boop can automatically analyze a MIDI file and assign each channel to the best-suited connected instrument:
 - **Channel analysis** - Detects instrument type (drums, melody, bass, harmony), note ranges, and polyphony per channel
 - **Instrument matching** - Evaluates connected instruments capabilities and generates compatibility scores (0-100)
 - **Intelligent drum mapping** - Remaps General MIDI drum notes (35-81) to available instrument notes with priority-based substitution (kick → snare → hi-hat → crash → toms)
@@ -120,7 +120,7 @@ per-channel routing to connected devices, playable-note highlighting, cursor
 repositioning during playback pause, touch mode (separate Move / Add / Resize
 buttons) for tablets.
 
-**User preferences** (persisted in `localStorage` under `maestro_settings`): touch
+**User preferences** (persisted in `localStorage` under `gmboop_settings`): touch
 mode, keyboard-playback feedback, drag-playback feedback.
 
 See [docs/MIDI_EDITOR.md](./docs/MIDI_EDITOR.md) for architecture, the public API,
@@ -193,8 +193,8 @@ MIDI instrument names are translated in all supported languages.
 ### Setup
 
 ```bash
-git clone https://github.com/glloq/Ma-est-tro.git
-cd Ma-est-tro
+git clone https://github.com/glloq/General-Midi-Boop.git
+cd General-Midi-Boop
 npm install
 ```
 

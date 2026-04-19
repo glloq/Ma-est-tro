@@ -58,7 +58,7 @@ curl https://blokas.io/pimidi/install.sh | sh
 aconnect -l
 ```
 
-> **Note**: The Pimidi uses I2C, not UART. It does not use `/dev/ttyAMA*` but appears as an ALSA MIDI device. Ma-est-tro will detect it as a standard system MIDI port (not via the Serial MIDI GPIO module).
+> **Note**: The Pimidi uses I2C, not UART. It does not use `/dev/ttyAMA*` but appears as an ALSA MIDI device. Général Midi Boop will detect it as a standard system MIDI port (not via the Serial MIDI GPIO module).
 
 ---
 
@@ -122,7 +122,7 @@ aconnect -l
 
 **Advantages**: Compact, affordable, mini-jack connectors (space-saving), 5V buffer for maximum compatibility, additional GPIO on v1.2+.
 
-> **Note**: The Slim MIDI Hat uses UART0 (`/dev/ttyAMA0`). It is compatible with the Ma-est-tro Serial MIDI GPIO module. Enable it in the settings and the `/dev/ttyAMA0` port will be detected automatically.
+> **Note**: The Slim MIDI Hat uses UART0 (`/dev/ttyAMA0`). It is compatible with the Général Midi Boop Serial MIDI GPIO module. Enable it in the settings and the `/dev/ttyAMA0` port will be detected automatically.
 
 **Installation**:
 ```bash
@@ -149,7 +149,7 @@ sudo reboot
 
 **Advantages**: Simple, standard DIN-5 connectors, comprehensive documentation with setup guide.
 
-> **Note**: Uses UART0 like the Domoshop. Compatible with the Ma-est-tro Serial MIDI module.
+> **Note**: Uses UART0 like the Domoshop. Compatible with the Général Midi Boop Serial MIDI module.
 
 ---
 
@@ -164,7 +164,7 @@ sudo reboot
 
 \* Pisound Micro available for Pi 5 (~69 EUR)
 
-### Compatibility with Ma-est-tro
+### Compatibility with Général Midi Boop
 
 | HAT | Detection | Module Used |
 |-----|-----------|-------------|
@@ -173,7 +173,7 @@ sudo reboot
 | **Slim MIDI Hat** | Via `/dev/ttyAMA0` | **Serial MIDI GPIO** (enable in settings) |
 | **OSA MIDI Board** | Via `/dev/ttyAMA0` | **Serial MIDI GPIO** (enable in settings) |
 
-> I2C/SPI-based HATs (Pimidi, Pisound) appear as standard MIDI ports and are automatically detected by Ma-est-tro without enabling the Serial MIDI GPIO option. UART-based HATs (Domoshop, OSA) require enabling the Serial MIDI GPIO option in the settings.
+> I2C/SPI-based HATs (Pimidi, Pisound) appear as standard MIDI ports and are automatically detected by Général Midi Boop without enabling the Serial MIDI GPIO option. UART-based HATs (Domoshop, OSA) require enabling the Serial MIDI GPIO option in the settings.
 
 ---
 

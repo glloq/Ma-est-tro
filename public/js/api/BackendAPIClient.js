@@ -1,5 +1,5 @@
 /**
- * BackendAPIClient - Complete WebSocket client for MidiMind backend
+ * BackendAPIClient - Complete WebSocket client for GeneralMidiBoop backend
  * Handles connection, reconnection, and all API commands
  */
 

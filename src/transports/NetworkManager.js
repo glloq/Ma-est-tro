@@ -462,7 +462,7 @@ class NetworkManager extends EventEmitter {
     try {
       // Create RTP-MIDI session
       const session = new RtpMidiSession({
-        localName: 'MidiMind',
+        localName: 'GeneralMidiBoop',
         localPort: 5004
       });
 

@@ -1,6 +1,6 @@
 /**
  * @file src/types/index.ts
- * @description Shared TypeScript type definitions for the MidiMind
+ * @description Shared TypeScript type definitions for the GeneralMidiBoop
  * backend. Pure declarations — no runtime code. Imported by JS files via
  * JSDoc `@type {import('../types/index.js').XYZ}` so the IDE can offer
  * completion without enabling `checkJs`.
