@@ -53,6 +53,15 @@ class DelayCalibrator {
       maxWaitTime: 2000,     // Detection timeout (ms)
       measurements: 5        // Number of measurements per instrument
     };
+
+    // Biquad filter state for the tuner path. Persists across windows so
+    // IIR transients do not ring at each analysis boundary. Coefficients
+    // are lazily initialized by _buildFilterCoeffs() on first use.
+    this._filter = {
+      hp: { x1: 0, x2: 0, y1: 0, y2: 0 },
+      lp: { x1: 0, x2: 0, y1: 0, y2: 0 },
+      coeffs: null
+    };
   }
 
   /**
@@ -487,106 +496,203 @@ class DelayCalibrator {
   }
 
   /**
-   * Estimate the fundamental frequency of a mono audio window using
-   * normalized autocorrelation with parabolic interpolation. Adequate
-   * for monophonic instruments (guitar, violin, voice).
+   * Build and cache RBJ-cookbook biquad coefficients for the tuner path:
+   * a 60 Hz high-pass (kills AC hum and handling rumble) cascaded into
+   * a 3 kHz low-pass (kills attack hiss and hash above the useful
+   * instrument range). Both biquads use Q = 1/√2 (Butterworth flat).
    *
-   * The algorithm first walks past the autocorrelation's initial
-   * positive lobe and the following negative region, then locates the
-   * strongest peak in the subsequent positive region — this avoids
-   * reporting sub-period lags that still have a positive correlation
-   * value but lie on the decay of the lag-0 peak.
+   * @param {number} sampleRate
+   */
+  _buildFilterCoeffs(sampleRate) {
+    const Q = Math.SQRT1_2;
+    const make = (kind, f0) => {
+      const w0 = 2 * Math.PI * f0 / sampleRate;
+      const cosw = Math.cos(w0);
+      const sinw = Math.sin(w0);
+      const alpha = sinw / (2 * Q);
+      let b0, b1, b2;
+      if (kind === 'hp') {
+        b0 = (1 + cosw) / 2;
+        b1 = -(1 + cosw);
+        b2 = (1 + cosw) / 2;
+      } else { // lp
+        b0 = (1 - cosw) / 2;
+        b1 = 1 - cosw;
+        b2 = (1 - cosw) / 2;
+      }
+      const a0 = 1 + alpha;
+      const a1 = -2 * cosw;
+      const a2 = 1 - alpha;
+      return {
+        b0: b0 / a0, b1: b1 / a0, b2: b2 / a0,
+        a1: a1 / a0, a2: a2 / a0
+      };
+    };
+    this._filter.coeffs = {
+      hp: make('hp', 60),
+      lp: make('lp', 3000),
+      sampleRate
+    };
+  }
+
+  /**
+   * Reset biquad state. Call when the arecord stream starts so pre-existing
+   * filter history does not bleed into a fresh capture.
+   */
+  _resetFilterState() {
+    this._filter.hp.x1 = this._filter.hp.x2 = this._filter.hp.y1 = this._filter.hp.y2 = 0;
+    this._filter.lp.x1 = this._filter.lp.x2 = this._filter.lp.y1 = this._filter.lp.y2 = 0;
+  }
+
+  /**
+   * In-place apply the HP→LP biquad cascade to `samples`. Filter state
+   * advances continuously so this MUST be called exactly once on every
+   * sample in capture order.
    *
-   * @param {Float32Array} buf - Audio samples normalized to [-1, 1]
+   * @param {Float32Array} samples
+   * @param {number} sampleRate
+   */
+  _applyFilter(samples, sampleRate) {
+    if (!this._filter.coeffs || this._filter.coeffs.sampleRate !== sampleRate) {
+      this._buildFilterCoeffs(sampleRate);
+    }
+    const { hp: hc, lp: lc } = this._filter.coeffs;
+    const hp = this._filter.hp;
+    const lp = this._filter.lp;
+    for (let i = 0; i < samples.length; i++) {
+      const x = samples[i];
+      // High-pass
+      const y = hc.b0 * x + hc.b1 * hp.x1 + hc.b2 * hp.x2 - hc.a1 * hp.y1 - hc.a2 * hp.y2;
+      hp.x2 = hp.x1; hp.x1 = x;
+      hp.y2 = hp.y1; hp.y1 = y;
+      // Low-pass (input = HP output)
+      const z = lc.b0 * y + lc.b1 * lp.x1 + lc.b2 * lp.x2 - lc.a1 * lp.y1 - lc.a2 * lp.y2;
+      lp.x2 = lp.x1; lp.x1 = y;
+      lp.y2 = lp.y1; lp.y1 = z;
+      samples[i] = z;
+    }
+  }
+
+  /**
+   * Estimate the fundamental frequency of a mono audio window using the
+   * McLeod Pitch Method (MPM): a normalized square difference function
+   * (NSDF) whose key-maxima are scanned and picked via the
+   * "first peak ≥ 0.9 × global max" rule. Amplitude-invariant and
+   * robust to rich-harmonic signals — significantly better than plain
+   * ACF on stringed instruments.
+   *
+   * @param {Float32Array} buf - Audio samples normalized to [-1, 1].
+   *   The buffer is expected to have been pre-filtered by _applyFilter().
    * @param {number} sampleRate
    * @returns {{ freq: number, confidence: number, rms: number }}
    */
   detectPitch(buf, sampleRate) {
-    const SIZE = buf.length;
-    if (SIZE < 64) return { freq: 0, confidence: 0, rms: 0 };
+    const N = buf.length;
+    if (N < 128) return { freq: 0, confidence: 0, rms: 0 };
 
-    // RMS gate: ignore silence / low-level noise
+    // RMS gate on the filtered signal.
     let rms = 0;
-    for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
-    rms = Math.sqrt(rms / SIZE);
-    if (rms < 0.01) return { freq: 0, confidence: 0, rms };
+    for (let i = 0; i < N; i++) rms += buf[i] * buf[i];
+    rms = Math.sqrt(rms / N);
+    if (rms < 0.008) return { freq: 0, confidence: 0, rms };
 
-    // Trim to the stable part of the window
-    const thr = 0.2;
-    let r1 = 0, r2 = SIZE - 1;
-    for (let i = 0; i < SIZE / 2; i++) {
-      if (Math.abs(buf[i]) >= thr) { r1 = i; break; }
-    }
-    for (let i = 1; i < SIZE / 2; i++) {
-      if (Math.abs(buf[SIZE - i]) >= thr) { r2 = SIZE - i; break; }
-    }
-    if (r2 - r1 < 32) return { freq: 0, confidence: 0, rms };
-    const N = r2 - r1;
-
-    // Restrict lag range to musical frequencies: 30 Hz .. 2000 Hz
-    const minLag = Math.max(2, Math.floor(sampleRate / 2000));
-    const maxLag = Math.min(Math.floor(N / 2), Math.floor(sampleRate / 30));
+    // Pitch search range: ~55 Hz (A1) to ~1200 Hz (~D6). Covers every
+    // string on guitar/bass/violin/viola/cello/ukulele and most voices.
+    const minLag = Math.max(2, Math.floor(sampleRate / 1200));
+    const maxLag = Math.min(Math.floor(N / 2), Math.floor(sampleRate / 55));
     if (minLag >= maxLag) return { freq: 0, confidence: 0, rms };
 
-    // Compute normalized autocorrelation over the full lag range.
-    const c = new Float32Array(maxLag + 2);
-    for (let lag = minLag; lag <= maxLag; lag++) {
-      let sum = 0;
-      for (let i = 0; i < N - lag; i++) {
-        sum += buf[r1 + i] * buf[r1 + i + lag];
-      }
-      c[lag] = sum / (N - lag);
-    }
+    // NSDF: n(τ) = 2 · r(τ) / m(τ),  where
+    //   r(τ) = Σ_{i=0..W-1} x[i]·x[i+τ]
+    //   m(τ) = Σ_{i=0..W-1} (x[i]² + x[i+τ]²)
+    // W is fixed so that x[i+τ] is in range for every τ in [0, maxLag].
+    // Compute from τ=1 (not minLag) so we can detect the NSDF's first
+    // zero crossing — MPM's key-maxima scan must start after that crossing.
+    const W = N - maxLag;
+    const nsdf = new Float32Array(maxLag + 2);
 
-    // Walk past the initial positive lobe (decaying from lag 0) ...
-    let lag = minLag;
-    while (lag <= maxLag && c[lag] > 0) lag++;
-    // ... then past the subsequent negative region.
-    while (lag <= maxLag && c[lag] <= 0) lag++;
-    if (lag > maxLag) return { freq: 0, confidence: 0, rms };
+    let sumSq0 = 0;
+    for (let i = 0; i < W; i++) sumSq0 += buf[i] * buf[i];
 
-    // From here, find the strongest local peak. Stop once we've clearly
-    // passed the peak (drop below 60% of the running best).
-    let bestLag = -1;
-    let bestCorr = 0;
-    for (; lag <= maxLag; lag++) {
-      const corr = c[lag];
-      if (corr > bestCorr) {
-        bestCorr = corr;
-        bestLag = lag;
-      } else if (bestLag > 0 && corr < bestCorr * 0.6) {
-        break;
+    // sumSqR tracks Σ x[i+τ]² for i in [0, W). Start at τ=0 and roll
+    // forward with sumSqR += x[τ+W-1]² - x[τ-1]² as τ increments.
+    let sumSqR = sumSq0;
+
+    for (let tau = 1; tau <= maxLag; tau++) {
+      let r = 0;
+      for (let i = 0; i < W; i++) r += buf[i] * buf[i + tau];
+      const m = sumSq0 + sumSqR;
+      nsdf[tau] = m > 0 ? (2 * r) / m : 0;
+      // Roll sumSqR to the next tau (guard against the final out-of-range read).
+      if (tau + W < N) {
+        sumSqR += buf[tau + W] * buf[tau + W] - buf[tau] * buf[tau];
       }
     }
 
-    if (bestLag <= 0 || bestCorr <= 0) return { freq: 0, confidence: 0, rms };
+    // Key-maxima scan. Per McLeod & Wyvill 2005:
+    //   1. The NSDF starts at 1 at lag 0 and descends through a positive
+    //      lobe before reaching its first zero crossing at ~T/4 where T
+    //      is the fundamental period.
+    //   2. Walk past that initial positive lobe, then collect exactly one
+    //      (highest) key maximum per subsequent positive region.
+    let tau = 1;
+    while (tau <= maxLag && nsdf[tau] > 0) tau++;
+    // Ensure we only consider lags in the musical range.
+    if (tau < minLag) tau = minLag;
 
-    // Parabolic interpolation for sub-sample precision.
-    const y1 = c[bestLag - 1] || 0;
-    const y2 = c[bestLag];
-    const y3 = c[bestLag + 1] || 0;
+    const keyMaxima = [];
+    while (tau <= maxLag) {
+      while (tau <= maxLag && nsdf[tau] <= 0) tau++;
+      let peakTau = -1;
+      let peakVal = -1;
+      while (tau <= maxLag && nsdf[tau] > 0) {
+        if (nsdf[tau] > peakVal) { peakVal = nsdf[tau]; peakTau = tau; }
+        tau++;
+      }
+      if (peakTau > 0) keyMaxima.push({ tau: peakTau, val: peakVal });
+    }
+    if (keyMaxima.length === 0) return { freq: 0, confidence: 0, rms };
+
+    // Pick the first key maximum whose height is at least 90% of the
+    // global max. This is the MPM rule that resolves octave ambiguity:
+    // on a harmonic spectrum, ACF picks 2f (biggest peak); MPM picks f.
+    let globalMax = 0;
+    for (const km of keyMaxima) if (km.val > globalMax) globalMax = km.val;
+    const threshold = 0.9 * globalMax;
+    const chosen = keyMaxima.find(km => km.val >= threshold) || keyMaxima[0];
+
+    // Parabolic interpolation around the chosen lag for sub-sample precision.
+    const y1 = chosen.tau > 0 ? nsdf[chosen.tau - 1] : 0;
+    const y2 = nsdf[chosen.tau];
+    const y3 = nsdf[chosen.tau + 1] || 0;
     const denom = 2 * (2 * y2 - y1 - y3);
-    const shift = denom !== 0 ? (y3 - y1) / denom : 0;
-    const refinedLag = bestLag + Math.max(-1, Math.min(1, shift));
+    let shift = denom !== 0 ? (y3 - y1) / denom : 0;
+    if (shift > 1) shift = 1; else if (shift < -1) shift = -1;
+    const refinedLag = chosen.tau + shift;
+    const clarity = y2 - 0.25 * (y1 - y3) * shift;
 
     const freq = sampleRate / refinedLag;
-    // Confidence proxy: peak strength relative to signal energy (c[minLag]
-    // is a decent proxy for near-zero-lag energy given our minLag is small).
-    const energy = c[minLag] > 0 ? c[minLag] : bestCorr;
-    const confidence = Math.min(1, bestCorr / (energy || 1));
+    if (freq < 55 || freq > 1200) return { freq: 0, confidence: 0, rms };
 
+    const confidence = clarity > 1 ? 1 : (clarity < 0 ? 0 : clarity);
     return { freq, confidence, rms };
   }
 
   /**
    * Start a continuous pitch-monitoring loop, invoking `callback` with
-   * `{ rms, freq, confidence }` each time a full analysis window has
-   * been accumulated (~128 ms at 16 kHz). Shares the same `arecord`
-   * pipeline layout as {@link startMonitoring}, but is kept separate to
-   * avoid disturbing the VU-meter contract when the tuner modal is in use.
+   * `{ rms, freq, confidence }` every `hop` samples of captured audio.
+   *
+   * Pipeline: arecord → decode S16_LE → biquad HPF+LPF (state continuous
+   * across chunks) → circular ring of size `windowSize` filled with
+   * filtered samples → every `hop` samples, copy the ring into a linear
+   * analysis window, run MPM pitch detection, emit.
+   *
+   * Default 4096 samples window (256 ms @ 16 kHz) with 2048-sample hop
+   * (128 ms, 50% overlap): enough periods for reliable low-string
+   * tracking, and a new result every ~128 ms for a responsive UI.
    *
    * @param {Function} callback
-   * @param {Object} [options] - { alsaDevice?: string, windowSize?: number }
+   * @param {Object} [options] - { alsaDevice?, windowSize?, hopSize? }
    */
   startTunerMonitoring(callback, options = {}) {
     if (this.tunerProcess) {
@@ -598,37 +704,56 @@ class DelayCalibrator {
       throw new Error(`Invalid ALSA device format: ${device}`);
     }
 
-    const windowSize = options.windowSize || 2048;
+    const windowSize = options.windowSize || 4096;
+    const hopSize = options.hopSize || Math.floor(windowSize / 2);
+    const sr = this.config.sampleRate;
+
     this.tunerCallback = callback;
-    this.tunerWindow = new Float32Array(windowSize);
-    this.tunerWindowFilled = 0;
+    this.tunerRing = new Float32Array(windowSize);  // circular buffer
+    this.tunerRingHead = 0;                          // next write position
+    this.tunerRingFilled = 0;                        // total filtered samples ever written
+    this.tunerSamplesSinceAnalysis = 0;
+    this.tunerWindow = new Float32Array(windowSize); // linearized analysis window
+    this.tunerWindowSize = windowSize;
+    this.tunerHopSize = hopSize;
+
+    // Fresh filter state for this capture session.
+    this._buildFilterCoeffs(sr);
+    this._resetFilterState();
 
     this.tunerProcess = spawn('arecord', [
       '-D', device,
       '-f', this.config.format,
-      '-r', this.config.sampleRate.toString(),
+      '-r', sr.toString(),
       '-c', this.config.channels.toString(),
       '-t', 'raw'
     ]);
 
     this.tunerProcess.stdout.on('data', (chunk) => {
       const samples = this.decodeS16LE(chunk);
-      let offset = 0;
-      while (offset < samples.length) {
-        const remaining = windowSize - this.tunerWindowFilled;
-        const toCopy = Math.min(remaining, samples.length - offset);
-        this.tunerWindow.set(samples.subarray(offset, offset + toCopy), this.tunerWindowFilled);
-        this.tunerWindowFilled += toCopy;
-        offset += toCopy;
+      // Apply HPF→LPF cascade to the full chunk; state advances once per
+      // sample in capture order so IIR transients do not ring per-window.
+      this._applyFilter(samples, sr);
 
-        if (this.tunerWindowFilled === windowSize) {
-          const result = this.detectPitch(this.tunerWindow, this.config.sampleRate);
+      for (let i = 0; i < samples.length; i++) {
+        this.tunerRing[this.tunerRingHead] = samples[i];
+        this.tunerRingHead = (this.tunerRingHead + 1) % windowSize;
+        if (this.tunerRingFilled < windowSize) this.tunerRingFilled++;
+        this.tunerSamplesSinceAnalysis++;
+
+        if (this.tunerRingFilled >= windowSize && this.tunerSamplesSinceAnalysis >= hopSize) {
+          this.tunerSamplesSinceAnalysis = 0;
+          // Copy the ring into a linear buffer, oldest sample first.
+          const start = this.tunerRingHead; // oldest = next-to-overwrite
+          for (let j = 0; j < windowSize; j++) {
+            this.tunerWindow[j] = this.tunerRing[(start + j) % windowSize];
+          }
+          const result = this.detectPitch(this.tunerWindow, sr);
           if (this.tunerCallback) {
             try { this.tunerCallback(result); } catch (e) {
               this.logger.warn(`Tuner callback threw: ${e.message}`);
             }
           }
-          this.tunerWindowFilled = 0;
         }
       }
     });
@@ -649,7 +774,7 @@ class DelayCalibrator {
       this.tunerProcess = null;
     });
 
-    this.logger.info(`Tuner monitoring started on ${device}`);
+    this.logger.info(`Tuner monitoring started on ${device} (window=${windowSize}, hop=${hopSize})`);
   }
 
   /**
@@ -661,8 +786,12 @@ class DelayCalibrator {
       this.tunerProcess = null;
     }
     this.tunerCallback = null;
+    this.tunerRing = null;
     this.tunerWindow = null;
-    this.tunerWindowFilled = 0;
+    this.tunerRingHead = 0;
+    this.tunerRingFilled = 0;
+    this.tunerSamplesSinceAnalysis = 0;
+    this._resetFilterState();
     this.logger.info('Tuner monitoring stopped');
   }
 
