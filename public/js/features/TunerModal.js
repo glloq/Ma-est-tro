@@ -69,7 +69,7 @@
             this._noSignalTimer = null;
             this._freqRing = [];        // recent accepted frequencies
             this._confRing = [];        // parallel confidences for weighting
-            this._ringSize = 9;         // ~1.2 s at 128 ms/frame
+            this._ringSize = 6;         // ~0.77 s at 128 ms hop
             this._changeStreak = 0;     // consecutive frames far from current median
 
             // UI state
@@ -312,7 +312,9 @@
             const freq = payload && typeof payload.freq === 'number' ? payload.freq : 0;
             const confidence = payload && typeof payload.confidence === 'number' ? payload.confidence : 0;
 
-            if (freq <= 0 || confidence < 0.6) return;
+            // MPM clarity on a clean sustained note is typically > 0.9;
+            // below 0.85 is usually transient or noise.
+            if (freq <= 0 || confidence < 0.85) return;
 
             let corrected = freq;
             const ring = this._freqRing;
@@ -338,7 +340,7 @@
                 const cents = 1200 * Math.log2(corrected / median);
                 if (Math.abs(cents) > 100) {
                     this._changeStreak++;
-                    if (this._changeStreak >= 3) {
+                    if (this._changeStreak >= 2) {
                         // New note: flush history and reseed.
                         this._freqRing = [];
                         this._confRing = [];
