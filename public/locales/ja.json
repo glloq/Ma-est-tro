@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "MIDIクロック有効",
         "enableMidiClock": "MIDIクロックを有効化",
-        "midiClockEnabledHelp": "この楽器にMIDIクロック信号を送信"
+        "midiClockEnabledHelp": "この楽器にMIDIクロック信号を送信",
+        "minNoteInterval": "2つのノート間の最小間隔 (ms)",
+        "minNoteIntervalHelp": "連続する2つのnote-onイベント間の最小遅延 (ms)",
+        "minNoteDuration": "最小アクティブノート時間 (ms)",
+        "minNoteDurationHelp": "ノートがアクティブのままでいる最小時間 (ms)"
     },
     "playlist": {
         "title": "プレイリスト",

@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "MIDI 클럭 활성",
         "enableMidiClock": "MIDI 클럭 활성화",
-        "midiClockEnabledHelp": "이 악기에 MIDI 클럭 신호 전송"
+        "midiClockEnabledHelp": "이 악기에 MIDI 클럭 신호 전송",
+        "minNoteInterval": "두 노트 사이의 최소 간격 (ms)",
+        "minNoteIntervalHelp": "연속된 두 note-on 이벤트 사이의 최소 지연 (ms)",
+        "minNoteDuration": "최소 활성 노트 지속 시간 (ms)",
+        "minNoteDurationHelp": "노트가 활성 상태로 유지되는 최소 시간 (ms)"
     },
     "playlist": {
         "title": "재생목록",

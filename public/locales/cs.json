@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "MIDI hodiny aktivní",
         "enableMidiClock": "Povolit MIDI hodiny",
-        "midiClockEnabledHelp": "Odeslat signál MIDI hodin tomuto nástroji"
+        "midiClockEnabledHelp": "Odeslat signál MIDI hodin tomuto nástroji",
+        "minNoteInterval": "Minimální interval mezi 2 notami (ms)",
+        "minNoteIntervalHelp": "Minimální prodleva mezi dvěma po sobě jdoucími událostmi note-on (v ms)",
+        "minNoteDuration": "Minimální doba aktivní noty (ms)",
+        "minNoteDurationHelp": "Minimální doba, po kterou nota zůstává aktivní (v ms)"
     },
     "playlist": {
         "title": "Playlisty",

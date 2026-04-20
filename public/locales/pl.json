@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "Zegar MIDI aktywny",
         "enableMidiClock": "Włącz zegar MIDI",
-        "midiClockEnabledHelp": "Wyślij sygnał zegara MIDI do tego instrumentu"
+        "midiClockEnabledHelp": "Wyślij sygnał zegara MIDI do tego instrumentu",
+        "minNoteInterval": "Minimalny odstęp między 2 nutami (ms)",
+        "minNoteIntervalHelp": "Minimalne opóźnienie między dwoma kolejnymi zdarzeniami note-on (w ms)",
+        "minNoteDuration": "Minimalny czas trwania aktywnej nuty (ms)",
+        "minNoteDurationHelp": "Minimalny czas, przez jaki nuta pozostaje aktywna (w ms)"
     },
     "playlist": {
         "title": "Playlisty",

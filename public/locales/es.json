@@ -655,7 +655,11 @@
         "micNotAvailable": "El micrófono no está disponible en este navegador.",
         "midiClockEnabled": "Reloj MIDI activo",
         "enableMidiClock": "Activar reloj MIDI",
-        "midiClockEnabledHelp": "Enviar señal de reloj MIDI a este instrumento"
+        "midiClockEnabledHelp": "Enviar señal de reloj MIDI a este instrumento",
+        "minNoteInterval": "Intervalo mínimo entre 2 notas (ms)",
+        "minNoteIntervalHelp": "Retraso mínimo entre dos eventos note-on consecutivos (en ms)",
+        "minNoteDuration": "Duración mínima de nota activa (ms)",
+        "minNoteDurationHelp": "Duración mínima durante la cual una nota permanece activa (en ms)"
     },
     "playlist": {
         "title": "Listas de reproducción",
