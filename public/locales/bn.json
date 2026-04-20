@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "MIDI Clock",
         "enableMidiClock": "Send MIDI clock to this instrument",
-        "midiClockEnabledHelp": "Synchronize this instrument's arpeggiators, LFOs and sequencers with the playback tempo"
+        "midiClockEnabledHelp": "Synchronize this instrument's arpeggiators, LFOs and sequencers with the playback tempo",
+        "minNoteInterval": "২ নোটের মধ্যে ন্যূনতম ব্যবধান (ms)",
+        "minNoteIntervalHelp": "দুটি ধারাবাহিক note-on ইভেন্টের মধ্যে ন্যূনতম বিলম্ব (ms)",
+        "minNoteDuration": "ন্যূনতম সক্রিয় নোট সময়কাল (ms)",
+        "minNoteDurationHelp": "একটি নোট সক্রিয় থাকার ন্যূনতম সময়কাল (ms)"
     },
     "playlist": {
         "title": "প্লেলিস্ট",

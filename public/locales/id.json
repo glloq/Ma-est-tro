@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "MIDI Clock aktif",
         "enableMidiClock": "Aktifkan MIDI Clock",
-        "midiClockEnabledHelp": "Kirim sinyal MIDI Clock ke instrumen ini"
+        "midiClockEnabledHelp": "Kirim sinyal MIDI Clock ke instrumen ini",
+        "minNoteInterval": "Interval minimum antara 2 nada (ms)",
+        "minNoteIntervalHelp": "Jeda minimum antara dua peristiwa note-on berturut-turut (dalam ms)",
+        "minNoteDuration": "Durasi nada aktif minimum (ms)",
+        "minNoteDurationHelp": "Durasi minimum sebuah nada tetap aktif (dalam ms)"
     },
     "playlist": {
         "title": "Daftar Putar",

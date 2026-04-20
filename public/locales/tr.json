@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "MIDI Saat aktif",
         "enableMidiClock": "MIDI Saati etkinleştir",
-        "midiClockEnabledHelp": "Bu enstrümana MIDI saat sinyali gönder"
+        "midiClockEnabledHelp": "Bu enstrümana MIDI saat sinyali gönder",
+        "minNoteInterval": "2 nota arasındaki minimum aralık (ms)",
+        "minNoteIntervalHelp": "Art arda iki note-on olayı arasındaki minimum gecikme (ms cinsinden)",
+        "minNoteDuration": "Minimum aktif nota süresi (ms)",
+        "minNoteDurationHelp": "Bir notanın aktif kaldığı minimum süre (ms cinsinden)"
     },
     "playlist": {
         "title": "Çalma Listeleri",

@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "MIDI时钟已启用",
         "enableMidiClock": "启用MIDI时钟",
-        "midiClockEnabledHelp": "向此乐器发送MIDI时钟信号"
+        "midiClockEnabledHelp": "向此乐器发送MIDI时钟信号",
+        "minNoteInterval": "两个音符之间的最小间隔 (ms)",
+        "minNoteIntervalHelp": "两个连续 note-on 事件之间的最小延迟（毫秒）",
+        "minNoteDuration": "最小活动音符持续时间 (ms)",
+        "minNoteDurationHelp": "音符保持活动状态的最短持续时间（毫秒）"
     },
     "playlist": {
         "title": "播放列表",

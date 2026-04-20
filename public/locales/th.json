@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "MIDI Clock",
         "enableMidiClock": "Send MIDI clock to this instrument",
-        "midiClockEnabledHelp": "Synchronize this instrument's arpeggiators, LFOs and sequencers with the playback tempo"
+        "midiClockEnabledHelp": "Synchronize this instrument's arpeggiators, LFOs and sequencers with the playback tempo",
+        "minNoteInterval": "ช่วงเวลาขั้นต่ำระหว่าง 2 โน้ต (ms)",
+        "minNoteIntervalHelp": "ความล่าช้าขั้นต่ำระหว่างเหตุการณ์ note-on สองรายการที่ต่อเนื่องกัน (หน่วย ms)",
+        "minNoteDuration": "ระยะเวลาโน้ตที่ใช้งานขั้นต่ำ (ms)",
+        "minNoteDurationHelp": "ระยะเวลาขั้นต่ำที่โน้ตยังคงใช้งานอยู่ (หน่วย ms)"
     },
     "playlist": {
         "title": "เพลย์ลิสต์",

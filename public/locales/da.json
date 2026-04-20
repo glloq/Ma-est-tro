@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "MIDI-ur aktivt",
         "enableMidiClock": "Aktiver MIDI-ur",
-        "midiClockEnabledHelp": "Send MIDI-ursignal til dette instrument"
+        "midiClockEnabledHelp": "Send MIDI-ursignal til dette instrument",
+        "minNoteInterval": "Minimumsinterval mellem 2 noder (ms)",
+        "minNoteIntervalHelp": "Minimumsforsinkelse mellem to på hinanden følgende note-on-hændelser (i ms)",
+        "minNoteDuration": "Minimum aktiv nodevarighed (ms)",
+        "minNoteDurationHelp": "Minimumstid en node forbliver aktiv (i ms)"
     },
     "playlist": {
         "title": "Playlister",

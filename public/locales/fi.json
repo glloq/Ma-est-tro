@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "MIDI-kello aktiivinen",
         "enableMidiClock": "Ota MIDI-kello käyttöön",
-        "midiClockEnabledHelp": "Lähetä MIDI-kellosignaali tälle soittimelle"
+        "midiClockEnabledHelp": "Lähetä MIDI-kellosignaali tälle soittimelle",
+        "minNoteInterval": "Vähimmäisväli kahden nuotin välillä (ms)",
+        "minNoteIntervalHelp": "Vähimmäisviive kahden peräkkäisen note-on-tapahtuman välillä (ms)",
+        "minNoteDuration": "Aktiivisen nuotin vähimmäiskesto (ms)",
+        "minNoteDurationHelp": "Vähimmäisaika, jonka nuotti pysyy aktiivisena (ms)"
     },
     "playlist": {
         "title": "Soittolistat",

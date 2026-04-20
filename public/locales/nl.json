@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "MIDI-klok actief",
         "enableMidiClock": "MIDI-klok inschakelen",
-        "midiClockEnabledHelp": "MIDI-kloksignaal naar dit instrument sturen"
+        "midiClockEnabledHelp": "MIDI-kloksignaal naar dit instrument sturen",
+        "minNoteInterval": "Minimale interval tussen 2 noten (ms)",
+        "minNoteIntervalHelp": "Minimale vertraging tussen twee opeenvolgende note-on gebeurtenissen (in ms)",
+        "minNoteDuration": "Minimale actieve nootduur (ms)",
+        "minNoteDurationHelp": "Minimale duur dat een noot actief blijft (in ms)"
     },
     "playlist": {
         "title": "Afspeellijsten",

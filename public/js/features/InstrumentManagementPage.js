@@ -51,12 +51,12 @@ class InstrumentManagementPage {
                        id="instrumentSearch"
                        placeholder="🔍 ${i18n.t('instrumentManagement.searchPlaceholder') || 'Rechercher un instrument...'}"
                        onkeyup="instrumentManagementPageInstance.handleSearch(this.value)"
-                       style="flex: 1; min-width: 150px; padding: 8px 14px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; font-size: 14px; background: rgba(255,255,255,0.15); color: white; outline: none;"
+                       style="flex: 1; min-width: 150px; height: 38px; box-sizing: border-box; padding: 8px 14px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; font-size: 14px; background: rgba(255,255,255,0.15); color: white; outline: none;"
                        onfocus="this.style.borderColor='rgba(255,255,255,0.6)';this.style.background='rgba(255,255,255,0.25)'"
                        onblur="this.style.borderColor='rgba(255,255,255,0.3)';this.style.background='rgba(255,255,255,0.15)'">
                 <select id="instrumentFilter"
                         onchange="instrumentManagementPageInstance.handleFilter(this.value)"
-                        style="padding: 8px 12px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; font-size: 13px; background: rgba(255,255,255,0.15); color: white; cursor: pointer;">
+                        style="flex-shrink: 0; min-width: 140px; height: 38px; box-sizing: border-box; padding: 8px 14px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; font-size: 14px; background: rgba(255,255,255,0.15); color: white; cursor: pointer; line-height: normal;">
                   <option value="all" style="background: #2d2d2d; color: #e0e0e0;">${i18n.t('instrumentManagement.filterAll') || 'Tous'}</option>
                   <option value="complete" style="background: #2d2d2d; color: #e0e0e0;">✓ ${i18n.t('instrumentManagement.filterComplete') || 'Complets'}</option>
                   <option value="incomplete" style="background: #2d2d2d; color: #e0e0e0;">⚠ ${i18n.t('instrumentManagement.filterIncomplete') || 'Incomplets'}</option>

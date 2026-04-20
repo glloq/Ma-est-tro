@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "MIDI Clock активен",
         "enableMidiClock": "Включить MIDI Clock",
-        "midiClockEnabledHelp": "Отправлять сигнал MIDI Clock на этот инструмент"
+        "midiClockEnabledHelp": "Отправлять сигнал MIDI Clock на этот инструмент",
+        "minNoteInterval": "Минимальный интервал между 2 нотами (мс)",
+        "minNoteIntervalHelp": "Минимальная задержка между двумя последовательными событиями note-on (в мс)",
+        "minNoteDuration": "Минимальная длительность активной ноты (мс)",
+        "minNoteDurationHelp": "Минимальное время, в течение которого нота остаётся активной (в мс)"
     },
     "playlist": {
         "title": "Плейлисты",

@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "Đồng hồ MIDI đang hoạt động",
         "enableMidiClock": "Bật đồng hồ MIDI",
-        "midiClockEnabledHelp": "Gửi tín hiệu đồng hồ MIDI đến nhạc cụ này"
+        "midiClockEnabledHelp": "Gửi tín hiệu đồng hồ MIDI đến nhạc cụ này",
+        "minNoteInterval": "Khoảng cách tối thiểu giữa 2 nốt (ms)",
+        "minNoteIntervalHelp": "Độ trễ tối thiểu giữa hai sự kiện note-on liên tiếp (tính bằng ms)",
+        "minNoteDuration": "Thời lượng nốt đang hoạt động tối thiểu (ms)",
+        "minNoteDurationHelp": "Thời lượng tối thiểu một nốt duy trì hoạt động (tính bằng ms)"
     },
     "playlist": {
         "title": "Danh sách phát",

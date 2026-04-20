@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "MIDI Clock",
         "enableMidiClock": "Send MIDI clock to this instrument",
-        "midiClockEnabledHelp": "Synchronize this instrument's arpeggiators, LFOs and sequencers with the playback tempo"
+        "midiClockEnabledHelp": "Synchronize this instrument's arpeggiators, LFOs and sequencers with the playback tempo",
+        "minNoteInterval": "Minimuma intervalo inter 2 notoj (ms)",
+        "minNoteIntervalHelp": "Minimuma prokrasto inter du sinsekvaj note-on eventoj (en ms)",
+        "minNoteDuration": "Minimuma aktiva notdaŭro (ms)",
+        "minNoteDurationHelp": "Minimuma daŭro dum kiu noto restas aktiva (en ms)"
     },
     "playlist": {
         "title": "Ludlistoj",

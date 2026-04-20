@@ -160,17 +160,10 @@
         const noteMode = settings.note_selection_mode || 'range';
         const octaveMode = settings.octave_mode || 'chromatic';
 
-        // CC data
+        // CC data — preserved as-is in a hidden input; only String/Fret CC config is exposed in the UI (strings subsection)
         const currentCCs = settings.supported_ccs
             ? (Array.isArray(settings.supported_ccs) ? settings.supported_ccs : String(settings.supported_ccs).split(',').map(function(s) { return parseInt(s.trim()); }).filter(function(n) { return !isNaN(n); }))
             : [];
-
-        // Recommended CCs
-        const catKey = this._getGmCategoryKey(gmProgram);
-        const recommendedCCs = catKey ? (InstrumentSettingsModal.GM_RECOMMENDED_CCS[catKey] || []) : [];
-
-        // CC accordion
-        const ccAccordionHtml = this._renderCCAccordion(currentCCs, recommendedCCs);
 
         const polyphonyVal = tab.stringInstrumentConfig
             ? tab.stringInstrumentConfig.num_strings
@@ -268,97 +261,8 @@
                 ${this._renderDrumsContent()}
             </div>` : ''}
 
-            <div class="ism-form-group">
-                <label>${this.t('instrumentSettings.supportedCCs') || 'CC supportés'}</label>
-                <div class="ism-active-ccs-summary" id="activeCCsSummary">
-                    ${this._renderActiveCCsSummary(currentCCs)}
-                </div>
-                ${recommendedCCs.length > 0 ? `<button type="button" class="btn btn-small ism-apply-recommended-ccs" id="applyRecommendedCCs">✨ ${this.t('instrumentSettings.applyRecommendedCCs') || 'Appliquer les CC recommandés'}</button>` : ''}
-                ${ccAccordionHtml}
-                <input type="hidden" id="supportedCCs" value="${currentCCs.join(', ')}">
-            </div>
+            <input type="hidden" id="supportedCCs" value="${currentCCs.join(', ')}">
         `;
-    };
-
-    ISMSections._renderCCAccordion = function(currentCCs, recommendedCCs) {
-        const groups = InstrumentSettingsModal.CC_GROUPS;
-        let html = '<div class="ism-cc-accordion">';
-        for (const groupId of Object.keys(groups)) {
-            const group = groups[groupId];
-            const ccsObj = group.ccs; // now an object { ccNum: { name, desc, range } }
-            const ccNums = Object.keys(ccsObj).map(Number);
-            const checkedCount = ccNums.filter(function(cc) { return currentCCs.includes(cc); }).length;
-            const isExpanded = false;
-
-            let ccsHtml = '';
-            for (const ccNum of ccNums) {
-                const info = ccsObj[ccNum];
-                const checked = currentCCs.includes(ccNum) ? 'checked' : '';
-                const isRecommended = recommendedCCs.includes(ccNum);
-                ccsHtml += `<label class="ism-cc-item ${checked ? 'checked' : ''}" title="${this.escape(info.desc + ' | ' + info.range)}">
-                    <input type="checkbox" class="ism-cc-checkbox" value="${ccNum}" ${checked}>
-                    <span class="ism-cc-num">${ccNum}</span>
-                    <span class="ism-cc-name">${this.escape(info.name)}</span>
-                    <span class="ism-cc-range">${this.escape(info.range)}</span>
-                    ${isRecommended ? '<span class="ism-cc-recommended" title="Recommandé pour cet instrument">★</span>' : ''}
-                </label>`;
-            }
-
-            html += `<div class="ism-cc-group ${isExpanded ? 'expanded' : ''}" data-group="${groupId}">
-                <div class="ism-cc-group-header">
-                    <span class="ism-cc-group-icon">${group.icon || ''}</span>
-                    <span class="ism-cc-group-name">${group.label}</span>
-                    <span class="ism-cc-group-badge">${checkedCount}/${ccNums.length}</span>
-                    <span class="ism-cc-group-chevron">▸</span>
-                </div>
-                <div class="ism-cc-group-body">
-                    <div class="ism-cc-grid">${ccsHtml}</div>
-                </div>
-            </div>`;
-        }
-        html += '</div>';
-        return html;
-    };
-
-    ISMSections._getStringCCNumbers = function() {
-        const tab = this._getActiveTab();
-        const config = tab?.stringInstrumentConfig;
-        if (!config || config.cc_enabled === false) return [];
-        return [config.cc_string_number ?? 20, config.cc_fret_number ?? 21];
-    };
-
-    ISMSections._renderActiveCCsSummary = function(activeCCs) {
-        const stringCCs = this._getStringCCNumbers();
-        // Merge string CCs into active list (without duplicates)
-        const allCCs = [...(activeCCs || [])];
-        for (const scc of stringCCs) {
-            if (!allCCs.includes(scc)) allCCs.push(scc);
-        }
-
-        if (allCCs.length === 0) {
-            return '<span class="ism-active-ccs-empty">Aucun CC actif</span>';
-        }
-        const groups = InstrumentSettingsModal.CC_GROUPS;
-        // Build a flat map of CC number -> name
-        const ccNames = {};
-        for (const groupId of Object.keys(groups)) {
-            const ccsObj = groups[groupId].ccs;
-            for (const ccNum of Object.keys(ccsObj)) {
-                ccNames[Number(ccNum)] = ccsObj[ccNum].name;
-            }
-        }
-        const stringCCSet = new Set(stringCCs);
-        const sorted = [...allCCs].sort((a, b) => a - b);
-        return sorted.map(function(cc) {
-            const isStringCC = stringCCSet.has(cc);
-            const name = isStringCC
-                ? (cc === (this._getActiveTab()?.stringInstrumentConfig?.cc_string_number ?? 20) ? 'String Select' : 'Fret Select')
-                : (ccNames[cc] || ('CC ' + cc));
-            if (isStringCC) {
-                return `<span class="ism-active-cc-tag ism-cc-tag-string" title="${this.escape(name)} (Cordes)"><span class="ism-active-cc-num">${cc}</span> ${this.escape(name)}</span>`;
-            }
-            return `<span class="ism-active-cc-tag" title="${this.escape(name)}"><span class="ism-active-cc-num">${cc}</span> ${this.escape(name)}<button type="button" class="ism-cc-tag-remove" data-cc="${cc}" aria-label="Supprimer CC ${cc}">\u00d7</button></span>`;
-        }.bind(this)).join('');
     };
 
     ISMSections._renderStringsContent = function() {
@@ -579,19 +483,10 @@
         if (!tab) return '';
         const settings = tab.settings;
 
-        // Check calibration button visibility
-        let showCalibration = false;
-        try {
-            const gmboopSettings = localStorage.getItem('gmboop_settings');
-            if (gmboopSettings) {
-                const parsed = JSON.parse(gmboopSettings);
-                showCalibration = !!parsed.showCalibrationButton;
-            }
-        } catch (e) { /* ignore */ }
-
         // Communication timeout
         const commTimeout = settings.comm_timeout || 5000;
 
+        // Measure-delay button is rendered hidden; shown later if an audio input device is detected.
         return `
             <h3 class="ism-section-title"><span class="ism-section-title-icon">⚙️</span> ${this.t('instrumentSettings.sectionAdvanced') || 'Avancé'}</h3>
 
@@ -599,7 +494,7 @@
                 <label>${this.t('instrumentSettings.syncDelay') || 'Délai de synchronisation'}</label>
                 <div class="ism-delay-row">
                     <input type="number" id="syncDelay" value="${settings.sync_delay || 0}" min="-5000" max="5000">
-                    ${showCalibration ? `<button type="button" class="btn btn-small ism-measure-delay-btn" id="measureDelayBtn">🎤 ${this.t('instrumentSettings.measureDelay') || 'Mesurer'}</button>` : ''}
+                    <button type="button" class="btn btn-small ism-measure-delay-btn" id="measureDelayBtn" style="display:none">🎤 ${this.t('instrumentSettings.measureDelay') || 'Mesurer'}</button>
                 </div>
                 <span class="ism-form-hint">${this.t('instrumentSettings.syncDelayHelp') || 'Ajustement du timing en millisecondes'}</span>
             </div>

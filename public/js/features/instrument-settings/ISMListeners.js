@@ -52,8 +52,6 @@
                 }
                 const ccSection = this.dialog?.querySelector('#ism-cc-config-section');
                 if (ccSection) ccSection.classList.toggle('si-collapsed', !e.target.checked);
-                // Update CC summary to reflect string CC changes
-                this._updateActiveCCsSummary();
             }.bind(this));
         }
 
@@ -286,45 +284,6 @@
         });
     };
 
-    ISMListeners._wireCCAccordionListeners = function() {
-        // CC group expand/collapse
-        this.$$('.ism-cc-group-header').forEach(function(header) {
-            header.addEventListener('click', function() {
-                header.closest('.ism-cc-group').classList.toggle('expanded');
-            });
-        });
-
-        // CC checkboxes
-        this.$$('.ism-cc-checkbox').forEach(function(cb) {
-            cb.addEventListener('change', function() {
-                cb.closest('.ism-cc-item').classList.toggle('checked', cb.checked);
-                this._updateCCHiddenInput();
-                this._updateCCGroupBadges();
-                this._updateActiveCCsSummary();
-            }.bind(this));
-        }.bind(this));
-    };
-
-    ISMListeners._applyRecommendedCCs = function() {
-        const tab = this._getActiveTab();
-        if (!tab) return;
-        const catKey = this._getGmCategoryKey(tab.settings.gm_program);
-        const recommended = catKey ? (InstrumentSettingsModal.GM_RECOMMENDED_CCS[catKey] || []) : [];
-        if (recommended.length === 0) return;
-
-        // Check all recommended CCs
-        this.$$('.ism-cc-checkbox').forEach(function(cb) {
-            const ccNum = parseInt(cb.value);
-            if (recommended.includes(ccNum)) {
-                cb.checked = true;
-                cb.closest('.ism-cc-item')?.classList.add('checked');
-            }
-        });
-        this._updateCCHiddenInput();
-        this._updateCCGroupBadges();
-        this._updateActiveCCsSummary();
-    };
-
     ISMListeners._wireDrumListeners = function() {
         // Drum category expand/collapse
         this.$$('.ism-drum-cat-header').forEach(function(header) {
@@ -457,72 +416,14 @@
 
     ISMListeners._attachNotesSectionListeners = function() {
         this._wireNotesModeListeners();
-        this._wireCCAccordionListeners();
         this._wireDrumListeners();
         this._attachStringsSectionListeners();
-
-        // Apply recommended CCs button
-        const applyBtn = this.$('#applyRecommendedCCs');
-        if (applyBtn) {
-            applyBtn.addEventListener('click', function() {
-                this._applyRecommendedCCs();
-            }.bind(this));
-        }
-
-        // CC tag remove buttons (event delegation — summary is re-rendered dynamically)
-        const ccSummary = this.$('#activeCCsSummary');
-        if (ccSummary) {
-            ccSummary.addEventListener('click', function(e) {
-                const removeBtn = e.target.closest('.ism-cc-tag-remove');
-                if (!removeBtn) return;
-                e.stopPropagation();
-                const ccNum = parseInt(removeBtn.dataset.cc);
-                if (isNaN(ccNum)) return;
-                const cb = this.$(`.ism-cc-checkbox[value="${ccNum}"]`);
-                if (cb) {
-                    cb.checked = false;
-                    const item = cb.closest('.ism-cc-item');
-                    if (item) item.classList.remove('checked');
-                }
-                this._updateCCHiddenInput();
-                this._updateCCGroupBadges();
-                this._updateActiveCCsSummary();
-            }.bind(this));
-        }
-
         // Piano is initialized by _switchSection('notes') when the section becomes visible
     };
 
     ISMListeners._attachIdentitySectionListeners = function() {
         this._wireChannelGridListeners();
         this._wireGmProgramChange();
-    };
-
-    ISMListeners._updateCCHiddenInput = function() {
-        const selected = [];
-        this.$$('.ism-cc-checkbox:checked').forEach(function(c) { selected.push(parseInt(c.value)); });
-        const hidden = this.$('#supportedCCs');
-        if (hidden) hidden.value = selected.join(', ');
-    };
-
-    ISMListeners._updateActiveCCsSummary = function() {
-        const summary = this.$('#activeCCsSummary');
-        if (!summary) return;
-        const selected = [];
-        this.$$('.ism-cc-checkbox:checked').forEach(function(c) { selected.push(parseInt(c.value)); });
-        summary.innerHTML = this._renderActiveCCsSummary(selected);
-    };
-
-    ISMListeners._updateCCGroupBadges = function() {
-        const groups = InstrumentSettingsModal.CC_GROUPS;
-        for (const groupId of Object.keys(groups)) {
-            const groupEl = this.$(`.ism-cc-group[data-group="${groupId}"]`);
-            if (!groupEl) continue;
-            const cbs = groupEl.querySelectorAll('.ism-cc-checkbox');
-            const checkedCount = groupEl.querySelectorAll('.ism-cc-checkbox:checked').length;
-            const badge = groupEl.querySelector('.ism-cc-group-badge');
-            if (badge) badge.textContent = `${checkedCount}/${cbs.length}`;
-        }
     };
 
     ISMListeners._measureDelay = function() {
@@ -537,20 +438,6 @@
         if (btn) {
             btn.disabled = true;
             btn.textContent = this.t('instrumentSettings.measureListening') || '🎤 Écoute...';
-        }
-
-        const startTime = performance.now();
-        // Send a MIDI note to trigger sound
-        if (this.api && this.device) {
-            try {
-                this.api.sendCommand('midi_send_note', {
-                    deviceId: this.device.id,
-                    channel: this.activeChannel,
-                    note: 60,
-                    velocity: 100,
-                    duration: 100
-                });
-            } catch (e) { /* ignore */ }
         }
 
         navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
@@ -570,13 +457,27 @@
                 audioCtx.close().catch(() => {});
                 if (btn) {
                     btn.disabled = false;
-                    btn.textContent = this.t('instrumentSettings.measureButton') || '🎤 Mesurer';
+                    btn.textContent = '🎤 ' + (this.t('instrumentSettings.measureDelay') || 'Mesurer');
                 }
                 this._micTestCleanup = null;
             };
 
-            // Store cleanup reference for modal close
             this._micTestCleanup = cleanup;
+
+            // Start chrono and trigger the MIDI note only once the mic stream is live,
+            // so the measurement excludes the permission-prompt delay.
+            const startTime = performance.now();
+            if (this.api && this.device) {
+                try {
+                    this.api.sendCommand('midi_send_note', {
+                        deviceId: this.device.id,
+                        channel: this.activeChannel,
+                        note: 60,
+                        velocity: 100,
+                        duration: 100
+                    });
+                } catch (e) { /* ignore */ }
+            }
 
             var checkInterval = setInterval(function() {
                 analyser.getByteTimeDomainData(dataArray);
@@ -604,9 +505,19 @@
         }.bind(this)).catch(function() {
             if (btn) {
                 btn.disabled = false;
-                btn.textContent = '🎤 Mesurer';
+                btn.textContent = '🎤 ' + (this.t('instrumentSettings.measureDelay') || 'Mesurer');
             }
-        });
+        }.bind(this));
+    };
+
+    ISMListeners._detectMicAndToggleMeasureBtn = function() {
+        const btn = this.$('#measureDelayBtn');
+        if (!btn) return;
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+        navigator.mediaDevices.enumerateDevices().then(function(devices) {
+            const hasMic = devices.some(function(d) { return d.kind === 'audioinput'; });
+            if (hasMic) btn.style.display = '';
+        }).catch(function() { /* no permission / not supported → stay hidden */ });
     };
 
     // ========== MAIN EVENT LISTENERS ==========
@@ -636,10 +547,11 @@
         this._attachIdentitySectionListeners();
         this._attachNotesSectionListeners();
 
-        // Measure delay button
+        // Measure delay button — hidden by default, revealed only if an audio input is detected
         const measureBtn = this.$('#measureDelayBtn');
         if (measureBtn) {
             measureBtn.addEventListener('click', function() { this._measureDelay(); }.bind(this));
+            this._detectMicAndToggleMeasureBtn();
         }
     };
 

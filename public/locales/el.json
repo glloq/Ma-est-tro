@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "MIDI Clock ενεργό",
         "enableMidiClock": "Ενεργοποίηση MIDI Clock",
-        "midiClockEnabledHelp": "Αποστολή σήματος MIDI Clock σε αυτό το όργανο"
+        "midiClockEnabledHelp": "Αποστολή σήματος MIDI Clock σε αυτό το όργανο",
+        "minNoteInterval": "Ελάχιστο διάστημα μεταξύ 2 νοτών (ms)",
+        "minNoteIntervalHelp": "Ελάχιστη καθυστέρηση μεταξύ δύο διαδοχικών συμβάντων note-on (σε ms)",
+        "minNoteDuration": "Ελάχιστη διάρκεια ενεργής νότας (ms)",
+        "minNoteDurationHelp": "Ελάχιστη διάρκεια που μια νότα παραμένει ενεργή (σε ms)"
     },
     "playlist": {
         "title": "Λίστες αναπαραγωγής",
