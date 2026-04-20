@@ -756,16 +756,7 @@ class RoutingSummaryPage {
     const playableInfo = playableData ? `(${playableData.playable}/${playableData.total})` : '';
 
     // Adaptation controls (pitch shift + OOR handling) — P2-F.4q
-    const adaptHTML = renderAdaptationBlock({
-      channel,
-      adaptation,
-      analysis,
-      assignment,
-      isSkipped,
-      isDrumChannel,
-      playableWithTranspose: (adaptation.pitchShift === 'manual') ? this._computePlayableNotes(ch) : null,
-      polyReductionHTML: this._renderPolyReductionSection(channel, adaptation, analysis, assignment)
-    });
+    const adaptHTML = this._renderAdaptationBlock(channel);
 
     // Instrument chips (horizontal bar) — always show, even on skipped channels
     const instrumentChipsHTML = (options.length > 0 || lowOptions.length > 0)
@@ -901,6 +892,52 @@ class RoutingSummaryPage {
       channelPolyphony: this._getChannelPolyphony(channel),
       instrumentPolyphony: this._getInstrumentPolyphony(channel)
     });
+  }
+
+  /**
+   * Render the adaptation block for a channel (pitch-shift + OOR + polyphony).
+   * Used both during full detail rebuilds and for the targeted partial refresh
+   * triggered by adaptation radio toggles.
+   */
+  _renderAdaptationBlock(channel) {
+    const ch = String(channel);
+    const isSkipped = this.skippedChannels.has(channel);
+    const assignment = this.selectedAssignments[ch];
+    const analysis = this.channelAnalyses[channel] || assignment?.channelAnalysis;
+    const isDrumChannel = channel === 9 || analysis?.estimatedType === 'drums';
+    const adaptation = this.adaptationSettings[ch] || {};
+    return renderAdaptationBlock({
+      channel,
+      adaptation,
+      analysis,
+      assignment,
+      isSkipped,
+      isDrumChannel,
+      playableWithTranspose: (adaptation.pitchShift === 'manual') ? this._computePlayableNotes(ch) : null,
+      polyReductionHTML: this._renderPolyReductionSection(channel, adaptation, analysis, assignment)
+    });
+  }
+
+  /**
+   * Targeted partial update of the .rs-adaptation block for a channel.
+   * Avoids rebuilding the entire detail panel when only an adaptation
+   * radio toggle changed (pitchShift / oorHandling / polyReduction /
+   * polyStrategy) — those changes don't affect the rest of the panel.
+   * Returns false if the block isn't currently in the DOM (caller should
+   * fall back to a full refresh).
+   */
+  _refreshAdaptationBlock(channel) {
+    const panel = this.modal?.querySelector('#rsDetailPanel');
+    const block = panel?.querySelector('.rs-adaptation');
+    if (!block) return false;
+    const html = this._renderAdaptationBlock(channel);
+    if (!html) return false;
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = html;
+    const fresh = wrapper.firstElementChild;
+    if (!fresh) return false;
+    block.replaceWith(fresh);
+    return true;
   }
 
   /**
@@ -1285,7 +1322,9 @@ class RoutingSummaryPage {
           if (!this.adaptationSettings[ch]) this.adaptationSettings[ch] = {};
           const current = this.adaptationSettings[ch].polyTarget || this._getInstrumentPolyphony(ch) || getGmDefaultPolyphony(this.selectedAssignments[ch]?.gmProgram) || 8;
           this.adaptationSettings[ch].polyTarget = Math.max(1, Math.min(128, current + delta));
-          this._refreshUI(channelKeys, 'detail');
+          if (!this._refreshAdaptationBlock(parseInt(ch))) {
+            this._refreshUI(channelKeys, 'detail');
+          }
         }
         return;
       }
@@ -1442,8 +1481,15 @@ class RoutingSummaryPage {
             transpositionChanged = oldSemi !== newSemi;
             this._reclampSplitRanges(parseInt(ch), oldSemi, newSemi);
           }
-          // Only rebuild summary when transposition value actually changed (affects scores/ranges)
-          this._refreshUI(channelKeys, transpositionChanged ? 'both-panels' : 'detail');
+          // When the transposition value didn't change, only the adaptation
+          // block needs to be re-rendered. A full detail rebuild is wasteful
+          // (and laggy on complex panels). Falls back to the heavy path
+          // when the targeted update can't apply.
+          if (transpositionChanged) {
+            this._refreshUI(channelKeys, 'both-panels');
+          } else if (!this._refreshAdaptationBlock(parseInt(ch))) {
+            this._refreshUI(channelKeys, 'detail');
+          }
         }
         return;
       }
@@ -1455,7 +1501,9 @@ class RoutingSummaryPage {
         if (ch && !isNaN(val) && val >= 1) {
           if (!this.adaptationSettings[ch]) this.adaptationSettings[ch] = {};
           this.adaptationSettings[ch].polyTarget = Math.max(1, Math.min(128, val));
-          this._refreshUI(channelKeys, 'detail');
+          if (!this._refreshAdaptationBlock(parseInt(ch))) {
+            this._refreshUI(channelKeys, 'detail');
+          }
         }
         return;
       }
