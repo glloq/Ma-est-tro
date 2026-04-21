@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "Đồng hồ MIDI đang hoạt động",
         "enableMidiClock": "Bật đồng hồ MIDI",
-        "midiClockEnabledHelp": "Gửi tín hiệu đồng hồ MIDI đến nhạc cụ này"
+        "midiClockEnabledHelp": "Gửi tín hiệu đồng hồ MIDI đến nhạc cụ này",
+        "minNoteInterval": "Khoảng cách tối thiểu giữa 2 nốt (ms)",
+        "minNoteIntervalHelp": "Độ trễ tối thiểu giữa hai sự kiện note-on liên tiếp (tính bằng ms)",
+        "minNoteDuration": "Thời lượng nốt đang hoạt động tối thiểu (ms)",
+        "minNoteDurationHelp": "Thời lượng tối thiểu một nốt duy trì hoạt động (tính bằng ms)"
     },
     "playlist": {
         "title": "Danh sách phát",
@@ -1802,6 +1806,11 @@
         "tooHigh": "Trop haut",
         "hintAuto": "Mode libre : jouez une note, la plus proche sera affichée",
         "heardNote": "Note détectée : {note}",
+        "connectedInstruments": "Instruments connectés",
+        "genericPresets": "Presets génériques",
+        "noInstrumentsConnected": "Aucun instrument connecté — utilisez un preset générique.",
+        "noConfigForInstrument": "Aucune configuration d'accordage pour cet instrument — renseignez-la depuis les réglages d'instrument.",
+        "sourceConfigured": "✓ configuré",
         "mode": {
             "auto": "Libre",
             "note": "Note ciblée",

@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "MIDI Clock активний",
         "enableMidiClock": "Увімкнути MIDI Clock",
-        "midiClockEnabledHelp": "Надсилати сигнал MIDI Clock цьому інструменту"
+        "midiClockEnabledHelp": "Надсилати сигнал MIDI Clock цьому інструменту",
+        "minNoteInterval": "Мінімальний інтервал між 2 нотами (мс)",
+        "minNoteIntervalHelp": "Мінімальна затримка між двома послідовними подіями note-on (у мс)",
+        "minNoteDuration": "Мінімальна тривалість активної ноти (мс)",
+        "minNoteDurationHelp": "Мінімальний час, протягом якого нота залишається активною (у мс)"
     },
     "playlist": {
         "title": "Плейлисти",
@@ -1802,6 +1806,11 @@
         "tooHigh": "Trop haut",
         "hintAuto": "Mode libre : jouez une note, la plus proche sera affichée",
         "heardNote": "Note détectée : {note}",
+        "connectedInstruments": "Instruments connectés",
+        "genericPresets": "Presets génériques",
+        "noInstrumentsConnected": "Aucun instrument connecté — utilisez un preset générique.",
+        "noConfigForInstrument": "Aucune configuration d'accordage pour cet instrument — renseignez-la depuis les réglages d'instrument.",
+        "sourceConfigured": "✓ configuré",
         "mode": {
             "auto": "Libre",
             "note": "Note ciblée",

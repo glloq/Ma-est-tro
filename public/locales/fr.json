@@ -655,7 +655,11 @@
         "sysexIdentityReceived": "✅ Identité reçue",
         "measureListening": "🎤 Écoute...",
         "measureButton": "🎤 Mesurer",
-        "micNotAvailable": "Le microphone n'est pas disponible dans ce navigateur."
+        "micNotAvailable": "Le microphone n'est pas disponible dans ce navigateur.",
+        "minNoteInterval": "Temps minimum entre 2 notes (ms)",
+        "minNoteIntervalHelp": "Délai minimum entre deux note-on consécutifs (en ms)",
+        "minNoteDuration": "Temps note actif minimum (ms)",
+        "minNoteDurationHelp": "Durée minimum pendant laquelle une note reste active (en ms)"
     },
     "playlist": {
         "title": "Playlists",
@@ -1802,6 +1806,11 @@
         "tooHigh": "Trop haut",
         "hintAuto": "Mode libre : jouez une note, la plus proche sera affichée",
         "heardNote": "Note détectée : {note}",
+        "connectedInstruments": "Instruments connectés",
+        "genericPresets": "Presets génériques",
+        "noInstrumentsConnected": "Aucun instrument connecté — utilisez un preset générique.",
+        "noConfigForInstrument": "Aucune configuration d'accordage pour cet instrument — renseignez-la depuis les réglages d'instrument.",
+        "sourceConfigured": "✓ configuré",
         "mode": {
             "auto": "Libre",
             "note": "Note ciblée",

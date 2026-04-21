@@ -655,7 +655,11 @@
         "micNotAvailable": "Microphone is not available in this browser.",
         "midiClockEnabled": "MIDI-klok actief",
         "enableMidiClock": "MIDI-klok inschakelen",
-        "midiClockEnabledHelp": "MIDI-kloksignaal naar dit instrument sturen"
+        "midiClockEnabledHelp": "MIDI-kloksignaal naar dit instrument sturen",
+        "minNoteInterval": "Minimale interval tussen 2 noten (ms)",
+        "minNoteIntervalHelp": "Minimale vertraging tussen twee opeenvolgende note-on gebeurtenissen (in ms)",
+        "minNoteDuration": "Minimale actieve nootduur (ms)",
+        "minNoteDurationHelp": "Minimale duur dat een noot actief blijft (in ms)"
     },
     "playlist": {
         "title": "Afspeellijsten",
@@ -1802,6 +1806,11 @@
         "tooHigh": "Trop haut",
         "hintAuto": "Mode libre : jouez une note, la plus proche sera affichée",
         "heardNote": "Note détectée : {note}",
+        "connectedInstruments": "Instruments connectés",
+        "genericPresets": "Presets génériques",
+        "noInstrumentsConnected": "Aucun instrument connecté — utilisez un preset générique.",
+        "noConfigForInstrument": "Aucune configuration d'accordage pour cet instrument — renseignez-la depuis les réglages d'instrument.",
+        "sourceConfigured": "✓ configuré",
         "mode": {
             "auto": "Libre",
             "note": "Note ciblée",
