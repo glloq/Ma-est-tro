@@ -69,6 +69,39 @@ class StringInstrumentDatabase {
     'mandolin':           { name: 'Mandolin (GDAE)',               strings: 4, frets: 20, tuning: [55, 62, 69, 76] },
   };
 
+  /**
+   * Built-in scale-length presets (mm). Used by the hand-position planner
+   * to reason about physical fret spacing — frets are geometrically spaced
+   * so a fixed hand width covers a variable number of frets depending on
+   * where it sits on the neck. The user picks a preset to seed the value
+   * for a freshly created instrument and may override it afterwards.
+   *
+   * Values are typical real-world averages; precision matters less than
+   * order of magnitude (a ±20 mm error shifts the per-position covered
+   * fret count by less than a quarter of a fret).
+   */
+  static SCALE_LENGTH_PRESETS = {
+    guitar_classical:    { name: 'Classical Guitar',           scale_length_mm: 650 },
+    guitar_acoustic:     { name: 'Acoustic Guitar',            scale_length_mm: 648 },
+    guitar_electric:     { name: 'Electric Guitar (Fender)',   scale_length_mm: 648 },
+    guitar_gibson:       { name: 'Electric Guitar (Gibson)',   scale_length_mm: 628 },
+    guitar_baritone:     { name: 'Baritone Guitar',            scale_length_mm: 686 },
+    guitar_7string:      { name: '7-String Guitar',            scale_length_mm: 648 },
+    bass_long:           { name: 'Bass (long scale 34")',      scale_length_mm: 864 },
+    bass_short:          { name: 'Bass (short scale 30")',     scale_length_mm: 762 },
+    bass_5string:        { name: '5-String Bass (35")',        scale_length_mm: 889 },
+    ukulele_soprano:     { name: 'Ukulele (soprano)',          scale_length_mm: 350 },
+    ukulele_concert:     { name: 'Ukulele (concert)',          scale_length_mm: 380 },
+    ukulele_tenor:       { name: 'Ukulele (tenor)',            scale_length_mm: 430 },
+    ukulele_baritone:    { name: 'Ukulele (baritone)',         scale_length_mm: 510 },
+    banjo_5string:       { name: 'Banjo (5-string)',           scale_length_mm: 660 },
+    mandolin:            { name: 'Mandolin',                   scale_length_mm: 350 },
+    violin:              { name: 'Violin',                     scale_length_mm: 328 },
+    viola:               { name: 'Viola',                      scale_length_mm: 380 },
+    cello:               { name: 'Cello',                      scale_length_mm: 690 },
+    contrabass:          { name: 'Double Bass',                scale_length_mm: 1050 }
+  };
+
   // ==================== STRING INSTRUMENTS CRUD ====================
 
   /**
@@ -100,14 +133,16 @@ class StringInstrumentDatabase {
         ? JSON.stringify(Array.isArray(config.frets_per_string) ? config.frets_per_string : JSON.parse(config.frets_per_string))
         : null;
 
+      const scaleLengthMm = this._normalizeScaleLength(config.scale_length_mm);
+
       const stmt = this.db.prepare(`
         INSERT INTO string_instruments (
           device_id, channel, instrument_name, num_strings, num_frets,
           tuning, is_fretless, capo_fret, cc_enabled, tab_algorithm,
           cc_string_number, cc_string_min, cc_string_max, cc_string_offset,
           cc_fret_number, cc_fret_min, cc_fret_max, cc_fret_offset,
-          frets_per_string
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          frets_per_string, scale_length_mm
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(device_id, channel) DO UPDATE SET
           instrument_name = excluded.instrument_name,
           num_strings = excluded.num_strings,
@@ -125,7 +160,8 @@ class StringInstrumentDatabase {
           cc_fret_min = excluded.cc_fret_min,
           cc_fret_max = excluded.cc_fret_max,
           cc_fret_offset = excluded.cc_fret_offset,
-          frets_per_string = excluded.frets_per_string
+          frets_per_string = excluded.frets_per_string,
+          scale_length_mm = excluded.scale_length_mm
       `);
 
       const result = stmt.run(
@@ -147,7 +183,8 @@ class StringInstrumentDatabase {
         config.cc_fret_min !== undefined ? config.cc_fret_min : 0,
         config.cc_fret_max !== undefined ? config.cc_fret_max : 36,
         config.cc_fret_offset || 0,
-        fretsPerStringJson
+        fretsPerStringJson,
+        scaleLengthMm
       );
 
       this.logger.info(`String instrument created/updated for ${config.device_id} ch${config.channel}`);
@@ -338,6 +375,12 @@ class StringInstrumentDatabase {
         }
       }
 
+      // Scale length in millimetres (physical hand-position model).
+      if (updates.scale_length_mm !== undefined) {
+        fields.push('scale_length_mm = ?');
+        values.push(this._normalizeScaleLength(updates.scale_length_mm));
+      }
+
       if (fields.length === 0) return false;
 
       values.push(id);
@@ -422,6 +465,24 @@ class StringInstrumentDatabase {
    */
   getTuningPreset(presetKey) {
     return StringInstrumentDatabase.TUNING_PRESETS[presetKey] || null;
+  }
+
+  /**
+   * Built-in scale-length presets keyed by short identifier. The frontend
+   * uses these to seed the value when the user creates a new instrument
+   * or wants to "snap to a preset".
+   * @returns {Object<string, {name:string, scale_length_mm:number}>}
+   */
+  getScaleLengthPresets() {
+    return StringInstrumentDatabase.SCALE_LENGTH_PRESETS;
+  }
+
+  /**
+   * @param {string} presetKey
+   * @returns {?{name:string, scale_length_mm:number}}
+   */
+  getScaleLengthPreset(presetKey) {
+    return StringInstrumentDatabase.SCALE_LENGTH_PRESETS[presetKey] || null;
   }
 
   // ==================== TABLATURE DATA ====================
@@ -584,9 +645,29 @@ class StringInstrumentDatabase {
       cc_fret_offset: row.cc_fret_offset || 0,
       // Per-string fret count
       frets_per_string,
+      // Scale length (physical hand model). null until the user picks a preset
+      // or types a value; in that case the planner falls back to constant frets.
+      scale_length_mm: Number.isFinite(row.scale_length_mm) ? row.scale_length_mm : null,
       created_at: row.created_at,
       updated_at: row.updated_at
     };
+  }
+
+  /**
+   * Coerce a `scale_length_mm` value to either a clamped integer in
+   * [100, 2000] or `null` (= preset not chosen). Throws on values that
+   * are explicitly out of range so a UI bug surfaces instead of silently
+   * clamping.
+   * @private
+   */
+  _normalizeScaleLength(raw) {
+    if (raw === null || raw === undefined || raw === '') return null;
+    const n = typeof raw === 'number' ? raw : parseInt(raw, 10);
+    if (!Number.isFinite(n)) return null;
+    if (n < 100 || n > 2000) {
+      throw new Error('scale_length_mm must be between 100 and 2000');
+    }
+    return Math.round(n);
   }
 
   /**
