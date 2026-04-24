@@ -668,6 +668,19 @@ class DatabaseManager {
     return this.instrumentDB.getRegisteredInstrumentIds();
   }
 
+  // Instrument Voices (secondary GM alternatives keyed by device_id +
+  // channel). The delegating methods exist on InstrumentDatabase; the
+  // InstrumentRepository accesses them via this manager so every voice
+  // call must have a pass-through here — otherwise
+  // `instrument_save_all` / `instrument_voice_replace` blow up with
+  // `TypeError: this.database.replaceInstrumentVoices is not a function`.
+  listInstrumentVoices(...args) { return this.instrumentDB.listInstrumentVoices(...args); }
+  createInstrumentVoice(...args) { return this.instrumentDB.createInstrumentVoice(...args); }
+  updateInstrumentVoice(...args) { return this.instrumentDB.updateInstrumentVoice(...args); }
+  deleteInstrumentVoice(...args) { return this.instrumentDB.deleteInstrumentVoice(...args); }
+  deleteInstrumentVoicesByInstrument(...args) { return this.instrumentDB.deleteInstrumentVoicesByInstrument(...args); }
+  replaceInstrumentVoices(...args) { return this.instrumentDB.replaceInstrumentVoices(...args); }
+
   // Routing persistence
   insertRouting(routing) {
     return this.instrumentDB.insertRouting(routing);
