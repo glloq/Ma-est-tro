@@ -687,7 +687,9 @@
         "supportedCcsTitle": "Podporované CC",
         "supportedCcsLabel": "Podporované CC (oddělené čárkou)",
         "supportedCcsHint": "Sdíleno napříč všemi GM hlasy tohoto nástroje. CC, kterým nástroj nerozumí, jsou jednoduše ignorovány na hardwarové straně.",
-        "previewThisVoice": "Klikněte pro náhled tohoto hlasu na klávesnici"
+        "previewThisVoice": "Klikněte pro náhled tohoto hlasu na klávesnici",
+        "voicesShareNotes": "Všechny GM nástroje hrají stejné MIDI noty",
+        "voicesShareNotesHint": "Odznačte, abyste každému GM nástroji nastavili vlastní hratelné noty."
     },
     "playlist": {
         "title": "Playlisty",

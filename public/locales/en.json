@@ -656,6 +656,8 @@
         "supportedCcsTitle": "Supported CCs",
         "supportedCcsLabel": "Supported CCs (comma-separated)",
         "supportedCcsHint": "Shared across every GM voice on this instrument. CCs an instrument doesn't handle are simply ignored on the hardware side.",
+        "voicesShareNotes": "All GM instruments play the same MIDI notes",
+        "voicesShareNotesHint": "Uncheck to give each GM instrument its own playable-note capabilities.",
         "capabilitiesSource": "Capabilities source",
         "saveErrorTitle": "Save error",
         "drumToggleAll": "Check/uncheck all",

@@ -70,6 +70,36 @@ function _validateVoicePayload(v) {
     const o = parseInt(v.display_order, 10);
     if (Number.isFinite(o)) payload.display_order = o;
   }
+
+  // Per-voice note capabilities (optional — only written when the user
+  // disabled the "voices share notes" flag on the primary instrument).
+  if (v.note_selection_mode !== undefined && v.note_selection_mode !== null) {
+    const allowed = ['range', 'discrete'];
+    if (!allowed.includes(v.note_selection_mode)) {
+      throw new ValidationError('note_selection_mode must be "range" or "discrete"', 'note_selection_mode');
+    }
+    payload.note_selection_mode = v.note_selection_mode;
+  } else {
+    payload.note_selection_mode = null;
+  }
+  payload.note_range_min = num(v.note_range_min, 'note_range_min', 0, 127);
+  payload.note_range_max = num(v.note_range_max, 'note_range_max', 0, 127);
+  if (Array.isArray(v.selected_notes)) {
+    payload.selected_notes = v.selected_notes
+      .map((n) => parseInt(n, 10))
+      .filter((n) => Number.isFinite(n) && n >= 0 && n <= 127);
+  } else {
+    payload.selected_notes = null;
+  }
+  if (v.octave_mode !== undefined && v.octave_mode !== null) {
+    const allowed = ['chromatic', 'diatonic', 'pentatonic'];
+    if (!allowed.includes(v.octave_mode)) {
+      throw new ValidationError('octave_mode must be chromatic/diatonic/pentatonic', 'octave_mode');
+    }
+    payload.octave_mode = v.octave_mode;
+  } else {
+    payload.octave_mode = null;
+  }
   return payload;
 }
 

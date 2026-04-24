@@ -687,7 +687,9 @@
         "supportedCcsTitle": "CC supportati",
         "supportedCcsLabel": "CC supportati (separati da virgole)",
         "supportedCcsHint": "Condiviso tra tutte le voci GM di questo strumento. I CC non gestiti da uno strumento sono semplicemente ignorati lato hardware.",
-        "previewThisVoice": "Clicca per visualizzare in anteprima questa voce sulla tastiera"
+        "previewThisVoice": "Clicca per visualizzare in anteprima questa voce sulla tastiera",
+        "voicesShareNotes": "Tutti gli strumenti GM suonano le stesse note MIDI",
+        "voicesShareNotesHint": "Deseleziona per dare a ogni strumento GM le proprie note suonabili."
     },
     "playlist": {
         "title": "Playlist",

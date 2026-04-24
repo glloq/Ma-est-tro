@@ -687,7 +687,9 @@
         "supportedCcsTitle": "Unterstützte CCs",
         "supportedCcsLabel": "Unterstützte CCs (kommagetrennt)",
         "supportedCcsHint": "Wird von allen GM-Stimmen dieses Instruments gemeinsam genutzt. CCs, die ein Instrument nicht versteht, werden hardwareseitig einfach ignoriert.",
-        "previewThisVoice": "Klicken, um diese Stimme auf dem Keyboard vorzuhören"
+        "previewThisVoice": "Klicken, um diese Stimme auf dem Keyboard vorzuhören",
+        "voicesShareNotes": "Alle GM-Instrumente spielen dieselben MIDI-Noten",
+        "voicesShareNotesHint": "Deaktivieren, um jedem GM-Instrument eigene spielbare Noten zuzuweisen."
     },
     "playlist": {
         "title": "Playlists",

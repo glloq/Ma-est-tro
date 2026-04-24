@@ -4,6 +4,12 @@
 
     ISMSave._save = async function() {
         try {
+            // Flush the Notes editor (piano + mode toggles) into whichever
+            // target it currently edits (primary settings or active voice)
+            // so nothing is lost if the user edited a voice tab.
+            if (typeof this._commitCurrentNotesEditor === 'function') {
+                this._commitCurrentNotesEditor();
+            }
             const customName = (this.$('#customName')?.value || '').trim();
             const syncDelay = parseInt(this.$('#syncDelay')?.value) || 0;
             const macAddress = (this.$('#macAddress')?.value || '').trim();
@@ -19,17 +25,19 @@
             const polyVal = (this.$('#polyphonyInput')?.value || '').trim();
             const polyphony = polyVal !== '' ? parseInt(polyVal) : null;
 
-            // Note selection
-            const noteSelectionMode = this.$('#noteSelectionModeInput')?.value || 'range';
-            const noteRangeMin = this.$('#noteRangeMin')?.value?.trim();
-            const noteRangeMax = this.$('#noteRangeMax')?.value?.trim();
-            const parsedMin = noteRangeMin !== '' && noteRangeMin != null ? parseInt(noteRangeMin) : null;
-            const parsedMax = noteRangeMax !== '' && noteRangeMax != null ? parseInt(noteRangeMax) : null;
+            // Note selection — source the PRIMARY's values from tab.settings
+            // (freshly committed from the editor above). The hidden inputs
+            // might currently reflect a voice tab, so reading them would be
+            // wrong when voices don't share notes.
+            const primaryTab = this._getActiveTab();
+            const primarySettings = primaryTab ? primaryTab.settings : {};
+            const noteSelectionMode = primarySettings.note_selection_mode || 'range';
+            const parsedMin = primarySettings.note_range_min != null ? parseInt(primarySettings.note_range_min, 10) : null;
+            const parsedMax = primarySettings.note_range_max != null ? parseInt(primarySettings.note_range_max, 10) : null;
 
             let selectedNotes = null;
-            if (noteSelectionMode === 'discrete') {
-                const input = this.$('#selectedNotesInput')?.value?.trim();
-                if (input) { try { selectedNotes = JSON.parse(input); } catch(e) {} }
+            if (noteSelectionMode === 'discrete' && Array.isArray(primarySettings.selected_notes)) {
+                selectedNotes = [...primarySettings.selected_notes];
             }
 
             // For drums section: use drum selected notes if in drum mode
@@ -70,9 +78,18 @@
                 }
             }
 
-            // New fields
-            const octaveMode = (this.$('#octaveModeInput')?.value || '').trim() || 'chromatic';
+            // New fields — primary's octave_mode comes from tab.settings (same
+            // reasoning as note_selection_mode: hidden input may be on a voice).
+            const octaveMode = primarySettings.octave_mode || 'chromatic';
             const commTimeout = parseInt(this.$('#commTimeout')?.value) || null;
+
+            // Voices-share-notes flag — when the toggle is hidden (no voices,
+            // or primary is drum/string), fall back to the stored value so we
+            // don't accidentally clear it.
+            const shareCb = this.$('#voicesShareNotesCheckbox');
+            const voicesShareNotes = shareCb
+                ? (shareCb.checked ? 1 : 0)
+                : (primarySettings.voices_share_notes === 0 || primarySettings.voices_share_notes === false ? 0 : 1);
 
             // Timing fields
             const minNoteIntervalVal = this.$('#minNoteInterval')?.value?.trim();
@@ -97,7 +114,8 @@
                 comm_timeout: commTimeout,
                 min_note_interval: minNoteInterval,
                 min_note_duration: minNoteDuration,
-                omni_mode: omniMode
+                omni_mode: omniMode,
+                voices_share_notes: voicesShareNotes
             });
 
             // String instrument path
@@ -196,10 +214,11 @@
             }
 
             // Persist secondary GM voices (multi-GM alternatives).
-            // The supported CC list is shared across every GM voice: CCs an
-            // instrument doesn't understand are simply ignored hardware-side,
-            // so we persist the same list on every voice to keep the DB
-            // consistent with the single editor shown in the UI.
+            // - supported_ccs is a single shared list; unsupported CCs are
+            //   ignored hardware-side.
+            // - note-range fields are sent per-voice ONLY when sharing is off;
+            //   when sharing is on we explicitly null them so stale per-voice
+            //   data from a previous "unshared" session doesn't leak through.
             const tabForSave = this._getActiveTab();
             const voicesToSave = (tabForSave && Array.isArray(tabForSave.voices)) ? tabForSave.voices : [];
             try {
@@ -207,12 +226,25 @@
                     deviceId: this.device.id,
                     channel: saveChannel,
                     voices: voicesToSave.map(function(v) {
-                        return {
+                        const base = {
                             gm_program: v.gm_program,
                             min_note_interval: v.min_note_interval,
                             min_note_duration: v.min_note_duration,
-                            supported_ccs: supportedCCs
+                            supported_ccs: supportedCCs,
+                            note_selection_mode: null,
+                            note_range_min: null,
+                            note_range_max: null,
+                            selected_notes: null,
+                            octave_mode: null
                         };
+                        if (voicesShareNotes === 0) {
+                            base.note_selection_mode = v.note_selection_mode || null;
+                            base.note_range_min = v.note_range_min != null ? v.note_range_min : null;
+                            base.note_range_max = v.note_range_max != null ? v.note_range_max : null;
+                            base.selected_notes = Array.isArray(v.selected_notes) ? v.selected_notes : null;
+                            base.octave_mode = v.octave_mode || null;
+                        }
+                        return base;
                     })
                 });
             } catch (e) {
@@ -265,7 +297,12 @@
                         gm_program: v.gm_program,
                         min_note_interval: v.min_note_interval,
                         min_note_duration: v.min_note_duration,
-                        supported_ccs: Array.isArray(v.supported_ccs) ? v.supported_ccs : null
+                        supported_ccs: Array.isArray(v.supported_ccs) ? v.supported_ccs : null,
+                        note_selection_mode: v.note_selection_mode != null ? v.note_selection_mode : null,
+                        note_range_min: v.note_range_min != null ? v.note_range_min : null,
+                        note_range_max: v.note_range_max != null ? v.note_range_max : null,
+                        selected_notes: Array.isArray(v.selected_notes) ? v.selected_notes : null,
+                        octave_mode: v.octave_mode != null ? v.octave_mode : null
                     };
                 });
             }

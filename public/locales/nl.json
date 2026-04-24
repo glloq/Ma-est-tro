@@ -687,7 +687,9 @@
         "supportedCcsTitle": "Ondersteunde CC's",
         "supportedCcsLabel": "Ondersteunde CC's (door komma's gescheiden)",
         "supportedCcsHint": "Gedeeld door alle GM-stemmen van dit instrument. CC's die een instrument niet ondersteunt, worden aan de hardwarezijde simpelweg genegeerd.",
-        "previewThisVoice": "Klik om deze stem voor te beluisteren op het klavier"
+        "previewThisVoice": "Klik om deze stem voor te beluisteren op het klavier",
+        "voicesShareNotes": "Alle GM-instrumenten spelen dezelfde MIDI-noten",
+        "voicesShareNotesHint": "Schakel uit om elk GM-instrument eigen speelbare noten te geven."
     },
     "playlist": {
         "title": "Afspeellijsten",
