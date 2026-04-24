@@ -21,6 +21,8 @@
     ISMNavigation._switchTab = async function(channel) {
         this.activeChannel = channel;
         this.activeSection = 'identity';
+        // Reset preview routing: each tab starts with its primary voice active.
+        this._previewActiveVoice = null;
         this._syncGlobalState();
         this._refreshContent();
         this._updateHeader();

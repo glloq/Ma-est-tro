@@ -686,7 +686,8 @@
         "primaryVoice": "Główny głos",
         "supportedCcsTitle": "Obsługiwane CC",
         "supportedCcsLabel": "Obsługiwane CC (oddzielone przecinkami)",
-        "supportedCcsHint": "Współdzielone przez wszystkie głosy GM tego instrumentu. CC, których instrument nie obsługuje, są po prostu ignorowane po stronie sprzętu."
+        "supportedCcsHint": "Współdzielone przez wszystkie głosy GM tego instrumentu. CC, których instrument nie obsługuje, są po prostu ignorowane po stronie sprzętu.",
+        "previewThisVoice": "Kliknij, aby wyświetlić podgląd tego głosu na klawiaturze"
     },
     "playlist": {
         "title": "Playlisty",

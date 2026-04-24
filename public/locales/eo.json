@@ -686,7 +686,8 @@
         "primaryVoice": "Ĉefa voĉo",
         "supportedCcsTitle": "Subtenataj CC",
         "supportedCcsLabel": "Subtenataj CC (apartigitaj per komo)",
-        "supportedCcsHint": "Dividita inter ĉiuj GM-voĉoj de ĉi tiu instrumento. CC, kiujn instrumento ne traktas, estas simple ignoritaj ĉe la aparatflanko."
+        "supportedCcsHint": "Dividita inter ĉiuj GM-voĉoj de ĉi tiu instrumento. CC, kiujn instrumento ne traktas, estas simple ignoritaj ĉe la aparatflanko.",
+        "previewThisVoice": "Klaku por antaŭaŭskulti ĉi tiun voĉon sur la klavaro"
     },
     "playlist": {
         "title": "Ludlistoj",

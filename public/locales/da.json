@@ -686,7 +686,8 @@
         "primaryVoice": "Primær stemme",
         "supportedCcsTitle": "Understøttede CC'er",
         "supportedCcsLabel": "Understøttede CC'er (kommasepareret)",
-        "supportedCcsHint": "Delt på tværs af alle GM-stemmer på dette instrument. CC'er som et instrument ikke håndterer, ignoreres simpelthen på hardwaresiden."
+        "supportedCcsHint": "Delt på tværs af alle GM-stemmer på dette instrument. CC'er som et instrument ikke håndterer, ignoreres simpelthen på hardwaresiden.",
+        "previewThisVoice": "Klik for at forhåndsvise denne stemme på tastaturet"
     },
     "playlist": {
         "title": "Playlister",

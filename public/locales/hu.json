@@ -686,7 +686,8 @@
         "primaryVoice": "Fő hang",
         "supportedCcsTitle": "Támogatott CC-k",
         "supportedCcsLabel": "Támogatott CC-k (vesszővel elválasztva)",
-        "supportedCcsHint": "A hangszer összes GM hangja között megosztva. A hangszer által nem kezelt CC-ket a hardver oldalán egyszerűen figyelmen kívül hagyják."
+        "supportedCcsHint": "A hangszer összes GM hangja között megosztva. A hangszer által nem kezelt CC-ket a hardver oldalán egyszerűen figyelmen kívül hagyják.",
+        "previewThisVoice": "Kattintson a hang előnézetéhez a billentyűzeten"
     },
     "playlist": {
         "title": "Lejátszási listák",

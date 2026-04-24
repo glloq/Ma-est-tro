@@ -439,7 +439,8 @@
         // Edit → re-open instrument grid with current family preselected
         const editBtn = this.$('.ism-edit-instrument');
         if (editBtn) {
-            editBtn.addEventListener('click', function() {
+            editBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
                 self._identityUI.step = 'instruments';
                 self._rerenderIdentityPicker();
             });
@@ -448,7 +449,8 @@
         // Delete → confirm then clear
         const delBtn = this.$('.ism-delete-instrument');
         if (delBtn) {
-            delBtn.addEventListener('click', function() {
+            delBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
                 self._clearInstrument();
             });
         }
@@ -464,11 +466,28 @@
         // Delete a secondary voice directly from the Identity tab.
         // _deleteVoiceAt rerenders both the Notes-tab list and this picker.
         this.$$('.ism-identity-voice-delete').forEach(function(btn) {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
                 const row = btn.closest('.ism-selected-secondary');
                 if (!row) return;
                 const idx = parseInt(row.dataset.voiceIndex, 10);
                 self._deleteVoiceAt(idx);
+            });
+        });
+
+        // Click a GM instrument row to route the preview keyboard to it.
+        this.$$('.ism-selected-instrument').forEach(function(row) {
+            const activate = function() {
+                const raw = row.dataset.voiceIndex;
+                const idx = (raw === '' || raw == null) ? null : parseInt(raw, 10);
+                self._setPreviewActiveVoice(idx);
+            };
+            row.addEventListener('click', activate);
+            row.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    activate();
+                }
             });
         });
     };
@@ -612,8 +631,21 @@
         if (!tab || !Array.isArray(tab.voices)) return;
         if (idx < 0 || idx >= tab.voices.length) return;
         tab.voices.splice(idx, 1);
+
+        // Keep the preview routing consistent with the spliced list: if the
+        // deleted voice WAS the preview target, fall back to the primary;
+        // if a voice BEFORE the active one was deleted, shift the index down.
+        if (this._previewActiveVoice != null) {
+            if (this._previewActiveVoice === idx) {
+                this._previewActiveVoice = null;
+            } else if (this._previewActiveVoice > idx) {
+                this._previewActiveVoice -= 1;
+            }
+        }
+
         this._rerenderVoicesSubsection();
         this._rerenderIdentityPicker();
+        this._renderPreviewKeyboard();
     };
 
     /**

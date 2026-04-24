@@ -98,7 +98,10 @@
             <h3 class="ism-section-title"><span class="ism-section-title-icon">${gmEmoji}</span> ${this.t('instrumentSettings.sectionIdentity') || 'Identité'}</h3>
 
             <div class="ism-form-group ism-identity-picker-wrap">
-                <label>${this.t('instrumentSettings.gmCategory') || 'Instrument'}</label>
+                <div class="ism-identity-header-row">
+                    <label>${this.t('instrumentSettings.gmCategory') || 'Instrument'}</label>
+                    <div class="ism-preview-slot" id="ismPreviewSlot"></div>
+                </div>
                 ${pickerHtml}
                 <div id="drumKitDesc" class="ism-drum-kit-desc" style="display: none;"></div>
                 <div id="drumKitNotice" class="ism-drum-notice" style="display: none;">
@@ -301,8 +304,18 @@
         const delTitle = this.t('instrumentSettings.deleteInstrument') || 'Effacer l\'instrument';
         const addLabel = this.t('instrumentSettings.addGmInstrument') || 'Ajouter un instrument GM';
         const secondaryLabel = this.t('instrumentSettings.secondaryVoices') || 'Voix supplémentaires';
+        const previewTitle = this.t('instrumentSettings.previewThisVoice') || 'Cliquez pour prévisualiser cette voix';
+        // Which row is currently routed to the preview keyboard?
+        // null => primary voice, number => index in tab.voices.
+        const activePreviewIdx = (typeof this._previewActiveVoice !== 'undefined') ? this._previewActiveVoice : null;
+        const primaryIsActive = activePreviewIdx == null;
 
-        const primaryHtml = `<div class="ism-selected-instrument ism-selected-primary">
+        const primaryHtml = `<div class="ism-selected-instrument ism-selected-primary ${primaryIsActive ? 'ism-preview-active' : ''}"
+                data-voice-index=""
+                role="button"
+                tabindex="0"
+                aria-pressed="${primaryIsActive ? 'true' : 'false'}"
+                title="${this.escape(previewTitle)}">
             <span class="ism-sel-icon">
                 ${icon.slug ? `<img class="ism-sel-svg" src="${icon.svgUrl}" alt=""
                     onerror="this.style.display='none';this.nextElementSibling.style.display='inline';">
@@ -327,7 +340,13 @@
                 : { emoji: '🎵', svgUrl: null, slug: null, name: null };
             const vName = vIcon.name
                 || (typeof getGMInstrumentName === 'function' && vProgram != null ? getGMInstrumentName(vProgram) : '—');
-            return `<div class="ism-selected-instrument ism-selected-secondary" data-voice-index="${idx}">
+            const isActive = activePreviewIdx === idx;
+            return `<div class="ism-selected-instrument ism-selected-secondary ${isActive ? 'ism-preview-active' : ''}"
+                    data-voice-index="${idx}"
+                    role="button"
+                    tabindex="0"
+                    aria-pressed="${isActive ? 'true' : 'false'}"
+                    title="${self.escape(previewTitle)}">
                 <span class="ism-sel-icon">
                     ${vIcon.slug ? `<img class="ism-sel-svg" src="${vIcon.svgUrl}" alt=""
                         onerror="this.style.display='none';this.nextElementSibling.style.display='inline';">

@@ -686,7 +686,8 @@
         "primaryVoice": "Hoofdstem",
         "supportedCcsTitle": "Ondersteunde CC's",
         "supportedCcsLabel": "Ondersteunde CC's (door komma's gescheiden)",
-        "supportedCcsHint": "Gedeeld door alle GM-stemmen van dit instrument. CC's die een instrument niet ondersteunt, worden aan de hardwarezijde simpelweg genegeerd."
+        "supportedCcsHint": "Gedeeld door alle GM-stemmen van dit instrument. CC's die een instrument niet ondersteunt, worden aan de hardwarezijde simpelweg genegeerd.",
+        "previewThisVoice": "Klik om deze stem voor te beluisteren op het klavier"
     },
     "playlist": {
         "title": "Afspeellijsten",

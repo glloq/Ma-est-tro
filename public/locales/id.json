@@ -686,7 +686,8 @@
         "primaryVoice": "Suara utama",
         "supportedCcsTitle": "CC yang didukung",
         "supportedCcsLabel": "CC yang didukung (dipisahkan koma)",
-        "supportedCcsHint": "Dibagikan ke semua suara GM instrumen ini. CC yang tidak ditangani instrumen cukup diabaikan di sisi perangkat keras."
+        "supportedCcsHint": "Dibagikan ke semua suara GM instrumen ini. CC yang tidak ditangani instrumen cukup diabaikan di sisi perangkat keras.",
+        "previewThisVoice": "Klik untuk pratinjau suara ini di keyboard"
     },
     "playlist": {
         "title": "Daftar Putar",

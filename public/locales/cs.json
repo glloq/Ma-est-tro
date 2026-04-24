@@ -686,7 +686,8 @@
         "primaryVoice": "Hlavní hlas",
         "supportedCcsTitle": "Podporované CC",
         "supportedCcsLabel": "Podporované CC (oddělené čárkou)",
-        "supportedCcsHint": "Sdíleno napříč všemi GM hlasy tohoto nástroje. CC, kterým nástroj nerozumí, jsou jednoduše ignorovány na hardwarové straně."
+        "supportedCcsHint": "Sdíleno napříč všemi GM hlasy tohoto nástroje. CC, kterým nástroj nerozumí, jsou jednoduše ignorovány na hardwarové straně.",
+        "previewThisVoice": "Klikněte pro náhled tohoto hlasu na klávesnici"
     },
     "playlist": {
         "title": "Playlisty",

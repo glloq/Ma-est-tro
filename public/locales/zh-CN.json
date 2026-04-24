@@ -686,7 +686,8 @@
         "primaryVoice": "主音色",
         "supportedCcsTitle": "支持的 CC",
         "supportedCcsLabel": "支持的 CC(逗号分隔)",
-        "supportedCcsHint": "由此乐器的所有 GM 音色共享。乐器不处理的 CC 会在硬件端被直接忽略。"
+        "supportedCcsHint": "由此乐器的所有 GM 音色共享。乐器不处理的 CC 会在硬件端被直接忽略。",
+        "previewThisVoice": "点击在键盘上试听此音色"
     },
     "playlist": {
         "title": "播放列表",

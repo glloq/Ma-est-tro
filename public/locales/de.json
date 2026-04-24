@@ -686,7 +686,8 @@
         "primaryVoice": "Hauptstimme",
         "supportedCcsTitle": "Unterstützte CCs",
         "supportedCcsLabel": "Unterstützte CCs (kommagetrennt)",
-        "supportedCcsHint": "Wird von allen GM-Stimmen dieses Instruments gemeinsam genutzt. CCs, die ein Instrument nicht versteht, werden hardwareseitig einfach ignoriert."
+        "supportedCcsHint": "Wird von allen GM-Stimmen dieses Instruments gemeinsam genutzt. CCs, die ein Instrument nicht versteht, werden hardwareseitig einfach ignoriert.",
+        "previewThisVoice": "Klicken, um diese Stimme auf dem Keyboard vorzuhören"
     },
     "playlist": {
         "title": "Playlists",

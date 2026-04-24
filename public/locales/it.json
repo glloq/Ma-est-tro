@@ -686,7 +686,8 @@
         "primaryVoice": "Voce principale",
         "supportedCcsTitle": "CC supportati",
         "supportedCcsLabel": "CC supportati (separati da virgole)",
-        "supportedCcsHint": "Condiviso tra tutte le voci GM di questo strumento. I CC non gestiti da uno strumento sono semplicemente ignorati lato hardware."
+        "supportedCcsHint": "Condiviso tra tutte le voci GM di questo strumento. I CC non gestiti da uno strumento sono semplicemente ignorati lato hardware.",
+        "previewThisVoice": "Clicca per visualizzare in anteprima questa voce sulla tastiera"
     },
     "playlist": {
         "title": "Playlist",

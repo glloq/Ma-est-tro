@@ -686,7 +686,8 @@
         "primaryVoice": "Hovedstemme",
         "supportedCcsTitle": "Støttede CC-er",
         "supportedCcsLabel": "Støttede CC-er (kommaseparert)",
-        "supportedCcsHint": "Delt på tvers av alle GM-stemmer på dette instrumentet. CC-er som et instrument ikke håndterer, blir ganske enkelt ignorert på maskinvaresiden."
+        "supportedCcsHint": "Delt på tvers av alle GM-stemmer på dette instrumentet. CC-er som et instrument ikke håndterer, blir ganske enkelt ignorert på maskinvaresiden.",
+        "previewThisVoice": "Klikk for å forhåndsvise denne stemmen på tastaturet"
     },
     "playlist": {
         "title": "Spillelister",

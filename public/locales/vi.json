@@ -686,7 +686,8 @@
         "primaryVoice": "Giọng chính",
         "supportedCcsTitle": "CC được hỗ trợ",
         "supportedCcsLabel": "CC được hỗ trợ (phân cách bằng dấu phẩy)",
-        "supportedCcsHint": "Dùng chung cho tất cả các giọng GM của nhạc cụ này. Các CC mà một nhạc cụ không xử lý sẽ đơn giản bị bỏ qua ở phía phần cứng."
+        "supportedCcsHint": "Dùng chung cho tất cả các giọng GM của nhạc cụ này. Các CC mà một nhạc cụ không xử lý sẽ đơn giản bị bỏ qua ở phía phần cứng.",
+        "previewThisVoice": "Nhấp để nghe thử giọng này trên bàn phím"
     },
     "playlist": {
         "title": "Danh sách phát",

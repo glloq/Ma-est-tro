@@ -648,6 +648,7 @@
         "omniModeActiveHint": "Cet instrument reçoit les notes sur n'importe quel canal — le choix du canal est ignoré.",
         "addGmInstrument": "Ajouter un instrument GM",
         "secondaryVoices": "Voix supplémentaires",
+        "previewThisVoice": "Cliquez pour prévisualiser cette voix sur le clavier",
         "sectionTimingsPerGm": "Temporisations par instrument GM",
         "timingsPerGmHint": "Chaque voix GM peut avoir ses propres contraintes de timing (utile quand les instruments ont des temps de réponse différents).",
         "primaryVoiceBadge": "Voix principale",

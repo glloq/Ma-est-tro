@@ -686,7 +686,8 @@
         "primaryVoice": "Pääääni",
         "supportedCcsTitle": "Tuetut CC:t",
         "supportedCcsLabel": "Tuetut CC:t (pilkulla eroteltuna)",
-        "supportedCcsHint": "Jaettu kaikkien tämän soittimen GM-äänten kesken. CC:t, joita soitin ei käsittele, jätetään yksinkertaisesti huomiotta laitteistopuolella."
+        "supportedCcsHint": "Jaettu kaikkien tämän soittimen GM-äänten kesken. CC:t, joita soitin ei käsittele, jätetään yksinkertaisesti huomiotta laitteistopuolella.",
+        "previewThisVoice": "Napsauta esikuunnellaksesi tätä ääntä koskettimistolla"
     },
     "playlist": {
         "title": "Soittolistat",

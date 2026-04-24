@@ -686,7 +686,8 @@
         "primaryVoice": "Voz principal",
         "supportedCcsTitle": "CCs suportados",
         "supportedCcsLabel": "CCs suportados (separados por vírgulas)",
-        "supportedCcsHint": "Compartilhado entre todas as vozes GM deste instrumento. CCs que um instrumento não trata são simplesmente ignorados no lado do hardware."
+        "supportedCcsHint": "Compartilhado entre todas as vozes GM deste instrumento. CCs que um instrumento não trata são simplesmente ignorados no lado do hardware.",
+        "previewThisVoice": "Clique para ouvir uma prévia desta voz no teclado"
     },
     "playlist": {
         "title": "Playlists",
