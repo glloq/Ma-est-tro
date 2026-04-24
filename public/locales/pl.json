@@ -683,7 +683,10 @@
         "sectionTimingsPerGm": "Czasy według instrumentu GM",
         "timingsPerGmHint": "Każdy głos GM może mieć własne ograniczenia czasowe (przydatne, gdy instrumenty mają różne czasy reakcji).",
         "primaryVoiceBadge": "Główny głos",
-        "primaryVoice": "Główny głos"
+        "primaryVoice": "Główny głos",
+        "supportedCcsTitle": "Obsługiwane CC",
+        "supportedCcsLabel": "Obsługiwane CC (oddzielone przecinkami)",
+        "supportedCcsHint": "Współdzielone przez wszystkie głosy GM tego instrumentu. CC, których instrument nie obsługuje, są po prostu ignorowane po stronie sprzętu."
     },
     "playlist": {
         "title": "Playlisty",

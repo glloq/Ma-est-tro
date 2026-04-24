@@ -683,7 +683,10 @@
         "sectionTimingsPerGm": "按 GM 乐器设置的时值",
         "timingsPerGmHint": "每个 GM 音色可以有自己的时值约束(当乐器响应时间不同时很有用)。",
         "primaryVoiceBadge": "主音色",
-        "primaryVoice": "主音色"
+        "primaryVoice": "主音色",
+        "supportedCcsTitle": "支持的 CC",
+        "supportedCcsLabel": "支持的 CC(逗号分隔)",
+        "supportedCcsHint": "由此乐器的所有 GM 音色共享。乐器不处理的 CC 会在硬件端被直接忽略。"
     },
     "playlist": {
         "title": "播放列表",

@@ -683,7 +683,10 @@
         "sectionTimingsPerGm": "Timing pr. GM-instrument",
         "timingsPerGmHint": "Hver GM-stemme kan have sine egne timingbegrænsninger (nyttigt når instrumenter har forskellige responstider).",
         "primaryVoiceBadge": "Primær stemme",
-        "primaryVoice": "Primær stemme"
+        "primaryVoice": "Primær stemme",
+        "supportedCcsTitle": "Understøttede CC'er",
+        "supportedCcsLabel": "Understøttede CC'er (kommasepareret)",
+        "supportedCcsHint": "Delt på tværs af alle GM-stemmer på dette instrument. CC'er som et instrument ikke håndterer, ignoreres simpelthen på hardwaresiden."
     },
     "playlist": {
         "title": "Playlister",

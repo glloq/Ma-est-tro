@@ -683,7 +683,10 @@
         "sectionTimingsPerGm": "Časování podle GM nástroje",
         "timingsPerGmHint": "Každý GM hlas může mít vlastní časová omezení (užitečné, když nástroje mají různé doby odezvy).",
         "primaryVoiceBadge": "Hlavní hlas",
-        "primaryVoice": "Hlavní hlas"
+        "primaryVoice": "Hlavní hlas",
+        "supportedCcsTitle": "Podporované CC",
+        "supportedCcsLabel": "Podporované CC (oddělené čárkou)",
+        "supportedCcsHint": "Sdíleno napříč všemi GM hlasy tohoto nástroje. CC, kterým nástroj nerozumí, jsou jednoduše ignorovány na hardwarové straně."
     },
     "playlist": {
         "title": "Playlisty",

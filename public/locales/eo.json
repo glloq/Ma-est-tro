@@ -683,7 +683,10 @@
         "sectionTimingsPerGm": "Tempigoj laŭ GM-instrumento",
         "timingsPerGmHint": "Ĉiu GM-voĉo povas havi proprajn tempigajn limigojn (utila kiam instrumentoj havas malsamajn respondtempojn).",
         "primaryVoiceBadge": "Ĉefa voĉo",
-        "primaryVoice": "Ĉefa voĉo"
+        "primaryVoice": "Ĉefa voĉo",
+        "supportedCcsTitle": "Subtenataj CC",
+        "supportedCcsLabel": "Subtenataj CC (apartigitaj per komo)",
+        "supportedCcsHint": "Dividita inter ĉiuj GM-voĉoj de ĉi tiu instrumento. CC, kiujn instrumento ne traktas, estas simple ignoritaj ĉe la aparatflanko."
     },
     "playlist": {
         "title": "Ludlistoj",

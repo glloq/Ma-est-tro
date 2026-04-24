@@ -683,7 +683,10 @@
         "sectionTimingsPerGm": "Időzítések GM hangszerenként",
         "timingsPerGmHint": "Minden GM hangnak lehetnek saját időzítési korlátai (hasznos, ha a hangszerek válaszideje eltér).",
         "primaryVoiceBadge": "Fő hang",
-        "primaryVoice": "Fő hang"
+        "primaryVoice": "Fő hang",
+        "supportedCcsTitle": "Támogatott CC-k",
+        "supportedCcsLabel": "Támogatott CC-k (vesszővel elválasztva)",
+        "supportedCcsHint": "A hangszer összes GM hangja között megosztva. A hangszer által nem kezelt CC-ket a hardver oldalán egyszerűen figyelmen kívül hagyják."
     },
     "playlist": {
         "title": "Lejátszási listák",

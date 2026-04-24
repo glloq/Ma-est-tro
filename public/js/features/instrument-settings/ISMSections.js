@@ -491,7 +491,14 @@
                 <div id="timingsVoicesList">${this._renderVoicesSubsection()}</div>
             </div>
 
-            <input type="hidden" id="supportedCCs" value="${currentCCs.join(', ')}">
+            <div class="ism-subsection" id="sharedCcsSubsection">
+                <h4 class="ism-subsection-title">🎛️ ${this.t('instrumentSettings.supportedCcsTitle') || 'CC supportés'}</h4>
+                <p class="ism-subsection-hint">${this.t('instrumentSettings.supportedCcsHint') || 'Liste partagée par toutes les voix GM de cet instrument. Les CC non gérés par un instrument sont simplement ignorés côté matériel.'}</p>
+                <div class="ism-form-group">
+                    <label for="supportedCCs">${this.t('instrumentSettings.supportedCcsLabel') || 'CC supportés (séparés par des virgules)'}</label>
+                    <input type="text" id="supportedCCs" value="${currentCCs.join(', ')}" placeholder="1, 7, 11, 64">
+                </div>
+            </div>
         `;
     };
 
@@ -697,7 +704,6 @@
                 : { emoji: '🎵', svgUrl: null, slug: null, name: null };
             const name = icon.name
                 || (typeof getGMInstrumentName === 'function' && gmProgram != null ? getGMInstrumentName(gmProgram) : '—');
-            const ccCsv = Array.isArray(v.supported_ccs) ? v.supported_ccs.join(', ') : '';
             return `<div class="ism-timings-row ism-voice-row" data-voice-index="${idx}">
                 <div class="ism-timings-head">
                     <span class="ism-timings-icon">
@@ -717,10 +723,6 @@
                     <div class="ism-timings-param">
                         <label>${self.escape(self.t('instrumentSettings.minNoteDuration') || 'Temps note active min (ms)')}</label>
                         <input type="number" class="ism-voice-duration" value="${v.min_note_duration != null ? v.min_note_duration : ''}" min="0" max="5000" placeholder="0">
-                    </div>
-                    <div class="ism-timings-param ism-voice-ccs">
-                        <label>${self.escape(self.t('instrumentSettings.voiceCcs') || 'CC supportés (séparés par virgules)')}</label>
-                        <input type="text" class="ism-voice-ccs-input" value="${self.escape(ccCsv)}" placeholder="1, 7, 11">
                     </div>
                 </div>
             </div>`;

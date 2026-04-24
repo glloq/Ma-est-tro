@@ -683,7 +683,10 @@
         "sectionTimingsPerGm": "Ajoitukset GM-soittimen mukaan",
         "timingsPerGmHint": "Jokaisella GM-äänellä voi olla omat ajoitusrajoitteensa (hyödyllinen, kun soittimilla on eri vasteajat).",
         "primaryVoiceBadge": "Pääääni",
-        "primaryVoice": "Pääääni"
+        "primaryVoice": "Pääääni",
+        "supportedCcsTitle": "Tuetut CC:t",
+        "supportedCcsLabel": "Tuetut CC:t (pilkulla eroteltuna)",
+        "supportedCcsHint": "Jaettu kaikkien tämän soittimen GM-äänten kesken. CC:t, joita soitin ei käsittele, jätetään yksinkertaisesti huomiotta laitteistopuolella."
     },
     "playlist": {
         "title": "Soittolistat",

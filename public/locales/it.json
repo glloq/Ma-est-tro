@@ -683,7 +683,10 @@
         "sectionTimingsPerGm": "Temporizzazioni per strumento GM",
         "timingsPerGmHint": "Ogni voce GM può avere i propri vincoli di timing (utile quando gli strumenti hanno tempi di risposta diversi).",
         "primaryVoiceBadge": "Voce principale",
-        "primaryVoice": "Voce principale"
+        "primaryVoice": "Voce principale",
+        "supportedCcsTitle": "CC supportati",
+        "supportedCcsLabel": "CC supportati (separati da virgole)",
+        "supportedCcsHint": "Condiviso tra tutte le voci GM di questo strumento. I CC non gestiti da uno strumento sono semplicemente ignorati lato hardware."
     },
     "playlist": {
         "title": "Playlist",

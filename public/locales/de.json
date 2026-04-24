@@ -683,7 +683,10 @@
         "sectionTimingsPerGm": "Timings pro GM-Instrument",
         "timingsPerGmHint": "Jede GM-Stimme kann eigene Timing-Einstellungen haben (nützlich, wenn Instrumente unterschiedliche Reaktionszeiten haben).",
         "primaryVoiceBadge": "Hauptstimme",
-        "primaryVoice": "Hauptstimme"
+        "primaryVoice": "Hauptstimme",
+        "supportedCcsTitle": "Unterstützte CCs",
+        "supportedCcsLabel": "Unterstützte CCs (kommagetrennt)",
+        "supportedCcsHint": "Wird von allen GM-Stimmen dieses Instruments gemeinsam genutzt. CCs, die ein Instrument nicht versteht, werden hardwareseitig einfach ignoriert."
     },
     "playlist": {
         "title": "Playlists",

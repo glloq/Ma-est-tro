@@ -683,7 +683,10 @@
         "sectionTimingsPerGm": "GM যন্ত্র অনুসারে সময়সীমা",
         "timingsPerGmHint": "প্রতিটি GM কণ্ঠের নিজস্ব সময় সীমা থাকতে পারে (যখন যন্ত্রগুলির প্রতিক্রিয়া সময় ভিন্ন হয় তখন কার্যকর)।",
         "primaryVoiceBadge": "মূল কণ্ঠ",
-        "primaryVoice": "মূল কণ্ঠ"
+        "primaryVoice": "মূল কণ্ঠ",
+        "supportedCcsTitle": "সমর্থিত CC",
+        "supportedCcsLabel": "সমর্থিত CC (কমা-পৃথক)",
+        "supportedCcsHint": "এই যন্ত্রের সব GM কণ্ঠ দ্বারা ভাগ করা। যে CC একটি যন্ত্র হ্যান্ডেল করে না সেটি হার্ডওয়্যার পক্ষে উপেক্ষা করা হয়।"
     },
     "playlist": {
         "title": "প্লেলিস্ট",

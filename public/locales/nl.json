@@ -683,7 +683,10 @@
         "sectionTimingsPerGm": "Timings per GM-instrument",
         "timingsPerGmHint": "Elke GM-stem kan eigen timingbeperkingen hebben (nuttig wanneer instrumenten verschillende responstijden hebben).",
         "primaryVoiceBadge": "Hoofdstem",
-        "primaryVoice": "Hoofdstem"
+        "primaryVoice": "Hoofdstem",
+        "supportedCcsTitle": "Ondersteunde CC's",
+        "supportedCcsLabel": "Ondersteunde CC's (door komma's gescheiden)",
+        "supportedCcsHint": "Gedeeld door alle GM-stemmen van dit instrument. CC's die een instrument niet ondersteunt, worden aan de hardwarezijde simpelweg genegeerd."
     },
     "playlist": {
         "title": "Afspeellijsten",

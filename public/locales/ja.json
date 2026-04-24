@@ -683,7 +683,10 @@
         "sectionTimingsPerGm": "GM楽器ごとのタイミング",
         "timingsPerGmHint": "各GMボイスは独自のタイミング制約を持てます(楽器の応答時間が異なる場合に便利)。",
         "primaryVoiceBadge": "メインボイス",
-        "primaryVoice": "メインボイス"
+        "primaryVoice": "メインボイス",
+        "supportedCcsTitle": "サポートされる CC",
+        "supportedCcsLabel": "サポートされる CC (カンマ区切り)",
+        "supportedCcsHint": "この楽器のすべての GM ボイスで共有されます。楽器が処理しない CC はハードウェア側で単に無視されます。"
     },
     "playlist": {
         "title": "プレイリスト",

@@ -683,7 +683,10 @@
         "sectionTimingsPerGm": "Timings kada GM instrument",
         "timingsPerGmHint": "Maaaring magkaroon ng sariling mga timing constraint ang bawat GM voice (kapaki-pakinabang kapag iba-iba ang response time ng mga instrumento).",
         "primaryVoiceBadge": "Pangunahing boses",
-        "primaryVoice": "Pangunahing boses"
+        "primaryVoice": "Pangunahing boses",
+        "supportedCcsTitle": "Mga suportadong CC",
+        "supportedCcsLabel": "Mga suportadong CC (pinaghihiwalay ng kuwit)",
+        "supportedCcsHint": "Ibinabahagi sa lahat ng GM voice ng instrumentong ito. Ang mga CC na hindi suportado ng isang instrumento ay simpleng hindi pinapansin sa hardware side."
     },
     "playlist": {
         "title": "Mga Playlist",

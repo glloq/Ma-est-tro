@@ -182,7 +182,11 @@
                 });
             }
 
-            // Persist secondary GM voices (multi-GM alternatives)
+            // Persist secondary GM voices (multi-GM alternatives).
+            // The supported CC list is shared across every GM voice: CCs an
+            // instrument doesn't understand are simply ignored hardware-side,
+            // so we persist the same list on every voice to keep the DB
+            // consistent with the single editor shown in the UI.
             const tabForSave = this._getActiveTab();
             const voicesToSave = (tabForSave && Array.isArray(tabForSave.voices)) ? tabForSave.voices : [];
             try {
@@ -194,7 +198,7 @@
                             gm_program: v.gm_program,
                             min_note_interval: v.min_note_interval,
                             min_note_duration: v.min_note_duration,
-                            supported_ccs: v.supported_ccs
+                            supported_ccs: supportedCCs
                         };
                     })
                 });

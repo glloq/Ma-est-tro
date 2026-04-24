@@ -683,7 +683,10 @@
         "sectionTimingsPerGm": "GM enstrüman başına zamanlamalar",
         "timingsPerGmHint": "Her GM sesinin kendi zamanlama kısıtlamaları olabilir (enstrümanların yanıt süreleri farklı olduğunda faydalı).",
         "primaryVoiceBadge": "Ana ses",
-        "primaryVoice": "Ana ses"
+        "primaryVoice": "Ana ses",
+        "supportedCcsTitle": "Desteklenen CC'ler",
+        "supportedCcsLabel": "Desteklenen CC'ler (virgülle ayrılmış)",
+        "supportedCcsHint": "Bu enstrümanın tüm GM sesleri arasında paylaşılır. Bir enstrümanın işlemediği CC'ler donanım tarafında basitçe göz ardı edilir."
     },
     "playlist": {
         "title": "Çalma Listeleri",

@@ -2316,13 +2316,9 @@ body.dark-mode .ism-delete-instrument:hover {
 
 .ism-timings-params {
   display: grid;
-  grid-template-columns: 1fr 1fr 2fr;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
   align-items: end;
-}
-
-.ism-timings-primary .ism-timings-params {
-  grid-template-columns: 1fr 1fr;
 }
 
 .ism-timings-param {
@@ -2351,8 +2347,7 @@ body.dark-mode .ism-delete-instrument:hover {
 }
 
 @media (max-width: 640px) {
-  .ism-timings-params,
-  .ism-timings-primary .ism-timings-params {
+  .ism-timings-params {
     grid-template-columns: 1fr;
   }
 }
