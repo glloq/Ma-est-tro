@@ -719,6 +719,15 @@
         const isFretless = config?.is_fretless || false;
         const numFrets = config?.num_frets ?? 24;
 
+        // Scale length (mm) for the physical hand-position model. Optional;
+        // null means the planner falls back to constant-fret reach.
+        const scaleLengthMm = config?.scale_length_mm ?? '';
+        const scaleLengthPresets = this.scaleLengthPresets || {};
+        let scaleLengthOptions = '<option value="">—</option>';
+        for (const [key, preset] of Object.entries(scaleLengthPresets)) {
+            scaleLengthOptions += `<option value="${key}" data-mm="${preset.scale_length_mm}">${preset.name} (${preset.scale_length_mm} mm)</option>`;
+        }
+
         // Build horizontal header rows (string numbers, note badges,
         // MIDI tuning inputs). Per-string fret / position values ride
         // along in hidden inputs — the interactive editor is the neck
@@ -750,6 +759,19 @@
                     <div class="ism-form-group ism-narrow">
                         <label>${this.t('stringInstrument.numStrings') || 'Cordes'}</label>
                         <input type="number" id="siNumStrings" value="${numStrings}" min="1" max="12">
+                    </div>
+                </div>
+
+                <div class="ism-form-row">
+                    <div class="ism-form-group">
+                        <label>${this.t('stringInstrument.scaleLengthPreset') || 'Preset de longueur de corde'}</label>
+                        <select id="siScaleLengthPreset">${scaleLengthOptions}</select>
+                        <span class="ism-form-hint">Choisir un preset remplit le champ ci-contre. Vous pouvez ensuite ajuster la valeur exacte.</span>
+                    </div>
+                    <div class="ism-form-group ism-narrow">
+                        <label>${this.t('stringInstrument.scaleLengthMm') || 'Longueur (mm)'}</label>
+                        <input type="number" id="siScaleLengthMm" value="${scaleLengthMm}" min="100" max="2000" placeholder="—">
+                        <span class="ism-form-hint">Distance sillet → chevalet. Active le modèle physique de main.</span>
                     </div>
                 </div>
 
