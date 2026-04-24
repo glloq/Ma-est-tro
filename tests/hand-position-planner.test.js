@@ -245,6 +245,146 @@ describe('HandPositionPlanner — CC emission timing', () => {
   });
 });
 
+// -----------------------------------------------------------------------------
+// frets mode: a single fretting hand, axis = absolute fret number, travel in
+// frets/sec. Input events carry `fretPosition` instead of using `note`.
+// -----------------------------------------------------------------------------
+
+const guitarCfg = {
+  enabled: true,
+  mode: 'frets',
+  hand_move_frets_per_sec: 12,
+  hands: [
+    { id: 'fretting', cc_position_number: 22, hand_span_frets: 4 }
+  ]
+};
+// Standard 22-fret guitar: axis is [0, 22].
+const guitarCtx = { unit: 'frets', noteRangeMin: 0, noteRangeMax: 22 };
+
+const fretNote = (time, fret, extra = {}) => ({
+  time,
+  note: 60, // unused in frets mode but required by other code paths
+  fretPosition: fret,
+  channel: 0,
+  velocity: 80,
+  hand: 'fretting',
+  ...extra
+});
+
+describe('HandPositionPlanner — frets mode', () => {
+  test('emits initial CC just before first fretted note', () => {
+    const p = new HandPositionPlanner(guitarCfg, guitarCtx);
+    const { ccEvents } = p.plan([fretNote(1.0, 5)]);
+    expect(ccEvents).toHaveLength(1);
+    expect(ccEvents[0].controller).toBe(22);
+    expect(ccEvents[0].value).toBe(5);
+    expect(ccEvents[0].time).toBeLessThan(1.0);
+    expect(ccEvents[0].hand).toBe('fretting');
+  });
+
+  test('no shift while consecutive frets stay inside the span', () => {
+    const p = new HandPositionPlanner(guitarCfg, guitarCtx);
+    const { ccEvents, stats } = p.plan([
+      fretNote(0.0, 5),
+      fretNote(0.5, 6),
+      fretNote(1.0, 8),
+      fretNote(1.5, 9) // window [5..9], span 4
+    ]);
+    expect(ccEvents).toHaveLength(1);
+    expect(stats.shifts.fretting).toBe(1);
+  });
+
+  test('shifts window upward when next fret exceeds span', () => {
+    const p = new HandPositionPlanner(guitarCfg, guitarCtx);
+    const { ccEvents } = p.plan([
+      fretNote(0.0, 5),
+      fretNote(2.0, 15)
+    ]);
+    expect(ccEvents).toHaveLength(2);
+    expect(ccEvents[1].value).toBe(15);
+  });
+
+  test('shifts window downward when next fret is below current window', () => {
+    const p = new HandPositionPlanner(guitarCfg, guitarCtx);
+    const { ccEvents } = p.plan([
+      fretNote(0.0, 10),
+      fretNote(2.0, 2)
+    ]);
+    expect(ccEvents).toHaveLength(2);
+    expect(ccEvents[1].value).toBe(2);
+  });
+
+  test('CC value for an isolated open string is 0 when not filtered upstream', () => {
+    const p = new HandPositionPlanner(guitarCfg, guitarCtx);
+    const { ccEvents } = p.plan([fretNote(0, 0)]);
+    expect(ccEvents[0].value).toBe(0);
+  });
+
+  test('events without fretPosition are skipped (grouping safety)', () => {
+    const p = new HandPositionPlanner(guitarCfg, guitarCtx);
+    const { ccEvents } = p.plan([
+      { time: 0, note: 60, channel: 0, velocity: 80, hand: 'fretting' }, // no fretPosition
+      fretNote(1, 7)
+    ]);
+    expect(ccEvents).toHaveLength(1);
+    expect(ccEvents[0].value).toBe(7);
+  });
+
+  test('chord wider than hand_span_frets flags chord_span_exceeded', () => {
+    const p = new HandPositionPlanner(guitarCfg, guitarCtx);
+    const { warnings } = p.plan([
+      fretNote(0, 3),
+      fretNote(0, 10) // chord span 7 > 4
+    ]);
+    expect(warnings.some(w => w.code === 'chord_span_exceeded')).toBe(true);
+    expect(warnings.find(w => w.code === 'chord_span_exceeded').message).toMatch(/frets/);
+  });
+
+  test('move_too_fast reports frets unit and fires when shift is too fast', () => {
+    const p = new HandPositionPlanner(guitarCfg, guitarCtx);
+    // 15 frets shift at 12 frets/sec needs 1250ms; we give 50ms.
+    const { warnings } = p.plan([
+      fretNote(0.0, 2),
+      fretNote(0.05, 20)
+    ]);
+    const mtf = warnings.find(w => w.code === 'move_too_fast');
+    expect(mtf).toBeDefined();
+    expect(mtf.message).toMatch(/frets/);
+  });
+
+  test('out_of_range fires for fret above instrument max', () => {
+    const p = new HandPositionPlanner(guitarCfg, { unit: 'frets', noteRangeMin: 0, noteRangeMax: 12 });
+    const { warnings } = p.plan([fretNote(0, 18)]);
+    const oor = warnings.find(w => w.code === 'out_of_range');
+    expect(oor).toBeDefined();
+    expect(oor.message).toMatch(/Fret 18/);
+  });
+
+  test('fretless (float positions) produces rounded CC values', () => {
+    const p = new HandPositionPlanner(guitarCfg, { unit: 'frets', noteRangeMin: 0, noteRangeMax: 24 });
+    const { ccEvents } = p.plan([fretNote(0, 3.4), fretNote(2, 8.6)]);
+    expect(ccEvents.map(e => e.value)).toEqual([3, 9]);
+  });
+
+  test('semitones fields on a frets config are ignored (unit is explicit)', () => {
+    const cfg = {
+      ...guitarCfg,
+      // stray semitones fields should have no effect
+      hand_move_semitones_per_sec: 60,
+      hands: [
+        { id: 'fretting', cc_position_number: 22, hand_span_frets: 4, hand_span_semitones: 14 }
+      ]
+    };
+    const p = new HandPositionPlanner(cfg, guitarCtx);
+    const { ccEvents } = p.plan([
+      fretNote(0, 3),
+      fretNote(2, 9) // within 4 frets? 9-3=6 > 4 → shift
+    ]);
+    expect(ccEvents).toHaveLength(2);
+    expect(ccEvents[1].value).toBe(9);
+  });
+});
+
 describe('HandPositionPlanner — edge cases', () => {
   test('empty notes list returns empty plan', () => {
     const p = new HandPositionPlanner(pianoCfg, pianoCtx);

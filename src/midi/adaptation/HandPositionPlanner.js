@@ -4,26 +4,51 @@
  * `hands_config` has been resolved by the {@link HandAssigner}.
  *
  * Input : an ordered list of note events already tagged with `hand`
- *         ("left" | "right") and optional `track`.
+ *         (e.g. "left" | "right" for keyboards, "fretting" for strings)
+ *         and optional `track`. For string instruments (unit: 'frets')
+ *         each note also carries `fretPosition` (the absolute fret the
+ *         tablature converter chose, capo included).
  * Output: a list of CC events ready to be merged back into the playback
  *         timeline, plus a feasibility report the UI can show to the
  *         operator (non-blocking warnings).
  *
  * CC semantics:
- *   - Controller number = `hand.cc_position_number` (e.g. 23/24).
- *   - Value              = MIDI note number of the LOWEST note in the
- *                          current reachable window of that hand. Raw,
- *                          no scaling or offset. The hardware controller
- *                          is expected to interpret this as "move the
- *                          mechanical hand so its leftmost finger sits
- *                          on this note".
+ *   - Controller number = `hand.cc_position_number` (e.g. 22/23/24).
+ *   - Value in 'semitones' mode = MIDI note number of the LOWEST note
+ *                                 in the current reachable window.
+ *   - Value in 'frets' mode     = absolute fret number (0 = open) of
+ *                                 the LOWEST fret in the current
+ *                                 reachable window of the fretting hand.
+ *     Raw, no scaling or offset. The hardware controller interprets
+ *     this as "move the mechanical hand so its leftmost finger sits
+ *     on this position".
  *
- * Simplified per-hand model: each hand only stores `cc_position_number`
- * and `hand_span_semitones`. The reachable note range is derived from
- * the instrument's own `note_range_min`/`note_range_max`; the minimum
- * gap between notes comes from the instrument's `min_note_interval`;
- * the mechanical travel speed is a single value shared by both hands
- * (`hands_config.hand_move_semitones_per_sec`).
+ * Two units supported, selected by `instrumentContext.unit`:
+ *   - 'semitones' (default): keyboard-family. Per-hand `hand_span_semitones`,
+ *     root `hand_move_semitones_per_sec`. Window is a semitone range on the
+ *     MIDI note axis.
+ *   - 'frets':               string-family (plucked, bowed, fretless).
+ *     Per-hand `hand_span_frets`, root `hand_move_frets_per_sec`. Window
+ *     is a fret range on the fingerboard axis. The input value is
+ *     `note.fretPosition` (not `note.note`), which is supplied by the
+ *     caller from persisted tablature data. Open-string events
+ *     (`fretPosition === 0`) should be filtered upstream — the planner
+ *     treats them like any other position value but callers typically
+ *     skip them so open strings don't force a shift.
+ *
+ * Simplified per-hand model (semitones mode): each hand stores
+ * `cc_position_number` and `hand_span_semitones`. The reachable note
+ * range is derived from the instrument's `note_range_min`/`note_range_max`;
+ * the minimum gap between notes comes from the instrument's
+ * `min_note_interval`; the mechanical travel speed is shared across
+ * both hands (`hands_config.hand_move_semitones_per_sec`).
+ *
+ * Simplified per-hand model (frets mode): a single hand entry with
+ * `cc_position_number` and `hand_span_frets`. The reachable fret range
+ * is `[0, maxFret]` supplied via `instrumentContext.noteRangeMin`/`Max`
+ * (which the MidiPlayer computes from the string instrument's
+ * `frets_per_string`). Travel speed is
+ * `hands_config.hand_move_frets_per_sec`.
  *
  * Emission timing (the "as early as possible" rule):
  *   When a new window is needed (a note falls outside the current one),
@@ -35,8 +60,11 @@
  * Warning codes (all non-blocking):
  *   - `move_too_fast`            — travel speed too slow for the shift.
  *   - `finger_interval_violated` — gap between two notes on the same hand < instrument's `min_note_interval`.
- *   - `out_of_range`             — note outside the instrument's playable range.
- *   - `chord_span_exceeded`      — chord width > hand_span_semitones (forced shift, one note may still be uncomfortable).
+ *   - `out_of_range`             — note/fret outside the instrument's playable range.
+ *   - `chord_span_exceeded`      — chord width > hand span (forced shift; one note may still be uncomfortable).
+ *
+ * Warning messages carry the unit label ("semitones"/"frets") to match
+ * the active mode.
  */
 
 const EPSILON_SECONDS = 0.0001;
@@ -46,14 +74,20 @@ const CHORD_GROUPING_TOLERANCE = 0.002;
 class HandPositionPlanner {
   /**
    * @param {Object} handsConfig - Validated `hands_config` payload.
-   * @param {number} [handsConfig.hand_move_semitones_per_sec] - Shared travel speed.
+   * @param {number} [handsConfig.hand_move_semitones_per_sec] - Shared travel speed (semitones mode).
+   * @param {number} [handsConfig.hand_move_frets_per_sec] - Shared travel speed (frets mode).
    * @param {Array<{id:string, cc_position_number:number,
-   *                hand_span_semitones:number}>} handsConfig.hands
+   *                hand_span_semitones?:number,
+   *                hand_span_frets?:number}>} handsConfig.hands
    * @param {Object} [instrumentContext] - Fields pulled from the owning
    *   instrument's capabilities. All optional; when absent the matching
    *   check is skipped (preserves pre-feature behavior).
-   * @param {number} [instrumentContext.noteRangeMin] - Lowest playable note.
-   * @param {number} [instrumentContext.noteRangeMax] - Highest playable note.
+   * @param {'semitones'|'frets'} [instrumentContext.unit='semitones'] - Axis
+   *   unit. 'semitones' reads `note.note`; 'frets' reads `note.fretPosition`.
+   * @param {number} [instrumentContext.noteRangeMin] - Lowest playable value
+   *   on the axis (MIDI note in semitones mode, fret number in frets mode).
+   * @param {number} [instrumentContext.noteRangeMax] - Highest playable value
+   *   on the axis.
    * @param {number} [instrumentContext.minNoteIntervalMs] - Min gap between
    *   consecutive notes on the same hand (milliseconds). 0 or null disables
    *   the `finger_interval_violated` warning.
@@ -61,21 +95,41 @@ class HandPositionPlanner {
   constructor(handsConfig, instrumentContext) {
     this.config = handsConfig || {};
     this.ctx = instrumentContext || {};
+    this.unit = this.ctx.unit === 'frets' ? 'frets' : 'semitones';
     this.handById = new Map();
     for (const h of (this.config.hands || [])) {
       this.handById.set(h.id, h);
     }
   }
 
+  /** @private */
+  _spanOf(hand) {
+    if (this.unit === 'frets') return hand.hand_span_frets ?? 4;
+    return hand.hand_span_semitones ?? 14;
+  }
+
+  /** @private */
+  _commonSpeed() {
+    if (this.unit === 'frets') return this.config.hand_move_frets_per_sec || 12;
+    return this.config.hand_move_semitones_per_sec || 60;
+  }
+
+  /** @private Extract the axis value (MIDI note or fret position). */
+  _axisValue(n) {
+    if (this.unit === 'frets') return n.fretPosition;
+    return n.note;
+  }
+
   /**
    * Produce hand-position CC events for a sequence of note events.
    *
    * @param {Array<{time:number, note:number, channel:number,
-   *                velocity?:number, hand:'left'|'right'}>} notes
+   *                velocity?:number, hand:string, fretPosition?:number}>} notes
    *   Note-ons only, sorted by `time`. `velocity === 0` notes are
-   *   ignored (they are logical note-offs).
+   *   ignored (they are logical note-offs). In 'frets' mode each note
+   *   must carry `fretPosition`; events without it are skipped.
    * @returns {{ ccEvents: Array<Object>, warnings: Array<Object>,
-   *             stats: { shifts: { left: number, right: number } } }}
+   *             stats: { shifts: Record<string, number> } }}
    */
   plan(notes) {
     const ccEvents = [];
@@ -104,8 +158,10 @@ class HandPositionPlanner {
 
     const instrumentMin = this.ctx.noteRangeMin;
     const instrumentMax = this.ctx.noteRangeMax;
-    const commonSpeed = this.config.hand_move_semitones_per_sec || 60;
+    const commonSpeed = this._commonSpeed();
     const minIntervalMs = this.ctx.minNoteIntervalMs ?? 0;
+    const unitLabel = this.unit === 'frets' ? 'frets' : 'semitones';
+    const axisLabel = this.unit === 'frets' ? 'Fret' : 'Note';
 
     for (const g of groups) {
       const hand = this.handById.get(g.hand);
@@ -115,18 +171,20 @@ class HandPositionPlanner {
       // Out-of-range check per note, against the instrument's playable range.
       for (const nIdx of g.notes) {
         const n = notes[nIdx];
-        if (instrumentMin != null && n.note < instrumentMin) {
+        const axisVal = this._axisValue(n);
+        if (axisVal == null) continue;
+        if (instrumentMin != null && axisVal < instrumentMin) {
           warnings.push({
             time: n.time, hand: g.hand, note: n.note,
             code: 'out_of_range',
-            message: `Note ${n.note} < instrument range min ${instrumentMin}`
+            message: `${axisLabel} ${axisVal} < instrument range min ${instrumentMin}`
           });
         }
-        if (instrumentMax != null && n.note > instrumentMax) {
+        if (instrumentMax != null && axisVal > instrumentMax) {
           warnings.push({
             time: n.time, hand: g.hand, note: n.note,
             code: 'out_of_range',
-            message: `Note ${n.note} > instrument range max ${instrumentMax}`
+            message: `${axisLabel} ${axisVal} > instrument range max ${instrumentMax}`
           });
         }
       }
@@ -135,13 +193,13 @@ class HandPositionPlanner {
       const groupLow = g.low;
       const groupHigh = g.high;
       const groupSpan = groupHigh - groupLow;
-      const span = hand.hand_span_semitones ?? 14;
+      const span = this._spanOf(hand);
 
       if (groupSpan > span) {
         warnings.push({
           time: g.time, hand: g.hand, note: null,
           code: 'chord_span_exceeded',
-          message: `Chord span ${groupSpan} > hand span ${span}`
+          message: `Chord span ${groupSpan} ${unitLabel} > hand span ${span} ${unitLabel}`
         });
       }
 
@@ -186,14 +244,14 @@ class HandPositionPlanner {
           // Right after the last note-on of the previous window.
           ccTime = (s.lastNoteOnTime ?? g.time) + EPSILON_SECONDS;
           // Feasibility: enough time to physically move?
-          const travelSemitones = Math.abs(newLow - s.windowLowest);
-          const requiredSec = travelSemitones / commonSpeed;
+          const travelUnits = Math.abs(newLow - s.windowLowest);
+          const requiredSec = travelUnits / commonSpeed;
           const availableSec = g.time - ccTime;
           if (requiredSec > availableSec) {
             warnings.push({
               time: g.time, hand: g.hand, note: null,
               code: 'move_too_fast',
-              message: `Shift ${travelSemitones} semitones needs ${(requiredSec * 1000).toFixed(0)}ms, only ${(availableSec * 1000).toFixed(0)}ms available`
+              message: `Shift ${travelUnits} ${unitLabel} needs ${(requiredSec * 1000).toFixed(0)}ms, only ${(availableSec * 1000).toFixed(0)}ms available`
             });
           }
         }
@@ -245,11 +303,14 @@ class HandPositionPlanner {
   _groupByHandAndTime(notes) {
     // Bucket by hand first so simultaneous same-hand notes always merge
     // even when interleaved with the other hand in the source list.
+    // Notes whose axis value is null (e.g. frets mode without fretPosition)
+    // are skipped so they don't poison `low`/`high`.
     const byHand = new Map();
     for (let i = 0; i < notes.length; i++) {
       const n = notes[i];
       if (!n || !n.hand) continue;
       if (n.velocity === 0) continue; // logical note-off
+      if (this._axisValue(n) == null) continue;
       if (!byHand.has(n.hand)) byHand.set(n.hand, []);
       byHand.get(n.hand).push(i);
     }
@@ -260,13 +321,14 @@ class HandPositionPlanner {
       let current = null;
       for (const idx of indices) {
         const n = notes[idx];
+        const v = this._axisValue(n);
         if (current && Math.abs(n.time - current.time) <= CHORD_GROUPING_TOLERANCE) {
           current.notes.push(idx);
-          if (n.note < current.low) current.low = n.note;
-          if (n.note > current.high) current.high = n.note;
+          if (v < current.low) current.low = v;
+          if (v > current.high) current.high = v;
         } else {
           if (current) groups.push(current);
-          current = { hand, time: n.time, notes: [idx], low: n.note, high: n.note };
+          current = { hand, time: n.time, notes: [idx], low: v, high: v };
         }
       }
       if (current) groups.push(current);
