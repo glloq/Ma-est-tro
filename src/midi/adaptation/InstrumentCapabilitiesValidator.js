@@ -125,6 +125,18 @@ class InstrumentCapabilitiesValidator {
   /**
    * Validate the optional `hands_config` JSON payload. Returns an array
    * of `missing`-shaped entries (empty when absent or well-formed).
+   *
+   * Supports two modes, selected by `cfg.mode`:
+   *   - `'semitones'` (default when absent): keyboard-family. Two hands
+   *     (left/right), per-hand `hand_span_semitones`, shared
+   *     `hand_move_semitones_per_sec`, optional `assignment` block.
+   *   - `'frets'`: string-family. A single hand whose id is `'fretting'`,
+   *     per-hand `hand_span_frets`, shared `hand_move_frets_per_sec`, no
+   *     assignment block.
+   *
+   * Cross-unit fields are rejected (a frets-mode config carrying
+   * `hand_span_semitones`, or vice versa) so misconfigurations surface
+   * at save time rather than at playback time.
    * @private
    */
   _validateHandsConfig(raw) {
@@ -156,6 +168,16 @@ class InstrumentCapabilitiesValidator {
 
     if (cfg.enabled === false) return []; // explicitly disabled — OK
 
+    const mode = cfg.mode === 'frets' ? 'frets' : 'semitones';
+    if (cfg.mode != null && cfg.mode !== 'semitones' && cfg.mode !== 'frets') {
+      issues.push({
+        field: 'hands_config.mode', label: 'Hand-position mode',
+        type: 'select', required: true,
+        reason: `Unknown mode '${cfg.mode}'. Must be 'semitones' or 'frets'.`
+      });
+      return issues;
+    }
+
     if (!Array.isArray(cfg.hands) || cfg.hands.length === 0) {
       issues.push({
         field: 'hands_config.hands', label: 'Hands list',
@@ -165,6 +187,17 @@ class InstrumentCapabilitiesValidator {
       return issues;
     }
 
+    if (mode === 'frets') {
+      this._validateFretsHandsConfig(cfg, issues);
+    } else {
+      this._validateSemitonesHandsConfig(cfg, issues);
+    }
+
+    return issues;
+  }
+
+  /** @private Semitones mode: two hands (left/right), assignment block allowed. */
+  _validateSemitonesHandsConfig(cfg, issues) {
     const seenIds = new Set();
     for (let i = 0; i < cfg.hands.length; i++) {
       const h = cfg.hands[i];
@@ -185,6 +218,9 @@ class InstrumentCapabilitiesValidator {
       if (!Number.isFinite(h.hand_span_semitones) || h.hand_span_semitones <= 0) {
         issues.push({ field: `hands_config.hands[${i}].hand_span_semitones`, label: 'Hand span', type: 'number', required: true, reason: 'Must be a positive number of semitones.' });
       }
+      if (h.hand_span_frets != null) {
+        issues.push({ field: `hands_config.hands[${i}].hand_span_frets`, label: 'Hand span', type: 'number', required: true, reason: 'hand_span_frets is only valid in frets mode.' });
+      }
     }
 
     if (cfg.hand_move_semitones_per_sec != null
@@ -195,13 +231,69 @@ class InstrumentCapabilitiesValidator {
         reason: 'hand_move_semitones_per_sec must be a positive number.'
       });
     }
+    if (cfg.hand_move_frets_per_sec != null) {
+      issues.push({
+        field: 'hands_config.hand_move_frets_per_sec', label: 'Travel speed',
+        type: 'number', required: true,
+        reason: 'hand_move_frets_per_sec is only valid in frets mode.'
+      });
+    }
 
     const mode = cfg.assignment?.mode;
     if (mode && mode !== 'auto' && mode !== 'track' && mode !== 'pitch_split') {
       issues.push({ field: 'hands_config.assignment.mode', label: 'Assignment mode', type: 'select', required: true, reason: `Unknown mode '${mode}'.` });
     }
+  }
 
-    return issues;
+  /** @private Frets mode: single fretting hand, no assignment block. */
+  _validateFretsHandsConfig(cfg, issues) {
+    if (cfg.hands.length !== 1) {
+      issues.push({
+        field: 'hands_config.hands', label: 'Hands list',
+        type: 'array', required: true,
+        reason: "frets mode requires exactly one hand entry (the fretting hand)."
+      });
+    }
+    const h = cfg.hands[0];
+    if (!h || typeof h !== 'object') {
+      issues.push({ field: 'hands_config.hands[0]', label: 'Hand entry', type: 'object', required: true, reason: 'Must be an object.' });
+      return;
+    }
+    if (h.id !== 'fretting') {
+      issues.push({ field: 'hands_config.hands[0].id', label: 'Hand id', type: 'text', required: true, reason: "id must be 'fretting' in frets mode." });
+    }
+    if (!Number.isFinite(h.cc_position_number) || h.cc_position_number < 0 || h.cc_position_number > 127) {
+      issues.push({ field: 'hands_config.hands[0].cc_position_number', label: 'CC number', type: 'number', required: true, reason: 'Must be an integer in [0,127].' });
+    }
+    if (!Number.isFinite(h.hand_span_frets) || h.hand_span_frets <= 0) {
+      issues.push({ field: 'hands_config.hands[0].hand_span_frets', label: 'Hand span', type: 'number', required: true, reason: 'Must be a positive number of frets.' });
+    }
+    if (h.hand_span_semitones != null) {
+      issues.push({ field: 'hands_config.hands[0].hand_span_semitones', label: 'Hand span', type: 'number', required: true, reason: 'hand_span_semitones is only valid in semitones mode.' });
+    }
+
+    if (cfg.hand_move_frets_per_sec != null
+        && (!Number.isFinite(cfg.hand_move_frets_per_sec) || cfg.hand_move_frets_per_sec <= 0)) {
+      issues.push({
+        field: 'hands_config.hand_move_frets_per_sec', label: 'Travel speed',
+        type: 'number', required: true,
+        reason: 'hand_move_frets_per_sec must be a positive number.'
+      });
+    }
+    if (cfg.hand_move_semitones_per_sec != null) {
+      issues.push({
+        field: 'hands_config.hand_move_semitones_per_sec', label: 'Travel speed',
+        type: 'number', required: true,
+        reason: 'hand_move_semitones_per_sec is only valid in semitones mode.'
+      });
+    }
+    if (cfg.assignment != null) {
+      issues.push({
+        field: 'hands_config.assignment', label: 'Assignment mode',
+        type: 'object', required: true,
+        reason: 'assignment is not used in frets mode (single hand).'
+      });
+    }
   }
 
   /**
