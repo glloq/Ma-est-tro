@@ -84,6 +84,10 @@ function _validateVoicePayload(v) {
   }
   payload.note_range_min = num(v.note_range_min, 'note_range_min', 0, 127);
   payload.note_range_max = num(v.note_range_max, 'note_range_max', 0, 127);
+  if (payload.note_range_min != null && payload.note_range_max != null
+      && payload.note_range_min > payload.note_range_max) {
+    throw new ValidationError('note_range_min must be <= note_range_max', 'note_range_min');
+  }
   if (Array.isArray(v.selected_notes)) {
     payload.selected_notes = v.selected_notes
       .map((n) => parseInt(n, 10))

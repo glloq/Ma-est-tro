@@ -40,8 +40,16 @@
                 selectedNotes = [...primarySettings.selected_notes];
             }
 
-            // For drums section: use drum selected notes if in drum mode
-            if (this._drumSelectedNotes && this._drumSelectedNotes.size > 0 && (this.activeChannel === 9 || gmDecoded.isDrumKit)) {
+            // For drums section: use drum selected notes if in drum mode.
+            // Only applies when: primary is drum, voices share notes (single
+            // editor), and the user is currently editing the primary — not
+            // a per-voice tab — so we don't clobber primary's notes with
+            // unrelated drum-pad state.
+            const sharingOn = primarySettings.voices_share_notes !== 0 && primarySettings.voices_share_notes !== false;
+            const primaryIsDrum = (this.activeChannel === 9) || gmDecoded.isDrumKit;
+            const editingPrimaryTab = this._activeNotesVoiceIdx == null;
+            if (this._drumSelectedNotes && this._drumSelectedNotes.size > 0
+                && primaryIsDrum && sharingOn && editingPrimaryTab) {
                 selectedNotes = [...this._drumSelectedNotes].sort((a, b) => a - b);
             }
 
@@ -68,9 +76,27 @@
 
             // Handle channel change
             if (saveChannel !== originalChannel) {
-                try {
-                    await this.api.sendCommand('instrument_delete', { deviceId: this.device.id, channel: originalChannel });
-                } catch (e) { console.warn('Could not delete old channel:', e); }
+                // Pre-check: if the target channel is already occupied by
+                // another tab, abort before any DB write. The grid in the
+                // Identity section already disables occupied buttons, but
+                // that doesn't cover a drum-kit program auto-switching to
+                // channel 9.
+                const collision = Array.isArray(this.instrumentTabs) && this.instrumentTabs.some(function(t) {
+                    return t.channel === saveChannel && t !== primaryTab;
+                });
+                if (collision) {
+                    if (typeof showAlert === 'function') {
+                        await showAlert(
+                            this.t('instrumentSettings.channelOccupied') || 'Le canal cible est déjà utilisé par un autre instrument.',
+                            { title: this.t('common.error') || 'Erreur', icon: '⚠️' }
+                        );
+                    }
+                    return;
+                }
+                // Don't swallow delete errors — a silent failure would leave
+                // the old row in place AND create/update a new one on save,
+                // producing dual rows the user can't see.
+                await this.api.sendCommand('instrument_delete', { deviceId: this.device.id, channel: originalChannel });
                 const tab = this._getActiveTab();
                 if (tab) {
                     tab.channel = saveChannel;
@@ -221,6 +247,7 @@
             //   data from a previous "unshared" session doesn't leak through.
             const tabForSave = this._getActiveTab();
             const voicesToSave = (tabForSave && Array.isArray(tabForSave.voices)) ? tabForSave.voices : [];
+            let voiceSaveError = null;
             try {
                 await this.api.sendCommand('instrument_voice_replace', {
                     deviceId: this.device.id,
@@ -248,13 +275,23 @@
                     })
                 });
             } catch (e) {
+                // Don't swallow — the primary save succeeded, but the user
+                // needs to know the secondary voices were NOT persisted.
                 console.warn('Failed to save secondary voices:', e);
+                voiceSaveError = e.message || String(e);
             }
 
             // Close and refresh
             this.close();
             if (typeof loadDevices === 'function') await loadDevices();
             if (window.instrumentManagementPageInstance) window.instrumentManagementPageInstance.refresh();
+
+            if (voiceSaveError && typeof showAlert === 'function') {
+                await showAlert(
+                    (this.t('instrumentSettings.voiceSaveWarning') || 'Les réglages principaux ont été sauvegardés, mais les voix GM additionnelles n\'ont pas pu être enregistrées') + ' : ' + voiceSaveError,
+                    { title: this.t('common.warning') || 'Avertissement', icon: '⚠️' }
+                );
+            }
 
         } catch (error) {
             console.error('Save error:', error);
