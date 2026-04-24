@@ -1263,6 +1263,7 @@
         // Section-specific listeners
         this._attachIdentitySectionListeners();
         this._attachNotesSectionListeners();
+        this._attachHandsSectionListeners();
 
         // Measure delay button — hidden by default, revealed only if an audio input is detected
         const measureBtn = this.$('#measureDelayBtn');
@@ -1270,6 +1271,36 @@
             measureBtn.addEventListener('click', function() { this._measureDelay(); }.bind(this));
             this._detectMicAndToggleMeasureBtn();
         }
+    };
+
+    /**
+     * Wire live behaviours for the Hands section. Today this is limited
+     * to refreshing the physical-model coverage hint when the user types
+     * a new `hand_span_mm`; saving still happens via _collectHandsConfig
+     * reading the DOM. When the section is not rendered (instrument
+     * family without hand-position support) this is a no-op.
+     */
+    ISMListeners._attachHandsSectionListeners = function() {
+        const handsSection = this.$('.ism-section[data-section="hands"]');
+        if (!handsSection) return;
+
+        const spanMmInput = handsSection.querySelector('[data-field="hand_span_mm"]');
+        const hint = handsSection.querySelector('#handsCoverageHint');
+        if (!spanMmInput || !hint || !window.ISMSections?._fretCoverageHint) return;
+
+        const scaleLengthMm = parseInt(hint.dataset.scaleLength, 10);
+        if (!Number.isFinite(scaleLengthMm) || scaleLengthMm <= 0) return;
+
+        const refresh = () => {
+            const mm = parseInt(spanMmInput.value, 10);
+            if (!Number.isFinite(mm) || mm <= 0) {
+                hint.innerHTML = 'Couverture : <em>renseignez la largeur pour voir la couverture estimée</em>';
+                return;
+            }
+            const text = window.ISMSections._fretCoverageHint(scaleLengthMm, mm);
+            hint.textContent = `Couverture : ${text}`;
+        };
+        spanMmInput.addEventListener('input', refresh);
     };
 
     if (typeof window !== 'undefined') window.ISMListeners = ISMListeners;

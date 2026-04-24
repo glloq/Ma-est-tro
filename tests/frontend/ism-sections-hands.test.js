@@ -147,6 +147,111 @@ describe('ISMSections — frets render → collect round-trip', () => {
   });
 });
 
+describe('ISMSections — frets render with physical model (scale length present)', () => {
+  const tabWithScale = {
+    settings: { gm_program: 24 },
+    channel: 0,
+    stringInstrumentConfig: { scale_length_mm: 650, num_strings: 6 }
+  };
+
+  it('renders mm inputs and a coverage hint when scale_length_mm is present', () => {
+    const cfg = window.ISMSections._defaultHandsConfig('frets', tabWithScale);
+    const html = window.ISMSections._renderHandsSectionFrets(cfg, tabWithScale);
+    expect(html).toMatch(/hand_span_mm/);
+    expect(html).toMatch(/handsMoveMmPerSec/);
+    expect(html).toMatch(/handsCoverageHint/);
+    expect(html).toMatch(/Couverture/);
+    expect(html).not.toMatch(/Aucune longueur de corde renseignée/);
+  });
+
+  it('seeds default hand_span_mm and hand_move_mm_per_sec when scale length is known', () => {
+    const cfg = window.ISMSections._defaultHandsConfig('frets', tabWithScale);
+    expect(cfg.hand_move_mm_per_sec).toBe(250);
+    expect(cfg.hands[0].hand_span_mm).toBe(80);
+    // Frets fallbacks remain so the user can still save a fret-mode config.
+    expect(cfg.hand_move_frets_per_sec).toBe(12);
+    expect(cfg.hands[0].hand_span_frets).toBe(4);
+  });
+
+  it('seeds max_fingers from num_strings when known', () => {
+    const cfg = window.ISMSections._defaultHandsConfig('frets', tabWithScale);
+    expect(cfg.hands[0].max_fingers).toBe(6);
+  });
+
+  it('round-trip preserves mm fields and max_fingers', () => {
+    const cfg = {
+      enabled: true, mode: 'frets',
+      hand_move_mm_per_sec: 300,
+      hand_move_frets_per_sec: 12,
+      hands: [{
+        id: 'fretting', cc_position_number: 22,
+        hand_span_mm: 90, hand_span_frets: 4, max_fingers: 5
+      }]
+    };
+    const html = window.ISMSections._renderHandsSectionFrets(cfg, tabWithScale);
+    const root = mountSection(html);
+
+    const collected = window.ISMSections._collectHandsConfig(root);
+    expect(collected.mode).toBe('frets');
+    expect(collected.hand_move_mm_per_sec).toBe(300);
+    expect(collected.hand_move_frets_per_sec).toBe(12);
+    expect(collected.hands[0].hand_span_mm).toBe(90);
+    expect(collected.hands[0].max_fingers).toBe(5);
+  });
+
+  it('coverage hint reports more frets at fret 14 than at fret 1', () => {
+    // Sanity: physical model means upper-neck reach > nut-region reach.
+    const at1 = window.ISMSections._approxFretsAt(650, 80, 1);
+    const at14 = window.ISMSections._approxFretsAt(650, 80, 14);
+    expect(at14).toBeGreaterThan(at1);
+  });
+
+  it('coverage hint string mentions the three reference positions', () => {
+    const hint = window.ISMSections._fretCoverageHint(650, 80);
+    expect(hint).toMatch(/fr\.1/);
+    expect(hint).toMatch(/fr\.7/);
+    expect(hint).toMatch(/fr\.14/);
+  });
+
+  it('_approxFretsAt returns Infinity when the hand spans past the bridge', () => {
+    // 650 mm hand on a 650 mm scale at fret 0: term = 1 - 1 = 0 → unreachable.
+    expect(window.ISMSections._approxFretsAt(650, 650, 0)).toBe(Infinity);
+  });
+});
+
+describe('ISMSections — frets render WITHOUT scale length (fallback only)', () => {
+  const tabNoScale = {
+    settings: { gm_program: 24 },
+    channel: 0,
+    stringInstrumentConfig: { num_strings: 6, scale_length_mm: null }
+  };
+
+  it('does not render mm inputs and shows the warning banner', () => {
+    const cfg = window.ISMSections._defaultHandsConfig('frets', tabNoScale);
+    const html = window.ISMSections._renderHandsSectionFrets(cfg, tabNoScale);
+    expect(html).not.toMatch(/handsMoveMmPerSec/);
+    expect(html).toMatch(/Aucune longueur de corde renseignée/);
+    // Frets fallback inputs are still rendered.
+    expect(html).toMatch(/hand_span_frets/);
+  });
+
+  it('default does not include mm fields when scale length is absent', () => {
+    const cfg = window.ISMSections._defaultHandsConfig('frets', tabNoScale);
+    expect(cfg.hand_move_mm_per_sec).toBeUndefined();
+    expect(cfg.hands[0].hand_span_mm).toBeUndefined();
+  });
+
+  it('round-trip preserves max_fingers in fallback layout', () => {
+    const cfg = window.ISMSections._defaultHandsConfig('frets', tabNoScale);
+    const html = window.ISMSections._renderHandsSectionFrets(cfg, tabNoScale);
+    const root = mountSection(html);
+
+    const collected = window.ISMSections._collectHandsConfig(root);
+    expect(collected.hands[0].max_fingers).toBe(6);
+    expect(collected.hand_move_mm_per_sec).toBeUndefined();
+  });
+});
+
 describe('ISMSections — semitones render → collect round-trip', () => {
   it('default config survives a render→collect round-trip', () => {
     const cfg = window.ISMSections._defaultHandsConfig('semitones');
