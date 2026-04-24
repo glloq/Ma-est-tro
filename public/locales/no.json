@@ -679,7 +679,15 @@
         "omniModeHelp": "Dette instrumentet aksepterer noter på hvilken som helst MIDI-kanal (nyttig når det er enheten sitt eneste instrument)",
         "omniModeActiveHint": "Dette instrumentet mottar noter på hvilken som helst kanal — kanalvalget over ignoreres.",
         "addGmInstrument": "Legg til et GM-instrument",
-        "secondaryVoices": "Ekstra stemmer"
+        "secondaryVoices": "Ekstra stemmer",
+        "sectionTimingsPerGm": "Timing per GM-instrument",
+        "timingsPerGmHint": "Hver GM-stemme kan ha sine egne timing-begrensninger (nyttig når instrumenter har ulike responstider).",
+        "primaryVoiceBadge": "Hovedstemme",
+        "primaryVoice": "Hovedstemme",
+        "supportedCcsTitle": "Støttede CC-er",
+        "supportedCcsLabel": "Støttede CC-er (kommaseparert)",
+        "supportedCcsHint": "Delt på tvers av alle GM-stemmer på dette instrumentet. CC-er som et instrument ikke håndterer, blir ganske enkelt ignorert på maskinvaresiden.",
+        "previewThisVoice": "Klikk for å forhåndsvise denne stemmen på tastaturet"
     },
     "playlist": {
         "title": "Spillelister",

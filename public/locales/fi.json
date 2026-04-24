@@ -679,7 +679,15 @@
         "omniModeHelp": "Soitin hyväksyy nuotteja millä tahansa MIDI-kanavalla (hyödyllinen kun se on laitteen ainoa soitin)",
         "omniModeActiveHint": "Tämä soitin vastaanottaa nuotteja millä tahansa kanavalla — yllä oleva kanavavalinta jätetään huomiotta.",
         "addGmInstrument": "Lisää GM-soitin",
-        "secondaryVoices": "Lisä-äänet"
+        "secondaryVoices": "Lisä-äänet",
+        "sectionTimingsPerGm": "Ajoitukset GM-soittimen mukaan",
+        "timingsPerGmHint": "Jokaisella GM-äänellä voi olla omat ajoitusrajoitteensa (hyödyllinen, kun soittimilla on eri vasteajat).",
+        "primaryVoiceBadge": "Pääääni",
+        "primaryVoice": "Pääääni",
+        "supportedCcsTitle": "Tuetut CC:t",
+        "supportedCcsLabel": "Tuetut CC:t (pilkulla eroteltuna)",
+        "supportedCcsHint": "Jaettu kaikkien tämän soittimen GM-äänten kesken. CC:t, joita soitin ei käsittele, jätetään yksinkertaisesti huomiotta laitteistopuolella.",
+        "previewThisVoice": "Napsauta esikuunnellaksesi tätä ääntä koskettimistolla"
     },
     "playlist": {
         "title": "Soittolistat",

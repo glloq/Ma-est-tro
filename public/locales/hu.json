@@ -679,7 +679,15 @@
         "omniModeHelp": "A hangszer bármely MIDI csatornán elfogad hangokat (hasznos, ha ez az eszköz egyetlen hangszere)",
         "omniModeActiveHint": "Ez a hangszer bármely csatornán fogad hangokat — a fenti csatornaválasztás figyelmen kívül marad.",
         "addGmInstrument": "GM hangszer hozzáadása",
-        "secondaryVoices": "További hangok"
+        "secondaryVoices": "További hangok",
+        "sectionTimingsPerGm": "Időzítések GM hangszerenként",
+        "timingsPerGmHint": "Minden GM hangnak lehetnek saját időzítési korlátai (hasznos, ha a hangszerek válaszideje eltér).",
+        "primaryVoiceBadge": "Fő hang",
+        "primaryVoice": "Fő hang",
+        "supportedCcsTitle": "Támogatott CC-k",
+        "supportedCcsLabel": "Támogatott CC-k (vesszővel elválasztva)",
+        "supportedCcsHint": "A hangszer összes GM hangja között megosztva. A hangszer által nem kezelt CC-ket a hardver oldalán egyszerűen figyelmen kívül hagyják.",
+        "previewThisVoice": "Kattintson a hang előnézetéhez a billentyűzeten"
     },
     "playlist": {
         "title": "Lejátszási listák",

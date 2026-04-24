@@ -679,7 +679,15 @@
         "omniModeHelp": "Dit instrument accepteert noten op elk MIDI-kanaal (handig wanneer het het enige instrument op het apparaat is)",
         "omniModeActiveHint": "Dit instrument ontvangt noten op elk kanaal — de kanaalkeuze hierboven wordt genegeerd.",
         "addGmInstrument": "Een GM-instrument toevoegen",
-        "secondaryVoices": "Aanvullende stemmen"
+        "secondaryVoices": "Aanvullende stemmen",
+        "sectionTimingsPerGm": "Timings per GM-instrument",
+        "timingsPerGmHint": "Elke GM-stem kan eigen timingbeperkingen hebben (nuttig wanneer instrumenten verschillende responstijden hebben).",
+        "primaryVoiceBadge": "Hoofdstem",
+        "primaryVoice": "Hoofdstem",
+        "supportedCcsTitle": "Ondersteunde CC's",
+        "supportedCcsLabel": "Ondersteunde CC's (door komma's gescheiden)",
+        "supportedCcsHint": "Gedeeld door alle GM-stemmen van dit instrument. CC's die een instrument niet ondersteunt, worden aan de hardwarezijde simpelweg genegeerd.",
+        "previewThisVoice": "Klik om deze stem voor te beluisteren op het klavier"
     },
     "playlist": {
         "title": "Afspeellijsten",

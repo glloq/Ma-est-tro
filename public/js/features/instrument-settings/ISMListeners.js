@@ -439,7 +439,8 @@
         // Edit → re-open instrument grid with current family preselected
         const editBtn = this.$('.ism-edit-instrument');
         if (editBtn) {
-            editBtn.addEventListener('click', function() {
+            editBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
                 self._identityUI.step = 'instruments';
                 self._rerenderIdentityPicker();
             });
@@ -448,7 +449,8 @@
         // Delete → confirm then clear
         const delBtn = this.$('.ism-delete-instrument');
         if (delBtn) {
-            delBtn.addEventListener('click', function() {
+            delBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
                 self._clearInstrument();
             });
         }
@@ -464,11 +466,28 @@
         // Delete a secondary voice directly from the Identity tab.
         // _deleteVoiceAt rerenders both the Notes-tab list and this picker.
         this.$$('.ism-identity-voice-delete').forEach(function(btn) {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
                 const row = btn.closest('.ism-selected-secondary');
                 if (!row) return;
                 const idx = parseInt(row.dataset.voiceIndex, 10);
                 self._deleteVoiceAt(idx);
+            });
+        });
+
+        // Click a GM instrument row to route the preview keyboard to it.
+        this.$$('.ism-selected-instrument').forEach(function(row) {
+            const activate = function() {
+                const raw = row.dataset.voiceIndex;
+                const idx = (raw === '' || raw == null) ? null : parseInt(raw, 10);
+                self._setPreviewActiveVoice(idx);
+            };
+            row.addEventListener('click', activate);
+            row.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    activate();
+                }
             });
         });
     };
@@ -569,28 +588,13 @@
         // Piano is initialized by _switchSection('notes') when the section becomes visible
     };
 
-    // ===== Multi-GM voices (Notes subsection) =====
+    // ===== Multi-GM voices (per-voice timing rows in the ⏱️ Timings subsection) =====
 
     ISMListeners._wireVoicesListeners = function() {
         const self = this;
 
-        // Add voice button -> picker overlay
-        const addBtn = this.$('.ism-voice-add-btn');
-        if (addBtn) {
-            addBtn.addEventListener('click', function() { self._openVoicePicker(); });
-        }
-
-        // Delete voice
-        this.$$('.ism-voice-delete').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                const row = btn.closest('.ism-voice-row');
-                if (!row) return;
-                const idx = parseInt(row.dataset.voiceIndex, 10);
-                self._deleteVoiceAt(idx);
-            });
-        });
-
-        // Param edits (interval / duration / ccs) -> mutate tab.voices in-place
+        // Param edits (interval / duration / ccs) -> mutate tab.voices in-place.
+        // Add/delete are handled from the Identity tab; no buttons here.
         this.$$('.ism-voice-row').forEach(function(row) {
             const idx = parseInt(row.dataset.voiceIndex, 10);
             const intervalEl = row.querySelector('.ism-voice-interval');
@@ -627,19 +631,32 @@
         if (!tab || !Array.isArray(tab.voices)) return;
         if (idx < 0 || idx >= tab.voices.length) return;
         tab.voices.splice(idx, 1);
+
+        // Keep the preview routing consistent with the spliced list: if the
+        // deleted voice WAS the preview target, fall back to the primary;
+        // if a voice BEFORE the active one was deleted, shift the index down.
+        if (this._previewActiveVoice != null) {
+            if (this._previewActiveVoice === idx) {
+                this._previewActiveVoice = null;
+            } else if (this._previewActiveVoice > idx) {
+                this._previewActiveVoice -= 1;
+            }
+        }
+
         this._rerenderVoicesSubsection();
         this._rerenderIdentityPicker();
+        this._renderPreviewKeyboard();
     };
 
+    /**
+     * Rerender just the voices list inside the ⏱️ Timings subsection. The
+     * primary block is left untouched so unsaved input in `#minNoteInterval`
+     * / `#minNoteDuration` is preserved across voice add/delete.
+     */
     ISMListeners._rerenderVoicesSubsection = function() {
-        const sub = this.$('#voicesSubsection');
-        if (!sub) return;
-        // Preserve subsection title, replace only list + add btn
-        const titleEl = sub.querySelector('.ism-subsection-title');
-        const hintEl = sub.querySelector('.ism-subsection-hint');
-        sub.innerHTML = (titleEl ? titleEl.outerHTML : '')
-            + (hintEl ? hintEl.outerHTML : '')
-            + this._renderVoicesSubsection();
+        const list = this.$('#timingsVoicesList');
+        if (!list) return;
+        list.innerHTML = this._renderVoicesSubsection();
         this._wireVoicesListeners();
     };
 

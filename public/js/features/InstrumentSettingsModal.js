@@ -424,15 +424,39 @@ class InstrumentSettingsModal extends BaseModal {
 
     // ========== PREVIEW KEYBOARD (in header) ==========
 
+    /**
+     * Resolve the GM voice that should be audibly previewed by the mini
+     * keyboard. Defaults to the primary (tab.settings.gm_program) but can
+     * be switched to any secondary voice by the user via `_previewActiveVoice`
+     * (null = primary, number = index in tab.voices).
+     *
+     * Returns { program, channel, isDrumKit } or { program: null, ... } when
+     * nothing is selected yet.
+     */
+    _getActivePreviewVoice() {
+        const tab = this._getActiveTab();
+        if (!tab) return { program: null, channel: 0, isDrumKit: false };
+        const idx = this._previewActiveVoice;
+        const OFFSET = (typeof GM_DRUM_KIT_OFFSET !== 'undefined') ? GM_DRUM_KIT_OFFSET : 128;
+
+        if (idx != null && Array.isArray(tab.voices) && tab.voices[idx]) {
+            const stored = tab.voices[idx].gm_program;
+            const isDrumKit = stored != null && stored >= OFFSET;
+            const program = isDrumKit ? (stored - OFFSET) : stored;
+            return { program: program, channel: isDrumKit ? 9 : tab.channel, isDrumKit: isDrumKit };
+        }
+        const gmProgram = tab.settings.gm_program;
+        const isDrumKit = tab.channel === 9 || (gmProgram != null && gmProgram >= 128);
+        const program = isDrumKit && gmProgram != null && gmProgram >= OFFSET ? (gmProgram - OFFSET) : gmProgram;
+        return { program: program, channel: tab.channel, isDrumKit: isDrumKit };
+    }
+
     _renderPreviewKeyboard() {
         const slot = this.$('#ismPreviewSlot');
         if (!slot) return;
-        const tab = this._getActiveTab();
-        const gmProgram = tab ? tab.settings.gm_program : null;
-        const channel = tab ? tab.channel : 0;
-        const isDrumKit = channel === 9 || (gmProgram != null && gmProgram >= 128);
+        const { program, isDrumKit } = this._getActivePreviewVoice();
 
-        if (gmProgram == null && !isDrumKit) {
+        if (program == null && !isDrumKit) {
             slot.innerHTML = `<span class="ism-preview-hint">${this.escape(this.t('instrumentSettings.previewPickInstrument') || '🎵 Choisir un instrument pour activer la preview')}</span>`;
             return;
         }
@@ -608,12 +632,10 @@ class InstrumentSettingsModal extends BaseModal {
         this._previewActive.add(note);
         if (el) el.classList.add('active');
 
-        const tab = this._getActiveTab();
-        const gmProgram = tab ? tab.settings.gm_program : null;
-        const rawChannel = tab ? tab.channel : 0;
-        const isDrumKit = rawChannel === 9 || (gmProgram != null && gmProgram >= 128);
+        const active = this._getActivePreviewVoice();
+        const isDrumKit = active.isDrumKit;
         const synthChannel = isDrumKit ? 9 : 0;
-        const program = (gmProgram != null && !isDrumKit) ? (gmProgram & 0x7f) : 0;
+        const program = (active.program != null && !isDrumKit) ? (active.program & 0x7f) : 0;
 
         const self = this;
         (async () => {
@@ -653,6 +675,31 @@ class InstrumentSettingsModal extends BaseModal {
      * program change to the physical instrument, pre-load the soundbank voice
      * locally so the header preview is responsive when hovered.
      */
+    /**
+     * Route the preview keyboard to a specific GM voice.
+     * @param {?number} idx - null selects the primary voice, a number selects
+     *   the matching entry in `tab.voices`.
+     */
+    _setPreviewActiveVoice(idx) {
+        const tab = this._getActiveTab();
+        if (!tab) return;
+        if (idx != null) {
+            if (!Array.isArray(tab.voices) || idx < 0 || idx >= tab.voices.length) return;
+        }
+        if (this._previewActiveVoice === idx) return;
+        // Cancel any currently-held preview notes on the old voice before switching
+        this._previewAllNotesOff();
+        this._previewActiveVoice = idx;
+        this._rerenderIdentityPicker();
+        this._renderPreviewKeyboard();
+        // Preload the new voice so the keyboard is responsive on first hover
+        const active = this._getActivePreviewVoice();
+        if (active.program != null || active.isDrumKit) {
+            const previewChannel = active.isDrumKit ? 9 : 0;
+            this._sendPreviewProgramChange(active.program, previewChannel);
+        }
+    }
+
     _sendPreviewProgramChange(program, channel) {
         if (program == null) return;
         const isDrum = channel === 9 || program >= 128;
@@ -696,8 +743,9 @@ class InstrumentSettingsModal extends BaseModal {
                 <span class="ism-header-gear">⚙️</span>
                 <span class="ism-header-name">${this.escape(instrumentName)}</span>
             </span>
-            <div class="ism-preview-slot" id="ismPreviewSlot"></div>
         `;
+        // Preview keyboard is now rendered inline next to the Identity-section
+        // "Instrument" label, not in the modal header.
         this._renderPreviewKeyboard();
     }
 

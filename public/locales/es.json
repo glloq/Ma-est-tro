@@ -679,7 +679,15 @@
         "omniModeHelp": "Este instrumento acepta notas en cualquier canal MIDI (útil cuando es el único instrumento del dispositivo)",
         "omniModeActiveHint": "Este instrumento recibe notas en cualquier canal — la selección de canal de arriba se ignora.",
         "addGmInstrument": "Añadir un instrumento GM",
-        "secondaryVoices": "Voces adicionales"
+        "secondaryVoices": "Voces adicionales",
+        "sectionTimingsPerGm": "Temporización por instrumento GM",
+        "timingsPerGmHint": "Cada voz GM puede tener sus propias restricciones de temporización (útil cuando los instrumentos tienen tiempos de respuesta diferentes).",
+        "primaryVoiceBadge": "Voz principal",
+        "primaryVoice": "Voz principal",
+        "supportedCcsTitle": "CC compatibles",
+        "supportedCcsLabel": "CC compatibles (separados por comas)",
+        "supportedCcsHint": "Compartida por todas las voces GM de este instrumento. Los CC que un instrumento no gestiona simplemente se ignoran en el lado del hardware.",
+        "previewThisVoice": "Haz clic para previsualizar esta voz en el teclado"
     },
     "playlist": {
         "title": "Listas de reproducción",
