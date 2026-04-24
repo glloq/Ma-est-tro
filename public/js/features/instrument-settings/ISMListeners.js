@@ -498,6 +498,26 @@
             ? selectValueToGmProgram(encodedValue)
             : { program: encodedValue, isDrumKit: isDrumKit };
 
+        // Pre-flight: a drum kit always lives on channel 10 (index 9).
+        // If the user picked a drum kit on a different channel AND another
+        // tab already occupies channel 9, silently forcing `tab.channel = 9`
+        // would overwrite that other tab on save. Abort before any state
+        // mutation so the user can free channel 9 manually first.
+        if (isDrumKit && tab && tab.channel !== 9) {
+            const collision = this.instrumentTabs.some(function(t) {
+                return t.channel === 9 && t !== tab;
+            });
+            if (collision) {
+                if (typeof showAlert === 'function') {
+                    showAlert(
+                        this.t('instrumentSettings.drumChannelOccupied') || 'Le canal 10 (percussions) est déjà utilisé par un autre instrument.',
+                        { title: this.t('common.error') || 'Erreur', icon: '⚠️' }
+                    );
+                }
+                return;
+            }
+        }
+
         // 1) Update hidden input (save path reads #gmProgramSelect)
         const hiddenSel = this.$('#gmProgramSelect');
         if (hiddenSel) hiddenSel.value = String(encodedValue);
