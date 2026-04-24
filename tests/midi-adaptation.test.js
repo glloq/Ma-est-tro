@@ -239,6 +239,48 @@ describe('InstrumentMatcher', () => {
     jest.clearAllMocks();
   });
 
+  describe('scorePhysicalFamilyMatch (v7 taxonomy bonus)', () => {
+    test('returns 0 when either program is null', () => {
+      expect(matcher.scorePhysicalFamilyMatch(null, 0, 24, 0).score).toBe(0);
+      expect(matcher.scorePhysicalFamilyMatch(24, 0, null, 0).score).toBe(0);
+    });
+
+    test('returns 0 when exact program match (already rewarded elsewhere)', () => {
+      expect(matcher.scorePhysicalFamilyMatch(24, 0, 24, 0).score).toBe(0);
+    });
+
+    test('returns 0 when same GM category (double-count guard)', () => {
+      // Both in guitar category (24-31) so sameCategoryMatch already fires
+      expect(matcher.scorePhysicalFamilyMatch(24, 0, 26, 0).score).toBe(0);
+    });
+
+    test('returns bonus when different GM categories share a physical family', () => {
+      // nylon guitar (24, guitar) ↔ sitar (104, ethnic) → both plucked_strings
+      const r = matcher.scorePhysicalFamilyMatch(24, 0, 104, 0);
+      expect(r.score).toBe(ScoringConfig.bonuses.samePhysicalFamilyMatch);
+      expect(r.info).toContain('plucked_strings');
+    });
+
+    test('returns bonus for violin ↔ fiddle (bowed_strings)', () => {
+      // violin (40, strings) ↔ fiddle (110, ethnic)
+      const r = matcher.scorePhysicalFamilyMatch(40, 0, 110, 0);
+      expect(r.score).toBe(ScoringConfig.bonuses.samePhysicalFamilyMatch);
+      expect(r.info).toContain('bowed_strings');
+    });
+
+    test('returns bonus for accordion ↔ clarinet (reeds)', () => {
+      // accordion (21, organ) ↔ clarinet (71, reed)
+      const r = matcher.scorePhysicalFamilyMatch(21, 0, 71, 0);
+      expect(r.score).toBe(ScoringConfig.bonuses.samePhysicalFamilyMatch);
+      expect(r.info).toContain('reeds');
+    });
+
+    test('returns 0 when physical families differ', () => {
+      // piano (0, keyboards) vs trumpet (56, brass)
+      expect(matcher.scorePhysicalFamilyMatch(0, 0, 56, 0).score).toBe(0);
+    });
+  });
+
   test('calculateCompatibility returns score between 0 and 100', () => {
     const analysis = {
       channel: 0,
