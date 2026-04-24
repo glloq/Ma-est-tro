@@ -659,7 +659,21 @@
         "minNoteInterval": "Mindestabstand zwischen 2 Noten (ms)",
         "minNoteIntervalHelp": "Mindestverzögerung zwischen zwei aufeinanderfolgenden Note-On-Ereignissen (in ms)",
         "minNoteDuration": "Mindestdauer aktiver Note (ms)",
-        "minNoteDurationHelp": "Mindestdauer, die eine Note aktiv bleibt (in ms)"
+        "minNoteDurationHelp": "Mindestdauer, die eine Note aktiv bleibt (in ms)",
+        "pickFamily": "Pick an instrument family",
+        "pickInstrument": "Pick an instrument in this family",
+        "backToFamily": "Families",
+        "editInstrument": "Edit instrument",
+        "deleteInstrument": "Clear instrument",
+        "deleteInstrumentConfirm": "Clear the instrument choice for this channel?",
+        "sectionTimings": "Timings (primary voice)",
+        "sectionVoices": "Additional GM voices",
+        "voicesHint": "Add timbre variants (e.g. fingerstyle, slap, tapping, arco/pizzicato) playing the same notes with a different actuator.",
+        "voicesEmpty": "No additional voice — the primary voice is set in the Identity tab.",
+        "addVoice": "Add a voice",
+        "deleteVoice": "Remove this voice",
+        "voiceCcs": "Supported CCs (comma-separated)",
+        "previewPickInstrument": "🎵 Pick an instrument to enable the preview"
     },
     "playlist": {
         "title": "Playlists",
@@ -887,7 +901,8 @@
         "instrumentType": "Instrumententyp",
         "customType": "Benutzerdefiniert",
         "customName": "Benutzerdefinierter Name",
-        "customNamePlaceholder": "z.B. Mein Klavier, ESP32 Drums..."
+        "customNamePlaceholder": "z.B. Mein Klavier, ESP32 Drums...",
+        "free": "free"
     },
     "channelRouter": {
         "title": "MIDI-Routing-Konfiguration",
@@ -2067,5 +2082,20 @@
         "allowInstrumentReuseDesc": "Erlaubt die Zuweisung desselben Instruments an mehrere MIDI-Kanäle wenn nicht genügend Instrumente verfügbar sind.",
         "sharedPenalty": "Teilungsstrafe",
         "sharedPenaltyDesc": "Score-Reduzierung für geteilte Zuweisungen"
+    },
+    "instrumentFamilies": {
+        "keyboards": "Keyboards",
+        "chromaticPercussion": "Chromatic Percussion",
+        "organs": "Organs",
+        "pluckedStrings": "Plucked Strings",
+        "bowedStrings": "Bowed Strings",
+        "ensembles": "Ensembles",
+        "brass": "Brass",
+        "reeds": "Reeds",
+        "winds": "Winds (flutes)",
+        "synths": "Synths",
+        "percussive": "Percussion",
+        "sfx": "Sound Effects",
+        "drumKits": "Drum Kits (GM)"
     }
 }

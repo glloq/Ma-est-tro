@@ -659,7 +659,21 @@
         "minNoteInterval": "Khoảng cách tối thiểu giữa 2 nốt (ms)",
         "minNoteIntervalHelp": "Độ trễ tối thiểu giữa hai sự kiện note-on liên tiếp (tính bằng ms)",
         "minNoteDuration": "Thời lượng nốt đang hoạt động tối thiểu (ms)",
-        "minNoteDurationHelp": "Thời lượng tối thiểu một nốt duy trì hoạt động (tính bằng ms)"
+        "minNoteDurationHelp": "Thời lượng tối thiểu một nốt duy trì hoạt động (tính bằng ms)",
+        "pickFamily": "Pick an instrument family",
+        "pickInstrument": "Pick an instrument in this family",
+        "backToFamily": "Families",
+        "editInstrument": "Edit instrument",
+        "deleteInstrument": "Clear instrument",
+        "deleteInstrumentConfirm": "Clear the instrument choice for this channel?",
+        "sectionTimings": "Timings (primary voice)",
+        "sectionVoices": "Additional GM voices",
+        "voicesHint": "Add timbre variants (e.g. fingerstyle, slap, tapping, arco/pizzicato) playing the same notes with a different actuator.",
+        "voicesEmpty": "No additional voice — the primary voice is set in the Identity tab.",
+        "addVoice": "Add a voice",
+        "deleteVoice": "Remove this voice",
+        "voiceCcs": "Supported CCs (comma-separated)",
+        "previewPickInstrument": "🎵 Pick an instrument to enable the preview"
     },
     "playlist": {
         "title": "Danh sách phát",
@@ -887,7 +901,8 @@
         "instrumentType": "Instrument type",
         "customType": "Custom",
         "customName": "Custom name",
-        "customNamePlaceholder": "e.g. My Piano, ESP32 Drums..."
+        "customNamePlaceholder": "e.g. My Piano, ESP32 Drums...",
+        "free": "free"
     },
     "channelRouter": {
         "title": "Cấu hình Định tuyến MIDI",
@@ -2067,5 +2082,20 @@
         "allowInstrumentReuseDesc": "Cho phép gán cùng nhạc cụ cho nhiều kênh MIDI khi không đủ nhạc cụ.",
         "sharedPenalty": "Phạt chia sẻ",
         "sharedPenaltyDesc": "Giảm điểm cho các gán chia sẻ"
+    },
+    "instrumentFamilies": {
+        "keyboards": "Keyboards",
+        "chromaticPercussion": "Chromatic Percussion",
+        "organs": "Organs",
+        "pluckedStrings": "Plucked Strings",
+        "bowedStrings": "Bowed Strings",
+        "ensembles": "Ensembles",
+        "brass": "Brass",
+        "reeds": "Reeds",
+        "winds": "Winds (flutes)",
+        "synths": "Synths",
+        "percussive": "Percussion",
+        "sfx": "Sound Effects",
+        "drumKits": "Drum Kits (GM)"
     }
 }

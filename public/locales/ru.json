@@ -659,7 +659,21 @@
         "minNoteInterval": "Минимальный интервал между 2 нотами (мс)",
         "minNoteIntervalHelp": "Минимальная задержка между двумя последовательными событиями note-on (в мс)",
         "minNoteDuration": "Минимальная длительность активной ноты (мс)",
-        "minNoteDurationHelp": "Минимальное время, в течение которого нота остаётся активной (в мс)"
+        "minNoteDurationHelp": "Минимальное время, в течение которого нота остаётся активной (в мс)",
+        "pickFamily": "Pick an instrument family",
+        "pickInstrument": "Pick an instrument in this family",
+        "backToFamily": "Families",
+        "editInstrument": "Edit instrument",
+        "deleteInstrument": "Clear instrument",
+        "deleteInstrumentConfirm": "Clear the instrument choice for this channel?",
+        "sectionTimings": "Timings (primary voice)",
+        "sectionVoices": "Additional GM voices",
+        "voicesHint": "Add timbre variants (e.g. fingerstyle, slap, tapping, arco/pizzicato) playing the same notes with a different actuator.",
+        "voicesEmpty": "No additional voice — the primary voice is set in the Identity tab.",
+        "addVoice": "Add a voice",
+        "deleteVoice": "Remove this voice",
+        "voiceCcs": "Supported CCs (comma-separated)",
+        "previewPickInstrument": "🎵 Pick an instrument to enable the preview"
     },
     "playlist": {
         "title": "Плейлисты",
@@ -887,7 +901,8 @@
         "instrumentType": "Instrument type",
         "customType": "Custom",
         "customName": "Custom name",
-        "customNamePlaceholder": "e.g. My Piano, ESP32 Drums..."
+        "customNamePlaceholder": "e.g. My Piano, ESP32 Drums...",
+        "free": "free"
     },
     "channelRouter": {
         "title": "Настройка маршрутизации MIDI",
@@ -2067,5 +2082,20 @@
         "allowInstrumentReuseDesc": "Позволяет назначать один инструмент нескольким MIDI-каналам при нехватке инструментов.",
         "sharedPenalty": "Штраф за совместное использование",
         "sharedPenaltyDesc": "Снижение балла для совместных назначений"
+    },
+    "instrumentFamilies": {
+        "keyboards": "Keyboards",
+        "chromaticPercussion": "Chromatic Percussion",
+        "organs": "Organs",
+        "pluckedStrings": "Plucked Strings",
+        "bowedStrings": "Bowed Strings",
+        "ensembles": "Ensembles",
+        "brass": "Brass",
+        "reeds": "Reeds",
+        "winds": "Winds (flutes)",
+        "synths": "Synths",
+        "percussive": "Percussion",
+        "sfx": "Sound Effects",
+        "drumKits": "Drum Kits (GM)"
     }
 }

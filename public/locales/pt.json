@@ -659,7 +659,21 @@
         "minNoteInterval": "Intervalo mínimo entre 2 notas (ms)",
         "minNoteIntervalHelp": "Atraso mínimo entre dois eventos note-on consecutivos (em ms)",
         "minNoteDuration": "Duração mínima de nota ativa (ms)",
-        "minNoteDurationHelp": "Duração mínima durante a qual uma nota permanece ativa (em ms)"
+        "minNoteDurationHelp": "Duração mínima durante a qual uma nota permanece ativa (em ms)",
+        "pickFamily": "Pick an instrument family",
+        "pickInstrument": "Pick an instrument in this family",
+        "backToFamily": "Families",
+        "editInstrument": "Edit instrument",
+        "deleteInstrument": "Clear instrument",
+        "deleteInstrumentConfirm": "Clear the instrument choice for this channel?",
+        "sectionTimings": "Timings (primary voice)",
+        "sectionVoices": "Additional GM voices",
+        "voicesHint": "Add timbre variants (e.g. fingerstyle, slap, tapping, arco/pizzicato) playing the same notes with a different actuator.",
+        "voicesEmpty": "No additional voice — the primary voice is set in the Identity tab.",
+        "addVoice": "Add a voice",
+        "deleteVoice": "Remove this voice",
+        "voiceCcs": "Supported CCs (comma-separated)",
+        "previewPickInstrument": "🎵 Pick an instrument to enable the preview"
     },
     "playlist": {
         "title": "Playlists",
@@ -887,7 +901,8 @@
         "instrumentType": "Instrument type",
         "customType": "Custom",
         "customName": "Custom name",
-        "customNamePlaceholder": "e.g. My Piano, ESP32 Drums..."
+        "customNamePlaceholder": "e.g. My Piano, ESP32 Drums...",
+        "free": "free"
     },
     "channelRouter": {
         "title": "Configuração de roteamento MIDI",
@@ -2067,5 +2082,20 @@
         "allowInstrumentReuseDesc": "Permite atribuir o mesmo instrumento a múltiplos canais MIDI quando não há instrumentos suficientes.",
         "sharedPenalty": "Penalidade de compartilhamento",
         "sharedPenaltyDesc": "Redução de pontuação para atribuições compartilhadas"
+    },
+    "instrumentFamilies": {
+        "keyboards": "Keyboards",
+        "chromaticPercussion": "Chromatic Percussion",
+        "organs": "Organs",
+        "pluckedStrings": "Plucked Strings",
+        "bowedStrings": "Bowed Strings",
+        "ensembles": "Ensembles",
+        "brass": "Brass",
+        "reeds": "Reeds",
+        "winds": "Winds (flutes)",
+        "synths": "Synths",
+        "percussive": "Percussion",
+        "sfx": "Sound Effects",
+        "drumKits": "Drum Kits (GM)"
     }
 }
