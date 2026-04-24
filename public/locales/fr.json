@@ -665,7 +665,22 @@
         "minNoteInterval": "Temps minimum entre 2 notes (ms)",
         "minNoteIntervalHelp": "Délai minimum entre deux note-on consécutifs (en ms)",
         "minNoteDuration": "Temps note actif minimum (ms)",
-        "minNoteDurationHelp": "Durée minimum pendant laquelle une note reste active (en ms)"
+        "minNoteDurationHelp": "Durée minimum pendant laquelle une note reste active (en ms)",
+        "pickFamily": "Choisir une famille d'instruments",
+        "pickInstrument": "Choisir un instrument dans la famille",
+        "backToFamily": "Familles",
+        "editInstrument": "Modifier l'instrument",
+        "deleteInstrument": "Effacer l'instrument",
+        "deleteInstrumentConfirm": "Effacer le choix d'instrument pour ce canal ?",
+        "sectionTimings": "Temporisations (voix principale)",
+        "sectionVoices": "Voix GM additionnelles",
+        "voicesHint": "Ajoutez des variantes de timbre (ex : fingerstyle, slap, tapping, arco/pizzicato) jouant les mêmes notes avec un actionneur différent.",
+        "voicesEmpty": "Aucune voix additionnelle — la voix principale est définie dans l'onglet Identité.",
+        "addVoice": "Ajouter une voix",
+        "deleteVoice": "Supprimer cette voix",
+        "voiceCcs": "CC supportés (séparés par virgules)",
+        "gmCategory": "Instrument",
+        "previewPickInstrument": "🎵 Choisir un instrument pour activer la preview"
     },
     "playlist": {
         "title": "Playlists",
@@ -893,7 +908,8 @@
         "instrumentType": "Type d'instrument",
         "customType": "Personnalisé",
         "customName": "Nom personnalisé",
-        "customNamePlaceholder": "Ex: Mon Piano, Batterie ESP32..."
+        "customNamePlaceholder": "Ex: Mon Piano, Batterie ESP32...",
+        "free": "libre"
     },
     "channelRouter": {
         "title": "Configuration du routage MIDI",
@@ -2073,5 +2089,20 @@
         "presetJazzDesc": "Priorité au timbre et au type d'instrument pour les formations jazz",
         "presetDrumsFocusedDesc": "Maximise la qualité du mapping percussions et le bonus canal 10",
         "presetMinimalDesc": "Seuils permissifs et splits limités pour les petites configurations"
+    },
+    "instrumentFamilies": {
+        "keyboards": "Instruments à touches",
+        "chromaticPercussion": "Percussions chromatiques",
+        "organs": "Orgues",
+        "pluckedStrings": "Cordes grattées",
+        "bowedStrings": "Cordes frottées",
+        "ensembles": "Ensembles",
+        "brass": "Cuivres",
+        "reeds": "Anches",
+        "winds": "Vents (flûtes)",
+        "synths": "Synthétiseurs",
+        "percussive": "Percussions diverses",
+        "sfx": "Effets sonores",
+        "drumKits": "Batteries (kits GM)"
     }
 }

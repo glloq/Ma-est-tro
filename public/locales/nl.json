@@ -659,7 +659,21 @@
         "minNoteInterval": "Minimale interval tussen 2 noten (ms)",
         "minNoteIntervalHelp": "Minimale vertraging tussen twee opeenvolgende note-on gebeurtenissen (in ms)",
         "minNoteDuration": "Minimale actieve nootduur (ms)",
-        "minNoteDurationHelp": "Minimale duur dat een noot actief blijft (in ms)"
+        "minNoteDurationHelp": "Minimale duur dat een noot actief blijft (in ms)",
+        "pickFamily": "Pick an instrument family",
+        "pickInstrument": "Pick an instrument in this family",
+        "backToFamily": "Families",
+        "editInstrument": "Edit instrument",
+        "deleteInstrument": "Clear instrument",
+        "deleteInstrumentConfirm": "Clear the instrument choice for this channel?",
+        "sectionTimings": "Timings (primary voice)",
+        "sectionVoices": "Additional GM voices",
+        "voicesHint": "Add timbre variants (e.g. fingerstyle, slap, tapping, arco/pizzicato) playing the same notes with a different actuator.",
+        "voicesEmpty": "No additional voice — the primary voice is set in the Identity tab.",
+        "addVoice": "Add a voice",
+        "deleteVoice": "Remove this voice",
+        "voiceCcs": "Supported CCs (comma-separated)",
+        "previewPickInstrument": "🎵 Pick an instrument to enable the preview"
     },
     "playlist": {
         "title": "Afspeellijsten",
@@ -887,7 +901,8 @@
         "instrumentType": "Instrument type",
         "customType": "Custom",
         "customName": "Custom name",
-        "customNamePlaceholder": "e.g. My Piano, ESP32 Drums..."
+        "customNamePlaceholder": "e.g. My Piano, ESP32 Drums...",
+        "free": "free"
     },
     "channelRouter": {
         "title": "MIDI-routeringsconfiguratie",
@@ -2067,5 +2082,20 @@
         "allowInstrumentReuseDesc": "Staat toe hetzelfde instrument aan meerdere MIDI-kanalen toe te wijzen wanneer er onvoldoende instrumenten beschikbaar zijn.",
         "sharedPenalty": "Delingsstraf",
         "sharedPenaltyDesc": "Scorereductie voor gedeelde toewijzingen"
+    },
+    "instrumentFamilies": {
+        "keyboards": "Keyboards",
+        "chromaticPercussion": "Chromatic Percussion",
+        "organs": "Organs",
+        "pluckedStrings": "Plucked Strings",
+        "bowedStrings": "Bowed Strings",
+        "ensembles": "Ensembles",
+        "brass": "Brass",
+        "reeds": "Reeds",
+        "winds": "Winds (flutes)",
+        "synths": "Synths",
+        "percussive": "Percussion",
+        "sfx": "Sound Effects",
+        "drumKits": "Drum Kits (GM)"
     }
 }

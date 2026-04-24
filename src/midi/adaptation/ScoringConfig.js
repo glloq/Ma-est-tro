@@ -68,7 +68,8 @@ const ScoringConfig = {
     channel10Drums: 5,            // Channel 10 assigned to drums
     exactTypeMatch: 20,           // Exact hierarchical type (e.g., guitar ↔ guitar)
     subtypeMatch: 5,              // Exact subtype on top
-    sameFamilyMatch: 12           // Same family (e.g., reed ↔ pipe = woodwinds)
+    sameFamilyMatch: 12,          // Same family (e.g., reed ↔ pipe = woodwinds)
+    samePhysicalFamilyMatch: 6    // Same physical-taxonomy family (13-family, v7 picker)
   },
 
   /**

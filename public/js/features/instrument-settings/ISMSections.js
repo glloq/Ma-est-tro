@@ -22,18 +22,23 @@
         const settings = tab.settings;
         const channel = tab.channel;
 
-        // GM category emoji
+        // GM category emoji (section-title icon)
         const gmProgram = settings.gm_program;
         const catKey = this._getGmCategoryKey(gmProgram);
         const gmEmoji = catKey ? (InstrumentSettingsModal.GM_CATEGORY_EMOJIS[catKey] || '🎵') : '🎵';
 
-        // GM 2-step selection: category + program
-        const gmCategoryOptions = typeof renderGMCategoryOptions === 'function'
-            ? renderGMCategoryOptions(settings.gm_program, channel) : '';
-        const detectedCategory = typeof getGmCategoryForProgram === 'function'
-            ? getGmCategoryForProgram(settings.gm_program, channel) : null;
-        const gmProgramOptions = (detectedCategory && typeof renderGMProgramOptionsForCategory === 'function')
-            ? renderGMProgramOptionsForCategory(detectedCategory, settings.gm_program, channel) : '';
+        // Identity picker state: always derived from the current tab on a full
+        // render. Preservation of 'instruments' step across interactions is
+        // handled by the partial re-renders in _rerenderIdentityPicker.
+        const hasProgram = gmProgram != null || channel === 9;
+        const fam = (window.InstrumentFamilies && hasProgram)
+            ? window.InstrumentFamilies.getFamilyForProgram(gmProgram, channel)
+            : null;
+        this._identityUI = {
+            step: hasProgram ? 'selected' : 'family',
+            currentFamilySlug: fam ? fam.slug : null
+        };
+        const pickerHtml = this._renderIdentityPicker();
 
         // SysEx identity
         const sysexIdentity = settings.sysex_identity || (this._sysexIdentityCache && this._sysexIdentityCache[this.device.id]) || null;
@@ -90,16 +95,9 @@
         return `
             <h3 class="ism-section-title"><span class="ism-section-title-icon">${gmEmoji}</span> ${this.t('instrumentSettings.sectionIdentity') || 'Identité'}</h3>
 
-            <div class="ism-form-group">
+            <div class="ism-form-group ism-identity-picker-wrap">
                 <label>${this.t('instrumentSettings.gmCategory') || 'Instrument'}</label>
-                <select id="gmCategorySelect">${gmCategoryOptions}</select>
-                <span class="ism-form-hint">${this.t('instrumentSettings.gmCategoryHelp') || 'Sélectionnez le type d\'instrument'}</span>
-            </div>
-
-            <div class="ism-form-group" id="gmProgramGroup" style="${detectedCategory ? '' : 'display: none;'}">
-                <label>${this.t('instrumentSettings.gmProgram') || 'Banque son (GM)'}</label>
-                <select id="gmProgramSelect">${gmProgramOptions}</select>
-                <span class="ism-form-hint">${this.t('instrumentSettings.gmProgramHelp') || 'Sélectionnez la banque son à associer'}</span>
+                ${pickerHtml}
                 <div id="drumKitDesc" class="ism-drum-kit-desc" style="display: none;"></div>
                 <div id="drumKitNotice" class="ism-drum-notice" style="display: none;">
                     ${this.t('instrumentSettings.drumKitNotice') || 'Les kits de batterie utilisent le canal MIDI 10 et le mode notes individuelles.'}
@@ -132,6 +130,177 @@
             </div>
 
         `;
+    };
+
+    // ===== Identity picker (3 états : family | instruments | selected) =====
+
+    ISMSections._renderIdentityPicker = function() {
+        const tab = this._getActiveTab();
+        if (!tab) return '';
+        const settings = tab.settings;
+        const channel = tab.channel;
+        const gmProgram = settings.gm_program;
+        const step = (this._identityUI && this._identityUI.step) || 'family';
+
+        // Hidden input preserved for ISMSave compatibility (reads #gmProgramSelect)
+        const encoded = (gmProgram != null && typeof gmProgramToSelectValue === 'function')
+            ? gmProgramToSelectValue(gmProgram, channel)
+            : '';
+        const hiddenInput = `<input type="hidden" id="gmProgramSelect" value="${encoded === '' || encoded == null ? '' : encoded}">`;
+
+        if (step === 'selected') {
+            return `<div class="ism-identity-picker" data-step="selected">
+                ${this._renderIdentitySelectedBlock()}
+                ${hiddenInput}
+            </div>`;
+        }
+        if (step === 'instruments') {
+            return `<div class="ism-identity-picker" data-step="instruments">
+                ${this._renderIdentityInstrumentGrid()}
+                ${hiddenInput}
+            </div>`;
+        }
+        return `<div class="ism-identity-picker" data-step="family">
+            ${this._renderIdentityFamilyRow()}
+            ${hiddenInput}
+        </div>`;
+    };
+
+    ISMSections._renderIdentityFamilyRow = function() {
+        const families = (window.InstrumentFamilies && window.InstrumentFamilies.getAllFamilies())
+            || [];
+        const current = this._identityUI ? this._identityUI.currentFamilySlug : null;
+        const self = this;
+        const btns = families.map(function(fam) {
+            const label = self.t(fam.labelKey) || fam.slug;
+            const svg = window.InstrumentFamilies.familyIconUrl(fam.slug);
+            const isActive = fam.slug === current ? 'active' : '';
+            return `<button type="button" class="ism-family-btn ${isActive}" data-family="${fam.slug}" title="${self.escape(label)}">
+                <span class="ism-family-icon">
+                    <img class="ism-family-svg" src="${svg}" alt=""
+                        onerror="this.style.display='none';this.nextElementSibling.style.display='inline';">
+                    <span class="ism-family-emoji" style="display:none">${fam.emoji}</span>
+                </span>
+                <span class="ism-family-label">${self.escape(label)}</span>
+            </button>`;
+        }).join('');
+        const hint = this.t('instrumentSettings.pickFamily') || 'Choisir une famille d\'instruments';
+        return `<div class="ism-family-row">${btns}</div>
+            <span class="ism-form-hint">${this.escape(hint)}</span>`;
+    };
+
+    ISMSections._renderIdentityInstrumentGrid = function() {
+        const tab = this._getActiveTab();
+        if (!tab) return '';
+        const channel = tab.channel;
+        const famSlug = this._identityUI ? this._identityUI.currentFamilySlug : null;
+        const fam = (window.InstrumentFamilies && famSlug)
+            ? window.InstrumentFamilies.getFamilyBySlug(famSlug) : null;
+        if (!fam) return this._renderIdentityFamilyRow();
+
+        const self = this;
+        const currentProgram = tab.settings.gm_program;
+        const backLabel = this.t('instrumentSettings.backToFamily') || '◀ Familles';
+        const backBtn = `<button type="button" class="ism-back-to-family">◀ ${this.escape(backLabel.replace(/^◀\s*/, ''))}</button>`;
+
+        let tiles = '';
+        if (fam.isDrumKits) {
+            const kits = window.InstrumentFamilies.GM_DRUM_KITS_LIST;
+            const offset = (typeof GM_DRUM_KIT_OFFSET !== 'undefined') ? GM_DRUM_KIT_OFFSET : 128;
+            tiles = kits.map(function(kit) {
+                const encoded = kit.program + offset;
+                const isActive = (channel === 9 && currentProgram === kit.program) ? 'active' : '';
+                const icon = window.InstrumentFamilies.resolveInstrumentIcon({ gmProgram: encoded, channel: 9 });
+                const kitName = icon.name || kit.name;
+                const descKey = 'instruments.drumKitsDesc.' + kit.program;
+                const descTrans = (typeof i18n !== 'undefined' && i18n.t) ? i18n.t(descKey) : descKey;
+                const desc = descTrans && descTrans !== descKey ? descTrans : '';
+                return `<button type="button" class="ism-instrument-btn ${isActive}"
+                        data-program="${encoded}" data-drum-kit="true"
+                        data-desc="${self.escape(desc)}"
+                        title="${self.escape(kitName)}">
+                    <span class="ism-inst-icon">
+                        ${icon.slug ? `<img class="ism-inst-svg" src="${icon.svgUrl}" alt=""
+                            onerror="this.style.display='none';this.nextElementSibling.style.display='inline';">
+                        <span class="ism-inst-emoji" style="display:none">${icon.emoji}</span>`
+                        : `<span class="ism-inst-emoji">${icon.emoji}</span>`}
+                    </span>
+                    <span class="ism-inst-number">${kit.program}</span>
+                    <span class="ism-inst-name">${self.escape(kitName)}</span>
+                </button>`;
+            }).join('');
+        } else {
+            tiles = fam.programs.map(function(p) {
+                const isActive = (p === currentProgram && channel !== 9) ? 'active' : '';
+                const icon = window.InstrumentFamilies.resolveInstrumentIcon({ gmProgram: p, channel: channel });
+                const name = (typeof getGMInstrumentName === 'function')
+                    ? getGMInstrumentName(p) : ('Program ' + p);
+                return `<button type="button" class="ism-instrument-btn ${isActive}"
+                        data-program="${p}" data-drum-kit="false"
+                        title="${self.escape(name)}">
+                    <span class="ism-inst-icon">
+                        ${icon.slug ? `<img class="ism-inst-svg" src="${icon.svgUrl}" alt=""
+                            onerror="this.style.display='none';this.nextElementSibling.style.display='inline';">
+                        <span class="ism-inst-emoji" style="display:none">${icon.emoji}</span>`
+                        : `<span class="ism-inst-emoji">${icon.emoji}</span>`}
+                    </span>
+                    <span class="ism-inst-number">${p}</span>
+                    <span class="ism-inst-name">${self.escape(name)}</span>
+                </button>`;
+            }).join('');
+        }
+
+        const famLabel = this.t(fam.labelKey) || fam.slug;
+        const hint = this.t('instrumentSettings.pickInstrument') || 'Choisir un instrument';
+        return `<div class="ism-instrument-grid-header">
+                ${backBtn}
+                <span class="ism-instrument-grid-family">${fam.emoji} ${this.escape(famLabel)}</span>
+            </div>
+            <div class="ism-instrument-grid">${tiles}</div>
+            <span class="ism-form-hint">${this.escape(hint)}</span>`;
+    };
+
+    ISMSections._renderIdentitySelectedBlock = function() {
+        const tab = this._getActiveTab();
+        if (!tab) return '';
+        const settings = tab.settings;
+        const channel = tab.channel;
+        const gmProgram = settings.gm_program;
+        const isDrumChannel = channel === 9;
+
+        let displayProgram = gmProgram;
+        let icon;
+        let name;
+        if (isDrumChannel) {
+            const offset = (typeof GM_DRUM_KIT_OFFSET !== 'undefined') ? GM_DRUM_KIT_OFFSET : 128;
+            icon = window.InstrumentFamilies.resolveInstrumentIcon({
+                gmProgram: gmProgram != null ? (gmProgram + offset) : null,
+                channel: 9
+            });
+            name = icon.name || (this.t('instrumentSettings.drumKit') || 'Kit batterie');
+        } else {
+            icon = window.InstrumentFamilies.resolveInstrumentIcon({ gmProgram: gmProgram, channel: channel });
+            name = icon.name || (typeof getGMInstrumentName === 'function'
+                ? getGMInstrumentName(gmProgram) : ('Program ' + gmProgram));
+        }
+
+        const editTitle = this.t('instrumentSettings.editInstrument') || 'Modifier l\'instrument';
+        const delTitle = this.t('instrumentSettings.deleteInstrument') || 'Effacer l\'instrument';
+
+        return `<div class="ism-selected-instrument">
+            <span class="ism-sel-icon">
+                ${icon.slug ? `<img class="ism-sel-svg" src="${icon.svgUrl}" alt=""
+                    onerror="this.style.display='none';this.nextElementSibling.style.display='inline';">
+                <span class="ism-sel-emoji" style="display:none">${icon.emoji}</span>`
+                : `<span class="ism-sel-emoji">${icon.emoji}</span>`}
+            </span>
+            <span class="ism-sel-program">${displayProgram != null ? displayProgram : ''}</span>
+            <span class="ism-sel-name">${this.escape(name)}</span>
+            <div class="ism-sel-actions">
+                <button type="button" class="ism-icon-btn ism-edit-instrument" title="${this.escape(editTitle)}" aria-label="${this.escape(editTitle)}">✏️</button>
+                <button type="button" class="ism-icon-btn ism-delete-instrument" title="${this.escape(delTitle)}" aria-label="${this.escape(delTitle)}">🗑️</button>
+            </div>
+        </div>`;
     };
 
     ISMSections._renderSysexIdentityCard = function(identity) {
@@ -261,6 +430,28 @@
                 ${this._renderDrumsContent()}
             </div>` : ''}
 
+            <div class="ism-subsection" id="timingsSubsection">
+                <h4 class="ism-subsection-title">⏱️ ${this.t('instrumentSettings.sectionTimings') || 'Temporisations (voix principale)'}</h4>
+                <div class="ism-form-row">
+                    <div class="ism-form-group">
+                        <label>${this.t('instrumentSettings.minNoteInterval') || 'Temps minimum entre 2 notes (ms)'}</label>
+                        <input type="number" id="minNoteInterval" value="${settings.min_note_interval != null ? settings.min_note_interval : ''}" min="0" max="5000" step="1" placeholder="0">
+                        <span class="ism-form-hint">${this.t('instrumentSettings.minNoteIntervalHelp') || 'Délai minimum entre deux note-on consécutifs (en ms)'}</span>
+                    </div>
+                    <div class="ism-form-group">
+                        <label>${this.t('instrumentSettings.minNoteDuration') || 'Temps note actif minimum (ms)'}</label>
+                        <input type="number" id="minNoteDuration" value="${settings.min_note_duration != null ? settings.min_note_duration : ''}" min="0" max="5000" step="1" placeholder="0">
+                        <span class="ism-form-hint">${this.t('instrumentSettings.minNoteDurationHelp') || 'Durée minimum pendant laquelle une note reste active (en ms)'}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ism-subsection" id="voicesSubsection">
+                <h4 class="ism-subsection-title">🎛️ ${this.t('instrumentSettings.sectionVoices') || 'Voix GM additionnelles'}</h4>
+                <p class="ism-subsection-hint">${this.t('instrumentSettings.voicesHint') || 'Ajoutez des variantes de timbre (ex : fingerstyle, slap, tapping) jouant les mêmes notes avec un actionneur différent.'}</p>
+                ${this._renderVoicesSubsection()}
+            </div>
+
             <input type="hidden" id="supportedCCs" value="${currentCCs.join(', ')}">
         `;
     };
@@ -366,18 +557,6 @@
                                 <label>CC#</label>
                                 <input type="number" class="si-input si-input-xs" id="ism-cc-str-num" value="${ccStrNum}" min="0" max="127">
                             </div>
-                            <div class="si-cc-param">
-                                <label>Min</label>
-                                <input type="number" class="si-input si-input-xs" id="ism-cc-str-min" value="${ccStrMin}" min="0" max="127">
-                            </div>
-                            <div class="si-cc-param">
-                                <label>Max</label>
-                                <input type="number" class="si-input si-input-xs" id="ism-cc-str-max" value="${ccStrMax}" min="0" max="127">
-                            </div>
-                            <div class="si-cc-param">
-                                <label>Offset</label>
-                                <input type="number" class="si-input si-input-xs" id="ism-cc-str-offset" value="${ccStrOff}" min="-127" max="127">
-                            </div>
                         </div>
                     </div>
                     <div class="si-cc-row">
@@ -387,23 +566,73 @@
                                 <label>CC#</label>
                                 <input type="number" class="si-input si-input-xs" id="ism-cc-fret-num" value="${ccFretNum}" min="0" max="127">
                             </div>
-                            <div class="si-cc-param">
-                                <label>Min</label>
-                                <input type="number" class="si-input si-input-xs" id="ism-cc-fret-min" value="${ccFretMin}" min="0" max="127">
-                            </div>
-                            <div class="si-cc-param">
-                                <label>Max</label>
-                                <input type="number" class="si-input si-input-xs" id="ism-cc-fret-max" value="${ccFretMax}" min="0" max="127">
-                            </div>
-                            <div class="si-cc-param">
-                                <label>Offset</label>
-                                <input type="number" class="si-input si-input-xs" id="ism-cc-fret-offset" value="${ccFretOff}" min="-127" max="127">
-                            </div>
                         </div>
                     </div>
+                    <input type="hidden" id="ism-cc-str-min" value="${ccStrMin}">
+                    <input type="hidden" id="ism-cc-str-max" value="${ccStrMax}">
+                    <input type="hidden" id="ism-cc-str-offset" value="${ccStrOff}">
+                    <input type="hidden" id="ism-cc-fret-min" value="${ccFretMin}">
+                    <input type="hidden" id="ism-cc-fret-max" value="${ccFretMax}">
+                    <input type="hidden" id="ism-cc-fret-offset" value="${ccFretOff}">
                 </div>
             </div>
         `;
+    };
+
+    // ===== Voices subsection (multi-GM alternatives) =====
+
+    ISMSections._renderVoicesSubsection = function() {
+        const tab = this._getActiveTab();
+        if (!tab) return '';
+        const voices = Array.isArray(tab.voices) ? tab.voices : [];
+        const channel = tab.channel;
+        const self = this;
+
+        let rowsHtml = '';
+        if (voices.length === 0) {
+            rowsHtml = `<div class="ism-voices-empty">${this.escape(this.t('instrumentSettings.voicesEmpty') || 'Aucune voix additionnelle — la voix principale est définie dans l\'onglet Identité.')}</div>`;
+        } else {
+            rowsHtml = voices.map(function(v, idx) {
+                const gmProgram = v.gm_program;
+                const icon = window.InstrumentFamilies
+                    ? window.InstrumentFamilies.resolveInstrumentIcon({ gmProgram: gmProgram, channel: channel })
+                    : { emoji: '🎵', svgUrl: null, slug: null, name: null };
+                const name = icon.name
+                    || (typeof getGMInstrumentName === 'function' && gmProgram != null ? getGMInstrumentName(gmProgram) : '—');
+                const ccCsv = Array.isArray(v.supported_ccs) ? v.supported_ccs.join(', ') : '';
+                return `<div class="ism-voice-row" data-voice-index="${idx}">
+                    <div class="ism-voice-head">
+                        <span class="ism-voice-icon">
+                            ${icon.slug ? `<img class="ism-voice-svg" src="${icon.svgUrl}" alt=""
+                                onerror="this.style.display='none';this.nextElementSibling.style.display='inline';">
+                            <span class="ism-voice-emoji" style="display:none">${icon.emoji}</span>`
+                            : `<span class="ism-voice-emoji">${icon.emoji}</span>`}
+                        </span>
+                        <span class="ism-voice-number">${gmProgram != null ? gmProgram : '—'}</span>
+                        <span class="ism-voice-name">${self.escape(name)}</span>
+                        <button type="button" class="ism-icon-btn ism-voice-delete" title="${self.escape(self.t('instrumentSettings.deleteVoice') || 'Supprimer cette voix')}" aria-label="${self.escape(self.t('instrumentSettings.deleteVoice') || 'Supprimer cette voix')}">🗑️</button>
+                    </div>
+                    <div class="ism-voice-params">
+                        <div class="ism-voice-param">
+                            <label>${self.escape(self.t('instrumentSettings.minNoteInterval') || 'Temps min entre 2 notes (ms)')}</label>
+                            <input type="number" class="ism-voice-interval" value="${v.min_note_interval != null ? v.min_note_interval : ''}" min="0" max="5000" placeholder="0">
+                        </div>
+                        <div class="ism-voice-param">
+                            <label>${self.escape(self.t('instrumentSettings.minNoteDuration') || 'Temps note active min (ms)')}</label>
+                            <input type="number" class="ism-voice-duration" value="${v.min_note_duration != null ? v.min_note_duration : ''}" min="0" max="5000" placeholder="0">
+                        </div>
+                        <div class="ism-voice-param ism-voice-ccs">
+                            <label>${self.escape(self.t('instrumentSettings.voiceCcs') || 'CC supportés (séparés par virgules)')}</label>
+                            <input type="text" class="ism-voice-ccs-input" value="${self.escape(ccCsv)}" placeholder="1, 7, 11">
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        const addLabel = this.t('instrumentSettings.addVoice') || 'Ajouter une voix';
+        return `<div class="ism-voices-list">${rowsHtml}</div>
+            <button type="button" class="ism-voice-add-btn">➕ ${this.escape(addLabel)}</button>`;
     };
 
     ISMSections._renderDrumsContent = function() {
@@ -511,18 +740,6 @@
                 <label>${this.t('instrumentSettings.commTimeout') || 'Timeout de communication (ms)'}</label>
                 <input type="number" id="commTimeout" value="${commTimeout}" min="100" max="30000" step="100">
                 <span class="ism-form-hint">${this.t('instrumentSettings.commTimeoutHelp') || 'Délai d\'attente maximal pour une réponse (en ms)'}</span>
-            </div>
-
-            <div class="ism-form-group">
-                <label>${this.t('instrumentSettings.minNoteInterval') || 'Temps minimum entre 2 notes (ms)'}</label>
-                <input type="number" id="minNoteInterval" value="${settings.min_note_interval != null ? settings.min_note_interval : ''}" min="0" max="5000" step="1" placeholder="0">
-                <span class="ism-form-hint">${this.t('instrumentSettings.minNoteIntervalHelp') || 'Délai minimum entre deux note-on consécutifs (en ms)'}</span>
-            </div>
-
-            <div class="ism-form-group">
-                <label>${this.t('instrumentSettings.minNoteDuration') || 'Temps note actif minimum (ms)'}</label>
-                <input type="number" id="minNoteDuration" value="${settings.min_note_duration != null ? settings.min_note_duration : ''}" min="0" max="5000" step="1" placeholder="0">
-                <span class="ism-form-hint">${this.t('instrumentSettings.minNoteDurationHelp') || 'Durée minimum pendant laquelle une note reste active (en ms)'}</span>
             </div>
 
         `;

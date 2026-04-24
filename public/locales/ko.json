@@ -659,7 +659,21 @@
         "minNoteInterval": "두 노트 사이의 최소 간격 (ms)",
         "minNoteIntervalHelp": "연속된 두 note-on 이벤트 사이의 최소 지연 (ms)",
         "minNoteDuration": "최소 활성 노트 지속 시간 (ms)",
-        "minNoteDurationHelp": "노트가 활성 상태로 유지되는 최소 시간 (ms)"
+        "minNoteDurationHelp": "노트가 활성 상태로 유지되는 최소 시간 (ms)",
+        "pickFamily": "Pick an instrument family",
+        "pickInstrument": "Pick an instrument in this family",
+        "backToFamily": "Families",
+        "editInstrument": "Edit instrument",
+        "deleteInstrument": "Clear instrument",
+        "deleteInstrumentConfirm": "Clear the instrument choice for this channel?",
+        "sectionTimings": "Timings (primary voice)",
+        "sectionVoices": "Additional GM voices",
+        "voicesHint": "Add timbre variants (e.g. fingerstyle, slap, tapping, arco/pizzicato) playing the same notes with a different actuator.",
+        "voicesEmpty": "No additional voice — the primary voice is set in the Identity tab.",
+        "addVoice": "Add a voice",
+        "deleteVoice": "Remove this voice",
+        "voiceCcs": "Supported CCs (comma-separated)",
+        "previewPickInstrument": "🎵 Pick an instrument to enable the preview"
     },
     "playlist": {
         "title": "재생목록",
@@ -887,7 +901,8 @@
         "instrumentType": "Instrument type",
         "customType": "Custom",
         "customName": "Custom name",
-        "customNamePlaceholder": "e.g. My Piano, ESP32 Drums..."
+        "customNamePlaceholder": "e.g. My Piano, ESP32 Drums...",
+        "free": "free"
     },
     "channelRouter": {
         "title": "MIDI 라우팅 설정",
@@ -2067,5 +2082,20 @@
         "allowInstrumentReuseDesc": "악기가 부족할 때 동일한 악기를 여러 MIDI 채널에 할당할 수 있도록 허용합니다.",
         "sharedPenalty": "공유 페널티",
         "sharedPenaltyDesc": "공유 할당에 대한 점수 감소"
+    },
+    "instrumentFamilies": {
+        "keyboards": "Keyboards",
+        "chromaticPercussion": "Chromatic Percussion",
+        "organs": "Organs",
+        "pluckedStrings": "Plucked Strings",
+        "bowedStrings": "Bowed Strings",
+        "ensembles": "Ensembles",
+        "brass": "Brass",
+        "reeds": "Reeds",
+        "winds": "Winds (flutes)",
+        "synths": "Synths",
+        "percussive": "Percussion",
+        "sfx": "Sound Effects",
+        "drumKits": "Drum Kits (GM)"
     }
 }

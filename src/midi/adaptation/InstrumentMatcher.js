@@ -18,6 +18,7 @@ import MidiUtils from '../../utils/MidiUtils.js';
 import ScoringConfig from './ScoringConfig.js';
 import DrumNoteMapper from './DrumNoteMapper.js';
 import InstrumentTypeConfig from './InstrumentTypeConfig.js';
+import InstrumentFamilies from '../gm/InstrumentFamilies.js';
 
 /**
  * Multi-criteria channel ↔ instrument compatibility scorer (0-100).
@@ -71,6 +72,20 @@ class InstrumentMatcher {
     );
     score += programScore.score;
     if (programScore.info) info.push(programScore.info);
+
+    // 1b. Physical-taxonomy family match (v7 InstrumentFamilies bonus).
+    // Complements the GM-category bonus above: fires only when the two
+    // programs share the physical family (e.g. nylon guitar ↔ sitar,
+    // both plucked_strings) but come from different GM categories, so
+    // we don't double-count with `sameCategoryMatch`.
+    const familyScore = this.scorePhysicalFamilyMatch(
+      channelAnalysis.primaryProgram,
+      channelAnalysis.channel,
+      instrument.gm_program,
+      instrument.channel
+    );
+    score += familyScore.score;
+    if (familyScore.info) info.push(familyScore.info);
 
     // 2. Note compatibility (+40 points max)
     let parsedSelectedNotes = null;
@@ -318,6 +333,57 @@ class InstrumentMatcher {
     }
 
     return { score: 0 };
+  }
+
+  /**
+   * Physical-family bonus using the v7 `InstrumentFamilies` taxonomy
+   * (13 families driven by actuator/physical type rather than GM slot
+   * number). Complements {@link scoreProgramCompatibility}'s same-GM-
+   * category bonus.
+   *
+   * Fires only when:
+   *   - both programs resolve to a family
+   *   - the two programs share the same physical family
+   *   - but are in DIFFERENT GM categories (otherwise
+   *     `sameCategoryMatch` already awards the match and we'd
+   *     double-count).
+   *
+   * Examples that trigger the bonus:
+   *   - nylon guitar (24, guitar cat) ↔ sitar (104, ethnic cat)      → plucked_strings
+   *   - violin (40, strings cat) ↔ fiddle (110, ethnic cat)          → bowed_strings
+   *   - accordion (21, organ cat) ↔ clarinet (71, reed cat)          → reeds
+   *
+   * @param {number|null|undefined} channelProgram
+   * @param {number|null|undefined} channelChannel
+   * @param {number|null|undefined} instrumentProgram
+   * @param {number|null|undefined} instrumentChannel
+   * @returns {{score:number, info:string|null}}
+   */
+  scorePhysicalFamilyMatch(channelProgram, channelChannel, instrumentProgram, instrumentChannel) {
+    if (channelProgram == null || instrumentProgram == null) {
+      return { score: 0, info: null };
+    }
+    // Perfect program match is already rewarded by perfectProgramMatch
+    if (channelProgram === instrumentProgram) {
+      return { score: 0, info: null };
+    }
+
+    const chanFam = InstrumentFamilies.getFamilyForProgram(channelProgram, channelChannel);
+    const instFam = InstrumentFamilies.getFamilyForProgram(instrumentProgram, instrumentChannel);
+    if (!chanFam || !instFam) return { score: 0, info: null };
+    if (chanFam.slug !== instFam.slug) return { score: 0, info: null };
+
+    // Avoid double-counting the same signal as sameCategoryMatch.
+    // Both programs in the same GM category (8-program block) are already
+    // rewarded by scoreProgramCompatibility.
+    const chanGmCat = Math.floor(channelProgram / 8);
+    const instGmCat = Math.floor(instrumentProgram / 8);
+    if (chanGmCat === instGmCat) return { score: 0, info: null };
+
+    return {
+      score: this.config.getBonus('samePhysicalFamilyMatch'),
+      info: `Same physical family: ${chanFam.slug}`
+    };
   }
 
   /**
