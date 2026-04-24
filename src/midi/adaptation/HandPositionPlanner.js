@@ -100,10 +100,87 @@ class HandPositionPlanner {
     for (const h of (this.config.hands || [])) {
       this.handById.set(h.id, h);
     }
+
+    // Physical mode is active when frets-unit AND both scale length and
+    // hand width (mm) are known. It supersedes the constant-frets-window
+    // model with a position-dependent reach derived from equal-temperament
+    // geometry. When any required input is missing, we fall back to the
+    // constant-frets model — same behavior as before this feature.
+    this._physical = this._maybeBuildPhysical();
   }
 
   /** @private */
-  _spanOf(hand) {
+  _maybeBuildPhysical() {
+    if (this.unit !== 'frets') return null;
+    const L = this.ctx.scaleLengthMm;
+    if (!Number.isFinite(L) || L <= 0) return null;
+    // Per-hand span_mm (could differ between hands in theory; in practice
+    // frets-mode has a single 'fretting' hand). We resolve lazily because
+    // _spanAt needs the hand object.
+    const moveMmPerSec = this.config.hand_move_mm_per_sec;
+    if (!Number.isFinite(moveMmPerSec) || moveMmPerSec <= 0) {
+      // Speed in mm is required to make the physical travel computation
+      // meaningful. Without it the planner would mix mm-window with
+      // frets-speed which would give nonsense move_too_fast warnings.
+      return null;
+    }
+    return { L, moveMmPerSec };
+  }
+
+  /**
+   * Distance in millimetres between two fret positions on a scale of
+   * length L (mm). Equal-temperament geometry: fret n sits at
+   * `L · (1 − 2^(−n/12))` from the nut, so the gap shrinks geometrically
+   * the further you go up the neck.
+   * @private
+   */
+  _fretDistanceMm(a, b) {
+    const L = this._physical.L;
+    return L * (Math.pow(2, -a / 12) - Math.pow(2, -b / 12));
+  }
+
+  /**
+   * Highest fret reachable from anchor `p` with a hand of width `s` mm.
+   * Solved from `posFromNut(maxReach) − posFromNut(p) = s`. If the hand
+   * is wide enough to cover everything above `p` (would require crossing
+   * the bridge), we return `+Infinity` and the caller clamps to the
+   * instrument range.
+   * @private
+   */
+  _maxReachFromMm(p, s) {
+    const L = this._physical.L;
+    const term = Math.pow(2, -p / 12) - s / L;
+    if (term <= 0) return Number.POSITIVE_INFINITY;
+    return -12 * Math.log2(term);
+  }
+
+  /**
+   * Lowest anchor `p` that still fits a chord whose top note sits on
+   * fret `q`, with a hand of width `s` mm. Inverse of `_maxReachFromMm`.
+   * Negative results are clamped to 0 (open-string side of the nut).
+   * @private
+   */
+  _minAnchorForTopMm(q, s) {
+    const L = this._physical.L;
+    const v = Math.pow(2, -q / 12) + s / L;
+    const p = -12 * Math.log2(v);
+    return p < 0 ? 0 : p;
+  }
+
+  /**
+   * Span (in axis units) reachable from anchor `p` with the given hand.
+   * In physical mode the value depends on `p` (geometric fret spacing);
+   * otherwise it's a constant fallback per-hand.
+   * @private
+   */
+  _spanAt(hand, p) {
+    if (this._physical) {
+      const s = hand.hand_span_mm;
+      if (Number.isFinite(s) && s > 0) {
+        const top = this._maxReachFromMm(p, s);
+        return top - p;
+      }
+    }
     if (this.unit === 'frets') return hand.hand_span_frets ?? 4;
     return hand.hand_span_semitones ?? 14;
   }
@@ -192,47 +269,92 @@ class HandPositionPlanner {
       // Chord span check + window decision.
       const groupLow = g.low;
       const groupHigh = g.high;
-      const groupSpan = groupHigh - groupLow;
-      const span = this._spanOf(hand);
+      const span = this._spanAt(hand, groupLow);
 
-      if (groupSpan > span) {
-        warnings.push({
-          time: g.time, hand: g.hand, note: null,
-          code: 'chord_span_exceeded',
-          message: `Chord span ${groupSpan} ${unitLabel} > hand span ${span} ${unitLabel}`
-        });
+      if (this._physical && Number.isFinite(hand.hand_span_mm) && hand.hand_span_mm > 0) {
+        // Physical mode: compare actual mm distance, not fret count.
+        const chordMm = this._fretDistanceMm(groupLow, groupHigh);
+        if (chordMm > hand.hand_span_mm) {
+          const approxFretsAtAnchor = this._maxReachFromMm(groupLow, hand.hand_span_mm) - groupLow;
+          warnings.push({
+            time: g.time, hand: g.hand, note: null,
+            code: 'chord_span_exceeded',
+            spanMm: Math.round(chordMm),
+            handMm: hand.hand_span_mm,
+            approxFrets: Number(approxFretsAtAnchor.toFixed(1)),
+            atFret: groupLow,
+            message: `Chord span ${Math.round(chordMm)} mm > hand ${hand.hand_span_mm} mm — ~${approxFretsAtAnchor.toFixed(1)} frets at fret ${groupLow}`
+          });
+        }
+      } else {
+        const groupSpan = groupHigh - groupLow;
+        if (groupSpan > span) {
+          warnings.push({
+            time: g.time, hand: g.hand, note: null,
+            code: 'chord_span_exceeded',
+            message: `Chord span ${groupSpan} ${unitLabel} > hand span ${span} ${unitLabel}`
+          });
+        }
+      }
+
+      // max_fingers check (frets mode only). Open strings (fret 0) don't
+      // press a string against the fretboard, so they don't consume a
+      // finger — exclude them from the count. The check is non-blocking,
+      // the planner still emits a CC even when too many fingers are
+      // demanded.
+      if (this.unit === 'frets' && Number.isFinite(hand.max_fingers) && hand.max_fingers > 0) {
+        let frettedCount = 0;
+        for (const nIdx of g.notes) {
+          const f = notes[nIdx].fretPosition;
+          if (Number.isFinite(f) && f > 0) frettedCount++;
+        }
+        if (frettedCount > hand.max_fingers) {
+          warnings.push({
+            time: g.time, hand: g.hand, note: null,
+            code: 'too_many_fingers',
+            count: frettedCount,
+            limit: hand.max_fingers,
+            message: `Chord requires ${frettedCount} fingers, hand has ${hand.max_fingers}`
+          });
+        }
       }
 
       // Need a shift if: no window yet, or any note falls outside current window.
+      const currentSpan = s.windowLowest != null ? this._spanAt(hand, s.windowLowest) : null;
       const needShift = s.windowLowest == null
         || groupLow < s.windowLowest
-        || groupHigh > s.windowLowest + span;
+        || groupHigh > s.windowLowest + currentSpan;
 
       if (needShift) {
-        // Anchor the new window. When shifting up we prefer to anchor at
-        // groupHigh - span (keeps the hand's low fingers on the chord's
-        // bottom note); for a shift down we anchor at groupLow (the low
-        // finger takes the lowest note).
+        // Anchor the new window. When shifting up we want the smallest p
+        // that still covers groupHigh — in physical mode, given by the
+        // closed-form inversion `_minAnchorForTopMm`; in the fallback,
+        // `groupHigh − span`.
         let newLow;
         if (s.windowLowest == null) {
           newLow = groupLow;
         } else if (groupLow < s.windowLowest) {
           newLow = groupLow;
+        } else if (this._physical && Number.isFinite(hand.hand_span_mm) && hand.hand_span_mm > 0) {
+          newLow = Math.max(groupLow, this._minAnchorForTopMm(groupHigh, hand.hand_span_mm));
         } else {
-          // groupHigh > windowLowest + span
           newLow = Math.max(groupLow, groupHigh - span);
         }
 
-        // Clamp the anchor to the instrument's playable range so the
-        // CC we send is always a note the hand can actually reach. The
-        // note itself may still be out-of-range (reported separately as
-        // `out_of_range`); clamping keeps the hardware safe by not
-        // commanding it to move somewhere it cannot go.
+        // Clamp the anchor to the instrument's playable range so the CC
+        // we send is always a position the hand can actually reach. The
+        // note itself may still be out-of-range (reported separately).
+        const newSpan = this._spanAt(hand, newLow);
         if (instrumentMin != null && newLow < instrumentMin) {
           newLow = instrumentMin;
         }
-        if (instrumentMax != null && newLow + span > instrumentMax) {
-          newLow = Math.max(instrumentMin ?? 0, instrumentMax - span);
+        if (instrumentMax != null && newLow + newSpan > instrumentMax) {
+          // Slide the window down so its top fits the range max.
+          if (this._physical && Number.isFinite(hand.hand_span_mm) && hand.hand_span_mm > 0) {
+            newLow = Math.max(instrumentMin ?? 0, this._minAnchorForTopMm(instrumentMax, hand.hand_span_mm));
+          } else {
+            newLow = Math.max(instrumentMin ?? 0, instrumentMax - newSpan);
+          }
         }
 
         // Emit CC as early as possible.
@@ -244,15 +366,34 @@ class HandPositionPlanner {
           // Right after the last note-on of the previous window.
           ccTime = (s.lastNoteOnTime ?? g.time) + EPSILON_SECONDS;
           // Feasibility: enough time to physically move?
-          const travelUnits = Math.abs(newLow - s.windowLowest);
-          const requiredSec = travelUnits / commonSpeed;
-          const availableSec = g.time - ccTime;
-          if (requiredSec > availableSec) {
-            warnings.push({
-              time: g.time, hand: g.hand, note: null,
-              code: 'move_too_fast',
-              message: `Shift ${travelUnits} ${unitLabel} needs ${(requiredSec * 1000).toFixed(0)}ms, only ${(availableSec * 1000).toFixed(0)}ms available`
-            });
+          if (this._physical) {
+            const travelMm = Math.abs(this._fretDistanceMm(
+              Math.min(s.windowLowest, newLow),
+              Math.max(s.windowLowest, newLow)
+            ));
+            const requiredSec = travelMm / this._physical.moveMmPerSec;
+            const availableSec = g.time - ccTime;
+            if (requiredSec > availableSec) {
+              warnings.push({
+                time: g.time, hand: g.hand, note: null,
+                code: 'move_too_fast',
+                travelMm: Math.round(travelMm),
+                requiredMs: Math.round(requiredSec * 1000),
+                availableMs: Math.round(availableSec * 1000),
+                message: `Shift ${Math.round(travelMm)} mm needs ${(requiredSec * 1000).toFixed(0)}ms, only ${(availableSec * 1000).toFixed(0)}ms available`
+              });
+            }
+          } else {
+            const travelUnits = Math.abs(newLow - s.windowLowest);
+            const requiredSec = travelUnits / commonSpeed;
+            const availableSec = g.time - ccTime;
+            if (requiredSec > availableSec) {
+              warnings.push({
+                time: g.time, hand: g.hand, note: null,
+                code: 'move_too_fast',
+                message: `Shift ${travelUnits} ${unitLabel} needs ${(requiredSec * 1000).toFixed(0)}ms, only ${(availableSec * 1000).toFixed(0)}ms available`
+              });
+            }
           }
         }
 

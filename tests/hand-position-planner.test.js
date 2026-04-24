@@ -385,6 +385,154 @@ describe('HandPositionPlanner — frets mode', () => {
   });
 });
 
+// -----------------------------------------------------------------------------
+// frets mode — PHYSICAL model. When the context provides scaleLengthMm and
+// the hand carries hand_span_mm + hand_move_mm_per_sec, the planner switches
+// from constant-fret span to a position-dependent reach derived from
+// equal-temperament geometry. A 80 mm hand on a 650 mm scale covers ~2.2
+// frets at fret 1 and ~4.4 frets at fret 12.
+// -----------------------------------------------------------------------------
+
+const guitarPhysCfg = {
+  enabled: true,
+  mode: 'frets',
+  hand_move_mm_per_sec: 250,
+  hands: [{ id: 'fretting', cc_position_number: 22, hand_span_mm: 80 }]
+};
+const guitarPhysCtx = {
+  unit: 'frets',
+  scaleLengthMm: 650,
+  noteRangeMin: 0,
+  noteRangeMax: 22
+};
+
+describe('HandPositionPlanner — frets mode (physical model)', () => {
+  test('initial CC value is the lowest fret as usual', () => {
+    const p = new HandPositionPlanner(guitarPhysCfg, guitarPhysCtx);
+    const { ccEvents } = p.plan([fretNote(0, 5)]);
+    expect(ccEvents).toHaveLength(1);
+    expect(ccEvents[0].value).toBe(5);
+  });
+
+  test('low-position hand covers fewer frets than high-position hand', () => {
+    // A 4-fret jump near the nut should force a shift (~2 fret reach).
+    const pLow = new HandPositionPlanner(guitarPhysCfg, guitarPhysCtx);
+    const lowPlan = pLow.plan([fretNote(0, 1), fretNote(2, 4)]);
+    expect(lowPlan.ccEvents).toHaveLength(2);
+    expect(lowPlan.stats.shifts.fretting).toBe(2);
+
+    // The same 3-fret jump near fret 12 stays inside the same window
+    // (~4.4 fret reach), so only one CC is emitted.
+    const pHigh = new HandPositionPlanner(guitarPhysCfg, guitarPhysCtx);
+    const highPlan = pHigh.plan([fretNote(0, 12), fretNote(2, 15)]);
+    expect(highPlan.ccEvents).toHaveLength(1);
+    expect(highPlan.stats.shifts.fretting).toBe(1);
+  });
+
+  test('shift-up anchor for a chord lands below chordHigh so the chord fits', () => {
+    const planner = new HandPositionPlanner(guitarPhysCfg, guitarPhysCtx);
+    const { ccEvents } = planner.plan([
+      fretNote(0, 1),                  // initial anchor near nut
+      fretNote(2, 12), fretNote(2, 15) // chord: low=12, high=15
+    ]);
+    expect(ccEvents).toHaveLength(2);
+    // Anchor must cover both 12 and 15. With ~4.4 frets reach at fret 12,
+    // anchor 12 covers up to ~16 → fits. So newLow = chordLow = 12.
+    expect(ccEvents[1].value).toBe(12);
+  });
+
+  test('chord_span_exceeded reports mm + approx frets at anchor', () => {
+    // 80 mm hand. d(0, 5) on L=650 ≈ 168 mm, well beyond 80 mm.
+    const planner = new HandPositionPlanner(guitarPhysCfg, guitarPhysCtx);
+    const { warnings } = planner.plan([fretNote(0, 0), fretNote(0, 5)]);
+    const w = warnings.find(x => x.code === 'chord_span_exceeded');
+    expect(w).toBeDefined();
+    expect(w.spanMm).toBeGreaterThan(80);
+    expect(w.handMm).toBe(80);
+    expect(w.atFret).toBe(0);
+    expect(w.approxFrets).toBeGreaterThan(0);
+    expect(w.message).toMatch(/mm/);
+  });
+
+  test('move_too_fast carries travelMm and ms metrics', () => {
+    // 250 mm/s. Distance(0,12) on 650 mm ≈ 325 mm → needs ~1.3s; we give 50ms.
+    const planner = new HandPositionPlanner(guitarPhysCfg, guitarPhysCtx);
+    const { warnings } = planner.plan([
+      fretNote(0.0, 0),
+      fretNote(0.05, 14)
+    ]);
+    const w = warnings.find(x => x.code === 'move_too_fast');
+    expect(w).toBeDefined();
+    expect(w.travelMm).toBeGreaterThan(80);
+    expect(w.requiredMs).toBeGreaterThan(w.availableMs);
+    expect(w.message).toMatch(/mm/);
+  });
+
+  test('falls back to fret-count model when scaleLengthMm is missing', () => {
+    const cfgFallback = {
+      enabled: true,
+      mode: 'frets',
+      hand_move_frets_per_sec: 12,
+      hands: [{ id: 'fretting', cc_position_number: 22, hand_span_frets: 4, hand_span_mm: 80 }]
+    };
+    const ctxFallback = { unit: 'frets', noteRangeMin: 0, noteRangeMax: 22 };
+    const planner = new HandPositionPlanner(cfgFallback, ctxFallback);
+    // Constant 4-fret span: a 0→3 jump fits, a 0→5 jump shifts.
+    const { ccEvents: nofit } = planner.plan([fretNote(0, 0), fretNote(2, 5)]);
+    expect(nofit).toHaveLength(2);
+  });
+
+  test('falls back when hand_span_mm is missing on the hand', () => {
+    const cfg = {
+      enabled: true,
+      mode: 'frets',
+      hand_move_mm_per_sec: 250,
+      hands: [{ id: 'fretting', cc_position_number: 22, hand_span_frets: 4 }]
+    };
+    const planner = new HandPositionPlanner(cfg, guitarPhysCtx);
+    // Behaves as constant 4-fret span.
+    const { ccEvents } = planner.plan([fretNote(0, 12), fretNote(2, 15)]);
+    expect(ccEvents).toHaveLength(1);
+  });
+
+  test('too_many_fingers fires when chord exceeds max_fingers', () => {
+    const cfg = {
+      enabled: true,
+      mode: 'frets',
+      hand_move_mm_per_sec: 250,
+      hands: [{ id: 'fretting', cc_position_number: 22, hand_span_mm: 80, max_fingers: 3 }]
+    };
+    const planner = new HandPositionPlanner(cfg, guitarPhysCtx);
+    const { warnings } = planner.plan([
+      fretNote(0, 5),
+      fretNote(0, 5),
+      fretNote(0, 6),
+      fretNote(0, 7)  // 4 fretted notes, max 3
+    ]);
+    const w = warnings.find(x => x.code === 'too_many_fingers');
+    expect(w).toBeDefined();
+    expect(w.count).toBe(4);
+    expect(w.limit).toBe(3);
+  });
+
+  test('open strings (fret 0) do not consume a finger', () => {
+    const cfg = {
+      enabled: true,
+      mode: 'frets',
+      hand_move_mm_per_sec: 250,
+      hands: [{ id: 'fretting', cc_position_number: 22, hand_span_mm: 80, max_fingers: 2 }]
+    };
+    const planner = new HandPositionPlanner(cfg, guitarPhysCtx);
+    const { warnings } = planner.plan([
+      fretNote(0, 5),
+      fretNote(0, 5),
+      fretNote(0, 0),  // open
+      fretNote(0, 0)   // open
+    ]);
+    expect(warnings.some(w => w.code === 'too_many_fingers')).toBe(false);
+  });
+});
+
 describe('HandPositionPlanner — edge cases', () => {
   test('empty notes list returns empty plan', () => {
     const p = new HandPositionPlanner(pianoCfg, pianoCtx);
