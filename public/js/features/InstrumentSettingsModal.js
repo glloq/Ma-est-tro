@@ -278,6 +278,7 @@ class InstrumentSettingsModal extends BaseModal {
         this.instrumentTabs = [];
         this.activeChannel = 0;
         this.tuningPresets = {};
+        this.scaleLengthPresets = {};
         this.activeSection = 'identity';
         this.isCreationMode = false;
         // Identity picker state: { step: 'family'|'instruments'|'selected', currentFamilySlug }
@@ -292,9 +293,14 @@ class InstrumentSettingsModal extends BaseModal {
         this.isCreationMode = false;
         try {
             this.tuningPresets = {};
+            this.scaleLengthPresets = {};
             try {
                 const resp = await this.api.sendCommand('string_instrument_get_presets', {});
                 if (resp && resp.presets) this.tuningPresets = resp.presets;
+            } catch (e) { /* no presets */ }
+            try {
+                const resp = await this.api.sendCommand('string_instrument_get_scale_length_presets', {});
+                if (resp && resp.presets) this.scaleLengthPresets = resp.presets;
             } catch (e) { /* no presets */ }
 
             this.instrumentTabs = [];
@@ -344,9 +350,14 @@ class InstrumentSettingsModal extends BaseModal {
         this.isCreationMode = true;
         try {
             this.tuningPresets = {};
+            this.scaleLengthPresets = {};
             try {
                 const resp = await this.api.sendCommand('string_instrument_get_presets', {});
                 if (resp && resp.presets) this.tuningPresets = resp.presets;
+            } catch (e) { /* no presets */ }
+            try {
+                const resp = await this.api.sendCommand('string_instrument_get_scale_length_presets', {});
+                if (resp && resp.presets) this.scaleLengthPresets = resp.presets;
             } catch (e) { /* no presets */ }
 
             // Start with empty defaults on channel 0

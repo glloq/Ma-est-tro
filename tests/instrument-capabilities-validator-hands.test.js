@@ -114,4 +114,348 @@ describe('InstrumentCapabilitiesValidator — hands_config', () => {
     expect(r.isValid).toBe(false);
     expect(r.missing.some(m => m.field === 'hands_config.assignment.mode')).toBe(true);
   });
+
+  test('explicit semitones mode is valid', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...baseInstrument(),
+      hands_config: {
+        enabled: true,
+        mode: 'semitones',
+        hand_move_semitones_per_sec: 60,
+        hands: [
+          { id: 'left',  cc_position_number: 23, hand_span_semitones: 14 },
+          { id: 'right', cc_position_number: 24, hand_span_semitones: 14 }
+        ]
+      }
+    });
+    expect(r.isValid).toBe(true);
+  });
+
+  test('unknown mode value is flagged', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...baseInstrument(),
+      hands_config: { enabled: true, mode: 'bananas', hands: [] }
+    });
+    expect(r.isValid).toBe(false);
+    expect(r.missing.some(m => m.field === 'hands_config.mode')).toBe(true);
+  });
+});
+
+describe('InstrumentCapabilitiesValidator — hands_config (frets mode)', () => {
+  const guitar = () => ({
+    gm_program: 24,
+    polyphony: 6,
+    note_selection_mode: 'range',
+    note_range_min: 40,
+    note_range_max: 86
+  });
+
+  test('well-formed frets config is valid', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...guitar(),
+      hands_config: {
+        enabled: true,
+        mode: 'frets',
+        hand_move_frets_per_sec: 12,
+        hands: [
+          { id: 'fretting', cc_position_number: 22, hand_span_frets: 4 }
+        ]
+      }
+    });
+    expect(r.isValid).toBe(true);
+  });
+
+  test('frets mode with two hands is flagged', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...guitar(),
+      hands_config: {
+        enabled: true,
+        mode: 'frets',
+        hand_move_frets_per_sec: 12,
+        hands: [
+          { id: 'fretting', cc_position_number: 22, hand_span_frets: 4 },
+          { id: 'other',    cc_position_number: 23, hand_span_frets: 4 }
+        ]
+      }
+    });
+    expect(r.isValid).toBe(false);
+    expect(r.missing.some(m => /exactly one hand/.test(m.reason || ''))).toBe(true);
+  });
+
+  test('frets mode with wrong hand id is flagged', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...guitar(),
+      hands_config: {
+        enabled: true,
+        mode: 'frets',
+        hands: [{ id: 'left', cc_position_number: 22, hand_span_frets: 4 }]
+      }
+    });
+    expect(r.isValid).toBe(false);
+    expect(r.missing.some(m => m.field === 'hands_config.hands[0].id')).toBe(true);
+  });
+
+  test('frets mode missing both hand_span_mm and hand_span_frets is flagged', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...guitar(),
+      hands_config: {
+        enabled: true,
+        mode: 'frets',
+        hand_move_frets_per_sec: 12,
+        hands: [{ id: 'fretting', cc_position_number: 22 }]
+      }
+    });
+    expect(r.isValid).toBe(false);
+    expect(r.missing.some(m => /hand_span/.test(m.field || ''))).toBe(true);
+  });
+
+  test('frets mode rejects cross-unit semitone fields on hand', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...guitar(),
+      hands_config: {
+        enabled: true,
+        mode: 'frets',
+        hands: [{ id: 'fretting', cc_position_number: 22, hand_span_frets: 4, hand_span_semitones: 14 }]
+      }
+    });
+    expect(r.isValid).toBe(false);
+    expect(r.missing.some(m => m.field === 'hands_config.hands[0].hand_span_semitones')).toBe(true);
+  });
+
+  test('frets mode rejects cross-unit semitone travel speed', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...guitar(),
+      hands_config: {
+        enabled: true,
+        mode: 'frets',
+        hand_move_semitones_per_sec: 60,
+        hands: [{ id: 'fretting', cc_position_number: 22, hand_span_frets: 4 }]
+      }
+    });
+    expect(r.isValid).toBe(false);
+    expect(r.missing.some(m => m.field === 'hands_config.hand_move_semitones_per_sec')).toBe(true);
+  });
+
+  test('frets mode rejects an assignment block', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...guitar(),
+      hands_config: {
+        enabled: true,
+        mode: 'frets',
+        assignment: { mode: 'auto' },
+        hands: [{ id: 'fretting', cc_position_number: 22, hand_span_frets: 4 }]
+      }
+    });
+    expect(r.isValid).toBe(false);
+    expect(r.missing.some(m => m.field === 'hands_config.assignment')).toBe(true);
+  });
+
+  test('semitones mode rejects stray hand_span_frets', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...baseInstrument(),
+      hands_config: {
+        enabled: true,
+        mode: 'semitones',
+        hands: [
+          { id: 'left',  cc_position_number: 23, hand_span_semitones: 14, hand_span_frets: 4 },
+          { id: 'right', cc_position_number: 24, hand_span_semitones: 14 }
+        ]
+      }
+    });
+    expect(r.isValid).toBe(false);
+    expect(r.missing.some(m => m.field === 'hands_config.hands[0].hand_span_frets')).toBe(true);
+  });
+
+  test('semitones mode rejects stray hand_move_frets_per_sec', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...baseInstrument(),
+      hands_config: {
+        enabled: true,
+        mode: 'semitones',
+        hand_move_frets_per_sec: 12,
+        hands: [
+          { id: 'left',  cc_position_number: 23, hand_span_semitones: 14 },
+          { id: 'right', cc_position_number: 24, hand_span_semitones: 14 }
+        ]
+      }
+    });
+    expect(r.isValid).toBe(false);
+    expect(r.missing.some(m => m.field === 'hands_config.hand_move_frets_per_sec')).toBe(true);
+  });
+});
+
+describe('InstrumentCapabilitiesValidator — frets mode mm + max_fingers', () => {
+  const guitar = () => ({
+    gm_program: 24,
+    polyphony: 6,
+    note_selection_mode: 'range',
+    note_range_min: 40,
+    note_range_max: 86
+  });
+
+  test('mm-only config is valid (physical model, no frets fallback needed)', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...guitar(),
+      hands_config: {
+        enabled: true,
+        mode: 'frets',
+        hand_move_mm_per_sec: 250,
+        hands: [{ id: 'fretting', cc_position_number: 22, hand_span_mm: 80 }]
+      }
+    });
+    expect(r.isValid).toBe(true);
+  });
+
+  test('frets-only config is still valid (fallback when no scale length)', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...guitar(),
+      hands_config: {
+        enabled: true,
+        mode: 'frets',
+        hand_move_frets_per_sec: 12,
+        hands: [{ id: 'fretting', cc_position_number: 22, hand_span_frets: 4 }]
+      }
+    });
+    expect(r.isValid).toBe(true);
+  });
+
+  test('both mm and frets present is valid (planner picks the available unit at runtime)', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...guitar(),
+      hands_config: {
+        enabled: true,
+        mode: 'frets',
+        hand_move_mm_per_sec: 250,
+        hand_move_frets_per_sec: 12,
+        hands: [{
+          id: 'fretting', cc_position_number: 22,
+          hand_span_mm: 80, hand_span_frets: 4
+        }]
+      }
+    });
+    expect(r.isValid).toBe(true);
+  });
+
+  test('hand_span_mm out of [30, 200] is flagged', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...guitar(),
+      hands_config: {
+        enabled: true,
+        mode: 'frets',
+        hand_move_mm_per_sec: 250,
+        hands: [{ id: 'fretting', cc_position_number: 22, hand_span_mm: 250 }]
+      }
+    });
+    expect(r.isValid).toBe(false);
+    expect(r.missing.some(m => m.field === 'hands_config.hands[0].hand_span_mm')).toBe(true);
+  });
+
+  test('hand_move_mm_per_sec out of [50, 2000] is flagged', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...guitar(),
+      hands_config: {
+        enabled: true,
+        mode: 'frets',
+        hand_move_mm_per_sec: 5000,
+        hands: [{ id: 'fretting', cc_position_number: 22, hand_span_mm: 80 }]
+      }
+    });
+    expect(r.isValid).toBe(false);
+    expect(r.missing.some(m => m.field === 'hands_config.hand_move_mm_per_sec')).toBe(true);
+  });
+
+  test('missing both speeds is flagged', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...guitar(),
+      hands_config: {
+        enabled: true,
+        mode: 'frets',
+        hands: [{ id: 'fretting', cc_position_number: 22, hand_span_mm: 80 }]
+      }
+    });
+    expect(r.isValid).toBe(false);
+    expect(r.missing.some(m => /hand_move/.test(m.field || ''))).toBe(true);
+  });
+
+  test('max_fingers in [1, 12] is accepted', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...guitar(),
+      hands_config: {
+        enabled: true,
+        mode: 'frets',
+        hand_move_mm_per_sec: 250,
+        hands: [{ id: 'fretting', cc_position_number: 22, hand_span_mm: 80, max_fingers: 6 }]
+      }
+    });
+    expect(r.isValid).toBe(true);
+  });
+
+  test('max_fingers out of [1, 12] is flagged', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...guitar(),
+      hands_config: {
+        enabled: true,
+        mode: 'frets',
+        hand_move_mm_per_sec: 250,
+        hands: [{ id: 'fretting', cc_position_number: 22, hand_span_mm: 80, max_fingers: 0 }]
+      }
+    });
+    expect(r.isValid).toBe(false);
+    expect(r.missing.some(m => m.field === 'hands_config.hands[0].max_fingers')).toBe(true);
+  });
+
+  test('semitones mode rejects stray hand_span_mm and max_fingers', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...baseInstrument(),
+      hands_config: {
+        enabled: true,
+        mode: 'semitones',
+        hands: [
+          { id: 'left',  cc_position_number: 23, hand_span_semitones: 14, hand_span_mm: 80, max_fingers: 5 },
+          { id: 'right', cc_position_number: 24, hand_span_semitones: 14 }
+        ]
+      }
+    });
+    expect(r.isValid).toBe(false);
+    expect(r.missing.some(m => m.field === 'hands_config.hands[0].hand_span_mm')).toBe(true);
+    expect(r.missing.some(m => m.field === 'hands_config.hands[0].max_fingers')).toBe(true);
+  });
+
+  test('semitones mode rejects stray hand_move_mm_per_sec', () => {
+    const v = new InstrumentCapabilitiesValidator();
+    const r = v.validateInstrument({
+      ...baseInstrument(),
+      hands_config: {
+        enabled: true,
+        mode: 'semitones',
+        hand_move_mm_per_sec: 250,
+        hands: [
+          { id: 'left',  cc_position_number: 23, hand_span_semitones: 14 },
+          { id: 'right', cc_position_number: 24, hand_span_semitones: 14 }
+        ]
+      }
+    });
+    expect(r.isValid).toBe(false);
+    expect(r.missing.some(m => m.field === 'hands_config.hand_move_mm_per_sec')).toBe(true);
+  });
 });

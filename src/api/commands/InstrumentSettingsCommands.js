@@ -663,7 +663,8 @@ async function instrumentSaveAll(app, data) {
         cc_fret_min: si.cc_fret_min,
         cc_fret_max: si.cc_fret_max,
         cc_fret_offset: si.cc_fret_offset,
-        frets_per_string: si.frets_per_string
+        frets_per_string: si.frets_per_string,
+        scale_length_mm: si.scale_length_mm
       });
     }
 

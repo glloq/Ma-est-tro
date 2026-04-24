@@ -24,8 +24,9 @@
 
     /**
      * Hand-position control is meaningful only for instruments where the
-     * pitch comes from a spatial actuator. Phase 1: keyboard-family GM
-     * programs. Phase 2 will extend to plucked/bowed strings.
+     * pitch comes from a spatial actuator. Keyboard-family instruments
+     * use the semitone mode (two hands, pitch split). Plucked and bowed
+     * strings use the frets mode (single fretting hand, fret window).
      */
     ISMSections._shouldShowHandsSection = function(tab) {
         if (!tab) return false;
@@ -35,7 +36,25 @@
         if (gmProgram == null) return false;
         const fam = window.InstrumentFamilies?.getFamilyForProgram(gmProgram, channel);
         if (!fam) return false;
-        return fam.slug === 'keyboards' || fam.slug === 'chromatic_percussion' || fam.slug === 'organs';
+        return fam.slug === 'keyboards'
+            || fam.slug === 'chromatic_percussion'
+            || fam.slug === 'organs'
+            || fam.slug === 'plucked_strings'
+            || fam.slug === 'bowed_strings';
+    };
+
+    /**
+     * Which hand-position mode does this instrument use?
+     * Strings → 'frets' (single fretting hand). Everything else → 'semitones'.
+     */
+    ISMSections._handsModeForTab = function(tab) {
+        const gmProgram = tab?.settings?.gm_program;
+        const channel = tab?.channel;
+        const fam = window.InstrumentFamilies?.getFamilyForProgram(gmProgram, channel);
+        if (fam && (fam.slug === 'plucked_strings' || fam.slug === 'bowed_strings')) {
+            return 'frets';
+        }
+        return 'semitones';
     };
 
     ISMSections._renderIdentitySection = function() {
@@ -700,6 +719,15 @@
         const isFretless = config?.is_fretless || false;
         const numFrets = config?.num_frets ?? 24;
 
+        // Scale length (mm) for the physical hand-position model. Optional;
+        // null means the planner falls back to constant-fret reach.
+        const scaleLengthMm = config?.scale_length_mm ?? '';
+        const scaleLengthPresets = this.scaleLengthPresets || {};
+        let scaleLengthOptions = '<option value="">—</option>';
+        for (const [key, preset] of Object.entries(scaleLengthPresets)) {
+            scaleLengthOptions += `<option value="${key}" data-mm="${preset.scale_length_mm}">${preset.name} (${preset.scale_length_mm} mm)</option>`;
+        }
+
         // Build horizontal header rows (string numbers, note badges,
         // MIDI tuning inputs). Per-string fret / position values ride
         // along in hidden inputs — the interactive editor is the neck
@@ -731,6 +759,19 @@
                     <div class="ism-form-group ism-narrow">
                         <label>${this.t('stringInstrument.numStrings') || 'Cordes'}</label>
                         <input type="number" id="siNumStrings" value="${numStrings}" min="1" max="12">
+                    </div>
+                </div>
+
+                <div class="ism-form-row">
+                    <div class="ism-form-group">
+                        <label>${this.t('stringInstrument.scaleLengthPreset') || 'Preset de longueur de corde'}</label>
+                        <select id="siScaleLengthPreset">${scaleLengthOptions}</select>
+                        <span class="ism-form-hint">Choisir un preset remplit le champ ci-contre. Vous pouvez ensuite ajuster la valeur exacte.</span>
+                    </div>
+                    <div class="ism-form-group ism-narrow">
+                        <label>${this.t('stringInstrument.scaleLengthMm') || 'Longueur (mm)'}</label>
+                        <input type="number" id="siScaleLengthMm" value="${scaleLengthMm}" min="100" max="2000" placeholder="—">
+                        <span class="ism-form-hint">Distance sillet → chevalet. Active le modèle physique de main.</span>
                     </div>
                 </div>
 
@@ -916,25 +957,42 @@
     };
 
     /**
-     * Hand-position section: edit the `hands_config` JSON payload.
-     * Phase 1 keyboards: always two hands (left + right). Per-hand we
-     * only store the CC number and the reachable span without moving;
-     * the travel speed is shared across both hands. The reachable note
-     * range is derived at play time from the instrument's own
-     * `note_range_min`/`note_range_max`, and the minimum gap between
-     * notes comes from the instrument's `min_note_interval`.
+     * Hand-position section: edit the `hands_config` JSON payload. Two
+     * layouts, selected by the instrument family:
+     *   - Keyboards/organs/chromatic percussion → semitones mode (two
+     *     hands, assignment block, span in semitones).
+     *   - Plucked/bowed strings → frets mode (single fretting hand, no
+     *     assignment, span in frets). Reachable range is derived at play
+     *     time from the attached string_instrument's `frets_per_string`.
      */
     ISMSections._renderHandsSection = function() {
         const tab = this._getActiveTab();
         if (!tab) return '';
+        const mode = ISMSections._handsModeForTab(tab);
         const settings = tab.settings;
-        const cfg = settings.hands_config || ISMSections._defaultHandsConfig();
+        const cfg = settings.hands_config || ISMSections._defaultHandsConfig(mode, tab);
 
+        // If the stored config's mode doesn't match the instrument family
+        // (user changed the GM program), fall back to a fresh default for
+        // the new family so the rendered form is coherent.
+        const effectiveCfg = (cfg.mode === mode
+            || (cfg.mode == null && mode === 'semitones'))
+            ? cfg
+            : ISMSections._defaultHandsConfig(mode, tab);
+
+        if (mode === 'frets') {
+            return ISMSections._renderHandsSectionFrets(effectiveCfg, tab);
+        }
+        return ISMSections._renderHandsSectionSemitones(effectiveCfg);
+    };
+
+    ISMSections._renderHandsSectionSemitones = function(cfg) {
+        const defaults = ISMSections._defaultHandsConfig('semitones');
         const enabled = cfg.enabled !== false;
         const assignment = cfg.assignment || { mode: 'auto' };
         const hands = Array.isArray(cfg.hands) && cfg.hands.length >= 2
             ? cfg.hands
-            : ISMSections._defaultHandsConfig().hands;
+            : defaults.hands;
         const commonSpeed = Number.isFinite(cfg.hand_move_semitones_per_sec)
             ? cfg.hand_move_semitones_per_sec
             : 60;
@@ -963,6 +1021,7 @@
 
         return `
             <h3 class="ism-section-title"><span class="ism-section-title-icon">🫱</span> Mains</h3>
+            <input type="hidden" id="handsMode" value="semitones">
             <div class="ism-form-group">
                 <label>
                     <input type="checkbox" id="handsEnabled" ${enabled ? 'checked' : ''}>
@@ -1001,15 +1060,175 @@
             </div>
 
             <div class="ism-hands-list">
-                ${handRow(hands.find(h => h.id === 'left') || ISMSections._defaultHandsConfig().hands[0])}
-                ${handRow(hands.find(h => h.id === 'right') || ISMSections._defaultHandsConfig().hands[1])}
+                ${handRow(hands.find(h => h.id === 'left') || defaults.hands[0])}
+                ${handRow(hands.find(h => h.id === 'right') || defaults.hands[1])}
             </div>
         `;
     };
 
-    ISMSections._defaultHandsConfig = function() {
+    /**
+     * Approximate the number of frets a hand of `handSpanMm` covers when
+     * anchored at fret `p`, on a scale of `L` mm. Uses equal-temperament
+     * geometry: distance(a, b) = L · (2^(−a/12) − 2^(−b/12)). Returns
+     * Infinity when the hand reaches past the bridge from `p`.
+     */
+    ISMSections._approxFretsAt = function(L, handSpanMm, p) {
+        if (!Number.isFinite(L) || !Number.isFinite(handSpanMm) || L <= 0 || handSpanMm <= 0) return null;
+        const term = Math.pow(2, -p / 12) - handSpanMm / L;
+        if (term <= 0) return Infinity;
+        return -12 * Math.log2(term) - p;
+    };
+
+    /**
+     * Build the live coverage hint shown alongside the mm input. Three
+     * positions (1, 7, 14) give a feel for how the same physical hand
+     * width covers more frets up the neck — this is the property that
+     * motivated the physical model in the first place.
+     */
+    ISMSections._fretCoverageHint = function(L, handSpanMm) {
+        const fmt = (n) => Number.isFinite(n) ? n.toFixed(1) : '∞';
+        return [1, 7, 14]
+            .map(p => `fr.${p}: ~${fmt(ISMSections._approxFretsAt(L, handSpanMm, p))}`)
+            .join(' · ');
+    };
+
+    ISMSections._renderHandsSectionFrets = function(cfg, tab) {
+        const defaults = ISMSections._defaultHandsConfig('frets', tab);
+        const enabled = cfg.enabled !== false;
+        const hand = (Array.isArray(cfg.hands) && cfg.hands[0])
+            ? cfg.hands[0]
+            : defaults.hands[0];
+
+        const scaleLengthMm = tab?.stringInstrumentConfig?.scale_length_mm ?? null;
+        const numStrings = tab?.stringInstrumentConfig?.num_strings ?? null;
+        const physicalAvailable = Number.isFinite(scaleLengthMm) && scaleLengthMm > 0;
+
+        // mm-mode values fall back to defaults when not yet set.
+        const handSpanMm = Number.isFinite(hand.hand_span_mm) ? hand.hand_span_mm : (physicalAvailable ? 80 : '');
+        const moveMmPerSec = Number.isFinite(cfg.hand_move_mm_per_sec) ? cfg.hand_move_mm_per_sec : (physicalAvailable ? 250 : '');
+        // frets fallback values — always rendered so the user can save a
+        // fret-mode config even when no scale length is known.
+        const handSpanFrets = Number.isFinite(hand.hand_span_frets) ? hand.hand_span_frets : 4;
+        const moveFretsPerSec = Number.isFinite(cfg.hand_move_frets_per_sec) ? cfg.hand_move_frets_per_sec : 12;
+
+        const maxFingersDefault = Number.isFinite(numStrings) ? numStrings : 6;
+        const maxFingers = Number.isFinite(hand.max_fingers) ? hand.max_fingers : maxFingersDefault;
+        const maxFingersUpper = Number.isFinite(numStrings) ? numStrings : 12;
+
+        const coverageHint = physicalAvailable && Number.isFinite(handSpanMm) && handSpanMm > 0
+            ? ISMSections._fretCoverageHint(scaleLengthMm, handSpanMm)
+            : '';
+
+        const physicalSpanRow = physicalAvailable ? `
+                    <div class="ism-form-group ism-form-grid-2">
+                        <div>
+                            <label>Largeur de la main (mm)</label>
+                            <input type="number" data-hand="fretting" data-field="hand_span_mm"
+                                   value="${handSpanMm}" min="30" max="200">
+                            <span class="ism-form-hint">Empan physique entre l'index et le petit doigt en position normale.</span>
+                        </div>
+                        <div>
+                            <label>Vitesse (mm/s)</label>
+                            <input type="number" id="handsMoveMmPerSec" value="${moveMmPerSec}" min="50" max="2000">
+                            <span class="ism-form-hint">Vitesse mécanique le long du manche.</span>
+                        </div>
+                    </div>
+                    <div class="ism-form-group">
+                        <span class="ism-form-hint" id="handsCoverageHint" data-scale-length="${scaleLengthMm}">
+                            Couverture : ${coverageHint || '<em>renseignez la largeur pour voir la couverture estimée</em>'}
+                        </span>
+                    </div>
+        ` : '';
+
+        const physicalBanner = physicalAvailable ? '' : `
+            <div class="ism-form-group">
+                <span class="ism-form-hint" style="background:#fff8e1;padding:8px;border-radius:4px;display:block">
+                    ⚠ Aucune longueur de corde renseignée pour cet instrument. Le modèle physique (mm) est désactivé.
+                    Renseignez <code>scale_length_mm</code> dans la section "Notes &amp; Capacités" pour activer la couverture variable selon la position.
+                </span>
+            </div>
+        `;
+
+        return `
+            <h3 class="ism-section-title"><span class="ism-section-title-icon">🎸</span> Main de jeu</h3>
+            <input type="hidden" id="handsMode" value="frets">
+            <input type="hidden" id="handsPhysicalAvailable" value="${physicalAvailable ? '1' : '0'}">
+            <div class="ism-form-group">
+                <label>
+                    <input type="checkbox" id="handsEnabled" ${enabled ? 'checked' : ''}>
+                    Activer le contrôle de position de la main
+                </label>
+                <span class="ism-form-hint">
+                    Si activé, le lecteur envoie un CC avec la frette absolue la plus basse de la fenêtre dès que la main doit se déplacer.
+                </span>
+            </div>
+
+            ${physicalBanner}
+
+            <div class="ism-hands-list">
+                <div class="ism-hand-row" data-hand="fretting">
+                    <h4 class="ism-hand-title">🎸 Main de jeu (frettage)</h4>
+                    <div class="ism-form-group ism-form-grid-2">
+                        <div>
+                            <label>CC position</label>
+                            <input type="number" class="ism-hand-cc" data-hand="fretting" data-field="cc_position_number"
+                                   value="${hand.cc_position_number}" min="0" max="127">
+                            <span class="ism-form-hint">CC envoyé. Valeur = frette absolue la plus basse (capo inclus).</span>
+                        </div>
+                        <div>
+                            <label>Doigts disponibles</label>
+                            <input type="number" class="ism-hand-fingers" data-hand="fretting" data-field="max_fingers"
+                                   value="${maxFingers}" min="1" max="${maxFingersUpper}">
+                            <span class="ism-form-hint">Nombre maximal de cordes pressées en même temps. Par défaut = nombre de cordes.</span>
+                        </div>
+                    </div>
+
+                    ${physicalSpanRow}
+
+                    <div class="ism-form-group ism-form-grid-2">
+                        <div>
+                            <label>Écart max (frettes) — fallback</label>
+                            <input type="number" class="ism-hand-span" data-hand="fretting" data-field="hand_span_frets"
+                                   value="${handSpanFrets}" min="1" max="24">
+                            <span class="ism-form-hint">Utilisé si aucune longueur de corde n'est connue.</span>
+                        </div>
+                        <div>
+                            <label>Vitesse (frettes/s) — fallback</label>
+                            <input type="number" id="handsMoveSpeed" value="${moveFretsPerSec}" min="1" max="120">
+                            <span class="ism-form-hint">Utilisé si aucune longueur de corde n'est connue.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+
+    ISMSections._defaultHandsConfig = function(mode, tab) {
+        if (mode === 'frets') {
+            const numStrings = tab?.stringInstrumentConfig?.num_strings;
+            const scaleLengthMm = tab?.stringInstrumentConfig?.scale_length_mm;
+            const out = {
+                enabled: true,
+                mode: 'frets',
+                hand_move_frets_per_sec: 12,
+                hands: [{
+                    id: 'fretting',
+                    cc_position_number: 22,
+                    hand_span_frets: 4,
+                    max_fingers: Number.isFinite(numStrings) ? numStrings : 6
+                }]
+            };
+            // When scale_length_mm is known, prefer the physical model and
+            // seed sensible defaults so the user only has to confirm.
+            if (Number.isFinite(scaleLengthMm) && scaleLengthMm > 0) {
+                out.hand_move_mm_per_sec = 250;
+                out.hands[0].hand_span_mm = 80;
+            }
+            return out;
+        }
         return {
             enabled: true,
+            mode: 'semitones',
             hand_move_semitones_per_sec: 60,
             assignment: { mode: 'auto', pitch_split_note: 60, pitch_split_hysteresis: 2 },
             hands: [
@@ -1021,19 +1240,62 @@
 
     /**
      * Read the hands-section DOM back into a hands_config object ready
-     * to persist. Returns `null` when the section is not rendered (the
-     * instrument is not keyboard-family) — the caller stores null so the
-     * feature stays disabled.
+     * to persist. Returns `undefined` when the section is not rendered
+     * (instrument family without hand-position support) so the caller
+     * leaves the existing value untouched. The shape depends on the
+     * hidden `#handsMode` field set by the renderer.
      */
     ISMSections._collectHandsConfig = function(rootEl) {
         const section = rootEl?.querySelector('.ism-section[data-section="hands"]');
         if (!section) return undefined; // no-op: section not rendered
 
+        const mode = rootEl.querySelector('#handsMode')?.value === 'frets'
+            ? 'frets'
+            : 'semitones';
         const enabled = !!rootEl.querySelector('#handsEnabled')?.checked;
-        const mode = rootEl.querySelector('#handsAssignmentMode')?.value || 'auto';
+        const moveSpeed = parseInt(rootEl.querySelector('#handsMoveSpeed')?.value, 10);
+
+        if (mode === 'frets') {
+            const row = section.querySelector('.ism-hand-row[data-hand="fretting"]');
+            const readInt = (field, dflt) => {
+                const v = parseInt(row?.querySelector(`[data-field="${field}"]`)?.value, 10);
+                return Number.isFinite(v) ? v : dflt;
+            };
+            const readOptInt = (field) => {
+                const v = parseInt(row?.querySelector(`[data-field="${field}"]`)?.value, 10);
+                return Number.isFinite(v) ? v : null;
+            };
+            // The physical-model inputs are only rendered when the linked
+            // string_instrument has a scale_length_mm. When omitted we
+            // simply don't include the *_mm fields; the planner keeps
+            // falling back to the *_frets ones.
+            const moveMmPerSecRaw = parseInt(rootEl.querySelector('#handsMoveMmPerSec')?.value, 10);
+            const handSpanMmOpt = readOptInt('hand_span_mm');
+            const maxFingersOpt = readOptInt('max_fingers');
+
+            const hand = {
+                id: 'fretting',
+                cc_position_number: readInt('cc_position_number', 22),
+                hand_span_frets: readInt('hand_span_frets', 4)
+            };
+            if (handSpanMmOpt != null) hand.hand_span_mm = handSpanMmOpt;
+            if (maxFingersOpt != null) hand.max_fingers = maxFingersOpt;
+
+            const out = {
+                enabled,
+                mode: 'frets',
+                hand_move_frets_per_sec: Number.isFinite(moveSpeed) ? moveSpeed : 12,
+                hands: [hand]
+            };
+            if (Number.isFinite(moveMmPerSecRaw) && moveMmPerSecRaw > 0) {
+                out.hand_move_mm_per_sec = moveMmPerSecRaw;
+            }
+            return out;
+        }
+
+        const assignmentMode = rootEl.querySelector('#handsAssignmentMode')?.value || 'auto';
         const pitchSplitNote = parseInt(rootEl.querySelector('#handsPitchSplitNote')?.value, 10);
         const hysteresis = parseInt(rootEl.querySelector('#handsPitchSplitHysteresis')?.value, 10);
-        const moveSpeed = parseInt(rootEl.querySelector('#handsMoveSpeed')?.value, 10);
 
         const readHand = (id) => {
             const row = section.querySelector(`.ism-hand-row[data-hand="${id}"]`);
@@ -1052,9 +1314,10 @@
         const hands = [readHand('left'), readHand('right')].filter(Boolean);
         return {
             enabled,
+            mode: 'semitones',
             hand_move_semitones_per_sec: Number.isFinite(moveSpeed) ? moveSpeed : 60,
             assignment: {
-                mode,
+                mode: assignmentMode,
                 pitch_split_note: Number.isFinite(pitchSplitNote) ? pitchSplitNote : 60,
                 pitch_split_hysteresis: Number.isFinite(hysteresis) ? hysteresis : 2
             },

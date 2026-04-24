@@ -158,6 +158,14 @@
                 const fretsPerStringData = this._neckDiagram
                     ? this._neckDiagram.getFretsPerString()
                     : (tab?.stringInstrumentConfig?.frets_per_string || null);
+                // scale_length_mm is optional. An empty input means "no
+                // physical model" — we send null so the backend stores NULL
+                // and the planner falls back to constant-fret reach.
+                const scaleLengthRaw = this.$('#siScaleLengthMm')?.value;
+                const scaleLengthParsed = scaleLengthRaw === '' || scaleLengthRaw == null
+                    ? null
+                    : parseInt(scaleLengthRaw, 10);
+                const scaleLengthMm = Number.isFinite(scaleLengthParsed) ? scaleLengthParsed : null;
                 stringInstrumentPayload = {
                     instrument_name: instrumentName,
                     num_strings: numStrings,
@@ -174,7 +182,8 @@
                     cc_fret_min:      _int(this.$('#ism-cc-fret-min')?.value, 0),
                     cc_fret_max:      _int(this.$('#ism-cc-fret-max')?.value, 36),
                     cc_fret_offset:   _int(this.$('#ism-cc-fret-offset')?.value, 0),
-                    frets_per_string: fretsPerStringData
+                    frets_per_string: fretsPerStringData,
+                    scale_length_mm: scaleLengthMm
                 };
             }
 

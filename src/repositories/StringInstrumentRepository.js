@@ -62,6 +62,15 @@ export default class StringInstrumentRepository {
     return this._sub.getTuningPreset(key);
   }
 
+  // Scale-length presets (physical hand model)
+  findAllScaleLengthPresets() {
+    return this._sub.getScaleLengthPresets();
+  }
+
+  findScaleLengthPreset(key) {
+    return this._sub.getScaleLengthPreset(key);
+  }
+
   // Tablatures
   saveTablature(...args) {
     return this._sub.saveTablature(...args);

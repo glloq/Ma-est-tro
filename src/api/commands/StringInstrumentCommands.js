@@ -58,7 +58,8 @@ async function stringInstrumentCreate(app, data) {
     cc_fret_min: data.cc_fret_min,
     cc_fret_max: data.cc_fret_max,
     cc_fret_offset: data.cc_fret_offset,
-    frets_per_string: data.frets_per_string
+    frets_per_string: data.frets_per_string,
+    scale_length_mm: data.scale_length_mm
   });
   return { success: true, id };
 }
@@ -91,7 +92,8 @@ async function stringInstrumentUpdate(app, data) {
     cc_fret_min: data.cc_fret_min,
     cc_fret_max: data.cc_fret_max,
     cc_fret_offset: data.cc_fret_offset,
-    frets_per_string: data.frets_per_string
+    frets_per_string: data.frets_per_string,
+    scale_length_mm: data.scale_length_mm
   });
   return { success: updated };
 }
@@ -221,6 +223,22 @@ async function stringInstrumentCreateFromPreset(app, data) {
     capo_fret: 0
   });
   return { success: true, id };
+}
+
+// ==================== SCALE-LENGTH PRESETS ====================
+
+/**
+ * Returns the in-memory catalogue of physical scale-length presets the
+ * frontend uses to seed `scale_length_mm` for a string instrument. The
+ * frontend can pick a preset to populate the field and still let the
+ * user override the resulting value.
+ *
+ * @param {Object} app
+ * @returns {Promise<{presets:Object<string, {name:string, scale_length_mm:number}>}>}
+ */
+async function stringInstrumentGetScaleLengthPresets(app) {
+  const presets = app.stringInstrumentRepository.findAllScaleLengthPresets();
+  return { presets };
 }
 
 // ==================== TABLATURE DATA ====================
@@ -377,6 +395,7 @@ export function register(registry, app) {
   registry.register('string_instrument_get_presets', () => stringInstrumentGetPresets(app));
   registry.register('string_instrument_apply_preset', (data) => stringInstrumentApplyPreset(app, data));
   registry.register('string_instrument_create_from_preset', (data) => stringInstrumentCreateFromPreset(app, data));
+  registry.register('string_instrument_get_scale_length_presets', () => stringInstrumentGetScaleLengthPresets(app));
 
   // Tablature data
   registry.register('tablature_save', (data) => tablatureSave(app, data));
