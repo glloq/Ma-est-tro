@@ -61,12 +61,22 @@
 
             // M1 — lerp animation state. `_displayedAnchor` is the
             // smoothed float used by `_drawHandWindow`; falls back
-            // to `handWindow.anchorFret` when no animation is
-            // active. `_animation` carries the start/end + sim-time
-            // bounds so `setCurrentTime` can interpolate.
+            // to `handWindow.anchorFret` when no trajectory drives
+            // us. The trajectory (= the engine's full timeline of
+            // shifts for this hand) lets `setCurrentTime` derive the
+            // displayed anchor from the playhead instead of waiting
+            // for shift events to land. `_animation` is the legacy
+            // single-shot path kept for callers without a trajectory.
             this._displayedAnchor = null;
             this._animation = null;
             this._currentSec = 0;
+            this._trajectory = [];
+            this._ticksPerSec = null;
+            // Redraw throttle — skip draw() when the displayed
+            // anchor barely moved AND at least one frame budget
+            // (~33 ms = 30 fps) has elapsed since the last paint.
+            this._lastDrawnAnchor = null;
+            this._lastDrawnAt = 0;
 
             // Wider left margin holds the tuning labels (D1) plus
             // the O / X glyph column (N3); wider right margin holds
@@ -186,12 +196,59 @@
         setCurrentTime(currentSec) {
             this._currentSec = Number.isFinite(currentSec) ? currentSec : 0;
             this._tickAnimation();
+            // Throttle: skip the redraw when the displayed anchor
+            // moved less than 0.05 frets AND we drew within the last
+            // 33 ms (= ~30 fps). Cuts CPU on long sustained chords
+            // where the playhead advances continuously but the band
+            // is visually static.
+            if (this._lastDrawnAnchor != null && this._displayedAnchor != null) {
+                const delta = Math.abs(this._displayedAnchor - this._lastDrawnAnchor);
+                const now = (typeof performance !== 'undefined' && performance.now)
+                    ? performance.now() : Date.now();
+                if (delta < 0.05 && (now - this._lastDrawnAt) < 33) return;
+            }
             this.draw();
         }
 
-        /** @private — recompute `_displayedAnchor` from the active
-         *  animation given `_currentSec`. */
+        /**
+         * Set the per-hand trajectory used to drive the band
+         * animation. Each entry: `{tick, anchor, releaseTick?,
+         * motion?}`. The trajectory replaces the legacy single-shot
+         * `_animation` path: on each `setCurrentTime`, the band's
+         * displayed anchor is computed from the playhead's position
+         * inside the right segment.
+         */
+        setHandTrajectory(points) {
+            this._trajectory = Array.isArray(points)
+                ? points
+                    .filter(p => p && Number.isFinite(p.tick) && Number.isFinite(p.anchor))
+                    .slice()
+                    .sort((a, b) => a.tick - b.tick)
+                : [];
+            this._tickAnimation();
+            this.draw();
+        }
+
+        /** Conversion factor for tick → sec used by the trajectory
+         *  interpolator. The panel passes `ticksPerBeat × bpm/60`. */
+        setTicksPerSec(ticksPerSec) {
+            this._ticksPerSec = Number.isFinite(ticksPerSec) && ticksPerSec > 0
+                ? ticksPerSec : null;
+        }
+
+        /** @private — recompute `_displayedAnchor` from the
+         *  trajectory (preferred) or the legacy single-shot
+         *  animation. */
         _tickAnimation() {
+            // Trajectory drive — preferred when both pieces are set.
+            if (this._trajectory && this._trajectory.length > 0
+                    && this._ticksPerSec != null) {
+                const a = this._anchorFromTrajectory(this._currentSec);
+                if (a != null) this._displayedAnchor = a;
+                return;
+            }
+            // Legacy single-shot animation (kept for callers that
+            // don't push a full trajectory yet).
             const a = this._animation;
             if (!a) return;
             if (this._currentSec >= a.toSec) {
@@ -205,6 +262,44 @@
             }
             const t = (this._currentSec - a.fromSec) / (a.toSec - a.fromSec);
             this._displayedAnchor = a.fromAnchor + (a.toAnchor - a.fromAnchor) * t;
+        }
+
+        /** @private — Compute the anchor for a given sim time from
+         *  the per-hand trajectory: hold the previous anchor while
+         *  its chord is ringing, then lerp toward the next anchor.
+         *  When `motion.requiredSec` is available the lerp finishes
+         *  early (the hand arrives, then waits for the next chord). */
+        _anchorFromTrajectory(currentSec) {
+            const traj = this._trajectory;
+            const tps  = this._ticksPerSec;
+            if (!traj || traj.length === 0 || !tps) return null;
+            let prev = null, next = null;
+            for (const p of traj) {
+                const pSec = p.tick / tps;
+                if (pSec <= currentSec) prev = p;
+                else { next = p; break; }
+            }
+            if (!prev && !next) return null;
+            if (!prev) return next.anchor;     // before any shift
+            if (!next) return prev.anchor;     // after the last shift
+            const prevReleaseSec = (Number.isFinite(prev.releaseTick)
+                ? prev.releaseTick : prev.tick) / tps;
+            const nextSec = next.tick / tps;
+            // HOLD the prev anchor while prev's chord is still
+            // ringing — the hand can't physically move yet.
+            if (currentSec <= prevReleaseSec) return prev.anchor;
+            // After release, lerp toward the next anchor over the
+            // physical travel time when known. Outside [prevRelease,
+            // arrival] we hold prev / next.
+            let toSec = nextSec;
+            if (next.motion && Number.isFinite(next.motion.requiredSec)
+                    && next.motion.feasible !== false) {
+                toSec = Math.min(nextSec, prevReleaseSec + next.motion.requiredSec);
+            }
+            if (toSec <= prevReleaseSec) return next.anchor;
+            if (currentSec >= toSec) return next.anchor;
+            const t = (currentSec - prevReleaseSec) / (toSec - prevReleaseSec);
+            return prev.anchor + (next.anchor - prev.anchor) * t;
         }
 
         // -----------------------------------------------------------------
@@ -317,6 +412,12 @@
             this._drawActivePositions();
             // Unplayable overlay (red discs on top of the active dots).
             this._drawUnplayablePositions();
+
+            // Mark the current paint state so `setCurrentTime` can
+            // skip redraws that wouldn't move anything visibly.
+            this._lastDrawnAnchor = this._displayedAnchor;
+            this._lastDrawnAt = (typeof performance !== 'undefined' && performance.now)
+                ? performance.now() : Date.now();
         }
 
         /**
@@ -724,6 +825,8 @@
             this.ghostAnchor = null;
             this._displayedAnchor = null;
             this._animation = null;
+            this._trajectory = [];
+            this._ticksPerSec = null;
         }
     }
 

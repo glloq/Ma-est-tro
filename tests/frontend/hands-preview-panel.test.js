@@ -352,6 +352,40 @@ describe('HandsPreviewPanel — engine wiring (frets)', () => {
     panel.destroy();
   });
 
+  it('pushes the engine\'s fretting trajectory + tempo to the fretboard at construction', () => {
+    const setTraj = vi.fn();
+    const setTps  = vi.fn();
+    // Stub the fretboard's setters before mount.
+    const origNew = window.FretboardHandPreview;
+    window.FretboardHandPreview = function (canvas, opts) {
+      const inst = new origNew(canvas, opts);
+      inst.setHandTrajectory = setTraj;
+      inst.setTicksPerSec = setTps;
+      return inst;
+    };
+    try {
+      const panel = makePanel({
+        instrument: {
+          hands_config: fretsHands,
+          tuning: [40, 45, 50, 55, 59, 64], num_frets: 22
+        },
+        notes: [
+          { tick: 0,   note: 45, fret: 5,  string: 1 },
+          { tick: 480, note: 47, fret: 12, string: 1 }
+        ],
+        ticksPerBeat: 480, bpm: 60
+      });
+      expect(setTps).toHaveBeenCalledWith(480);
+      expect(setTraj).toHaveBeenCalled();
+      const points = setTraj.mock.calls[0][0];
+      expect(Array.isArray(points)).toBe(true);
+      expect(points.length).toBeGreaterThan(0);
+      panel.destroy();
+    } finally {
+      window.FretboardHandPreview = origNew;
+    }
+  });
+
   it('forwards setCurrentTime to the fretboard on every tick (M1 animation drive)', () => {
     const panel = makePanel({
       instrument: {
