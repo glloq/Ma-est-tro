@@ -200,6 +200,33 @@
             this.advanceTo(sec * ticksPerSec);
         }
 
+        /**
+         * Build a per-hand trajectory from the precomputed timeline:
+         *
+         *   Map<handId, [{tick, anchor}]>
+         *
+         * Each trajectory is the sequence of anchor positions emitted
+         * by the simulator's shift events. Used by the lookahead
+         * strip to paint a translucent ribbon showing where each
+         * hand will be over the next few seconds.
+         *
+         * @returns {Map<string, Array<{tick:number, anchor:number}>>}
+         */
+        getHandTrajectories() {
+            const out = new Map();
+            for (const ev of this._timeline) {
+                if (ev.type !== 'shift' || ev.handId == null || !Number.isFinite(ev.toAnchor)) continue;
+                if (!out.has(ev.handId)) out.set(ev.handId, []);
+                out.get(ev.handId).push({ tick: ev.tick, anchor: ev.toAnchor });
+            }
+            // Sort defensively — the timeline is already ordered but
+            // a future caller might inject extra entries.
+            for (const points of out.values()) {
+                points.sort((a, b) => a.tick - b.tick);
+            }
+            return out;
+        }
+
         /** Return to tick 0 and clear cursor state. */
         reset() {
             this.pause();

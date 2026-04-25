@@ -19,7 +19,7 @@ function installCanvasStub() {
   const ctx = new Proxy({ calls }, {
     get(target, prop) {
       if (prop === 'calls') return target.calls;
-      if (typeof prop === 'string' && /^(setTransform|fillRect|strokeRect|fillText|beginPath|moveTo|lineTo|closePath|fill|stroke|clearRect|save|restore|translate|scale|rotate|setLineDash|rect|clip|arc)$/.test(prop)) {
+      if (typeof prop === 'string' && /^(setTransform|fillRect|strokeRect|fillText|beginPath|moveTo|lineTo|closePath|fill|stroke|clearRect|save|restore|translate|scale|rotate|setLineDash|rect|clip|arc|bezierCurveTo|quadraticCurveTo)$/.test(prop)) {
         return (...args) => target.calls.push({ method: prop, args });
       }
       return target[prop];
@@ -215,5 +215,101 @@ describe('HandsLookaheadStrip — destroy', () => {
     expect(s.notes.length).toBe(0);
     expect(s._noteTimes.length).toBe(0);
     expect(s.unplayableNotes.size).toBe(0);
+  });
+});
+
+describe('HandsLookaheadStrip — hand trajectory ribbons', () => {
+  it('initialises with no trajectories', () => {
+    const s = makeStrip();
+    expect(s.handTrajectories).toEqual([]);
+  });
+
+  it('setHandTrajectories converts ticks to seconds and sorts by time', () => {
+    const s = makeStrip();
+    s.setHandTrajectories([{
+      id: 'left', span: 14, color: '#3b82f6',
+      points: [{ tick: 1920, anchor: 70 }, { tick: 0, anchor: 60 }, { tick: 480, anchor: 65 }]
+    }]);
+    expect(s.handTrajectories).toHaveLength(1);
+    const pts = s.handTrajectories[0].points;
+    expect(pts.map(p => p.sec)).toEqual([0, 1, 4]);
+    expect(pts.map(p => p.anchor)).toEqual([60, 65, 70]);
+  });
+
+  it('drops malformed trajectories (no id / no span / bad points)', () => {
+    const s = makeStrip();
+    s.setHandTrajectories([
+      { id: 'left', span: 14, color: '#3b82f6', points: [{ tick: 0, anchor: 60 }] },
+      { id: 'no-span', color: '#ff0000', points: [{ tick: 0, anchor: 60 }] },
+      { /* no id */ span: 14, points: [] },
+      null
+    ]);
+    expect(s.handTrajectories).toHaveLength(1);
+  });
+
+  it('setHandTrajectories(null) / [] clears the ribbons', () => {
+    const s = makeStrip();
+    s.setHandTrajectories([{ id: 'left', span: 14, color: '#3b82f6', points: [{ tick: 0, anchor: 60 }] }]);
+    expect(s.handTrajectories).toHaveLength(1);
+    s.setHandTrajectories(null);
+    expect(s.handTrajectories).toHaveLength(0);
+  });
+
+  it('paints a quadratic-bezier trajectory ribbon under the notes', () => {
+    const ctx = installCanvasStub();
+    const s = new window.HandsLookaheadStrip(makeCanvas(), {
+      ticksPerSecond: 480, rangeMin: 36, rangeMax: 96, windowSeconds: 4,
+      notes: []
+    });
+    s.setHandTrajectories([{
+      id: 'left', span: 14, color: '#3b82f6',
+      points: [{ tick: 0, anchor: 40 }, { tick: 480, anchor: 50 }] // shift mid-window
+    }]);
+    s.draw();
+    // Ribbon paints with bezier curves; we just check at least one
+    // bezierCurveTo call landed.
+    const beziers = ctx.calls.filter(c => c.method === 'bezierCurveTo');
+    expect(beziers.length).toBeGreaterThan(0);
+  });
+
+  it('uses the configured hand color (translucent) for the ribbon fill', () => {
+    const ctx = installCanvasStub();
+    const s = new window.HandsLookaheadStrip(makeCanvas(), {
+      ticksPerSecond: 480, rangeMin: 36, rangeMax: 96, windowSeconds: 4,
+      notes: []
+    });
+    s.setHandTrajectories([{
+      id: 'left', span: 14, color: '#3b82f6',
+      points: [{ tick: 0, anchor: 60 }]
+    }]);
+    s.draw();
+    const fillStyles = ctx.calls.filter(c => c.method === 'set' && c.prop === 'fillStyle').map(c => c.value);
+    // 0.18 alpha rgba derived from #3b82f6.
+    expect(fillStyles.some(v => v.startsWith('rgba(59, 130, 246'))).toBe(true);
+  });
+
+  it('renders the ribbon BEFORE the falling notes (so notes stay readable)', () => {
+    const ctx = installCanvasStub();
+    const s = new window.HandsLookaheadStrip(makeCanvas(), {
+      ticksPerSecond: 480, rangeMin: 36, rangeMax: 96, windowSeconds: 4,
+      notes: [{ tick: 480, note: 60, duration: 240 }]
+    });
+    s.setHandTrajectories([{
+      id: 'left', span: 14, color: '#3b82f6',
+      points: [{ tick: 0, anchor: 50 }, { tick: 480, anchor: 60 }]
+    }]);
+    s.draw();
+    // Ribbon paint emits stroke/fill via bezierCurveTo; notes paint via
+    // fillRect. Order check: first bezier appears before the last note
+    // fillRect. (Background fillRect happens first, so we check the
+    // last fillRect comes after the first bezier.)
+    const calls = ctx.calls;
+    const firstBezier = calls.findIndex(c => c.method === 'bezierCurveTo');
+    let lastNoteFillRect = -1;
+    for (let i = calls.length - 1; i >= 0; i--) {
+      if (calls[i].method === 'fillRect') { lastNoteFillRect = i; break; }
+    }
+    expect(firstBezier).toBeGreaterThan(0);
+    expect(lastNoteFillRect).toBeGreaterThan(firstBezier);
   });
 });

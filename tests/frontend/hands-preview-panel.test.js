@@ -23,7 +23,7 @@ function installCanvasStub() {
   const ctx = new Proxy({}, {
     get(_t, prop) {
       if (prop === 'measureText') return () => ({ width: 8 });
-      if (typeof prop === 'string' && /^(setTransform|fillRect|strokeRect|fillText|beginPath|moveTo|lineTo|closePath|fill|stroke|clearRect|save|restore|translate|scale|rotate|setLineDash|rect|clip|arc)$/.test(prop)) {
+      if (typeof prop === 'string' && /^(setTransform|fillRect|strokeRect|fillText|beginPath|moveTo|lineTo|closePath|fill|stroke|clearRect|save|restore|translate|scale|rotate|setLineDash|rect|clip|arc|bezierCurveTo|quadraticCurveTo)$/.test(prop)) {
         return () => {};
       }
       return undefined;
@@ -138,6 +138,37 @@ describe('HandsPreviewPanel — setCurrentTime drives the engine', () => {
     const advance = vi.spyOn(panel.engine, 'advanceToSec');
     panel.setCurrentTime(undefined);
     expect(advance).toHaveBeenCalledWith(0);
+    panel.destroy();
+  });
+});
+
+describe('HandsPreviewPanel — hand trajectory ribbons (semitones)', () => {
+  it('pushes the engine\'s trajectories into the lookahead at construction', () => {
+    const panel = makePanel({
+      notes: [{ tick: 0, note: 40 }, { tick: 0, note: 80 }, { tick: 480, note: 95 }]
+    });
+    expect(Array.isArray(panel.lookahead.handTrajectories)).toBe(true);
+    expect(panel.lookahead.handTrajectories.length).toBeGreaterThanOrEqual(1);
+    panel.destroy();
+  });
+
+  it('rebuilds the trajectories when overrides change', () => {
+    const panel = makePanel();
+    const setTraj = vi.spyOn(panel.lookahead, 'setHandTrajectories');
+    panel.pinHandAnchor('left', 50);
+    // setOverrides() rebuilt the engine and re-pushed the trajectories.
+    expect(setTraj).toHaveBeenCalled();
+    panel.destroy();
+  });
+
+  it('attaches the right colour per hand band', () => {
+    const panel = makePanel({
+      notes: [{ tick: 0, note: 40 }, { tick: 0, note: 80 }]
+    });
+    const left  = panel.lookahead.handTrajectories.find(t => t.id === 'left');
+    const right = panel.lookahead.handTrajectories.find(t => t.id === 'right');
+    if (left)  expect(left.color).toMatch(/^#/);
+    if (right) expect(right.color).toMatch(/^#/);
     panel.destroy();
   });
 });
