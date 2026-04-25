@@ -65,7 +65,7 @@
 
             this.rangeMin = Number.isFinite(opts.rangeMin) ? opts.rangeMin : 21;  // A0
             this.rangeMax = Number.isFinite(opts.rangeMax) ? opts.rangeMax : 108; // C8
-            this.activeNotes = new Set();
+            this.activeNotes = new Map(); // midi → handId | null
             this.unplayableNotes = new Map(); // midi → { hand }
             this.handBands = [];              // [{id, low, high, color}]
             this.bandHeight = Number.isFinite(opts.bandHeight) ? opts.bandHeight : 8;
@@ -105,8 +105,24 @@
             this.draw();
         }
 
+        /**
+         * Accept either the legacy flat list `[midi, midi, …]` or a
+         * tagged shape `[{ midi, handId }, …]`. When `handId` is
+         * provided, the key is painted in the colour of the matching
+         * hand band so the operator can read which hand plays each
+         * note at a glance.
+         */
         setActiveNotes(notes) {
-            this.activeNotes = new Set(Array.isArray(notes) ? notes.filter(n => Number.isFinite(n)) : []);
+            this.activeNotes = new Map();
+            if (Array.isArray(notes)) {
+                for (const entry of notes) {
+                    if (Number.isFinite(entry)) {
+                        this.activeNotes.set(entry, null);
+                    } else if (entry && Number.isFinite(entry.midi)) {
+                        this.activeNotes.set(entry.midi, entry.handId || null);
+                    }
+                }
+            }
             this.draw();
         }
 
@@ -301,6 +317,11 @@
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, w, h);
 
+            // Build a quick id → colour map so active keys can be
+            // tinted with their assigned hand's colour.
+            const bandColorById = new Map();
+            for (const b of this.handBands) bandColorById.set(b.id, b.color);
+
             // Pass 1 — white keys.
             for (let m = this.rangeMin; m <= this.rangeMax; m++) {
                 if (isBlackKey(m)) continue;
@@ -308,8 +329,13 @@
                 const isActive = this.activeNotes.has(m);
                 const isUnplayable = this.unplayableNotes.has(m);
                 let fill = '#ffffff';
-                if (isUnplayable) fill = '#fee2e2';        // light red
-                else if (isActive) fill = '#bfdbfe';       // light blue
+                if (isUnplayable) {
+                    fill = '#fee2e2';                       // light red
+                } else if (isActive) {
+                    const hid = this.activeNotes.get(m);
+                    const handColor = hid ? bandColorById.get(hid) : null;
+                    fill = handColor ? rgbaWithAlpha(handColor, 0.45) : '#bfdbfe';
+                }
                 ctx.fillStyle = fill;
                 ctx.fillRect(x, 0, ww - 0.5, keysH);
                 ctx.strokeStyle = '#9ca3af';
@@ -331,7 +357,15 @@
                 const x = this._xOf(m);
                 const isActive = this.activeNotes.has(m);
                 const isUnplayable = this.unplayableNotes.has(m);
-                ctx.fillStyle = isUnplayable ? '#dc2626' : (isActive ? '#1d4ed8' : '#1f2937');
+                if (isUnplayable) {
+                    ctx.fillStyle = '#dc2626';
+                } else if (isActive) {
+                    const hid = this.activeNotes.get(m);
+                    const handColor = hid ? bandColorById.get(hid) : null;
+                    ctx.fillStyle = handColor || '#1d4ed8';
+                } else {
+                    ctx.fillStyle = '#1f2937';
+                }
                 ctx.fillRect(x, 0, blackW, blackH);
             }
 

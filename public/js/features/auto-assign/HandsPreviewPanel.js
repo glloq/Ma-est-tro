@@ -240,7 +240,9 @@
             this.engine.on('chord', (e) => {
                 const { notes, unplayable } = e.detail;
                 if (this.keyboard) {
-                    this.keyboard.setActiveNotes(notes.map(n => n.note));
+                    this.keyboard.setActiveNotes(
+                        notes.map(n => ({ midi: n.note, handId: n.handId || null }))
+                    );
                     this.keyboard.setUnplayableNotes(unplayable.map(u => ({ note: u.note, hand: u.handId })));
                 }
                 if (this.lookahead) {
