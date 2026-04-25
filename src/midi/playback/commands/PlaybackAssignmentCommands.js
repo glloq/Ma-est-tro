@@ -344,6 +344,23 @@ async function applyAssignments(app, data) {
   const routings = [];
   const targetFileId = adaptedFileId || data.originalFileId;
 
+  // D.1: pre-compute the hand-position feasibility per (channel, deviceId)
+  // so each routing row gets persisted with its current classification.
+  // The same payload is also returned at the end (D.2) so the frontend
+  // can paint the C.3 badge without an extra round-trip. The lookup
+  // map keys on `${channel}:${deviceId}` to support split assignments
+  // where each segment has its own destination.
+  const handPositionWarnings = buildHandPositionWarnings(app, midiData, data.assignments);
+  const feasibilityByChannelDevice = new Map();
+  for (const w of handPositionWarnings) {
+    feasibilityByChannelDevice.set(`${w.channel}:${w.deviceId}`, {
+      level: w.level,
+      qualityScore: w.qualityScore,
+      summary: w.summary,
+      message: w.message
+    });
+  }
+
   for (const [channel, assignment] of Object.entries(data.assignments)) {
     const channelNum = parseInt(channel);
 
@@ -368,7 +385,8 @@ async function applyAssignments(app, data) {
             assignment_reason: `Split ${assignment.splitMode || 'range'} from ch ${channelNum}: notes ${seg.noteRange?.min ?? '?'}-${seg.noteRange?.max ?? '?'}`,
             note_remapping: null,
             enabled: true,
-            created_at: Date.now()
+            created_at: Date.now(),
+            hand_position_feasibility: feasibilityByChannelDevice.get(`${channelNum}:${seg.deviceId}`) || null
           };
           try {
             app.routingRepository.save(routing);
@@ -449,7 +467,8 @@ async function applyAssignments(app, data) {
         : 'Auto-assigned',
       note_remapping: assignment.noteRemapping ? JSON.stringify(assignment.noteRemapping) : null,
       enabled: true,
-      created_at: Date.now()
+      created_at: Date.now(),
+      hand_position_feasibility: feasibilityByChannelDevice.get(`${channelNum}:${assignment.deviceId}`) || null
     };
 
     try {
@@ -468,12 +487,11 @@ async function applyAssignments(app, data) {
     );
   }
 
-  // Build a per-channel summary of hand-position feasibility for this
-  // routing apply, so the frontend (C.3 badge, future inspection
-  // panel) can show the operator at-a-glance which channels look
-  // problematic without needing to start playback. The function is
-  // defensive — it never fails the apply.
-  const handPositionWarnings = buildHandPositionWarnings(app, midiData, data.assignments);
+  // handPositionWarnings was computed earlier (just before the
+  // routings loop) so we could persist each entry alongside its
+  // routing row (D.1). Reuse the same payload in the response so
+  // the frontend (C.3 badge, future inspection panel) sees the
+  // same level taxonomy without an extra round-trip.
 
   return {
     success: true,
