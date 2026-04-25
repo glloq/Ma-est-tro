@@ -601,6 +601,10 @@
         "play": "Lecture",
         "pause": "Pause",
         "reset": "Rembobiner",
+        "save": "Enregistrer",
+        "saveDirty": "Modifications non sauvegardées",
+        "saveClean": "Aucune modification à sauvegarder",
+        "resetOverrides": "Annuler les overrides",
         "noHandsConfig": "Aucune configuration des mains pour cet instrument — la pré-visualisation est désactivée."
     },
     "instrumentSettings": {

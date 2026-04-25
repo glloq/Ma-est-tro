@@ -100,15 +100,34 @@
                 <button class="hpp-play"  type="button">${_t('handsPreview.play',  'Lecture')}</button>
                 <button class="hpp-pause" type="button">${_t('handsPreview.pause', 'Pause')}</button>
                 <button class="hpp-reset" type="button">${_t('handsPreview.reset', 'Rembobiner')}</button>
+                <span style="display:inline-block;width:1px;height:18px;background:#d1d5db;margin:0 4px;"></span>
+                <button class="hpp-reset-overrides" type="button"
+                        title="${_t('handsPreview.resetOverrides', 'Annuler les overrides')}">↺</button>
+                <button class="hpp-save" type="button" disabled
+                        title="${_t('handsPreview.saveClean', 'Aucune modification à sauvegarder')}">${_t('handsPreview.save', 'Enregistrer')}</button>
             `;
             this.container.appendChild(header);
 
             this._playBtn  = header.querySelector('.hpp-play');
             this._pauseBtn = header.querySelector('.hpp-pause');
             this._resetBtn = header.querySelector('.hpp-reset');
+            this._resetOverridesBtn = header.querySelector('.hpp-reset-overrides');
+            this._saveBtn = header.querySelector('.hpp-save');
             this._playBtn.addEventListener('click',  () => this.play());
             this._pauseBtn.addEventListener('click', () => this.pause());
             this._resetBtn.addEventListener('click', () => this.reset());
+            this._resetOverridesBtn.addEventListener('click', () => this.resetOverrides());
+            this._saveBtn.addEventListener('click', () => {
+                this.saveOverrides()
+                    .then(() => this._refreshSaveButton())
+                    .catch(err => {
+                        // Stay non-blocking: log + restore the dirty
+                        // state so the operator can retry.
+                        console.error('[HandsPreviewPanel] saveOverrides failed:', err);
+                        this._dirty = true;
+                        this._refreshSaveButton();
+                    });
+            });
 
             const body = document.createElement('div');
             body.className = 'hpp-body';
@@ -227,6 +246,101 @@
             });
         }
 
+        // -----------------------------------------------------------------
+        //  Edit mode (E.6.8)
+        // -----------------------------------------------------------------
+
+        /**
+         * Toggle a note's "disabled" state at the current playhead
+         * tick. Updates the in-memory overrides + flags the panel as
+         * dirty so the Save button signals an unsaved edit.
+         */
+        toggleDisabledNote(midi) {
+            if (!Number.isFinite(midi)) return;
+            const tick = this.engine?.currentTick() || 0;
+            this.overrides = this.overrides || { hand_anchors: [], disabled_notes: [], version: 1 };
+            if (!Array.isArray(this.overrides.disabled_notes)) this.overrides.disabled_notes = [];
+            const idx = this.overrides.disabled_notes
+                .findIndex(n => n.tick === tick && n.note === midi);
+            if (idx >= 0) {
+                this.overrides.disabled_notes.splice(idx, 1);
+            } else {
+                this.overrides.disabled_notes.push({ tick, note: midi, reason: 'user' });
+            }
+            this._markDirty();
+            // Re-arm the engine so the next chord at this tick honours
+            // the new disabled list. setOverrides is a full rebuild
+            // which is overkill but cheap on a single channel.
+            this.setOverrides(this.overrides);
+        }
+
+        /**
+         * Pin a hand's anchor at the current tick. Used by the future
+         * drag interaction (and exposed via the public API so tests
+         * can drive it without simulating a drag gesture).
+         */
+        pinHandAnchor(handId, anchor) {
+            if (!handId || !Number.isFinite(anchor)) return;
+            const tick = this.engine?.currentTick() || 0;
+            this.overrides = this.overrides || { hand_anchors: [], disabled_notes: [], version: 1 };
+            if (!Array.isArray(this.overrides.hand_anchors)) this.overrides.hand_anchors = [];
+            const idx = this.overrides.hand_anchors
+                .findIndex(a => a.tick === tick && a.handId === handId);
+            const entry = { tick, handId, anchor };
+            if (idx >= 0) this.overrides.hand_anchors[idx] = entry;
+            else this.overrides.hand_anchors.push(entry);
+            this._markDirty();
+            this.setOverrides(this.overrides);
+        }
+
+        /** Reset overrides + revert UI back to the planner defaults. */
+        resetOverrides() {
+            this.overrides = null;
+            this._dirty = false;
+            this._refreshSaveButton();
+            this.setOverrides(null);
+        }
+
+        /**
+         * Persist the current overrides via the routing_save_hand_overrides
+         * WS command. The caller (RoutingSummaryPage) provides the API
+         * client + routing identifiers via opts.saveCtx.
+         *
+         * @returns {Promise<{updated:number}>}
+         */
+        async saveOverrides() {
+            const ctx = this.opts.saveCtx;
+            const apiClient = ctx?.apiClient;
+            if (!apiClient || typeof apiClient.sendCommand !== 'function') {
+                throw new Error('saveOverrides: apiClient is not wired');
+            }
+            if (ctx.fileId == null || ctx.deviceId == null || !Number.isFinite(this.channel)) {
+                throw new Error('saveOverrides: missing fileId / channel / deviceId');
+            }
+            const res = await apiClient.sendCommand('routing_save_hand_overrides', {
+                fileId: ctx.fileId,
+                channel: this.channel,
+                deviceId: ctx.deviceId,
+                overrides: this.overrides
+            });
+            this._dirty = false;
+            this._refreshSaveButton();
+            return res || { updated: 0 };
+        }
+
+        _markDirty() {
+            this._dirty = true;
+            this._refreshSaveButton();
+        }
+
+        _refreshSaveButton() {
+            if (!this._saveBtn) return;
+            this._saveBtn.disabled = !this._dirty;
+            this._saveBtn.title = this._dirty
+                ? _t('handsPreview.saveDirty', 'Modifications non sauvegardées')
+                : _t('handsPreview.saveClean', 'Aucune modification à sauvegarder');
+        }
+
         _refreshHandsView() {
             const hands = _hands(this.instrument);
             if (this.mode === 'semitones' && this.keyboard) {
@@ -251,9 +365,14 @@
         }
 
         _onKeyClick(midi) {
-            // Hook for E.6.8 (edit mode). For now, just expose the
-            // event via onSeek so the parent can react if it wants.
-            if (typeof this.opts.onKeyClick === 'function') this.opts.onKeyClick(midi);
+            // E.6.8 — clicking a key toggles the note's "disabled"
+            // state at the current playhead. Bypassed when the host
+            // page wants to handle the click itself (rare; kept for
+            // power-user customization).
+            if (typeof this.opts.onKeyClick === 'function') {
+                if (this.opts.onKeyClick(midi) === false) return;
+            }
+            this.toggleDisabledNote(midi);
         }
 
         // -----------------------------------------------------------------

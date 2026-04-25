@@ -199,6 +199,113 @@ describe('HandsPreviewPanel — engine wiring (frets)', () => {
   });
 });
 
+describe('HandsPreviewPanel — edit mode (E.6.8)', () => {
+  it('toggleDisabledNote adds an entry on first call, removes on second', () => {
+    const panel = makePanel();
+    expect(panel.overrides).toBeFalsy();
+    panel.toggleDisabledNote(60);
+    expect(panel.overrides.disabled_notes).toHaveLength(1);
+    expect(panel.overrides.disabled_notes[0]).toMatchObject({ tick: 0, note: 60 });
+    panel.toggleDisabledNote(60);
+    expect(panel.overrides.disabled_notes).toHaveLength(0);
+    panel.destroy();
+  });
+
+  it('toggleDisabledNote ignores non-finite midi numbers', () => {
+    const panel = makePanel();
+    panel.toggleDisabledNote(NaN);
+    panel.toggleDisabledNote(undefined);
+    expect(panel.overrides).toBeFalsy();
+    panel.destroy();
+  });
+
+  it('keyboard click triggers toggleDisabledNote (semitones layout)', () => {
+    const panel = makePanel();
+    panel.keyboard.onKeyClick(64);
+    expect(panel.overrides.disabled_notes.find(n => n.note === 64)).toBeDefined();
+    panel.destroy();
+  });
+
+  it('host can short-circuit the keyboard click by returning false', () => {
+    const handled = vi.fn(() => false);
+    const panel = makePanel({ onKeyClick: handled });
+    panel.keyboard.onKeyClick(60);
+    expect(handled).toHaveBeenCalledWith(60);
+    expect(panel.overrides).toBeFalsy();
+    panel.destroy();
+  });
+
+  it('pinHandAnchor records / replaces an entry at the current tick', () => {
+    const panel = makePanel();
+    panel.pinHandAnchor('left', 60);
+    expect(panel.overrides.hand_anchors).toHaveLength(1);
+    expect(panel.overrides.hand_anchors[0]).toEqual({ tick: 0, handId: 'left', anchor: 60 });
+    panel.pinHandAnchor('left', 64); // replace, not append
+    expect(panel.overrides.hand_anchors).toHaveLength(1);
+    expect(panel.overrides.hand_anchors[0].anchor).toBe(64);
+    panel.destroy();
+  });
+
+  it('save button is disabled when there is no edit, enabled after a toggle', () => {
+    const panel = makePanel();
+    expect(document.querySelector('.hpp-save').disabled).toBe(true);
+    panel.toggleDisabledNote(60);
+    expect(document.querySelector('.hpp-save').disabled).toBe(false);
+    panel.destroy();
+  });
+
+  it('resetOverrides clears the in-memory overrides + disables save', () => {
+    const panel = makePanel();
+    panel.toggleDisabledNote(60);
+    panel.resetOverrides();
+    expect(panel.overrides).toBeNull();
+    expect(document.querySelector('.hpp-save').disabled).toBe(true);
+    panel.destroy();
+  });
+
+  it('saveOverrides invokes routing_save_hand_overrides via apiClient', async () => {
+    const sendCommand = vi.fn().mockResolvedValue({ success: true, updated: 1 });
+    const panel = makePanel({
+      saveCtx: {
+        apiClient: { sendCommand },
+        fileId: 42,
+        deviceId: 'piano-1'
+      }
+    });
+    panel.toggleDisabledNote(60);
+    const r = await panel.saveOverrides();
+    expect(r.updated).toBe(1);
+    expect(sendCommand).toHaveBeenCalledWith('routing_save_hand_overrides', expect.objectContaining({
+      fileId: 42,
+      channel: 0,
+      deviceId: 'piano-1',
+      overrides: expect.objectContaining({
+        disabled_notes: [expect.objectContaining({ note: 60 })]
+      })
+    }));
+    panel.destroy();
+  });
+
+  it('saveOverrides throws when no apiClient is wired', async () => {
+    const panel = makePanel();
+    await expect(panel.saveOverrides()).rejects.toThrow(/apiClient/);
+    panel.destroy();
+  });
+
+  it('save button click triggers a save and clears the dirty flag', async () => {
+    const sendCommand = vi.fn().mockResolvedValue({ success: true, updated: 1 });
+    const panel = makePanel({
+      saveCtx: { apiClient: { sendCommand }, fileId: 1, deviceId: 'p' }
+    });
+    panel.toggleDisabledNote(60);
+    document.querySelector('.hpp-save').click();
+    // Wait a microtask for the async save() to resolve.
+    await new Promise(r => setTimeout(r, 0));
+    expect(sendCommand).toHaveBeenCalled();
+    panel.destroy();
+  });
+});
+
 describe('HandsPreviewPanel — lifecycle', () => {
   it('reset() clears active notes / bands and rewinds the engine', () => {
     const panel = makePanel();

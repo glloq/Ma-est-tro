@@ -1011,7 +1011,14 @@ class RoutingSummaryPage {
       ticksPerBeat,
       bpm,
       overrides: initialOverrides,
-      onSeek: (currentTick, totalTicks) => this._onHandsPreviewSeek(currentTick, totalTicks)
+      onSeek: (currentTick, totalTicks) => this._onHandsPreviewSeek(currentTick, totalTicks),
+      // E.6.8 — saveCtx tells the panel how to persist its overrides
+      // via the routing_save_hand_overrides WS command.
+      saveCtx: {
+        apiClient: this._rawApiClient || this.apiClient?.backend || this.apiClient,
+        fileId: this.fileId,
+        deviceId: assignment.deviceId
+      }
     });
     this._handsPreviewChannel = channel;
   }
