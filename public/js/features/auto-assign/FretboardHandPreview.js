@@ -56,25 +56,18 @@
 
             this.activePositions = [];
             this.unplayablePositions = [];
-            this.handWindow = null;
-            this.ghostAnchor = null;
 
-            // M1 — lerp animation state. `_displayedAnchor` is the
-            // smoothed float used by `_drawHandWindow`; falls back
-            // to `handWindow.anchorFret` when no trajectory drives
-            // us. The trajectory (= the engine's full timeline of
-            // shifts for this hand) lets `setCurrentTime` derive the
-            // displayed anchor from the playhead instead of waiting
-            // for shift events to land. `_animation` is the legacy
-            // single-shot path kept for callers without a trajectory.
-            this._displayedAnchor = null;
-            this._animation = null;
-            this._currentSec = 0;
+            // Single source of truth for the hand band. Position is
+            // DERIVED from `_trajectory` + `_currentSec`; level is
+            // chord-driven. No more `handWindow.anchorFret` /
+            // `_displayedAnchor` / `_animation` triple.
             this._trajectory = [];
             this._ticksPerSec = null;
-            // Redraw throttle — skip draw() when the displayed
-            // anchor barely moved AND at least one frame budget
-            // (~33 ms = 30 fps) has elapsed since the last paint.
+            this._currentSec = 0;
+            this._level = 'ok';
+            // Throttle: skip draw when the displayed anchor barely
+            // moved AND at least one frame budget (~33 ms = 30 fps)
+            // has elapsed since the last paint.
             this._lastDrawnAnchor = null;
             this._lastDrawnAt = 0;
 
@@ -112,111 +105,11 @@
         }
 
         /**
-         * Set a translucent "ghost" rectangle showing where the hand
-         * is GOING for the next planned shift. Same shape as the
-         * regular `setHandWindow` payload but rendered with a more
-         * faded fill + dashed outline so the eye reads "future
-         * position, not current". Pass `null` to clear.
-         */
-        setGhostAnchor(window) {
-            if (window == null) {
-                this.ghostAnchor = null;
-                this.draw();
-                return;
-            }
-            const anchor = parseInt(window.anchorFret, 10);
-            const spanFrets = parseInt(window.spanFrets, 10);
-            if (!Number.isFinite(anchor) || !Number.isFinite(spanFrets) || spanFrets <= 0) {
-                this.ghostAnchor = null;
-                this.draw();
-                return;
-            }
-            this.ghostAnchor = {
-                anchorFret: Math.max(0, anchor),
-                spanFrets,
-                level: window.level || 'ok'
-            };
-            this.draw();
-        }
-
-        setHandWindow(handWindow) {
-            if (handWindow == null) {
-                this.handWindow = null;
-                this._displayedAnchor = null;
-                this._animation = null;
-                this.draw();
-                return;
-            }
-            const anchor = parseInt(handWindow.anchorFret, 10);
-            const spanFrets = parseInt(handWindow.spanFrets, 10);
-            if (!Number.isFinite(anchor) || !Number.isFinite(spanFrets) || spanFrets <= 0) {
-                this.handWindow = null;
-                this._displayedAnchor = null;
-                this._animation = null;
-                this.draw();
-                return;
-            }
-            const newAnchor = Math.max(0, anchor);
-            this.handWindow = {
-                anchorFret: newAnchor,
-                spanFrets,
-                level: handWindow.level || 'ok'
-            };
-            // M1 — start a lerp animation when the panel passes sim-
-            // time bounds (`animateFromSec` / `animateToSec`). Without
-            // them, snap immediately to the new anchor (= back-compat
-            // with callers that don't drive playback).
-            const fromSec = handWindow.animateFromSec;
-            const toSec   = handWindow.animateToSec;
-            if (this._displayedAnchor != null
-                    && Number.isFinite(fromSec) && Number.isFinite(toSec)
-                    && toSec > fromSec
-                    && this._displayedAnchor !== newAnchor) {
-                this._animation = {
-                    fromAnchor: this._displayedAnchor,
-                    toAnchor: newAnchor,
-                    fromSec,
-                    toSec
-                };
-                this._tickAnimation();
-            } else {
-                this._displayedAnchor = newAnchor;
-                this._animation = null;
-            }
-            this.draw();
-        }
-
-        /**
-         * M1 — Drive the lerp animation from the simulated playhead.
-         * The panel calls this on every `tick` event so the band
-         * smoothly slides between anchors using the SAME wall-clock
-         * the simulator runs on (= paused when paused, fast-forwarded
-         * on seek).
-         */
-        setCurrentTime(currentSec) {
-            this._currentSec = Number.isFinite(currentSec) ? currentSec : 0;
-            this._tickAnimation();
-            // Throttle: skip the redraw when the displayed anchor
-            // moved less than 0.05 frets AND we drew within the last
-            // 33 ms (= ~30 fps). Cuts CPU on long sustained chords
-            // where the playhead advances continuously but the band
-            // is visually static.
-            if (this._lastDrawnAnchor != null && this._displayedAnchor != null) {
-                const delta = Math.abs(this._displayedAnchor - this._lastDrawnAnchor);
-                const now = (typeof performance !== 'undefined' && performance.now)
-                    ? performance.now() : Date.now();
-                if (delta < 0.05 && (now - this._lastDrawnAt) < 33) return;
-            }
-            this.draw();
-        }
-
-        /**
-         * Set the per-hand trajectory used to drive the band
-         * animation. Each entry: `{tick, anchor, releaseTick?,
-         * motion?}`. The trajectory replaces the legacy single-shot
-         * `_animation` path: on each `setCurrentTime`, the band's
-         * displayed anchor is computed from the playhead's position
-         * inside the right segment.
+         * Set the per-hand trajectory used to drive the band's
+         * position. Each entry: `{tick, anchor, releaseTick?,
+         * motion?}`. Posed ONCE per engine setup (and on
+         * `setOverrides`). The band + ghost positions are derived
+         * from this + `_currentSec`, never set explicitly.
          */
         setHandTrajectory(points) {
             this._trajectory = Array.isArray(points)
@@ -225,50 +118,74 @@
                     .slice()
                     .sort((a, b) => a.tick - b.tick)
                 : [];
-            this._tickAnimation();
+            this._lastDrawnAnchor = null; // force first paint
             this.draw();
         }
 
         /** Conversion factor for tick → sec used by the trajectory
-         *  interpolator. The panel passes `ticksPerBeat × bpm/60`. */
+         *  interpolator. Posed once. */
         setTicksPerSec(ticksPerSec) {
             this._ticksPerSec = Number.isFinite(ticksPerSec) && ticksPerSec > 0
                 ? ticksPerSec : null;
         }
 
-        /** @private — recompute `_displayedAnchor` from the
-         *  trajectory (preferred) or the legacy single-shot
-         *  animation. */
-        _tickAnimation() {
-            // Trajectory drive — preferred when both pieces are set.
-            if (this._trajectory && this._trajectory.length > 0
-                    && this._ticksPerSec != null) {
-                const a = this._anchorFromTrajectory(this._currentSec);
-                if (a != null) this._displayedAnchor = a;
-                return;
+        /**
+         * Drive the animation from the simulated playhead. Cheap:
+         * walks the trajectory once, computes the derived anchor,
+         * and only redraws when the anchor moved enough OR a frame
+         * budget has elapsed.
+         */
+        setCurrentTime(currentSec) {
+            this._currentSec = Number.isFinite(currentSec) ? currentSec : 0;
+            const newAnchor = this._currentDisplayedAnchor();
+            if (this._lastDrawnAnchor != null && newAnchor != null) {
+                const delta = Math.abs(newAnchor - this._lastDrawnAnchor);
+                const now = (typeof performance !== 'undefined' && performance.now)
+                    ? performance.now() : Date.now();
+                if (delta < 0.05 && (now - this._lastDrawnAt) < 33) return;
             }
-            // Legacy single-shot animation (kept for callers that
-            // don't push a full trajectory yet).
-            const a = this._animation;
-            if (!a) return;
-            if (this._currentSec >= a.toSec) {
-                this._displayedAnchor = a.toAnchor;
-                this._animation = null;
-                return;
-            }
-            if (this._currentSec <= a.fromSec) {
-                this._displayedAnchor = a.fromAnchor;
-                return;
-            }
-            const t = (this._currentSec - a.fromSec) / (a.toSec - a.fromSec);
-            this._displayedAnchor = a.fromAnchor + (a.toAnchor - a.fromAnchor) * t;
+            this.draw();
         }
 
-        /** @private — Compute the anchor for a given sim time from
-         *  the per-hand trajectory: hold the previous anchor while
-         *  its chord is ringing, then lerp toward the next anchor.
-         *  When `motion.requiredSec` is available the lerp finishes
-         *  early (the hand arrives, then waits for the next chord). */
+        /**
+         * Set the chord-level reachability of the CURRENT chord.
+         * Drives the band colour. Speed-related infeasibility is
+         * NOT communicated here — the trajectory animation already
+         * shows the hand visually lagging behind the music.
+         *
+         * Accepted values: `'ok' | 'warning' | 'infeasible'`.
+         */
+        setLevel(level) {
+            this._level = (level === 'warning' || level === 'infeasible') ? level : 'ok';
+            this.draw();
+        }
+
+        /** @private — Anchor for the CURRENT playhead. Returns
+         *  `null` when no trajectory is loaded so the caller can
+         *  decide what to do. Stable: callable from any code path. */
+        _currentDisplayedAnchor() {
+            return this._anchorFromTrajectory(this._currentSec);
+        }
+
+        /** @private — Anchor of the FIRST upcoming shift after the
+         *  playhead, used to render the ghost rectangle. Returns
+         *  `null` when no future shift exists. */
+        _nextShiftAnchor() {
+            const traj = this._trajectory;
+            const tps  = this._ticksPerSec;
+            if (!traj || traj.length === 0 || !tps) return null;
+            for (const p of traj) {
+                if (p.tick / tps > this._currentSec) return p.anchor;
+            }
+            return null;
+        }
+
+        /** @private — Compute the anchor at `currentSec` by walking
+         *  the trajectory: hold the previous anchor while its chord
+         *  rings, then lerp toward the next anchor at the physical
+         *  travel speed (`motion.requiredSec`). When the move is
+         *  infeasible (`requiredSec > gap`), the band visually lags
+         *  behind the music — that's the correct cue. */
         _anchorFromTrajectory(currentSec) {
             const traj = this._trajectory;
             const tps  = this._ticksPerSec;
@@ -284,19 +201,8 @@
             if (!next) return prev.anchor;     // after the last shift
             const prevReleaseSec = (Number.isFinite(prev.releaseTick)
                 ? prev.releaseTick : prev.tick) / tps;
-            const nextSec = next.tick / tps;
-            // HOLD the prev anchor while prev's chord is still
-            // ringing — the hand can't physically move yet.
             if (currentSec <= prevReleaseSec) return prev.anchor;
-            // After release, lerp toward the next anchor at the
-            // PHYSICAL travel speed (`motion.requiredSec`). When the
-            // move is infeasible (= requiredSec > gap), the band
-            // visually lags BEHIND the music: it's still in transit
-            // when the next chord starts. That's the correct visual
-            // signal — "the hand wasn't fast enough" — and far more
-            // legible than the previous "spread the move over the
-            // whole gap" behaviour.
-            let toSec = nextSec;
+            let toSec = next.tick / tps;
             if (next.motion && Number.isFinite(next.motion.requiredSec)
                     && next.motion.requiredSec > 0) {
                 toSec = prevReleaseSec + next.motion.requiredSec;
@@ -382,11 +288,24 @@
             // the strings so they don't extend into the body.
             this._drawBodyHint(w, h);
 
-            // Ghost anchor (= upcoming planned position) drawn first
-            // so the live hand window paints on top.
-            if (this.ghostAnchor) this._drawGhostAnchor(fbY, fbH);
-            // Hand window (under strings/dots so finger dots stay legible).
-            if (this.handWindow) this._drawHandWindow(fbX, fbY, fbW, fbH, w);
+            // Anchors derived from the trajectory + playhead — the
+            // hand position is never set explicitly. Both the band
+            // and the ghost share the same data path.
+            const liveAnchor = this._currentDisplayedAnchor();
+            const nextAnchor = this._nextShiftAnchor();
+            // Ghost first (= upcoming anchor), drawn under so the
+            // live band paints on top. Skipped when ghost ≈ live
+            // (= no upcoming shift visible) or when no live anchor.
+            if (Number.isFinite(nextAnchor) && Number.isFinite(liveAnchor)
+                    && Math.abs(nextAnchor - liveAnchor) > 0.5) {
+                this._drawGhostAnchor(fbY, fbH, nextAnchor);
+            }
+            // Live hand band — always painted when an anchor is
+            // derivable; level (= colour) is purely chord-driven via
+            // `setLevel`.
+            if (Number.isFinite(liveAnchor)) {
+                this._drawHandWindow(fbX, fbY, fbW, fbH, w, liveAnchor, this._level);
+            }
 
             // Inlay dots.
             this._drawInlayMarkers(fbY, fbH);
@@ -420,7 +339,7 @@
 
             // Mark the current paint state so `setCurrentTime` can
             // skip redraws that wouldn't move anything visibly.
-            this._lastDrawnAnchor = this._displayedAnchor;
+            this._lastDrawnAnchor = liveAnchor;
             this._lastDrawnAt = (typeof performance !== 'undefined' && performance.now)
                 ? performance.now() : Date.now();
         }
@@ -452,32 +371,22 @@
             return { x0, x1 };
         }
 
-        _drawGhostAnchor(fbY, fbH) {
-            const { anchorFret, spanFrets, level } = this.ghostAnchor;
-            const { x0, x1 } = this._handWindowX(anchorFret, spanFrets);
+        /**
+         * Paint the upcoming-anchor "ghost" rectangle. ALWAYS
+         * neutral grey — never red — so the ghost never doubles as
+         * a feasibility signal (that's the live band's job). Span
+         * is shared with the live band.
+         */
+        _drawGhostAnchor(fbY, fbH, anchorFret) {
+            const { x0, x1 } = this._handWindowX(anchorFret, this.handSpanFrets);
             if (!Number.isFinite(x0) || !Number.isFinite(x1) || x1 <= x0) return;
-
-            // Faded fills (≈ 40 % of handWindow alpha) so the ghost
-            // never out-shouts the live band but is still readable.
-            const fills = {
-                ok:         'rgba(34, 197, 94, 0.10)',
-                warning:    'rgba(245, 158, 11, 0.12)',
-                infeasible: 'rgba(239, 68, 68, 0.14)'
-            };
-            const strokes = {
-                ok:         'rgba(34, 197, 94, 0.55)',
-                warning:    'rgba(245, 158, 11, 0.65)',
-                infeasible: 'rgba(239, 68, 68, 0.65)'
-            };
             const ctx = this.ctx;
-            // Vertical overflow so the band reads as "the hand", not
-            // "the fret slot" — same offset on top and bottom.
             const yOverflow = HAND_BAND_Y_OVERFLOW;
             const yTop = fbY - yOverflow;
             const bandH = fbH + 2 * yOverflow;
-            ctx.fillStyle = fills[level] || fills.ok;
+            ctx.fillStyle   = 'rgba(120, 120, 140, 0.10)';
             ctx.fillRect(x0, yTop, x1 - x0, bandH);
-            ctx.strokeStyle = strokes[level] || strokes.ok;
+            ctx.strokeStyle = 'rgba(120, 120, 140, 0.55)';
             ctx.lineWidth = 1;
             ctx.setLineDash([2, 4]);
             ctx.strokeRect(x0, yTop, x1 - x0, bandH);
@@ -511,14 +420,8 @@
             }
         }
 
-        _drawHandWindow(fbX, fbY, fbW, fbH, _canvasW) {
-            const { anchorFret, spanFrets, level } = this.handWindow;
-            // M1 — use the smoothed anchor when an animation is in
-            // flight. Falls back to the target anchor when no
-            // playhead drives us.
-            const effectiveAnchor = Number.isFinite(this._displayedAnchor)
-                ? this._displayedAnchor : anchorFret;
-            const { x0, x1 } = this._handWindowX(effectiveAnchor, spanFrets);
+        _drawHandWindow(fbX, fbY, fbW, fbH, _canvasW, anchor, level) {
+            const { x0, x1 } = this._handWindowX(anchor, this.handSpanFrets);
             if (!Number.isFinite(x0) || !Number.isFinite(x1) || x1 <= x0) return;
 
             const fills = {
@@ -697,11 +600,13 @@
 
         /** N2 — Ghost-text "1" / "2" / "3" / "4" inside the hand
          *  band so the operator can see which finger plays which
-         *  fret. Centered on each slot vertically + horizontally. */
+         *  fret. Anchored on the LIVE displayed anchor (rounded so
+         *  the labels stay legible during animation). */
         _drawFingerNumbers(fbY, fbH) {
-            if (!this.handWindow) return;
-            const { anchorFret, spanFrets } = this.handWindow;
-            const span = spanFrets || this.handSpanFrets;
+            const liveAnchor = this._currentDisplayedAnchor();
+            if (!Number.isFinite(liveAnchor)) return;
+            const anchorFret = Math.round(liveAnchor);
+            const span = this.handSpanFrets;
             if (!Number.isFinite(anchorFret) || !Number.isFinite(span) || span <= 0) return;
             const ctx = this.ctx;
             ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
@@ -826,12 +731,9 @@
         destroy() {
             this.activePositions = [];
             this.unplayablePositions = [];
-            this.handWindow = null;
-            this.ghostAnchor = null;
-            this._displayedAnchor = null;
-            this._animation = null;
             this._trajectory = [];
             this._ticksPerSec = null;
+            this._level = 'ok';
         }
     }
 

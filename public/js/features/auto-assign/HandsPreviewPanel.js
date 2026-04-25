@@ -76,22 +76,11 @@
             this.keyboard = null;
             this.lookahead = null;
             this.fretboard = null;
-            this._currentHandWindows = new Map(); // handId → anchor
-            // Feasibility level tracking (frets mode only). Combined
-            // with `_lastMotionLevel` to colour the live hand band.
-            this._currentChordLevel = 'ok';
-            this._lastMotionLevel   = 'ok';
+            this._currentHandWindows = new Map(); // handId → anchor (semitones only)
             this._currentTick = 0;
 
             this._render();
             this._wireEngine();
-        }
-
-        /** Compare two level strings with the order
-         *  ok < warning < infeasible. @private */
-        static _worseLevel(a, b) {
-            const order = { ok: 0, warning: 1, infeasible: 2 };
-            return (order[a] ?? 0) >= (order[b] ?? 0) ? a : b;
         }
 
         // -----------------------------------------------------------------
@@ -245,45 +234,14 @@
             });
 
             this.engine.on('shift', (e) => {
-                const { handId, toAnchor, tick, motion } = e.detail;
+                const { handId, toAnchor } = e.detail;
                 this._currentHandWindows.set(handId, toAnchor);
-                // Track speed-limit feasibility so the frets hand band
-                // can flip to red when the hand can't physically make
-                // the shift in time. Same field name lives on the
-                // semitones path; harmless when the lookahead drives
-                // its own visual signal there.
-                if (motion && motion.feasible === false) {
-                    this._lastMotionLevel = 'infeasible';
-                } else {
-                    this._lastMotionLevel = 'ok';
-                }
-                // M1 — compute the lerp animation bounds for the
-                // frets fretboard. The band slides from the prev
-                // anchor to `toAnchor` between (chord.tick − lead)
-                // and chord.tick. `lead` is the smaller of
-                // requiredSec / availableSec — capped at the
-                // available time so we don't reach back BEFORE the
-                // previous note-off.
-                this._lastShiftFromSec = null;
-                this._lastShiftToSec = null;
-                if (this.mode === 'frets'
-                        && motion
-                        && Number.isFinite(motion.requiredSec)
-                        && Number.isFinite(this.ticksPerBeat) && this.ticksPerBeat > 0
-                        && Number.isFinite(this.bpm) && this.bpm > 0
-                        && Number.isFinite(tick)) {
-                    const ticksPerSec = this.ticksPerBeat * (this.bpm / 60);
-                    const tickSec = tick / ticksPerSec;
-                    const required = Math.max(0, motion.requiredSec);
-                    const available = Number.isFinite(motion.availableSec)
-                        ? motion.availableSec : required;
-                    const lead = Math.min(required, available);
-                    if (lead > 0) {
-                        this._lastShiftFromSec = tickSec - lead;
-                        this._lastShiftToSec = tickSec;
-                    }
-                }
-                this._refreshHandsView();
+                // Frets mode no longer uses `_currentHandWindows` —
+                // the fretboard derives its band position from the
+                // trajectory + playhead. Only the keyboard's
+                // semitones path still relies on the per-hand anchor
+                // map (`_refreshHandsView` semitones branch).
+                if (this.mode === 'semitones') this._refreshHandsView();
             });
             this.engine.on('chord', (e) => {
                 const { notes, unplayable } = e.detail;
@@ -306,35 +264,30 @@
                     // and fret reach the preview.
                     this.fretboard.setUnplayablePositions(unplayable
                         .filter(u => Number.isFinite(u.string) && Number.isFinite(u.fret)));
-                    // Reachability drives the band colour. The band
-                    // turns red when the simulator says the chord
-                    // can't be played at this position — i.e. some
-                    // note is `outside_window` (= beyond the hand's
-                    // reach) or the chord exceeds `max_fingers`.
-                    // Speed-related infeasibility (`move_too_fast`)
-                    // is communicated by the band visually LAGGING
-                    // behind the music, NOT by the colour, since
-                    // "too slow" isn't an unreachable position.
-                    this._currentChordLevel =
+                    // Reachability drives the band colour. Red when
+                    // the simulator says the chord can't be played
+                    // at this position (`too_many_fingers` or
+                    // `outside_window`); green otherwise. Speed
+                    // infeasibility is signalled by the trajectory
+                    // animation lag, NOT by the band colour.
+                    const level =
                         unplayable.some(u => u.reason === 'too_many_fingers'
                                           || u.reason === 'outside_window')
                             ? 'infeasible' : 'ok';
+                    this.fretboard.setLevel(level);
                 }
-                this._refreshHandsView();
+                if (this.mode === 'semitones') this._refreshHandsView();
             });
             this.engine.on('tick', (e) => {
                 this._currentTick = e.detail.currentTick;
                 if (this.lookahead) this.lookahead.setCurrentTime(e.detail.currentSec);
-                if (this.fretboard) {
-                    // M1 — drive the lerp animation from the
-                    // simulated playhead. The fretboard already has
-                    // the full per-hand trajectory (pushed in
-                    // `_wireEngine`) so it can interpolate without
-                    // waiting for the shift event to land.
-                    if (typeof this.fretboard.setCurrentTime === 'function') {
-                        this.fretboard.setCurrentTime(e.detail.currentSec);
-                    }
-                    this._refreshGhostAnchor();
+                if (this.fretboard
+                        && typeof this.fretboard.setCurrentTime === 'function') {
+                    // The fretboard derives the band + ghost from
+                    // its own trajectory, so this single call drives
+                    // the whole frets visualisation. No `_refreshGhostAnchor`
+                    // anymore — the ghost is recomputed inside draw().
+                    this.fretboard.setCurrentTime(e.detail.currentSec);
                 }
                 if (typeof this.onSeek === 'function') {
                     this.onSeek(e.detail.currentTick, e.detail.totalTicks);
@@ -507,55 +460,10 @@
                     return { id: h.id, low: anchor, high: anchor + span, color: _handColor(h.id) };
                 }).filter(Boolean);
                 this.keyboard.setHandBands(bands);
-            } else if (this.mode === 'frets' && this.fretboard) {
-                const fretting = hands.find(h => h && h.id === 'fretting') || hands[0];
-                const anchor = this._currentHandWindows.get(fretting?.id);
-                if (Number.isFinite(anchor) && Number.isFinite(fretting?.hand_span_frets)) {
-                    // Band colour reflects the CURRENT chord's
-                    // reachability only. Speed infeasibility
-                    // (`move_too_fast`) doesn't turn the band red —
-                    // the trajectory animation already shows the
-                    // hand visually lagging behind the music.
-                    const level = this._currentChordLevel;
-                    this.fretboard.setHandWindow({
-                        anchorFret: anchor,
-                        spanFrets: fretting.hand_span_frets,
-                        level,
-                        // M1 — bounds picked up from the most recent
-                        // shift event so the band slides across the
-                        // gap instead of teleporting.
-                        animateFromSec: this._lastShiftFromSec,
-                        animateToSec: this._lastShiftToSec
-                    });
-                }
             }
-        }
-
-        /**
-         * Find the FIRST upcoming shift for the fretting hand and
-         * push its anchor into the fretboard as a ghost rectangle.
-         * Called on every tick so the ghost tracks the playhead;
-         * cheap because the trajectory is precomputed at the engine
-         * level.
-         * @private
-         */
-        _refreshGhostAnchor() {
-            if (this.mode !== 'frets' || !this.fretboard || !this.engine) return;
-            if (typeof this.engine.getHandTrajectories !== 'function') return;
-            const trajectories = this.engine.getHandTrajectories();
-            const handsArr = _hands(this.instrument);
-            const fretting = handsArr.find(h => h && h.id === 'fretting') || handsArr[0];
-            if (!fretting) { this.fretboard.setGhostAnchor(null); return; }
-            const points = trajectories.get(fretting.id) || [];
-            const next = points.find(p => p.tick > this._currentTick);
-            if (!next) { this.fretboard.setGhostAnchor(null); return; }
-            const span = Number.isFinite(fretting.hand_span_frets)
-                ? fretting.hand_span_frets : 4;
-            this.fretboard.setGhostAnchor({
-                anchorFret: next.anchor,
-                spanFrets: span,
-                level: next.motion?.feasible === false ? 'infeasible' : 'ok'
-            });
+            // Frets mode handles itself: position is derived from the
+            // trajectory pushed in `_refreshFretboardTrajectory`,
+            // colour is set by the chord handler via `setLevel`.
         }
 
         _onKeyClick(midi) {

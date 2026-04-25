@@ -50,6 +50,15 @@ function makeCanvas(w = 600, h = 160) {
   return c;
 }
 
+/** Place the band at a given anchor (single-point trajectory) and
+ *  optional level. Replaces the legacy `setHandWindow` for tests. */
+function placeAt(fb, anchor, level = 'ok') {
+  fb.setTicksPerSec(480);
+  fb.setHandTrajectory([{ tick: 0, anchor, releaseTick: 0 }]);
+  fb.setCurrentTime(0);
+  fb.setLevel(level);
+}
+
 describe('FretboardHandPreview — geometric fret spacing', () => {
   it('places fret 12 at half the available scale length', () => {
     const fb = new window.FretboardHandPreview(makeCanvas(), {
@@ -147,7 +156,7 @@ describe('FretboardHandPreview — hand window rectangle', () => {
       tuning: [40, 45, 50, 55, 59, 64], numFrets: 22,
       scaleLengthMm: 650, handSpanMm: 80
     });
-    fb.setHandWindow({ anchorFret: 5, spanFrets: 4, level: 'ok' });
+    placeAt(fb, 5, 'ok');
     const fillStyles = calls
       .filter(c => c.method === 'set' && c.prop === 'fillStyle')
       .map(c => c.value);
@@ -158,20 +167,20 @@ describe('FretboardHandPreview — hand window rectangle', () => {
     const fb = new window.FretboardHandPreview(makeCanvas(), {
       tuning: [40, 45, 50, 55, 59, 64], numFrets: 22
     });
-    fb.setHandWindow({ anchorFret: 0, spanFrets: 4, level: 'warning' });
+    placeAt(fb, 1, 'warning');
     expect(calls.some(c => c.method === 'set' && c.prop === 'fillStyle'
       && /rgba\(245,\s*158,\s*11/.test(c.value))).toBe(true);
-    fb.setHandWindow({ anchorFret: 0, spanFrets: 4, level: 'infeasible' });
+    placeAt(fb, 1, 'infeasible');
     expect(calls.some(c => c.method === 'set' && c.prop === 'fillStyle'
       && /rgba\(239,\s*68,\s*68/.test(c.value))).toBe(true);
   });
 
-  it('null hand window clears the band', () => {
+  it('clearing the trajectory hides the band', () => {
     const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
-    fb.setHandWindow({ anchorFret: 5, spanFrets: 4 });
-    expect(fb.handWindow).not.toBeNull();
-    fb.setHandWindow(null);
-    expect(fb.handWindow).toBeNull();
+    placeAt(fb, 5);
+    expect(fb._currentDisplayedAnchor()).toBe(5);
+    fb.setHandTrajectory([]);
+    expect(fb._currentDisplayedAnchor()).toBeNull();
   });
 
   it('with scaleLengthMm + handSpanMm, the band has the same pixel width regardless of position (true mm scale)', () => {
@@ -197,13 +206,13 @@ describe('FretboardHandPreview — hand window rectangle', () => {
       tuning: [40, 45, 50, 55, 59, 64], numFrets: 22,
       scaleLengthMm: 650, handSpanMm: 80
     });
-    fb.setHandWindow({ anchorFret: 0, spanFrets: 4 });
+    placeAt(fb, 0);
     const bandAtNut = bandRect();
     expect(bandAtNut).not.toBeNull();
     const widthAtNutPx = bandAtNut.args[2];
 
     calls.length = 0;
-    fb.setHandWindow({ anchorFret: 12, spanFrets: 4 });
+    placeAt(fb, 12);
     const bandAtH12 = bandRect();
     expect(bandAtH12).not.toBeNull();
     expect(bandAtH12.args[2]).toBeCloseTo(widthAtNutPx, 5);
@@ -225,7 +234,7 @@ describe('FretboardHandPreview — hand window rectangle', () => {
       tuning: [40, 45, 50, 55, 59, 64], numFrets: 22, handSpanFrets: 4
       // no scaleLengthMm, no handSpanMm
     });
-    fb.setHandWindow({ anchorFret: 5, spanFrets: 4 });
+    placeAt(fb, 5);
     // Anchor=5 means index finger on fret 5 → band starts at the
     // LEFT side of fret 5's slot = `_fretX(4)` (right edge of the
     // fret 4 wire). Span=4 frets → ends at `_fretX(4+4)=_fretX(8)`.
@@ -243,7 +252,7 @@ describe('FretboardHandPreview — hand window rectangle', () => {
     const fb = new window.FretboardHandPreview(makeCanvas(), {
       tuning: [40, 45, 50, 55, 59, 64], numFrets: 22, handSpanFrets: 4
     });
-    fb.setHandWindow({ anchorFret: 1, spanFrets: 4 });
+    placeAt(fb, 1);
     const xNut = fb._fretX(0);
     const bandRect = calls
       .filter(c => c.method === 'fillRect')
@@ -255,7 +264,7 @@ describe('FretboardHandPreview — hand window rectangle', () => {
     const fb = new window.FretboardHandPreview(makeCanvas(600, 200), {
       tuning: [40, 45, 50, 55, 59, 64], numFrets: 22, handSpanFrets: 4
     });
-    fb.setHandWindow({ anchorFret: 5, spanFrets: 4 });
+    placeAt(fb, 5);
     const fbY = fb.margin.top;
     const fbH = 200 - fb.margin.top - fb.margin.bottom;
     const bandRect = calls
@@ -393,7 +402,7 @@ describe('FretboardHandPreview — active note feedback (N1 / N2 / N3)', () => {
     const fb = new window.FretboardHandPreview(makeCanvas(800, 200), {
       tuning: [40, 45, 50, 55, 59, 64], numFrets: 22
     });
-    fb.setHandWindow({ anchorFret: 5, spanFrets: 4 });
+    placeAt(fb, 5);
     const fillTexts = calls.filter(c => c.method === 'fillText').map(c => c.args[0]);
     expect(fillTexts).toContain('1');
     expect(fillTexts).toContain('2');
@@ -428,107 +437,58 @@ describe('FretboardHandPreview — active note feedback (N1 / N2 / N3)', () => {
   });
 });
 
-describe('FretboardHandPreview — ghost anchor', () => {
-  it('setGhostAnchor renders a faint translucent rectangle', () => {
-    const fb = new window.FretboardHandPreview(makeCanvas(), {
-      tuning: [40, 45, 50, 55, 59, 64], numFrets: 22
-    });
-    fb.setGhostAnchor({ anchorFret: 5, spanFrets: 4, level: 'ok' });
+describe('FretboardHandPreview — derived ghost anchor', () => {
+  function makeFb() {
+    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
+    fb.setTicksPerSec(480);
+    return fb;
+  }
+
+  it('paints a NEUTRAL grey ghost rectangle at the next planned shift', () => {
+    const fb = makeFb();
+    fb.setHandTrajectory([
+      { tick: 0,    anchor: 1,  releaseTick: 0 },
+      { tick: 1000, anchor: 12, releaseTick: 1000 }
+    ]);
+    fb.setCurrentTime(0);
     const fillStyles = calls
       .filter(c => c.method === 'set' && c.prop === 'fillStyle')
       .map(c => c.value);
-    // Ghost ok fill is rgba(34, 197, 94, 0.10) — distinct from the
-    // active hand window's 0.22.
-    expect(fillStyles.some(v => /rgba\(34, 197, 94, 0\.10\)/.test(v))).toBe(true);
+    // Ghost is ALWAYS painted in a neutral grey — never red, never
+    // level-tinted. (Reserves red exclusively for the live band's
+    // unreachability signal.)
+    expect(fillStyles.some(v => /rgba\(120, 120, 140, 0\.10\)/.test(v))).toBe(true);
+    // No red anywhere on the ghost path.
+    expect(fillStyles.some(v => /rgba\(239, 68, 68, 0\.14\)/.test(v))).toBe(false);
   });
 
-  it('ghost anchor uses warning/infeasible tints when its motion is at risk', () => {
-    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
-    fb.setGhostAnchor({ anchorFret: 5, spanFrets: 4, level: 'infeasible' });
-    expect(calls.some(c => c.method === 'set' && c.prop === 'fillStyle'
-        && /rgba\(239, 68, 68, 0\.14\)/.test(c.value))).toBe(true);
-  });
-
-  it('null ghost anchor clears the overlay', () => {
-    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
-    fb.setGhostAnchor({ anchorFret: 5, spanFrets: 4 });
-    expect(fb.ghostAnchor).not.toBeNull();
-    fb.setGhostAnchor(null);
-    expect(fb.ghostAnchor).toBeNull();
-  });
-
-  it('rejects malformed ghost anchor input', () => {
-    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
-    fb.setGhostAnchor({ anchorFret: 'bad', spanFrets: 4 });
-    expect(fb.ghostAnchor).toBeNull();
-    fb.setGhostAnchor({ anchorFret: 5, spanFrets: -1 });
-    expect(fb.ghostAnchor).toBeNull();
-  });
-});
-
-describe('FretboardHandPreview — M1 lerp animation', () => {
-  it('snaps directly when no animateFromSec / animateToSec is provided', () => {
-    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
-    fb.setHandWindow({ anchorFret: 5, spanFrets: 4 });
-    expect(fb._displayedAnchor).toBe(5);
-    expect(fb._animation).toBeNull();
-  });
-
-  it('starts a lerp animation when sim-time bounds are passed AND a previous anchor exists', () => {
-    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
-    fb.setHandWindow({ anchorFret: 1, spanFrets: 4 });
-    fb.setCurrentTime(0);
-    fb.setHandWindow({
-      anchorFret: 12, spanFrets: 4,
-      animateFromSec: 0, animateToSec: 1
-    });
-    expect(fb._animation).not.toBeNull();
-    expect(fb._animation.fromAnchor).toBe(1);
-    expect(fb._animation.toAnchor).toBe(12);
-  });
-
-  it('setCurrentTime in the middle of the animation interpolates the displayed anchor', () => {
-    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
-    fb.setHandWindow({ anchorFret: 1, spanFrets: 4 });
-    fb.setCurrentTime(0);
-    fb.setHandWindow({
-      anchorFret: 11, spanFrets: 4,
-      animateFromSec: 0, animateToSec: 1
-    });
-    fb.setCurrentTime(0.5);
-    expect(fb._displayedAnchor).toBeCloseTo(6, 1);
-  });
-
-  it('setCurrentTime past the animation end snaps to the target anchor', () => {
-    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
-    fb.setHandWindow({ anchorFret: 1, spanFrets: 4 });
-    fb.setCurrentTime(0);
-    fb.setHandWindow({
-      anchorFret: 12, spanFrets: 4,
-      animateFromSec: 0, animateToSec: 1
-    });
-    fb.setCurrentTime(2);
-    expect(fb._displayedAnchor).toBe(12);
-    expect(fb._animation).toBeNull();
-  });
-
-  it('paints the band at the INTERPOLATED anchor when in the middle of an animation', () => {
-    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
-    fb.setHandWindow({ anchorFret: 1, spanFrets: 4 });
-    fb.setCurrentTime(0);
-    fb.setHandWindow({
-      anchorFret: 11, spanFrets: 4,
-      animateFromSec: 0, animateToSec: 1
-    });
+  it('hides the ghost when the next anchor matches the current one', () => {
+    const fb = makeFb();
+    fb.setHandTrajectory([
+      { tick: 0,    anchor: 5, releaseTick: 0 },
+      { tick: 1000, anchor: 5, releaseTick: 1000 } // same anchor
+    ]);
     calls.length = 0;
-    fb.setCurrentTime(0.5);
-    // The band's left x should be at fretX(slotLeft) where slotLeft
-    // = 6-1 = 5 (= halfway between fret 0 and fret 10).
-    const expectedX0 = fb._fretX(5);
-    const bandRect = calls
-      .filter(c => c.method === 'fillRect')
-      .find(c => Math.abs(c.args[0] - expectedX0) < 1.5);
-    expect(bandRect).toBeDefined();
+    fb.setCurrentTime(0.001); // bust the throttle without changing visual
+    fb.draw();                // force a fresh paint regardless of throttle
+    const fillStyles = calls
+      .filter(c => c.method === 'set' && c.prop === 'fillStyle')
+      .map(c => c.value);
+    expect(fillStyles.some(v => /rgba\(120, 120, 140, 0\.10\)/.test(v))).toBe(false);
+  });
+
+  it('hides the ghost once the playhead passes every shift', () => {
+    const fb = makeFb();
+    fb.setHandTrajectory([
+      { tick: 0,    anchor: 5,  releaseTick: 0 },
+      { tick: 1000, anchor: 12, releaseTick: 1000 }
+    ]);
+    calls.length = 0; // ignore the initial paint at sec=0
+    fb.setCurrentTime(99);
+    const fillStyles = calls
+      .filter(c => c.method === 'set' && c.prop === 'fillStyle')
+      .map(c => c.value);
+    expect(fillStyles.some(v => /rgba\(120, 120, 140, 0\.10\)/.test(v))).toBe(false);
   });
 });
 
@@ -547,13 +507,13 @@ describe('FretboardHandPreview — trajectory-driven animation', () => {
         motion: { requiredSec: 0.4, availableSec: 1.5, feasible: true } }
     ]);
     fb.setCurrentTime(0);
-    expect(fb._displayedAnchor).toBe(1);
+    expect(fb._currentDisplayedAnchor()).toBe(1);
     fb.setCurrentTime(0.2); // still during chord 1's release (=0.208s)
-    expect(fb._displayedAnchor).toBe(1);
+    expect(fb._currentDisplayedAnchor()).toBe(1);
     fb.setCurrentTime(0.408); // mid-transition: prevRelease=0.208, arrival=0.608
-    expect(fb._displayedAnchor).toBeCloseTo(6.5, 0); // halfway between 1 and 12
+    expect(fb._currentDisplayedAnchor()).toBeCloseTo(6.5, 0); // halfway between 1 and 12
     fb.setCurrentTime(2.0); // past everything
-    expect(fb._displayedAnchor).toBe(12);
+    expect(fb._currentDisplayedAnchor()).toBe(12);
   });
 
   it('arrives EARLY (compressed by motion.requiredSec) when the move is fast', () => {
@@ -565,7 +525,7 @@ describe('FretboardHandPreview — trajectory-driven animation', () => {
     ]);
     // At sec 0.5: prevRelease=0, arrival=0+0.2=0.2 → already arrived.
     fb.setCurrentTime(0.5);
-    expect(fb._displayedAnchor).toBe(5);
+    expect(fb._currentDisplayedAnchor()).toBe(5);
   });
 
   it('always animates at physical requiredSec, even when motion.feasible=false (band lags behind)', () => {
@@ -581,22 +541,15 @@ describe('FretboardHandPreview — trajectory-driven animation', () => {
         motion: { requiredSec: 2, availableSec: 1, feasible: false } }
     ]);
     fb.setCurrentTime(0.5);  // 25 % through the physical move
-    expect(fb._displayedAnchor).toBeGreaterThan(2);
-    expect(fb._displayedAnchor).toBeLessThan(7);
+    expect(fb._currentDisplayedAnchor()).toBeGreaterThan(2);
+    expect(fb._currentDisplayedAnchor()).toBeLessThan(7);
     fb.setCurrentTime(2.1);  // past the full physical duration
-    expect(fb._displayedAnchor).toBe(12);
+    expect(fb._currentDisplayedAnchor()).toBe(12);
   });
 
-  it('falls back to the legacy single-shot animation when no trajectory is set', () => {
+  it('returns null displayedAnchor when no trajectory is set', () => {
     const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
-    fb.setHandWindow({ anchorFret: 1, spanFrets: 4 });
-    fb.setCurrentTime(0);
-    fb.setHandWindow({
-      anchorFret: 11, spanFrets: 4,
-      animateFromSec: 0, animateToSec: 1
-    });
-    fb.setCurrentTime(0.5);
-    expect(fb._displayedAnchor).toBeCloseTo(6, 1);
+    expect(fb._currentDisplayedAnchor()).toBeNull();
   });
 
   it('throttles redraws when the displayed anchor barely moves', () => {
@@ -616,10 +569,10 @@ describe('FretboardHandPreview — lifecycle', () => {
   it('destroy() drops state but does not throw on a follow-up draw', () => {
     const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
     fb.setActivePositions([{ string: 3, fret: 5 }]);
-    fb.setHandWindow({ anchorFret: 5, spanFrets: 4 });
+    placeAt(fb, 5);
     fb.destroy();
     expect(fb.activePositions).toEqual([]);
-    expect(fb.handWindow).toBeNull();
+    expect(fb._trajectory).toEqual([]);
     expect(() => fb.draw()).not.toThrow();
   });
 });
