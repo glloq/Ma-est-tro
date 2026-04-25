@@ -152,16 +152,21 @@
         }
 
         _renderKeyboardLayout(body) {
-            // 1. Look-ahead strip on top.
+            // 1. Vertical look-ahead strip — notes fall toward the
+            // keyboard below. Taller than the old horizontal bar so
+            // the operator has time to read the next bars (≈ 4 s of
+            // music spread vertically).
             const lookCanvas = document.createElement('canvas');
             lookCanvas.className = 'hpp-lookahead';
-            lookCanvas.style.cssText = 'width:100%;height:60px;display:block;border:1px solid #e5e7eb;border-radius:4px;margin-bottom:6px;';
+            lookCanvas.style.cssText = 'width:100%;height:140px;display:block;border:1px solid #e5e7eb;border-bottom:none;border-radius:4px 4px 0 0;';
             body.appendChild(lookCanvas);
 
-            // 2. Keyboard widget below.
+            // 2. Keyboard widget directly below the strip — same x
+            // axis (we share rangeMin/rangeMax) so each note column
+            // aligns with the key it will play.
             const kbCanvas = document.createElement('canvas');
             kbCanvas.className = 'hpp-keyboard';
-            kbCanvas.style.cssText = 'width:100%;height:120px;display:block;border:1px solid #e5e7eb;border-radius:4px;';
+            kbCanvas.style.cssText = 'width:100%;height:120px;display:block;border:1px solid #e5e7eb;border-radius:0 0 4px 4px;';
             body.appendChild(kbCanvas);
 
             const rangeMin = Number.isFinite(this.instrument?.note_range_min) ? this.instrument.note_range_min : 21;

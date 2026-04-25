@@ -1,40 +1,49 @@
 /**
  * @file HandsLookaheadStrip.js
- * @description Compact horizontal piano-roll showing the next
- * `windowSeconds` of upcoming notes during a HandsPreviewPanel
+ * @description Vertical "Synthesia-style" piano-roll showing the
+ * next `windowSeconds` of upcoming notes during a HandsPreviewPanel
  * simulation. Keyboard families only — string instruments use the
  * fretboard (Feature E spec), so this component isn't mounted for
  * them.
  *
- * Visual: x = time (left = now, right = `windowSeconds` ahead);
- * y = pitch within the configured note range. Each upcoming note is
- * a coloured rectangle whose width equals its duration in the same
- * pixels-per-second scale. The "now" line stays anchored at x = 0.
+ * Visual:
+ *   - x = pitch, aligned with the KeyboardPreview underneath. Each
+ *     note renders directly ABOVE the key it will play.
+ *   - y = time. Bottom of canvas = NOW (the moment the note hits
+ *     the key); top of canvas = `windowSeconds` ahead.
+ *   - As the simulation advances, notes fall toward the keyboard.
  *
- * Data flow:
- *   - At construction, the caller provides the channel's notes
- *     `[{tick, note, duration?, channel?}]` (sorted by tick) plus
- *     a tempo helper (ticksPerSecond).
- *   - `setCurrentTime(currentSec)` from the engine drives the auto-
- *     scroll. Drawing uses a binary-search to find the slice in
- *     [now, now + windowSeconds] without re-walking the whole list.
+ * The strip MUST share the same `rangeMin`/`rangeMax` as the
+ * KeyboardPreview below it; HandsPreviewPanel passes them through
+ * so both widgets agree on the white-key-index → x mapping.
  *
  * Public API:
  *   const strip = new HandsLookaheadStrip(canvas, {
- *     notes,            // array as above
+ *     notes,            // [{tick, note, duration?, channel?}]
  *     ticksPerSecond,   // (ticksPerBeat * bpm) / 60
  *     rangeMin, rangeMax,
  *     windowSeconds: 4
  *   });
  *   strip.setCurrentTime(currentSec);
  *   strip.setRange(min, max);
- *   strip.setUnplayableNotes([{note}]); // tinted red in upcoming view
+ *   strip.setUnplayableNotes([{note} | midi]);
  *   strip.destroy();
  */
 (function() {
     'use strict';
 
     const DEFAULT_WINDOW_SECONDS = 4;
+    const BLACK_OFFSETS = new Set([1, 3, 6, 8, 10]);
+
+    function isBlackKey(midi) {
+        return BLACK_OFFSETS.has(((midi % 12) + 12) % 12);
+    }
+
+    function whiteKeyCount(rangeMin, rangeMax) {
+        let n = 0;
+        for (let m = rangeMin; m <= rangeMax; m++) if (!isBlackKey(m)) n++;
+        return n;
+    }
 
     class HandsLookaheadStrip {
         constructor(canvas, opts = {}) {
@@ -44,7 +53,7 @@
 
             this.notes = Array.isArray(opts.notes) ? opts.notes.slice().sort((a, b) => a.tick - b.tick) : [];
             this.ticksPerSecond = Number.isFinite(opts.ticksPerSecond) && opts.ticksPerSecond > 0
-                ? opts.ticksPerSecond : 480; // 120 bpm @ 480 ppq → 960 actually; sane default fallback
+                ? opts.ticksPerSecond : 480;
             this.rangeMin = Number.isFinite(opts.rangeMin) ? opts.rangeMin : 36;
             this.rangeMax = Number.isFinite(opts.rangeMax) ? opts.rangeMax : 96;
             this.windowSeconds = Math.max(1, Math.min(10,
@@ -93,10 +102,39 @@
         }
 
         // -----------------------------------------------------------------
-        //  Helpers
+        //  Geometry helpers (same formulas as KeyboardPreview so the
+        //  vertical alignment with the keys below is exact).
         // -----------------------------------------------------------------
 
-        /** Index of the first note that ends at or after `sec`. */
+        _whiteKeyWidth() {
+            const w = (this.canvas?.clientWidth || this.canvas?.width) || 0;
+            const count = Math.max(1, whiteKeyCount(this.rangeMin, this.rangeMax));
+            return w / count;
+        }
+
+        /** White-key index relative to rangeMin (0-based) for `midi`. */
+        _whiteIndexForMidi(midi) {
+            let idx = 0;
+            for (let m = this.rangeMin; m < midi; m++) if (!isBlackKey(m)) idx++;
+            return idx;
+        }
+
+        /**
+         * Return the [x, width] of the column above the given key.
+         * White keys span a full white-width; black keys span 60%
+         * of a white-width and sit on the boundary between adjacent
+         * white keys — same offset as KeyboardPreview.
+         */
+        _columnFor(midi) {
+            const ww = this._whiteKeyWidth();
+            if (ww <= 0) return { x: 0, width: 0 };
+            if (!isBlackKey(midi)) {
+                return { x: this._whiteIndexForMidi(midi) * ww, width: ww };
+            }
+            return { x: this._whiteIndexForMidi(midi - 1) * ww + ww * 0.65, width: ww * 0.6 };
+        }
+
+        /** Index of the first note whose end is at or after `sec`. */
         _firstVisibleIndex(sec) {
             let lo = 0, hi = this._noteTimes.length;
             while (lo < hi) {
@@ -130,17 +168,14 @@
             ctx.fillStyle = '#f9fafb';
             ctx.fillRect(0, 0, w, h);
 
-            // Vertical "now" line at x=0 (left edge).
+            // Now line — bottom edge of the canvas (where notes meet
+            // the keyboard below).
             ctx.strokeStyle = '#1d4ed8';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.moveTo(0.5, 0);
-            ctx.lineTo(0.5, h);
+            ctx.moveTo(0,     h - 0.5);
+            ctx.lineTo(w,     h - 0.5);
             ctx.stroke();
-
-            const pixelsPerSec = w / this.windowSeconds;
-            const pitchSpan = Math.max(1, this.rangeMax - this.rangeMin);
-            const pixelsPerSemitone = h / pitchSpan;
 
             const start = this.currentSec;
             const end = start + this.windowSeconds;
@@ -149,17 +184,27 @@
             for (let i = i0; i < this._noteTimes.length; i++) {
                 const t = this._noteTimes[i];
                 if (t.start > end) break; // sorted; nothing further is visible
-                const x1 = (Math.max(t.start, start) - start) * pixelsPerSec;
-                const x2 = (Math.min(t.start + t.duration, end) - start) * pixelsPerSec;
-                const y = h - ((t.note - this.rangeMin + 0.5) * pixelsPerSemitone);
-                const noteH = Math.max(2, pixelsPerSemitone * 0.9);
-                const noteW = Math.max(2, x2 - x1);
+                if (t.note < this.rangeMin || t.note > this.rangeMax) continue;
+
+                const dtStart = t.start - start;
+                const dtEnd = (t.start + t.duration) - start;
+                // y axis: bottom = now (dt = 0), top = window end (dt = windowSeconds).
+                const yStart = h * (1 - dtStart / this.windowSeconds);
+                const yEnd   = h * (1 - dtEnd   / this.windowSeconds);
+                const yTop    = Math.max(0, Math.min(h, yEnd));
+                const yBottom = Math.max(0, Math.min(h, yStart));
+                const noteH = Math.max(2, yBottom - yTop);
+
+                const col = this._columnFor(t.note);
                 const isUnplayable = this.unplayableNotes.has(t.note);
-                ctx.fillStyle = isUnplayable ? 'rgba(220, 38, 38, 0.85)' : 'rgba(59, 130, 246, 0.75)';
-                ctx.fillRect(x1, y - noteH / 2, noteW, noteH);
-                ctx.strokeStyle = isUnplayable ? '#b91c1c' : '#1e40af';
+                const fill = isUnplayable ? 'rgba(220, 38, 38, 0.85)' : 'rgba(59, 130, 246, 0.75)';
+                const stroke = isUnplayable ? '#b91c1c' : '#1e40af';
+
+                ctx.fillStyle = fill;
+                ctx.fillRect(col.x, yTop, Math.max(2, col.width - 1), noteH);
+                ctx.strokeStyle = stroke;
                 ctx.lineWidth = 0.5;
-                ctx.strokeRect(x1, y - noteH / 2, noteW, noteH);
+                ctx.strokeRect(col.x + 0.5, yTop + 0.5, Math.max(1, col.width - 1.5), Math.max(1, noteH - 1));
             }
         }
 
