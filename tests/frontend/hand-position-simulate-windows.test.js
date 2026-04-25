@@ -314,3 +314,93 @@ describe('simulateHandWindows — semitones non-overlap (E.6.x)', () => {
     expect(shifts.every(s => s.handId === 'left')).toBe(true);
   });
 });
+
+describe('simulateHandWindows — semitones lookahead-aware anchor placement', () => {
+  function shiftsByHand(out, handId) {
+    return out.filter(e => e.type === 'shift' && e.handId === handId);
+  }
+
+  it('keeps the previous anchor when the next chord still fits the same window', () => {
+    // Both chords are below SPLIT_REF (60) so the bias sends them
+    // both to LEFT. Chord 1: notes [50, 55] anchor left at 50;
+    // chord 2: notes [52, 58] still fit inside [50..64] → no shift.
+    const out = window.HandPositionFeasibility.simulateHandWindows(
+      [note(0, 50), note(0, 55), note(480, 52), note(480, 58)],
+      { hands_config: semitonesHands }
+    );
+    const leftAutoShifts = shiftsByHand(out, 'left').filter(s => s.source === 'auto');
+    // Only the initial pull — the second chord lands inside the
+    // pre-existing window.
+    expect(leftAutoShifts).toHaveLength(1);
+    expect(leftAutoShifts[0].toAnchor).toBe(50);
+  });
+
+  it('reduces shift size by clamping the previous anchor into the new range', () => {
+    // Chord 1: notes [50, 55] anchors left at 50. Chord 2: a single
+    // high note 80 forces RIGHT (the parked one) to move. Right was
+    // parked just above left's reach (anchor ≈ 65). The naive algo
+    // would jump it to 80 (Δ ≈ 15); the look-ahead-aware planner
+    // clamps 65 into [80-14, 80] = [66, 80] → anchor 66 (Δ = 1).
+    const out = window.HandPositionFeasibility.simulateHandWindows(
+      [note(0, 50), note(0, 55), note(480, 80)],
+      { hands_config: semitonesHands }
+    );
+    const rightAutoShifts = shiftsByHand(out, 'right').filter(s => s.source === 'auto');
+    expect(rightAutoShifts.length).toBeGreaterThanOrEqual(1);
+    const finalRight = rightAutoShifts[rightAutoShifts.length - 1].toAnchor;
+    // Critical: NOT jumping to 80 — the shift uses the minimum
+    // viable anchor (range lo).
+    expect(finalRight).toBeGreaterThanOrEqual(66);
+    expect(finalRight).toBeLessThan(80);
+  });
+
+  it('returns to a music-driven anchor when no future chord constrains', () => {
+    // Lone chord, all notes below SPLIT_REF → left hand. With no
+    // future to bias the anchor, the fallback (lo of lowSet) wins.
+    const out = window.HandPositionFeasibility.simulateHandWindows(
+      [note(0, 50), note(0, 55)],
+      { hands_config: semitonesHands }
+    );
+    const leftShifts = shiftsByHand(out, 'left');
+    expect(leftShifts[0].toAnchor).toBe(50);
+  });
+
+  it('on a sequence the cumulative auto-shift distance is bounded by the music', () => {
+    // Three single-note chords, all on left: 50, 56, 50.
+    // - Chord 1 [50]: anchor=50 (initial fb).
+    // - Chord 2 [56]: range=[42,56], prev=50 in range → no shift.
+    // - Chord 3 [50]: range=[36,50], prev=50 in range → no shift.
+    // Total auto distance = 0 (only the initial anchor).
+    const out = window.HandPositionFeasibility.simulateHandWindows(
+      [note(0, 50), note(480, 56), note(960, 50)],
+      { hands_config: semitonesHands }
+    );
+    const leftAutoShifts = shiftsByHand(out, 'left').filter(s => s.source === 'auto');
+    let total = 0;
+    for (let i = 1; i < leftAutoShifts.length; i++) {
+      total += Math.abs(leftAutoShifts[i].toAnchor - leftAutoShifts[i - 1].toAnchor);
+    }
+    // The naive algorithm would shift 50 → 56 → 50 (Δ=12). Look-ahead
+    // aware keeps the hand still since both later chords fit the
+    // initial window.
+    expect(total).toBe(0);
+  });
+
+  it('initial anchor anticipates an upcoming higher chord (look-ahead bias)', () => {
+    // Chord 1 [50, 55] gives left freedom in [41, 50] (range lo=41
+    // because hi=55, span=14). Chord 2 forces a low note 30 → range
+    // [16, 30], anchor moves down. The look-ahead refiner picks
+    // chord 1's anchor at the LOW end of the freedom (41) so the
+    // distance to chord 2 (30) is minimised: |41-30|=11 vs the
+    // naive |50-30|=20.
+    const out = window.HandPositionFeasibility.simulateHandWindows(
+      [note(0, 50), note(0, 55), note(480, 30)],
+      { hands_config: semitonesHands }
+    );
+    const leftAuto = shiftsByHand(out, 'left').filter(s => s.source === 'auto');
+    // First auto-shift is the initial pull. Look-ahead pushes it to
+    // 41 instead of 50 because chord 2 is below.
+    expect(leftAuto[0].toAnchor).toBeLessThan(50);
+    expect(leftAuto[0].toAnchor).toBeGreaterThanOrEqual(41);
+  });
+});
