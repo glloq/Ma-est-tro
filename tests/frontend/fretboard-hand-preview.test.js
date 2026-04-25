@@ -532,6 +532,67 @@ describe('FretboardHandPreview — M1 lerp animation', () => {
   });
 });
 
+describe('FretboardHandPreview — trajectory-driven animation', () => {
+  function makeFb() {
+    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
+    fb.setTicksPerSec(480); // 1 sec = 480 ticks
+    return fb;
+  }
+
+  it('setHandTrajectory + setCurrentTime drives the displayed anchor from the playhead', () => {
+    const fb = makeFb();
+    fb.setHandTrajectory([
+      { tick: 0,    anchor: 1,  releaseTick: 100 },
+      { tick: 1000, anchor: 12, releaseTick: 1100,
+        motion: { requiredSec: 0.4, availableSec: 1.5, feasible: true } }
+    ]);
+    fb.setCurrentTime(0);
+    expect(fb._displayedAnchor).toBe(1);
+    fb.setCurrentTime(0.2); // still during chord 1's release (=0.208s)
+    expect(fb._displayedAnchor).toBe(1);
+    fb.setCurrentTime(0.408); // mid-transition: prevRelease=0.208, arrival=0.608
+    expect(fb._displayedAnchor).toBeCloseTo(6.5, 0); // halfway between 1 and 12
+    fb.setCurrentTime(2.0); // past everything
+    expect(fb._displayedAnchor).toBe(12);
+  });
+
+  it('arrives EARLY (compressed by motion.requiredSec) when the move is fast', () => {
+    const fb = makeFb();
+    fb.setHandTrajectory([
+      { tick: 0,    anchor: 1, releaseTick: 0 },
+      { tick: 480,  anchor: 5, releaseTick: 480, // 1 sec gap
+        motion: { requiredSec: 0.2, availableSec: 1, feasible: true } }
+    ]);
+    // At sec 0.5: prevRelease=0, arrival=0+0.2=0.2 → already arrived.
+    fb.setCurrentTime(0.5);
+    expect(fb._displayedAnchor).toBe(5);
+  });
+
+  it('falls back to the legacy single-shot animation when no trajectory is set', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
+    fb.setHandWindow({ anchorFret: 1, spanFrets: 4 });
+    fb.setCurrentTime(0);
+    fb.setHandWindow({
+      anchorFret: 11, spanFrets: 4,
+      animateFromSec: 0, animateToSec: 1
+    });
+    fb.setCurrentTime(0.5);
+    expect(fb._displayedAnchor).toBeCloseTo(6, 1);
+  });
+
+  it('throttles redraws when the displayed anchor barely moves', () => {
+    const fb = makeFb();
+    fb.setHandTrajectory([
+      { tick: 0, anchor: 5, releaseTick: 480 },
+      { tick: 4800, anchor: 5, releaseTick: 4800 } // same anchor → no motion
+    ]);
+    fb.setCurrentTime(0); // first paint
+    calls.length = 0;
+    fb.setCurrentTime(0.001); // sub-pixel + within 33 ms → SKIP
+    expect(calls.filter(c => c.method === 'fillRect').length).toBe(0);
+  });
+});
+
 describe('FretboardHandPreview — lifecycle', () => {
   it('destroy() drops state but does not throw on a follow-up draw', () => {
     const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });

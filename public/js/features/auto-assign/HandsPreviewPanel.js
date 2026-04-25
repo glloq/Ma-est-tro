@@ -320,8 +320,10 @@
                 if (this.lookahead) this.lookahead.setCurrentTime(e.detail.currentSec);
                 if (this.fretboard) {
                     // M1 — drive the lerp animation from the
-                    // simulated playhead so the band slides at the
-                    // same rate as the rest of the preview.
+                    // simulated playhead. The fretboard already has
+                    // the full per-hand trajectory (pushed in
+                    // `_wireEngine`) so it can interpolate without
+                    // waiting for the shift event to land.
                     if (typeof this.fretboard.setCurrentTime === 'function') {
                         this.fretboard.setCurrentTime(e.detail.currentSec);
                     }
@@ -340,6 +342,11 @@
             // sees where each hand will be over the next few seconds
             // (in addition to the falling notes).
             this._refreshHandTrajectories();
+            // P.5.2 — for fretted instruments, push the trajectory
+            // to the fretboard too so the band animation is driven
+            // by the playhead instead of waiting for shift events
+            // to land (which arrive AT the chord tick = too late).
+            this._refreshFretboardTrajectory();
         }
 
         /** Push the engine's per-hand trajectories into the look-ahead
@@ -365,6 +372,27 @@
                 });
             }
             this.lookahead.setHandTrajectories(trajectories);
+        }
+
+        /** Push the engine's fretting-hand trajectory + tempo into
+         *  the fretboard preview so its band animation is driven by
+         *  the playhead. Re-called on override changes. */
+        _refreshFretboardTrajectory() {
+            if (this.mode !== 'frets') return;
+            if (!this.fretboard || !this.engine) return;
+            if (typeof this.engine.getHandTrajectories !== 'function') return;
+            if (typeof this.fretboard.setHandTrajectory !== 'function') return;
+            if (Number.isFinite(this.ticksPerBeat) && this.ticksPerBeat > 0
+                    && Number.isFinite(this.bpm) && this.bpm > 0
+                    && typeof this.fretboard.setTicksPerSec === 'function') {
+                this.fretboard.setTicksPerSec(this.ticksPerBeat * (this.bpm / 60));
+            }
+            const handsArr = _hands(this.instrument);
+            const fretting = handsArr.find(h => h && h.id === 'fretting') || handsArr[0];
+            if (!fretting) { this.fretboard.setHandTrajectory([]); return; }
+            const map = this.engine.getHandTrajectories();
+            const points = map.get(fretting.id) || [];
+            this.fretboard.setHandTrajectory(points);
         }
 
         // -----------------------------------------------------------------
