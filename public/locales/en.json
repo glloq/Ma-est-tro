@@ -581,6 +581,14 @@
         "messageRateLimitDescription": "Maximum MIDI messages per second (0 = unlimited)",
         "messageRateLimitUnit": "msgs/sec"
     },
+    "handPosition": {
+        "toastPrefix": "Hand feasibility",
+        "warnMoveTooFast": "moves too fast",
+        "warnChordSpan": "chords wider than hand",
+        "warnTooManyFingers": "too many fingers required",
+        "warnOutOfRange": "notes out of range",
+        "warnFingerInterval": "fingers too close in time"
+    },
     "instrumentSettings": {
         "title": "Instrument Settings",
         "settingsButton": "Instrument settings",
