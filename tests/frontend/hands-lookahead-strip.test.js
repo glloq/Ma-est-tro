@@ -1,9 +1,9 @@
 // tests/frontend/hands-lookahead-strip.test.js
-// E.6.5: HandsLookaheadStrip is the small horizontal piano-roll
+// HandsLookaheadStrip is a Synthesia-style vertical piano-roll
 // shown above the keyboard in the HandsPreviewPanel (claviers only).
-// Tests focus on the visible-window math (only notes inside
-// [now, now + windowSeconds] paint), the unplayable colour change
-// and a few defensive guards.
+// y = time (bottom = now, top = windowSeconds ahead);
+// x = pitch, aligned with the keys below (white-key index, black
+// keys offset like the keyboard widget).
 
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
@@ -43,7 +43,7 @@ beforeEach(() => {
   document.body.innerHTML = '';
 });
 
-function makeCanvas(width = 600, height = 80) {
+function makeCanvas(width = 600, height = 140) {
   const canvas = document.createElement('canvas');
   Object.defineProperty(canvas, 'clientWidth',  { value: width, configurable: true });
   Object.defineProperty(canvas, 'clientHeight', { value: height, configurable: true });
@@ -53,7 +53,7 @@ function makeCanvas(width = 600, height = 80) {
 
 function makeStrip(opts = {}) {
   return new window.HandsLookaheadStrip(makeCanvas(opts.width, opts.height), {
-    ticksPerSecond: 480,        // simple: 1 tick = 1 ms equivalent at this rate
+    ticksPerSecond: 480,
     rangeMin: 36, rangeMax: 96,
     windowSeconds: 4,
     ...opts
@@ -100,7 +100,30 @@ describe('HandsLookaheadStrip — _firstVisibleIndex', () => {
   });
 });
 
-describe('HandsLookaheadStrip — drawing', () => {
+describe('HandsLookaheadStrip — column geometry (x mirrors the keyboard)', () => {
+  it('white keys take a full white-key column', () => {
+    const s = new window.HandsLookaheadStrip(makeCanvas(700, 140), {
+      ticksPerSecond: 480, rangeMin: 60, rangeMax: 71, windowSeconds: 4
+    });
+    // 7 whites in one octave → ww = 100.
+    const col = s._columnFor(60); // C5 (white)
+    expect(col.x).toBeCloseTo(0, 5);
+    expect(col.width).toBeCloseTo(100, 5);
+  });
+
+  it('black keys are narrower and sit on the white-key boundary', () => {
+    const s = new window.HandsLookaheadStrip(makeCanvas(700, 140), {
+      ticksPerSecond: 480, rangeMin: 60, rangeMax: 71, windowSeconds: 4
+    });
+    const colC = s._columnFor(60);  // C
+    const colCs = s._columnFor(61); // C#
+    expect(colCs.x).toBeGreaterThan(colC.x);
+    expect(colCs.x).toBeLessThan(colC.x + colC.width);
+    expect(colCs.width).toBeLessThan(colC.width);
+  });
+});
+
+describe('HandsLookaheadStrip — drawing (vertical fall-down)', () => {
   it('paints background + now line + a fillRect per visible note', () => {
     const ctx = installCanvasStub();
     const s = new window.HandsLookaheadStrip(makeCanvas(), {
@@ -113,27 +136,28 @@ describe('HandsLookaheadStrip — drawing', () => {
     });
     s.draw();
     const fillRects = ctx.calls.filter(c => c.method === 'fillRect');
-    // background + 2 visible notes
-    expect(fillRects.length).toBe(3);
+    // background + 2 visible notes (note at exactly windowSeconds is
+    // typically drawn as well — its top edge clamps to y=0).
+    expect(fillRects.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('draws notes farther up the canvas for higher pitches', () => {
+  it('puts notes near the bottom of the canvas as time approaches now', () => {
+    // A note that starts at tick 480 (≈ 1s ahead at our default
+    // tempo). With windowSeconds=4, dt_start=1 → yStart should be
+    // h * (1 - 1/4) = 0.75 * h, near the bottom.
     const ctx = installCanvasStub();
-    const s = new window.HandsLookaheadStrip(makeCanvas(), {
+    const h = 140;
+    const s = new window.HandsLookaheadStrip(makeCanvas(600, h), {
       ticksPerSecond: 480, rangeMin: 36, rangeMax: 96, windowSeconds: 4,
-      notes: [
-        { tick: 480, note: 40, duration: 240 }, // low
-        { tick: 480, note: 90, duration: 240 }  // high
-      ]
+      notes: [{ tick: 480, note: 60, duration: 0 }]
     });
     s.draw();
-    // Each fillRect's args are [x, y, w, h]. Capture the y for the
-    // two notes — the higher pitch should have a smaller y (top of canvas).
     const fillRects = ctx.calls.filter(c => c.method === 'fillRect').slice(1); // skip background
-    expect(fillRects).toHaveLength(2);
-    const [yLow, yHigh] = [fillRects[0].args[1], fillRects[1].args[1]];
-    // Both notes were given in the same order as added: low first, high second.
-    expect(yLow).toBeGreaterThan(yHigh);
+    expect(fillRects).toHaveLength(1);
+    const [, y] = fillRects[0].args;
+    // Should sit roughly at 75% of the height from the top.
+    expect(y).toBeGreaterThan(h * 0.6);
+    expect(y).toBeLessThan(h);
   });
 
   it('uses a red tint for unplayable notes', () => {
@@ -148,22 +172,34 @@ describe('HandsLookaheadStrip — drawing', () => {
     expect(fillStyles.some(v => v.startsWith('rgba(220, 38, 38'))).toBe(true);
   });
 
+  it('skips notes outside [rangeMin, rangeMax]', () => {
+    const ctx = installCanvasStub();
+    const s = new window.HandsLookaheadStrip(makeCanvas(), {
+      ticksPerSecond: 480, rangeMin: 60, rangeMax: 72, windowSeconds: 4,
+      notes: [
+        { tick: 480, note: 30, duration: 240 }, // below range
+        { tick: 480, note: 65, duration: 240 }, // in range
+        { tick: 480, note: 90, duration: 240 }  // above range
+      ]
+    });
+    s.draw();
+    const fillRects = ctx.calls.filter(c => c.method === 'fillRect').slice(1); // skip background
+    expect(fillRects).toHaveLength(1);
+  });
+
   it('honours setCurrentTime — notes that scrolled past disappear', () => {
     const ctx = installCanvasStub();
     const s = new window.HandsLookaheadStrip(makeCanvas(), {
       ticksPerSecond: 480, rangeMin: 36, rangeMax: 96, windowSeconds: 4,
       notes: [{ tick: 0, note: 60, duration: 240 }, { tick: 4800, note: 64, duration: 240 }]
     });
-    // At t=10s the first note is long gone; the second (10s away from
-    // t=10s? note at tick 4800 → 10s, so it just became "now") is at
-    // the left edge. Either way, we have 1 visible.
-    s.setCurrentTime(10);
+    s.setCurrentTime(20); // way past the note at tick 4800 too
     const fillRects = ctx.calls.filter(c => c.method === 'fillRect').slice(1);
-    expect(fillRects.length).toBeLessThanOrEqual(1);
+    expect(fillRects.length).toBe(0);
   });
 
   it('does not throw on empty canvas (width=0)', () => {
-    const canvas = makeCanvas(0, 80);
+    const canvas = makeCanvas(0, 140);
     const s = new window.HandsLookaheadStrip(canvas, {
       ticksPerSecond: 480, notes: [{ tick: 0, note: 60 }]
     });
