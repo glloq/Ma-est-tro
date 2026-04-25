@@ -247,11 +247,9 @@ class SettingsModal {
 
         const timeRange = this.modal.querySelector('#noteDisplayTimeRange');
         const timeValue = this.modal.querySelector('#noteDisplayTimeValue');
-        const virtualToggle = this.modal.querySelector('#virtualInstrumentToggle');
 
         if (timeRange) timeRange.value = this.settings.noteDisplayTime;
         if (timeValue) timeValue.textContent = this.settings.noteDisplayTime + 's';
-        if (virtualToggle) virtualToggle.checked = this.settings.virtualInstrument;
 
         const pianoRollToggle = this.modal.querySelector('#showPianoRollToggle');
         if (pianoRollToggle) pianoRollToggle.checked = this.settings.showPianoRoll;
@@ -321,7 +319,6 @@ class SettingsModal {
     save() {
         const darkModeToggle = this.modal.querySelector('#darkModeToggle');
         const timeRange = this.modal.querySelector('#noteDisplayTimeRange');
-        const virtualToggle = this.modal.querySelector('#virtualInstrumentToggle');
         const pianoRollToggle = this.modal.querySelector('#showPianoRollToggle');
         const debugButtonToggle = this.modal.querySelector('#showDebugButtonToggle');
         const calibrationButtonToggle = this.modal.querySelector('#showCalibrationButtonToggle');
@@ -333,11 +330,23 @@ class SettingsModal {
         const loadingAnimationToggle = this.modal.querySelector('#showLoadingAnimationToggle');
         const soundBankSelect = this.modal.querySelector('#soundBankSelect');
 
+        // The virtual-instrument flag is owned by the Gestion des instruments
+        // header now — re-read the freshest value from storage so saving the
+        // global settings doesn't stomp a recent change made there.
+        let currentVirtual = this.settings.virtualInstrument;
+        try {
+            const saved = localStorage.getItem('gmboop_settings');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (typeof parsed.virtualInstrument === 'boolean') currentVirtual = parsed.virtualInstrument;
+            }
+        } catch (e) { /* ignore */ }
+
         const newSettings = {
             theme: darkModeToggle ? (darkModeToggle.checked ? 'dark' : 'colored') : this.settings.theme,
             keyboardOctaves: this.settings.keyboardOctaves,
             noteDisplayTime: timeRange ? parseInt(timeRange.value) : this.settings.noteDisplayTime,
-            virtualInstrument: virtualToggle ? virtualToggle.checked : this.settings.virtualInstrument,
+            virtualInstrument: currentVirtual,
             showPianoRoll: pianoRollToggle ? pianoRollToggle.checked : this.settings.showPianoRoll,
             showDebugButton: debugButtonToggle ? debugButtonToggle.checked : this.settings.showDebugButton,
             showCalibrationButton: calibrationButtonToggle ? calibrationButtonToggle.checked : this.settings.showCalibrationButton,
@@ -352,7 +361,6 @@ class SettingsModal {
 
         const themeChanged = newSettings.theme !== this.settings.theme;
         const timeChanged = newSettings.noteDisplayTime !== this.settings.noteDisplayTime;
-        const virtualInstrumentChanged = newSettings.virtualInstrument !== this.settings.virtualInstrument;
         const pianoRollChanged = newSettings.showPianoRoll !== this.settings.showPianoRoll;
         const debugButtonChanged = newSettings.showDebugButton !== this.settings.showDebugButton;
         const calibrationButtonChanged = newSettings.showCalibrationButton !== this.settings.showCalibrationButton;
@@ -369,10 +377,6 @@ class SettingsModal {
 
         if (themeChanged) this.eventBus?.emit('settings:theme_changed', { theme: newSettings.theme });
         if (timeChanged) this.eventBus?.emit('settings:display_time_changed', { time: newSettings.noteDisplayTime });
-        if (virtualInstrumentChanged) {
-            this.eventBus?.emit('settings:virtual_instrument_changed', { enabled: newSettings.virtualInstrument });
-            this.logger?.info(`🎵 ${i18n.t(newSettings.virtualInstrument ? 'settings.virtualInstrument.enabled' : 'settings.virtualInstrument.disabled')}`);
-        }
         if (pianoRollChanged) {
             this.eventBus?.emit('settings:piano_roll_changed', { enabled: newSettings.showPianoRoll });
             this.logger?.info(`🎹 ${i18n.t(newSettings.showPianoRoll ? 'settings.pianoRoll.enabled' : 'settings.pianoRoll.disabled')}`);
