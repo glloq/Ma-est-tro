@@ -213,6 +213,12 @@
         return map;
     }
 
+    // K-step look-ahead window used by the two-hand anchor refiner.
+    // 4 chords keeps the cost bounded while letting the planner park
+    // each hand near upcoming material rather than over-shifting on a
+    // single chord that doesn't reflect what's just behind it.
+    const LOOKAHEAD_K = 4;
+
     function _simulateSemitones(groups, hands, overrideAnchors, disabledNotes) {
         const out = [];
         const handIds = hands.hands.map(h => h.id);
@@ -242,98 +248,214 @@
             state.get(id).anchor = toAnchor;
         }
 
-        for (const g of groups) {
-            // 1. Apply pinned overrides first so the partition step
-            //    sees the intended anchors.
-            for (const id of handIds) {
-                const ovKey = `${id}:${g.tick}`;
-                if (overrideAnchors.has(ovKey)) {
-                    _emitShift(g, id, state.get(id).anchor, overrideAnchors.get(ovKey), 'override');
-                }
-            }
+        const lowSpan  = state.get(lowId).span;
+        const highSpan = state.get(highId).span;
 
-            // 2. Filter disabled notes upfront.
-            const liveNotes = g.notes.filter(n => !disabledNotes.has(`${g.tick}:${n.note}`));
-            const unplayable = [];
+        // -------------------------------------------------------------
+        // Phase 1 — partition each chord and record per-hand ranges.
+        // The simulated anchors fed back into _bestPartition track the
+        // partition's preferred anchor (= prev clamped into the valid
+        // range) so cost-based tie-breaks stay realistic.
+        // -------------------------------------------------------------
+        const plans = [];
+        let lowSim  = null;
+        let highSim = null;
+
+        for (const g of groups) {
+            const lowOvKey  = `${lowId}:${g.tick}`;
+            const highOvKey = `${highId}:${g.tick}`;
+            const lowOv  = overrideAnchors.has(lowOvKey)  ? overrideAnchors.get(lowOvKey)  : null;
+            const highOv = overrideAnchors.has(highOvKey) ? overrideAnchors.get(highOvKey) : null;
+            if (lowOv  != null) lowSim  = lowOv;
+            if (highOv != null) highSim = highOv;
+
+            const liveNotes   = g.notes.filter(n => !disabledNotes.has(`${g.tick}:${n.note}`));
             const sortedNotes = liveNotes.slice().sort((a, b) => a.note - b.note);
 
-            // 3. Single-hand mode: trivial — same logic as the previous
-            //    implementation, no partition needed.
             if (sameHand) {
-                if (sortedNotes.length > 0) {
-                    const lo = sortedNotes[0].note;
-                    const hi = sortedNotes[sortedNotes.length - 1].note;
+                plans.push({ tick: g.tick, liveNotes, sortedNotes, sameHand: true, lowOv, highOv });
+                continue;
+            }
+
+            const partition = _bestPartition(sortedNotes, lowSpan, highSpan, lowSim, highSim, lowId, highId);
+            plans.push({
+                tick: g.tick,
+                liveNotes,
+                sortedNotes,
+                sameHand: false,
+                lowOv, highOv,
+                lowRange:  partition.lowRange,
+                highRange: partition.highRange,
+                unplayable: partition.unplayable,
+                overlap: partition.overlap,
+                lowDefault:  partition.lowAnchor,
+                highDefault: partition.highAnchor
+            });
+            if (partition.lowAnchor  != null) lowSim  = partition.lowAnchor;
+            if (partition.highAnchor != null) highSim = partition.highAnchor;
+        }
+
+        // -------------------------------------------------------------
+        // Phase 2 — emit shifts/chords, picking each anchor with a
+        // K-chord look-ahead so the planner parks each hand near the
+        // upcoming material instead of riding the immediate chord.
+        // -------------------------------------------------------------
+        for (let i = 0; i < plans.length; i++) {
+            const plan = plans[i];
+            const g = { tick: plan.tick };
+
+            // Apply pinned override anchors first so the look-ahead
+            // refiner sees the user's intent in the prev-anchor slot.
+            if (plan.lowOv != null) {
+                _emitShift(g, lowId, state.get(lowId).anchor, plan.lowOv, 'override');
+            }
+            if (!sameHand && plan.highOv != null) {
+                _emitShift(g, highId, state.get(highId).anchor, plan.highOv, 'override');
+            }
+
+            const unplayable = [];
+
+            if (plan.sameHand) {
+                if (plan.sortedNotes.length > 0) {
+                    const lo = plan.sortedNotes[0].note;
+                    const hi = plan.sortedNotes[plan.sortedNotes.length - 1].note;
                     const span = state.get(lowId).span;
                     let newAnchor = state.get(lowId).anchor;
                     if (newAnchor == null || lo < newAnchor || hi > newAnchor + span) {
                         _emitShift(g, lowId, newAnchor, lo, 'auto');
                         newAnchor = lo;
                     }
-                    for (const n of sortedNotes) {
+                    for (const n of plan.sortedNotes) {
                         if (n.note < newAnchor || n.note > newAnchor + span) {
                             unplayable.push({ note: n.note, reason: 'outside_window', handId: lowId });
                         }
                     }
                 }
-                out.push({ type: 'chord', tick: g.tick, notes: liveNotes.map(n => ({ ...n })), unplayable });
+                out.push({ type: 'chord', tick: plan.tick,
+                           notes: plan.liveNotes.map(n => ({ ...n })), unplayable });
                 continue;
             }
 
-            // 4. Two-hand mode: pick the partition split that minimises
-            //    movement under the no-overlap constraint.
-            const lowSpan  = state.get(lowId).span;
-            const highSpan = state.get(highId).span;
+            // Build the K-chord futures for each hand.
+            const futureLow  = [];
+            const futureHigh = [];
+            for (let j = i + 1; j < Math.min(i + 1 + LOOKAHEAD_K, plans.length); j++) {
+                if (plans[j].sameHand) break; // mode shouldn't change mid-stream
+                futureLow.push(plans[j].lowRange);
+                futureHigh.push(plans[j].highRange);
+            }
+
             const lowPrev  = state.get(lowId).anchor;
             const highPrev = state.get(highId).anchor;
 
-            const partition = _bestPartition(sortedNotes, lowSpan, highSpan, lowPrev, highPrev, lowId, highId);
+            const lowAnchor = plan.lowOv != null
+                ? plan.lowOv
+                : _pickAnchorWithLookahead(lowPrev, plan.lowRange, futureLow, plan.lowDefault);
+            const highAnchor = plan.highOv != null
+                ? plan.highOv
+                : _pickAnchorWithLookahead(highPrev, plan.highRange, futureHigh, plan.highDefault);
 
-            // 5. Apply the chosen partition. Hands without notes don't
-            //    move on their own, but if the moving hand's window
-            //    would now collide with the idle hand's window, push
-            //    the idle hand away — operators can pin it back via an
-            //    override if they don't want that.
-            const lowAnchor  = partition.lowAnchor;
-            const highAnchor = partition.highAnchor;
-
-            if (lowAnchor != null && lowAnchor !== state.get(lowId).anchor) {
-                _emitShift(g, lowId, state.get(lowId).anchor, lowAnchor, 'auto');
+            if (lowAnchor  != null && lowAnchor  !== state.get(lowId).anchor) {
+                _emitShift(g, lowId,  state.get(lowId).anchor,  lowAnchor,  'auto');
             }
             if (highAnchor != null && highAnchor !== state.get(highId).anchor) {
                 _emitShift(g, highId, state.get(highId).anchor, highAnchor, 'auto');
             }
 
-            // 6. Resolve a pending collision when only one hand moved.
-            //    Walk the idle hand away by the smallest amount that
-            //    restores the invariant low.high < high.anchor.
             const settled = _resolveOverlap(state, lowId, highId, lowSpan, highSpan);
             if (settled) {
-                if (settled.lowAnchor !== state.get(lowId).anchor) {
-                    _emitShift(g, lowId, state.get(lowId).anchor, settled.lowAnchor, 'collision');
+                if (settled.lowAnchor  !== state.get(lowId).anchor) {
+                    _emitShift(g, lowId,  state.get(lowId).anchor,  settled.lowAnchor,  'collision');
                 }
                 if (settled.highAnchor !== state.get(highId).anchor) {
                     _emitShift(g, highId, state.get(highId).anchor, settled.highAnchor, 'collision');
                 }
             }
 
-            // 7. Per-note unplayable detection for the chord.
-            for (const n of partition.unplayable) {
-                unplayable.push(n);
-            }
-            // Hand-overlap notice when the partition couldn't avoid it.
-            if (partition.overlap) {
+            for (const n of plan.unplayable) unplayable.push(n);
+            if (plan.overlap) {
                 unplayable.push({ note: null, reason: 'hand_overlap', handId: null,
                                   message: 'Notes too close to split between hands without overlap' });
             }
 
             out.push({
                 type: 'chord',
-                tick: g.tick,
-                notes: liveNotes.map(n => ({ ...n })),
+                tick: plan.tick,
+                notes: plan.liveNotes.map(n => ({ ...n })),
                 unplayable
             });
         }
         return out;
+    }
+
+    /**
+     * Pick the anchor inside `range` that minimises cumulative
+     * movement across `futureRanges` (with exponential decay).
+     *
+     *   - `prev` is the hand's current anchor (null → first chord).
+     *   - `range` is the [lo, hi] of valid anchors for THIS chord
+     *     (= [maxNote-span, minNote]); null means the hand is idle.
+     *   - `futureRanges` is an array of upcoming ranges (each may be
+     *     null for an idle chord).
+     *   - `fallback` is the value to use when no prev / no range
+     *     guidance applies — usually the partition's default anchor.
+     *
+     * If `prev` already lies inside `range`, we keep it (zero shift)
+     * and only break ties when prev is also movement-equivalent for
+     * the future. Otherwise we evaluate a small candidate set
+     * (range bounds + each future bound clamped into `range`) and
+     * pick the one with the lowest decayed cost.
+     * @private
+     */
+    function _pickAnchorWithLookahead(prev, range, futureRanges, fallback) {
+        if (range == null) {
+            // Idle this chord: keep current position.
+            return prev != null ? prev : (fallback != null ? fallback : null);
+        }
+        const [lo, hi] = range;
+        const fb = fallback != null ? Math.max(lo, Math.min(hi, fallback)) : lo;
+
+        const candidates = new Set();
+        candidates.add(lo);
+        candidates.add(hi);
+        candidates.add(fb);
+        if (prev != null) candidates.add(Math.max(lo, Math.min(hi, prev)));
+        for (const r of futureRanges || []) {
+            if (!r) continue;
+            candidates.add(Math.max(lo, Math.min(hi, r[0])));
+            candidates.add(Math.max(lo, Math.min(hi, r[1])));
+        }
+
+        let best = null;
+        for (const a of candidates) {
+            // Immediate shift cost.
+            let cost = prev != null ? Math.abs(a - prev) : 0;
+
+            // Decayed cost of propagating `a` through the future
+            // chords — at each step the hand moves the smallest
+            // amount that lands in the next range.
+            let cur = a;
+            let weight = 0.7;
+            for (const r of futureRanges || []) {
+                if (!r) { weight *= 0.7; continue; }
+                const next = Math.max(r[0], Math.min(cur, r[1]));
+                cost += weight * Math.abs(next - cur);
+                cur = next;
+                weight *= 0.7;
+            }
+
+            // Tie-break: prefer the fallback (= partition's natural
+            // anchor — usually the lo of the assigned set) so the
+            // band's visual position stays predictable when no
+            // movement constraint differentiates candidates.
+            const tie = Math.abs(a - fb) * 1e-6;
+            cost += tie;
+
+            if (!best || cost < best.cost) {
+                best = { a, cost };
+            }
+        }
+        return best ? best.a : fb;
     }
 
     /**
@@ -343,14 +465,22 @@
      * option (with `overlap=true` flag) when no partition satisfies
      * the no-overlap invariant.
      *
-     * Tie-break: minimise total |new − prev| anchor movement so the
-     * planner doesn't bounce hands around between consecutive chords.
+     * Tie-break: minimise total |clamped(prev) − prev| anchor
+     * movement so the planner doesn't bounce hands around between
+     * consecutive chords. The "preferred anchor" returned per side
+     * is the prev clamped into the partition's valid range — i.e.
+     * zero movement when the hand was already inside the range.
+     * The two-pass refiner in `_simulateSemitones` may swap that
+     * anchor for a look-ahead-aware one, so we also return the
+     * full valid range (`lowRange`, `highRange`) for each side.
      * @private
      */
     function _bestPartition(sortedNotes, lowSpan, highSpan, lowPrev, highPrev, lowId, highId) {
         const N = sortedNotes.length;
-        const empty = { lowAnchor: lowPrev, highAnchor: highPrev, unplayable: [], overlap: false };
-        if (N === 0) return empty;
+        if (N === 0) {
+            return { lowAnchor: lowPrev, highAnchor: highPrev,
+                     lowRange: null, highRange: null, unplayable: [], overlap: false };
+        }
 
         // Reference midpoint used by the initial-state bias below.
         // Notes below SPLIT_REF "want" the low hand; notes at/above
@@ -376,8 +506,17 @@
             const highFits = highSet.length === 0 || (highHi - highLo) <= highSpan;
             if (!lowFits || !highFits) continue;
 
-            let lowAnchor  = lowSet.length  ? lowLo  : lowPrev;
-            let highAnchor = highSet.length ? highLo : highPrev;
+            // Valid anchor range per hand: [hi - span, lo].
+            const lowRange  = lowSet.length  ? [lowHi  - lowSpan,  lowLo]  : null;
+            const highRange = highSet.length ? [highHi - highSpan, highLo] : null;
+
+            // Preferred anchor = prev clamped into the valid range.
+            // 0 movement when the hand was already in range; otherwise
+            // the closest in-range value. Initial chord falls back to
+            // the lowest note in the set so the band starts at the
+            // music's natural floor / ceiling.
+            let lowAnchor  = _clampInto(lowPrev,  lowRange,  lowLo);
+            let highAnchor = _clampInto(highPrev, highRange, highLo);
 
             // When a hand stays idle on the very first chord, give it
             // a parking spot beyond the moving hand's reach so the UI
@@ -420,7 +559,8 @@
             cost += pitchPenalty;
 
             if (!best || cost < best.cost) {
-                best = { lowAnchor, highAnchor, unplayable: [], overlap: false, cost };
+                best = { lowAnchor, highAnchor, lowRange, highRange,
+                         unplayable: [], overlap: false, cost };
             }
         }
 
@@ -441,9 +581,12 @@
             const highFits = highSet.length === 0 || (highHi - highLo) <= highSpan;
             if (!lowFits || !highFits) continue;
 
-            const lowAnchor  = lowSet.length  ? lowLo  : lowPrev;
-            const highAnchor = highSet.length ? highLo : highPrev;
-            return { lowAnchor, highAnchor, unplayable: [], overlap: true };
+            const lowRange  = lowSet.length  ? [lowHi  - lowSpan,  lowLo]  : null;
+            const highRange = highSet.length ? [highHi - highSpan, highLo] : null;
+            const lowAnchor  = _clampInto(lowPrev,  lowRange,  lowLo);
+            const highAnchor = _clampInto(highPrev, highRange, highLo);
+            return { lowAnchor, highAnchor, lowRange, highRange,
+                     unplayable: [], overlap: true };
         }
 
         // The chord exceeds even the per-hand span on both sides — every
@@ -454,11 +597,22 @@
             unplayable.push({ note: n.note, reason: 'outside_window', handId: null });
         }
         return {
-            lowAnchor: lowPrev ?? sortedNotes[0].note,
+            lowAnchor:  lowPrev  ?? sortedNotes[0].note,
             highAnchor: highPrev ?? sortedNotes[sortedNotes.length - 1].note,
+            lowRange:  null,
+            highRange: null,
             unplayable,
             overlap: true
         };
+    }
+
+    /** Clamp `value` into `range` (= [lo, hi]); returns `fallback`
+     *  when value is null and a `range` is provided. @private */
+    function _clampInto(value, range, fallback) {
+        if (range == null) return value;
+        const [lo, hi] = range;
+        if (value == null) return fallback != null ? fallback : lo;
+        return Math.max(lo, Math.min(hi, value));
     }
 
     /**
