@@ -452,6 +452,16 @@ class RoutingSummaryPage {
         const newDetail = this.modal.querySelector('#rsDetailPanel');
         if (newSummary) newSummary.scrollTop = savedSummaryScroll;
         if (newDetail) newDetail.scrollTop = savedDetailScroll;
+
+        // E.6.7 — mount the HandsPreviewPanel after the detail panel
+        // is in the DOM so its canvases attach to live elements.
+        if (this.selectedChannel !== null) {
+          this._mountHandsPreview(this.selectedChannel);
+        } else if (this._handsPreviewPanel) {
+          this._handsPreviewPanel.destroy();
+          this._handsPreviewPanel = null;
+          this._handsPreviewChannel = null;
+        }
       } else {
         // Partial update — only rebuild the affected panel(s)
         if (hint === 'summary' || hint === 'both-panels') {
@@ -472,6 +482,17 @@ class RoutingSummaryPage {
               : this._renderDetailPlaceholder();
             panel.scrollTop = saved;
             this._bindDetailEvents(channelKeys);
+            // E.6.7 — re-mount the preview panel on detail re-render
+            // (channel switch, override apply…). The mount call is
+            // idempotent: it destroys the previous instance if the
+            // channel changed, otherwise it's a no-op.
+            if (this.selectedChannel !== null) {
+              this._mountHandsPreview(this.selectedChannel);
+            } else if (this._handsPreviewPanel) {
+              this._handsPreviewPanel.destroy();
+              this._handsPreviewPanel = null;
+              this._handsPreviewChannel = null;
+            }
           }
         }
         // Sync container layout class (detail visible or not)
@@ -924,8 +945,147 @@ class RoutingSummaryPage {
       splitHTML,
       addInstrumentHTML,
       ccSectionHTML: this._renderCCSection(channel),
+      // E.6.7 — empty container; the panel itself is mounted later
+      // by `_mountHandsPreview` once the section is in the DOM.
+      handsPreviewHTML: this._renderHandsPreviewSection(channel),
       escape: escapeHtml
     });
+  }
+
+  /**
+   * Build the host element for the HandsPreviewPanel. The panel is
+   * a runtime widget (canvas + listeners), so we emit just the
+   * container shell here and mount the actual instance once the
+   * detail panel is in the DOM (`_mountHandsPreview`).
+   * @private
+   */
+  _renderHandsPreviewSection(channel) {
+    if (!window.HandsPreviewPanel) return '';
+    return `
+      <section class="rs-section rs-hands-preview-section" id="rsHandsPreview-${channel}"
+               data-channel="${channel}"
+               style="margin-top:8px;border:1px solid var(--border-color, #e5e7eb);border-radius:6px;background:var(--bg-secondary, #fff);">
+      </section>
+    `;
+  }
+
+  /**
+   * Mount (or remount) the HandsPreviewPanel instance into the
+   * detail panel host element. Idempotent — destroys the previous
+   * instance before creating a new one so a channel switch never
+   * leaks listeners or canvas memory.
+   * @private
+   */
+  _mountHandsPreview(channel) {
+    if (!window.HandsPreviewPanel) return;
+    const host = this.modal?.querySelector(`#rsHandsPreview-${channel}`);
+    if (!host) return;
+
+    if (this._handsPreviewPanel && this._handsPreviewChannel !== channel) {
+      this._handsPreviewPanel.destroy();
+      this._handsPreviewPanel = null;
+    }
+    if (this._handsPreviewPanel) return; // already mounted on this channel
+
+    // Resolve the routed instrument (incl. hands_config) + a notes
+    // slice for the channel. Skip silently when any required piece
+    // is missing — the panel host stays empty.
+    const assignment = this.selectedAssignments?.[String(channel)];
+    if (!assignment) return;
+    const instrumentRecord = (this.allInstruments || [])
+      .find(i => i.id === assignment.instrumentId);
+    if (!instrumentRecord) return;
+
+    const notes = this._getChannelNotesForPreview(channel);
+    if (!notes || notes.length === 0) return;
+
+    const ticksPerBeat = this.midiData?.header?.ticksPerBeat
+      || this.midiData?.ticksPerBeat || 480;
+    const bpm = this._estimateBpm() || 120;
+    const initialOverrides = this._extractInitialOverrides(assignment);
+
+    this._handsPreviewPanel = new window.HandsPreviewPanel(host, {
+      channel,
+      notes,
+      instrument: instrumentRecord,
+      ticksPerBeat,
+      bpm,
+      overrides: initialOverrides,
+      onSeek: (currentTick, totalTicks) => this._onHandsPreviewSeek(currentTick, totalTicks),
+      // E.6.8 — saveCtx tells the panel how to persist its overrides
+      // via the routing_save_hand_overrides WS command.
+      saveCtx: {
+        apiClient: this._rawApiClient || this.apiClient?.backend || this.apiClient,
+        fileId: this.fileId,
+        deviceId: assignment.deviceId
+      }
+    });
+    this._handsPreviewChannel = channel;
+  }
+
+  /**
+   * Extract the channel's notes for the preview engine. Reuses the
+   * minimap helper when available so the slice is consistent with
+   * the navigation bar; falls back to a direct walk of midiData.
+   * @private
+   */
+  _getChannelNotesForPreview(channel) {
+    if (typeof this._extractNotesForMinimap === 'function') {
+      try {
+        const out = this._extractNotesForMinimap(channel);
+        if (Array.isArray(out) && out.length > 0) {
+          // Minimap shape is [{t, n, ch}], normalize to the engine's
+          // expected {tick, note, channel}.
+          return out.map(e => ({ tick: e.t, note: e.n, channel: e.ch }));
+        }
+      } catch (_) { /* fall through */ }
+    }
+    if (!this.midiData?.tracks) return [];
+    const notes = [];
+    let absoluteTick = 0;
+    for (const track of this.midiData.tracks) {
+      absoluteTick = 0;
+      for (const ev of (track.events || track)) {
+        absoluteTick += ev.deltaTime || 0;
+        if (ev.type === 'noteOn' && (ev.velocity ?? 0) > 0 && ev.channel === channel) {
+          notes.push({ tick: absoluteTick, note: ev.noteNumber, channel });
+        }
+      }
+    }
+    return notes;
+  }
+
+  /** Pull a starter overrides payload off the routing-summary state. */
+  _extractInitialOverrides(assignment) {
+    return assignment?.handPositionOverrides
+      || assignment?.hand_position_overrides
+      || null;
+  }
+
+  _estimateBpm() {
+    // First setTempo event from the parsed MIDI; defaults to 120 bpm.
+    const tracks = this.midiData?.tracks || [];
+    for (const track of tracks) {
+      for (const ev of (track.events || track)) {
+        if (ev.type === 'setTempo' && Number.isFinite(ev.microsecondsPerBeat)) {
+          return 60_000_000 / ev.microsecondsPerBeat;
+        }
+      }
+    }
+    return 120;
+  }
+
+  /**
+   * Forward the preview engine's playhead to the parent's minimap so
+   * the operator gets a single navigation cursor across the table.
+   * @private
+   */
+  _onHandsPreviewSeek(currentTick, totalTicks) {
+    if (totalTicks <= 0) return;
+    const pct = currentTick / totalTicks;
+    if (typeof this._drawMinimapFrame === 'function') {
+      try { this._drawMinimapFrame(pct); } catch (_) { /* defensive */ }
+    }
   }
 
   /**

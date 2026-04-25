@@ -5438,6 +5438,15 @@
     <script src="js/features/auto-assign/RoutingSummaryApi.js"></script>
     <script src="js/features/auto-assign/RoutingSummaryAssignmentBuilder.js"></script>
     <script src="js/features/auto-assign/HandPositionFeasibility.js"></script>
+    <!-- Feature E — per-channel hand-position preview panel. Order matters:
+         the engine + 3 widgets must be loaded before HandsPreviewPanel,
+         which orchestrates them. RoutingSummaryPage references
+         window.HandsPreviewPanel lazily so the preview falls back to
+         a no-op if the panel script fails to load. -->
+    <script src="js/features/auto-assign/HandSimulationEngine.js"></script>
+    <script src="js/features/auto-assign/KeyboardPreview.js"></script>
+    <script src="js/features/auto-assign/HandsLookaheadStrip.js"></script>
+    <script src="js/features/auto-assign/HandsPreviewPanel.js"></script>
     <script src="js/features/auto-assign/RoutingSummaryRenderers.js"></script>
     <script src="js/features/auto-assign/RoutingSummarySaveDialog.js"></script>
     <script src="js/features/auto-assign/RoutingSummaryMinimapNotes.js"></script>

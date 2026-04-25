@@ -596,6 +596,17 @@
             "short": "Hand"
         }
     },
+    "handsPreview": {
+        "title": "Hands preview",
+        "play": "Play",
+        "pause": "Pause",
+        "reset": "Reset",
+        "save": "Save",
+        "saveDirty": "Unsaved changes",
+        "saveClean": "No changes to save",
+        "resetOverrides": "Discard overrides",
+        "noHandsConfig": "No hands configuration on this instrument — preview is disabled."
+    },
     "instrumentSettings": {
         "title": "Instrument Settings",
         "settingsButton": "Instrument settings",
