@@ -245,7 +245,7 @@
             });
 
             this.engine.on('shift', (e) => {
-                const { handId, toAnchor, motion } = e.detail;
+                const { handId, toAnchor, tick, motion } = e.detail;
                 this._currentHandWindows.set(handId, toAnchor);
                 // Track speed-limit feasibility so the frets hand band
                 // can flip to red when the hand can't physically make
@@ -256,6 +256,32 @@
                     this._lastMotionLevel = 'infeasible';
                 } else {
                     this._lastMotionLevel = 'ok';
+                }
+                // M1 — compute the lerp animation bounds for the
+                // frets fretboard. The band slides from the prev
+                // anchor to `toAnchor` between (chord.tick − lead)
+                // and chord.tick. `lead` is the smaller of
+                // requiredSec / availableSec — capped at the
+                // available time so we don't reach back BEFORE the
+                // previous note-off.
+                this._lastShiftFromSec = null;
+                this._lastShiftToSec = null;
+                if (this.mode === 'frets'
+                        && motion
+                        && Number.isFinite(motion.requiredSec)
+                        && Number.isFinite(this.ticksPerBeat) && this.ticksPerBeat > 0
+                        && Number.isFinite(this.bpm) && this.bpm > 0
+                        && Number.isFinite(tick)) {
+                    const ticksPerSec = this.ticksPerBeat * (this.bpm / 60);
+                    const tickSec = tick / ticksPerSec;
+                    const required = Math.max(0, motion.requiredSec);
+                    const available = Number.isFinite(motion.availableSec)
+                        ? motion.availableSec : required;
+                    const lead = Math.min(required, available);
+                    if (lead > 0) {
+                        this._lastShiftFromSec = tickSec - lead;
+                        this._lastShiftToSec = tickSec;
+                    }
                 }
                 this._refreshHandsView();
             });
@@ -292,7 +318,15 @@
             this.engine.on('tick', (e) => {
                 this._currentTick = e.detail.currentTick;
                 if (this.lookahead) this.lookahead.setCurrentTime(e.detail.currentSec);
-                if (this.fretboard) this._refreshGhostAnchor();
+                if (this.fretboard) {
+                    // M1 — drive the lerp animation from the
+                    // simulated playhead so the band slides at the
+                    // same rate as the rest of the preview.
+                    if (typeof this.fretboard.setCurrentTime === 'function') {
+                        this.fretboard.setCurrentTime(e.detail.currentSec);
+                    }
+                    this._refreshGhostAnchor();
+                }
                 if (typeof this.onSeek === 'function') {
                     this.onSeek(e.detail.currentTick, e.detail.totalTicks);
                 }
@@ -451,7 +485,12 @@
                     this.fretboard.setHandWindow({
                         anchorFret: anchor,
                         spanFrets: fretting.hand_span_frets,
-                        level
+                        level,
+                        // M1 — bounds picked up from the most recent
+                        // shift event so the band slides across the
+                        // gap instead of teleporting.
+                        animateFromSec: this._lastShiftFromSec,
+                        animateToSec: this._lastShiftToSec
                     });
                 }
             }

@@ -59,6 +59,15 @@
             this.handWindow = null;
             this.ghostAnchor = null;
 
+            // M1 — lerp animation state. `_displayedAnchor` is the
+            // smoothed float used by `_drawHandWindow`; falls back
+            // to `handWindow.anchorFret` when no animation is
+            // active. `_animation` carries the start/end + sim-time
+            // bounds so `setCurrentTime` can interpolate.
+            this._displayedAnchor = null;
+            this._animation = null;
+            this._currentSec = 0;
+
             // Wider left margin holds the tuning labels (D1) plus
             // the O / X glyph column (N3); wider right margin holds
             // the body sketch (B1).
@@ -123,6 +132,8 @@
         setHandWindow(handWindow) {
             if (handWindow == null) {
                 this.handWindow = null;
+                this._displayedAnchor = null;
+                this._animation = null;
                 this.draw();
                 return;
             }
@@ -130,15 +141,70 @@
             const spanFrets = parseInt(handWindow.spanFrets, 10);
             if (!Number.isFinite(anchor) || !Number.isFinite(spanFrets) || spanFrets <= 0) {
                 this.handWindow = null;
+                this._displayedAnchor = null;
+                this._animation = null;
                 this.draw();
                 return;
             }
+            const newAnchor = Math.max(0, anchor);
             this.handWindow = {
-                anchorFret: Math.max(0, anchor),
+                anchorFret: newAnchor,
                 spanFrets,
                 level: handWindow.level || 'ok'
             };
+            // M1 — start a lerp animation when the panel passes sim-
+            // time bounds (`animateFromSec` / `animateToSec`). Without
+            // them, snap immediately to the new anchor (= back-compat
+            // with callers that don't drive playback).
+            const fromSec = handWindow.animateFromSec;
+            const toSec   = handWindow.animateToSec;
+            if (this._displayedAnchor != null
+                    && Number.isFinite(fromSec) && Number.isFinite(toSec)
+                    && toSec > fromSec
+                    && this._displayedAnchor !== newAnchor) {
+                this._animation = {
+                    fromAnchor: this._displayedAnchor,
+                    toAnchor: newAnchor,
+                    fromSec,
+                    toSec
+                };
+                this._tickAnimation();
+            } else {
+                this._displayedAnchor = newAnchor;
+                this._animation = null;
+            }
             this.draw();
+        }
+
+        /**
+         * M1 — Drive the lerp animation from the simulated playhead.
+         * The panel calls this on every `tick` event so the band
+         * smoothly slides between anchors using the SAME wall-clock
+         * the simulator runs on (= paused when paused, fast-forwarded
+         * on seek).
+         */
+        setCurrentTime(currentSec) {
+            this._currentSec = Number.isFinite(currentSec) ? currentSec : 0;
+            this._tickAnimation();
+            this.draw();
+        }
+
+        /** @private — recompute `_displayedAnchor` from the active
+         *  animation given `_currentSec`. */
+        _tickAnimation() {
+            const a = this._animation;
+            if (!a) return;
+            if (this._currentSec >= a.toSec) {
+                this._displayedAnchor = a.toAnchor;
+                this._animation = null;
+                return;
+            }
+            if (this._currentSec <= a.fromSec) {
+                this._displayedAnchor = a.fromAnchor;
+                return;
+            }
+            const t = (this._currentSec - a.fromSec) / (a.toSec - a.fromSec);
+            this._displayedAnchor = a.fromAnchor + (a.toAnchor - a.fromAnchor) * t;
         }
 
         // -----------------------------------------------------------------
@@ -341,7 +407,12 @@
 
         _drawHandWindow(fbX, fbY, fbW, fbH, _canvasW) {
             const { anchorFret, spanFrets, level } = this.handWindow;
-            const { x0, x1 } = this._handWindowX(anchorFret, spanFrets);
+            // M1 — use the smoothed anchor when an animation is in
+            // flight. Falls back to the target anchor when no
+            // playhead drives us.
+            const effectiveAnchor = Number.isFinite(this._displayedAnchor)
+                ? this._displayedAnchor : anchorFret;
+            const { x0, x1 } = this._handWindowX(effectiveAnchor, spanFrets);
             if (!Number.isFinite(x0) || !Number.isFinite(x1) || x1 <= x0) return;
 
             const fills = {
@@ -649,6 +720,8 @@
             this.unplayablePositions = [];
             this.handWindow = null;
             this.ghostAnchor = null;
+            this._displayedAnchor = null;
+            this._animation = null;
         }
     }
 

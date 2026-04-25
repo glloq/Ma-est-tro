@@ -462,6 +462,72 @@ describe('FretboardHandPreview — ghost anchor', () => {
   });
 });
 
+describe('FretboardHandPreview — M1 lerp animation', () => {
+  it('snaps directly when no animateFromSec / animateToSec is provided', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
+    fb.setHandWindow({ anchorFret: 5, spanFrets: 4 });
+    expect(fb._displayedAnchor).toBe(5);
+    expect(fb._animation).toBeNull();
+  });
+
+  it('starts a lerp animation when sim-time bounds are passed AND a previous anchor exists', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
+    fb.setHandWindow({ anchorFret: 1, spanFrets: 4 });
+    fb.setCurrentTime(0);
+    fb.setHandWindow({
+      anchorFret: 12, spanFrets: 4,
+      animateFromSec: 0, animateToSec: 1
+    });
+    expect(fb._animation).not.toBeNull();
+    expect(fb._animation.fromAnchor).toBe(1);
+    expect(fb._animation.toAnchor).toBe(12);
+  });
+
+  it('setCurrentTime in the middle of the animation interpolates the displayed anchor', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
+    fb.setHandWindow({ anchorFret: 1, spanFrets: 4 });
+    fb.setCurrentTime(0);
+    fb.setHandWindow({
+      anchorFret: 11, spanFrets: 4,
+      animateFromSec: 0, animateToSec: 1
+    });
+    fb.setCurrentTime(0.5);
+    expect(fb._displayedAnchor).toBeCloseTo(6, 1);
+  });
+
+  it('setCurrentTime past the animation end snaps to the target anchor', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
+    fb.setHandWindow({ anchorFret: 1, spanFrets: 4 });
+    fb.setCurrentTime(0);
+    fb.setHandWindow({
+      anchorFret: 12, spanFrets: 4,
+      animateFromSec: 0, animateToSec: 1
+    });
+    fb.setCurrentTime(2);
+    expect(fb._displayedAnchor).toBe(12);
+    expect(fb._animation).toBeNull();
+  });
+
+  it('paints the band at the INTERPOLATED anchor when in the middle of an animation', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
+    fb.setHandWindow({ anchorFret: 1, spanFrets: 4 });
+    fb.setCurrentTime(0);
+    fb.setHandWindow({
+      anchorFret: 11, spanFrets: 4,
+      animateFromSec: 0, animateToSec: 1
+    });
+    calls.length = 0;
+    fb.setCurrentTime(0.5);
+    // The band's left x should be at fretX(slotLeft) where slotLeft
+    // = 6-1 = 5 (= halfway between fret 0 and fret 10).
+    const expectedX0 = fb._fretX(5);
+    const bandRect = calls
+      .filter(c => c.method === 'fillRect')
+      .find(c => Math.abs(c.args[0] - expectedX0) < 1.5);
+    expect(bandRect).toBeDefined();
+  });
+});
+
 describe('FretboardHandPreview — lifecycle', () => {
   it('destroy() drops state but does not throw on a follow-up draw', () => {
     const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });

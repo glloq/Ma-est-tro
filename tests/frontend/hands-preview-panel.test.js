@@ -257,9 +257,9 @@ describe('HandsPreviewPanel — engine wiring (frets)', () => {
     panel.engine.dispatchEvent(new CustomEvent('shift', {
       detail: { handId: 'fretting', toAnchor: 5 }
     }));
-    expect(setHand).toHaveBeenCalledWith({
+    expect(setHand).toHaveBeenCalledWith(expect.objectContaining({
       anchorFret: 5, spanFrets: 4, level: 'ok'
-    });
+    }));
     panel.destroy();
   });
 
@@ -349,6 +349,43 @@ describe('HandsPreviewPanel — engine wiring (frets)', () => {
     const arg = setGhost.mock.calls[setGhost.mock.calls.length - 1][0];
     expect(arg).not.toBeNull();
     expect(arg.anchorFret).toBe(12);
+    panel.destroy();
+  });
+
+  it('forwards setCurrentTime to the fretboard on every tick (M1 animation drive)', () => {
+    const panel = makePanel({
+      instrument: {
+        hands_config: fretsHands,
+        tuning: [40, 45, 50, 55, 59, 64], num_frets: 22
+      }
+    });
+    const setTime = vi.spyOn(panel.fretboard, 'setCurrentTime');
+    panel.engine.dispatchEvent(new CustomEvent('tick', {
+      detail: { currentTick: 240, currentSec: 0.5, totalTicks: 960 }
+    }));
+    expect(setTime).toHaveBeenCalledWith(0.5);
+    panel.destroy();
+  });
+
+  it('shift event with motion fields produces animateFromSec / animateToSec on setHandWindow', () => {
+    const panel = makePanel({
+      instrument: {
+        hands_config: fretsHands,
+        tuning: [40, 45, 50, 55, 59, 64], num_frets: 22
+      },
+      ticksPerBeat: 480, bpm: 60   // → 480 ticks/sec → tick 480 = 1 s
+    });
+    const setHand = vi.spyOn(panel.fretboard, 'setHandWindow');
+    panel.engine.dispatchEvent(new CustomEvent('shift', {
+      detail: {
+        handId: 'fretting', toAnchor: 12, tick: 480,
+        motion: { requiredSec: 0.4, availableSec: 0.6, feasible: true }
+      }
+    }));
+    const lastCall = setHand.mock.calls[setHand.mock.calls.length - 1][0];
+    // tick 480 / 480 = 1 s; lead = min(required, available) = 0.4.
+    expect(lastCall.animateToSec).toBeCloseTo(1, 3);
+    expect(lastCall.animateFromSec).toBeCloseTo(0.6, 3);
     panel.destroy();
   });
 
