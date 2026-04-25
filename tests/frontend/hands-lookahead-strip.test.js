@@ -445,6 +445,28 @@ describe('HandsLookaheadStrip — hold-then-transition (note-off anchored)', () 
     expect(infeasibleTopY).toBeLessThan(feasibleTopY);
   });
 
+  it('setCurrentTime SKIPS the redraw when the playhead moved less than one pixel', () => {
+    const ctx = installCanvasStub();
+    const s = new window.HandsLookaheadStrip(makeCanvas(600, 140), {
+      ticksPerSecond: 480, rangeMin: 36, rangeMax: 96, windowSeconds: 4,
+      notes: []
+    });
+    s.draw();
+    const baseFillRects = ctx.calls.filter(c => c.method === 'fillRect').length;
+    // Canvas h=140, windowSeconds=4 → pxPerSec=35 → 1 px ≈ 28.6 ms.
+    s.setCurrentTime(0.001); // < 1 px from 0 → must SKIP
+    expect(ctx.calls.filter(c => c.method === 'fillRect').length).toBe(baseFillRects);
+    s.setCurrentTime(0.05); // > 1 px → MUST redraw
+    expect(ctx.calls.filter(c => c.method === 'fillRect').length).toBeGreaterThan(baseFillRects);
+  });
+
+  it('still updates currentSec on a sub-pixel call (state stays in sync)', () => {
+    const s = makeStrip();
+    s.setCurrentTime(0.5);
+    s.setCurrentTime(0.5001); // sub-pixel — no redraw, but state tracks
+    expect(s.currentSec).toBe(0.5001);
+  });
+
   it('emits MORE fillRect calls when chords hold (background hold rectangles) than when they don\'t', () => {
     function fillRectCount(points) {
       const ctx = installCanvasStub();

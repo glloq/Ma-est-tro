@@ -84,10 +84,67 @@
                 note: n.note,
                 channel: n.channel
             }));
+
+            // Geometry cache. Re-built lazily inside `_geo()` whenever
+            // the canvas size or the range changes — column lookups
+            // are dropped from O(N) per midi to O(1) array-indexed.
+            this._geoCache = null;
+            // Last paint marker so sub-pixel `setCurrentTime` updates
+            // skip the heavy redraw.
+            this._lastDrawSec = -Infinity;
+        }
+
+        /** @private — return a cached geometry table built once per
+         *  (range, canvas-size) configuration. */
+        _geo() {
+            const w = (this.canvas?.clientWidth || this.canvas?.width) || 0;
+            const cache = this._geoCache;
+            if (cache && cache.w === w
+                    && cache.rangeMin === this.rangeMin
+                    && cache.rangeMax === this.rangeMax) {
+                return cache;
+            }
+            const count = Math.max(1, whiteKeyCount(this.rangeMin, this.rangeMax));
+            const ww = w / count;
+            // Pre-compute white-key index + column [x, width] per MIDI
+            // in [rangeMin..rangeMax]. Outside the range the entries
+            // stay 0; callers should clamp their MIDI numbers.
+            const whiteIdx = new Int16Array(128);
+            const colX     = new Float32Array(128);
+            const colW     = new Float32Array(128);
+            let idx = 0;
+            for (let m = this.rangeMin; m <= this.rangeMax; m++) {
+                whiteIdx[m] = idx;
+                if (!isBlackKey(m)) idx++;
+            }
+            for (let m = this.rangeMin; m <= this.rangeMax; m++) {
+                if (!isBlackKey(m)) {
+                    colX[m] = whiteIdx[m] * ww;
+                    colW[m] = ww;
+                } else {
+                    colX[m] = whiteIdx[m - 1] * ww + ww * 0.65;
+                    colW[m] = ww * 0.6;
+                }
+            }
+            this._geoCache = { w, ww, rangeMin: this.rangeMin, rangeMax: this.rangeMax,
+                                whiteIdx, colX, colW };
+            return this._geoCache;
         }
 
         setCurrentTime(currentSec) {
-            this.currentSec = Math.max(0, Number.isFinite(currentSec) ? currentSec : 0);
+            const next = Math.max(0, Number.isFinite(currentSec) ? currentSec : 0);
+            // Skip the heavy redraw when the playhead hasn't moved by
+            // at least one canvas pixel — the rAF loop drives this at
+            // ~60 Hz and the strip is typically 140 px tall over a 4 s
+            // window, so dt < ~30 ms is sub-pixel. Big CPU win for
+            // long sustained chords where currentSec barely advances.
+            const h = (this.canvas?.clientHeight || this.canvas?.height) || 1;
+            const pxPerSec = h / this.windowSeconds;
+            if (Math.abs(next - this._lastDrawSec) * pxPerSec < 1) {
+                this.currentSec = next;
+                return;
+            }
+            this.currentSec = next;
             this.draw();
         }
 
@@ -96,6 +153,7 @@
             const hi = Math.max(0, Math.min(127, Number.isFinite(max) ? max : this.rangeMax));
             this.rangeMin = Math.min(lo, hi);
             this.rangeMax = Math.max(lo, hi);
+            this._geoCache = null; // range changed → drop the column cache
             this.draw();
         }
 
@@ -177,16 +235,15 @@
         // -----------------------------------------------------------------
 
         _whiteKeyWidth() {
-            const w = (this.canvas?.clientWidth || this.canvas?.width) || 0;
-            const count = Math.max(1, whiteKeyCount(this.rangeMin, this.rangeMax));
-            return w / count;
+            return this._geo().ww;
         }
 
         /** White-key index relative to rangeMin (0-based) for `midi`. */
         _whiteIndexForMidi(midi) {
-            let idx = 0;
-            for (let m = this.rangeMin; m < midi; m++) if (!isBlackKey(m)) idx++;
-            return idx;
+            const g = this._geo();
+            if (midi < this.rangeMin) return 0;
+            if (midi > this.rangeMax) midi = this.rangeMax;
+            return g.whiteIdx[midi];
         }
 
         /**
@@ -196,12 +253,10 @@
          * white keys — same offset as KeyboardPreview.
          */
         _columnFor(midi) {
-            const ww = this._whiteKeyWidth();
-            if (ww <= 0) return { x: 0, width: 0 };
-            if (!isBlackKey(midi)) {
-                return { x: this._whiteIndexForMidi(midi) * ww, width: ww };
-            }
-            return { x: this._whiteIndexForMidi(midi - 1) * ww + ww * 0.65, width: ww * 0.6 };
+            const g = this._geo();
+            if (g.ww <= 0) return { x: 0, width: 0 };
+            const m = Math.max(this.rangeMin, Math.min(this.rangeMax, midi));
+            return { x: g.colX[m], width: g.colW[m] };
         }
 
         /** Index of the first note whose end is at or after `sec`. */
@@ -399,6 +454,7 @@
             if (this.canvas.width !== Math.round(w * dpr) || this.canvas.height !== Math.round(h * dpr)) {
                 this.canvas.width = Math.round(w * dpr);
                 this.canvas.height = Math.round(h * dpr);
+                this._geoCache = null; // canvas size changed → invalidate
             }
             const ctx = this.ctx;
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -406,6 +462,7 @@
             // Background.
             ctx.fillStyle = '#f9fafb';
             ctx.fillRect(0, 0, w, h);
+            this._lastDrawSec = this.currentSec;
 
             const start = this.currentSec;
             const end = start + this.windowSeconds;

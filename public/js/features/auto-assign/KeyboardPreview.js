@@ -67,6 +67,7 @@
             this.rangeMax = Number.isFinite(opts.rangeMax) ? opts.rangeMax : 108; // C8
             this.activeNotes = new Map(); // midi → handId | null
             this.unplayableNotes = new Map(); // midi → { hand }
+            this._geoCache = null; // built lazily on first draw / lookup
             this.handBands = [];              // [{id, low, high, color}]
             this.bandHeight = Number.isFinite(opts.bandHeight) ? opts.bandHeight : 8;
 
@@ -102,6 +103,7 @@
             const hi = Math.max(0, Math.min(127, Number.isFinite(max) ? max : this.rangeMax));
             this.rangeMin = Math.min(lo, hi);
             this.rangeMax = Math.max(lo, hi);
+            this._geoCache = null; // range changed → drop the cache
             this.draw();
         }
 
@@ -148,29 +150,52 @@
         //  Geometry helpers
         // -----------------------------------------------------------------
 
-        _whiteKeyWidth() {
+        /** @private — geometry cache rebuilt only when canvas size or
+         *  range changes. Drops O(N) MIDI lookups to O(1). */
+        _geo() {
             const w = (this.canvas?.clientWidth || this.canvas?.width) || 0;
+            const cache = this._geoCache;
+            if (cache && cache.w === w
+                    && cache.rangeMin === this.rangeMin
+                    && cache.rangeMax === this.rangeMax) {
+                return cache;
+            }
             const count = Math.max(1, whiteKeyCount(this.rangeMin, this.rangeMax));
-            return w / count;
+            const ww = w / count;
+            const whiteIdx = new Int16Array(128);
+            const xOf      = new Float32Array(128);
+            let idx = 0;
+            for (let m = this.rangeMin; m <= this.rangeMax; m++) {
+                whiteIdx[m] = idx;
+                if (!isBlackKey(m)) idx++;
+            }
+            for (let m = this.rangeMin; m <= this.rangeMax; m++) {
+                xOf[m] = isBlackKey(m)
+                    ? whiteIdx[m - 1] * ww + ww * 0.65
+                    : whiteIdx[m] * ww;
+            }
+            this._geoCache = { w, ww, rangeMin: this.rangeMin, rangeMax: this.rangeMax,
+                                whiteIdx, xOf };
+            return this._geoCache;
+        }
+
+        _whiteKeyWidth() {
+            return this._geo().ww;
         }
 
         _whiteIndexForMidi(midi) {
-            // Position of the lowest white key within [rangeMin..midi]
-            let idx = 0;
-            for (let m = this.rangeMin; m < midi; m++) if (!isBlackKey(m)) idx++;
-            return idx;
+            const g = this._geo();
+            if (midi < this.rangeMin) return 0;
+            if (midi > this.rangeMax) midi = this.rangeMax;
+            return g.whiteIdx[midi];
         }
 
         /** Pixel x of the LEFT edge of the key (white) or the centre (black). */
         _xOf(midi) {
-            const ww = this._whiteKeyWidth();
-            if (!isBlackKey(midi)) {
-                return this._whiteIndexForMidi(midi) * ww;
-            }
-            // Black key: sit on top of the left-adjacent white key,
-            // shifted right by a full white-width. Width of the black key
-            // is ~60% of a white.
-            return this._whiteIndexForMidi(midi - 1) * ww + ww * 0.65;
+            const g = this._geo();
+            if (g.ww <= 0) return 0;
+            const m = Math.max(this.rangeMin, Math.min(this.rangeMax, midi));
+            return g.xOf[m];
         }
 
         _midiAtX(x) {
@@ -305,6 +330,7 @@
             if (this.canvas.width !== Math.round(w * dpr) || this.canvas.height !== Math.round(h * dpr)) {
                 this.canvas.width = Math.round(w * dpr);
                 this.canvas.height = Math.round(h * dpr);
+                this._geoCache = null; // canvas resized → drop the cache
             }
             const ctx = this.ctx;
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
