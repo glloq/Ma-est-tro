@@ -638,6 +638,7 @@
         "polyphonyAutoString": "auto-défini par le nombre de cordes",
         "sectionIdentity": "Identité",
         "sectionNotes": "Notes & Capacités",
+        "sectionHands": "Mains",
         "sectionStrings": "Cordes",
         "sectionDrums": "Percussions",
         "sectionAdvanced": "Avancé",
