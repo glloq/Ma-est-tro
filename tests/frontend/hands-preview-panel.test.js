@@ -15,6 +15,7 @@ const sources = [
   'public/js/features/auto-assign/HandSimulationEngine.js',
   'public/js/features/auto-assign/KeyboardPreview.js',
   'public/js/features/auto-assign/HandsLookaheadStrip.js',
+  'public/js/features/auto-assign/FretboardHandPreview.js',
   'public/js/features/FretboardDiagram.js',
   'public/js/features/auto-assign/HandsPreviewPanel.js'
 ];
