@@ -72,11 +72,25 @@ describe('KeyboardPreview — construction + setters', () => {
     expect(kb.rangeMax).toBe(96);
   });
 
-  it('setActiveNotes stores a Set, ignoring non-finite entries', () => {
+  it('setActiveNotes accepts a flat list of midi numbers (legacy form)', () => {
     const kb = new window.KeyboardPreview(makeCanvas());
     kb.setActiveNotes([60, 64, NaN, 67, undefined]);
     expect(kb.activeNotes.size).toBe(3);
     expect(kb.activeNotes.has(60)).toBe(true);
+    expect(kb.activeNotes.get(60)).toBeNull();
+  });
+
+  it('setActiveNotes accepts tagged shape [{midi, handId}, …]', () => {
+    const kb = new window.KeyboardPreview(makeCanvas());
+    kb.setActiveNotes([
+      { midi: 60, handId: 'left' },
+      { midi: 64, handId: 'right' },
+      { midi: 100 } // no handId → null
+    ]);
+    expect(kb.activeNotes.size).toBe(3);
+    expect(kb.activeNotes.get(60)).toBe('left');
+    expect(kb.activeNotes.get(64)).toBe('right');
+    expect(kb.activeNotes.get(100)).toBeNull();
   });
 
   it('setUnplayableNotes accepts both number and {note} entries', () => {
@@ -166,6 +180,42 @@ describe('KeyboardPreview — rendering', () => {
     const canvas = makeCanvas(0, 120);
     const kb = new window.KeyboardPreview(canvas);
     expect(() => kb.draw()).not.toThrow();
+  });
+
+  it('paints an active WHITE key in the colour of its assigned hand band', () => {
+    const ctx = installCanvasStub();
+    const kb = new window.KeyboardPreview(makeCanvas(), { rangeMin: 60, rangeMax: 71 });
+    kb.setHandBands([{ id: 'left', low: 60, high: 74, color: '#3b82f6' }]);
+    kb.setActiveNotes([{ midi: 60, handId: 'left' }]); // C5 is white
+    // Active white note 60 should fill with rgba derived from #3b82f6
+    // (alpha 0.45) BEFORE the unplayable-red fill.
+    const fillStyles = ctx.calls
+      .filter(c => c.method === 'set' && c.prop === 'fillStyle')
+      .map(c => c.value);
+    expect(fillStyles.some(v => /rgba\(59, 130, 246, 0\.45\)/.test(v))).toBe(true);
+  });
+
+  it('paints an active BLACK key in the FULL hand colour (not the legacy blue)', () => {
+    const ctx = installCanvasStub();
+    const kb = new window.KeyboardPreview(makeCanvas(), { rangeMin: 60, rangeMax: 71 });
+    kb.setHandBands([{ id: 'right', low: 60, high: 74, color: '#10b981' }]);
+    kb.setActiveNotes([{ midi: 61, handId: 'right' }]); // C#5 is black
+    const fillStyles = ctx.calls
+      .filter(c => c.method === 'set' && c.prop === 'fillStyle')
+      .map(c => c.value);
+    expect(fillStyles).toContain('#10b981');
+    // The legacy active-black colour should NOT be used.
+    expect(fillStyles).not.toContain('#1d4ed8');
+  });
+
+  it('falls back to the legacy active blue when activeNotes have no handId', () => {
+    const ctx = installCanvasStub();
+    const kb = new window.KeyboardPreview(makeCanvas(), { rangeMin: 60, rangeMax: 71 });
+    kb.setActiveNotes([60]); // legacy form
+    const fillStyles = ctx.calls
+      .filter(c => c.method === 'set' && c.prop === 'fillStyle')
+      .map(c => c.value);
+    expect(fillStyles).toContain('#bfdbfe');
   });
 });
 

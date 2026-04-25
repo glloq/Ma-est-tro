@@ -71,7 +71,11 @@
             const simulator = opts.simulator
                 || (typeof window !== 'undefined' ? window.HandPositionFeasibility : null);
             this._timeline = simulator?.simulateHandWindows
-                ? simulator.simulateHandWindows(this.notes, this.instrument || {}, { overrides: this.overrides })
+                ? simulator.simulateHandWindows(this.notes, this.instrument || {}, {
+                    overrides: this.overrides,
+                    ticksPerBeat: this.ticksPerBeat,
+                    bpm: this.bpm
+                  })
                 : this.notes
                     .slice()
                     .sort((a, b) => a.tick - b.tick)
@@ -203,37 +207,56 @@
         /**
          * Build a per-hand trajectory from the precomputed timeline:
          *
-         *   Map<handId, [{tick, anchor, releaseTick}]>
+         *   Map<handId, [{tick, anchor, prevAnchor, releaseTick, motion}]>
          *
-         * Each trajectory is the sequence of anchor positions emitted
-         * by the simulator's shift events. `releaseTick` is the
-         * matching chord's last note-off time (= when the chord stops
-         * sounding and the hand can leave for the next anchor). Used
-         * by the lookahead strip to hold the band at the current
-         * anchor while the chord rings, then transition straight to
-         * the next anchor as soon as the chord releases — mirroring
-         * what a real player would do.
+         * Each trajectory point describes a shift the simulator emitted:
+         *   - `tick` / `anchor`: when the hand arrives at this position.
+         *   - `prevAnchor`: the position the hand came from (= the
+         *     shift's `fromAnchor`).
+         *   - `releaseTick`: when THIS hand's notes in the matching
+         *     chord stop ringing (per-hand from `chord.releaseByHand`,
+         *     falling back to chord-wide release, then to `tick`).
+         *   - `motion`: `{ requiredSec, availableSec, feasible }` —
+         *     the speed-limit envelope for the travel.
          *
-         * @returns {Map<string, Array<{tick:number, anchor:number, releaseTick:number}>>}
+         * The lookahead strip uses these fields to hold the band on
+         * the previous anchor until `prevPoint.releaseTick`, then
+         * slide diagonally to the new anchor — and to colour the
+         * transition red when `motion.feasible === false`.
+         *
+         * @returns {Map<string, Array<{tick:number, anchor:number,
+         *                              prevAnchor:number, releaseTick:number,
+         *                              motion:{requiredSec:number,
+         *                                      availableSec:number,
+         *                                      feasible:boolean}}>>}
          */
         getHandTrajectories() {
             // Index chords by tick so each shift can look up its
-            // matching chord's release time in O(1).
-            const releaseByTick = new Map();
+            // matching chord's per-hand release time in O(1).
+            const chordsByTick = new Map();
             for (const ev of this._timeline) {
-                if (ev.type === 'chord' && Number.isFinite(ev.releaseTick)) {
-                    releaseByTick.set(ev.tick, ev.releaseTick);
-                }
+                if (ev.type === 'chord') chordsByTick.set(ev.tick, ev);
             }
             const out = new Map();
             for (const ev of this._timeline) {
                 if (ev.type !== 'shift' || ev.handId == null || !Number.isFinite(ev.toAnchor)) continue;
                 if (!out.has(ev.handId)) out.set(ev.handId, []);
-                const releaseTick = releaseByTick.has(ev.tick) ? releaseByTick.get(ev.tick) : ev.tick;
+                const chord = chordsByTick.get(ev.tick);
+                let releaseTick = ev.tick;
+                if (chord) {
+                    if (chord.releaseByHand && Number.isFinite(chord.releaseByHand[ev.handId])) {
+                        releaseTick = chord.releaseByHand[ev.handId];
+                    } else if (Number.isFinite(chord.releaseTick)) {
+                        releaseTick = chord.releaseTick;
+                    }
+                }
+                const motion = ev.motion || { requiredSec: 0, availableSec: Infinity, feasible: true };
                 out.get(ev.handId).push({
                     tick: ev.tick,
                     anchor: ev.toAnchor,
-                    releaseTick
+                    prevAnchor: Number.isFinite(ev.fromAnchor) ? ev.fromAnchor : ev.toAnchor,
+                    releaseTick,
+                    motion
                 });
             }
             // Sort defensively — the timeline is already ordered but

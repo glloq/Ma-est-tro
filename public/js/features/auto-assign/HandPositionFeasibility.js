@@ -163,6 +163,18 @@
         const overrideAnchors = _indexOverrideAnchors(overrides);
         const disabledNotes = _indexDisabledNotes(overrides);
 
+        // Tempo info — required to convert tick distances into seconds
+        // for the speed-limit feasibility check on shift events. When
+        // not provided, motion checks fall back to feasible=true (the
+        // visualization simply doesn't flag any speed warning).
+        let ticksPerSec = null;
+        if (Number.isFinite(options.ticksPerSec) && options.ticksPerSec > 0) {
+            ticksPerSec = options.ticksPerSec;
+        } else if (Number.isFinite(options.ticksPerBeat) && options.ticksPerBeat > 0
+                && Number.isFinite(options.bpm) && options.bpm > 0) {
+            ticksPerSec = options.ticksPerBeat * (options.bpm / 60);
+        }
+
         // Group notes per tick (chord). Same tolerance as the backend
         // planner so a doubled chord doesn't desynchronize the windows.
         const groups = _groupByTick(notes);
@@ -170,7 +182,7 @@
         if (mode === 'frets') {
             return _simulateFrets(groups, hands, instrument, overrideAnchors, disabledNotes);
         }
-        return _simulateSemitones(groups, hands, overrideAnchors, disabledNotes);
+        return _simulateSemitones(groups, hands, overrideAnchors, disabledNotes, ticksPerSec);
     }
 
     function _groupByTick(notes) {
@@ -233,7 +245,7 @@
     // single chord that doesn't reflect what's just behind it.
     const LOOKAHEAD_K = 4;
 
-    function _simulateSemitones(groups, hands, overrideAnchors, disabledNotes) {
+    function _simulateSemitones(groups, hands, overrideAnchors, disabledNotes, ticksPerSec) {
         const out = [];
         const handIds = hands.hands.map(h => h.id);
         const handById = new Map(hands.hands.map(h => [h.id, h]));
@@ -256,9 +268,19 @@
             state.set(id, { anchor: null, span: handById.get(id).hand_span_semitones ?? 14 });
         }
 
+        // Per-hand tick at which the hand last "let go" — used to
+        // compute the available travel time on each shift. Initially
+        // null → first shift is unconstrained (the hand was at rest).
+        const prevReleaseByHand = Object.create(null);
+
         function _emitShift(g, id, fromAnchor, toAnchor, source) {
             if (fromAnchor === toAnchor) return;
-            out.push({ type: 'shift', tick: g.tick, handId: id, fromAnchor, toAnchor, source });
+            const motion = _computeMotion(fromAnchor, toAnchor, hands,
+                                            prevReleaseByHand[id], g.tick, ticksPerSec);
+            out.push({
+                type: 'shift', tick: g.tick, handId: id,
+                fromAnchor, toAnchor, source, motion
+            });
             state.get(id).anchor = toAnchor;
         }
 
@@ -302,6 +324,7 @@
                 lowOv, highOv,
                 lowRange:  partition.lowRange,
                 highRange: partition.highRange,
+                splitK: partition.splitK,
                 unplayable: partition.unplayable,
                 overlap: partition.overlap,
                 lowDefault:  partition.lowAnchor,
@@ -347,9 +370,15 @@
                         }
                     }
                 }
+                // Single-hand keyboard: every note belongs to that hand.
+                const taggedNotes = plan.liveNotes.map(n => ({ ...n, handId: lowId }));
+                const releaseByHand = _releaseByHand(taggedNotes, [lowId], plan.tick);
                 out.push({ type: 'chord', tick: plan.tick,
                            releaseTick: plan.releaseTick,
-                           notes: plan.liveNotes.map(n => ({ ...n })), unplayable });
+                           releaseByHand,
+                           notes: taggedNotes,
+                           unplayable });
+                _updatePrevRelease(prevReleaseByHand, releaseByHand);
                 continue;
             }
 
@@ -395,15 +424,106 @@
                                   message: 'Notes too close to split between hands without overlap' });
             }
 
+            // Tag each note with the hand that will play it. The
+            // partition's `splitK` divides `sortedNotes` so notes
+            // before the split go to `lowId`, after to `highId`.
+            // Then translate that back to `liveNotes` (which is in
+            // input order, not pitch-sorted) via reference identity.
+            const taggedNotes = _tagNotesByPartition(plan.liveNotes, plan.sortedNotes,
+                                                       plan.splitK, lowId, highId);
+            const releaseByHand = _releaseByHand(taggedNotes, [lowId, highId], plan.tick);
+
             out.push({
                 type: 'chord',
                 tick: plan.tick,
                 releaseTick: plan.releaseTick,
-                notes: plan.liveNotes.map(n => ({ ...n })),
+                releaseByHand,
+                notes: taggedNotes,
                 unplayable
             });
+            _updatePrevRelease(prevReleaseByHand, releaseByHand);
         }
         return out;
+    }
+
+    /** Replace per-hand previous-release entries with the latest
+     *  chord's `releaseByHand`. Hands not in the new map keep their
+     *  prior value (so an idle chord doesn't reset the timer).
+     *  @private */
+    function _updatePrevRelease(prev, releaseByHand) {
+        if (!releaseByHand) return;
+        for (const id of Object.keys(releaseByHand)) {
+            const v = releaseByHand[id];
+            if (Number.isFinite(v)) prev[id] = v;
+        }
+    }
+
+    /**
+     * Compute the motion envelope for a shift: the time required to
+     * travel `|to − from|` semitones at `hand_move_semitones_per_sec`,
+     * the time available since the hand's previous release, and a
+     * boolean `feasible` flag (= `availableSec >= requiredSec`).
+     *
+     * Returns `{ requiredSec: 0, availableSec: Infinity, feasible: true }`
+     * when tempo info or speed limit isn't available — the visualization
+     * then doesn't flag any speed warning, matching the previous
+     * "no constraint" behaviour.
+     * @private
+     */
+    function _computeMotion(fromAnchor, toAnchor, hands, prevReleaseTick,
+                              currentTick, ticksPerSec) {
+        if (!Number.isFinite(fromAnchor) || !Number.isFinite(toAnchor)
+                || !Number.isFinite(ticksPerSec) || ticksPerSec <= 0) {
+            return { requiredSec: 0, availableSec: Infinity, feasible: true };
+        }
+        const speed = Number.isFinite(hands.hand_move_semitones_per_sec)
+                && hands.hand_move_semitones_per_sec > 0
+            ? hands.hand_move_semitones_per_sec
+            : null;
+        const distance = Math.abs(toAnchor - fromAnchor);
+        if (speed == null) {
+            return { requiredSec: 0, availableSec: Infinity, feasible: true };
+        }
+        const requiredSec = distance / speed;
+        const prevTick = Number.isFinite(prevReleaseTick) ? prevReleaseTick : null;
+        const availableTicks = prevTick != null ? Math.max(0, currentTick - prevTick) : Infinity;
+        const availableSec = availableTicks === Infinity ? Infinity : availableTicks / ticksPerSec;
+        const feasible = availableSec + 1e-6 >= requiredSec;
+        return { requiredSec, availableSec, feasible };
+    }
+
+    /**
+     * Tag each note in `liveNotes` with `handId` based on the
+     * partition's split index `k` over `sortedNotes`. Returns a new
+     * array (originals untouched). @private
+     */
+    function _tagNotesByPartition(liveNotes, sortedNotes, splitK, lowId, highId) {
+        const lowSet = new Set();
+        const k = Number.isFinite(splitK) ? splitK : Math.floor(sortedNotes.length / 2);
+        for (let i = 0; i < k; i++) lowSet.add(sortedNotes[i]);
+        return liveNotes.map(n => ({
+            ...n,
+            handId: lowSet.has(n) ? lowId : highId
+        }));
+    }
+
+    /**
+     * Build `{ [handId]: maxReleaseTick }` from a list of tagged
+     * notes. Hands without any notes in the chord get `releaseTick =
+     * chordTick` so the visualization knows it's free immediately.
+     * @private
+     */
+    function _releaseByHand(taggedNotes, handIds, chordTick) {
+        const byHand = Object.create(null);
+        for (const id of handIds) byHand[id] = chordTick;
+        for (const n of taggedNotes) {
+            const dur = Number.isFinite(n.duration) && n.duration > 0 ? n.duration : 0;
+            const end = n.tick + dur;
+            if (n.handId && (byHand[n.handId] == null || end > byHand[n.handId])) {
+                byHand[n.handId] = end;
+            }
+        }
+        return byHand;
     }
 
     /**
@@ -497,7 +617,8 @@
         const N = sortedNotes.length;
         if (N === 0) {
             return { lowAnchor: lowPrev, highAnchor: highPrev,
-                     lowRange: null, highRange: null, unplayable: [], overlap: false };
+                     lowRange: null, highRange: null,
+                     splitK: 0, unplayable: [], overlap: false };
         }
 
         // Reference midpoint used by the initial-state bias below.
@@ -578,7 +699,7 @@
 
             if (!best || cost < best.cost) {
                 best = { lowAnchor, highAnchor, lowRange, highRange,
-                         unplayable: [], overlap: false, cost };
+                         splitK: k, unplayable: [], overlap: false, cost };
             }
         }
 
@@ -604,7 +725,7 @@
             const lowAnchor  = _clampInto(lowPrev,  lowRange,  lowLo);
             const highAnchor = _clampInto(highPrev, highRange, highLo);
             return { lowAnchor, highAnchor, lowRange, highRange,
-                     unplayable: [], overlap: true };
+                     splitK: k, unplayable: [], overlap: true };
         }
 
         // The chord exceeds even the per-hand span on both sides — every
@@ -619,6 +740,10 @@
             highAnchor: highPrev ?? sortedNotes[sortedNotes.length - 1].note,
             lowRange:  null,
             highRange: null,
+            // Split notes by pitch midpoint so the per-note handId
+            // tagging downstream still gets a sensible assignment
+            // even when no partition fits the spans.
+            splitK: Math.floor(sortedNotes.length / 2),
             unplayable,
             overlap: true
         };

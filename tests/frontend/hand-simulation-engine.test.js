@@ -284,7 +284,7 @@ describe('HandSimulationEngine — advanceTo / advanceToSec (external clock)', (
 });
 
 describe('HandSimulationEngine — getHandTrajectories with note-off propagation', () => {
-  it('attaches releaseTick from the matching chord to each shift point', () => {
+  it('attaches PER-HAND releaseTick from the matching chord to each shift point', () => {
     const { engine } = makeEngine({
       notes: [
         { tick: 0,   note: 60, duration: 240 },
@@ -299,9 +299,12 @@ describe('HandSimulationEngine — getHandTrajectories with note-off propagation
         expect(p.releaseTick).toBeGreaterThanOrEqual(p.tick);
       }
     }
-    const hands = [...trajectories.values()];
-    const first = hands.flatMap(h => h.filter(p => p.tick === 0));
-    expect(first[0].releaseTick).toBe(240);
+    // Note 60 lands on ONE hand → that hand's first shift has
+    // releaseTick = 240. The other hand is idle on chord 1 →
+    // releaseTick = chord.tick = 0.
+    const firstShifts = [...trajectories.values()].flatMap(h => h.filter(p => p.tick === 0));
+    const releases = firstShifts.map(p => p.releaseTick).sort((a, b) => a - b);
+    expect(releases).toContain(240);
   });
 
   it('falls back to releaseTick = tick when notes have no duration', () => {
@@ -312,6 +315,46 @@ describe('HandSimulationEngine — getHandTrajectories with note-off propagation
     for (const points of trajectories.values()) {
       for (const p of points) expect(p.releaseTick).toBe(p.tick);
     }
+  });
+
+  it('attaches motion = { requiredSec, availableSec, feasible } and prevAnchor', () => {
+    const { engine } = makeEngine({
+      notes: [{ tick: 0, note: 60 }, { tick: 480, note: 80 }]
+    });
+    const trajectories = engine.getHandTrajectories();
+    for (const points of trajectories.values()) {
+      for (const p of points) {
+        expect(p.motion).toBeDefined();
+        expect(typeof p.motion.requiredSec).toBe('number');
+        expect(typeof p.motion.feasible).toBe('boolean');
+        expect(Number.isFinite(p.prevAnchor)).toBe(true);
+      }
+    }
+  });
+
+  it('motion.feasible is false on a forced too-fast shift', () => {
+    // Slow speed (5 sem/s) + tight tick gap (240 ticks at bpm=120,
+    // ticksPerBeat=480 ⇒ 0.25 s available). A shift > 1.25 sem is
+    // already infeasible.
+    const slowHands = {
+      enabled: true, mode: 'semitones',
+      hand_move_semitones_per_sec: 5,
+      hands: [
+        { id: 'left',  cc_position_number: 23, hand_span_semitones: 14 },
+        { id: 'right', cc_position_number: 24, hand_span_semitones: 14 }
+      ]
+    };
+    const { engine } = makeEngine({
+      instrument: { hands_config: slowHands },
+      notes: [
+        { tick: 0,   note: 80, duration: 100 },
+        { tick: 240, note: 105 }
+      ]
+    });
+    const traj = engine.getHandTrajectories().get('right') || [];
+    const moving = traj.find(p => p.tick === 240);
+    expect(moving).toBeDefined();
+    expect(moving.motion.feasible).toBe(false);
   });
 });
 

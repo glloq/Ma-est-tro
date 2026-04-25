@@ -175,13 +175,18 @@ describe('HandsPreviewPanel — hand trajectory ribbons (semitones)', () => {
 });
 
 describe('HandsPreviewPanel — engine wiring (semitones)', () => {
-  it('chord event paints active notes on the keyboard', () => {
+  it('chord event paints active notes on the keyboard with handId tags', () => {
     const panel = makePanel();
     const setActive = vi.spyOn(panel.keyboard, 'setActiveNotes');
     panel.engine.dispatchEvent(new CustomEvent('chord', {
-      detail: { tick: 0, notes: [{ note: 60 }, { note: 64 }], unplayable: [] }
+      detail: { tick: 0,
+                notes: [{ note: 60, handId: 'left' }, { note: 64, handId: 'right' }],
+                unplayable: [] }
     }));
-    expect(setActive).toHaveBeenCalledWith([60, 64]);
+    expect(setActive).toHaveBeenCalledWith([
+      { midi: 60, handId: 'left' },
+      { midi: 64, handId: 'right' }
+    ]);
     panel.destroy();
   });
 

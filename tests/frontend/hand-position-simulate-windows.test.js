@@ -315,6 +315,189 @@ describe('simulateHandWindows — semitones non-overlap (E.6.x)', () => {
   });
 });
 
+describe('simulateHandWindows — speed-limit motion envelope on shift events', () => {
+  it('attaches motion = { requiredSec, availableSec, feasible } to every shift', () => {
+    const out = window.HandPositionFeasibility.simulateHandWindows(
+      [{ tick: 0, note: 60 }, { tick: 480, note: 70 }],
+      { hands_config: semitonesHands },
+      { ticksPerBeat: 480, bpm: 60 }
+    );
+    const shifts = out.filter(e => e.type === 'shift');
+    expect(shifts.length).toBeGreaterThan(0);
+    for (const s of shifts) {
+      expect(s.motion).toBeDefined();
+      expect(typeof s.motion.requiredSec).toBe('number');
+      expect(typeof s.motion.feasible).toBe('boolean');
+    }
+  });
+
+  it('first shift has availableSec = Infinity (hand was at rest)', () => {
+    const out = window.HandPositionFeasibility.simulateHandWindows(
+      [{ tick: 0, note: 60 }],
+      { hands_config: semitonesHands },
+      { ticksPerBeat: 480, bpm: 60 }
+    );
+    const firstShift = out.find(e => e.type === 'shift');
+    expect(firstShift).toBeDefined();
+    expect(firstShift.motion.availableSec).toBe(Infinity);
+    expect(firstShift.motion.feasible).toBe(true);
+  });
+
+  it('feasible=false when distance / speed > available time', () => {
+    // bpm=60, ticksPerBeat=480 → 480 ticks / sec.
+    // Speed = 60 semitones/sec → covers 60 semitones in 1 sec.
+    // Chord 1 at tick 0 (right at 60), chord 2 at tick 240 (right at 80).
+    // Required = 20 semitones / 60 = 0.333 sec.
+    // Available = 240 ticks / 480 = 0.5 sec → feasible.
+    // Make speed very low to force infeasible:
+    const slowHands = { ...semitonesHands, hand_move_semitones_per_sec: 5 };
+    const out = window.HandPositionFeasibility.simulateHandWindows(
+      [
+        { tick: 0,   note: 80, duration: 100 },
+        { tick: 240, note: 100 } // forces same hand to shift up by 20 sem
+      ],
+      { hands_config: slowHands },
+      { ticksPerBeat: 480, bpm: 60 }
+    );
+    const shifts = out.filter(e => e.type === 'shift' && e.tick === 240);
+    expect(shifts.length).toBeGreaterThan(0);
+    const movingShift = shifts.find(s => s.fromAnchor != null && s.fromAnchor !== s.toAnchor);
+    expect(movingShift).toBeDefined();
+    expect(movingShift.motion.feasible).toBe(false);
+    expect(movingShift.motion.requiredSec).toBeGreaterThan(movingShift.motion.availableSec);
+  });
+
+  it('feasible=true when no speed limit is configured', () => {
+    const noSpeedHands = {
+      enabled: true, mode: 'semitones',
+      // hand_move_semitones_per_sec intentionally absent
+      hands: [
+        { id: 'left',  cc_position_number: 23, hand_span_semitones: 14 },
+        { id: 'right', cc_position_number: 24, hand_span_semitones: 14 }
+      ]
+    };
+    const out = window.HandPositionFeasibility.simulateHandWindows(
+      [{ tick: 0, note: 60 }, { tick: 10, note: 80 }],
+      { hands_config: noSpeedHands },
+      { ticksPerBeat: 480, bpm: 60 }
+    );
+    const shifts = out.filter(e => e.type === 'shift');
+    for (const s of shifts) expect(s.motion.feasible).toBe(true);
+  });
+
+  it('feasible=true when no tempo info is provided', () => {
+    const out = window.HandPositionFeasibility.simulateHandWindows(
+      [{ tick: 0, note: 60 }, { tick: 1, note: 80 }],
+      { hands_config: semitonesHands }
+      // no options → no ticksPerBeat / bpm
+    );
+    const shifts = out.filter(e => e.type === 'shift');
+    for (const s of shifts) expect(s.motion.feasible).toBe(true);
+  });
+
+  it('uses per-hand releaseByHand to compute available time (not chord-wide)', () => {
+    // Setup: left holds long, right releases fast. The next chord
+    // forces the right hand up (note=105 needs anchor ≥ 91 with span=14
+    // → at least a few-semitone shift from 80).
+    // bpm=60, ticksPerBeat=480 → 480 ticks/sec.
+    // Right releases at tick 100; chord 2 at tick 480.
+    // Available for right = (480 − 100) / 480 = 0.792 s.
+    const out = window.HandPositionFeasibility.simulateHandWindows(
+      [
+        { tick: 0,   note: 40, duration: 1000 }, // left, long
+        { tick: 0,   note: 80, duration: 100 },  // right, short
+        { tick: 480, note: 105 }                 // forces right to shift up
+      ],
+      { hands_config: semitonesHands },
+      { ticksPerBeat: 480, bpm: 60 }
+    );
+    const rightShift = out.find(e => e.type === 'shift' && e.handId === 'right' && e.tick === 480);
+    expect(rightShift).toBeDefined();
+    // Available should be (480 − 100) / 480 ≈ 0.792 s, NOT (480 − 1000)/480 (negative).
+    expect(rightShift.motion.availableSec).toBeCloseTo((480 - 100) / 480, 3);
+  });
+});
+
+describe('simulateHandWindows — per-note handId + per-hand releaseByHand', () => {
+  it('tags each playable note with its assigned hand (semitones, two-hand)', () => {
+    const out = window.HandPositionFeasibility.simulateHandWindows(
+      [
+        { tick: 0, note: 40 }, // low → left
+        { tick: 0, note: 45 }, // low → left
+        { tick: 0, note: 70 }, // high → right
+        { tick: 0, note: 75 }  // high → right
+      ],
+      { hands_config: semitonesHands }
+    );
+    const chord = out.find(e => e.type === 'chord');
+    const byNote = new Map(chord.notes.map(n => [n.note, n.handId]));
+    expect(byNote.get(40)).toBe('left');
+    expect(byNote.get(45)).toBe('left');
+    expect(byNote.get(70)).toBe('right');
+    expect(byNote.get(75)).toBe('right');
+  });
+
+  it('single-hand keyboard tags every note with the only hand', () => {
+    const oneHand = {
+      enabled: true, mode: 'semitones', hand_move_semitones_per_sec: 60,
+      hands: [{ id: 'left', cc_position_number: 23, hand_span_semitones: 14 }]
+    };
+    const out = window.HandPositionFeasibility.simulateHandWindows(
+      [{ tick: 0, note: 60 }, { tick: 480, note: 67 }],
+      { hands_config: oneHand }
+    );
+    const chords = out.filter(e => e.type === 'chord');
+    for (const c of chords) for (const n of c.notes) {
+      expect(n.handId).toBe('left');
+    }
+  });
+
+  it('emits releaseByHand per chord with each hand\'s last note-off', () => {
+    const out = window.HandPositionFeasibility.simulateHandWindows(
+      [
+        { tick: 0, note: 40, duration: 240 }, // left releases at 240
+        { tick: 0, note: 45, duration: 360 }, // left releases at 360 (later)
+        { tick: 0, note: 70, duration: 120 }, // right releases at 120
+        { tick: 0, note: 75, duration: 480 }  // right releases at 480 (later)
+      ],
+      { hands_config: semitonesHands }
+    );
+    const chord = out.find(e => e.type === 'chord');
+    expect(chord.releaseByHand).toBeDefined();
+    expect(chord.releaseByHand.left).toBe(360);
+    expect(chord.releaseByHand.right).toBe(480);
+  });
+
+  it('right hand can leave early when its notes release before left\'s', () => {
+    const out = window.HandPositionFeasibility.simulateHandWindows(
+      [
+        { tick: 0, note: 40, duration: 1000 }, // left holds long
+        { tick: 0, note: 80, duration: 100 }   // right releases fast
+      ],
+      { hands_config: semitonesHands }
+    );
+    const chord = out.find(e => e.type === 'chord');
+    expect(chord.releaseByHand.left).toBe(1000);
+    expect(chord.releaseByHand.right).toBe(100);
+    // Hand-wide release is now strictly less than chord-wide release
+    // for at least one hand → the visualization can react earlier.
+    expect(Math.min(chord.releaseByHand.left, chord.releaseByHand.right))
+      .toBeLessThan(chord.releaseTick);
+  });
+
+  it('idle hand defaults to releaseByHand[id] = chord.tick (free immediately)', () => {
+    const out = window.HandPositionFeasibility.simulateHandWindows(
+      [
+        { tick: 480, note: 50, duration: 240 } // single low note → left only
+      ],
+      { hands_config: semitonesHands }
+    );
+    const chord = out.find(e => e.type === 'chord');
+    // Left has the note; right is idle → its release equals the chord tick.
+    expect(chord.releaseByHand.right).toBe(480);
+  });
+});
+
 describe('simulateHandWindows — chord release ticks (note-off propagation)', () => {
   it('chord events carry releaseTick = tick + max(duration)', () => {
     const out = window.HandPositionFeasibility.simulateHandWindows(
