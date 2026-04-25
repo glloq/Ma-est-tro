@@ -83,6 +83,16 @@ class TablatureConverter {
     // Per-string fret counts (null = use numFrets for all)
     this.fretsPerString = instrumentConfig.frets_per_string || null;
 
+    // Optional upper bound on simultaneously fretted strings. Source is
+    // `hands_config.hands[0].max_fingers`; the caller flattens it onto
+    // instrumentConfig so this module doesn't need to know about the
+    // wider instrument capability shape. Open strings (fret 0) are not
+    // counted against this cap — they don't press a finger against the
+    // fretboard. `null`/`undefined` disables the filter entirely.
+    this.maxFingers = Number.isFinite(instrumentConfig.max_fingers) && instrumentConfig.max_fingers > 0
+      ? instrumentConfig.max_fingers
+      : null;
+
     // Effective open-string notes with capo applied
     this.effectiveTuning = this.tuning.map(note => note + this.capoFret);
 
@@ -1071,6 +1081,7 @@ class TablatureConverter {
     const assignedFrets = current
       .filter(a => a.fret > 0)
       .map(a => a.fret);
+    const assignedFingerCount = assignedFrets.length;
 
     for (const pos of positions) {
       if (usedStrings[pos.string]) continue;
@@ -1080,6 +1091,15 @@ class TablatureConverter {
         const allFrets = [...assignedFrets, pos.fret];
         const span = Math.max(...allFrets) - Math.min(...allFrets);
         if (span > maxFretSpan) continue;
+      }
+
+      // Enforce max_fingers when configured. Only fretted positions
+      // consume a finger — open strings (fret 0) are skipped. The check
+      // prunes aggressively in the recursion rather than filtering
+      // post-hoc so we never enumerate assignments that would later be
+      // discarded.
+      if (this.maxFingers != null && pos.fret > 0) {
+        if (assignedFingerCount + 1 > this.maxFingers) continue;
       }
 
       usedStrings[pos.string] = true;

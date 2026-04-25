@@ -153,3 +153,53 @@ describe('TablatureConverter — _getClampedPosition', () => {
     expect(conv._getClampedPosition(20, occupied)).toBeNull();
   });
 });
+
+describe('TablatureConverter — max_fingers cap', () => {
+  // Four-note chord made entirely of fretted pitches (no open strings):
+  // on a standard 6-string guitar these are playable (6 strings available)
+  // but require 4 fingers pressed simultaneously.
+  const frettedChord = () => [50, 55, 59, 64].map(n => note(0, n));
+
+  test('no cap: a 4-finger chord emits 4 tab events (baseline)', () => {
+    const conv = new TablatureConverter(guitarConfig);
+    const out = conv.convertMidiToTablature(frettedChord());
+    expect(out.length).toBe(4);
+    // Baseline for the cap tests below.
+    expect(out.every(e => Number.isFinite(e.fret))).toBe(true);
+  });
+
+  test('max_fingers=3 drops one fretted note from a 4-finger chord', () => {
+    const conv = new TablatureConverter({ ...guitarConfig, max_fingers: 3 });
+    const out = conv.convertMidiToTablature(frettedChord());
+    const frettedEmitted = out.filter(e => !e.unplayable && e.fret > 0);
+    expect(frettedEmitted.length).toBeLessThanOrEqual(3);
+  });
+
+  test('max_fingers=0/null disables the filter', () => {
+    for (const mf of [null, undefined, 0]) {
+      const conv = new TablatureConverter({ ...guitarConfig, max_fingers: mf });
+      const out = conv.convertMidiToTablature(frettedChord());
+      expect(out.length).toBe(4);
+    }
+  });
+
+  test('open strings (fret 0) are not counted against max_fingers', () => {
+    // 40 (low E open) + 47 (A2 open) + 52 (D3 open) + 59 (B3 open) — all
+    // open-string voicings on a standard guitar. With max_fingers=1 the
+    // chord still fits because open strings don't press a finger.
+    const openEvoicings = [40, 45, 50, 59].map(n => note(0, n));
+    const conv = new TablatureConverter({ ...guitarConfig, max_fingers: 1 });
+    const out = conv.convertMidiToTablature(openEvoicings);
+    const fretted = out.filter(e => !e.unplayable && e.fret > 0);
+    expect(fretted.length).toBeLessThanOrEqual(1);
+    // All four notes are still emitted — at least three of them come back
+    // as open strings.
+    expect(out.length).toBe(4);
+  });
+
+  test('negative max_fingers is treated as disabled (defensive)', () => {
+    const conv = new TablatureConverter({ ...guitarConfig, max_fingers: -1 });
+    const out = conv.convertMidiToTablature(frettedChord());
+    expect(out.length).toBe(4);
+  });
+});
