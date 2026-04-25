@@ -37,6 +37,8 @@
     // band read as "the hand", not "the fret slot" — it brackets
     // the strings rather than sitting flush with the wood-tone fill.
     const HAND_BAND_Y_OVERFLOW   = 6;
+    const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F',
+                         'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
     class FretboardHandPreview {
         constructor(canvas, opts = {}) {
@@ -57,7 +59,9 @@
             this.handWindow = null;
             this.ghostAnchor = null;
 
-            this.margin = { top: 14, right: 12, bottom: 24, left: 24 };
+            // Wider left margin holds the tuning labels (D1); wider
+            // right margin holds the body sketch (B1).
+            this.margin = { top: 14, right: 56, bottom: 24, left: 38 };
 
             this._dprSyncedSize = { w: 0, h: 0 };
         }
@@ -207,6 +211,10 @@
             ctx.fillStyle = '#c8b898';
             ctx.fillRect(fbX, fbY, fbW, fbH);
 
+            // Body sketch right of the last fret (B1) — drawn under
+            // the strings so they don't extend into the body.
+            this._drawBodyHint(w, h);
+
             // Ghost anchor (= upcoming planned position) drawn first
             // so the live hand window paints on top.
             if (this.ghostAnchor) this._drawGhostAnchor(fbY, fbH);
@@ -221,6 +229,9 @@
 
             // Strings (horizontal lines).
             this._drawStrings();
+
+            // Tuning labels left of the nut (D1).
+            this._drawTuningLabels();
 
             // Fret numbers below the board.
             this._drawFretNumbers(fbY, fbH);
@@ -380,8 +391,12 @@
                     ctx.fillStyle = '#e8e0d0';
                     ctx.fillRect(x - 2, fbY, 4, fbH);
                 } else {
-                    ctx.strokeStyle = '#9098a8';
-                    ctx.lineWidth = 1;
+                    // D2 — heavier wires on marker frets so the eye
+                    // can find the 12 / 5 / 7 / etc. without counting.
+                    const isMajor = DOUBLE_MARKER_FRETS.includes(f);
+                    const isMinor = STANDARD_MARKER_FRETS.includes(f);
+                    ctx.strokeStyle = isMajor ? '#3a3f4d' : (isMinor ? '#5a6173' : '#9098a8');
+                    ctx.lineWidth = isMajor ? 2.5 : (isMinor ? 1.7 : 1);
                     ctx.beginPath();
                     ctx.moveTo(x, fbY);
                     ctx.lineTo(x, fbY + fbH);
@@ -403,6 +418,59 @@
                 ctx.lineTo(xR, y);
                 ctx.stroke();
             }
+        }
+
+        /** D1 — Letter labels left of the nut, one per string,
+         *  showing the open-string note name (e.g. "E2"). */
+        _drawTuningLabels() {
+            const ctx = this.ctx;
+            ctx.fillStyle = '#374151';
+            ctx.font = 'bold 10px monospace';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            const xLabel = this._fretX(0) - 6;
+            for (let s = 1; s <= this.numStrings; s++) {
+                const midi = this.tuning[s - 1];
+                if (!Number.isFinite(midi)) continue;
+                const y = this._stringY(s);
+                const name = NOTE_NAMES[((midi % 12) + 12) % 12];
+                const octave = Math.floor(midi / 12) - 1;
+                ctx.fillText(`${name}${octave}`, xLabel, y);
+            }
+        }
+
+        /** B1 — Stylised body sketch right of the last fret: shoulder
+         *  curve + soundhole rosette. Decorative but orients the eye. */
+        _drawBodyHint(canvasW, canvasH) {
+            const ctx = this.ctx;
+            const fbY = this.margin.top;
+            const fbH = canvasH - this.margin.top - this.margin.bottom;
+            const x0 = this._fretX(this.numFrets);
+            const xEnd = canvasW - 4;
+            if (xEnd <= x0 + 8) return; // not enough space
+            const midY = fbY + fbH / 2;
+            // Shoulder curve — cuts in slightly toward the centre so
+            // the body looks like it bulges out and back in.
+            ctx.fillStyle = '#d8c5a3';
+            ctx.beginPath();
+            ctx.moveTo(x0, fbY - 4);
+            ctx.quadraticCurveTo(x0 + 8, midY, x0, fbY + fbH + 4);
+            ctx.lineTo(xEnd, fbY + fbH + 4);
+            ctx.quadraticCurveTo(xEnd - 6, midY, xEnd, fbY - 4);
+            ctx.closePath();
+            ctx.fill();
+            // Soundhole rosette — concentric rings at the body centre.
+            const cx = (x0 + xEnd) / 2;
+            const r = Math.min(12, fbH * 0.18);
+            ctx.fillStyle = '#3a3225';
+            ctx.beginPath();
+            ctx.arc(cx, midY, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#8a7a5e';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(cx, midY, r + 3, 0, Math.PI * 2);
+            ctx.stroke();
         }
 
         _drawFretNumbers(fbY, fbH) {

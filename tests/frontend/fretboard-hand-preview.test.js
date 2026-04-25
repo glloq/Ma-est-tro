@@ -69,6 +69,59 @@ describe('FretboardHandPreview — geometric fret spacing', () => {
     expect(ratio).toBeLessThan(0.7);
   });
 
+  it('D1 — paints a tuning label per string left of the nut', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), {
+      tuning: [40, 45, 50, 55, 59, 64], numFrets: 22 // standard guitar
+    });
+    fb.draw();
+    const texts = calls
+      .filter(c => c.method === 'fillText')
+      .map(c => c.args[0]);
+    // Expect each string's open-note name to appear at least once.
+    expect(texts).toContain('E2'); // string 1 = midi 40
+    expect(texts).toContain('A2'); // string 2 = midi 45
+    expect(texts).toContain('D3'); // string 3 = midi 50
+    expect(texts).toContain('G3'); // string 4 = midi 55
+    expect(texts).toContain('B3'); // string 5 = midi 59
+    expect(texts).toContain('E4'); // string 6 = midi 64
+    // And those are positioned LEFT of the nut.
+    const labelCalls = calls.filter(c => c.method === 'fillText'
+        && /^[A-G]#?\d+$/.test(c.args[0]));
+    for (const c of labelCalls) {
+      expect(c.args[1]).toBeLessThan(fb._fretX(0));
+    }
+  });
+
+  it('D2 — major marker frets (12, 24) get a heavier wire', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
+    fb.draw();
+    // Track lineWidth assignments around fret-12 and fret-7's stroke
+    // calls. The simplest sniff: the set of distinct lineWidth
+    // values during _drawFrets must include a value ≥ 2 (major
+    // marker frets).
+    const lineWidths = calls
+      .filter(c => c.method === 'set' && c.prop === 'lineWidth')
+      .map(c => c.value);
+    expect(lineWidths.some(v => v >= 2)).toBe(true);
+  });
+
+  it('B1 — body sketch paints an arc + concentric soundhole right of the last fret', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(800, 200), {
+      tuning: [40, 45, 50, 55, 59, 64], numFrets: 22
+    });
+    fb.draw();
+    // Body region starts at fretX(numFrets) and reaches the right edge.
+    const xLastFret = fb._fretX(fb.numFrets);
+    // The body uses two arcs (soundhole rings). Check at least one
+    // arc with cx > xLastFret.
+    const arcCalls = calls.filter(c => c.method === 'arc');
+    expect(arcCalls.some(c => c.args[0] > xLastFret)).toBe(true);
+    // Plus the shoulder uses quadraticCurveTo (added to the canvas
+    // stub via the existing regex).
+    const quads = calls.filter(c => c.method === 'quadraticCurveTo');
+    expect(quads.length).toBeGreaterThanOrEqual(1);
+  });
+
   it('higher frets are shorter than lower frets (compression)', () => {
     const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
     const fret1Width = fb._fretX(1) - fb._fretX(0);
