@@ -1350,21 +1350,39 @@
 
         const spanMmInput = handsSection.querySelector('[data-field="hand_span_mm"]');
         const hint = handsSection.querySelector('#handsCoverageHint');
-        if (!spanMmInput || !hint || !window.ISMSections?._fretCoverageHint) return;
+        const canvas = handsSection.querySelector('#handsCoveragePreview');
+        if (!spanMmInput || !window.ISMSections?._fretCoverageHint) return;
 
-        const scaleLengthMm = parseInt(hint.dataset.scaleLength, 10);
+        const scaleLengthMm = parseInt(
+            (hint && hint.dataset.scaleLength) || (canvas && canvas.dataset.scaleLength),
+            10
+        );
         if (!Number.isFinite(scaleLengthMm) || scaleLengthMm <= 0) return;
+
+        const maxFrets = canvas
+            ? parseInt(canvas.dataset.maxFrets, 10) || 22
+            : 22;
 
         const refresh = () => {
             const mm = parseInt(spanMmInput.value, 10);
-            if (!Number.isFinite(mm) || mm <= 0) {
-                hint.innerHTML = 'Couverture : <em>renseignez la largeur pour voir la couverture estimée</em>';
-                return;
+            if (hint) {
+                if (!Number.isFinite(mm) || mm <= 0) {
+                    hint.innerHTML = 'Couverture : <em>renseignez la largeur pour voir la couverture estimée</em>';
+                } else {
+                    const text = window.ISMSections._fretCoverageHint(scaleLengthMm, mm);
+                    hint.textContent = `Couverture : ${text}`;
+                }
             }
-            const text = window.ISMSections._fretCoverageHint(scaleLengthMm, mm);
-            hint.textContent = `Couverture : ${text}`;
+            if (canvas && Number.isFinite(mm) && mm > 0
+                && typeof window.ISMSections._drawCoverageHeatmap === 'function') {
+                window.ISMSections._drawCoverageHeatmap(canvas, scaleLengthMm, mm, maxFrets);
+            }
         };
         spanMmInput.addEventListener('input', refresh);
+
+        // Initial paint so the canvas has content the moment the modal
+        // opens (the user might never edit hand_span_mm).
+        refresh();
     };
 
     if (typeof window !== 'undefined') window.ISMListeners = ISMListeners;
