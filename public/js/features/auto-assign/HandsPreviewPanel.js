@@ -194,17 +194,27 @@
         _renderFretsLayout(body) {
             const fbCanvas = document.createElement('canvas');
             fbCanvas.className = 'hpp-fretboard';
-            fbCanvas.style.cssText = 'width:100%;height:200px;display:block;border:1px solid #e5e7eb;border-radius:4px;';
+            fbCanvas.style.cssText = 'width:100%;height:160px;display:block;border:1px solid #e5e7eb;border-radius:4px;background:#f5f7fb;';
             body.appendChild(fbCanvas);
 
-            const cfg = {
+            // Pull the fretting hand's physical config so the
+            // preview can render the hand window at TRUE scale on
+            // the neck (geometric fret spacing × hand_span_mm).
+            const handsArr = _hands(this.instrument);
+            const fretting = handsArr.find(h => h && h.id === 'fretting') || handsArr[0] || {};
+            const PreviewClass = (typeof window !== 'undefined' && window.FretboardHandPreview)
+                ? window.FretboardHandPreview
+                : window.FretboardDiagram;
+            this.fretboard = new PreviewClass(fbCanvas, {
                 tuning: this.instrument?.tuning || [40, 45, 50, 55, 59, 64],
-                num_frets: this.instrument?.num_frets || 24,
-                is_fretless: !!this.instrument?.is_fretless,
-                capo_fret: this.instrument?.capo_fret || 0
-            };
-            this.fretboard = new window.FretboardDiagram(fbCanvas, cfg);
-            // FretboardDiagram already supports setHandWindow + setActivePositions.
+                numFrets: this.instrument?.num_frets || 24,
+                scaleLengthMm: this.instrument?.scale_length_mm,
+                handSpanMm: fretting.hand_span_mm,
+                handSpanFrets: fretting.hand_span_frets || 4
+            });
+            // Initial paint so the empty board is visible before the
+            // first engine event lands.
+            this.fretboard.draw && this.fretboard.draw();
         }
 
         // -----------------------------------------------------------------
