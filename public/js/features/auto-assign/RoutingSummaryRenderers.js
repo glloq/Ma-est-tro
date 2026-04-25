@@ -1655,6 +1655,10 @@
       rangeBarsHTML = '', drumMappingHTML = '', instrumentChipsHTML = '',
       adaptHTML = '', splitSuggestionHTML = '', splitHTML = '',
       addInstrumentHTML = '', ccSectionHTML = '',
+      // E.6.7 — empty string when the panel module isn't loaded; the
+      // host page mounts the actual widget after the container is in
+      // the DOM (so the canvas listeners attach to a live element).
+      handsPreviewHTML = '',
       escape
     } = opts;
     const { getScoreClass } = window.RoutingSummaryConstants;
@@ -1684,6 +1688,7 @@
         ${drumMappingHTML}
         ${instrumentChipsHTML}
         ${adaptHTML}
+        ${handsPreviewHTML}
         ${splitSuggestionHTML}
         ${splitHTML}
         ${addInstrumentHTML}

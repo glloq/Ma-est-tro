@@ -596,6 +596,13 @@
             "short": "Main"
         }
     },
+    "handsPreview": {
+        "title": "Aperçu des mains",
+        "play": "Lecture",
+        "pause": "Pause",
+        "reset": "Rembobiner",
+        "noHandsConfig": "Aucune configuration des mains pour cet instrument — la pré-visualisation est désactivée."
+    },
     "instrumentSettings": {
         "title": "Réglages de l'instrument",
         "settingsButton": "Réglages de l'instrument",
