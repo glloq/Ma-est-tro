@@ -16,7 +16,7 @@ function installCanvasStub() {
   const ctx = new Proxy({}, {
     get(_t, prop) {
       if (prop === 'measureText') return () => ({ width: 8 });
-      if (typeof prop === 'string' && /^(setTransform|fillRect|strokeRect|fillText|beginPath|moveTo|lineTo|closePath|fill|stroke|clearRect|save|restore|translate|scale|rotate|setLineDash|rect|clip|arc|bezierCurveTo|quadraticCurveTo)$/.test(prop)) {
+      if (typeof prop === 'string' && /^(setTransform|fillRect|strokeRect|fillText|strokeText|beginPath|moveTo|lineTo|closePath|fill|stroke|clearRect|save|restore|translate|scale|rotate|setLineDash|rect|clip|arc|bezierCurveTo|quadraticCurveTo)$/.test(prop)) {
         return (...args) => calls.push({ method: prop, args });
       }
       return undefined;
@@ -67,6 +67,59 @@ describe('FretboardHandPreview — geometric fret spacing', () => {
     // the way from nut to fret 24.
     expect(ratio).toBeGreaterThan(0.6);
     expect(ratio).toBeLessThan(0.7);
+  });
+
+  it('D1 — paints a tuning label per string left of the nut', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), {
+      tuning: [40, 45, 50, 55, 59, 64], numFrets: 22 // standard guitar
+    });
+    fb.draw();
+    const texts = calls
+      .filter(c => c.method === 'fillText')
+      .map(c => c.args[0]);
+    // Expect each string's open-note name to appear at least once.
+    expect(texts).toContain('E2'); // string 1 = midi 40
+    expect(texts).toContain('A2'); // string 2 = midi 45
+    expect(texts).toContain('D3'); // string 3 = midi 50
+    expect(texts).toContain('G3'); // string 4 = midi 55
+    expect(texts).toContain('B3'); // string 5 = midi 59
+    expect(texts).toContain('E4'); // string 6 = midi 64
+    // And those are positioned LEFT of the nut.
+    const labelCalls = calls.filter(c => c.method === 'fillText'
+        && /^[A-G]#?\d+$/.test(c.args[0]));
+    for (const c of labelCalls) {
+      expect(c.args[1]).toBeLessThan(fb._fretX(0));
+    }
+  });
+
+  it('D2 — major marker frets (12, 24) get a heavier wire', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
+    fb.draw();
+    // Track lineWidth assignments around fret-12 and fret-7's stroke
+    // calls. The simplest sniff: the set of distinct lineWidth
+    // values during _drawFrets must include a value ≥ 2 (major
+    // marker frets).
+    const lineWidths = calls
+      .filter(c => c.method === 'set' && c.prop === 'lineWidth')
+      .map(c => c.value);
+    expect(lineWidths.some(v => v >= 2)).toBe(true);
+  });
+
+  it('B1 — body sketch paints an arc + concentric soundhole right of the last fret', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(800, 200), {
+      tuning: [40, 45, 50, 55, 59, 64], numFrets: 22
+    });
+    fb.draw();
+    // Body region starts at fretX(numFrets) and reaches the right edge.
+    const xLastFret = fb._fretX(fb.numFrets);
+    // The body uses two arcs (soundhole rings). Check at least one
+    // arc with cx > xLastFret.
+    const arcCalls = calls.filter(c => c.method === 'arc');
+    expect(arcCalls.some(c => c.args[0] > xLastFret)).toBe(true);
+    // Plus the shoulder uses quadraticCurveTo (added to the canvas
+    // stub via the existing regex).
+    const quads = calls.filter(c => c.method === 'quadraticCurveTo');
+    expect(quads.length).toBeGreaterThanOrEqual(1);
   });
 
   it('higher frets are shorter than lower frets (compression)', () => {
@@ -297,6 +350,80 @@ describe('FretboardHandPreview — unplayable positions', () => {
   });
 });
 
+describe('FretboardHandPreview — active note feedback (N1 / N2 / N3)', () => {
+  it('N1 — paints a bright string segment from the nut to the pressed fret', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), {
+      tuning: [40, 45, 50, 55, 59, 64], numFrets: 22
+    });
+    fb.setActivePositions([{ string: 3, fret: 5, velocity: 100 }]);
+    // The N1 helper sets a yellow stroke + draws a line from xNut to
+    // the centre of fret 5's slot, on the y of string 3.
+    const yString3 = fb._stringY(3);
+    const xCentreF5 = (fb._fretX(4) + fb._fretX(5)) / 2;
+    const moves = calls.filter(c => c.method === 'moveTo' && Math.abs(c.args[1] - yString3) < 0.5);
+    const lines = calls.filter(c => c.method === 'lineTo'
+        && Math.abs(c.args[1] - yString3) < 0.5
+        && Math.abs(c.args[0] - xCentreF5) < 1);
+    expect(moves.length).toBeGreaterThan(0);
+    expect(lines.length).toBeGreaterThan(0);
+    const strokeStyles = calls
+      .filter(c => c.method === 'set' && c.prop === 'strokeStyle')
+      .map(c => c.value);
+    expect(strokeStyles.some(v => /rgba\(255, 215, 64/.test(v))).toBe(true);
+  });
+
+  it('N1 — open string (fret=0) lights up the entire string length', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), {
+      tuning: [40, 45, 50, 55, 59, 64], numFrets: 22
+    });
+    fb.setActivePositions([{ string: 6, fret: 0 }]);
+    const yString6 = fb._stringY(6);
+    const xRight = fb._fretX(fb.numFrets);
+    const lines = calls.filter(c => c.method === 'lineTo'
+        && Math.abs(c.args[1] - yString6) < 0.5
+        && Math.abs(c.args[0] - xRight) < 1);
+    expect(lines.length).toBeGreaterThan(0);
+  });
+
+  it('N2 — paints "1" / "2" / "3" / "4" inside the hand band', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(800, 200), {
+      tuning: [40, 45, 50, 55, 59, 64], numFrets: 22
+    });
+    fb.setHandWindow({ anchorFret: 5, spanFrets: 4 });
+    const fillTexts = calls.filter(c => c.method === 'fillText').map(c => c.args[0]);
+    expect(fillTexts).toContain('1');
+    expect(fillTexts).toContain('2');
+    expect(fillTexts).toContain('3');
+    expect(fillTexts).toContain('4');
+  });
+
+  it('N3 — paints a green "O" left of the nut for active open strings', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), {
+      tuning: [40, 45, 50, 55, 59, 64], numFrets: 22
+    });
+    fb.setActivePositions([{ string: 6, fret: 0 }]);
+    const fillStyles = calls
+      .filter(c => c.method === 'set' && c.prop === 'fillStyle')
+      .map(c => c.value);
+    expect(fillStyles).toContain('#06d6a0');
+    const oTexts = calls.filter(c => c.method === 'fillText' && c.args[0] === 'O');
+    expect(oTexts.length).toBeGreaterThan(0);
+    // Plotted left of the nut.
+    expect(oTexts[0].args[1]).toBeLessThan(fb._fretX(0));
+  });
+
+  it('N3 — paints a red "X" left of the nut for muted (unplayable) strings', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), {
+      tuning: [40, 45, 50, 55, 59, 64], numFrets: 22
+    });
+    fb.setUnplayablePositions([{ string: 5, fret: 12, reason: 'outside_window' }]);
+    const xTexts = calls.filter(c => c.method === 'fillText' && c.args[0] === 'X');
+    expect(xTexts.length).toBeGreaterThan(0);
+    // Centred on string 5's y.
+    expect(Math.abs(xTexts[0].args[2] - fb._stringY(5))).toBeLessThan(1);
+  });
+});
+
 describe('FretboardHandPreview — ghost anchor', () => {
   it('setGhostAnchor renders a faint translucent rectangle', () => {
     const fb = new window.FretboardHandPreview(makeCanvas(), {
@@ -332,6 +459,72 @@ describe('FretboardHandPreview — ghost anchor', () => {
     expect(fb.ghostAnchor).toBeNull();
     fb.setGhostAnchor({ anchorFret: 5, spanFrets: -1 });
     expect(fb.ghostAnchor).toBeNull();
+  });
+});
+
+describe('FretboardHandPreview — M1 lerp animation', () => {
+  it('snaps directly when no animateFromSec / animateToSec is provided', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
+    fb.setHandWindow({ anchorFret: 5, spanFrets: 4 });
+    expect(fb._displayedAnchor).toBe(5);
+    expect(fb._animation).toBeNull();
+  });
+
+  it('starts a lerp animation when sim-time bounds are passed AND a previous anchor exists', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
+    fb.setHandWindow({ anchorFret: 1, spanFrets: 4 });
+    fb.setCurrentTime(0);
+    fb.setHandWindow({
+      anchorFret: 12, spanFrets: 4,
+      animateFromSec: 0, animateToSec: 1
+    });
+    expect(fb._animation).not.toBeNull();
+    expect(fb._animation.fromAnchor).toBe(1);
+    expect(fb._animation.toAnchor).toBe(12);
+  });
+
+  it('setCurrentTime in the middle of the animation interpolates the displayed anchor', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
+    fb.setHandWindow({ anchorFret: 1, spanFrets: 4 });
+    fb.setCurrentTime(0);
+    fb.setHandWindow({
+      anchorFret: 11, spanFrets: 4,
+      animateFromSec: 0, animateToSec: 1
+    });
+    fb.setCurrentTime(0.5);
+    expect(fb._displayedAnchor).toBeCloseTo(6, 1);
+  });
+
+  it('setCurrentTime past the animation end snaps to the target anchor', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
+    fb.setHandWindow({ anchorFret: 1, spanFrets: 4 });
+    fb.setCurrentTime(0);
+    fb.setHandWindow({
+      anchorFret: 12, spanFrets: 4,
+      animateFromSec: 0, animateToSec: 1
+    });
+    fb.setCurrentTime(2);
+    expect(fb._displayedAnchor).toBe(12);
+    expect(fb._animation).toBeNull();
+  });
+
+  it('paints the band at the INTERPOLATED anchor when in the middle of an animation', () => {
+    const fb = new window.FretboardHandPreview(makeCanvas(), { numFrets: 22 });
+    fb.setHandWindow({ anchorFret: 1, spanFrets: 4 });
+    fb.setCurrentTime(0);
+    fb.setHandWindow({
+      anchorFret: 11, spanFrets: 4,
+      animateFromSec: 0, animateToSec: 1
+    });
+    calls.length = 0;
+    fb.setCurrentTime(0.5);
+    // The band's left x should be at fretX(slotLeft) where slotLeft
+    // = 6-1 = 5 (= halfway between fret 0 and fret 10).
+    const expectedX0 = fb._fretX(5);
+    const bandRect = calls
+      .filter(c => c.method === 'fillRect')
+      .find(c => Math.abs(c.args[0] - expectedX0) < 1.5);
+    expect(bandRect).toBeDefined();
   });
 });
 
