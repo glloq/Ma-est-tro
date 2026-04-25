@@ -251,6 +251,37 @@
             this.engine.on('end', () => {
                 if (this._playBtn) this._playBtn.disabled = false;
             });
+
+            // Now that the timeline is precomputed, hand the
+            // trajectories to the lookahead strip so the operator
+            // sees where each hand will be over the next few seconds
+            // (in addition to the falling notes).
+            this._refreshHandTrajectories();
+        }
+
+        /** Push the engine's per-hand trajectories into the look-ahead
+         *  strip. Re-called whenever overrides change so a fresh edit
+         *  is reflected in the trajectory ribbons immediately. */
+        _refreshHandTrajectories() {
+            if (!this.lookahead || !this.engine) return;
+            if (typeof this.engine.getHandTrajectories !== 'function') return;
+            if (typeof this.lookahead.setHandTrajectories !== 'function') return;
+            const trajectories = [];
+            const handsArr = _hands(this.instrument);
+            const byId = new Map(handsArr.map(h => [h.id, h]));
+            const map = this.engine.getHandTrajectories();
+            for (const [id, points] of map) {
+                const handCfg = byId.get(id);
+                if (!handCfg) continue;
+                const span = handCfg.hand_span_semitones ?? handCfg.hand_span_frets ?? 14;
+                trajectories.push({
+                    id,
+                    span,
+                    color: _handColor(id),
+                    points: points.slice()
+                });
+            }
+            this.lookahead.setHandTrajectories(trajectories);
         }
 
         // -----------------------------------------------------------------
@@ -426,10 +457,10 @@
         setOverrides(overrides) {
             this.overrides = overrides || null;
             // Rebuild the engine so the new overrides take effect.
-            const wasPlaying = this.engine?.isPlaying;
             this.engine?.dispose();
             this._wireEngine();
-            if (wasPlaying) this.play();
+            // _wireEngine refreshes the trajectories at the end so
+            // the lookahead reflects the new overrides immediately.
         }
 
         destroy() {

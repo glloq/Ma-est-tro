@@ -45,6 +45,15 @@
         return n;
     }
 
+    /** Convert a #RRGGBB hex to rgba() with the given alpha. */
+    function _alpha(hex, alpha) {
+        if (typeof hex !== 'string' || hex.length !== 7 || hex[0] !== '#') return hex;
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
     class HandsLookaheadStrip {
         constructor(canvas, opts = {}) {
             this.canvas = canvas;
@@ -61,6 +70,12 @@
 
             this.currentSec = 0;
             this.unplayableNotes = new Set();
+            // Hand trajectories: array of
+            //   {id, span, color, points:[{tick, anchor}, ...]}
+            // The points are converted to seconds internally and drawn
+            // as translucent vertical ribbons that "wave" between
+            // anchors at each shift point.
+            this.handTrajectories = [];
 
             // Pre-compute tick→sec for each note so we can binary-search by sec.
             this._noteTimes = this.notes.map(n => ({
@@ -97,6 +112,32 @@
                     const n = Number.isFinite(e?.note) ? e.note : (Number.isFinite(e) ? e : null);
                     if (n != null) this.unplayableNotes.add(n);
                 }
+            }
+            this.draw();
+        }
+
+        /**
+         * Replace the per-hand trajectory list. Each entry:
+         *   { id, span, color, points: [{tick, anchor}, ...] }
+         * Pass `[]` or `null` to hide the ribbons.
+         */
+        setHandTrajectories(trajectories) {
+            this.handTrajectories = [];
+            if (!Array.isArray(trajectories)) { this.draw(); return; }
+            for (const tr of trajectories) {
+                if (!tr || !tr.id || !Number.isFinite(tr.span)) continue;
+                const pts = Array.isArray(tr.points)
+                    ? tr.points
+                        .filter(p => p && Number.isFinite(p.tick) && Number.isFinite(p.anchor))
+                        .map(p => ({ sec: p.tick / this.ticksPerSecond, anchor: p.anchor }))
+                        .sort((a, b) => a.sec - b.sec)
+                    : [];
+                this.handTrajectories.push({
+                    id: tr.id,
+                    span: tr.span,
+                    color: tr.color || '#6b7280',
+                    points: pts
+                });
             }
             this.draw();
         }
@@ -146,6 +187,84 @@
             return lo;
         }
 
+        /** sec → y; bottom = currentSec, top = currentSec + windowSeconds. */
+        _yAt(sec, h, start) {
+            return h * (1 - (sec - start) / this.windowSeconds);
+        }
+
+        /**
+         * Paint each hand's trajectory as a translucent ribbon. Each
+         * segment between two consecutive trajectory points is drawn
+         * as a quadratic-bezier "S" so a shift looks like a wave
+         * sliding from one anchor to the next instead of a step.
+         * The ribbon stretches from the last visible point down to
+         * the now line (so the operator can see where the hand sits
+         * right now, not just where it goes).
+         * @private
+         */
+        _drawHandTrajectories(w, h, start, end) {
+            if (!this.handTrajectories || this.handTrajectories.length === 0) return;
+            const ctx = this.ctx;
+
+            for (const tr of this.handTrajectories) {
+                if (tr.points.length === 0) continue;
+
+                // Build a synthetic series that covers the visible
+                // window: prepend the last point at or before `start`
+                // (so the ribbon fills the bottom even when no shift
+                // is happening yet), append a sentinel at `end` so the
+                // ribbon reaches the top.
+                let series = [];
+                let lastBefore = null;
+                for (const p of tr.points) {
+                    if (p.sec <= start) lastBefore = p;
+                    else if (p.sec <= end) series.push(p);
+                    else break;
+                }
+                if (lastBefore) series.unshift({ sec: start, anchor: lastBefore.anchor });
+                else if (series.length === 0) continue;
+                else series.unshift({ sec: start, anchor: series[0].anchor });
+                series.push({ sec: end, anchor: series[series.length - 1].anchor });
+
+                ctx.fillStyle = _alpha(tr.color, 0.18);
+                ctx.strokeStyle = _alpha(tr.color, 0.55);
+                ctx.lineWidth = 1;
+
+                // Walk consecutive segments; each segment is a single
+                // closed path filled + outlined. Drawing them
+                // separately (instead of one big path) lets the
+                // alpha overlap on transitions stack so the operator
+                // sees the wave clearly even on small shifts.
+                for (let i = 0; i + 1 < series.length; i++) {
+                    const a = series[i], b = series[i + 1];
+                    const yA = this._yAt(a.sec, h, start);
+                    const yB = this._yAt(b.sec, h, start);
+                    const colA = this._columnFor(a.anchor);
+                    const colArightCol = this._columnFor(a.anchor + tr.span);
+                    const colB = this._columnFor(b.anchor);
+                    const colBrightCol = this._columnFor(b.anchor + tr.span);
+                    const xLeftA  = colA.x;
+                    const xRightA = colArightCol.x + colArightCol.width;
+                    const xLeftB  = colB.x;
+                    const xRightB = colBrightCol.x + colBrightCol.width;
+
+                    // Mid-y control points for a smooth S-shaped
+                    // transition between two anchors.
+                    const ctrlY = (yA + yB) / 2;
+                    ctx.beginPath();
+                    // Top edge (yB) → bottom edge (yA), filled in
+                    // between. We use two cubic bezier sides.
+                    ctx.moveTo(xLeftB, yB);
+                    ctx.bezierCurveTo(xLeftB, ctrlY, xLeftA, ctrlY, xLeftA, yA);
+                    ctx.lineTo(xRightA, yA);
+                    ctx.bezierCurveTo(xRightA, ctrlY, xRightB, ctrlY, xRightB, yB);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                }
+            }
+        }
+
         // -----------------------------------------------------------------
         //  Rendering
         // -----------------------------------------------------------------
@@ -168,6 +287,13 @@
             ctx.fillStyle = '#f9fafb';
             ctx.fillRect(0, 0, w, h);
 
+            const start = this.currentSec;
+            const end = start + this.windowSeconds;
+
+            // Hand trajectories — drawn first so the falling notes
+            // (drawn last) stay perfectly readable on top.
+            this._drawHandTrajectories(w, h, start, end);
+
             // Now line — bottom edge of the canvas (where notes meet
             // the keyboard below).
             ctx.strokeStyle = '#1d4ed8';
@@ -177,8 +303,6 @@
             ctx.lineTo(w,     h - 0.5);
             ctx.stroke();
 
-            const start = this.currentSec;
-            const end = start + this.windowSeconds;
             const i0 = this._firstVisibleIndex(start);
 
             for (let i = i0; i < this._noteTimes.length; i++) {
