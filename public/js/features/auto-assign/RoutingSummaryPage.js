@@ -1022,11 +1022,14 @@ class RoutingSummaryPage {
       overrides: initialOverrides,
       onSeek: (currentTick, totalTicks) => this._onHandsPreviewSeek(currentTick, totalTicks),
       // E.6.8 — saveCtx tells the panel how to persist its overrides
-      // via the routing_save_hand_overrides WS command.
+      // via the routing_save_hand_overrides WS command. PR5 piggybacks
+      // on this context to share the page's AudioPreview instance with
+      // the full-length editor modal — keeps a single synthesizer alive.
       saveCtx: {
         apiClient: this._rawApiClient || this.apiClient?.backend || this.apiClient,
         fileId: this.fileId,
-        deviceId: assignment.deviceId
+        deviceId: assignment.deviceId,
+        audioPreview: this.audioPreview || null
       }
     });
     this._handsPreviewChannel = channel;

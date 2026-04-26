@@ -122,22 +122,54 @@
 
             this._tickHandler = null;
             this._chordHandler = null;
+
+            // PR5 — embedded audio preview, follow-the-playhead toggle,
+            // history stack for undo/redo, dirty flag for the Save button.
+            this.audioPreview = opts.audioPreview || null;
+            this._followPlayhead = true;
+            this._playState = 'stopped'; // 'stopped' | 'playing' | 'paused'
+            this._history = [this._cloneOverrides(this.initialOverrides)];
+            this._historyIndex = 0;
+            this._dirty = false;
+            this._maxHistory = 50;
         }
 
         renderBody() {
             return `
                 <div class="hpe-toolbar">
+                    <button type="button" data-action="play"
+                            title="${_t('handPositionEditor.play', 'Lecture')}">▶</button>
+                    <button type="button" data-action="pause" disabled
+                            title="${_t('handPositionEditor.pause', 'Pause')}">⏸</button>
+                    <button type="button" data-action="stop" disabled
+                            title="${_t('handPositionEditor.stop', 'Stop')}">⏹</button>
+                    <span class="hpe-sep"></span>
                     <button type="button" data-action="zoom-out"
                             title="${_t('handPositionEditor.zoomOut', 'Dézoom')}">−</button>
                     <button type="button" data-action="zoom-in"
                             title="${_t('handPositionEditor.zoomIn', 'Zoom')}">+</button>
-                    <span class="hpe-spacer"></span>
                     <button type="button" data-action="reset-scroll"
                             title="${_t('handPositionEditor.gotoStart', 'Retour au début')}">⏮</button>
+                    <label class="hpe-follow"
+                           title="${_t('handPositionEditor.followTitle', 'Suivre le curseur de lecture')}">
+                        <input type="checkbox" data-role="follow" checked />
+                        ${_t('handPositionEditor.follow', 'Suivre')}
+                    </label>
+                    <span class="hpe-spacer"></span>
                     <span class="hpe-time" data-role="time">0:00 / 0:00</span>
+                    <span class="hpe-sep"></span>
+                    <button type="button" data-action="undo" disabled
+                            title="${_t('handPositionEditor.undo', 'Annuler (Ctrl+Z)')}">↶</button>
+                    <button type="button" data-action="redo" disabled
+                            title="${_t('handPositionEditor.redo', 'Rétablir (Ctrl+Y)')}">↷</button>
+                    <button type="button" data-action="reset-overrides"
+                            title="${_t('handPositionEditor.resetOverrides', 'Tout réinitialiser')}">⟲</button>
+                    <button type="button" data-action="save" disabled
+                            title="${_t('handPositionEditor.saveClean', 'Aucune modification')}">${_t('handPositionEditor.save', 'Enregistrer')}</button>
                 </div>
                 <div class="hpe-sticky-host"></div>
                 <div class="hpe-timeline-host"></div>
+                <div class="hpe-status" data-role="status"></div>
                 <div class="hpe-hint">
                     ${_t('handPositionEditor.hint',
                          'Faites défiler la timeline. Glissez la bande de la main sur l’aperçu en haut pour épingler une nouvelle position.')}
@@ -175,6 +207,16 @@
             this.sticky = null;
             if (this.timeline?.destroy) try { this.timeline.destroy(); } catch (_) {}
             this.timeline = null;
+            // Stop any in-flight playback we initiated. The host's
+            // AudioPreview instance is shared with the routing summary
+            // page, so we never destroy it ourselves — just stop.
+            if (this.audioPreview && (this.audioPreview.isPlaying || this.audioPreview.isPreviewing)) {
+                try { this.audioPreview.stop(); } catch (_) {}
+            }
+            if (this._keyHandler) {
+                document.removeEventListener('keydown', this._keyHandler);
+                this._keyHandler = null;
+            }
         }
 
         // ----------------------------------------------------------------
@@ -231,23 +273,259 @@
             if (!root) return;
             root.addEventListener('click', (e) => {
                 const btn = e.target.closest('[data-action]');
-                if (!btn) return;
+                if (!btn || btn.disabled) return;
                 const action = btn.dataset.action;
-                if (action === 'close') { this.close(); return; }
-                if (action === 'zoom-in' && this.timeline) {
-                    this.timeline.setPxPerSec(this.timeline.pxPerSec * 1.25);
-                    return;
-                }
-                if (action === 'zoom-out' && this.timeline) {
-                    this.timeline.setPxPerSec(this.timeline.pxPerSec / 1.25);
-                    return;
-                }
-                if (action === 'reset-scroll' && this.timeline) {
-                    this.timeline.setScrollSec(0);
-                    this._seekToSec(0);
-                    return;
+                switch (action) {
+                    case 'close': this.close(); return;
+                    case 'zoom-in':
+                        this.timeline?.setPxPerSec(this.timeline.pxPerSec * 1.25);
+                        return;
+                    case 'zoom-out':
+                        this.timeline?.setPxPerSec(this.timeline.pxPerSec / 1.25);
+                        return;
+                    case 'reset-scroll':
+                        this.timeline?.setScrollSec(0);
+                        this._seekToSec(0);
+                        return;
+                    case 'play': this._play(); return;
+                    case 'pause': this._pause(); return;
+                    case 'stop': this._stop(); return;
+                    case 'undo': this._undo(); return;
+                    case 'redo': this._redo(); return;
+                    case 'reset-overrides': this._resetOverrides(); return;
+                    case 'save': this._save(); return;
                 }
             });
+            // Follow toggle.
+            root.addEventListener('change', (e) => {
+                if (e.target?.dataset?.role === 'follow') {
+                    this._followPlayhead = !!e.target.checked;
+                }
+            });
+            // Keyboard shortcuts. Bound on document so the modal's focus
+            // trap can keep doing its job — we only react when the
+            // editor is open AND the focused element isn't a text input
+            // (so typing in a future search box doesn't fire shortcuts).
+            this._keyHandler = (e) => {
+                if (!this.isOpen) return;
+                const tag = (e.target?.tagName || '').toLowerCase();
+                if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+                if (e.key === ' ') {
+                    e.preventDefault();
+                    this._playState === 'playing' ? this._pause() : this._play();
+                } else if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                    e.preventDefault();
+                    this._undo();
+                } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) {
+                    e.preventDefault();
+                    this._redo();
+                } else if (e.key === '+') {
+                    this.timeline?.setPxPerSec(this.timeline.pxPerSec * 1.25);
+                } else if (e.key === '-') {
+                    this.timeline?.setPxPerSec(this.timeline.pxPerSec / 1.25);
+                } else if (e.key === 'Home') {
+                    this._seekToSec(0);
+                    this.timeline?.setScrollSec(0);
+                } else if (e.key === 'End') {
+                    this._seekToSec(this._totalSec);
+                }
+            };
+            document.addEventListener('keydown', this._keyHandler);
+        }
+
+        // ----------------------------------------------------------------
+        //  Audio preview wiring
+        // ----------------------------------------------------------------
+
+        async _play() {
+            if (!this.audioPreview || !window.AudioPreview) {
+                this._setStatus(_t('handPositionEditor.noAudio',
+                    'Aperçu audio indisponible.'));
+                return;
+            }
+            if (!this.midiData) return;
+            try {
+                this._setStatus('');
+                this.audioPreview.onProgress = (currentTick, totalTicks, currentSec) => {
+                    this._onAudioProgress(currentSec);
+                };
+                this.audioPreview.onPlaybackEnd = () => this._onAudioEnd();
+                const startSec = this.engine?.currentSec ? this.engine.currentSec() : 0;
+                await this.audioPreview.previewSingleChannel(
+                    this.midiData,
+                    this.channel,
+                    {},               // transposition — preview as authored
+                    {},               // instrument constraints — open
+                    startSec,
+                    0,                // duration ignored when fullFile=true
+                    true              // fullFile
+                );
+                this._playState = 'playing';
+                this._refreshTransport();
+            } catch (err) {
+                console.error('[HandPositionEditor] play failed:', err);
+                this._setStatus(`${_t('handPositionEditor.playFailed', 'Lecture impossible')}: ${err.message || err}`);
+            }
+        }
+
+        _pause() {
+            if (!this.audioPreview) return;
+            try { this.audioPreview.pause(); } catch (_) {}
+            this._playState = 'paused';
+            this._refreshTransport();
+        }
+
+        _stop() {
+            if (!this.audioPreview) return;
+            try { this.audioPreview.stop(); } catch (_) {}
+            this._playState = 'stopped';
+            this._refreshTransport();
+        }
+
+        _onAudioProgress(currentSec) {
+            if (this.engine?.advanceToSec) this.engine.advanceToSec(currentSec);
+            // The engine emits a 'tick' event which is already wired to
+            // the sticky preview + timeline playhead update in PR4.
+            this._maybeFollowPlayhead(currentSec);
+        }
+
+        _onAudioEnd() {
+            this._playState = 'stopped';
+            this._refreshTransport();
+        }
+
+        _maybeFollowPlayhead(currentSec) {
+            if (!this._followPlayhead || !this.timeline) return;
+            const viewportSec = this.timeline._viewportSec();
+            const top = this.timeline.scrollSec;
+            const bot = top + viewportSec;
+            // Re-center when the playhead leaves the comfortable middle
+            // band ([20%, 80%] of the viewport) — avoids twitchy resets
+            // for tiny sub-pixel updates.
+            if (currentSec < top + viewportSec * 0.2 || currentSec > top + viewportSec * 0.8) {
+                this.timeline.setScrollSec(currentSec - viewportSec * 0.4);
+            }
+        }
+
+        _refreshTransport() {
+            const playBtn = this.$('[data-action="play"]');
+            const pauseBtn = this.$('[data-action="pause"]');
+            const stopBtn = this.$('[data-action="stop"]');
+            const playing = this._playState === 'playing';
+            const paused = this._playState === 'paused';
+            if (playBtn) playBtn.disabled = playing;
+            if (pauseBtn) pauseBtn.disabled = !playing;
+            if (stopBtn) stopBtn.disabled = !(playing || paused);
+        }
+
+        // ----------------------------------------------------------------
+        //  History (undo / redo) + save
+        // ----------------------------------------------------------------
+
+        _cloneOverrides(o) {
+            if (!o) return null;
+            try { return JSON.parse(JSON.stringify(o)); } catch (_) { return null; }
+        }
+
+        _pushHistory() {
+            // Drop any redo branch beyond the current index, append the
+            // new snapshot, cap the stack at _maxHistory.
+            this._history = this._history.slice(0, this._historyIndex + 1);
+            this._history.push(this._cloneOverrides(this.initialOverrides));
+            if (this._history.length > this._maxHistory) {
+                this._history.shift();
+            } else {
+                this._historyIndex++;
+            }
+            this._dirty = true;
+            this._refreshHistoryButtons();
+        }
+
+        _undo() {
+            if (this._historyIndex <= 0) return;
+            this._historyIndex--;
+            this.initialOverrides = this._cloneOverrides(this._history[this._historyIndex]);
+            this._dirty = this._historyIndex !== 0;
+            this._rebuildEngineKeepingPlayhead();
+            this._refreshHistoryButtons();
+        }
+
+        _redo() {
+            if (this._historyIndex >= this._history.length - 1) return;
+            this._historyIndex++;
+            this.initialOverrides = this._cloneOverrides(this._history[this._historyIndex]);
+            this._dirty = this._historyIndex !== 0;
+            this._rebuildEngineKeepingPlayhead();
+            this._refreshHistoryButtons();
+        }
+
+        _resetOverrides() {
+            // Clear all overrides + push a snapshot so the operator can
+            // undo back to whatever they had before. No confirmation
+            // dialog yet — that's a polish item for PR7.
+            this.initialOverrides = { hand_anchors: [], disabled_notes: [], version: 1 };
+            this._pushHistory();
+            this._rebuildEngineKeepingPlayhead();
+        }
+
+        async _save() {
+            const apiClient = this.apiClient;
+            if (!apiClient || typeof apiClient.sendCommand !== 'function') {
+                this._setStatus(_t('handPositionEditor.noBackend',
+                    'Sauvegarde impossible : API non câblée.'));
+                return;
+            }
+            if (this.fileId == null || this.deviceId == null) {
+                this._setStatus(_t('handPositionEditor.missingCtx',
+                    'Sauvegarde impossible : contexte de routage manquant.'));
+                return;
+            }
+            try {
+                await apiClient.sendCommand('routing_save_hand_overrides', {
+                    fileId: this.fileId,
+                    channel: this.channel,
+                    deviceId: this.deviceId,
+                    overrides: this.initialOverrides
+                });
+                this._dirty = false;
+                this._refreshHistoryButtons();
+                this._setStatus(_t('handPositionEditor.saved', 'Modifications enregistrées.'), 'ok');
+            } catch (err) {
+                console.error('[HandPositionEditor] save failed:', err);
+                this._setStatus(`${_t('handPositionEditor.saveFailed', 'Sauvegarde échouée')}: ${err.message || err}`, 'err');
+            }
+        }
+
+        _refreshHistoryButtons() {
+            const undoBtn = this.$('[data-action="undo"]');
+            const redoBtn = this.$('[data-action="redo"]');
+            const saveBtn = this.$('[data-action="save"]');
+            if (undoBtn) undoBtn.disabled = this._historyIndex <= 0;
+            if (redoBtn) redoBtn.disabled = this._historyIndex >= this._history.length - 1;
+            if (saveBtn) {
+                saveBtn.disabled = !this._dirty;
+                saveBtn.title = this._dirty
+                    ? _t('handPositionEditor.saveDirty', 'Modifications non enregistrées')
+                    : _t('handPositionEditor.saveClean', 'Aucune modification');
+            }
+        }
+
+        _setStatus(msg, level = '') {
+            const el = this.$('[data-role="status"]');
+            if (!el) return;
+            el.textContent = msg || '';
+            el.dataset.level = level;
+        }
+
+        _rebuildEngineKeepingPlayhead() {
+            if (!this.engine) return;
+            const sec = this.engine.currentSec ? this.engine.currentSec() : 0;
+            try { this.engine.dispose(); } catch (_) {}
+            if (this._tickHandler) this.engine?.removeEventListener?.('tick', this._tickHandler);
+            if (this._chordHandler) this.engine?.removeEventListener?.('chord', this._chordHandler);
+            this.engine = null;
+            this._wireEngine();
+            if (this.engine?.advanceToSec) this.engine.advanceToSec(sec);
         }
 
         _wireEngine() {
@@ -320,12 +598,11 @@
             const entry = { tick, handId, anchor };
             if (idx >= 0) this.initialOverrides.hand_anchors[idx] = entry;
             else this.initialOverrides.hand_anchors.push(entry);
-            // Rebuild engine with the new override and re-push trajectory.
-            const currentSec = this.engine.currentSec ? this.engine.currentSec() : 0;
-            try { this.engine.dispose(); } catch (_) {}
-            this.engine = null;
-            this._wireEngine();
-            if (this.engine?.advanceToSec) this.engine.advanceToSec(currentSec);
+            // Push history snapshot so the operator can undo this pin
+            // (PR5). The mutation already happened above; the snapshot
+            // captures the post-mutation state.
+            this._pushHistory();
+            this._rebuildEngineKeepingPlayhead();
         }
 
         _seekToSec(sec) {
@@ -370,9 +647,24 @@
                     background: #fff; border-radius: 4px; cursor: pointer;
                     font-size: 14px;
                 }
-                .hpe-toolbar button[data-action]:hover { background: #f3f4f6; }
+                .hpe-toolbar button[data-action]:hover:not([disabled]) { background: #f3f4f6; }
+                .hpe-toolbar button[data-action][disabled] {
+                    opacity: 0.45; cursor: not-allowed;
+                }
                 .hpe-spacer { flex: 1; }
+                .hpe-sep { width: 1px; height: 18px; background: #d1d5db; margin: 0 4px; }
+                .hpe-follow {
+                    display: inline-flex; align-items: center; gap: 4px;
+                    font-size: 12px; color: #374151; cursor: pointer;
+                }
                 .hpe-time { font-variant-numeric: tabular-nums; color: #374151; font-size: 12px; }
+                .hpe-status {
+                    padding: 4px 10px; font-size: 12px;
+                    color: #374151; min-height: 20px;
+                    border-top: 1px solid #e5e7eb; background: #fff;
+                }
+                .hpe-status[data-level="ok"] { color: #047857; }
+                .hpe-status[data-level="err"] { color: #b91c1c; }
                 .hpe-sticky-host {
                     border-bottom: 1px solid #e5e7eb;
                     background: #f5f7fb;

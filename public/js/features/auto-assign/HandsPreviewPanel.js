@@ -595,7 +595,11 @@
                 instrument: this.instrument,
                 hands_config: this.instrument?.hands_config || null,
                 initialOverrides: this.overrides,
-                apiClient: ctx.apiClient || null
+                apiClient: ctx.apiClient || null,
+                // Reuse the host's AudioPreview instance so a single
+                // synthesizer is shared across the page (no double
+                // instantiation, no double resource use).
+                audioPreview: ctx.audioPreview || null
             });
             modal.open();
         }
