@@ -90,6 +90,29 @@
             this.margin = { top: 14, right: 56, bottom: 24, left: 56 };
 
             this._dprSyncedSize = { w: 0, h: 0 };
+
+            // Drag-to-pin (PR3). When `onBandDrag` is provided the
+            // operator can grab the live band and slide it to a new
+            // anchor. The callback is invoked on mouseup with the new
+            // (integer) fret anchor; the host typically funnels it to
+            // `pinHandAnchor(handId, anchor)` which appends to the
+            // overrides and rebuilds the engine. Until that rebuild
+            // lands (= a new `setHandTrajectory` call clears
+            // `_dragAnchor`), the band sits where the operator left it.
+            this.onBandDrag = typeof opts.onBandDrag === 'function' ? opts.onBandDrag : null;
+            this.handId = typeof opts.handId === 'string' ? opts.handId : 'fretting';
+            this._drag = null;
+            this._dragAnchor = null;
+            if (this.canvas && typeof this.canvas.addEventListener === 'function') {
+                this._mouseDownHandler = (e) => this._handleMouseDown(e);
+                this._mouseMoveHandler = (e) => this._handleMouseMove(e);
+                this._mouseUpHandler = () => this._handleMouseUp();
+                this.canvas.addEventListener('mousedown', this._mouseDownHandler);
+                this.canvas.addEventListener('mousemove', this._mouseMoveHandler);
+                if (typeof document !== 'undefined') {
+                    document.addEventListener('mouseup', this._mouseUpHandler);
+                }
+            }
         }
 
         // -----------------------------------------------------------------
@@ -131,6 +154,10 @@
                     .slice()
                     .sort((a, b) => a.tick - b.tick)
                 : [];
+            // A fresh trajectory means the engine has absorbed any
+            // pending drag override — drop the local visual override
+            // so the band returns to being trajectory-driven.
+            this._dragAnchor = null;
             this._lastDrawnAnchor = null; // force first paint
             this.draw();
         }
@@ -178,8 +205,12 @@
 
         /** @private — Anchor for the CURRENT playhead. Returns
          *  `null` when no trajectory is loaded so the caller can
-         *  decide what to do. Stable: callable from any code path. */
+         *  decide what to do. Stable: callable from any code path.
+         *  When the operator is currently dragging the band (PR3),
+         *  the drag anchor wins so the band visually tracks the cursor
+         *  without waiting for the engine rebuild round-trip. */
         _currentDisplayedAnchor() {
+            if (Number.isFinite(this._dragAnchor)) return this._dragAnchor;
             return this._anchorFromTrajectory(this._currentSec);
         }
 
@@ -323,6 +354,15 @@
                 this._drawHandWindow(fbX, fbY, fbW, fbH, w, liveAnchor, this._level);
             }
 
+            // Yellow curve for shift transitions the simulator considers
+            // infeasible (motion.feasible === false). Painted between
+            // the band and the inlay markers so it reads ON the
+            // fretboard, on top of the wood-tone fill.
+            const infeasible = this._currentMotionTransition();
+            if (infeasible) {
+                this._drawInfeasibleMotionCurve(fbY, fbH, infeasible.prevAnchor, infeasible.nextAnchor);
+            }
+
             // Inlay dots.
             this._drawInlayMarkers(fbY, fbH);
 
@@ -429,10 +469,29 @@
         _drawUnplayablePositions() {
             if (this.unplayablePositions.length === 0) return;
             const ctx = this.ctx;
+            // Compute the live band's X bracket once: notes flagged with
+            // a `direction` are parked just outside it so the operator
+            // sees at a glance how far the hand needs to extend.
+            const liveAnchor = this._currentDisplayedAnchor();
+            let bandLeftX = null, bandRightX = null;
+            if (Number.isFinite(liveAnchor)) {
+                const bracket = this._handWindowX(liveAnchor);
+                if (Number.isFinite(bracket?.x0) && Number.isFinite(bracket?.x1)) {
+                    bandLeftX = bracket.x0;
+                    bandRightX = bracket.x1;
+                }
+            }
             for (const pos of this.unplayablePositions) {
                 const y = this._stringY(pos.string);
                 let x;
-                if (pos.fret === 0) {
+                let drawChevron = null;
+                if (pos.direction === 'left' && bandLeftX != null) {
+                    x = bandLeftX - 12;
+                    drawChevron = 'left';
+                } else if (pos.direction === 'right' && bandRightX != null) {
+                    x = bandRightX + 12;
+                    drawChevron = 'right';
+                } else if (pos.fret === 0) {
                     x = this._fretX(0) - 8;
                 } else {
                     x = (this._fretX(pos.fret - 1) + this._fretX(pos.fret)) / 2;
@@ -450,7 +509,99 @@
                 ctx.beginPath();
                 ctx.arc(x, y, r, 0, Math.PI * 2);
                 ctx.stroke();
+                if (drawChevron) {
+                    // Tiny chevron pointing toward the unreachable fret
+                    // so the direction reads even when the band is wide.
+                    const dx = drawChevron === 'left' ? -r - 2 : r + 2;
+                    const tip = drawChevron === 'left' ? -3 : 3;
+                    ctx.strokeStyle = '#b91c1c';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(x + dx - tip, y - 3);
+                    ctx.lineTo(x + dx, y);
+                    ctx.lineTo(x + dx - tip, y + 3);
+                    ctx.stroke();
+                }
             }
+        }
+
+        /**
+         * Inspect the trajectory around the current playhead to find
+         * the imminent (or just-passed, while the band still lags
+         * toward it) shift transition. Returns `{prevAnchor, nextAnchor,
+         * motion}` when that transition's motion is flagged
+         * infeasible by the simulator, else `null`.
+         *
+         * The visual cue: a yellow curve between the two anchors. We
+         * intentionally show it for the upcoming / ongoing shift only —
+         * past infeasible moves shouldn't keep nagging the operator.
+         * @private
+         */
+        _currentMotionTransition() {
+            const traj = this._trajectory;
+            const tps  = this._ticksPerSec;
+            if (!traj || traj.length === 0 || !tps) return null;
+            // Walk to the first point strictly after the playhead — its
+            // motion describes the prev→this travel. Hold-window logic
+            // is handled by `_anchorFromTrajectory`; here we only need
+            // the bracket to draw between.
+            let prev = null;
+            for (const p of traj) {
+                const pSec = p.tick / tps;
+                if (pSec <= this._currentSec) {
+                    prev = p;
+                    continue;
+                }
+                if (!prev) return null; // first shift hasn't happened yet
+                if (!p.motion || p.motion.feasible !== false) return null;
+                if (!Number.isFinite(prev.anchor) || !Number.isFinite(p.anchor)) return null;
+                return { prevAnchor: prev.anchor, nextAnchor: p.anchor, motion: p.motion };
+            }
+            return null;
+        }
+
+        /**
+         * Paint a dashed yellow Bézier curve between the two anchors.
+         * The arc bows upward (toward the top of the board) so it
+         * reads as "the hand has to fly over here too fast" without
+         * obscuring the active note dots. Width / colour kept warm
+         * (#f5c518) so it doesn't compete with the red infeasible
+         * band fill — speed cues stay distinct from reachability cues.
+         * @private
+         */
+        _drawInfeasibleMotionCurve(fbY, fbH, prevAnchor, nextAnchor) {
+            const ctx = this.ctx;
+            const x1 = this._anchorBandCenterX(prevAnchor);
+            const x2 = this._anchorBandCenterX(nextAnchor);
+            if (!Number.isFinite(x1) || !Number.isFinite(x2)) return;
+            const yBase = fbY + Math.min(14, fbH * 0.18);
+            const arcHeight = Math.max(16, fbH * 0.32);
+            const xMid = (x1 + x2) / 2;
+            const yPeak = yBase - arcHeight;
+            ctx.save();
+            ctx.strokeStyle = '#f5c518';
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([6, 4]);
+            ctx.beginPath();
+            ctx.moveTo(x1, yBase);
+            ctx.quadraticCurveTo(xMid, yPeak, x2, yBase);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
+
+        /**
+         * Pixel x-center of the hand band placed at `anchor`. Used by
+         * the infeasible-motion curve to anchor its endpoints in the
+         * same coordinate space as the live band.
+         * @private
+         */
+        _anchorBandCenterX(anchor) {
+            const bracket = this._handWindowX(anchor);
+            if (!bracket || !Number.isFinite(bracket.x0) || !Number.isFinite(bracket.x1)) {
+                return null;
+            }
+            return (bracket.x0 + bracket.x1) / 2;
         }
 
         _drawHandWindow(fbX, fbY, fbW, fbH, _canvasW, anchor, level) {
@@ -728,6 +879,109 @@
         }
 
         // -----------------------------------------------------------------
+        //  Drag-to-pin (PR3)
+        // -----------------------------------------------------------------
+
+        /**
+         * Inverse of `_fretX`: convert a pixel x-coordinate to a
+         * (fractional) fret index by walking the fret bracket. Linear
+         * interpolation inside the bracket is good enough — fret
+         * spacing is monotonic and we round to an integer anchor on
+         * mouseup. Returns null when the canvas geometry is unknown.
+         * @private
+         */
+        _fretAtX(px) {
+            if (!Number.isFinite(px)) return null;
+            const x0 = this._fretX(0);
+            const xN = this._fretX(this.numFrets);
+            if (!Number.isFinite(x0) || !Number.isFinite(xN) || xN <= x0) return null;
+            if (px <= x0) return 0;
+            if (px >= xN) return this.numFrets;
+            for (let f = 1; f <= this.numFrets; f++) {
+                const a = this._fretX(f - 1);
+                const b = this._fretX(f);
+                if (px <= b) {
+                    const t = (px - a) / Math.max(1e-6, b - a);
+                    return (f - 1) + t;
+                }
+            }
+            return this.numFrets;
+        }
+
+        _pointerXY(e) {
+            const rect = this.canvas?.getBoundingClientRect
+                ? this.canvas.getBoundingClientRect() : { left: 0, top: 0 };
+            return {
+                x: (e.clientX || 0) - rect.left,
+                y: (e.clientY || 0) - rect.top
+            };
+        }
+
+        _handleMouseDown(e) {
+            if (!this.onBandDrag) return;
+            const liveAnchor = this._currentDisplayedAnchor();
+            if (!Number.isFinite(liveAnchor)) return;
+            const bracket = this._handWindowX(liveAnchor);
+            if (!bracket) return;
+            const { x, y } = this._pointerXY(e);
+            // Vertical hit-zone: the band brackets the strings region
+            // with a small overflow above/below — keep the same envelope.
+            const fbY = this.margin.top - HAND_BAND_Y_OVERFLOW;
+            const fbBottom = (this.canvas.clientHeight || this.canvas.height || 0)
+                - this.margin.bottom + HAND_BAND_Y_OVERFLOW;
+            if (y < fbY || y > fbBottom) return;
+            if (x < bracket.x0 || x > bracket.x1) return;
+
+            const fract = this._fretAtX(x);
+            if (fract == null) return;
+            this._drag = {
+                startX: x,
+                offset: fract - liveAnchor,
+                moved: false
+            };
+            if (e.preventDefault) e.preventDefault();
+        }
+
+        _handleMouseMove(e) {
+            if (!this._drag) return;
+            const { x } = this._pointerXY(e);
+            const fract = this._fretAtX(x);
+            if (fract == null) return;
+            const maxAnchor = Math.max(0, this.numFrets - this.handSpanFrets);
+            const newAnchor = Math.max(0, Math.min(maxAnchor,
+                Math.round(fract - this._drag.offset)));
+            if (this._dragAnchor !== newAnchor) {
+                this._dragAnchor = newAnchor;
+                this._drag.moved = true;
+                this._lastDrawnAnchor = null;
+                this.draw();
+            }
+        }
+
+        _handleMouseUp() {
+            if (!this._drag) return;
+            const drag = this._drag;
+            this._drag = null;
+            if (!drag.moved || !Number.isFinite(this._dragAnchor)) {
+                this._dragAnchor = null;
+                return;
+            }
+            const finalAnchor = this._dragAnchor;
+            // Notify the host. The host typically calls
+            // `pinHandAnchor(handId, anchor)` which rebuilds the engine
+            // and pushes a fresh trajectory back into us — that
+            // `setHandTrajectory` clears `_dragAnchor`. If the host
+            // doesn't push a new trajectory we still clear the override
+            // ourselves so the band doesn't stay frozen on the next
+            // play cycle.
+            if (this.onBandDrag) {
+                try { this.onBandDrag(this.handId, finalAnchor); } catch (err) {
+                    console.warn('[FretboardHandPreview] onBandDrag failed:', err);
+                }
+            }
+        }
+
+        // -----------------------------------------------------------------
         //  Lifecycle
         // -----------------------------------------------------------------
 
@@ -737,6 +991,18 @@
             this._trajectory = [];
             this._ticksPerSec = null;
             this._level = 'ok';
+            this._drag = null;
+            this._dragAnchor = null;
+            if (this.canvas && typeof this.canvas.removeEventListener === 'function') {
+                if (this._mouseDownHandler) this.canvas.removeEventListener('mousedown', this._mouseDownHandler);
+                if (this._mouseMoveHandler) this.canvas.removeEventListener('mousemove', this._mouseMoveHandler);
+            }
+            if (typeof document !== 'undefined' && this._mouseUpHandler) {
+                document.removeEventListener('mouseup', this._mouseUpHandler);
+            }
+            this._mouseDownHandler = null;
+            this._mouseMoveHandler = null;
+            this._mouseUpHandler = null;
         }
     }
 
