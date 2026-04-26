@@ -432,7 +432,11 @@ describe('MidiPlayer._injectHandPositionCCEvents — frets mode', () => {
     player._injectHandPositionCCEvents();
     const ccs = player.events.filter(e => e._handInjected);
     expect(ccs).toHaveLength(1);
-    expect(ccs[0].value).toBe(12);
+    // 10 mm index-finger backoff: anchor for fret 12 ≈ 11.5
+    // (rounded to 11 or 12 in the CC value). The chord 12→15 still
+    // fits in the band so no second shift is emitted.
+    expect(ccs[0].value).toBeGreaterThanOrEqual(11);
+    expect(ccs[0].value).toBeLessThanOrEqual(12);
   });
 
   test('falls back to fret-count model when scale_length_mm is null', () => {

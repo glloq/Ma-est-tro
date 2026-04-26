@@ -231,24 +231,45 @@ main physique :
    - L'ancrage est ensuite clampé à `[max(noteRangeMin, plancher
      physique), noteRangeMax]`.
 
-#### Plancher d'ancrage physique (2026-04)
+#### Recul du doigt index — 10 mm derrière chaque chordLow *(2026-04)*
 
-En mode physique (mm), le doigt index ne peut pas se placer plus de
-**10 mm derrière la frette 1**. Au lieu d'ancrer la main au sillet
-(fret 0) — ce qui mettrait l'index "dans le vide" sur le bois nu — le
-planificateur calcule un plancher en frettes équivalent à
-`fret1Mm − 10 mm`, ce qui donne ≈ 0,72 frette pour un diapason de
-650 mm. Conséquences :
+En mode physique (mm), le doigt index s'ancre **10 mm en arrière de
+la frette la plus grave de l'accord courant** (et non plus à un
+plancher fixe avant la frette 1). Le doigt a ainsi la place de
+presser la frette avec son extrémité, et la main reste suffisamment
+en avant pour atteindre les frettes plus hautes sans étirement
+inutile.
 
-- la frette 1 reste atteignable (le doigt est juste avant elle) ;
-- la frette terminale de la main est décalée d'autant vers l'aigu, ce
-  qui rapproche les positions hautes sans changer la largeur physique
-  de la main ;
-- en mode `frets` constant (sans `scale_length_mm`), aucun plancher
-  n'est appliqué — l'ancrage peut toujours descendre à 0.
+Exemples (diapason 650 mm, main 80 mm) :
 
-Implémenté dans `HandPositionPlanner._maybeBuildPhysical()`
-(`minAnchorFret = -12 · log2(1 − floorMm / L)`).
+| chordLow | distance frette | ancrage idéal (mm) | équivalent en frettes |
+| --- | --- | --- | --- |
+| 1 | ≈ 36,5 mm | ≈ 26,5 mm | ≈ 0,72 |
+| 2 | ≈ 70,7 mm | ≈ 60,7 mm | ≈ 1,71 |
+| 5 | ≈ 162,4 mm | ≈ 152,4 mm | ≈ 4,60 |
+| 12 | ≈ 325 mm | ≈ 315 mm | ≈ 11,48 |
+
+Si la frette la plus aiguë de l'accord ne tient pas dans
+`[idealLow, idealLow + hand_span_mm]`, le planificateur déplace
+l'ancrage vers l'aigu (`_minAnchorForTopMm(chordHigh, hand_span_mm)`)
+en perdant une partie du recul — l'accord est privilégié sur le
+confort du doigt index.
+
+Le bord supérieur de la main est aussi écrêté pour ne jamais dépasser
+la dernière frette : `newLow + spanAt(newLow) ≤ noteRangeMax`. Quand
+ce plafond mord, la main glisse vers le bas pour que sa main droite
+sorte exactement sur la dernière frette.
+
+En mode `frets` constant (sans `scale_length_mm`), aucun recul n'est
+appliqué — l'ancrage tombe directement sur `chordLow` (comportement
+historique).
+
+Implémenté dans `HandPositionPlanner._anchorBehindFret(targetFret)`
+et utilisé par `plan()` à chaque shift. Le simulateur frontal
+(`HandPositionFeasibility._simulateFrets`) applique exactement la
+même règle (`anchorBehindFret`) pour rester aligné avec le
+playback : la bande verte affichée et la fenêtre de jouabilité du
+moteur représentent le même intervalle.
 7. **Émission CC** :
    - 1er CC d'une main : `time − ε` avant la 1ère note.
    - shifts suivants : `lastNoteOnTime + ε` (dès que la note précédente
@@ -296,20 +317,27 @@ Tous diffusés via WebSocket (`playback_hand_position_warnings`)
 
 La bande qui matérialise la main sur le manche dans le panneau
 « Hands preview » ([`FretboardHandPreview`](../public/js/features/auto-assign/FretboardHandPreview.js))
-reflète **strictement** la largeur configurée dans `hands_config` :
+suit deux contrats stricts :
 
-- mode physique : largeur de la bande = `hands[0].hand_span_mm`,
-  positionnée selon la géométrie tempérée (la bande rétrécit visuellement
-  à mesure qu'on monte sur le manche, alors que sa largeur en mm reste
-  constante) ;
-- mode constant : largeur = `hands[0].hand_span_frets` (par défaut 4).
+1. **Largeur** = celle configurée dans `hands_config`. En mode
+   physique la bande mesure exactement `hands[0].hand_span_mm`
+   (rétrécit visuellement vers les frettes hautes mais sa longueur
+   en mm reste constante) ; en mode constant elle couvre
+   `hands[0].hand_span_frets` (défaut 4). Aucun appelant ne peut
+   altérer cette largeur — le contrat est documenté dans l'en-tête
+   de `FretboardHandPreview.js`.
+2. **Position** = identique à la fenêtre de jouabilité du simulateur
+   (`HandPositionFeasibility`). La bande commence à
+   `_xFromMm(anchorMm)` et se termine à `_xFromMm(anchorMm + handSpanMm)`,
+   où `anchorMm = scale_length_mm · (1 − 2^(−anchor/12))`. Avant cet
+   audit la bande utilisait l'approximation `slotLeft = anchor − 1`
+   qui décalait l'affichage d'environ une frette derrière la fenêtre
+   réelle — d'où des notes affichées « bonnes » alors qu'elles
+   tombaient hors de la bande verte.
 
-Aucune entrée externe ne peut écraser cette largeur — le contrat est
-documenté dans l'en-tête de `FretboardHandPreview.js`. Pour modifier
-la largeur affichée, ajuster `hand_span_mm` (ou `hand_span_frets`)
-dans les réglages de l'instrument et relancer la prévisualisation.
-
-Le même contrat s'applique à la
+Pour modifier la largeur affichée, ajuster `hand_span_mm` (ou
+`hand_span_frets`) dans les réglages de l'instrument et relancer la
+prévisualisation. Le même contrat s'applique à la
 [`FretboardLookaheadStrip`](../public/js/features/auto-assign/FretboardLookaheadStrip.js)
 qui affiche la trajectoire prévue sur 4 secondes.
 

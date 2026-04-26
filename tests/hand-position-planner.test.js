@@ -436,9 +436,13 @@ describe('HandPositionPlanner — frets mode (physical model)', () => {
       fretNote(2, 12), fretNote(2, 15) // chord: low=12, high=15
     ]);
     expect(ccEvents).toHaveLength(2);
-    // Anchor must cover both 12 and 15. With ~4.4 frets reach at fret 12,
-    // anchor 12 covers up to ~16 → fits. So newLow = chordLow = 12.
-    expect(ccEvents[1].value).toBe(12);
+    // Anchor must cover both 12 and 15. With the 10 mm index-finger
+    // backoff the planner anchors slightly BELOW fret 12 (~11.5), which
+    // also extends the upward reach a touch past 16 — same property as
+    // before, more forward-tolerant. CC values are rounded to integers
+    // so 11.5 lands on 11 or 12 depending on rounding.
+    expect(ccEvents[1].value).toBeGreaterThanOrEqual(11);
+    expect(ccEvents[1].value).toBeLessThanOrEqual(12);
   });
 
   test('chord_span_exceeded reports mm + approx frets at anchor', () => {
@@ -534,12 +538,13 @@ describe('HandPositionPlanner — frets mode (physical model)', () => {
 });
 
 // -----------------------------------------------------------------------------
-// Anchor floor: in the physical (mm) frets-mode model, the leftmost finger
-// cannot sit more than 10 mm behind fret 1. This widens the high-fret reach
-// for a fixed hand width while still letting fret 1 be played.
+// Index-finger backoff: in the physical (mm) frets-mode model, the index
+// finger sits 10 mm BEHIND the chord's lowest fret so it has room to press
+// that fret with its tip. The same rule applies whether the lowest fret is 1
+// or 7 — the hand simply rides forward as the music moves up the neck.
 // -----------------------------------------------------------------------------
 
-describe('HandPositionPlanner — physical anchor floor (10 mm before fret 1)', () => {
+describe('HandPositionPlanner — 10 mm index-finger backoff (physical mode)', () => {
   const cfg = {
     enabled: true,
     mode: 'frets',
@@ -548,40 +553,72 @@ describe('HandPositionPlanner — physical anchor floor (10 mm before fret 1)', 
   };
   const ctx = { unit: 'frets', scaleLengthMm: 650, noteRangeMin: 0, noteRangeMax: 22 };
 
-  test('exposes the floor as a fret-equivalent value > 0', () => {
+  test('_anchorBehindFret(1) puts the anchor strictly between 0 and 1', () => {
     const p = new HandPositionPlanner(cfg, ctx);
-    // For L=650 mm: fret 1 ≈ 36.5 mm from nut. 10 mm before fret 1 ≈
-    // 26.5 mm → ~0.72 frets. The floor must be strictly positive but
-    // less than 1 fret so fret 1 stays reachable.
-    expect(p._physical).not.toBeNull();
-    expect(p._physical.minAnchorFret).toBeGreaterThan(0);
-    expect(p._physical.minAnchorFret).toBeLessThan(1);
+    // For L=650 mm: fret 1 ≈ 36.5 mm. 10 mm behind ≈ 26.5 mm → ≈ 0.72
+    // fret-equivalent. Strictly > 0 (not at the nut) and < 1 (fret 1
+    // stays reachable by the index finger).
+    const a = p._anchorBehindFret(1);
+    expect(a).toBeGreaterThan(0);
+    expect(a).toBeLessThan(1);
   });
 
-  test('forces an open-string-only chord to anchor at the floor, never below it', () => {
+  test('_anchorBehindFret(2) sits between fret 1 and fret 2', () => {
     const p = new HandPositionPlanner(cfg, ctx);
-    // A note at fret 0 (open). The planner used to anchor at 0; with
-    // the floor it lifts the anchor forward.
-    const { ccEvents } = p.plan([fretNote(0, 0)]);
-    expect(ccEvents).toHaveLength(1);
-    const floor = p._physical.minAnchorFret;
-    // CC value is rounded; at L=650 the floor rounds to 1 (≈ 0.72).
-    expect(ccEvents[0].value).toBe(Math.max(0, Math.round(floor)));
+    // For L=650 mm: fret 2 ≈ 70.7 mm. 10 mm behind ≈ 60.7 mm → ≈ 1.71
+    // fret-equivalent. The anchor is strictly forward of fret 1 — the
+    // hand has moved up to reach fret 2 while keeping the 10 mm
+    // backoff.
+    const a = p._anchorBehindFret(2);
+    expect(a).toBeGreaterThan(1);
+    expect(a).toBeLessThan(2);
   });
 
-  test('floor still allows fret 1 to be played in the same window', () => {
+  test('_anchorBehindFret(0) returns 0 (no backoff past the nut)', () => {
     const p = new HandPositionPlanner(cfg, ctx);
-    // Anchor at the floor (~0.72 fret); reach with a 80 mm hand on a
-    // 650 mm scale extends well past fret 1.
-    const { ccEvents, warnings } = p.plan([fretNote(0, 1)]);
+    // Fret 0 = open string → no finger pressed → no backoff needed.
+    // The anchor clamps at the nut.
+    expect(p._anchorBehindFret(0)).toBe(0);
+  });
+
+  test('chord low at fret 2 anchors ~1.7 (rounds to 2 in the CC value)', () => {
+    const p = new HandPositionPlanner(cfg, ctx);
+    // Music asks for fret 2 — hand sits 10 mm behind fret 2. The CC
+    // value is the rounded anchor; 1.71 → 2 via Math.round.
+    const { ccEvents, warnings } = p.plan([fretNote(0, 2)]);
     expect(ccEvents).toHaveLength(1);
-    // No out_of_range / chord_span_exceeded — fret 1 fits the window.
-    expect(warnings.filter(w => w.code === 'out_of_range')).toHaveLength(0);
+    expect(ccEvents[0].value).toBe(2);
+    // No span warning — fret 2 fits the band (which now reaches well
+    // past fret 5 on a 80 mm hand at this scale).
     expect(warnings.filter(w => w.code === 'chord_span_exceeded')).toHaveLength(0);
   });
 
-  test('floor is not applied in non-physical (constant-fret) mode', () => {
-    // No scale length → physical model not built → no floor.
+  test('high-fret chord (12..15) anchors slightly behind fret 12 to extend the reach', () => {
+    const p = new HandPositionPlanner(cfg, ctx);
+    // Without the backoff, anchor = 12 → reach ≈ 16. With the
+    // 10 mm backoff, anchor ≈ 11.5 → reach extends past 16, so fret
+    // 15 fits more comfortably. CC value rounds 11.5 → 12 (still OK
+    // for hardware that expects integer fret positions).
+    const { ccEvents } = p.plan([fretNote(0, 1), fretNote(2, 12), fretNote(2, 15)]);
+    expect(ccEvents).toHaveLength(2);
+    // The shift CC for the chord should land around fret 11 or 12.
+    expect(ccEvents[1].value).toBeGreaterThanOrEqual(11);
+    expect(ccEvents[1].value).toBeLessThanOrEqual(12);
+  });
+
+  test('high-edge clamp keeps the bottom of the hand inside the last fret', () => {
+    // numFrets=22, scale=650, hand=80 mm. Last possible anchor: solve
+    // anchorMm + 80 = numFretsMm. fret22_mm ≈ 467.7 → anchorMm ≈ 387.7
+    // → anchor ≈ 16.36. A note at fret 22 should never push the
+    // anchor above this value.
+    const p = new HandPositionPlanner(cfg, ctx);
+    const { ccEvents } = p.plan([fretNote(0, 22)]);
+    expect(ccEvents).toHaveLength(1);
+    expect(ccEvents[0].value).toBeLessThanOrEqual(17);
+  });
+
+  test('backoff is not applied in non-physical (constant-fret) mode', () => {
+    // No scale length → physical model not built → no backoff.
     const cfgFallback = {
       enabled: true,
       mode: 'frets',
@@ -590,9 +627,9 @@ describe('HandPositionPlanner — physical anchor floor (10 mm before fret 1)', 
     };
     const p = new HandPositionPlanner(cfgFallback, { unit: 'frets', noteRangeMin: 0, noteRangeMax: 22 });
     expect(p._physical).toBeNull();
-    const { ccEvents } = p.plan([fretNote(0, 0)]);
-    // Anchor stays at 0 (the chord's lowest fret), no implicit floor.
-    expect(ccEvents[0].value).toBe(0);
+    // Anchor lands exactly on the chord's lowest fret (legacy behavior).
+    const { ccEvents } = p.plan([fretNote(0, 5)]);
+    expect(ccEvents[0].value).toBe(5);
   });
 });
 

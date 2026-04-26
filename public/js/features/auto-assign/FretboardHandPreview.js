@@ -350,20 +350,32 @@
 
         /**
          * Compute the [x0, x1] horizontal extent of a hand band on
-         * the fretboard. The band width is ALWAYS the configured hand
-         * size (`handSpanMm` in physical mode, `handSpanFrets` in
-         * fallback) — no caller can shrink/grow it. The band aligns
-         * with the SLOT of each fret: for anchor=1 (= index finger on
-         * fret 1) the band starts at the nut wire (`_fretX(0)`), NOT
-         * at fret 1's wire.
+         * the fretboard.
+         *
+         * The band MUST match the simulator's playability window 1:1
+         * — otherwise the operator sees notes drawn outside the green
+         * rectangle that the simulator considers playable, and vice
+         * versa. So:
+         *   - x0 sits at the anchor's mm position from the nut
+         *     (anchorMm = L · (1 − 2^(−anchor/12))).
+         *   - x1 sits at anchorMm + handSpanMm (physical mode) or at
+         *     `anchor + handSpanFrets` (fallback).
+         *
+         * The hand width on screen is ALWAYS the configured value
+         * (`handSpanMm` / `handSpanFrets`) — no caller can stretch or
+         * shrink it. The previous "slotLeft = anchor − 1" approximation
+         * was dropped because it shifted the band ~one fret behind the
+         * simulator window, producing the false-positive "playable note
+         * outside the band" we were seeing for chords whose lowest
+         * fret was ≥ 2.
          * @private
          */
         _handWindowX(anchorFret) {
-            const slotLeft = Math.max(0, anchorFret - 1);
-            const x0 = this._fretX(slotLeft);
-            let x1;
+            const safeAnchor = Math.max(0, anchorFret);
+            let x0, x1;
             if (this.scaleLengthMm && this.handSpanMm) {
-                const anchorMm = this.scaleLengthMm * (1 - Math.pow(2, -slotLeft / 12));
+                const anchorMm = this.scaleLengthMm * (1 - Math.pow(2, -safeAnchor / 12));
+                x0 = this._xFromMm(anchorMm);
                 const rightMm = anchorMm + this.handSpanMm;
                 const totalDistMm = this.scaleLengthMm * (1 - Math.pow(2, -this.numFrets / 12));
                 if (rightMm >= totalDistMm) {
@@ -372,7 +384,8 @@
                     x1 = this._xFromMm(rightMm);
                 }
             } else {
-                x1 = this._fretX(Math.min(this.numFrets, slotLeft + this.handSpanFrets));
+                x0 = this._fretX(safeAnchor);
+                x1 = this._fretX(Math.min(this.numFrets, safeAnchor + this.handSpanFrets));
             }
             return { x0, x1 };
         }

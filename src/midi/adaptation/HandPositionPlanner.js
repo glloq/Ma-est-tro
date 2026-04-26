@@ -124,17 +124,29 @@ class HandPositionPlanner {
       // frets-speed which would give nonsense move_too_fast warnings.
       return null;
     }
-    // Anchor floor: the leftmost finger cannot sit more than
-    // ANCHOR_BACK_OFF_MM behind fret 1 (the fingertip would otherwise
-    // hang off the nut, no string contact). Anchoring SLIGHTLY behind
-    // fret 1 — instead of at the nut — also widens the high-fret reach
-    // because the band shifts forward by ~the same distance.
-    const ANCHOR_BACK_OFF_MM = 10;
-    const fret1Mm = L * (1 - Math.pow(2, -1 / 12));
-    const floorMm = Math.max(0, fret1Mm - ANCHOR_BACK_OFF_MM);
-    // Solve fret-equivalent: L·(1 − 2^(−x/12)) = floorMm.
-    const minAnchorFret = -12 * Math.log2(1 - floorMm / L);
-    return { L, moveMmPerSec, minAnchorFret };
+    // Index-finger backoff: when the chord's lowest fret is F, the
+    // index finger sits `INDEX_BACKOFF_MM` behind F so it can press F
+    // comfortably and still reach more frets up the neck. The same
+    // rule applies whether F is fret 1 or fret 7 — the hand simply
+    // shifts forward as the music moves up. Setting the back-off in
+    // millimetres makes the rule scale-length-independent.
+    return { L, moveMmPerSec, indexBackoffMm: 10 };
+  }
+
+  /**
+   * Anchor (in fret-equivalent) that places the index finger
+   * `indexBackoffMm` behind `targetFret`. The result is a non-negative
+   * fret number (clamped at 0 = nut) so the index never falls past
+   * the nut. Outside physical mode it returns `targetFret` unchanged.
+   * @private
+   */
+  _anchorBehindFret(targetFret) {
+    if (!this._physical) return targetFret;
+    const L = this._physical.L;
+    const targetMm = L * (1 - Math.pow(2, -targetFret / 12));
+    const anchorMm = Math.max(0, targetMm - this._physical.indexBackoffMm);
+    if (anchorMm <= 0) return 0;
+    return -12 * Math.log2(1 - anchorMm / L);
   }
 
   /**
@@ -336,44 +348,43 @@ class HandPositionPlanner {
         || groupHigh > s.windowLowest + currentSpan;
 
       if (needShift) {
-        // Anchor the new window. When shifting up we want the smallest p
-        // that still covers groupHigh — in physical mode, given by the
-        // closed-form inversion `_minAnchorForTopMm`; in the fallback,
-        // `groupHigh − span`.
+        // Anchor the new window. The PREFERRED anchor sits 10 mm behind
+        // the chord's lowest fret so the index finger has room to press
+        // it without the fingertip hanging past the slot. When the
+        // chord's high note doesn't fit in `[idealLow, idealLow + span]`
+        // we slide the anchor forward (`_minAnchorForTopMm`), losing
+        // some of the back-off — but still picking the smallest anchor
+        // that fits the chord, so the rest of the hand stays as low as
+        // possible.
+        const idealLow = this._anchorBehindFret(groupLow);
         let newLow;
         if (s.windowLowest == null) {
-          newLow = groupLow;
+          newLow = idealLow;
         } else if (groupLow < s.windowLowest) {
-          newLow = groupLow;
+          newLow = idealLow;
         } else if (this._physical && Number.isFinite(hand.hand_span_mm) && hand.hand_span_mm > 0) {
-          newLow = Math.max(groupLow, this._minAnchorForTopMm(groupHigh, hand.hand_span_mm));
+          newLow = Math.max(idealLow, this._minAnchorForTopMm(groupHigh, hand.hand_span_mm));
         } else {
-          newLow = Math.max(groupLow, groupHigh - span);
+          newLow = Math.max(idealLow, groupHigh - span);
         }
 
         // Clamp the anchor to the instrument's playable range so the CC
         // we send is always a position the hand can actually reach. The
         // note itself may still be out-of-range (reported separately).
+        // Top-clamp guarantees the bottom of the hand
+        // (= anchor + handSpan) never extends past the last fret.
         const newSpan = this._spanAt(hand, newLow);
-        // Physical-model floor: in frets mode with a known scale length,
-        // the leftmost finger cannot be placed more than 10 mm behind
-        // fret 1 (ANCHOR_BACK_OFF_MM). Anchoring slightly forward
-        // widens the high-fret reach for a fixed hand width while still
-        // allowing fret 1 to be played.
-        let effectiveMin = instrumentMin ?? null;
-        if (this._physical && Number.isFinite(this._physical.minAnchorFret)) {
-          effectiveMin = Math.max(effectiveMin ?? 0, this._physical.minAnchorFret);
-        }
-        if (effectiveMin != null && newLow < effectiveMin) {
-          newLow = effectiveMin;
+        if (instrumentMin != null && newLow < instrumentMin) {
+          newLow = instrumentMin;
         }
         if (instrumentMax != null && newLow + newSpan > instrumentMax) {
-          // Slide the window down so its top fits the range max, but
-          // never below the physical floor.
+          // Slide the window down so its high edge fits inside the
+          // playable range. After this point the hand's furthest reach
+          // sits exactly on the last fret.
           if (this._physical && Number.isFinite(hand.hand_span_mm) && hand.hand_span_mm > 0) {
-            newLow = Math.max(effectiveMin ?? 0, this._minAnchorForTopMm(instrumentMax, hand.hand_span_mm));
+            newLow = Math.max(instrumentMin ?? 0, this._minAnchorForTopMm(instrumentMax, hand.hand_span_mm));
           } else {
-            newLow = Math.max(effectiveMin ?? 0, instrumentMax - newSpan);
+            newLow = Math.max(instrumentMin ?? 0, instrumentMax - newSpan);
           }
         }
 
