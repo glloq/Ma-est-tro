@@ -429,10 +429,29 @@
         _drawUnplayablePositions() {
             if (this.unplayablePositions.length === 0) return;
             const ctx = this.ctx;
+            // Compute the live band's X bracket once: notes flagged with
+            // a `direction` are parked just outside it so the operator
+            // sees at a glance how far the hand needs to extend.
+            const liveAnchor = this._currentDisplayedAnchor();
+            let bandLeftX = null, bandRightX = null;
+            if (Number.isFinite(liveAnchor)) {
+                const bracket = this._handWindowX(liveAnchor);
+                if (Number.isFinite(bracket?.x0) && Number.isFinite(bracket?.x1)) {
+                    bandLeftX = bracket.x0;
+                    bandRightX = bracket.x1;
+                }
+            }
             for (const pos of this.unplayablePositions) {
                 const y = this._stringY(pos.string);
                 let x;
-                if (pos.fret === 0) {
+                let drawChevron = null;
+                if (pos.direction === 'left' && bandLeftX != null) {
+                    x = bandLeftX - 12;
+                    drawChevron = 'left';
+                } else if (pos.direction === 'right' && bandRightX != null) {
+                    x = bandRightX + 12;
+                    drawChevron = 'right';
+                } else if (pos.fret === 0) {
                     x = this._fretX(0) - 8;
                 } else {
                     x = (this._fretX(pos.fret - 1) + this._fretX(pos.fret)) / 2;
@@ -450,6 +469,19 @@
                 ctx.beginPath();
                 ctx.arc(x, y, r, 0, Math.PI * 2);
                 ctx.stroke();
+                if (drawChevron) {
+                    // Tiny chevron pointing toward the unreachable fret
+                    // so the direction reads even when the band is wide.
+                    const dx = drawChevron === 'left' ? -r - 2 : r + 2;
+                    const tip = drawChevron === 'left' ? -3 : 3;
+                    ctx.strokeStyle = '#b91c1c';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(x + dx - tip, y - 3);
+                    ctx.lineTo(x + dx, y);
+                    ctx.lineTo(x + dx - tip, y + 3);
+                    ctx.stroke();
+                }
             }
         }
 

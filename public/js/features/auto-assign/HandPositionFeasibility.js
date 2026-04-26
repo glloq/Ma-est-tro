@@ -1049,8 +1049,15 @@
                 const top = maxReach(anchor);
                 for (const n of fretted) {
                     if (n.fret < anchor || n.fret > top) {
+                        // Direction tells the renderer where to park the
+                        // marker (left of the band when the note sits
+                        // below the anchor, right when it sits past the
+                        // top of the reach). Used by FretboardHandPreview
+                        // to draw an offset chevron instead of stacking
+                        // the dot on top of the unreachable fret.
+                        const direction = n.fret < anchor ? 'left' : 'right';
                         unplayable.push({ note: n.note, fret: n.fret, string: n.string,
-                                          reason: 'outside_window', handId });
+                                          reason: 'outside_window', handId, direction });
                     }
                 }
             }
