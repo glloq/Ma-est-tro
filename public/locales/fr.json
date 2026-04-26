@@ -1072,7 +1072,18 @@
         "labelGmPrograms": "GM Programmes : {value}",
         "labelDate": "Date : {from} - {to}",
         "noInstrumentsFound": "Aucun instrument trouvé",
-        "loadError": "Erreur de chargement"
+        "loadError": "Erreur de chargement",
+        "playabilityLabel": "Statut de jeu",
+        "playabilityAll": "Tous",
+        "playabilityPlayable": "Jouables",
+        "playabilityUnplayable": "Non jouables",
+        "instrumentFamilies": "Familles d'instruments",
+        "channelCount": "Nombre de canaux",
+        "sectionProperties": "Propriétés du fichier",
+        "sectionRoutingDetail": "Routage détaillé",
+        "routingDetailHint": "Ces options remplacent le statut de jeu en haut.",
+        "rangeAny": "Tous",
+        "clearAll": "Tout effacer"
     },
     "pianoRoll": {
         "title": "Notes à venir",
