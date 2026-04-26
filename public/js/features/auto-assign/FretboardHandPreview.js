@@ -60,12 +60,29 @@
             this.tuning = Array.isArray(opts.tuning) ? opts.tuning.slice() : [40, 45, 50, 55, 59, 64];
             this.numStrings = this.tuning.length;
             this.numFrets = Number.isFinite(opts.numFrets) && opts.numFrets > 0 ? opts.numFrets : 24;
-            this.scaleLengthMm = Number.isFinite(opts.scaleLengthMm) && opts.scaleLengthMm > 0
-                ? opts.scaleLengthMm : null;
-            this.handSpanMm = Number.isFinite(opts.handSpanMm) && opts.handSpanMm > 0
-                ? opts.handSpanMm : null;
             this.handSpanFrets = Number.isFinite(opts.handSpanFrets) && opts.handSpanFrets > 0
                 ? opts.handSpanFrets : 4;
+            // The band is always drawn in mm coordinates so its pixel
+            // width stays constant as the anchor slides along the
+            // neck — the human hand doesn't shrink toward the bridge.
+            // When the caller doesn't pass scale_length_mm we use a
+            // guitar-sized default; the chosen value defines the unit
+            // of the mm coordinate system, so any non-zero value works.
+            // When hand_span_mm is missing we derive it from
+            // hand_span_frets at a reference anchor (≈ first quarter
+            // of the neck) so existing fret-based configs still get a
+            // realistic constant-mm band.
+            this.scaleLengthMm = Number.isFinite(opts.scaleLengthMm) && opts.scaleLengthMm > 0
+                ? opts.scaleLengthMm : 648;
+            if (Number.isFinite(opts.handSpanMm) && opts.handSpanMm > 0) {
+                this.handSpanMm = opts.handSpanMm;
+            } else {
+                const refFret = Math.max(1, Math.round(this.numFrets * 0.25));
+                const startMm = this.scaleLengthMm * (1 - Math.pow(2, -refFret / 12));
+                const endMm = this.scaleLengthMm
+                    * (1 - Math.pow(2, -(refFret + this.handSpanFrets) / 12));
+                this.handSpanMm = Math.max(1, endMm - startMm);
+            }
 
             this.activePositions = [];
             this.unplayablePositions = [];
@@ -419,26 +436,18 @@
          */
         _handWindowX(anchorFret) {
             const safeAnchor = Math.max(0, anchorFret);
-            let x0, x1;
-            if (this.scaleLengthMm && this.handSpanMm) {
-                const anchorMm = this.scaleLengthMm * (1 - Math.pow(2, -safeAnchor / 12));
-                // Shift the whole band toward the nut by FINGER_BEFORE_FRET_MM
-                // so the index finger reads as resting *behind* the target
-                // fret wire rather than on top of it. Clamped at 0 so the
-                // band never starts before the nut.
-                const leftMm = Math.max(0, anchorMm - FINGER_BEFORE_FRET_MM);
-                x0 = this._xFromMm(leftMm);
-                const rightMm = leftMm + this.handSpanMm;
-                const totalDistMm = this.scaleLengthMm * (1 - Math.pow(2, -this.numFrets / 12));
-                if (rightMm >= totalDistMm) {
-                    x1 = this._fretX(this.numFrets);
-                } else {
-                    x1 = this._xFromMm(rightMm);
-                }
-            } else {
-                x0 = this._fretX(safeAnchor);
-                x1 = this._fretX(Math.min(this.numFrets, safeAnchor + this.handSpanFrets));
-            }
+            const anchorMm = this.scaleLengthMm * (1 - Math.pow(2, -safeAnchor / 12));
+            // Shift the whole band toward the nut by FINGER_BEFORE_FRET_MM
+            // so the index finger reads as resting *behind* the target
+            // fret wire rather than on top of it. Clamped at 0 so the
+            // band never starts before the nut.
+            const leftMm = Math.max(0, anchorMm - FINGER_BEFORE_FRET_MM);
+            const x0 = this._xFromMm(leftMm);
+            const rightMm = leftMm + this.handSpanMm;
+            const totalDistMm = this.scaleLengthMm * (1 - Math.pow(2, -this.numFrets / 12));
+            const x1 = rightMm >= totalDistMm
+                ? this._fretX(this.numFrets)
+                : this._xFromMm(rightMm);
             return { x0, x1 };
         }
 

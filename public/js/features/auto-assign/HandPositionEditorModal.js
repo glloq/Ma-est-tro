@@ -706,6 +706,12 @@
             const style = document.createElement('style');
             style.id = 'hpe-modal-styles';
             style.textContent = `
+                .modal-overlay.hpe-modal {
+                    /* Routing summary modal sits at 10005; stay above
+                       it so the editor doesn't get covered when opened
+                       from inside the routing flow. */
+                    z-index: 10010 !important;
+                }
                 .hpe-modal .modal-dialog {
                     width: 100vw; height: 100vh;
                     display: flex; flex-direction: column;

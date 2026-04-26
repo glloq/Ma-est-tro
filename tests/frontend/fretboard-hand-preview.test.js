@@ -229,23 +229,31 @@ describe('FretboardHandPreview — hand window rectangle', () => {
     expect(fretsReachedAtH12).toBeGreaterThan(fretsReachedAtNut);
   });
 
-  it('with no scaleLengthMm / handSpanMm, falls back to span frets and aligns with the slot', () => {
+  it('keeps a constant-pixel band width as the anchor slides up the neck', () => {
+    // The hand doesn't shrink toward the bridge — the band's pixel
+    // width must stay constant regardless of where it's pinned.
     const fb = new window.FretboardHandPreview(makeCanvas(), {
       tuning: [40, 45, 50, 55, 59, 64], numFrets: 22, handSpanFrets: 4
-      // no scaleLengthMm, no handSpanMm
+      // no scale_length_mm, no hand_span_mm — the widget falls back
+      // to derived defaults and the band stays in mm coordinates.
     });
-    placeAt(fb, 5);
-    // Anchor=5 means index finger on fret 5 → band starts at the
-    // LEFT side of fret 5's slot = `_fretX(4)` (right edge of the
-    // fret 4 wire). Span=4 frets → ends at `_fretX(4+4)=_fretX(8)`.
-    const x0 = fb._fretX(4);
-    const expectedRight = fb._fretX(8);
-    const expectedW = expectedRight - x0;
-    const bandRect = calls
+
+    placeAt(fb, 3);
+    const lowAnchorBand = calls
       .filter(c => c.method === 'fillRect')
-      .find(c => Math.abs(c.args[0] - x0) < 0.5);
-    expect(bandRect).toBeDefined();
-    expect(bandRect.args[2]).toBeCloseTo(expectedW, 0);
+      .find(c => c.args[2] > 20); // band is the only wide fillRect
+    expect(lowAnchorBand).toBeDefined();
+    const widthAtFret3 = lowAnchorBand.args[2];
+
+    calls.length = 0;
+    placeAt(fb, 15);
+    const highAnchorBand = calls
+      .filter(c => c.method === 'fillRect')
+      .find(c => c.args[2] > 20);
+    expect(highAnchorBand).toBeDefined();
+    const widthAtFret15 = highAnchorBand.args[2];
+
+    expect(widthAtFret15).toBeCloseTo(widthAtFret3, 0);
   });
 
   it('anchor=1 starts the band AT the nut (NOT at the fret 1 wire)', () => {
