@@ -4997,6 +4997,211 @@
         .gm-clear-link:hover {
             color: #0056b3;
         }
+
+        /* ========== FILTRES PRINCIPAUX (always visible) ========== */
+        .filters-main {
+            padding: 4px 4px 14px;
+            margin-bottom: 8px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        body.theme-dark .filters-main {
+            border-bottom-color: #444;
+        }
+        .filters-main .filter-subgroup + .filter-subgroup {
+            margin-top: 14px;
+        }
+
+        /* ========== SEGMENTED CONTROL ========== */
+        .segmented-control {
+            display: flex;
+            width: 100%;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #f9fafb;
+        }
+        body.theme-dark .segmented-control {
+            border-color: #555;
+            background: #2d2d2d;
+        }
+        .segmented-control input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+            width: 0;
+            height: 0;
+        }
+        .segmented-control label {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 7px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            user-select: none;
+            color: #374151;
+            background: transparent;
+            border-left: 1px solid #d1d5db;
+            transition: background 0.15s, color 0.15s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .segmented-control label:first-of-type {
+            border-left: none;
+        }
+        body.theme-dark .segmented-control label {
+            color: #ccc;
+            border-left-color: #555;
+        }
+        .segmented-control label:hover {
+            background: rgba(0, 123, 255, 0.08);
+        }
+        .segmented-control input[type="radio"]:checked + label {
+            background: #007bff;
+            color: white;
+        }
+        .segmented-control input[type="radio"]:focus-visible + label {
+            outline: 2px solid #007bff;
+            outline-offset: -2px;
+        }
+        .seg-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* ========== DUAL-THUMB RANGE SLIDER ========== */
+        .range-slider-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .range-slider-header .filter-label {
+            margin-bottom: 0;
+        }
+        .range-slider-readout {
+            font-size: 12px;
+            font-weight: 600;
+            color: #007bff;
+            font-variant-numeric: tabular-nums;
+        }
+        body.theme-dark .range-slider-readout {
+            color: #4a9eff;
+        }
+        .range-slider-readout.is-default {
+            color: #9ca3af;
+            font-weight: 500;
+        }
+        body.theme-dark .range-slider-readout.is-default {
+            color: #6b7280;
+        }
+        .range-slider-widget {
+            position: relative;
+            height: 26px;
+            margin: 4px 8px 2px;
+        }
+        .range-slider-track,
+        .range-slider-fill {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 4px;
+            border-radius: 2px;
+            pointer-events: none;
+        }
+        .range-slider-track {
+            left: 0;
+            right: 0;
+            background: #e5e7eb;
+        }
+        body.theme-dark .range-slider-track {
+            background: #4b5563;
+        }
+        .range-slider-fill {
+            background: #007bff;
+            left: 0;
+            right: 0;
+        }
+        .range-slider-thumb {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 26px;
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            -webkit-appearance: none;
+            appearance: none;
+            pointer-events: none;
+        }
+        .range-slider-thumb:focus { outline: none; }
+        .range-slider-thumb::-webkit-slider-runnable-track {
+            height: 26px;
+            background: transparent;
+            border: none;
+        }
+        .range-slider-thumb::-moz-range-track {
+            height: 26px;
+            background: transparent;
+            border: none;
+        }
+        .range-slider-thumb::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 2px solid #007bff;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+            cursor: pointer;
+            pointer-events: auto;
+            margin-top: 0;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        .range-slider-thumb::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 2px solid #007bff;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+            cursor: pointer;
+            pointer-events: auto;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        .range-slider-thumb:focus-visible::-webkit-slider-thumb {
+            box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.25);
+        }
+        .range-slider-thumb:focus-visible::-moz-range-thumb {
+            box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.25);
+        }
+        body.theme-dark .range-slider-thumb::-webkit-slider-thumb {
+            background: #1f2937;
+            border-color: #4a9eff;
+        }
+        body.theme-dark .range-slider-thumb::-moz-range-thumb {
+            background: #1f2937;
+            border-color: #4a9eff;
+        }
+
+        .filter-hint {
+            margin: 8px 0 0;
+            font-size: 11px;
+            color: #6b7280;
+            font-style: italic;
+        }
+        body.theme-dark .filter-hint {
+            color: #9ca3af;
+        }
     </style>
 
     <!-- CSS externe: variables (thèmes) + themes (overrides dark/colored) + composants modaux -->
@@ -5365,7 +5570,79 @@
 
             <div class="filters-panel-body">
 
-                <!-- Section 1: Propriétés du fichier -->
+                <!-- ===== Filtres principaux (toujours visibles) ===== -->
+                <div class="filters-main">
+
+                    <!-- 1. Statut de jeu : jouable / non jouable -->
+                    <div class="filter-subgroup">
+                        <label class="filter-label">▶ <span data-i18n="filters.playabilityLabel">Statut de jeu</span></label>
+                        <div class="segmented-control" id="playableStatusSegmented">
+                            <input type="radio" id="playableStatusAll" name="playableStatus" value="all" checked>
+                            <label for="playableStatusAll" data-i18n="filters.playabilityAll">Tous</label>
+                            <input type="radio" id="playableStatusYes" name="playableStatus" value="playable">
+                            <label for="playableStatusYes"><span class="seg-dot" style="background:#10b981;"></span><span data-i18n="filters.playabilityPlayable">Jouables</span></label>
+                            <input type="radio" id="playableStatusNo" name="playableStatus" value="unplayable">
+                            <label for="playableStatusNo"><span class="seg-dot" style="background:#9ca3af;"></span><span data-i18n="filters.playabilityUnplayable">Non jouables</span></label>
+                        </div>
+                    </div>
+
+                    <!-- 2. Familles d'instruments (catégories GM) -->
+                    <div class="filter-subgroup">
+                        <div class="gm-chip-header">
+                            <label class="filter-label" style="margin-bottom: 0;">🎼 <span data-i18n="filters.instrumentFamilies">Familles d'instruments</span></label>
+                            <button class="gm-clear-link" id="gmClearAll" data-i18n="filters.clearAll" style="display: none;">Tout effacer</button>
+                        </div>
+                        <div class="gm-chip-container">
+                            <span class="gm-chip" data-value="Piano" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.piano">Piano</span>
+                            <span class="gm-chip" data-value="Chromatic Percussion" role="checkbox" aria-checked="false" tabindex="0" data-i18n="filters.gmCategoryChromatic">Perc. chrom.</span>
+                            <span class="gm-chip" data-value="Organ" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.organ">Orgue</span>
+                            <span class="gm-chip" data-value="Guitar" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.guitar">Guitare</span>
+                            <span class="gm-chip" data-value="Bass" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.bass">Basse</span>
+                            <span class="gm-chip" data-value="Strings" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.strings">Cordes</span>
+                            <span class="gm-chip" data-value="Ensemble" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.ensemble">Ensemble</span>
+                            <span class="gm-chip" data-value="Brass" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.brass">Cuivres</span>
+                            <span class="gm-chip" data-value="Reed" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.reed">Anches</span>
+                            <span class="gm-chip" data-value="Pipe" role="checkbox" aria-checked="false" tabindex="0" data-i18n="filters.gmCategoryPipe">Bois</span>
+                            <span class="gm-chip" data-value="Synth Lead" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.synthLead">Synth Lead</span>
+                            <span class="gm-chip" data-value="Synth Pad" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.synthPad">Synth Pad</span>
+                            <span class="gm-chip" data-value="Synth Effects" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.synthEffects">Synth FX</span>
+                            <span class="gm-chip" data-value="Ethnic" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.ethnic">Ethnique</span>
+                            <span class="gm-chip" data-value="Percussive" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.percussive">Percussif</span>
+                            <span class="gm-chip" data-value="Sound Effects" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.soundEffects">Effets</span>
+                        </div>
+                        <div class="filter-row" style="margin-top: 6px;">
+                            <label class="filter-label" style="font-size: 0.85em; margin-bottom: 0; white-space: nowrap;" data-i18n="filters.mode">Mode :</label>
+                            <select id="filterGmMode" class="filter-select" style="flex: 1; min-width: 0; width: 0;">
+                                <option value="ANY" data-i18n="filters.gmModeAny">Au moins une</option>
+                                <option value="ALL" data-i18n="filters.gmModeAll">Toutes présentes</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 3. Jouable sur un instrument particulier -->
+                    <div class="filter-subgroup">
+                        <label class="filter-label">🎸 <span data-i18n="filters.playableOnInstruments">Jouable sur instruments</span></label>
+                        <div class="filter-row" style="margin-bottom: 6px;">
+                            <select id="filterInstrumentSource" class="filter-select" style="flex: 1; min-width: 0; width: 0;">
+                                <option value="connected" data-i18n="filters.connectedOnly">Connectés uniquement</option>
+                                <option value="registered" data-i18n="filters.allRegistered">Tous enregistrés</option>
+                            </select>
+                            <button id="refreshInstrumentsBtn" class="btn btn-sm" data-i18n-title="filters.refreshList" title="Rafraîchir la liste">🔄</button>
+                        </div>
+                        <select id="filterPlayableInstruments" class="filter-select" multiple size="5"></select>
+                        <div class="filter-row" style="margin-top: 6px;">
+                            <label class="filter-label" style="font-size: 0.85em; margin-bottom: 0; white-space: nowrap;" data-i18n="filters.mode">Mode :</label>
+                            <select id="filterPlayableMode" class="filter-select" style="flex: 1; min-width: 0; width: 0;">
+                                <option value="routed" data-i18n="filters.playableModeRouted">Routé vers</option>
+                                <option value="compatible" data-i18n="filters.playableModeCompatible">Compatible avec</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== Options avancées (collapsibles) ===== -->
+
+                <!-- Propriétés du fichier (sliders) -->
                 <div class="filter-accordion-section collapsed" data-section="properties">
                     <div class="filter-accordion-header">
                         <span class="filter-accordion-icon">▼</span>
@@ -5373,35 +5650,64 @@
                         <span class="filter-accordion-badge" data-section-badge="properties">0</span>
                     </div>
                     <div class="filter-accordion-body">
+
+                        <!-- Durée -->
                         <div class="filter-subgroup">
-                            <label class="filter-label">⏱ <span data-i18n="filters.duration">Durée</span></label>
-                            <div class="filter-row">
-                                <input type="number" id="filterDurationMin" class="filter-input" data-i18n-placeholder="filters.durationMinSec" placeholder="Min (sec)" min="0" step="1">
-                                <span>-</span>
-                                <input type="number" id="filterDurationMax" class="filter-input" data-i18n-placeholder="filters.durationMaxSec" placeholder="Max (sec)" min="0" step="1">
+                            <div class="range-slider-header">
+                                <label class="filter-label">⏱ <span data-i18n="filters.duration">Durée</span></label>
+                                <span class="range-slider-readout" data-readout-for="duration">—</span>
+                            </div>
+                            <div class="range-slider-widget"
+                                 data-range="duration"
+                                 data-min="0" data-max="1800" data-step="5"
+                                 data-format="time">
+                                <div class="range-slider-track"></div>
+                                <div class="range-slider-fill"></div>
+                                <input type="range" class="range-slider-thumb range-slider-thumb-min" min="0" max="1800" step="5" value="0" aria-label="Durée min">
+                                <input type="range" class="range-slider-thumb range-slider-thumb-max" min="0" max="1800" step="5" value="1800" aria-label="Durée max">
                             </div>
                         </div>
+
+                        <!-- Tempo -->
                         <div class="filter-subgroup">
-                            <label class="filter-label">🎵 <span data-i18n="filters.tempo">Tempo (BPM)</span></label>
-                            <div class="filter-row">
-                                <input type="number" id="filterTempoMin" class="filter-input" placeholder="Min" min="0" step="1">
-                                <span>-</span>
-                                <input type="number" id="filterTempoMax" class="filter-input" placeholder="Max" min="0" step="1">
+                            <div class="range-slider-header">
+                                <label class="filter-label">🎵 <span data-i18n="filters.tempo">Tempo (BPM)</span></label>
+                                <span class="range-slider-readout" data-readout-for="tempo">—</span>
+                            </div>
+                            <div class="range-slider-widget"
+                                 data-range="tempo"
+                                 data-min="30" data-max="240" data-step="1"
+                                 data-format="bpm">
+                                <div class="range-slider-track"></div>
+                                <div class="range-slider-fill"></div>
+                                <input type="range" class="range-slider-thumb range-slider-thumb-min" min="30" max="240" step="1" value="30" aria-label="Tempo min">
+                                <input type="range" class="range-slider-thumb range-slider-thumb-max" min="30" max="240" step="1" value="240" aria-label="Tempo max">
                             </div>
                             <div class="filter-presets" style="margin-top: 6px;">
-                                <button class="preset-btn" data-tempo="0,80" data-i18n="filters.tempoSlow">Lent</button>
+                                <button class="preset-btn" data-tempo="30,80" data-i18n="filters.tempoSlow">Lent</button>
                                 <button class="preset-btn" data-tempo="80,120" data-i18n="filters.tempoModerate">Modéré</button>
-                                <button class="preset-btn" data-tempo="120,999" data-i18n="filters.tempoFast">Rapide</button>
+                                <button class="preset-btn" data-tempo="120,240" data-i18n="filters.tempoFast">Rapide</button>
                             </div>
                         </div>
+
+                        <!-- Canaux -->
                         <div class="filter-subgroup">
-                            <label class="filter-label">🎚 <span data-i18n="filters.channelCount">Nombre de canaux</span></label>
-                            <div class="filter-row">
-                                <input type="number" id="filterChannelCountMin" class="filter-input" placeholder="Min" min="1" step="1">
-                                <span>-</span>
-                                <input type="number" id="filterChannelCountMax" class="filter-input" placeholder="Max" min="1" step="1">
+                            <div class="range-slider-header">
+                                <label class="filter-label">🎚 <span data-i18n="filters.channelCount">Nombre de canaux</span></label>
+                                <span class="range-slider-readout" data-readout-for="channels">—</span>
+                            </div>
+                            <div class="range-slider-widget"
+                                 data-range="channels"
+                                 data-min="1" data-max="16" data-step="1"
+                                 data-format="int">
+                                <div class="range-slider-track"></div>
+                                <div class="range-slider-fill"></div>
+                                <input type="range" class="range-slider-thumb range-slider-thumb-min" min="1" max="16" step="1" value="1" aria-label="Canaux min">
+                                <input type="range" class="range-slider-thumb range-slider-thumb-max" min="1" max="16" step="1" value="16" aria-label="Canaux max">
                             </div>
                         </div>
+
+                        <!-- Type de fichier -->
                         <div class="filter-subgroup">
                             <label class="filter-label">📄 <span data-i18n="filters.fileType">Type de fichier</span></label>
                             <div class="checkbox-group">
@@ -5413,71 +5719,11 @@
                     </div>
                 </div>
 
-                <!-- Section 2: Instruments -->
-                <div class="filter-accordion-section" data-section="instruments">
-                    <div class="filter-accordion-header">
-                        <span class="filter-accordion-icon">▼</span>
-                        <span class="filter-accordion-title" data-i18n="filters.sectionInstruments">Instruments</span>
-                        <span class="filter-accordion-badge" data-section-badge="instruments">0</span>
-                    </div>
-                    <div class="filter-accordion-body">
-                        <div class="filter-subgroup">
-                            <label class="filter-label">🎹 <span data-i18n="filters.instrumentTypes">Types d'instruments</span></label>
-                            <div class="checkbox-group">
-                                <label><input type="checkbox" class="filter-instrument" value="Drums"> <span data-i18n="filters.instrumentTypeDrums">Drums</span></label>
-                                <label><input type="checkbox" class="filter-instrument" value="Bass"> <span data-i18n="filters.instrumentTypeBass">Basse</span></label>
-                                <label><input type="checkbox" class="filter-instrument" value="Melody"> <span data-i18n="filters.instrumentTypeMelody">Mélodie</span></label>
-                                <label><input type="checkbox" class="filter-instrument" value="Harmony"> <span data-i18n="filters.instrumentTypeHarmony">Harmonie</span></label>
-                                <label><input type="checkbox" class="filter-instrument" value="Percussion"> <span data-i18n="filters.instrumentTypePercussion">Percussion</span></label>
-                            </div>
-                            <div style="margin-top: 8px;">
-                                <label class="filter-label" style="font-size: 0.9em;" data-i18n="filters.mode">Mode :</label>
-                                <select id="filterInstrumentMode" class="filter-select">
-                                    <option value="ANY" data-i18n="filters.modeAny">Au moins un</option>
-                                    <option value="ALL" data-i18n="filters.modeAll">Tous</option>
-                                    <option value="EXACT" data-i18n="filters.modeExact">Exactement</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="filter-subgroup">
-                            <div class="gm-chip-header">
-                                <label class="filter-label" style="margin-bottom: 0;">🎼 <span data-i18n="filters.gmCategories">Catégories GM</span></label>
-                                <button class="gm-clear-link" id="gmClearAll" data-i18n="filters.clearAll" style="display: none;">Tout effacer</button>
-                            </div>
-                            <div class="gm-chip-container">
-                                <span class="gm-chip" data-value="Piano" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.piano">Piano</span>
-                                <span class="gm-chip" data-value="Chromatic Percussion" role="checkbox" aria-checked="false" tabindex="0" data-i18n="filters.gmCategoryChromatic">Perc. chrom.</span>
-                                <span class="gm-chip" data-value="Organ" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.organ">Orgue</span>
-                                <span class="gm-chip" data-value="Guitar" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.guitar">Guitare</span>
-                                <span class="gm-chip" data-value="Bass" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.bass">Basse</span>
-                                <span class="gm-chip" data-value="Strings" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.strings">Cordes</span>
-                                <span class="gm-chip" data-value="Ensemble" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.ensemble">Ensemble</span>
-                                <span class="gm-chip" data-value="Brass" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.brass">Cuivres</span>
-                                <span class="gm-chip" data-value="Reed" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.reed">Anches</span>
-                                <span class="gm-chip" data-value="Pipe" role="checkbox" aria-checked="false" tabindex="0" data-i18n="filters.gmCategoryPipe">Bois</span>
-                                <span class="gm-chip" data-value="Synth Lead" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.synthLead">Synth Lead</span>
-                                <span class="gm-chip" data-value="Synth Pad" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.synthPad">Synth Pad</span>
-                                <span class="gm-chip" data-value="Synth Effects" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.synthEffects">Synth FX</span>
-                                <span class="gm-chip" data-value="Ethnic" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.ethnic">Ethnique</span>
-                                <span class="gm-chip" data-value="Percussive" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.percussive">Percussif</span>
-                                <span class="gm-chip" data-value="Sound Effects" role="checkbox" aria-checked="false" tabindex="0" data-i18n="instruments.categories.soundEffects">Effets</span>
-                            </div>
-                            <div style="margin-top: 8px;">
-                                <label class="filter-label" style="font-size: 0.9em;" data-i18n="filters.mode">Mode :</label>
-                                <select id="filterGmMode" class="filter-select">
-                                    <option value="ANY" data-i18n="filters.gmModeAny">Au moins une</option>
-                                    <option value="ALL" data-i18n="filters.gmModeAll">Toutes présentes</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Section 3: Routage & compatibilité -->
+                <!-- Routage avancé (5 statuts détaillés) -->
                 <div class="filter-accordion-section collapsed" data-section="routing">
                     <div class="filter-accordion-header">
                         <span class="filter-accordion-icon">▼</span>
-                        <span class="filter-accordion-title" data-i18n="filters.sectionRouting">Routage & compatibilité</span>
+                        <span class="filter-accordion-title" data-i18n="filters.sectionRoutingDetail">Routage détaillé</span>
                         <span class="filter-accordion-badge" data-section-badge="routing">0</span>
                     </div>
                     <div class="filter-accordion-body">
@@ -5510,25 +5756,7 @@
                                     <span data-i18n="filters.routingAutoAssigned">Auto-assigné (adapté)</span>
                                 </label>
                             </div>
-                        </div>
-                        <div class="filter-subgroup">
-                            <label class="filter-label">🎸 <span data-i18n="filters.playableOnInstruments">Jouable sur instruments</span></label>
-                            <div class="filter-row" style="margin-bottom: 8px;">
-                                <select id="filterInstrumentSource" class="filter-select" style="flex: 1; min-width: 0; width: 0;">
-                                    <option value="connected" data-i18n="filters.connectedOnly">Connectés uniquement</option>
-                                    <option value="registered" data-i18n="filters.allRegistered">Tous enregistrés</option>
-                                </select>
-                                <button id="refreshInstrumentsBtn" class="btn btn-sm" data-i18n-title="filters.refreshList" title="Rafraîchir la liste">🔄</button>
-                            </div>
-                            <select id="filterPlayableInstruments" class="filter-select" multiple size="5">
-                            </select>
-                            <div class="filter-row" style="margin-top: 6px;">
-                                <label class="filter-label" style="font-size: 0.9em; margin-bottom: 0; white-space: nowrap;" data-i18n="filters.mode">Mode :</label>
-                                <select id="filterPlayableMode" class="filter-select" style="flex: 1; min-width: 0; width: 0;">
-                                    <option value="routed" data-i18n="filters.playableModeRouted">Routé vers</option>
-                                    <option value="compatible" data-i18n="filters.playableModeCompatible">Compatible avec</option>
-                                </select>
-                            </div>
+                            <p class="filter-hint" data-i18n="filters.routingDetailHint">Ces options remplacent le statut de jeu en haut.</p>
                         </div>
                     </div>
                 </div>
@@ -12330,69 +12558,136 @@
             // ==================== SECTION BADGE COUNTER ====================
             // (updateSectionBadges is hoisted to outer scope so removeFilter can call it)
 
-            // Duration filter
-            const durationMin = document.getElementById('filterDurationMin');
-            const durationMax = document.getElementById('filterDurationMax');
-            durationMin.addEventListener('change', () => {
-                filterManager.setFilter('durationMin', durationMin.value ? parseFloat(durationMin.value) : null);
-            });
-            durationMax.addEventListener('change', () => {
-                filterManager.setFilter('durationMax', durationMax.value ? parseFloat(durationMax.value) : null);
-            });
+            // ==================== DUAL-THUMB RANGE SLIDERS ====================
+            // Configuration per range (key prefix → filterManager keys + readout formatter)
+            const rangeFormatters = {
+                time(v) {
+                    const m = Math.floor(v / 60);
+                    const s = Math.floor(v % 60);
+                    return `${m}:${String(s).padStart(2, '0')}`;
+                },
+                bpm(v) { return `${v}`; },
+                int(v) { return `${v}`; }
+            };
+            const rangeFilterKeys = {
+                duration: { min: 'durationMin', max: 'durationMax' },
+                tempo: { min: 'tempoMin', max: 'tempoMax' },
+                channels: { min: 'channelCountMin', max: 'channelCountMax' }
+            };
 
-            // Tempo filter
-            const tempoMin = document.getElementById('filterTempoMin');
-            const tempoMax = document.getElementById('filterTempoMax');
-            tempoMin.addEventListener('change', () => {
-                filterManager.setFilter('tempoMin', tempoMin.value ? parseFloat(tempoMin.value) : null);
-            });
-            tempoMax.addEventListener('change', () => {
-                filterManager.setFilter('tempoMax', tempoMax.value ? parseFloat(tempoMax.value) : null);
-            });
+            const rangeSliders = {}; // name → { widget, minInput, maxInput, refresh, setValues }
 
-            // Tempo presets
-            document.querySelectorAll('.preset-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const [min, max] = btn.dataset.tempo.split(',');
-                    tempoMin.value = min;
-                    tempoMax.value = max;
-                    filterManager.setFilter('tempoMin', parseFloat(min));
-                    filterManager.setFilter('tempoMax', parseFloat(max));
-                });
-            });
+            function setupRangeSlider(widget) {
+                const name = widget.dataset.range;
+                const lowEnd = parseFloat(widget.dataset.min);
+                const highEnd = parseFloat(widget.dataset.max);
+                const step = parseFloat(widget.dataset.step) || 1;
+                const formatType = widget.dataset.format || 'int';
+                const fmt = rangeFormatters[formatType] || rangeFormatters.int;
 
-            // Channel count filter
-            const channelCountMin = document.getElementById('filterChannelCountMin');
-            const channelCountMax = document.getElementById('filterChannelCountMax');
-            channelCountMin.addEventListener('change', () => {
-                filterManager.setFilter('channelCountMin', channelCountMin.value ? parseInt(channelCountMin.value) : null);
-            });
-            channelCountMax.addEventListener('change', () => {
-                filterManager.setFilter('channelCountMax', channelCountMax.value ? parseInt(channelCountMax.value) : null);
-            });
+                const minInput = widget.querySelector('.range-slider-thumb-min');
+                const maxInput = widget.querySelector('.range-slider-thumb-max');
+                const fill = widget.querySelector('.range-slider-fill');
+                const readout = widget.closest('.filter-subgroup').querySelector(`[data-readout-for="${name}"]`);
+                const keys = rangeFilterKeys[name];
 
-            // Instrument types filter (merged with quick filters: hasDrums/hasMelody/hasBass)
-            const instrumentCheckboxes = document.querySelectorAll('.filter-instrument');
-            const instrumentMode = document.getElementById('filterInstrumentMode');
+                function refresh() {
+                    let lo = parseFloat(minInput.value);
+                    let hi = parseFloat(maxInput.value);
+                    if (lo > hi) { [lo, hi] = [hi, lo]; }
+                    const range = highEnd - lowEnd;
+                    const loPct = range > 0 ? ((lo - lowEnd) / range) * 100 : 0;
+                    const hiPct = range > 0 ? ((hi - lowEnd) / range) * 100 : 100;
+                    fill.style.left = loPct + '%';
+                    fill.style.right = (100 - hiPct) + '%';
 
-            const quickFilterMap = { 'Drums': 'hasDrums', 'Melody': 'hasMelody', 'Bass': 'hasBass' };
-
-            instrumentCheckboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', () => {
-                    const selectedInstruments = Array.from(instrumentCheckboxes)
-                        .filter(cb => cb.checked)
-                        .map(cb => cb.value);
-                    filterManager.setFilter('instrumentTypes', selectedInstruments);
-                    // Sync quick-filter keys
-                    const qfKey = quickFilterMap[checkbox.value];
-                    if (qfKey) {
-                        filterManager.setFilter(qfKey, checkbox.checked ? true : null);
+                    const atDefault = lo <= lowEnd && hi >= highEnd;
+                    if (readout) {
+                        readout.textContent = atDefault
+                            ? (window.i18n ? window.i18n.t('filters.rangeAny') : 'Tous')
+                            : `${fmt(lo)} – ${fmt(hi)}`;
+                        readout.classList.toggle('is-default', atDefault);
                     }
+                }
+
+                function applyToFilter() {
+                    let lo = parseFloat(minInput.value);
+                    let hi = parseFloat(maxInput.value);
+                    if (lo > hi) { [lo, hi] = [hi, lo]; }
+                    if (keys) {
+                        filterManager.setFilter(keys.min, lo <= lowEnd ? null : lo);
+                        filterManager.setFilter(keys.max, hi >= highEnd ? null : hi);
+                    }
+                }
+
+                // Prevent thumbs from crossing
+                function clampThumbs(active) {
+                    const lo = parseFloat(minInput.value);
+                    const hi = parseFloat(maxInput.value);
+                    if (active === 'min' && lo > hi) {
+                        minInput.value = hi;
+                    } else if (active === 'max' && hi < lo) {
+                        maxInput.value = lo;
+                    }
+                }
+
+                minInput.addEventListener('input', () => { clampThumbs('min'); refresh(); });
+                maxInput.addEventListener('input', () => { clampThumbs('max'); refresh(); });
+                minInput.addEventListener('change', applyToFilter);
+                maxInput.addEventListener('change', applyToFilter);
+
+                function setValues(loVal, hiVal) {
+                    minInput.value = (loVal == null) ? lowEnd : Math.max(lowEnd, Math.min(highEnd, loVal));
+                    maxInput.value = (hiVal == null) ? highEnd : Math.max(lowEnd, Math.min(highEnd, hiVal));
+                    refresh();
+                }
+
+                rangeSliders[name] = {
+                    widget, minInput, maxInput, refresh, setValues,
+                    lowEnd, highEnd, step, keys
+                };
+
+                refresh();
+            }
+
+            document.querySelectorAll('.range-slider-widget').forEach(setupRangeSlider);
+
+            // Tempo presets (now drive the tempo slider directly)
+            document.querySelectorAll('.preset-btn[data-tempo]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const [min, max] = btn.dataset.tempo.split(',').map(parseFloat);
+                    const slider = rangeSliders.tempo;
+                    if (!slider) return;
+                    slider.setValues(min, max);
+                    filterManager.setFilter('tempoMin', min <= slider.lowEnd ? null : min);
+                    filterManager.setFilter('tempoMax', max >= slider.highEnd ? null : max);
                 });
             });
 
-            instrumentMode.addEventListener('change', () => {
-                filterManager.setFilter('instrumentMode', instrumentMode.value);
+            // ==================== STATUT DE JEU (segmented control) ====================
+            // Maps a high-level "playable / not playable" choice to routingStatuses.
+            const playableStatusGroups = {
+                playable:   ['playable', 'auto_assigned'],
+                unplayable: ['unrouted', 'partial', 'routed_incomplete']
+            };
+
+            function applyPlayableStatus(value) {
+                let statuses = [];
+                if (value === 'playable') statuses = playableStatusGroups.playable.slice();
+                else if (value === 'unplayable') statuses = playableStatusGroups.unplayable.slice();
+                filterManager.setFilter('routingStatuses', statuses);
+                filterManager.setFilter('routingStatus', null);
+                filterManager.setFilter('hasRouting', null);
+                // Sync the detailed checkboxes
+                document.querySelectorAll('.filter-routing-status').forEach(cb => {
+                    cb.checked = statuses.includes(cb.value);
+                });
+            }
+
+            document.querySelectorAll('input[name="playableStatus"]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    if (radio.checked) applyPlayableStatus(radio.value);
+                });
             });
 
             // GM Categories filter (chip-based UI)
@@ -12439,16 +12734,32 @@
                 filterManager.setFilter('gmMode', gmModeSelect.value);
             });
 
-            // Routing status filter (checkboxes with color indicators)
+            // Detailed routing status checkboxes (advanced section).
+            // Editing these takes precedence over the segmented control above.
             const routingStatusCheckboxes = document.querySelectorAll('.filter-routing-status');
+            function syncSegmentedFromCheckboxes() {
+                const checked = Array.from(routingStatusCheckboxes).filter(cb => cb.checked).map(cb => cb.value).sort();
+                const eq = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+                const playableSorted = playableStatusGroups.playable.slice().sort();
+                const unplayableSorted = playableStatusGroups.unplayable.slice().sort();
+                let next;
+                if (checked.length === 0) next = 'all';
+                else if (eq(checked, playableSorted)) next = 'playable';
+                else if (eq(checked, unplayableSorted)) next = 'unplayable';
+                else next = null; // custom selection — uncheck all radios
+                document.querySelectorAll('input[name="playableStatus"]').forEach(r => {
+                    r.checked = (next !== null && r.value === next);
+                });
+            }
             routingStatusCheckboxes.forEach(checkbox => {
                 checkbox.addEventListener('change', () => {
                     const checked = Array.from(routingStatusCheckboxes)
                         .filter(cb => cb.checked)
                         .map(cb => cb.value);
-                    filterManager.setFilter('routingStatuses', checked.length > 0 ? checked : []);
+                    filterManager.setFilter('routingStatuses', checked);
                     filterManager.setFilter('routingStatus', null);
                     filterManager.setFilter('hasRouting', null);
+                    syncSegmentedFromCheckboxes();
                 });
             });
 
@@ -12539,15 +12850,8 @@
 
             // Reset filters button
             resetFiltersBtn.addEventListener('click', async () => {
-                // Reset all inputs
-                durationMin.value = '';
-                durationMax.value = '';
-                tempoMin.value = '';
-                tempoMax.value = '';
-                channelCountMin.value = '';
-                channelCountMax.value = '';
-                instrumentCheckboxes.forEach(cb => cb.checked = false);
-                instrumentMode.value = 'ANY';
+                // Reset range sliders to extremes
+                Object.values(rangeSliders).forEach(s => s.setValues(null, null));
                 // Reset GM chips
                 gmChipContainer.querySelectorAll('.gm-chip.active').forEach(c => {
                     c.classList.remove('active');
@@ -12555,9 +12859,13 @@
                 });
                 gmClearAll.style.display = 'none';
                 gmModeSelect.value = 'ANY';
+                // Reset routing
                 routingStatusCheckboxes.forEach(cb => cb.checked = false);
+                document.getElementById('playableStatusAll').checked = true;
+                // Reset playable-on-instruments
                 playableInstrumentsSelect.selectedIndex = -1;
                 playableModeSelect.value = 'routed';
+                // File type
                 document.querySelector('input[name="isOriginal"][value="all"]').checked = true;
 
                 // Reset filter manager
@@ -12635,11 +12943,23 @@
         }
 
         // Section badge counter (hoisted from initAdvancedFilters so removeFilter can access it)
+        // Only the collapsible advanced sections need badges; main filters stay always visible.
         const sectionFilterKeys = {
             properties: ['durationMin', 'durationMax', 'tempoMin', 'tempoMax', 'channelCountMin', 'channelCountMax', 'isOriginal'],
-            instruments: ['instrumentTypes', 'hasDrums', 'hasMelody', 'hasBass', 'gmCategories'],
-            routing: ['routingStatuses', 'playableOnInstruments']
+            routing: ['routingStatuses']
         };
+
+        // Helper: reset a range slider widget's UI (thumbs to extremes, redraw fill/readout)
+        function resetRangeSliderUI(name) {
+            const widget = document.querySelector(`.range-slider-widget[data-range="${name}"]`);
+            if (!widget) return;
+            const minIn = widget.querySelector('.range-slider-thumb-min');
+            const maxIn = widget.querySelector('.range-slider-thumb-max');
+            if (!minIn || !maxIn) return;
+            minIn.value = widget.dataset.min;
+            maxIn.value = widget.dataset.max;
+            minIn.dispatchEvent(new Event('input', { bubbles: true }));
+        }
 
         function updateSectionBadges() {
             if (!filterManager) return;
@@ -12733,36 +13053,24 @@
             try {
             // Reset the corresponding input (use safe access — panel may not be open)
             if (key === 'durationMin' || key === 'durationMax') {
-                const durMinEl = document.getElementById('filterDurationMin');
-                const durMaxEl = document.getElementById('filterDurationMax');
-                if (durMinEl) durMinEl.value = '';
-                if (durMaxEl) durMaxEl.value = '';
+                resetRangeSliderUI('duration');
                 filterManager.setFilter('durationMin', null);
                 filterManager.setFilter('durationMax', null);
             } else if (key === 'tempoMin' || key === 'tempoMax') {
-                const tempoMinEl = document.getElementById('filterTempoMin');
-                const tempoMaxEl = document.getElementById('filterTempoMax');
-                if (tempoMinEl) tempoMinEl.value = '';
-                if (tempoMaxEl) tempoMaxEl.value = '';
+                resetRangeSliderUI('tempo');
                 filterManager.setFilter('tempoMin', null);
                 filterManager.setFilter('tempoMax', null);
             } else if (key === 'channelCountMin' || key === 'channelCountMax') {
-                const chMinEl = document.getElementById('filterChannelCountMin');
-                const chMaxEl = document.getElementById('filterChannelCountMax');
-                if (chMinEl) chMinEl.value = '';
-                if (chMaxEl) chMaxEl.value = '';
+                resetRangeSliderUI('channels');
                 filterManager.setFilter('channelCountMin', null);
                 filterManager.setFilter('channelCountMax', null);
             } else if (key === 'tracksMin' || key === 'tracksMax') {
                 filterManager.setFilter('tracksMin', null);
                 filterManager.setFilter('tracksMax', null);
             } else if (key === 'instrumentTypes') {
-                document.querySelectorAll('.filter-instrument').forEach(cb => cb.checked = false);
+                // The dedicated "Instrument types" UI was removed; just clear stale state.
                 filterManager.setFilter('instrumentTypes', []);
                 filterManager.setFilter('instrumentMode', 'ANY');
-                const instrumentModeSelect = document.getElementById('filterInstrumentMode');
-                if (instrumentModeSelect) instrumentModeSelect.value = 'ANY';
-                // Also clear synced quick-filter keys
                 filterManager.setFilter('hasDrums', null);
                 filterManager.setFilter('hasMelody', null);
                 filterManager.setFilter('hasBass', null);
@@ -12779,6 +13087,8 @@
                 filterManager.setFilter('gmMode', 'ANY');
             } else if (key === 'hasRouting' || key === 'routingStatus' || key === 'routingStatuses') {
                 document.querySelectorAll('.filter-routing-status').forEach(cb => cb.checked = false);
+                const allRadio = document.getElementById('playableStatusAll');
+                if (allRadio) allRadio.checked = true;
                 filterManager.setFilter('routingStatuses', []);
                 filterManager.setFilter('routingStatus', null);
                 filterManager.setFilter('hasRouting', null);
@@ -12804,25 +13114,12 @@
                 const originalRadio = document.querySelector('input[name="isOriginal"][value="all"]');
                 if (originalRadio) originalRadio.checked = true;
                 filterManager.setFilter('isOriginal', null);
-            } else if (key === 'hasDrums') {
-                const drumsCheckbox = document.querySelector('.filter-instrument[value="Drums"]');
-                if (drumsCheckbox) drumsCheckbox.checked = false;
-                filterManager.setFilter('hasDrums', null);
-                // Also remove from instrumentTypes
-                const types1 = (filterManager.getFilter('instrumentTypes') || []).filter(t => t !== 'Drums');
-                filterManager.setFilter('instrumentTypes', types1);
-            } else if (key === 'hasMelody') {
-                const melodyCheckbox = document.querySelector('.filter-instrument[value="Melody"]');
-                if (melodyCheckbox) melodyCheckbox.checked = false;
-                filterManager.setFilter('hasMelody', null);
-                const types2 = (filterManager.getFilter('instrumentTypes') || []).filter(t => t !== 'Melody');
-                filterManager.setFilter('instrumentTypes', types2);
-            } else if (key === 'hasBass') {
-                const bassCheckbox = document.querySelector('.filter-instrument[value="Bass"]');
-                if (bassCheckbox) bassCheckbox.checked = false;
-                filterManager.setFilter('hasBass', null);
-                const types3 = (filterManager.getFilter('instrumentTypes') || []).filter(t => t !== 'Bass');
-                filterManager.setFilter('instrumentTypes', types3);
+            } else if (key === 'hasDrums' || key === 'hasMelody' || key === 'hasBass') {
+                // Legacy quick filters — UI removed; just clear stale state.
+                filterManager.setFilter(key, null);
+                const stillSet = (filterManager.getFilter('instrumentTypes') || [])
+                    .filter(t => t !== (key === 'hasDrums' ? 'Drums' : key === 'hasMelody' ? 'Melody' : 'Bass'));
+                filterManager.setFilter('instrumentTypes', stillSet);
             } else if (key === 'folder') {
                 filterManager.resetFilter('folder');
                 filterManager.setFilter('includeSubfolders', false);

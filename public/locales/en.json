@@ -1074,7 +1074,18 @@
         "labelGmPrograms": "GM Programs: {value}",
         "labelDate": "Date: {from} - {to}",
         "noInstrumentsFound": "No instruments found",
-        "loadError": "Loading error"
+        "loadError": "Loading error",
+        "playabilityLabel": "Play status",
+        "playabilityAll": "All",
+        "playabilityPlayable": "Playable",
+        "playabilityUnplayable": "Not playable",
+        "instrumentFamilies": "Instrument families",
+        "channelCount": "Number of channels",
+        "sectionProperties": "File properties",
+        "sectionRoutingDetail": "Detailed routing",
+        "routingDetailHint": "These options replace the Play status above.",
+        "rangeAny": "Any",
+        "clearAll": "Clear all"
     },
     "pianoRoll": {
         "title": "Upcoming Notes",
