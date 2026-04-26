@@ -115,10 +115,21 @@
                             title="${_t('handPositionEditor.zoomIn', 'Zoom')}">+</button>
                     <button type="button" data-action="reset-scroll"
                             title="${_t('handPositionEditor.gotoStart', 'Retour au début')}">⏮</button>
+                    <span class="hpe-sep"></span>
+                    <button type="button" data-action="prev-problem"
+                            title="${_t('handPositionEditor.prevProblem', 'Problème précédent')}">◄!</button>
+                    <button type="button" data-action="next-problem"
+                            title="${_t('handPositionEditor.nextProblem', 'Problème suivant')}">!►</button>
+                    <span class="hpe-problem-count" data-role="problem-count"></span>
                     <label class="hpe-follow"
                            title="${_t('handPositionEditor.followTitle', 'Suivre le curseur de lecture')}">
                         <input type="checkbox" data-role="follow" checked />
                         ${_t('handPositionEditor.follow', 'Suivre')}
+                    </label>
+                    <label class="hpe-follow"
+                           title="${_t('handPositionEditor.showFingerRangeTitle', 'Afficher la plage globale d’extension d’un doigt')}">
+                        <input type="checkbox" data-role="finger-range" />
+                        ${_t('handPositionEditor.showFingerRange', 'Plage de doigt')}
                     </label>
                     <span class="hpe-spacer"></span>
                     <span class="hpe-time" data-role="time">0:00 / 0:00</span>
@@ -132,6 +143,7 @@
                     <button type="button" data-action="save" disabled
                             title="${_t('handPositionEditor.saveClean', 'Aucune modification')}">${_t('handPositionEditor.save', 'Enregistrer')}</button>
                 </div>
+                <div class="hpe-minimap-host"></div>
                 <div class="hpe-main">
                     <div class="hpe-sticky-host"></div>
                     <div class="hpe-timeline-host"></div>
@@ -156,6 +168,7 @@
             // Inject minimal styles once. Avoids a build-time CSS dep
             // for this PR; later PRs can move this into a stylesheet.
             this._injectStyles();
+            this._mountMinimap();
             this._mountSticky();
             this._mountTimeline();
             this._wireToolbar();
@@ -190,6 +203,8 @@
             }
             this._tickHandler = null;
             this._chordHandler = null;
+            this.minimap?.destroy();
+            this.minimap = null;
             this.sticky?.destroy();
             this.sticky = null;
             this.timeline?.destroy();
@@ -210,6 +225,23 @@
         //  Mount helpers
         // ----------------------------------------------------------------
 
+        _mountMinimap() {
+            const host = this.$('.hpe-minimap-host');
+            if (!host || !window.HandEditorMinimap) return;
+            const canvas = document.createElement('canvas');
+            canvas.className = 'hpe-minimap-canvas';
+            canvas.style.cssText = 'width:100%;height:100%;display:block;';
+            host.appendChild(canvas);
+            this.minimap = new window.HandEditorMinimap(canvas, {
+                totalSec: this._totalSec,
+                ticksPerSec: this.ticksPerSec,
+                numFrets: this.instrument?.num_frets || 24,
+                onSeek: (sec) => this._seekToSec(sec),
+                onScrollViewport: (sec) => this.timeline?.setScrollSec(sec)
+            });
+            this.minimap.draw();
+        }
+
         _mountSticky() {
             const host = this.$('.hpe-sticky-host');
             if (!host) return;
@@ -219,16 +251,28 @@
             host.appendChild(canvas);
 
             const fretting = _frettingHand(this.instrument);
+            const mechanism = this._resolveMechanism();
             this.sticky = new window.VerticalFretboardPreview(canvas, {
                 tuning: this.instrument?.tuning || [40, 45, 50, 55, 59, 64],
                 numFrets: this.instrument?.num_frets || 24,
                 scaleLengthMm: this.instrument?.scale_length_mm,
                 handSpanMm: fretting.hand_span_mm,
                 handSpanFrets: fretting.hand_span_frets || 4,
+                mechanism,
+                maxFingers: fretting.max_fingers,
                 handId: fretting.id || FRETTING_HAND_ID,
                 onBandDrag: (handId, anchor) => this._onStickyBandDrag(handId, anchor)
             });
             this.sticky.draw();
+        }
+
+        /** Pull the configured mechanism out of the parsed hands_config. */
+        _resolveMechanism() {
+            let cfg = this.instrument?.hands_config;
+            if (typeof cfg === 'string') {
+                try { cfg = JSON.parse(cfg); } catch (_) { return null; }
+            }
+            return cfg?.mechanism || null;
         }
 
         _mountTimeline() {
@@ -249,7 +293,9 @@
                 ticksPerSec: this.ticksPerSec,
                 totalSec: this._totalSec,
                 onSeek: (sec) => this._seekToSec(sec),
-                onNoteClick: (hit, evt) => this._openNoteEditPopover(hit, evt)
+                onNoteClick: (hit, evt) => this._openNoteEditPopover(hit, evt),
+                onViewportChange: (scrollSec, viewportSec) =>
+                    this.minimap?.setViewport(scrollSec, viewportSec)
             });
             this.timeline.draw();
         }
@@ -388,12 +434,16 @@
                     case 'redo': this._redo(); return;
                     case 'reset-overrides': this._resetOverrides(); return;
                     case 'save': this._save(); return;
+                    case 'prev-problem': this._jumpToProblem(-1); return;
+                    case 'next-problem': this._jumpToProblem(+1); return;
                 }
             });
-            // Follow toggle.
             root.addEventListener('change', (e) => {
-                if (e.target?.dataset?.role === 'follow') {
+                const role = e.target?.dataset?.role;
+                if (role === 'follow') {
                     this._followPlayhead = !!e.target.checked;
+                } else if (role === 'finger-range') {
+                    this.sticky?.setShowFingerRange(!!e.target.checked);
                 }
             });
             // Keyboard shortcuts. Bound on document so the modal's focus
@@ -538,6 +588,69 @@
             this._scheduleEngineRebuild();
         }
 
+        /**
+         * Collect every chord with at least one unplayable note, plus
+         * every shift whose motion isn't feasible. Sorted by ascending
+         * second so prev/next can step through them with simple
+         * binary searches.
+         */
+        _buildProblemList(timeline) {
+            const tps = this.ticksPerSec;
+            const problems = [];
+            for (const ev of timeline) {
+                if (ev.type === 'chord'
+                        && Array.isArray(ev.unplayable)
+                        && ev.unplayable.length > 0) {
+                    problems.push({ sec: ev.tick / tps, kind: 'chord' });
+                } else if (ev.type === 'shift'
+                        && ev.motion && ev.motion.feasible === false) {
+                    problems.push({ sec: ev.tick / tps, kind: 'speed' });
+                }
+            }
+            problems.sort((a, b) => a.sec - b.sec);
+            this._problems = problems;
+            this._refreshProblemUI();
+        }
+
+        _refreshProblemUI() {
+            const total = this._problems?.length || 0;
+            const prevBtn = this.$('[data-action="prev-problem"]');
+            const nextBtn = this.$('[data-action="next-problem"]');
+            const counter = this.$('[data-role="problem-count"]');
+            if (prevBtn) prevBtn.disabled = total === 0;
+            if (nextBtn) nextBtn.disabled = total === 0;
+            if (counter) counter.textContent = total > 0 ? `${total}` : '';
+        }
+
+        _jumpToProblem(direction) {
+            const list = this._problems || [];
+            if (list.length === 0) return;
+            const currentSec = this.engine?.currentSec ? this.engine.currentSec() : 0;
+            // EPSILON — when the playhead is exactly on a problem,
+            // "next" should still advance past it instead of looping
+            // back to the same one.
+            const EPS = 0.05;
+            let idx;
+            if (direction > 0) {
+                idx = list.findIndex(p => p.sec > currentSec + EPS);
+                if (idx < 0) idx = 0; // wrap to first
+            } else {
+                idx = -1;
+                for (let i = list.length - 1; i >= 0; i--) {
+                    if (list[i].sec < currentSec - EPS) { idx = i; break; }
+                }
+                if (idx < 0) idx = list.length - 1; // wrap to last
+            }
+            const target = list[idx];
+            this._seekToSec(target.sec);
+            // Center the timeline on the problem so the operator
+            // immediately sees the surrounding context.
+            if (this.timeline) {
+                const span = this.timeline._viewportSec();
+                this.timeline.setScrollSec(target.sec - span / 2);
+            }
+        }
+
         async _save() {
             const apiClient = this.apiClient;
             if (!apiClient || typeof apiClient.sendCommand !== 'function') {
@@ -626,11 +739,15 @@
                 overrides: this.overrides
             });
 
-            this.timeline?.setTimeline(this.engine.getTimeline());
+            const timeline = this.engine.getTimeline();
+            this.timeline?.setTimeline(timeline);
+            this.minimap?.setTimeline(timeline);
+            this._buildProblemList(timeline);
             const trajectories = this.engine.getHandTrajectories();
             const fretting = _frettingHand(this.instrument);
             const traj = trajectories.get(fretting.id) || [];
             this.timeline?.setTrajectory(traj);
+            this.minimap?.setTrajectory(traj);
             // Push the same trajectory into the sticky aperçu so its
             // band animates with the playhead just like the existing
             // HandsPreviewPanel does.
@@ -656,8 +773,15 @@
             };
             this._tickHandler = (e) => {
                 const detail = e.detail || {};
-                if (this.sticky?.setCurrentTime) this.sticky.setCurrentTime(detail.currentSec);
-                if (this.timeline?.setPlayhead) this.timeline.setPlayhead(detail.currentSec);
+                this.sticky?.setCurrentTime(detail.currentSec);
+                this.timeline?.setPlayhead(detail.currentSec);
+                this.minimap?.setPlayhead(detail.currentSec);
+                if (this.timeline && this.minimap) {
+                    this.minimap.setViewport(
+                        this.timeline.scrollSec,
+                        this.timeline._viewportSec()
+                    );
+                }
                 this._refreshTimeDisplay(detail.currentSec);
             };
             this.engine.addEventListener('chord', this._chordHandler);
@@ -778,6 +902,11 @@
                     text-decoration: underline; padding: 0;
                 }
                 .hpe-popover-clear:hover { color: #b91c1c; }
+                .hpe-minimap-host {
+                    height: 48px; flex-shrink: 0;
+                    border-bottom: 1px solid #e5e7eb;
+                    background: #f3f4f6;
+                }
                 .hpe-main {
                     flex: 1; display: flex; flex-direction: row;
                     overflow: hidden; min-height: 0;

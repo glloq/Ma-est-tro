@@ -33,6 +33,13 @@
             this.numFrets = Number.isFinite(opts.numFrets) && opts.numFrets > 0 ? opts.numFrets : 24;
             this.handSpanFrets = Number.isFinite(opts.handSpanFrets) && opts.handSpanFrets > 0
                 ? opts.handSpanFrets : 4;
+            // Mechanism + max_fingers drive the per-finger reach
+            // rectangle. Both can be undefined for non-fretted setups
+            // — the renderer simply skips drawing the rectangle then.
+            this.mechanism = typeof opts.mechanism === 'string' ? opts.mechanism : null;
+            this.maxFingers = Number.isFinite(opts.maxFingers) && opts.maxFingers > 0
+                ? opts.maxFingers : 4;
+            this.showFingerRange = !!opts.showFingerRange;
             // Constant-mm band geometry — see FretboardHandPreview.
             this.scaleLengthMm = Number.isFinite(opts.scaleLengthMm) && opts.scaleLengthMm > 0
                 ? opts.scaleLengthMm : 648;
@@ -116,6 +123,13 @@
 
         setLevel(level) {
             this._level = ['ok', 'warning', 'infeasible'].includes(level) ? level : 'ok';
+            this.draw();
+        }
+
+        setShowFingerRange(show) {
+            const next = !!show;
+            if (this.showFingerRange === next) return;
+            this.showFingerRange = next;
             this.draw();
         }
 
@@ -259,6 +273,9 @@
             const liveAnchor = this._currentDisplayedAnchor();
             if (Number.isFinite(liveAnchor)) {
                 this._drawHandBand(fbX, fbW, liveAnchor);
+                if (this.showFingerRange) {
+                    this._drawFingerRange(fbX, fbW, liveAnchor);
+                }
             }
 
             const infeasible = this._currentMotionTransition();
@@ -297,6 +314,60 @@
             ctx.setLineDash([4, 3]);
             ctx.strokeRect(xLeft, y0, bandW, y1 - y0);
             ctx.setLineDash([]);
+        }
+
+        /**
+         * A small dashed rectangle inside the hand band representing
+         * the global per-finger reach — its orientation depends on
+         * the chosen mechanism:
+         *   - `string_sliding_fingers`: each finger is locked to a
+         *     string and slides along the frets. The rectangle is
+         *     thus VERTICAL (along Y, the neck axis), height =
+         *     `handSpanMm / max_fingers`.
+         *   - `fret_sliding_fingers`: each finger is locked to a
+         *     fret offset and slides across strings. The rectangle
+         *     is HORIZONTAL (along X, across strings), width = the
+         *     mean inter-string distance.
+         * The rectangle is centered inside the band so the operator
+         * can see the relative reach at a glance.
+         */
+        _drawFingerRange(fbX, fbW, anchor) {
+            if (!this.mechanism) return;
+            const { y0, y1 } = this._handWindowY(anchor);
+            if (!Number.isFinite(y0) || !Number.isFinite(y1)) return;
+            const ctx = this.ctx;
+            const cx = fbX + fbW / 2;
+            const cy = (y0 + y1) / 2;
+            ctx.save();
+            ctx.strokeStyle = 'rgba(37, 99, 235, 0.8)';
+            ctx.fillStyle = 'rgba(37, 99, 235, 0.10)';
+            ctx.lineWidth = 1.2;
+            ctx.setLineDash([4, 3]);
+            if (this.mechanism === 'string_sliding_fingers') {
+                // Each finger covers `handSpanMm / max_fingers` of the
+                // neck. Convert to pixels via a fret-formula projection
+                // around the anchor.
+                const totalDistMm = this.scaleLengthMm
+                    * (1 - Math.pow(2, -this.numFrets / 12));
+                const usableH = this._usableHeight();
+                const fingerHeightPx = (this.handSpanMm / Math.max(1, this.maxFingers))
+                    * (usableH / totalDistMm);
+                const rectW = Math.min(fbW * 0.6, 22);
+                ctx.fillRect(cx - rectW / 2, cy - fingerHeightPx / 2, rectW, fingerHeightPx);
+                ctx.strokeRect(cx - rectW / 2, cy - fingerHeightPx / 2, rectW, fingerHeightPx);
+            } else if (this.mechanism === 'fret_sliding_fingers') {
+                // Mean inter-string pixel distance × ~1 to bracket the
+                // reach across one string slot.
+                const stringStep = this.numStrings > 1
+                    ? fbW / (this.numStrings - 1)
+                    : fbW * 0.6;
+                const rectW = Math.min(fbW * 0.85, stringStep * 1.2);
+                const rectH = Math.min(y1 - y0, 16);
+                ctx.fillRect(cx - rectW / 2, cy - rectH / 2, rectW, rectH);
+                ctx.strokeRect(cx - rectW / 2, cy - rectH / 2, rectW, rectH);
+            }
+            ctx.setLineDash([]);
+            ctx.restore();
         }
 
         _drawInfeasibleMotionCurve(fbX, fbW, prevAnchor, nextAnchor) {

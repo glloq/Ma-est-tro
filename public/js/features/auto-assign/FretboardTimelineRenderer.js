@@ -81,6 +81,8 @@
 
             this.onSeek = typeof opts.onSeek === 'function' ? opts.onSeek : null;
             this.onNoteClick = typeof opts.onNoteClick === 'function' ? opts.onNoteClick : null;
+            this.onViewportChange = typeof opts.onViewportChange === 'function'
+                ? opts.onViewportChange : null;
             this._noteHits = [];
 
             this._dirty = true;
@@ -141,6 +143,7 @@
             if (next === this.scrollSec) return;
             this.scrollSec = next;
             this._scheduleDraw();
+            this.onViewportChange?.(this.scrollSec, this._viewportSec());
         }
 
         setPxPerSec(px) {
@@ -155,6 +158,7 @@
             const max = Math.max(0, this.totalSec - this._viewportSec());
             this.scrollSec = Math.max(0, Math.min(max, newScroll));
             this._scheduleDraw();
+            this.onViewportChange?.(this.scrollSec, this._viewportSec());
         }
 
         setTotalSec(totalSec) {
