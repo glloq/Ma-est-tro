@@ -1516,6 +1516,7 @@
             transition: all 0.3s ease;
             min-width: 120px;
             box-sizing: border-box;
+            margin-bottom: 0;
         }
 
         .sort-select:focus {
@@ -2921,6 +2922,11 @@
                 flex: 0 0 auto;
                 min-width: 44px;
                 padding: 4px 10px;
+                justify-content: center;
+            }
+            .file-toolbar-main-row .upload-drop-zone-content {
+                justify-content: center;
+                width: auto;
             }
             .file-toolbar-main-row .upload-drop-zone-text {
                 display: none;
@@ -4250,19 +4256,19 @@
         .upload-drop-zone {
             border: 2px dashed #d1d5db;
             border-radius: 8px;
-            padding: 4px 12px;
-            text-align: center;
+            padding: 3px 10px;
+            text-align: left;
             cursor: pointer;
             transition: all 0.25s ease;
             background: #f9fafb;
-            flex: 1 1 200px;
-            min-width: 140px;
+            flex: 1 1 220px;
+            min-width: 160px;
             max-width: 320px;
-            height: 36px;
+            height: 40px;
             box-sizing: border-box;
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
         }
 
         .upload-drop-zone:hover {
@@ -4295,18 +4301,34 @@
         .upload-drop-zone-content {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
+            justify-content: flex-start;
+            gap: 10px;
+            width: 100%;
+            min-width: 0;
         }
 
         .upload-drop-zone-icon {
-            font-size: 20px;
+            font-size: 22px;
             line-height: 1;
+            flex-shrink: 0;
         }
 
         .upload-drop-zone-text {
-            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            font-size: 11px;
+            line-height: 1.2;
             color: #666;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .upload-drop-zone-text > span,
+        .upload-drop-zone-text > strong {
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .upload-drop-zone-text strong {
