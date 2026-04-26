@@ -36,12 +36,21 @@
             this.canvas = canvas;
             this.ctx = canvas.getContext('2d');
             this.numFrets = Number.isFinite(opts.numFrets) && opts.numFrets > 0 ? opts.numFrets : 24;
-            this.scaleLengthMm = Number.isFinite(opts.scaleLengthMm) && opts.scaleLengthMm > 0
-                ? opts.scaleLengthMm : null;
-            this.handSpanMm = Number.isFinite(opts.handSpanMm) && opts.handSpanMm > 0
-                ? opts.handSpanMm : null;
             this.handSpanFrets = Number.isFinite(opts.handSpanFrets) && opts.handSpanFrets > 0
                 ? opts.handSpanFrets : 4;
+            // Constant-mm band geometry — see FretboardHandPreview for
+            // the rationale and default-derivation strategy.
+            this.scaleLengthMm = Number.isFinite(opts.scaleLengthMm) && opts.scaleLengthMm > 0
+                ? opts.scaleLengthMm : 648;
+            if (Number.isFinite(opts.handSpanMm) && opts.handSpanMm > 0) {
+                this.handSpanMm = opts.handSpanMm;
+            } else {
+                const refFret = Math.max(1, Math.round(this.numFrets * 0.25));
+                const startMm = this.scaleLengthMm * (1 - Math.pow(2, -refFret / 12));
+                const endMm = this.scaleLengthMm
+                    * (1 - Math.pow(2, -(refFret + this.handSpanFrets) / 12));
+                this.handSpanMm = Math.max(1, endMm - startMm);
+            }
             this.windowSeconds = Math.max(2, Math.min(8,
                 Number.isFinite(opts.windowSeconds) ? opts.windowSeconds : 4));
 
@@ -122,22 +131,16 @@
         // one fret to the left of the playability range).
         _handWindowX(anchorFret) {
             const safeAnchor = Math.max(0, anchorFret);
-            let x0, x1;
-            if (this.scaleLengthMm && this.handSpanMm) {
-                const anchorMm = this.scaleLengthMm * (1 - Math.pow(2, -safeAnchor / 12));
-                // Same finger-before-fret offset as FretboardHandPreview so
-                // the lookahead trapezoids line up with the live band.
-                const leftMm = Math.max(0, anchorMm - FINGER_BEFORE_FRET_MM);
-                x0 = this._xFromMm(leftMm);
-                const rightMm = leftMm + this.handSpanMm;
-                const totalDistMm = this.scaleLengthMm * (1 - Math.pow(2, -this.numFrets / 12));
-                x1 = rightMm >= totalDistMm
-                    ? this._fretX(this.numFrets)
-                    : this._xFromMm(rightMm);
-            } else {
-                x0 = this._fretX(safeAnchor);
-                x1 = this._fretX(Math.min(this.numFrets, safeAnchor + this.handSpanFrets));
-            }
+            const anchorMm = this.scaleLengthMm * (1 - Math.pow(2, -safeAnchor / 12));
+            // Same finger-before-fret offset as FretboardHandPreview so
+            // the lookahead trapezoids line up with the live band.
+            const leftMm = Math.max(0, anchorMm - FINGER_BEFORE_FRET_MM);
+            const x0 = this._xFromMm(leftMm);
+            const rightMm = leftMm + this.handSpanMm;
+            const totalDistMm = this.scaleLengthMm * (1 - Math.pow(2, -this.numFrets / 12));
+            const x1 = rightMm >= totalDistMm
+                ? this._fretX(this.numFrets)
+                : this._xFromMm(rightMm);
             return { x0, x1 };
         }
 

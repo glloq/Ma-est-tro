@@ -61,13 +61,17 @@ beforeAll(() => {
     setPlayhead() {}
     setPxPerSec() {}
     setScrollSec() {}
+    setViewport() {}
+    setShowFingerRange() {}
     draw() {}
     destroy() {}
     get pxPerSec() { return 80; }
+    get scrollSec() { return 0; }
     _viewportSec() { return 5; }
   }
-  window.FretboardHandPreview = NoopWidget;
+  window.VerticalFretboardPreview = NoopWidget;
   window.FretboardTimelineRenderer = NoopWidget;
+  window.HandEditorMinimap = NoopWidget;
 
   // Lightweight engine stub — emits no events but exposes the few
   // methods the modal calls.
@@ -214,5 +218,63 @@ describe('HandPositionEditorModal — history layer', () => {
     expect(m.overrides.hand_anchors).toEqual([]);
     expect(m.overrides.disabled_notes).toEqual([]);
     expect(m.overrides.note_assignments).toEqual([]);
+  });
+});
+
+describe('HandPositionEditorModal — problem navigation', () => {
+  it('builds a sorted problem list from chord + shift events', () => {
+    const m = makeModal();
+    m._refreshProblemUI = () => {};
+    // Default ticksPerSec = ticksPerBeat (480) × bpm/60 (120/60 = 2) = 960
+    m._buildProblemList([
+      { type: 'chord', tick: 960,  unplayable: [{ note: 60, reason: 'outside_window' }] },
+      { type: 'shift', tick: 480,  motion: { feasible: false, requiredSec: 1, availableSec: 0.2 } },
+      { type: 'chord', tick: 0,    unplayable: [] }, // no problem → skipped
+      { type: 'chord', tick: 1920, unplayable: [{ note: 64, reason: 'too_many_fingers' }] }
+    ]);
+    expect(m._problems.map(p => p.kind)).toEqual(['speed', 'chord', 'chord']);
+    expect(m._problems.map(p => p.sec.toFixed(1))).toEqual(['0.5', '1.0', '2.0']);
+  });
+
+  it('next-problem jumps forward; wraps to the first when past the end', () => {
+    const m = makeModal();
+    let seekedTo = null;
+    m._refreshProblemUI = () => {};
+    m._seekToSec = (s) => { seekedTo = s; };
+    m.engine = { currentSec: () => 1.5 };
+    m.timeline = null;
+    m._problems = [
+      { sec: 0.5, kind: 'speed' },
+      { sec: 1.0, kind: 'chord' },
+      { sec: 2.0, kind: 'chord' }
+    ];
+    m._jumpToProblem(+1);
+    expect(seekedTo).toBeCloseTo(2.0, 5);
+    // Past the last problem → wrap to the first.
+    seekedTo = null;
+    m.engine = { currentSec: () => 5.0 };
+    m._jumpToProblem(+1);
+    expect(seekedTo).toBeCloseTo(0.5, 5);
+  });
+
+  it('prev-problem jumps backward; wraps to the last when before the start', () => {
+    const m = makeModal();
+    let seekedTo = null;
+    m._refreshProblemUI = () => {};
+    m._seekToSec = (s) => { seekedTo = s; };
+    m.engine = { currentSec: () => 1.5 };
+    m.timeline = null;
+    m._problems = [
+      { sec: 0.5, kind: 'speed' },
+      { sec: 1.0, kind: 'chord' },
+      { sec: 2.0, kind: 'chord' }
+    ];
+    m._jumpToProblem(-1);
+    expect(seekedTo).toBeCloseTo(1.0, 5);
+    // Before the first problem → wrap to the last.
+    seekedTo = null;
+    m.engine = { currentSec: () => 0 };
+    m._jumpToProblem(-1);
+    expect(seekedTo).toBeCloseTo(2.0, 5);
   });
 });
