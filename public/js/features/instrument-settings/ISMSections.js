@@ -1044,47 +1044,48 @@
     const KEYBOARD_MECHANISM_SVG = {
         aligned_fingers: `
             <svg viewBox="0 0 120 80" class="ism-mech-svg" aria-hidden="true">
-                <rect x="5" y="22" width="110" height="42" fill="#fafafa" stroke="#9ca3af" stroke-width="1"/>
-                <line x1="20" y1="22" x2="20" y2="64" stroke="#9ca3af" stroke-width="0.7"/>
-                <line x1="35" y1="22" x2="35" y2="64" stroke="#9ca3af" stroke-width="0.7"/>
-                <line x1="50" y1="22" x2="50" y2="64" stroke="#9ca3af" stroke-width="0.7"/>
-                <line x1="65" y1="22" x2="65" y2="64" stroke="#9ca3af" stroke-width="0.7"/>
-                <line x1="80" y1="22" x2="80" y2="64" stroke="#9ca3af" stroke-width="0.7"/>
-                <line x1="95" y1="22" x2="95" y2="64" stroke="#9ca3af" stroke-width="0.7"/>
-                <rect x="22" y="22" width="11" height="24" fill="#1f2937"/>
-                <rect x="52" y="22" width="11" height="24" fill="#1f2937"/>
-                <rect x="67" y="22" width="11" height="24" fill="#1f2937"/>
-                <rect x="82" y="22" width="11" height="24" fill="#1f2937"/>
-                <rect x="14" y="14" width="92" height="10" fill="#22c55e" fill-opacity="0.28" stroke="#16a34a" stroke-width="1.5" rx="2"/>
-                <line x1="22" y1="50" x2="22" y2="60" stroke="#15803d" stroke-width="3" stroke-linecap="round"/>
-                <line x1="42" y1="50" x2="42" y2="60" stroke="#15803d" stroke-width="3" stroke-linecap="round"/>
-                <line x1="58" y1="50" x2="58" y2="60" stroke="#15803d" stroke-width="3" stroke-linecap="round"/>
-                <line x1="78" y1="50" x2="78" y2="60" stroke="#15803d" stroke-width="3" stroke-linecap="round"/>
-                <line x1="98" y1="50" x2="98" y2="60" stroke="#15803d" stroke-width="3" stroke-linecap="round"/>
+                <rect x="5" y="8" width="110" height="42" fill="#fafafa" stroke="#9ca3af" stroke-width="1"/>
+                <line x1="20" y1="8" x2="20" y2="50" stroke="#9ca3af" stroke-width="0.7"/>
+                <line x1="35" y1="8" x2="35" y2="50" stroke="#9ca3af" stroke-width="0.7"/>
+                <line x1="50" y1="8" x2="50" y2="50" stroke="#9ca3af" stroke-width="0.7"/>
+                <line x1="65" y1="8" x2="65" y2="50" stroke="#9ca3af" stroke-width="0.7"/>
+                <line x1="80" y1="8" x2="80" y2="50" stroke="#9ca3af" stroke-width="0.7"/>
+                <line x1="95" y1="8" x2="95" y2="50" stroke="#9ca3af" stroke-width="0.7"/>
+                <rect x="22" y="8" width="11" height="24" fill="#1f2937"/>
+                <rect x="52" y="8" width="11" height="24" fill="#1f2937"/>
+                <rect x="67" y="8" width="11" height="24" fill="#1f2937"/>
+                <rect x="82" y="8" width="11" height="24" fill="#1f2937"/>
+                <line x1="22" y1="38" x2="22" y2="58" stroke="#15803d" stroke-width="3" stroke-linecap="round"/>
+                <line x1="42" y1="38" x2="42" y2="58" stroke="#15803d" stroke-width="3" stroke-linecap="round"/>
+                <line x1="58" y1="38" x2="58" y2="58" stroke="#15803d" stroke-width="3" stroke-linecap="round"/>
+                <line x1="78" y1="38" x2="78" y2="58" stroke="#15803d" stroke-width="3" stroke-linecap="round"/>
+                <line x1="98" y1="38" x2="98" y2="58" stroke="#15803d" stroke-width="3" stroke-linecap="round"/>
+                <rect x="14" y="58" width="92" height="10" fill="#22c55e" fill-opacity="0.28" stroke="#16a34a" stroke-width="1.5" rx="2"/>
             </svg>
         `,
         independent_fingers_5: `
             <svg viewBox="0 0 120 80" class="ism-mech-svg" aria-hidden="true">
-                <rect x="5" y="22" width="110" height="42" fill="#fafafa" stroke="#9ca3af" stroke-width="1"/>
-                <line x1="20" y1="22" x2="20" y2="64" stroke="#9ca3af" stroke-width="0.7"/>
-                <line x1="35" y1="22" x2="35" y2="64" stroke="#9ca3af" stroke-width="0.7"/>
-                <line x1="50" y1="22" x2="50" y2="64" stroke="#9ca3af" stroke-width="0.7"/>
-                <line x1="65" y1="22" x2="65" y2="64" stroke="#9ca3af" stroke-width="0.7"/>
-                <line x1="80" y1="22" x2="80" y2="64" stroke="#9ca3af" stroke-width="0.7"/>
-                <line x1="95" y1="22" x2="95" y2="64" stroke="#9ca3af" stroke-width="0.7"/>
-                <rect x="22" y="22" width="11" height="24" fill="#1f2937"/>
-                <rect x="52" y="22" width="11" height="24" fill="#1f2937"/>
-                <rect x="67" y="22" width="11" height="24" fill="#1f2937"/>
-                <line x1="60" y1="6" x2="22" y2="50" stroke="#16a34a" stroke-width="4" stroke-linecap="round"/>
-                <line x1="60" y1="6" x2="42" y2="55" stroke="#16a34a" stroke-width="4" stroke-linecap="round"/>
-                <line x1="60" y1="6" x2="60" y2="58" stroke="#16a34a" stroke-width="4" stroke-linecap="round"/>
-                <line x1="60" y1="6" x2="78" y2="55" stroke="#16a34a" stroke-width="4" stroke-linecap="round"/>
-                <line x1="60" y1="6" x2="98" y2="50" stroke="#16a34a" stroke-width="4" stroke-linecap="round"/>
-                <circle cx="22" cy="50" r="3" fill="#15803d"/>
-                <circle cx="42" cy="55" r="3" fill="#15803d"/>
-                <circle cx="60" cy="58" r="3" fill="#15803d"/>
-                <circle cx="78" cy="55" r="3" fill="#15803d"/>
-                <circle cx="98" cy="50" r="3" fill="#15803d"/>
+                <rect x="5" y="8" width="110" height="42" fill="#fafafa" stroke="#9ca3af" stroke-width="1"/>
+                <line x1="20" y1="8" x2="20" y2="50" stroke="#9ca3af" stroke-width="0.7"/>
+                <line x1="35" y1="8" x2="35" y2="50" stroke="#9ca3af" stroke-width="0.7"/>
+                <line x1="50" y1="8" x2="50" y2="50" stroke="#9ca3af" stroke-width="0.7"/>
+                <line x1="65" y1="8" x2="65" y2="50" stroke="#9ca3af" stroke-width="0.7"/>
+                <line x1="80" y1="8" x2="80" y2="50" stroke="#9ca3af" stroke-width="0.7"/>
+                <line x1="95" y1="8" x2="95" y2="50" stroke="#9ca3af" stroke-width="0.7"/>
+                <rect x="22" y="8" width="11" height="24" fill="#1f2937"/>
+                <rect x="52" y="8" width="11" height="24" fill="#1f2937"/>
+                <rect x="67" y="8" width="11" height="24" fill="#1f2937"/>
+                <line x1="60" y1="74" x2="22" y2="40" stroke="#16a34a" stroke-width="4" stroke-linecap="round"/>
+                <line x1="60" y1="74" x2="42" y2="36" stroke="#16a34a" stroke-width="4" stroke-linecap="round"/>
+                <line x1="60" y1="74" x2="60" y2="34" stroke="#16a34a" stroke-width="4" stroke-linecap="round"/>
+                <line x1="60" y1="74" x2="78" y2="36" stroke="#16a34a" stroke-width="4" stroke-linecap="round"/>
+                <line x1="60" y1="74" x2="98" y2="40" stroke="#16a34a" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="22" cy="40" r="3" fill="#15803d"/>
+                <circle cx="42" cy="36" r="3" fill="#15803d"/>
+                <circle cx="60" cy="34" r="3" fill="#15803d"/>
+                <circle cx="78" cy="36" r="3" fill="#15803d"/>
+                <circle cx="98" cy="40" r="3" fill="#15803d"/>
+                <circle cx="60" cy="74" r="3.5" fill="#15803d"/>
             </svg>
         `
     };
