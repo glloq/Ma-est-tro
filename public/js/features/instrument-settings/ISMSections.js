@@ -1027,9 +1027,9 @@
             : ISMSections._defaultHandsConfig(mode, tab);
 
         if (mode === 'frets') {
-            return ISMSections._renderHandsSectionFrets(effectiveCfg, tab);
+            return ISMSections._renderHandsSectionFrets.call(this, effectiveCfg, tab);
         }
-        return ISMSections._renderHandsSectionSemitones(effectiveCfg);
+        return ISMSections._renderHandsSectionSemitones.call(this, effectiveCfg);
     };
 
     /**
@@ -1090,8 +1090,37 @@
         `
     };
 
-    ISMSections._getKeyboardMechanisms = function() {
-        const t = (k, fb) => (typeof window.i18n?.t === 'function' ? window.i18n.t(k) : k) === k ? fb : window.i18n.t(k);
+    /**
+     * Build a translator that resolves keys through the modal's `this.t`
+     * when available, or directly through `window.i18n` otherwise, and
+     * falls back to a caller-supplied default string when neither hits.
+     * Critically, when both lookups miss it returns the fallback (or an
+     * empty string), NEVER the raw dot-path — that would surface in the
+     * UI as `instrumentSettings.handsLeft` which we saw in production.
+     *
+     * Usage: `const t = ISMSections._tHelper(this); t('key', 'fallback')`.
+     * @private
+     */
+    ISMSections._tHelper = function(ctx) {
+        return function(key, fallback) {
+            // 1) Modal's bound t() (preferred — also handles params).
+            if (ctx && typeof ctx.t === 'function') {
+                const v = ctx.t(key);
+                if (typeof v === 'string' && v !== key) return v;
+            }
+            // 2) Direct window.i18n lookup (covers cases where the section
+            //    is rendered with a non-modal `this`).
+            if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.t === 'function') {
+                const v = window.i18n.t(key);
+                if (typeof v === 'string' && v !== key) return v;
+            }
+            // 3) Fallback string from the caller, or empty when none.
+            return fallback != null ? fallback : '';
+        };
+    };
+
+    ISMSections._getKeyboardMechanisms = function(ctx) {
+        const t = ISMSections._tHelper(ctx);
         return [
             {
                 id: 'aligned_fingers',
@@ -1119,8 +1148,8 @@
      * behaviour via `[data-mechanism]` attributes.
      */
     ISMSections._renderKeyboardMechanismCards = function(selectedId) {
-        const mechanisms = ISMSections._getKeyboardMechanisms();
-        const t = this.t ? this.t.bind(this) : ((k) => k);
+        const mechanisms = ISMSections._getKeyboardMechanisms(this);
+        const t = ISMSections._tHelper(this);
         const cardHtml = (m) => {
             const isSelected = m.id === selectedId;
             const disabled = !!m.v2;
@@ -1175,7 +1204,14 @@
             ? cfg.hand_move_semitones_per_sec
             : 60;
         const mechanism = ISMSections._resolveKeyboardMechanism(cfg);
-        const t = this.t ? this.t.bind(this) : ((k, fb) => fb || k);
+        // The dispatcher binds `this` to the modal so this.t() resolves
+        // through BaseModal → window.i18n. We still gracefully degrade
+        // when the section is rendered standalone (e.g. unit tests):
+        // call window.i18n directly when this.t is unavailable, and
+        // fall back to the supplied default string when neither finds
+        // the key. Returning the raw dot-path is never acceptable —
+        // that's what we used to do before this fix.
+        const t = ISMSections._tHelper(this);
 
         const handRow = (h) => {
             const idLabel = h.id === 'left'
