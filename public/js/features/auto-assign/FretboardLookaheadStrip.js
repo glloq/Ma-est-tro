@@ -112,19 +112,24 @@
             return this.margin.left + (mm / totalDistMm) * usableW;
         }
 
+        // Band aligned with the simulator window — see the equivalent
+        // helper in FretboardHandPreview.js for the rationale (the old
+        // `slotLeft = anchor − 1` approximation made the band drift
+        // one fret to the left of the playability range).
         _handWindowX(anchorFret) {
-            const slotLeft = Math.max(0, anchorFret - 1);
-            const x0 = this._fretX(slotLeft);
-            let x1;
+            const safeAnchor = Math.max(0, anchorFret);
+            let x0, x1;
             if (this.scaleLengthMm && this.handSpanMm) {
-                const anchorMm = this.scaleLengthMm * (1 - Math.pow(2, -slotLeft / 12));
+                const anchorMm = this.scaleLengthMm * (1 - Math.pow(2, -safeAnchor / 12));
+                x0 = this._xFromMm(anchorMm);
                 const rightMm = anchorMm + this.handSpanMm;
                 const totalDistMm = this.scaleLengthMm * (1 - Math.pow(2, -this.numFrets / 12));
                 x1 = rightMm >= totalDistMm
                     ? this._fretX(this.numFrets)
                     : this._xFromMm(rightMm);
             } else {
-                x1 = this._fretX(Math.min(this.numFrets, slotLeft + this.handSpanFrets));
+                x0 = this._fretX(safeAnchor);
+                x1 = this._fretX(Math.min(this.numFrets, safeAnchor + this.handSpanFrets));
             }
             return { x0, x1 };
         }

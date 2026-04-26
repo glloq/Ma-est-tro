@@ -837,6 +837,20 @@
             return Math.max(0, -12 * Math.log2(v));
         }
 
+        // Index-finger backoff: the index sits 10 mm behind the
+        // chord's lowest fret (`bestLow`) so it can press that fret
+        // with its tip. Mirrors `HandPositionPlanner._anchorBehindFret`
+        // — the two simulators must agree on the anchor, otherwise
+        // the live preview band drifts away from the playback CC.
+        const INDEX_BACKOFF_MM = 10;
+        function anchorBehindFret(targetFret) {
+            if (!usePhysical) return targetFret;
+            const targetMm = scaleLengthMm * (1 - Math.pow(2, -targetFret / 12));
+            const anchorMm = Math.max(0, targetMm - INDEX_BACKOFF_MM);
+            if (anchorMm <= 0) return 0;
+            return -12 * Math.log2(1 - anchorMm / scaleLengthMm);
+        }
+
         // Travel time between two fret anchors. Physical mm if scale
         // length is configured, fret-count otherwise. Returns null
         // when no speed limit is available (= no constraint).
@@ -898,7 +912,14 @@
                 }
             }
             if (lo === Infinity) return null; // chord has no fretted note (open strings only)
-            return [minAnchorForTop(hi), lo];
+            // The valid anchor range for this chord is
+            // [minAnchorForTop(hi), idealLow] where `idealLow` is 10 mm
+            // behind the chord's lowest fret. The picker favours the
+            // upper bound (idealLow) when nothing else pulls the anchor
+            // away — same convention as before, but applied to the
+            // backed-off anchor instead of `lo` directly.
+            const idealLow = anchorBehindFret(lo);
+            return [minAnchorForTop(hi), Math.max(minAnchorForTop(hi), idealLow)];
         });
 
         /**
@@ -995,20 +1016,20 @@
                 if (anchor == null
                     || lo < anchor
                     || hi > maxReach(anchor)) {
-                    // The hand MUST move. Pick the new anchor
-                    // inside the chord's valid range
-                    // [minAnchorForTop(hi), lo] using a LOOKAHEAD
-                    // that biases toward an anchor minimising the
-                    // NEXT shift's cost too — same bookkeeping as
-                    // the keyboard `_pickAnchorWithLookahead`. For
-                    // chords wider than the hand's reach the range
-                    // is empty; fall back to `lo` so the low note
-                    // still sits inside.
+                    // The hand MUST move. Pick the new anchor inside
+                    // the chord's valid range
+                    // [minAnchorForTop(hi), idealLow] where idealLow
+                    // = anchorBehindFret(lo) is 10 mm behind the
+                    // chord's lowest fret. The picker uses LOOKAHEAD
+                    // to minimise cumulative shift cost. For chords
+                    // wider than the hand's reach the range collapses;
+                    // we fall back to `idealLow` so the low note still
+                    // sits inside the band.
                     const minA = minAnchorForTop(hi);
-                    const maxA = lo;
+                    const maxA = Math.max(minA, anchorBehindFret(lo));
                     let newAnchor;
                     if (minA > maxA) {
-                        newAnchor = lo;
+                        newAnchor = anchorBehindFret(lo);
                     } else {
                         const futureRanges = [];
                         for (let j = i + 1;
