@@ -1,32 +1,14 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
-<svg height="800px" width="800px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
-	 viewBox="0 0 496.2 496.2" xml:space="preserve">
-<path style="fill:#32BEA6;" d="M496.2,248.1C496.2,111.1,385.1,0,248.1,0S0,111.1,0,248.1s111.1,248.1,248.1,248.1
-	S496.2,385.1,496.2,248.1z"/>
-<polygon points="254,136.6 242.2,136.6 238.3,277.1 257.9,277.1 "/>
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+	 viewBox="0 0 512 512" xml:space="preserve">
+<polygon style="fill:#F7B239;" points="257.396,225.034 0.006,290.236 221.77,512 286.972,254.61 "/>
+<polygon style="fill:#C49270;" points="464.315,77.256 286.972,254.61 247.427,294.144 217.851,264.579 257.396,225.034 
+	434.75,47.691 "/>
+<polygon style="fill:#F7B239;" points="459.803,0 511.994,52.203 433.531,108.04 403.966,78.475 "/>
 <g>
-	<polygon style="fill:#512A10;" points="262.7,123.3 233.1,123.3 229.9,78.2 265.9,78.2 	"/>
-	<polygon style="fill:#512A10;" points="253.9,136.6 242,136.6 233.1,123.3 262.7,123.3 	"/>
-</g>
-<g>
-	<path style="fill:#FFFFFF;" d="M243.8,91.5c0,1.8-1.5,3.3-3.3,3.3s-3.3-1.5-3.3-3.3s1.5-3.3,3.3-3.3
-		C242.3,88.1,243.8,89.6,243.8,91.5z"/>
-	<circle style="fill:#FFFFFF;" cx="246.3" cy="104.1" r="3.3"/>
-	<circle style="fill:#FFFFFF;" cx="252.6" cy="116.8" r="3.3"/>
-</g>
-<path style="fill:#FFC57C;" d="M258.1,276.6h-20c0,0-67,59-94,140.9h208C325.1,335.5,258.1,276.6,258.1,276.6z"/>
-<g>
-	<path style="fill:#F87002;" d="M268.8,329.5c7.9,5.3,21.8,11.2,38.9,3.4c-25.2-35-49.6-56.4-49.6-56.4h-20c0,0-12.3,10.9-28.5,29.7
-		c5.6,3.1,14.3,7.1,23.5,8.2C245.6,316.1,259.9,323.5,268.8,329.5z"/>
-	<path style="fill:#F87002;" d="M343.6,395.4c-28.9,7.3-36.6,15.9-37.7,22.1h46.2C349.6,409.9,346.7,402.6,343.6,395.4z"/>
-	<path style="fill:#F87002;" d="M151.5,397.9c-2.7,6.4-5.2,12.9-7.4,19.6h43.5C184.2,404.9,162.8,399.7,151.5,397.9z"/>
-</g>
-<circle style="fill:#BA3C30;" cx="248.1" cy="338.9" r="10.7"/>
-<circle cx="248.1" cy="338.9" r="6"/>
-<g>
-	<polygon style="fill:#FFFFFF;" points="248.6,418 247.6,418 247.6,136.1 245.8,104.2 246.8,104.1 248.6,136.1 	"/>
-	<polygon style="fill:#FFFFFF;" points="256.3,418 251.1,136.2 252.1,116.8 253.1,116.8 252.1,136.2 257.3,418 	"/>
-	<polygon style="fill:#FFFFFF;" points="240.6,418 239.6,418 244.1,136.1 239.9,91.5 240.9,91.4 245.1,136.1 	"/>
+	<circle style="fill:#4D4D4D;" cx="176.113" cy="335.888" r="31.98"/>
+	
+		<rect x="98.456" y="373.678" transform="matrix(-0.7071 -0.7071 0.7071 -0.7071 -48.7131 744.2673)" style="fill:#4D4D4D;" width="62.661" height="17.089"/>
 </g>
 </svg>
