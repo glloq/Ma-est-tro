@@ -1090,6 +1090,7 @@
         "delete": "Delete",
         "movedToRoot": "File moved to root",
         "movedToFolder": "File moved to \"{folder}\"",
+        "root": "Root",
         "createFolder": "Create folder",
         "createFolderPrompt": "New folder name:",
         "folderCreated": "Folder \"{folder}\" created",

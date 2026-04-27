@@ -1090,6 +1090,7 @@
         "delete": "Supprimer",
         "movedToRoot": "Fichier déplacé vers la racine",
         "movedToFolder": "Fichier déplacé vers \"{folder}\"",
+        "root": "Racine",
         "createFolder": "Créer un dossier",
         "createFolderPrompt": "Nom du nouveau dossier:",
         "folderCreated": "Dossier \"{folder}\" créé",
