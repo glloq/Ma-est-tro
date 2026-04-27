@@ -712,10 +712,11 @@
             color: #90a4ae;
         }
         .search-bar-container .search-clear-btn {
-            color: #90a4ae;
+            color: #ef4444;
+            font-weight: bold;
         }
         .search-bar-container .search-clear-btn:hover {
-            color: #1565c0;
+            color: #b91c1c;
         }
         .search-bar-container .sort-select {
             background: #ffffff;
@@ -993,7 +994,7 @@
         .log-console { background: linear-gradient(135deg, #eee8f8, #e8ecfe); border: 1px solid rgba(118, 75, 162, 0.2); color: var(--text-primary); }
 
         /* Batch actions */
-        .batch-actions-bar { background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.1)); border: 1px solid rgba(118, 75, 162, 0.2); }
+        .batch-actions-bar { background: #e3f2fd; border: 1px solid #90caf9; }
 
         /* Upload progress */
         .upload-progress-modal { background: linear-gradient(135deg, #f8f4ff, #f0f0ff); border: 1px solid rgba(118, 75, 162, 0.2); }
@@ -1908,8 +1909,8 @@
         .batch-actions-bar {
             position: sticky;
             top: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 60%, #e84393 100%);
-            color: white;
+            background: #e3f2fd;
+            color: #1e3a5f;
             padding: 8px 18px;
             border-radius: 0;
             margin-bottom: 0;
@@ -1935,29 +1936,9 @@
             gap: 8px;
         }
 
-        .batch-actions-bar .btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 6px 12px;
-            font-size: 13px;
-        }
-
-        .batch-actions-bar .btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .batch-actions-bar .btn-danger {
-            background: rgba(239, 68, 68, 0.8);
-            border-color: rgba(239, 68, 68, 1);
-        }
-
-        .batch-actions-bar .btn-danger:hover {
-            background: rgba(239, 68, 68, 1);
-        }
-
         body.theme-dark .batch-actions-bar {
-            background: #5a6fd6;
+            background: #1e293b;
+            color: #e2e8f0;
         }
 
         .upload-progress-overlay {
@@ -2111,6 +2092,7 @@
 
         .file-name {
             flex: 1;
+            min-width: 0;
             font-weight: 500;
             display: flex;
             flex-direction: column;
@@ -2118,9 +2100,10 @@
         }
 
         .file-name-text {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .file-metadata {
@@ -2564,8 +2547,9 @@
         .file-list.view-grid .file-name-text {
             font-size: 13px;
             font-weight: 600;
-            word-break: break-word;
-            white-space: normal;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
             line-height: 1.3;
         }
 
@@ -7805,38 +7789,111 @@
             loadFiles();
         }
 
-        async function batchMoveFiles() {
-            if (selectedFileIds.size === 0) return;
+        // Afficher un menu déroulant pour choisir le dossier cible (ou en créer un nouveau)
+        function showMoveToFolderMenu(fileIds, anchorElement) {
+            if (!fileIds || fileIds.length === 0) return;
 
-            // Afficher la liste des dossiers disponibles
-            const folders = Object.keys(folderStructure);
-            if (folders.length === 0) {
-                await showAlert('Aucun dossier disponible. Créez un dossier d\'abord.', {
-                    title: 'Pas de dossier',
-                    icon: '⚠️'
-                });
-                return;
+            document.querySelectorAll('.folder-dropdown-menu').forEach(m => m.remove());
+
+            const isDark = document.body.classList.contains('theme-dark') || document.body.classList.contains('dark-mode');
+            const folders = Object.keys(folderStructure).sort((a, b) => a.localeCompare(b));
+
+            const menu = document.createElement('div');
+            menu.className = 'folder-dropdown-menu';
+            menu.style.cssText = 'position:fixed;z-index:10001;background:white;border:1px solid #dee2e6;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:6px 0;min-width:220px;max-height:340px;overflow-y:auto;';
+            if (isDark) {
+                menu.style.background = '#2d2d2d';
+                menu.style.borderColor = '#444';
+                menu.style.color = '#e2e8f0';
             }
 
-            // Utiliser showConfirm pour permettre à l'utilisateur de choisir
-            const targetFolder = folders[0];
+            const hoverBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(102,126,234,0.1)';
+            const itemBaseStyle = 'padding:8px 14px;cursor:pointer;font-size:0.9rem;transition:background 0.15s;';
+            const sepStyle = `border-top:1px solid ${isDark ? '#444' : '#dee2e6'};margin:4px 0;`;
 
-            const confirmed = await showConfirm(
-                `Déplacer ${selectedFileIds.size} fichier${selectedFileIds.size > 1 ? 's' : ''} vers "${targetFolder}" ?\n\n(Pour choisir un autre dossier, utilisez le glisser-déposer)`,
-                {
-                    title: 'Déplacer fichiers',
-                    icon: '📁',
-                    confirmText: 'Déplacer',
-                    cancelText: 'Annuler'
+            const addItem = (label, onClick, opts = {}) => {
+                const item = document.createElement('div');
+                item.style.cssText = itemBaseStyle + (opts.extraStyle || '');
+                item.textContent = label;
+                item.addEventListener('mouseenter', () => { item.style.background = hoverBg; });
+                item.addEventListener('mouseleave', () => { item.style.background = 'transparent'; });
+                item.addEventListener('click', onClick);
+                menu.appendChild(item);
+            };
+
+            const addSeparator = () => {
+                const sep = document.createElement('div');
+                sep.style.cssText = sepStyle;
+                menu.appendChild(sep);
+            };
+
+            // Option : Racine
+            addItem('📂 ' + (i18n.t('fileOperations.root') || 'Racine'), () => {
+                menu.remove();
+                moveMultipleFiles(fileIds, null);
+                selectedFileIds.clear();
+                updateBatchActionsBar();
+            });
+
+            if (folders.length > 0) {
+                addSeparator();
+                folders.forEach(folderName => {
+                    addItem('📁 ' + folderName, () => {
+                        menu.remove();
+                        moveMultipleFiles(fileIds, folderName);
+                        selectedFileIds.clear();
+                        updateBatchActionsBar();
+                    });
+                });
+            }
+
+            // Séparateur + Nouveau dossier
+            addSeparator();
+            addItem('+ ' + (i18n.t('fileOperations.newFolder') || 'Nouveau dossier'), async () => {
+                menu.remove();
+                const name = prompt(i18n.t('fileOperations.createFolderPrompt') || 'Nom du nouveau dossier:');
+                if (!name || !name.trim()) return;
+                const folderName = name.trim();
+                if (folderStructure[folderName]) {
+                    await showAlert(i18n.t('fileOperations.folderExists', { folder: folderName }), {
+                        title: i18n.t('fileOperations.folderExistsTitle'),
+                        icon: '⚠️'
+                    });
+                    return;
                 }
-            );
+                folderStructure[folderName] = { parent: null, files: [], open: true };
+                saveFolderStructure();
+                log(`📁 ${i18n.t('fileOperations.folderCreated', { folder: folderName })}`);
+                moveMultipleFiles(fileIds, folderName);
+                selectedFileIds.clear();
+                updateBatchActionsBar();
+            }, { extraStyle: 'font-weight:500;color:#667eea;' });
 
-            if (!confirmed) return;
+            // Positionnement sous le bouton ancre
+            const rect = anchorElement.getBoundingClientRect();
+            menu.style.top = (rect.bottom + 4) + 'px';
+            menu.style.left = rect.left + 'px';
+            document.body.appendChild(menu);
 
-            // Déplacer les fichiers (un seul reload)
-            moveMultipleFiles([...selectedFileIds].map(String), targetFolder);
-            selectedFileIds.clear();
-            updateBatchActionsBar();
+            // Réajuster si le menu déborde à droite
+            const menuRect = menu.getBoundingClientRect();
+            if (menuRect.right > window.innerWidth - 8) {
+                menu.style.left = Math.max(8, window.innerWidth - menuRect.width - 8) + 'px';
+            }
+
+            const closeMenu = (e) => {
+                if (!menu.contains(e.target)) {
+                    menu.remove();
+                    document.removeEventListener('click', closeMenu);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', closeMenu), 10);
+        }
+
+        function batchMoveFiles() {
+            if (selectedFileIds.size === 0) return;
+            const btn = document.getElementById('batchMove');
+            showMoveToFolderMenu([...selectedFileIds].map(String), btn);
         }
 
         // Initialiser les actions par lots
