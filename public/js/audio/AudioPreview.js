@@ -274,18 +274,92 @@ class AudioPreview {
   }
 
   /**
+   * Extract notes from raw MIDI tracks by pairing noteOn with noteOff so each
+   * note carries its real gate duration (in ticks). Mirrors the logic the
+   * MIDI editor uses (see MidiEditorSequence.convertMidiToSequence) so every
+   * modal that previews soundbank audio plays notes with the same length the
+   * editor would.
+   *
+   * @param {Object} midiData - Parsed MIDI data with tracks[].events[]
+   * @returns {Array<{tick:number, gate:number, note:number, channel:number, velocity:number}>}
+   *   Notes in absolute ticks, sorted naturally per-track (caller sorts globally).
+   */
+  _extractNotesFromMidi(midiData) {
+    const allNotes = [];
+    if (!midiData?.tracks) return allNotes;
+
+    for (const track of midiData.tracks) {
+      if (!track.events) continue;
+
+      const activeNotes = new Map(); // `${channel}_${note}` -> {tick, note, velocity, channel}
+      let currentTick = 0;
+
+      for (const event of track.events) {
+        currentTick += event.deltaTime || 0;
+
+        if (event.type === 'noteOn' && event.velocity > 0) {
+          const channel = event.channel ?? 0;
+          const note = event.note ?? event.noteNumber ?? 60;
+          const key = `${channel}_${note}`;
+
+          // Re-trigger before noteOff: close the previous note at the new noteOn
+          const existing = activeNotes.get(key);
+          if (existing) {
+            allNotes.push({
+              tick: existing.tick,
+              gate: Math.max(1, currentTick - existing.tick),
+              note: existing.note,
+              channel: existing.channel,
+              velocity: existing.velocity
+            });
+          }
+          activeNotes.set(key, { tick: currentTick, note, velocity: event.velocity, channel });
+        }
+        else if (event.type === 'noteOff' || (event.type === 'noteOn' && event.velocity === 0)) {
+          const channel = event.channel ?? 0;
+          const note = event.note ?? event.noteNumber ?? 60;
+          const key = `${channel}_${note}`;
+          const noteOn = activeNotes.get(key);
+          if (noteOn) {
+            allNotes.push({
+              tick: noteOn.tick,
+              gate: Math.max(1, currentTick - noteOn.tick),
+              note: noteOn.note,
+              channel: noteOn.channel,
+              velocity: noteOn.velocity
+            });
+            activeNotes.delete(key);
+          }
+        }
+      }
+
+      // Recover orphan noteOns whose noteOff is missing — same fallback as the editor.
+      for (const [, noteOn] of activeNotes) {
+        const defaultGate = Math.max(1, currentTick - noteOn.tick);
+        allNotes.push({
+          tick: noteOn.tick,
+          gate: defaultGate > 0 ? defaultGate : 480,
+          note: noteOn.note,
+          channel: noteOn.channel,
+          velocity: noteOn.velocity
+        });
+      }
+    }
+
+    return allNotes;
+  }
+
+  /**
    * Build a combined sequence from all non-skipped channels, applying per-channel
    * transpositions and instrument constraints.
    */
   _createMultiChannelSequence(midiData, channelConfigs, startTime, duration) {
-    const sequence = [];
-    const endTime = startTime + duration;
     const ticksPerBeat = midiData.header?.ticksPerBeat || 480;
     const tempo = midiData.tempo || 120;
 
     const msPerTick = (60000 / tempo) / ticksPerBeat;
     const startTick = (startTime * 1000) / msPerTick;
-    const endTick = (endTime * 1000) / msPerTick;
+    const endTick = duration > 0 ? ((startTime + duration) * 1000) / msPerTick : Infinity;
 
     // Build per-channel note filters
     const channelFilters = {};
@@ -297,55 +371,39 @@ class AudioPreview {
       };
     }
 
-    if (!midiData.tracks) return sequence;
+    const sequence = [];
+    const allNotes = this._extractNotesFromMidi(midiData);
 
-    for (const track of midiData.tracks) {
-      if (!track.events) continue;
+    for (const noteData of allNotes) {
+      if (noteData.tick < startTick || noteData.tick > endTick) continue;
 
-      let currentTick = 0;
+      const chConfig = channelFilters[noteData.channel];
+      if (!chConfig) continue;
 
-      for (const event of track.events) {
-        if (event.deltaTime !== undefined) {
-          currentTick += event.deltaTime;
+      let note = noteData.note;
+      const transposition = chConfig.transposition;
+      if (transposition) {
+        if (transposition.semitones) {
+          note = this.clampNote(note + transposition.semitones);
         }
-
-        if (currentTick < startTick || currentTick > endTick) continue;
-
-        if (event.type === 'noteOn' && event.velocity > 0) {
-          const channel = event.channel ?? 0;
-
-          // Skip channels not in config or marked as skipped
-          const chConfig = channelFilters[channel];
-          if (!chConfig) continue;
-
-          let note = event.note ?? event.noteNumber ?? 60;
-
-          // Apply transposition
-          const transposition = chConfig.transposition;
-          if (transposition) {
-            if (transposition.semitones) {
-              note = this.clampNote(note + transposition.semitones);
-            }
-            if (transposition.noteRemapping && transposition.noteRemapping[note] !== undefined) {
-              note = transposition.noteRemapping[note];
-            }
-          }
-
-          // Skip suppressed notes (e.g. muted drum notes mapped to -1)
-          if (note < 0) continue;
-
-          // Filter by instrument playable range
-          if (chConfig.noteFilter && !chConfig.noteFilter(note)) continue;
-
-          sequence.push({
-            t: currentTick - startTick,
-            g: event.duration || 480,
-            n: note,
-            c: channel,
-            v: event.velocity || 100
-          });
+        if (transposition.noteRemapping && transposition.noteRemapping[note] !== undefined) {
+          note = transposition.noteRemapping[note];
         }
       }
+
+      // Skip suppressed notes (e.g. muted drum notes mapped to -1)
+      if (note < 0) continue;
+
+      // Filter by instrument playable range
+      if (chConfig.noteFilter && !chConfig.noteFilter(note)) continue;
+
+      sequence.push({
+        t: noteData.tick - startTick,
+        g: noteData.gate,
+        n: note,
+        c: noteData.channel,
+        v: noteData.velocity || 100
+      });
     }
 
     sequence.sort((a, b) => a.t - b.t);
@@ -464,86 +522,50 @@ class AudioPreview {
    * @returns {Array} - Sequence in format [{t, g, n, c}, ...]
    */
   createPreviewSequence(midiData, transpositions, startTime, duration, options = {}) {
-    const sequence = [];
-    const endTime = startTime + duration;
     const ticksPerBeat = midiData.header?.ticksPerBeat || 480;
     const tempo = midiData.tempo || 120;
     const { channelFilter, instrumentConstraints } = options;
 
-    // Convert seconds to ticks
+    // Convert seconds to ticks (initial tempo — synth handles tempo map)
     const msPerTick = (60000 / tempo) / ticksPerBeat;
     const startTick = (startTime * 1000) / msPerTick;
-    const endTick = (endTime * 1000) / msPerTick;
+    const endTick = duration > 0 ? ((startTime + duration) * 1000) / msPerTick : Infinity;
 
-    // Build a playable note set from instrument constraints
     const noteFilter = this._buildNoteFilter(instrumentConstraints);
+    const sequence = [];
+    const allNotes = this._extractNotesFromMidi(midiData);
 
-    if (!midiData.tracks) {
-      return sequence;
-    }
+    for (const noteData of allNotes) {
+      if (noteData.tick < startTick || noteData.tick > endTick) continue;
 
-    // Extract notes from all tracks
-    for (const track of midiData.tracks) {
-      if (!track.events) continue;
+      if (channelFilter !== undefined && noteData.channel !== channelFilter) continue;
 
-      let currentTick = 0;
-
-      for (const event of track.events) {
-        // Update current time/tick
-        if (event.deltaTime !== undefined) {
-          currentTick += event.deltaTime;
+      let note = noteData.note;
+      const transposition = transpositions[noteData.channel];
+      if (transposition) {
+        if (transposition.semitones) {
+          note = this.clampNote(note + transposition.semitones);
         }
-
-        // Skip events outside preview range
-        if (currentTick < startTick || currentTick > endTick) {
-          continue;
-        }
-
-        // Process note events
-        if (event.type === 'noteOn' && event.velocity > 0) {
-          const channel = event.channel ?? 0;
-
-          // Filter by channel if specified
-          if (channelFilter !== undefined && channel !== channelFilter) {
-            continue;
-          }
-
-          let note = event.note ?? event.noteNumber ?? 60;
-
-          // Apply transposition if exists
-          const transposition = transpositions[channel];
-          if (transposition) {
-            if (transposition.semitones) {
-              note = this.clampNote(note + transposition.semitones);
-            }
-            if (transposition.noteRemapping && transposition.noteRemapping[note] !== undefined) {
-              note = transposition.noteRemapping[note];
-            }
-          }
-
-          // Skip suppressed notes (e.g. muted drum notes mapped to -1)
-          if (note < 0) continue;
-
-          // Filter by instrument's playable note range
-          if (noteFilter && !noteFilter(note)) {
-            continue;
-          }
-
-          // Add to sequence
-          sequence.push({
-            t: currentTick - startTick,
-            g: event.duration || 480,
-            n: note,
-            c: channel,
-            v: event.velocity || 100
-          });
+        if (transposition.noteRemapping && transposition.noteRemapping[note] !== undefined) {
+          note = transposition.noteRemapping[note];
         }
       }
+
+      // Skip suppressed notes (e.g. muted drum notes mapped to -1)
+      if (note < 0) continue;
+
+      if (noteFilter && !noteFilter(note)) continue;
+
+      sequence.push({
+        t: noteData.tick - startTick,
+        g: noteData.gate,
+        n: note,
+        c: noteData.channel,
+        v: noteData.velocity || 100
+      });
     }
 
-    // Sort by time
     sequence.sort((a, b) => a.t - b.t);
-
     return sequence;
   }
 
