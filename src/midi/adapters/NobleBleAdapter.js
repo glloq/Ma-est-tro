@@ -63,15 +63,64 @@ export default class NobleBleAdapter extends EventEmitter {
     this._bluetooth = bluetooth;
     this._destroy = destroy;
     this._adapter = await bluetooth.defaultAdapter();
+
+    // Many Linux setups (Raspberry Pi defaults, headless installs) leave the
+    // BlueZ adapter at Powered=off after boot. Discovery silently finds
+    // nothing in that state, so power it up before we report ready.
+    try {
+      const powered = await this._adapter.isPowered();
+      if (!powered) {
+        await this._adapter.setPowered(true);
+        this.logger.info('BLE adapter powered on automatically');
+      }
+    } catch (e) {
+      this.logger.warn(`Could not power on BLE adapter: ${e.message}`);
+    }
+
     this._ready = true;
   }
 
   async startDiscovery() {
     this._assertAlive();
     await this._init();
+
+    // Limit to BLE transport so BR/EDR-only neighbours don't crowd out
+    // BLE-MIDI advertisers on adapters that struggle with dual-mode auto.
+    // Failure to set the filter is non-fatal — fall through to default scan.
+    if (typeof this._adapter.setDiscoveryFilter === 'function') {
+      try {
+        await this._adapter.setDiscoveryFilter({ transport: 'le' });
+      } catch (e) {
+        this.logger.debug(`setDiscoveryFilter(le) failed: ${e.message}`);
+      }
+    }
+
     const isDiscovering = await this._adapter.isDiscovering();
     if (!isDiscovering) {
       await this._adapter.startDiscovery();
+    }
+  }
+
+  async powerOn() {
+    this._assertAlive();
+    await this._init();
+    await this._adapter.setPowered(true);
+    return { powered: true };
+  }
+
+  async powerOff() {
+    this._assertAlive();
+    await this._init();
+    await this._adapter.setPowered(false);
+    return { powered: false };
+  }
+
+  async isPowered() {
+    if (!this._ready) return false;
+    try {
+      return await this._adapter.isPowered();
+    } catch {
+      return false;
     }
   }
 
@@ -99,26 +148,61 @@ export default class NobleBleAdapter extends EventEmitter {
    */
   async scanOnce(durationMs = 5000) {
     await this.startDiscovery();
-    await new Promise((r) => setTimeout(r, durationMs));
-    const addresses = await this._adapter.devices();
-    for (const address of addresses) {
+
+    // Reset the snapshot for this scan so stale entries from a previous
+    // scan don't leak into the result (BluetoothManager already clears
+    // its own map, but the port's snapshot is the source of truth).
+    this._discovered.clear();
+
+    // Poll BlueZ's device tree every ~750ms so we surface devices as soon
+    // as they show up rather than only at the very end of the window.
+    // BlueZ populates its tree as advertisements arrive — polling is the
+    // simplest way to bridge that into our event stream without depending
+    // on private DBus signal subscriptions.
+    const pollInterval = 750;
+    const seen = new Set();
+    const harvest = async () => {
+      let addresses = [];
       try {
-        const device = await this._adapter.getDevice(address);
-        const name = await device.getName().catch(() => address);
-        const rssi = await device.getRSSI().catch(() => -100);
-        const uuids = await device.getUUIDs().catch(() => []);
-        const isMidiDevice = Array.isArray(uuids) && uuids.some((u) =>
-          typeof u === 'string' &&
-          (u.toLowerCase().includes('03b80e5a') ||
-           u.toLowerCase() === BLE_MIDI_SERVICE_UUID.toLowerCase())
-        );
-        const descriptor = { address, name, rssi, uuids, isMidiDevice };
-        this._discovered.set(address, descriptor);
-        this.emit(BLE_EVENTS.DEVICE_DISCOVERED, { ...descriptor });
+        addresses = await this._adapter.devices();
       } catch (e) {
-        this.logger.debug(`Could not read device ${address}: ${e.message}`);
+        this.logger.debug(`adapter.devices() failed: ${e.message}`);
+        return;
       }
+      for (const address of addresses) {
+        if (seen.has(address)) continue;
+        seen.add(address);
+        try {
+          const device = await this._adapter.getDevice(address);
+          const name = await device.getName().catch(() => address);
+          const rssi = await device.getRSSI().catch(() => -100);
+          const uuids = await device.getUUIDs().catch(() => []);
+          const isMidiDevice = Array.isArray(uuids) && uuids.some((u) =>
+            typeof u === 'string' &&
+            (u.toLowerCase().includes('03b80e5a') ||
+             u.toLowerCase() === BLE_MIDI_SERVICE_UUID.toLowerCase())
+          );
+          const descriptor = { address, name, rssi, uuids, isMidiDevice };
+          this._discovered.set(address, descriptor);
+          this.emit(BLE_EVENTS.DEVICE_DISCOVERED, { ...descriptor });
+        } catch (e) {
+          // Re-allow a retry next tick: the device might just not be
+          // fully populated in BlueZ yet.
+          seen.delete(address);
+          this.logger.debug(`Could not read device ${address}: ${e.message}`);
+        }
+      }
+    };
+
+    const deadline = Date.now() + durationMs;
+    // First harvest immediately so we surface devices BlueZ already had cached.
+    await harvest();
+    while (Date.now() < deadline) {
+      const remaining = deadline - Date.now();
+      await new Promise((r) => setTimeout(r, Math.min(pollInterval, remaining)));
+      await harvest();
     }
+
     await this.stopDiscovery();
     return this.listDiscovered();
   }
