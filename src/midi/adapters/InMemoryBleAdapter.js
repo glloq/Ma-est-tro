@@ -87,6 +87,20 @@ export default class InMemoryBleAdapter extends EventEmitter {
     return this._connected.has(address);
   }
 
+  async powerOn() {
+    this._powered = true;
+    return { powered: true };
+  }
+
+  async powerOff() {
+    this._powered = false;
+    return { powered: false };
+  }
+
+  async isPowered() {
+    return this._powered !== false;
+  }
+
   async dispose() {
     this._disposed = true;
     this._scanning = false;

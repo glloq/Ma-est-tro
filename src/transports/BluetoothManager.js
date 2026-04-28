@@ -418,14 +418,44 @@ class BluetoothManager extends EventEmitter {
   }
 
   getStatus() {
+    const ready = this._port._ready !== false;
     return {
-      enabled: this._port._ready !== false, // treat absent flag as enabled
-      state: this._port._ready === false ? 'unknown' : 'poweredOn',
+      enabled: ready,
+      available: ready,
+      state: ready ? 'poweredOn' : 'unknown',
       scanning: this.scanning,
       devicesFound: this.devices.size,
       connectedDevices: this.connectedDevices.size,
       pairedDevices: this.pairedDevices.length
     };
+  }
+
+  /**
+   * Power on the underlying BLE adapter (BlueZ Powered=true). Required by
+   * the `ble_power_on` API command. Falls back to a no-op when the port
+   * does not implement the capability (e.g. older test adapters).
+   */
+  async powerOn() {
+    if (this._initPromise) await this._initPromise.catch(() => {});
+    let result = { powered: true };
+    if (typeof this._port.powerOn === 'function') {
+      result = await this._port.powerOn();
+    }
+    this.emit('bluetooth:powered_on', result);
+    return result;
+  }
+
+  /**
+   * Power off the underlying BLE adapter. Counterpart of {@link powerOn}.
+   */
+  async powerOff() {
+    if (this._initPromise) await this._initPromise.catch(() => {});
+    let result = { powered: false };
+    if (typeof this._port.powerOff === 'function') {
+      result = await this._port.powerOff();
+    }
+    this.emit('bluetooth:powered_off', result);
+    return result;
   }
 
   async cleanup() {
