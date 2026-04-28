@@ -604,6 +604,19 @@ class InstrumentManagementPage {
          <span style="display:none; align-items:center; justify-content:center; font-size:32px; line-height:1;">${icon.emoji}</span>`
       : `<span style="display:flex; align-items:center; justify-content:center; font-size:32px; line-height:1;">${icon.emoji}</span>`;
 
+    // Hands info: parse hands_config and resolve a count (used both
+    // for the emoji badge next to the name and for the meta line).
+    let handsCfg = instrument.hands_config;
+    if (typeof handsCfg === 'string') {
+      try { handsCfg = JSON.parse(handsCfg); } catch (_) { handsCfg = null; }
+    }
+    const handsEnabled = !!(handsCfg && handsCfg.enabled === true);
+    const handsCount = handsEnabled && Array.isArray(handsCfg.hands) ? handsCfg.hands.length : 0;
+    const handsEmoji = handsCount >= 2 ? '🙌' : (handsCount === 1 ? '🫱' : '');
+    const handsBadgeHtml = handsEnabled && handsEmoji
+      ? `<span title="${handsCount} ${handsCount > 1 ? 'mains configurées' : 'main configurée'}" style="font-size:14px;line-height:1;">${handsEmoji}</span>`
+      : '';
+
     return `
       <div class="instrument-sub-card" style="
         padding: 10px 12px;
@@ -638,6 +651,7 @@ class InstrumentManagementPage {
             ${gmProgram !== null && gmProgram !== undefined
               ? `<span style="color: var(--text-primary, #374151); font-weight: 600; font-size: 14px;">${esc(displayName)}</span>`
               : `<span style="color: var(--text-muted, #9ca3af); font-style: italic;">${i18n.t('instrumentManagement.gmProgramNotSet') || 'Programme GM non défini'}</span>`}
+            ${handsBadgeHtml}
             ${isComplete
               ? `<span style="display:inline-block;padding:1px 6px;background:#10b981;color:white;border-radius:10px;font-size:10px;font-weight:600;">✓</span>`
               : `<span style="display:inline-block;padding:1px 6px;background:#f59e0b;color:white;border-radius:10px;font-size:10px;font-weight:600;">⚠</span>`}
@@ -651,15 +665,7 @@ class InstrumentManagementPage {
                   ? `<span>🥁 ${instrument.selected_notes.length} notes</span>`
                   : '')}
               ${instrument.polyphony ? `<span>poly: ${instrument.polyphony}</span>` : ''}
-              ${(() => {
-                let cfg = instrument.hands_config;
-                if (typeof cfg === 'string') {
-                  try { cfg = JSON.parse(cfg); } catch (_) { cfg = null; }
-                }
-                if (!cfg || cfg.enabled !== true) return '';
-                const count = Array.isArray(cfg.hands) ? cfg.hands.length : 0;
-                return `<span>🫱 ${count} ${count > 1 ? 'mains' : 'main'}</span>`;
-              })()}
+              ${handsEnabled ? `<span>${handsEmoji} ${handsCount} ${handsCount > 1 ? 'mains' : 'main'}</span>` : ''}
             </span>
           </div>
         </div>
