@@ -121,9 +121,16 @@ MD1 préservé/recalculé, arrondi MN1).
   `cancelText`/`btn.text`/`btn.value` (`details` reste du HTML intentionnel).
   **L4** reste ouvert : `NaN`/`Infinity` de coordonnées à tailles pathologiques
   (gardé/cosmétique).
-- **Smell de câblage** — les contrôles transport utilisent `getElementById` global ;
-  collision d'ID possible si l'éditeur de fichiers ET l'éditeur de boucle étaient
-  ouverts simultanément (non confirmé possible ; mode boucle omet ces contrôles).
+- **Smell de câblage** — ✅ **Investigué + corrigé** (suivi 2026-08-08). Confirmé :
+  l'éditeur est instancié 2× (singleton autonome + panneau de l'éditeur de boucle
+  via `new window.MidiEditorModal`). Le mode boucle **omet délibérément** tous les
+  ids de contrôle transport (`headerHtml=''`, `playbackSectionHtml=''`,
+  `settingsPopoverHtml=''` — commentés), et les lectures étaient déjà null-safe :
+  donc pas de crash ni de doublon d'id. Résiduel fermé : les 6 lectures
+  `getElementById` de ces contrôles (play/pause/stop, tempo-input, save-btn,
+  preview-source-toggle) sont désormais **scopées au conteneur de l'instance**
+  (`this.modal.container?.querySelector`), donc le panneau ne peut plus câbler
+  ni piloter les boutons du singleton même si les deux sont ouverts.
 
 ---
 

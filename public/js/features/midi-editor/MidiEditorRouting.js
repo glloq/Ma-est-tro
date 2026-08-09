@@ -200,7 +200,9 @@
     }
 
     updateSaveButton() {
-      const saveBtn = document.getElementById('save-btn');
+      // Instance-scoped (see MidiEditorTransport): loop-panel mode omits save-btn,
+      // so a global lookup from the panel would target the singleton's button.
+      const saveBtn = this.modal.container?.querySelector('#save-btn');
       if (saveBtn) {
         if (this.modal.isDirty) {
           saveBtn.classList.add('btn-warning');
