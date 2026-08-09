@@ -96,10 +96,27 @@ MD1 préservé/recalculé, arrondi MN1).
 
 ## 🟠 Ouverts — documentés
 
-- **MD2 (D2)** — changements de programme en cours de morceau et `programChange`
-  de kit de batterie (canal 9) **perdus** au round-trip : l'éditeur ne modélise
-  qu'un programme par canal (émis à tick 0). Altération silencieuse par conception
-  — à traiter si l'édition multi-programme devient un objectif.
+- **MD2 (D2)** — ✅ **Corrigé** (suivi 2026-08-09, « combo multi-programme »
+  Parts 1-3) : les `programChange` en cours de morceau sont désormais **conservés**
+  au round-trip.
+  - **Part 2 (fidélité)** — `MidiEditorSequence.convertMidiToSequence` retient
+    tous les `programChange` avec leur tick dans `modal.programChangeEvents` ;
+    `MidiEditorMidiWriter` les réémet verbatim pour un canal encore multi-programme
+    (sinon un seul PC à tick 0). Un changement d'instrument manuel
+    (`applyInstrumentToChannel`) purge les PC obsolètes du canal. Canal 9 (batterie)
+    n'émet jamais de PC (inchangé).
+  - **Part 1 (détection/avertissement)** — `ChannelAnalyzer.analyzeChannel` expose
+    `distinctPrograms` / `isMultiProgram` / `crossesFamily` ; `AutoAssigner` remonte
+    un `channelWarnings[ch]` (+ log) quand un canal change de **famille GM** en cours
+    de morceau (routé vers le programme dominant, timbres secondaires non reproduits
+    sur matériel mono-timbral). Badge « PC » sur la puce de canal côté éditeur.
+  - **Part 3 (résolution)** — action « Scinder par instrument » dans le popover ⚙
+    d'un canal multi-programme : scinde le canal en canaux mono-programme (dominant
+    conservé, les autres déplacés vers des canaux libres), que l'auto-routage statique
+    existant route ensuite séparément. Limite v1 : les CC/pitch-bend restent sur le
+    canal d'origine (seuls notes + programmes sont répartis).
+  - Tests : `tests/frontend/midi-editor-program-change.test.js` (15),
+    `tests/midi-adaptation.test.js` (+9 : détection + avertissements).
 - **N1 (D3)** — ✅ **Corrigé** (suivi 2026-08-08) : `disposeSynthesizer` ne
   draine plus le compteur GLOBAL `SoundBankLoadingIndicator` (masquait le spinner
   d'une autre feature) ; un compteur de refs propre à l'éditeur (`editorIndicatorRefs`,

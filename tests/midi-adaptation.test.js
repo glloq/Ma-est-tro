@@ -98,6 +98,22 @@ function createDrumTrack() {
   return events;
 }
 
+// Channel 0 that switches GM family mid-song: Acoustic Grand Piano (0) → Violin
+// (40, strings). Used to exercise multi-program detection (combo Part 1).
+function createMultiProgramTrack() {
+  const events = [programChange(0, 0)];
+  for (let t = 0; t < 50; t++) {
+    events.push(noteOn(0, 60, 80, t * 100));
+    events.push(noteOff(0, 60, t * 100 + 90));
+  }
+  events.push(programChange(0, 40, 5000)); // switch to strings mid-song
+  for (let t = 50; t < 100; t++) {
+    events.push(noteOn(0, 67, 80, t * 100));
+    events.push(noteOff(0, 67, t * 100 + 90));
+  }
+  return events;
+}
+
 function createInstrument(overrides = {}) {
   return {
     id: 1,
@@ -192,6 +208,48 @@ describe('ChannelAnalyzer', () => {
 
     expect(analyses.length).toBe(3);
     expect(analyses.map((a) => a.channel)).toEqual([0, 1, 9]);
+  });
+
+  // Multi-program detection (combo Part 1a)
+  test('summarizePrograms: single program is not multi-program', () => {
+    const r = analyzer.summarizePrograms([0, 0, 0]);
+    expect(r.distinct).toEqual([0]);
+    expect(r.crossesFamily).toBe(false);
+  });
+
+  test('summarizePrograms: empty list', () => {
+    const r = analyzer.summarizePrograms([]);
+    expect(r.distinct).toEqual([]);
+    expect(r.crossesFamily).toBe(false);
+  });
+
+  test('summarizePrograms: same-family programs do not cross family', () => {
+    // 0 = Acoustic Grand, 1 = Bright Acoustic — both piano family
+    const r = analyzer.summarizePrograms([0, 1]);
+    expect(r.distinct).toEqual([0, 1]);
+    expect(r.crossesFamily).toBe(false);
+  });
+
+  test('summarizePrograms: cross-family programs cross family', () => {
+    // 0 = piano, 40 = violin (strings)
+    const r = analyzer.summarizePrograms([40, 0, 40]);
+    expect(r.distinct).toEqual([0, 40]);
+    expect(r.crossesFamily).toBe(true);
+  });
+
+  test('analyzeChannel exposes multi-program fields (cross-family)', () => {
+    const midiData = createMidiData([createMultiProgramTrack()]);
+    const analysis = analyzer.analyzeChannel(midiData, 0);
+    expect(analysis.distinctPrograms).toEqual([0, 40]);
+    expect(analysis.isMultiProgram).toBe(true);
+    expect(analysis.crossesFamily).toBe(true);
+  });
+
+  test('analyzeChannel: single-program channel is not multi-program', () => {
+    const midiData = createMidiData([createPianoTrack()]);
+    const analysis = analyzer.analyzeChannel(midiData, 0);
+    expect(analysis.isMultiProgram).toBe(false);
+    expect(analysis.crossesFamily).toBe(false);
   });
 
   test('buildNoteHistogram counts notes correctly', () => {
@@ -1210,6 +1268,36 @@ describe('AutoAssigner', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('No instruments');
+  });
+
+  // Multi-program channel warnings (combo Part 1b)
+  test('generateSuggestions warns on channels that cross GM family mid-song', async () => {
+    const midiData = createMidiData([createMultiProgramTrack()]);
+    const result = await autoAssigner.generateSuggestions(midiData);
+
+    expect(result.success).toBe(true);
+    expect(result.channelWarnings).toBeDefined();
+    expect(result.channelWarnings[0]).toMatchObject({
+      type: 'multi_program',
+      distinctPrograms: [0, 40],
+      primaryProgram: expect.any(Number)
+    });
+  });
+
+  test('generateSuggestions emits no warning for single-program channels', async () => {
+    const midiData = createMidiData([createPianoTrack(), createBassTrack()]);
+    const result = await autoAssigner.generateSuggestions(midiData);
+    expect(result.channelWarnings).toEqual({});
+  });
+
+  test('_collectMultiProgramWarnings skips drum channel 9 and same-family channels', () => {
+    const warnings = autoAssigner._collectMultiProgramWarnings([
+      { channel: 9, crossesFamily: true, distinctPrograms: [0, 40], primaryProgram: 0 },
+      { channel: 1, crossesFamily: false, distinctPrograms: [0, 1], primaryProgram: 0 },
+      { channel: 2, crossesFamily: true, distinctPrograms: [0, 48], primaryProgram: 48 }
+    ]);
+    expect(Object.keys(warnings)).toEqual(['2']);
+    expect(warnings[2].type).toBe('multi_program');
   });
 
   test('generateSuggestions returns error for empty MIDI', async () => {

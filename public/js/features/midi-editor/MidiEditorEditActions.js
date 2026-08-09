@@ -151,6 +151,9 @@
     findAvailableChannel(program) {
       return this.channelOps?.findAvailableChannel(program) ?? -1;
     }
+    splitChannelByProgram(channel) {
+      return this.channelOps?.splitChannelByProgram(channel);
+    }
 
     cycleSnap() {
       // Move to the next value (cycle)

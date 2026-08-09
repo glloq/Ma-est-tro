@@ -30,6 +30,12 @@
       // redundant (audit P2.3). `tempo`/`tempoEvents` finalised after.
       let tempo = 120;
       this.modal.tempoEvents = [];
+      // Retain every program-change with its tick so mid-song instrument
+      // switches round-trip on save instead of collapsing to one per channel
+      // (audit D MD2). `channels[].program` still holds the primary/displayed
+      // instrument; this is the source of truth for what gets serialised and
+      // for the multi-program badge.
+      this.modal.programChangeEvents = [];
 
       const channelInstruments = new Map();
       const channelNoteCount = new Map();
@@ -73,6 +79,7 @@
             const pn = event.programNumber ?? event.program;
             if (pn !== undefined) {
               channelInstruments.set(channel, pn);
+              this.modal.programChangeEvents.push({ ticks: currentTick, channel, program: pn });
               this.modal.log(
                 'debug',
                 `Channel ${channel}: program ${pn} (${this.modal.getInstrumentName(pn)})`
