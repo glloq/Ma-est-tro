@@ -65,6 +65,13 @@
       const currentRouting = this.modal.channelRouting.get(channel) || '';
       const isHighlighted = this.modal.channelPlayableHighlights.has(channel);
 
+      // Multi-program channel: switches GM instrument mid-song. Offer to split it
+      // by program so each timbre routes to its own instrument (audit combo Part 3).
+      const channelPCs = (this.modal.programChangeEvents || []).filter(
+        (p) => p.channel === channel
+      );
+      const isMultiProgram = channel !== 9 && new Set(channelPCs.map((p) => p.program)).size > 1;
+
       // Build device options
       let deviceOptions = `<option value="">${this.modal.t('midiEditor.noRouting')}</option>`;
       this.modal.connectedDevices.forEach((device) => {
@@ -111,6 +118,15 @@
                 <span class="channel-settings-hint">${this.modal.t('midiEditor.channelRoutingHint')}</span>
                 <select class="channel-routing-select">${deviceOptions}</select>
             </div>
+            ${
+              isMultiProgram
+                ? `<div class="channel-settings-section">
+                <label class="channel-settings-label">🎚 ${this.modal.t('midiEditor.splitByProgramTitle')}</label>
+                <span class="channel-settings-hint">${this.modal.t('midiEditor.splitByProgramHint')}</span>
+                <button class="channel-split-program-btn">${this.modal.t('midiEditor.splitByProgramAction')}</button>
+            </div>`
+                : ''
+            }
             <div class="channel-settings-section channel-visibility-actions">
                 <label class="channel-settings-label">👁 ${this.modal.t('midiEditor.visibilityTitle')}</label>
                 <div class="channel-visibility-btns">
@@ -151,6 +167,16 @@
         deleteBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           this.deleteChannel(channel);
+        });
+      }
+
+      // Event: split-channel-by-program button (only present for multi-program channels)
+      const splitBtn = popover.querySelector('.channel-split-program-btn');
+      if (splitBtn) {
+        splitBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.closePopover();
+          this.modal.editActions.splitChannelByProgram(channel);
         });
       }
 
@@ -241,6 +267,15 @@
       this.modal._splitChannelNames?.delete(channel);
       this.modal._stringInstrumentChannels?.delete(channel);
       this.modal._stringInstrumentCCEnabled?.delete(channel);
+      // Drop retained program-change events for the deleted channel. This path
+      // rebuilds fullSequence directly (skipSync), so the sync-time prune never
+      // runs — without this, the stale PCs would resurface if the channel number
+      // is reused (audit combo follow-up).
+      if (Array.isArray(this.modal.programChangeEvents)) {
+        this.modal.programChangeEvents = this.modal.programChangeEvents.filter(
+          (p) => p.channel !== channel
+        );
+      }
 
       this.closePopover();
 

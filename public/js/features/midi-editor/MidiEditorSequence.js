@@ -30,6 +30,12 @@
       // redundant (audit P2.3). `tempo`/`tempoEvents` finalised after.
       let tempo = 120;
       this.modal.tempoEvents = [];
+      // Retain every program-change with its tick so mid-song instrument
+      // switches round-trip on save instead of collapsing to one per channel
+      // (audit D MD2). `channels[].program` still holds the primary/displayed
+      // instrument; this is the source of truth for what gets serialised and
+      // for the multi-program badge.
+      this.modal.programChangeEvents = [];
 
       const channelInstruments = new Map();
       const channelNoteCount = new Map();
@@ -73,6 +79,7 @@
             const pn = event.programNumber ?? event.program;
             if (pn !== undefined) {
               channelInstruments.set(channel, pn);
+              this.modal.programChangeEvents.push({ ticks: currentTick, channel, program: pn });
               this.modal.log(
                 'debug',
                 `Channel ${channel}: program ${pn} (${this.modal.getInstrumentName(pn)})`
@@ -373,6 +380,20 @@
       while (ii < invisibleNotes.length) merged[mi++] = invisibleNotes[ii++];
       while (vi < visibleNotes.length) merged[mi++] = visibleNotes[vi++];
       this.modal.fullSequence = merged;
+
+      // Drop retained program-change events for channels that no longer have any
+      // notes. programChangeEvents is keyed by channel number, and channel
+      // numbers get recycled (move / delete / split); without this, a stale
+      // mid-song PC set from an emptied channel would resurface once that number
+      // is reused — a wrong multi-program badge and phantom program changes in
+      // the saved file (audit combo follow-up). This is the universal note-edit
+      // chokepoint (drag, delete, move all sync through here).
+      if (Array.isArray(this.modal.programChangeEvents) && this.modal.programChangeEvents.length) {
+        const channelsWithNotes = new Set(merged.map((n) => n.c));
+        this.modal.programChangeEvents = this.modal.programChangeEvents.filter((p) =>
+          channelsWithNotes.has(p.channel)
+        );
+      }
 
       this.modal.log(
         'debug',

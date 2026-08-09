@@ -20,6 +20,22 @@
 
       let html = '<div class="channel-chips">';
 
+      // Channels that switch GM instrument mid-song (>1 distinct program). Shown
+      // with a badge so the user knows only the dominant timbre reaches hardware;
+      // the ⚙ popover offers to split them by program (audit combo Part 1c).
+      const multiProgramChannels = new Set();
+      if (Array.isArray(this.modal.programChangeEvents)) {
+        const programsByChannel = new Map();
+        for (const pc of this.modal.programChangeEvents) {
+          if (pc.channel === 9) continue;
+          if (!programsByChannel.has(pc.channel)) programsByChannel.set(pc.channel, new Set());
+          programsByChannel.get(pc.channel).add(pc.program);
+        }
+        for (const [chan, progs] of programsByChannel) {
+          if (progs.size > 1) multiProgramChannels.add(chan);
+        }
+      }
+
       // Chips pour chaque canal
       this.modal.channels.forEach((ch) => {
         const isActive = this.modal.activeChannels.has(ch.channel);
@@ -83,6 +99,12 @@
           ? `<span class="chip-number">${ch.channel + 1}</span><span class="chip-dot">·</span><span class="chip-instrument">${gmLabelFull}</span>`
           : `<span class="chip-number">${ch.channel + 1}</span>`;
 
+        // Multi-program badge — channel switches instrument mid-song
+        const isMultiProgram = multiProgramChannels.has(ch.channel);
+        const multiProgramBadge = isMultiProgram
+          ? `<span class="chip-multiprogram-badge" title="${this.modal.t('midiEditor.multiProgramBadgeTip')}">${this.modal.t('midiEditor.multiProgramBadge')}</span>`
+          : '';
+
         // Routed instrument line — detect split routing
         const isSplit =
           this.modal._splitChannelNames && this.modal._splitChannelNames.has(ch.channel);
@@ -128,7 +150,7 @@
                             title="${gmLabelFull ? `${ch.channel + 1}: ${gmLabelFull}` : `Ch ${ch.channel + 1}`} — ${this.modal.t('midiEditor.notesChannel', { count: ch.noteCount, channel: ch.channel + 1 })}"
                         >
                             <span class="chip-content">
-                                <span class="chip-main-line">${mainLabel}${isSplit ? '<span class="chip-split-badge" title="Split routing">split</span>' : ''}${playableIndicator}</span>
+                                <span class="chip-main-line">${mainLabel}${isSplit ? '<span class="chip-split-badge" title="Split routing">split</span>' : ''}${multiProgramBadge}${playableIndicator}</span>
                                 ${routedLine}
                             </span>
                         </button>

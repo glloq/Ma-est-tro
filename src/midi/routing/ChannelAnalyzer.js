@@ -139,6 +139,7 @@ class ChannelAnalyzer {
     const usesPitchBend = this.hasPitchBend(events);
     const programs = this.extractPrograms(events);
     const primaryProgram = this.getPrimaryProgram(programs);
+    const programSummary = this.summarizePrograms(programs);
     const bankSelect = this.extractBankSelect(events);
     const trackNames = this.getTrackNames(midiData, channel);
     const density = this.calculateNoteDensity(noteEvents, midiData.duration || 0);
@@ -173,6 +174,13 @@ class ChannelAnalyzer {
       usesPitchBend,
       programs,
       primaryProgram,
+      // Multi-program detection: a channel with >1 distinct program has
+      // mid-song program changes; `crossesFamily` means those span different GM
+      // families (Piano → Strings) and the secondary timbre(s) can't be
+      // reproduced on a single mono-timbral instrument (audit combo Part 1).
+      distinctPrograms: programSummary.distinct,
+      isMultiProgram: programSummary.distinct.length > 1,
+      crossesFamily: programSummary.crossesFamily,
       bankMSB: bankSelect.msb,
       bankLSB: bankSelect.lsb,
       trackNames,
@@ -480,6 +488,27 @@ class ChannelAnalyzer {
     }
 
     return primaryProgram;
+  }
+
+  /**
+   * Summarize a channel's program-change stream: the distinct GM programs it
+   * uses and whether those programs span more than one GM instrument *family*
+   * (e.g. Piano → Strings). GMB routes one physical (usually mono-timbral)
+   * instrument per channel, so a channel that switches family mid-song can only
+   * reproduce its dominant timbre on hardware — {@link AutoAssigner} surfaces a
+   * warning, and the editor offers to split the channel by program.
+   * @param {Array<number>} programs - Program numbers in stream order (may repeat)
+   * @returns {{ distinct: Array<number>, crossesFamily: boolean }}
+   */
+  summarizePrograms(programs) {
+    const distinct = Array.from(new Set(programs)).sort((a, b) => a - b);
+    if (distinct.length <= 1) {
+      return { distinct, crossesFamily: false };
+    }
+    const families = new Set(
+      distinct.map((p) => InstrumentTypeConfig.detectTypeFromProgram(p).type)
+    );
+    return { distinct, crossesFamily: families.size > 1 };
   }
 
   /**

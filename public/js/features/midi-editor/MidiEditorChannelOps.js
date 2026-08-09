@@ -312,6 +312,16 @@
       channelInfo.instrument = channel === 9 ? 'Drums' : instrumentName;
       channelInfo.hasExplicitProgram = true;
 
+      // The user picked one instrument for the whole channel: drop any retained
+      // mid-song program changes so the save writer emits a single programChange
+      // and the multi-program badge clears (audit combo Part 2). If they wanted
+      // to keep the timbre switches, they'd split the channel by program instead.
+      if (Array.isArray(this.modal.programChangeEvents)) {
+        this.modal.programChangeEvents = this.modal.programChangeEvents.filter(
+          (p) => p.channel !== channel
+        );
+      }
+
       this.modal.log('info', `Applied instrument ${instrumentName} to channel ${channel + 1}`);
       this.modal.showNotification(
         this.modal.t('midiEditor.instrumentApplied', {
@@ -381,6 +391,178 @@
       }
 
       return -1; // No channel available
+    }
+
+    /**
+     * Split a multi-program channel into several single-program channels — one
+     * per distinct GM program it switches to mid-song — so the existing static
+     * auto-routing (one instrument per channel) can route each timbre to its own
+     * instrument. The dominant program (most notes) keeps the original channel;
+     * every other program moves to a free channel. Notes are assigned to the
+     * program that was active at their tick. No-op on channel 9 (drums ignore
+     * program changes). Confirms first (the reorg is not covered by the
+     * piano-roll undo stack). (audit combo Part 3.)
+     * @param {number} channel
+     */
+    async splitChannelByProgram(channel) {
+      if (channel === 9) {
+        this.modal.showNotification(this.modal.t('midiEditor.splitByProgramDrums'), 'info');
+        return;
+      }
+
+      const pcs = (this.modal.programChangeEvents || [])
+        .filter((p) => p.channel === channel)
+        .slice()
+        .sort((a, b) => a.ticks - b.ticks);
+      if (new Set(pcs.map((p) => p.program)).size <= 1) {
+        this.modal.showNotification(this.modal.t('midiEditor.splitByProgramNotMulti'), 'info');
+        return;
+      }
+
+      // Pull any pending piano-roll edits into fullSequence before reassigning
+      // note channels directly (mirrors changeChannel()).
+      this.modal.sequenceOps.syncFullSequenceFromPianoRoll();
+
+      const channelNotes = this.modal.fullSequence
+        .filter((n) => n.c === channel)
+        .sort((a, b) => a.t - b.t);
+      if (channelNotes.length === 0) {
+        this.modal.showNotification(this.modal.t('midiEditor.splitByProgramNotMulti'), 'info');
+        return;
+      }
+
+      // Assign each note to the program active at its tick (GM default 0 before
+      // the first program change).
+      const notesByProgram = new Map();
+      let pcIdx = 0;
+      let currentProgram = 0;
+      for (const note of channelNotes) {
+        while (pcIdx < pcs.length && pcs[pcIdx].ticks <= note.t) {
+          currentProgram = pcs[pcIdx].program;
+          pcIdx++;
+        }
+        if (!notesByProgram.has(currentProgram)) notesByProgram.set(currentProgram, []);
+        notesByProgram.get(currentProgram).push(note);
+      }
+
+      const programs = Array.from(notesByProgram.keys());
+      if (programs.length <= 1) {
+        // Every note fell under a single program (e.g. all PCs sit after the
+        // last note) — nothing meaningful to split.
+        this.modal.showNotification(this.modal.t('midiEditor.splitByProgramNotMulti'), 'info');
+        return;
+      }
+
+      // Dominant program (most notes) keeps the original channel.
+      programs.sort((a, b) => notesByProgram.get(b).length - notesByProgram.get(a).length);
+      const keepProgram = programs[0];
+      const moveProgs = programs.slice(1);
+
+      // Allocate free channels for the programs being moved out.
+      const used = new Set(this.modal.channels.map((c) => c.channel));
+      const freeChannels = [];
+      for (let i = 0; i < 16 && freeChannels.length < moveProgs.length; i++) {
+        if (i === 9 || used.has(i)) continue;
+        freeChannels.push(i);
+      }
+      if (freeChannels.length < moveProgs.length) {
+        this.modal.showNotification(
+          this.modal.t('midiEditor.splitByProgramNoChannels', {
+            needed: moveProgs.length,
+            available: freeChannels.length
+          }),
+          'error'
+        );
+        return;
+      }
+
+      // Confirm before applying — the split reorganizes notes across several
+      // channels and is NOT covered by the piano-roll undo stack, so warn the
+      // user first (mirrors the confirm flow of changeChannel / applyInstrument).
+      const confirmed = await this.modal.dialogs.showConfirmModal({
+        title: this.modal.t('midiEditor.splitByProgramTitle'),
+        icon: '🎚',
+        message: this.modal.t('midiEditor.splitByProgramConfirm', {
+          channel: channel + 1,
+          count: moveProgs.length + 1
+        }),
+        details: `<div class="confirm-choice-info"><p>⚠️ ${this.modal.t('midiEditor.splitByProgramConfirmNote')}</p></div>`,
+        confirmText: this.modal.t('midiEditor.splitByProgramAction'),
+        confirmClass: 'primary'
+      });
+      if (!confirmed) {
+        this.modal.log('info', 'Split-by-program cancelled by user');
+        return;
+      }
+
+      // Reassign notes and register the new single-program channels. Pushing the
+      // channel entries before updateChannelsFromSequence() lets it preserve the
+      // programs we set here while it recomputes note counts. Note: CC / pitch-bend
+      // events (this.modal.ccEvents) stay on the original channel — the split
+      // routes notes and programs, not continuous controllers (v1 limitation).
+      moveProgs.forEach((prog, i) => {
+        const newCh = freeChannels[i];
+        for (const note of notesByProgram.get(prog)) note.c = newCh;
+        this.modal.channels.push({
+          channel: newCh,
+          program: prog,
+          instrument: newCh === 9 ? 'Drums' : this.modal.getInstrumentName(prog),
+          noteCount: notesByProgram.get(prog).length,
+          hasExplicitProgram: true
+        });
+        this.modal.activeChannels.add(newCh);
+      });
+
+      const origInfo = this.modal.channels.find((c) => c.channel === channel);
+      if (origInfo) {
+        origInfo.program = keepProgram;
+        origInfo.instrument = this.modal.getInstrumentName(keepProgram);
+        origInfo.hasExplicitProgram = true;
+      }
+
+      // Each resulting channel is now single-program: replace the retained PCs
+      // with one tick-0 entry per channel so the save writer and the
+      // multi-program badge reflect the new reality. Filter BOTH the source and
+      // the destination channels — a recycled destination number could still
+      // carry stale PCs, which would otherwise re-create a phantom multi-program
+      // channel (audit combo follow-up 3d).
+      const rewrittenChannels = new Set([channel, ...freeChannels]);
+      this.modal.programChangeEvents = (this.modal.programChangeEvents || []).filter(
+        (p) => !rewrittenChannels.has(p.channel)
+      );
+      this.modal.programChangeEvents.push({ ticks: 0, channel, program: keepProgram });
+      moveProgs.forEach((prog, i) => {
+        this.modal.programChangeEvents.push({ ticks: 0, channel: freeChannels[i], program: prog });
+      });
+
+      // Reset click-to-hear feedback instruments so the new channels preview
+      // with their own program (mirrors applyInstrumentToChannel).
+      if (this.modal._playback) this.modal._playback._feedbackInstrumentsLoaded = false;
+
+      // Recompute note counts (preserves the programs set above) and rebuild UI.
+      this.modal.ccPicker.updateChannelsFromSequence();
+      this.modal.isDirty = true;
+      this.modal.routingOps.updateSaveButton();
+      this.modal.sequenceOps.updateSequenceFromActiveChannels(null, true);
+      this.refreshChannelButtons();
+      this.modal.renderer.updateInstrumentSelector();
+      this.parent.updateEditButtons();
+      // Keep the synth's per-channel mute state in sync with the new channel set
+      // (mirrors deleteChannel; otherwise stale until the next Play).
+      this.modal.syncMutedChannels?.();
+
+      this.modal.showNotification(
+        this.modal.t('midiEditor.splitByProgramDone', {
+          channel: channel + 1,
+          count: moveProgs.length + 1
+        }),
+        'success'
+      );
+      this.modal.log(
+        'info',
+        `Split channel ${channel} by program into ${moveProgs.length + 1} channels ` +
+          `(kept program ${keepProgram}, moved ${moveProgs.join(', ')})`
+      );
     }
   }
 

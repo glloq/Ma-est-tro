@@ -209,6 +209,12 @@ class AutoAssigner {
       // 6. Calculate overall confidence score
       const confidenceScore = this.calculateConfidence(autoSelection, channelAnalyses.length);
 
+      // 6b. Multi-program channel warnings — a channel that switches GM family
+      // mid-song routes to a single (dominant) instrument, so its secondary
+      // timbre(s) won't be reproduced on mono-timbral hardware. Surface it so the
+      // UI can prompt the user to split the channel by program (audit combo Part 1).
+      const channelWarnings = this._collectMultiProgramWarnings(channelAnalyses);
+
       // 7. Build the matrix and instrument list (if requested)
       let matrixScores = null;
       let instrumentList = null;
@@ -227,6 +233,7 @@ class AutoAssigner {
         autoSelection,
         splitProposals,
         channelAnalyses,
+        channelWarnings,
         confidenceScore,
         allInstruments,
         matrixScores,
@@ -242,6 +249,37 @@ class AutoAssigner {
       this.logger.error(`Error generating suggestions: ${error.message}`);
       throw error;
     }
+  }
+
+  /**
+   * Build per-channel warnings for channels whose program-change stream crosses
+   * GM instrument families mid-song. These channels route to a single dominant
+   * instrument (see {@link ChannelAnalyzer#getPrimaryProgram}), so their other
+   * timbres are silently dropped on mono-timbral hardware; the editor can offer
+   * to split them by program. Drum channels (9) ignore program changes and are
+   * skipped (audit combo Part 1).
+   * @param {Array<Object>} channelAnalyses
+   * @returns {Object<number, { type: string, distinctPrograms: Array<number>, primaryProgram: number|null }>}
+   * @private
+   */
+  _collectMultiProgramWarnings(channelAnalyses) {
+    const warnings = {};
+    for (const analysis of channelAnalyses) {
+      if (analysis.channel === 9) continue;
+      if (!analysis.crossesFamily) continue;
+      warnings[analysis.channel] = {
+        type: 'multi_program',
+        distinctPrograms: analysis.distinctPrograms,
+        primaryProgram: analysis.primaryProgram
+      };
+      this.logger.warn(
+        `Channel ${analysis.channel + 1} changes instrument family mid-song ` +
+          `(programs ${analysis.distinctPrograms.join(', ')}); routed to program ` +
+          `${analysis.primaryProgram} — secondary timbre(s) won't be reproduced on ` +
+          `mono-timbral hardware. Consider splitting the channel by program.`
+      );
+    }
+    return warnings;
   }
 
   /**

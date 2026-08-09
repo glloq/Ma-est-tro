@@ -291,6 +291,7 @@
           }
         });
         m.tempoEvents = [];
+        m.programChangeEvents = [];
 
         step('tablatureEditor', () => {
           if (m.tablatureEditor) {

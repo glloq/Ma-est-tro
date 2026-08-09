@@ -41,7 +41,15 @@
       // Clamp MIDI values to their valid ranges and count any corrections for the log.
       // The MIDI standard enforces 7-bit values (0-127) for note/velocity/CC,
       // 4-bit (0-15) for channel, and 14-bit signed (-8192..8191) for pitch bend.
-      const clampStats = { note: 0, channel: 0, velocity: 0, cc: 0, pitchBend: 0, ticks: 0 };
+      const clampStats = {
+        note: 0,
+        channel: 0,
+        velocity: 0,
+        cc: 0,
+        pitchBend: 0,
+        ticks: 0,
+        program: 0
+      };
       const clamp = (value, min, max, kind) => {
         const n = Number(value);
         if (!Number.isFinite(n)) {
@@ -116,10 +124,42 @@
         }
       });
 
-      // Add programChange events at tick 0 for each channel
+      // Emit program-change events. A channel that still carries multiple
+      // distinct programs mid-song (the user did not collapse it to a single
+      // instrument) has every change preserved at its original tick, so the file
+      // round-trips and multi-timbral / software synths follow the switches
+      // (audit D MD2). Whole-channel instrument edits and channel splits drop the
+      // stale entries (MidiEditorChannelOps), so those channels fall through to a
+      // single programChange at tick 0. Channel 9 (GM drums) never gets one.
+      const storedPCByChannel = new Map();
+      (this.modal.programChangeEvents || []).forEach((pc) => {
+        if (pc.channel === 9) return;
+        if (!storedPCByChannel.has(pc.channel)) storedPCByChannel.set(pc.channel, []);
+        storedPCByChannel.get(pc.channel).push(pc);
+      });
+
       usedChannels.forEach((program, channel) => {
-        if (channel !== 9) {
-          // Canal 10 (index 9) est pour drums, pas de programChange
+        if (channel === 9) return; // Canal 10 (index 9) = drums, pas de programChange
+        const stored = storedPCByChannel.get(channel);
+        const distinctPrograms = stored ? new Set(stored.map((p) => p.program)) : null;
+
+        if (stored && distinctPrograms.size > 1) {
+          stored
+            .slice()
+            .sort((a, b) => a.ticks - b.ticks)
+            .forEach((pc) => {
+              events.push({
+                absoluteTime: clamp(pc.ticks, 0, Number.MAX_SAFE_INTEGER, 'ticks'),
+                type: 'programChange',
+                channel: channel,
+                programNumber: clamp(pc.program, 0, 127, 'program')
+              });
+            });
+          this.modal.log(
+            'debug',
+            `Preserved ${stored.length} mid-song programChange(s) for channel ${channel}`
+          );
+        } else {
           events.push({
             absoluteTime: 0,
             type: 'programChange',
