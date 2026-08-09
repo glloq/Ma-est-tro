@@ -1453,6 +1453,25 @@
     line-height: 1.4;
 }
 
+/* Multi-program badge — channel switches GM instrument mid-song. Amber so it
+   reads as "attention" and stays distinct from the (white) split badge; the
+   help cursor hints at the explanatory tooltip. */
+.midi-editor-modal .chip-multiprogram-badge {
+    display: inline-block;
+    padding: 0 4px;
+    margin-left: 4px;
+    border-radius: 3px;
+    background: rgba(255, 179, 0, 0.92);
+    color: #241a00;
+    font-size: 0.55rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+    line-height: 1.4;
+    cursor: help;
+}
+
 /* Split routing line */
 .midi-editor-modal .chip-split-line {
     color: rgba(255, 255, 255, 0.85);
@@ -1684,6 +1703,30 @@
     color: var(--text-primary, #2d3561);
     background: var(--bg-secondary, #ffffff);
     border-color: var(--accent-primary, #667eea);
+}
+
+/* Split-channel-by-program action (shown only for multi-program channels in
+   the gear settings popover). Accent border marks it as the section's main action. */
+.channel-split-program-btn {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary, #2d3561);
+    background: var(--bg-tertiary, #e8eeff);
+    border: 1px solid var(--accent-primary, #667eea);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.channel-split-program-btn:hover {
+    color: #fff;
+    background: var(--accent-primary, #667eea);
+}
+
+.channel-split-program-btn:active {
+    transform: translateY(1px);
 }
 
 .playable-color-dot {

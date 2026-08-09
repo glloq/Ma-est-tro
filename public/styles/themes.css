@@ -463,6 +463,17 @@ body.dark-mode .channel-show-all-btn:hover {
     background: #3a3a3a;
 }
 
+body.dark-mode .channel-split-program-btn {
+    color: #e0e0e0;
+    background: #2a2a2a;
+    border-color: #667eea;
+}
+
+body.dark-mode .channel-split-program-btn:hover {
+    color: #fff;
+    background: #667eea;
+}
+
 body.dark-mode .visualizer-controls {
     background: var(--bg-tertiary);
     border-top-color: var(--border-color);
