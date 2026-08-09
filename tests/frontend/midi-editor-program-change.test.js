@@ -30,17 +30,25 @@ const rendererSource = readFileSync(
   resolve(__dirname, '../../public/js/features/midi-editor/MidiEditorRenderer.js'),
   'utf8'
 );
+const popoverSource = readFileSync(
+  resolve(__dirname, '../../public/js/features/midi-editor/MidiEditorChannelSettingsPopover.js'),
+  'utf8'
+);
 
 new Function(writerSource)();
 new Function(fileOpsSource)();
 new Function(sequenceSource)();
 new Function(channelOpsSource)();
 new Function(rendererSource)();
+new Function(popoverSource)();
 
 const MidiEditorFileOps = /** @type {any} */ (globalThis.window.MidiEditorFileOps);
 const MidiEditorSequence = /** @type {any} */ (globalThis.window.MidiEditorSequence);
 const MidiEditorChannelOps = /** @type {any} */ (globalThis.window.MidiEditorChannelOps);
 const MidiEditorRenderer = /** @type {any} */ (globalThis.window.MidiEditorRenderer);
+const MidiEditorChannelSettingsPopover = /** @type {any} */ (
+  globalThis.window.MidiEditorChannelSettingsPopover
+);
 
 function makeModal(overrides = {}) {
   return {
@@ -245,6 +253,9 @@ describe('MidiEditorChannelOps.splitChannelByProgram (audit combo Part 3)', () =
       routingOps: { updateSaveButton: vi.fn() },
       renderer: { updateInstrumentSelector: vi.fn() },
       tablatureOps: { _closeChannelSettingsPopover: vi.fn() },
+      dialogs: { showConfirmModal: vi.fn().mockResolvedValue(true) },
+      _playback: { _feedbackInstrumentsLoaded: true },
+      syncMutedChannels: vi.fn(),
       container: undefined,
       fullSequence: [],
       channels: [],
@@ -255,7 +266,7 @@ describe('MidiEditorChannelOps.splitChannelByProgram (audit combo Part 3)', () =
     return { ops: new MidiEditorChannelOps(parent), modal, notifications };
   }
 
-  it('splits a multi-program channel: dominant keeps the channel, others move', () => {
+  it('splits a multi-program channel: dominant keeps the channel, others move', async () => {
     // 3 notes under program 0 (dominant), 2 under program 40.
     const { ops, modal, notifications } = makeSplitCtx({
       fullSequence: [
@@ -272,7 +283,8 @@ describe('MidiEditorChannelOps.splitChannelByProgram (audit combo Part 3)', () =
       ]
     });
 
-    ops.splitChannelByProgram(0);
+    await ops.splitChannelByProgram(0);
+    expect(modal.dialogs.showConfirmModal).toHaveBeenCalled();
 
     // Program-0 notes (dominant, 3) stay on channel 0; program-40 notes move.
     const stay = modal.fullSequence.filter((n) => n.t < 1000);
@@ -297,25 +309,25 @@ describe('MidiEditorChannelOps.splitChannelByProgram (audit combo Part 3)', () =
     expect(notifications.some((n) => n.level === 'success')).toBe(true);
   });
 
-  it('is a no-op with an info notice on a single-program channel', () => {
+  it('is a no-op with an info notice on a single-program channel', async () => {
     const { ops, modal, notifications } = makeSplitCtx({
       fullSequence: [{ t: 0, g: 100, n: 60, c: 0, v: 100 }],
       channels: [{ channel: 0, program: 0, instrument: 'Program0', noteCount: 1 }],
       programChangeEvents: [{ ticks: 0, channel: 0, program: 0 }]
     });
-    ops.splitChannelByProgram(0);
+    await ops.splitChannelByProgram(0);
     expect(modal.isDirty).toBe(false);
     expect(notifications).toEqual([{ msg: 'midiEditor.splitByProgramNotMulti', level: 'info' }]);
   });
 
-  it('refuses to split channel 9 (drums ignore program changes)', () => {
+  it('refuses to split channel 9 (drums ignore program changes)', async () => {
     const { ops, modal, notifications } = makeSplitCtx();
-    ops.splitChannelByProgram(9);
+    await ops.splitChannelByProgram(9);
     expect(modal.isDirty).toBe(false);
     expect(notifications).toEqual([{ msg: 'midiEditor.splitByProgramDrums', level: 'info' }]);
   });
 
-  it('errors when there are not enough free channels', () => {
+  it('errors when there are not enough free channels', async () => {
     // Occupy every non-drum channel so no free channel remains for the move.
     const channels = [];
     for (let i = 0; i < 16; i++) {
@@ -333,9 +345,53 @@ describe('MidiEditorChannelOps.splitChannelByProgram (audit combo Part 3)', () =
         { ticks: 1000, channel: 0, program: 40 }
       ]
     });
-    ops.splitChannelByProgram(0);
+    await ops.splitChannelByProgram(0);
     expect(modal.isDirty).toBe(false);
     expect(notifications.some((n) => n.level === 'error')).toBe(true);
+  });
+
+  it('does nothing when the user cancels the confirmation', async () => {
+    const { ops, modal, notifications } = makeSplitCtx({
+      fullSequence: [
+        { t: 0, g: 100, n: 60, c: 0, v: 100 },
+        { t: 1000, g: 100, n: 67, c: 0, v: 100 }
+      ],
+      channels: [{ channel: 0, program: 40, instrument: 'Program40', noteCount: 2 }],
+      programChangeEvents: [
+        { ticks: 0, channel: 0, program: 0 },
+        { ticks: 1000, channel: 0, program: 40 }
+      ]
+    });
+    modal.dialogs.showConfirmModal.mockResolvedValue(false);
+    await ops.splitChannelByProgram(0);
+    expect(modal.isDirty).toBe(false);
+    expect(modal.fullSequence.every((n) => n.c === 0)).toBe(true); // no notes moved
+    expect(notifications.some((n) => n.level === 'success')).toBe(false);
+  });
+
+  it('drops stale program changes on a recycled destination channel (3d)', async () => {
+    // Channel 1 carries stale multi-program PCs but no notes; the split moves the
+    // secondary program onto it and must NOT inherit those stale PCs.
+    const { ops, modal } = makeSplitCtx({
+      fullSequence: [
+        { t: 0, g: 100, n: 60, c: 0, v: 100 },
+        { t: 100, g: 100, n: 62, c: 0, v: 100 },
+        { t: 1000, g: 100, n: 67, c: 0, v: 100 }
+      ],
+      channels: [{ channel: 0, program: 40, instrument: 'Program40', noteCount: 3 }],
+      programChangeEvents: [
+        { ticks: 0, channel: 0, program: 0 },
+        { ticks: 1000, channel: 0, program: 40 },
+        // Stale leftovers on channel 1 (a previously deleted channel).
+        { ticks: 0, channel: 1, program: 24 },
+        { ticks: 500, channel: 1, program: 60 }
+      ]
+    });
+    await ops.splitChannelByProgram(0);
+    // Channel 1 (first free) received the moved program (40) and holds exactly
+    // one PC — the stale program-24/60 entries are gone.
+    const ch1PCs = modal.programChangeEvents.filter((p) => p.channel === 1);
+    expect(ch1PCs).toEqual([{ ticks: 0, channel: 1, program: 40 }]);
   });
 });
 
@@ -406,5 +462,76 @@ describe('MidiEditorRenderer multi-program badge (audit combo Part 1c)', () => {
     });
     const html = new MidiEditorRenderer(modal).renderChannelButtons();
     expect(html).not.toContain('chip-multiprogram-badge');
+  });
+});
+
+// Regression: programChangeEvents is keyed by channel number, which gets
+// recycled. Stale PCs must be dropped when a channel is emptied/deleted, or a
+// reused channel number resurrects phantom mid-song program changes (wrong badge
+// + wrong saved output). See the lifecycle audit findings 3a-3e.
+describe('program-change lifecycle: stale entries are pruned (audit follow-up)', () => {
+  it('syncFullSequenceFromPianoRoll drops PCs for channels that lost all notes', () => {
+    // Channel 1 is emptied in the renderer (its notes deleted); its PCs must go.
+    const modal = {
+      log: vi.fn(),
+      activeChannels: new Set([0, 1]),
+      fullSequence: [
+        { t: 0, g: 100, n: 60, c: 0, v: 100 },
+        { t: 0, g: 100, n: 64, c: 1, v: 100 }
+      ],
+      pianoRollRenderer: {
+        getSequence: () => [{ t: 0, g: 100, n: 60, c: 0, v: 100 }] // channel 1 gone
+      },
+      programChangeEvents: [
+        { ticks: 0, channel: 0, program: 0 },
+        { ticks: 0, channel: 1, program: 24 },
+        { ticks: 500, channel: 1, program: 60 }
+      ]
+    };
+    new MidiEditorSequence(modal).syncFullSequenceFromPianoRoll();
+    expect(modal.programChangeEvents.every((p) => p.channel === 0)).toBe(true);
+    expect(modal.programChangeEvents).toEqual([{ ticks: 0, channel: 0, program: 0 }]);
+  });
+
+  it('deleteChannel drops the deleted channel’s program changes', () => {
+    const modal = {
+      log: vi.fn(),
+      isDirty: false,
+      fullSequence: [
+        { t: 0, g: 100, n: 60, c: 0, v: 100 },
+        { t: 0, g: 100, n: 64, c: 2, v: 100 }
+      ],
+      sequence: [],
+      channels: [
+        { channel: 0, program: 0 },
+        { channel: 2, program: 40 }
+      ],
+      activeChannels: new Set([0, 2]),
+      channelDisabled: new Set(),
+      channelRouting: new Map(),
+      channelPlayableHighlights: new Set(),
+      _routedGmPrograms: new Map(),
+      _splitChannelNames: new Map(),
+      _stringInstrumentChannels: new Map(),
+      _stringInstrumentCCEnabled: new Map(),
+      programChangeEvents: [
+        { ticks: 0, channel: 0, program: 0 },
+        { ticks: 0, channel: 2, program: 40 },
+        { ticks: 1000, channel: 2, program: 48 }
+      ],
+      container: null,
+      _channelSettingsPopoverEl: null,
+      _popoverOutsideClickHandler: null,
+      _popoverScrollHandler: null,
+      sequenceOps: { updateSequenceFromActiveChannels: vi.fn() },
+      editActions: { refreshChannelButtons: vi.fn() },
+      renderer: { updateInstrumentSelector: vi.fn() },
+      syncMutedChannels: vi.fn(),
+      routingOps: { updateSaveButton: vi.fn() }
+    };
+    const popover = new MidiEditorChannelSettingsPopover({ modal });
+    popover.deleteChannel(2);
+    expect(modal.programChangeEvents.some((p) => p.channel === 2)).toBe(false);
+    expect(modal.programChangeEvents).toEqual([{ ticks: 0, channel: 0, program: 0 }]);
   });
 });

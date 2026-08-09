@@ -267,6 +267,15 @@
       this.modal._splitChannelNames?.delete(channel);
       this.modal._stringInstrumentChannels?.delete(channel);
       this.modal._stringInstrumentCCEnabled?.delete(channel);
+      // Drop retained program-change events for the deleted channel. This path
+      // rebuilds fullSequence directly (skipSync), so the sync-time prune never
+      // runs — without this, the stale PCs would resurface if the channel number
+      // is reused (audit combo follow-up).
+      if (Array.isArray(this.modal.programChangeEvents)) {
+        this.modal.programChangeEvents = this.modal.programChangeEvents.filter(
+          (p) => p.channel !== channel
+        );
+      }
 
       this.closePopover();
 

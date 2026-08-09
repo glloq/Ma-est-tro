@@ -381,6 +381,20 @@
       while (vi < visibleNotes.length) merged[mi++] = visibleNotes[vi++];
       this.modal.fullSequence = merged;
 
+      // Drop retained program-change events for channels that no longer have any
+      // notes. programChangeEvents is keyed by channel number, and channel
+      // numbers get recycled (move / delete / split); without this, a stale
+      // mid-song PC set from an emptied channel would resurface once that number
+      // is reused — a wrong multi-program badge and phantom program changes in
+      // the saved file (audit combo follow-up). This is the universal note-edit
+      // chokepoint (drag, delete, move all sync through here).
+      if (Array.isArray(this.modal.programChangeEvents) && this.modal.programChangeEvents.length) {
+        const channelsWithNotes = new Set(merged.map((n) => n.c));
+        this.modal.programChangeEvents = this.modal.programChangeEvents.filter((p) =>
+          channelsWithNotes.has(p.channel)
+        );
+      }
+
       this.modal.log(
         'debug',
         `Synced fullSequence: ${invisibleNotes.length} invisible + ${visibleNotes.length} visible = ${this.modal.fullSequence.length} total (using ${previousActiveChannels ? 'previous' : 'current'} active channels)`

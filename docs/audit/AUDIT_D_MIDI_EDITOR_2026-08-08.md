@@ -115,8 +115,24 @@ MD1 préservé/recalculé, arrondi MN1).
     conservé, les autres déplacés vers des canaux libres), que l'auto-routage statique
     existant route ensuite séparément. Limite v1 : les CC/pitch-bend restent sur le
     canal d'origine (seuls notes + programmes sont répartis).
-  - Tests : `tests/frontend/midi-editor-program-change.test.js` (15),
+  - Tests : `tests/frontend/midi-editor-program-change.test.js` (19),
     `tests/midi-adaptation.test.js` (+9 : détection + avertissements).
+  - **Suivi audit adversarial (2026-08-09)** — deux revues parallèles du combo :
+    - **Cohérence `programChangeEvents`** — la clé est le **numéro de canal**, or
+      les numéros sont recyclés (déplacement/suppression/scission) et seules 2 des
+      ~5 opérations synchronisaient le tableau → des PC obsolètes ressuscitaient
+      sur un canal réutilisé (mauvais badge **et** faux `programChange` sauvegardés).
+      Corrigé : purge des PC orphelins dans `syncFullSequenceFromPianoRoll` (chokepoint
+      universel d'édition de notes), dans `deleteChannel` (seul contournement), et
+      filtrage des canaux destination dans `splitChannelByProgram` ; reset ajouté
+      dans `doClose`. Tests de non-régression ajoutés.
+    - **UI/UX** — le badge et le bouton n'avaient **aucun CSS** (commit `638cb8f`) ;
+      la scission ne **confirmait pas** (réorganisation multi-canaux non couverte par
+      l'undo du piano-roll) → dialogue de confirmation ajouté ; le libellé « PC »
+      (jargon, illisible au toucher) remplacé par « multi » (28 langues) ; sync des
+      mutes + reset des instruments de feedback ajoutés après scission.
+    - Limites v1 documentées : les CC/pitch-bend restent sur le canal d'origine ;
+      la scission n'est pas annulable via Ctrl+Z (mitigée par la confirmation).
 - **N1 (D3)** — ✅ **Corrigé** (suivi 2026-08-08) : `disposeSynthesizer` ne
   draine plus le compteur GLOBAL `SoundBankLoadingIndicator` (masquait le spinner
   d'une autre feature) ; un compteur de refs propre à l'éditeur (`editorIndicatorRefs`,
