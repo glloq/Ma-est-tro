@@ -131,10 +131,11 @@ Tests : `tests/frontend/event-bus.test.js` (M2 snapshot/ré-entrance, M3 debounc
   (suivi 2026-08-08) : `on()` tague la closure unsub (`_gmEvent`/`_gmHandler`) et
   `off()` retire l'abonnement suivi correspondant, donc les cycles on()/off() ne
   laissent plus de closures mortes. Tests : `tests/frontend/base-view-off-leak.test.js`.
-- **C3 (minor)** — handlers playback (`getElementById(...).style` sans garde ;
-  éléments statiques aujourd'hui) → durcir en `?.` ; champs metadata numériques
-  (`durationFormatted`/`tempo`/`channelCount`, serveur-calculés) → échapper en
-  défense-en-profondeur.
+- **C3 (minor)** — handlers playback (`getElementById(...).style` sans garde) →
+  ✅ **Corrigé** (suivi 2026-08-08) : helper `setHeaderProgress()` null-safe
+  utilisé par `playback_status` / `playback_position` / `virtualplayback_progress`.
+  Reste : champs metadata numériques (`durationFormatted`/`tempo`/`channelCount`,
+  serveur-calculés) → échappement défense-en-profondeur (non bloquant).
 
 ---
 

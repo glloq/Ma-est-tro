@@ -524,6 +524,7 @@
     "noDeviceFilter": "-- All notes --",
     "saveAsDescription": "Save a copy with a new name",
     "saveAsSuccess": "File saved as \"{filename}\"",
+    "saveAsDuplicate": "Identical content already exists as \"{filename}\" — no copy was created",
     "emptyFilename": "Filename cannot be empty",
     "curveType": "Curve type",
     "drumKit": "Drum Kit",

@@ -7,10 +7,12 @@
  *
  * Memory envelope: a SoundFont2 instance holds a reference to its source
  * Uint8Array (the full file bytes), so the bookkeeping size is roughly the
- * SF2 file size + a small parse tree. The cache is capped at 2 entries — enough
- * to hold a melodic + drum soundfont without re-parse thrash, but low enough
- * that even two near-max (160 MB) files stay within a 1 GB Pi envelope. It was
- * previously 3, which combined with the old 500 MB file cap risked OOM.
+ * SF2 file size + a small parse tree. The cache is bounded on BOTH axes: at most
+ * 2 entries (a melodic + drum pair without re-parse thrash) AND a total byte
+ * budget (default 256 MB). The byte budget is what actually keeps two near-max
+ * (~160 MB) soundfonts from co-residing and OOM-ing a 1 GB Pi — the entry count
+ * alone would allow ~320 MB. At least one entry is always retained so a single
+ * legitimate large soundfont still caches.
  *
  * Invalidation: the `mtimeMs` component of the key makes a stale instance
  * disappear automatically when the underlying SF2 file is re-installed or
@@ -22,17 +24,35 @@ import fs from 'fs';
 import { parseSoundFont } from './SF2Converter.js';
 
 const DEFAULT_CAPACITY = 2;
+// Also bound retained BYTES, not just entry count: two near-max SF2 files
+// (~160 MB each) fit the 2-entry cap yet total ~320 MB and risk OOM on a 1 GB
+// Pi (audit B2/B3). At least one entry is always kept — even if it alone exceeds
+// the budget — so a single legitimate large soundfont still caches.
+const DEFAULT_MAX_BYTES = 256 * 1024 * 1024;
 
 export class SF2InstanceCache {
   /**
    * @param {Object} [opts]
    * @param {number} [opts.capacity=2]
+   * @param {number} [opts.maxBytes=256MiB] Total source-bytes budget across
+   *   cached instances (each holds a reference to its full file buffer).
    */
-  constructor({ capacity = DEFAULT_CAPACITY } = {}) {
+  constructor({ capacity = DEFAULT_CAPACITY, maxBytes = DEFAULT_MAX_BYTES } = {}) {
     this.capacity = capacity;
-    /** @type {Map<string, { sf2: any, mtimeMs: number }>} */
+    this.maxBytes = maxBytes;
+    /** @type {Map<string, { sf2: any, mtimeMs: number, bytes: number }>} */
     this._map = new Map();
     this._parseCount = 0;
+    this._bytes = 0;
+  }
+
+  /** Delete an entry and keep the byte accounting in sync. @private */
+  _delete(key) {
+    const entry = this._map.get(key);
+    if (entry) {
+      this._bytes -= entry.bytes || 0;
+      this._map.delete(key);
+    }
   }
 
   /**
@@ -57,17 +77,20 @@ export class SF2InstanceCache {
 
     // Miss — parse and store. Drop any older entry for the same path (mtime
     // changed) so we don't retain the obsolete instance forever.
-    for (const k of this._map.keys()) {
-      if (k.startsWith(absPath + ':')) this._map.delete(k);
+    for (const k of [...this._map.keys()]) {
+      if (k.startsWith(absPath + ':')) this._delete(k);
     }
     const buf = fs.readFileSync(absPath);
     const sf2 = parseSoundFont(buf);
     this._parseCount++;
-    this._map.set(key, { sf2, mtimeMs: stat.mtimeMs });
+    this._map.set(key, { sf2, mtimeMs: stat.mtimeMs, bytes: buf.length });
+    this._bytes += buf.length;
 
-    while (this._map.size > this.capacity) {
+    // Evict LRU until BOTH the entry-count and byte budgets are satisfied, but
+    // never below a single entry (a lone oversized file must still cache).
+    while (this._map.size > this.capacity || (this._bytes > this.maxBytes && this._map.size > 1)) {
       const oldest = this._map.keys().next().value;
-      this._map.delete(oldest);
+      this._delete(oldest);
     }
     return sf2;
   }
@@ -79,9 +102,9 @@ export class SF2InstanceCache {
    * @param {string} absPathPrefix
    */
   invalidate(absPathPrefix) {
-    for (const k of this._map.keys()) {
+    for (const k of [...this._map.keys()]) {
       if (k.startsWith(absPathPrefix + ':') || k === absPathPrefix) {
-        this._map.delete(k);
+        this._delete(k);
       }
     }
   }
@@ -90,10 +113,11 @@ export class SF2InstanceCache {
   clear() {
     this._map.clear();
     this._parseCount = 0;
+    this._bytes = 0;
   }
 
-  /** @returns {{ size: number, parses: number }} */
+  /** @returns {{ size: number, parses: number, bytes: number }} */
   getStats() {
-    return { size: this._map.size, parses: this._parseCount };
+    return { size: this._map.size, parses: this._parseCount, bytes: this._bytes };
   }
 }

@@ -524,6 +524,7 @@
     "noDeviceFilter": "-- Toutes les notes --",
     "saveAsDescription": "Enregistrer une copie avec un nouveau nom",
     "saveAsSuccess": "Fichier enregistré sous \"{filename}\"",
+    "saveAsDuplicate": "Contenu identique déjà présent sous « {filename} » — aucune copie créée",
     "emptyFilename": "Le nom du fichier ne peut pas être vide",
     "curveType": "Type de courbe",
     "drumKit": "Kit de batterie",

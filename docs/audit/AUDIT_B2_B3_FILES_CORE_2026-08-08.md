@@ -89,12 +89,16 @@ SF2), 3 MAJEURS (upload SF2 mort, OOM upload MIDI, teardown non isolé). Le rest
   `handleUpload` rejette désormais `!valid` (header manquant / 0 piste — les seuls
   cas bloquants ; orphelins/hors-plage restent des warnings non bloquants), blob
   orphelin nettoyé. Tests : `tests/midi-file-validator-verdict.test.js`.
-- **SF2 Md1** : `SF2InstanceCache` borne le NOMBRE d'entrées (2), pas les octets
-  (~2× taille fichier retenue) → deux SF2 de 160 Mo peuvent OOM un Pi 1 Go. →
-  budget d'octets / baisser `MAX_SF2_FILE_SIZE` (décision de tuning).
+- **SF2 Md1** : `SF2InstanceCache` bornait le NOMBRE d'entrées (2), pas les octets
+  (~2× taille fichier retenue) → deux SF2 de 160 Mo pouvaient OOM un Pi 1 Go. →
+  ✅ **Corrigé** (suivi 2026-08-08) : budget d'octets (`maxBytes`, défaut 256 Mo)
+  en plus du cap d'entrées ; éviction LRU sur les deux axes, ≥ 1 entrée toujours
+  conservée. Tests : `tests/sf2-instance-cache.test.js`.
 - **B2c-M1** : `saveFileAs` dédup silencieusement (UNIQUE content_hash) et renvoie
-  un id/nom existant ; le backend expose déjà `status:'duplicate'` — **le frontend
-  doit le traiter** (audit C) au lieu d'annoncer « enregistré sous {nom} ».
+  un id/nom existant ; le frontend annonçait « enregistré sous {nom} » à tort. →
+  ✅ **Corrigé** (suivi 2026-08-08) : `saveAsFile` traite `status:'duplicate'`
+  (toast info nommant le fichier existant, event `duplicate:true`). Tests :
+  `tests/frontend/midi-editor-saveas-duplicate.test.js`.
 - **B3-M3** : `Logger.close()` (flush) n'était jamais appelé en prod → dernières
   lignes perdues à l'exit. → ✅ **Corrigé** (suivi 2026-08-08) : `close()` renvoie
   une promesse résolue après le flush (`stream.end(cb)` + timeout de sûreté 2 s) ;
