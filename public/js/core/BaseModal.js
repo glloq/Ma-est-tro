@@ -74,6 +74,20 @@ class BaseModal {
   }
 
   /**
+   * Like {@link BaseModal#t} but HTML-escapes the interpolation param values —
+   * use for innerHTML sinks, not textContent (see I18n#tHtml).
+   * @param {string} key - Translation key
+   * @param {Object} [params] - Interpolation parameters (values escaped)
+   * @returns {string}
+   */
+  tHtml(key, params = {}) {
+    if (typeof i18n !== 'undefined' && i18n.tHtml) {
+      return i18n.tHtml(key, params);
+    }
+    return key;
+  }
+
+  /**
    * Escape HTML to prevent XSS
    * @param {string} text - Raw text
    * @returns {string} Escaped HTML

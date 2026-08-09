@@ -240,6 +240,17 @@ class MidiEditorModal {
   }
 
   /**
+   * Like {@link t} but HTML-escapes the interpolation param values — use for
+   * innerHTML sinks, not textContent (see I18n#tHtml).
+   * @param {string} key - Translation key
+   * @param {Object} params - Interpolation parameters (values escaped)
+   * @returns {string}
+   */
+  tHtml(key, params = {}) {
+    return typeof i18n !== 'undefined' && i18n.tHtml ? i18n.tHtml(key, params) : key;
+  }
+
+  /**
    * Retrieve the translated name of a GM instrument
    * @param {number} index - Instrument index (0-127)
    * @returns {string} - Translated instrument name
