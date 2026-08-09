@@ -31,6 +31,11 @@
     showConfirmModal(options) {
       return new Promise((resolve) => {
         const t = (k) => this.modal.t(k);
+        // Escape caller-supplied text fields before innerHTML. All current
+        // callers pass trusted i18n/GM strings, but a future caller passing a
+        // filename / meta string would otherwise inject (audit D L3). `details`
+        // stays raw — it is intentionally an HTML fragment; `icon` is an emoji.
+        const esc = (s) => window.escapeHtml(s);
         const {
           title = t('common.confirm'),
           message = '',
@@ -48,22 +53,22 @@
                     <div class="confirm-modal">
                         <div class="confirm-modal-header">
                             <span class="confirm-modal-icon">${icon}</span>
-                            <h3 class="confirm-modal-title">${title}</h3>
+                            <h3 class="confirm-modal-title">${esc(title)}</h3>
                         </div>
                         <div class="confirm-modal-body">
-                            <p class="confirm-modal-message">${message}</p>
+                            <p class="confirm-modal-message">${esc(message)}</p>
                             ${details ? `<div class="confirm-modal-details">${details}</div>` : ''}
                         </div>
                         <div class="confirm-modal-footer">
-                            ${cancelText ? `<button class="confirm-modal-btn cancel" data-action="cancel">${cancelText}</button>` : ''}
+                            ${cancelText ? `<button class="confirm-modal-btn cancel" data-action="cancel">${esc(cancelText)}</button>` : ''}
                             ${extraButtons
                               .map(
                                 (btn) => `
-                                <button class="confirm-modal-btn ${btn.class || 'secondary'}" data-action="extra" data-value="${btn.value}">${btn.text}</button>
+                                <button class="confirm-modal-btn ${btn.class || 'secondary'}" data-action="extra" data-value="${esc(btn.value)}">${esc(btn.text)}</button>
                             `
                               )
                               .join('')}
-                            <button class="confirm-modal-btn ${confirmClass}" data-action="confirm">${confirmText}</button>
+                            <button class="confirm-modal-btn ${confirmClass}" data-action="confirm">${esc(confirmText)}</button>
                         </div>
                     </div>
                 `;
@@ -134,7 +139,7 @@
           count: noteCount,
           channel: newChannel + 1
         }),
-        details: `${this._detailRow(m.t('midiEditor.fromChannel'), currentChannelText)}${this._detailRow(m.t('midiEditor.toChannel'), m.t('midiEditor.channelWithInstrument', { channel: newChannel + 1, instrument: newChannelInstrument }))}
+        details: `${this._detailRow(m.t('midiEditor.fromChannel'), currentChannelText)}${this._detailRow(m.t('midiEditor.toChannel'), m.tHtml('midiEditor.channelWithInstrument', { channel: newChannel + 1, instrument: newChannelInstrument }))}
                 `,
         confirmText: m.t('midiEditor.apply'),
         confirmClass: 'primary'

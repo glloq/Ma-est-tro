@@ -100,23 +100,37 @@ MD1 préservé/recalculé, arrondi MN1).
   de kit de batterie (canal 9) **perdus** au round-trip : l'éditeur ne modélise
   qu'un programme par canal (émis à tick 0). Altération silencieuse par conception
   — à traiter si l'édition multi-programme devient un objectif.
-- **N1 (D3)** — `disposeSynthesizer` vide le compteur GLOBAL `SoundBankLoadingIndicator`
-  à 0 : peut masquer un spinner d'une autre feature en cours de chargement. Ne
-  défaire que les `begin()` propres à l'éditeur.
-- **N2 (D3)** — l'`input` tempo mute l'état à chaque frappe (dirty + toast répétés).
-  Débouncer ou n'écouter que `change`.
-- **N3/N4 (D3)** — diff de feedback de notes clé par index (feedback audio erroné
-  après insert/delete) ; refresh du bouton undo/redo sauté après paste/delete
+- **N1 (D3)** — ✅ **Corrigé** (suivi 2026-08-08) : `disposeSynthesizer` ne
+  draine plus le compteur GLOBAL `SoundBankLoadingIndicator` (masquait le spinner
+  d'une autre feature) ; un compteur de refs propre à l'éditeur (`editorIndicatorRefs`,
+  tenu par `withLoadingIndicator`) est le seul défait au teardown.
+- **N2 (D3)** — ✅ **Corrigé** (suivi 2026-08-08) : `setTempo(newTempo, { silent })`
+  ; le handler `input` (temps réel) applique le tempo sans toast/log, seul le
+  `change` (commit) notifie une fois. Tests : `tests/frontend/midi-editor-tempo-silent.test.js`.
+- **N3 (D3)** — ✅ **Corrigé** (suivi 2026-08-08) : le diff de feedback de notes
+  est désormais clé par identité musicale (`tick_canal_hauteur`) au lieu de
+  l'index de tableau, donc insert/delete ne déclenche plus de feedback audio
+  erroné. Tests : `tests/frontend/midi-editor-note-feedback.test.js`.
+  **N4** reste ouvert : refresh du bouton undo/redo sauté après paste/delete
   spécialisé (choix historique).
 - **MN2/MN3 (D2)** — `programNumber` non clampé côté frontend (le serveur valide
   désormais) ; code mort `defaultGate>0?…:480` et asymétrie note de longueur 0.
-- **L2/L3/L4 (D4)** — libellés d'enum fallback non échappés (enums backend, pas du
-  texte de fichier) ; `showConfirmModal` traite ses entrées comme HTML (tous les
-  appelants passent de l'i18n/valeurs sûres) ; `NaN`/`Infinity` de coordonnées à
-  tailles pathologiques (gardé/cosmétique).
-- **Smell de câblage** — les contrôles transport utilisent `getElementById` global ;
-  collision d'ID possible si l'éditeur de fichiers ET l'éditeur de boucle étaient
-  ouverts simultanément (non confirmé possible ; mode boucle omet ces contrôles).
+- **L2/L3 (D4)** — ✅ **Corrigé** (suivi 2026-08-08) : libellés d'enum fallback
+  (`ROUTING_LABELS`/`TYPE_LABELS` → `routingStatus`/`estimated_type`) échappés à
+  la construction ; `showConfirmModal` échappe `title`/`message`/`confirmText`/
+  `cancelText`/`btn.text`/`btn.value` (`details` reste du HTML intentionnel).
+  **L4** reste ouvert : `NaN`/`Infinity` de coordonnées à tailles pathologiques
+  (gardé/cosmétique).
+- **Smell de câblage** — ✅ **Investigué + corrigé** (suivi 2026-08-08). Confirmé :
+  l'éditeur est instancié 2× (singleton autonome + panneau de l'éditeur de boucle
+  via `new window.MidiEditorModal`). Le mode boucle **omet délibérément** tous les
+  ids de contrôle transport (`headerHtml=''`, `playbackSectionHtml=''`,
+  `settingsPopoverHtml=''` — commentés), et les lectures étaient déjà null-safe :
+  donc pas de crash ni de doublon d'id. Résiduel fermé : les 6 lectures
+  `getElementById` de ces contrôles (play/pause/stop, tempo-input, save-btn,
+  preview-source-toggle) sont désormais **scopées au conteneur de l'instance**
+  (`this.modal.container?.querySelector`), donc le panneau ne peut plus câbler
+  ni piloter les boutons du singleton même si les deux sont ouverts.
 
 ---
 

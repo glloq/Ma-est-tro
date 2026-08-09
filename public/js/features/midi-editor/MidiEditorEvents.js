@@ -169,8 +169,10 @@
 
       this.channelChips?.attachHandlers();
 
-      // Toggle preview source (GM / Routed)
-      const previewToggle = document.getElementById('preview-source-toggle');
+      // Toggle preview source (GM / Routed). Instance-scoped (see
+      // MidiEditorTransport): loop-panel mode omits this control, so a global
+      // lookup could wire the panel's handler onto the singleton's toggle.
+      const previewToggle = this.modal.container?.querySelector('#preview-source-toggle');
       if (previewToggle) {
         previewToggle.addEventListener('click', () => this.modal.routingOps?.togglePreviewSource());
       }
@@ -208,7 +210,9 @@
       }
 
       // Tempo input
-      const tempoInput = document.getElementById('tempo-input');
+      // Instance-scoped (see MidiEditorTransport): loop-panel mode omits the
+      // tempo header, so a global lookup could bind to the singleton's input.
+      const tempoInput = this.modal.container?.querySelector('#tempo-input');
       if (tempoInput) {
         tempoInput.addEventListener('change', (e) => {
           const newTempo = parseInt(e.target.value);
@@ -223,8 +227,10 @@
         tempoInput.addEventListener('input', (e) => {
           const newTempo = parseInt(e.target.value);
           if (!isNaN(newTempo) && newTempo >= 20 && newTempo <= 300) {
-            // Real-time update (optional — can be removed if too chatty)
-            this.modal.setTempo(newTempo);
+            // Real-time feedback while typing, but SILENT: the toast/log fire
+            // once on commit via the `change` handler above, not per keystroke
+            // (audit D N2).
+            this.modal.setTempo(newTempo, { silent: true });
           }
         });
       }

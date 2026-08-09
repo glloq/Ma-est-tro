@@ -7546,6 +7546,19 @@
                     log(`Error: ${error.message}`, 'error');
                 });
 
+                // Null-guard the header progress DOM writes: playback_status /
+                // playback_position / virtualplayback broadcasts can arrive while
+                // the header is briefly absent (mid-DOM-swap), and an unguarded
+                // getElementById(...).style would throw in the handler (audit C3 minor).
+                function setHeaderProgress(percent, timeText) {
+                    const fill = document.getElementById('headerProgressFill');
+                    if (fill) fill.style.width = `${percent}%`;
+                    if (timeText != null) {
+                        const timeEl = document.getElementById('headerTime');
+                        if (timeEl) timeEl.textContent = timeText;
+                    }
+                }
+
                 // Événement de statut de lecture (contient la durée et l'état)
                 api.on('playback_status', (data) => {
                     if (data && data.duration !== undefined) {
@@ -7559,9 +7572,8 @@
                     }
                     if (data && data.position !== undefined) {
                         const percent = currentDuration > 0 ? (data.position / currentDuration) * 100 : 0;
-                        document.getElementById('headerProgressFill').style.width = `${percent}%`;
                         const timeText = `${formatTime(data.position * 1000)} / ${formatTime(currentDuration * 1000)}`;
-                        document.getElementById('headerTime').textContent = timeText;
+                        setHeaderProgress(percent, timeText);
                     }
                 });
 
@@ -7569,9 +7581,8 @@
                 api.on('playback_position', (data) => {
                     if (data && data.position !== undefined) {
                         const percent = currentDuration > 0 ? (data.position / currentDuration) * 100 : 0;
-                        document.getElementById('headerProgressFill').style.width = `${percent}%`;
                         const timeText = `${formatTime(data.position * 1000)} / ${formatTime(currentDuration * 1000)}`;
-                        document.getElementById('headerTime').textContent = timeText;
+                        setHeaderProgress(percent, timeText);
 
                         // Calculer le tick à partir du temps (utilise tempo et ticksPerBeat du fichier)
                         const ticksPerSecond = (currentTicksPerBeat * currentTempo) / 60;
@@ -7643,13 +7654,10 @@
                     const { position, duration, progress } = event.detail;
                     currentDuration = duration;
 
-                    // Mettre à jour la barre de progression
+                    // Mettre à jour la barre de progression + le temps
                     const percent = progress * 100;
-                    document.getElementById('headerProgressFill').style.width = `${percent}%`;
-
-                    // Mettre à jour le temps
                     const timeText = `${formatTime(position * 1000)} / ${formatTime(duration * 1000)}`;
-                    document.getElementById('headerTime').textContent = timeText;
+                    setHeaderProgress(percent, timeText);
                 });
 
                 // Événement de réception d'identité SysEx

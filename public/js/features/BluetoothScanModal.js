@@ -529,7 +529,7 @@ class BluetoothScanModal {
     // Show the confirmation modal
     this.showConfirmModal(
       t('bluetooth.forgetDevice.title'),
-      `${t('bluetooth.forgetDevice.message', { deviceName: escapeHtml(deviceName) })}<br><br>${t('bluetooth.forgetDevice.warning')}`,
+      `${this._tHtml('bluetooth.forgetDevice.message', { deviceName })}<br><br>${t('bluetooth.forgetDevice.warning')}`,
       async () => {
         this.logger.info('BluetoothScanModal', `Forgetting device: ${deviceAddress}`);
 
@@ -937,6 +937,11 @@ class BluetoothScanModal {
 
   _t(key, params) {
     return typeof i18n !== 'undefined' ? i18n.t(key, params) : key;
+  }
+
+  /** Like _t but HTML-escapes param values — use for innerHTML sinks. */
+  _tHtml(key, params) {
+    return typeof i18n !== 'undefined' && i18n.tHtml ? i18n.tHtml(key, params) : key;
   }
 }
 

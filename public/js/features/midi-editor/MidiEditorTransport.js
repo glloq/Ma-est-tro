@@ -325,9 +325,16 @@
      */
     updatePlaybackButtons() {
       const m = this.modal;
-      const playBtn = document.getElementById('play-btn');
-      const pauseBtn = document.getElementById('pause-btn');
-      const stopBtn = document.getElementById('stop-btn');
+      // Scope to THIS instance's container, not document: the editor is
+      // instantiated twice (standalone singleton + loop-editor panel). Loop mode
+      // omits these buttons, so a global getElementById from the panel would find
+      // the singleton's buttons and drive the wrong instance (audit D wiring
+      // smell). Container-scoped lookup keeps each instance self-contained.
+      const root = m.container;
+      if (!root) return;
+      const playBtn = root.querySelector('#play-btn');
+      const pauseBtn = root.querySelector('#pause-btn');
+      const stopBtn = root.querySelector('#stop-btn');
 
       // While playing the pause button replaces play; otherwise (paused
       // or stopped) the play button shows. Stop is enabled whenever a

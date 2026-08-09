@@ -177,17 +177,26 @@
         });
 
         if (response && response.success) {
+          // Content-addressed dedup: when the serialized bytes match an existing
+          // file the backend returns status:'duplicate' with the EXISTING file's
+          // id/name and creates nothing new. Announcing "saved as {newFilename}"
+          // then lied — surface the real outcome instead (audit B2c-M1).
+          const isDuplicate = response.status === 'duplicate';
+          const storedName = response.filename || newFilename;
           this.modal.showNotification(
-            this.modal.t('midiEditor.saveAsSuccess', { filename: newFilename }),
-            'success'
+            isDuplicate
+              ? this.modal.t('midiEditor.saveAsDuplicate', { filename: storedName })
+              : this.modal.t('midiEditor.saveAsSuccess', { filename: newFilename }),
+            isDuplicate ? 'info' : 'success'
           );
 
-          // Emit event
+          // Emit event (carry the real stored name + a duplicate flag)
           if (this.modal.eventBus) {
             this.modal.eventBus.emit('midi_editor:saved_as', {
               originalFile: this.modal.currentFile,
               newFile: response.newFileId,
-              newFilename: newFilename
+              newFilename: storedName,
+              duplicate: isDuplicate
             });
           }
 

@@ -145,4 +145,38 @@ describe('SF2InstanceCache', () => {
     cache.getForPath('/sf2/a.sf2');
     expect(parseCalls).toBe(3); // a re-parsed; b still cached
   });
+
+  // Audit B2/B3: the cache must bound retained BYTES, not just entry count, so
+  // two near-max soundfonts can't co-reside and OOM a 1 GB Pi.
+  test('evicts by BYTE budget (not just count), keeping at least one entry', () => {
+    fakeFiles.set('/sf2/x.sf2', { content: VALID_SF2, mtimeMs: 1 }); // 12 bytes
+    fakeFiles.set('/sf2/y.sf2', { content: VALID_SF2, mtimeMs: 1 }); // 12 bytes
+    // High count cap so ONLY the byte budget bounds the cache; 20 < 2 × 12.
+    const cache = new SF2InstanceCache({ capacity: 10, maxBytes: 20 });
+
+    cache.getForPath('/sf2/x.sf2'); // 12 bytes
+    cache.getForPath('/sf2/y.sf2'); // +12 = 24 > 20 → evict LRU (x)
+
+    expect(cache.getStats().size).toBe(1);
+    expect(cache.getStats().bytes).toBeLessThanOrEqual(20);
+    // x was evicted → re-fetching it re-parses.
+    cache.getForPath('/sf2/x.sf2');
+    expect(parseCalls).toBe(3);
+  });
+
+  test('a single file larger than the byte budget is still cached (never below 1)', () => {
+    fakeFiles.set('/sf2/big.sf2', { content: VALID_SF2, mtimeMs: 1 }); // 12 bytes
+    const cache = new SF2InstanceCache({ capacity: 2, maxBytes: 5 }); // budget < 12
+    cache.getForPath('/sf2/big.sf2');
+    expect(cache.getStats().size).toBe(1);
+  });
+
+  test('getStats().bytes tracks add + drop accounting', () => {
+    fakeFiles.set('/sf2/a.sf2', { content: VALID_SF2, mtimeMs: 1 });
+    const cache = new SF2InstanceCache({ capacity: 3 });
+    cache.getForPath('/sf2/a.sf2');
+    expect(cache.getStats().bytes).toBe(VALID_SF2.length);
+    cache.invalidate('/sf2/a.sf2');
+    expect(cache.getStats().bytes).toBe(0);
+  });
 });

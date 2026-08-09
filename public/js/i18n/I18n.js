@@ -11,6 +11,22 @@
 (function (global) {
   'use strict';
 
+  // Escape an interpolation parameter for safe insertion into innerHTML. Prefers
+  // the shared window.escapeHtml; falls back to an inline OWASP escape so tHtml()
+  // is safe even if called before escapeHtml.js loaded (or in a non-browser).
+  function escapeParam(value) {
+    if (typeof window !== 'undefined' && typeof window.escapeHtml === 'function') {
+      return window.escapeHtml(value);
+    }
+    if (value == null || value === '') return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   class I18n {
     constructor() {
       this.currentLocale = 'fr';
@@ -243,6 +259,27 @@
       }
 
       return result;
+    }
+
+    /**
+     * Like {@link I18n#t}, but HTML-escapes every interpolation PARAMETER value
+     * before substituting it into the (trusted) locale template. Use this — not
+     * t() — whenever the result is written to innerHTML, so an untrusted param
+     * (filename, device / MIDI-meta name, user text) cannot inject markup.
+     *
+     * For textContent / attribute-property / .value / .title sinks keep using
+     * t(): escaping there would double-escape (e.g. `&` shown as `&amp;`).
+     *
+     * @param {string} key - Translation key
+     * @param {Object} params - Parameters for interpolation (values are escaped)
+     * @returns {string|Array|Object}
+     */
+    tHtml(key, params = {}) {
+      const names = Object.keys(params);
+      if (names.length === 0) return this.t(key, params);
+      const escaped = {};
+      for (const name of names) escaped[name] = escapeParam(params[name]);
+      return this.t(key, escaped);
     }
 
     /**

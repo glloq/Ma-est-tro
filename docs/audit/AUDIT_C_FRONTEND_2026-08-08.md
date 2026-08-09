@@ -112,12 +112,19 @@ Tests : `tests/frontend/event-bus.test.js` (M2 snapshot/ré-entrance, M3 debounc
 
 ## 🟠 Ouverts — documentés (posture LAN de confiance / non exploitable / architectural)
 
-- **C1 (MEDIUM) — `i18n.t(key,{param})` n'échappe pas les params** (`I18n.js`,
-  `replace(/\{(\w+)\}/, …)`). Sûr aujourd'hui **par convention** : `MidiEditorChannelPanel`
-  pré-échappe ; `MidiEditorRenderer` (title `ch.instrument`/`preset.name`) est sûr
-  car ces noms viennent de la table GM (statique), pas de méta free-form. → À
-  terme : `t()` échappant par défaut (ou split `tHtml`/`tText`) plutôt que de
-  dépendre de chaque appelant.
+- **C1 (MEDIUM) — `i18n.t(key,{param})` n'échappe pas les params** → ✅ **Corrigé**
+  (suivi 2026-08-08). Un auto-échappement dans `t()` serait FAUX (double-échappe
+  les consommateurs `textContent`). Ajout d'un **`tHtml(key, params)`** (I18n +
+  `BaseModal` + `MidiEditorModal` + `BluetoothScanModal._tHtml`) qui échappe les
+  VALEURS de params (les templates de locale restent sûrs) puis délègue à `t()`.
+  Convention : **`tHtml` pour un sink innerHTML, `t` pour textContent / propriété /
+  `.value` / `.title`**. Balayage exhaustif des 83 appels `t()` avec params : les
+  6 sites innerHTML à param non-statique migrés vers `tHtml` (dont 3 auparavant
+  non échappés — Renderer title tab/wind, Dialogs `channelWithInstrument` ; 3 qui
+  échappaient inline — InfoModal, ChannelPanel, BluetoothScanModal — inline retiré
+  pour éviter le double-échappement). Les 15 sites innerHTML à param
+  numérique/littéral sont sûrs et laissés en `t()` (la convention couvre toute
+  évolution). Tests : `tests/frontend/i18n-thtml.test.js`.
 - **C1 (MEDIUM) — `LightingDeviceUI` onclick JS-string** (`_stopLiveEffect('${esc(e.key)}')`) :
   même anti-pattern que C1-HIGH mais **non exploitable** (`e.key` = `deviceId:effectType`,
   id numérique + enum serveur, pas d'apostrophe attaquant). → À convertir en
@@ -127,14 +134,15 @@ Tests : `tests/frontend/event-bus.test.js` (M2 snapshot/ré-entrance, M3 debounc
   strippent `[<>"'&]`). Recommandé : échapper pour cohérence défensive.
 - **C1 (LOW) — `BluetoothScanModal` `address`/`id` non échappés** : MAC fournies
   par BlueZ (pas de string arbitraire). Faible risque ; échapper par principe.
-- **C2 (minor) — `BaseView.off()` ne purge pas `eventSubscriptions`** : les unsub
-  périmés s'accumulent jusqu'au `destroy()` (fuite mineure de closures ; les unsub
-  restants sont des no-op idempotents). À nettoyer si churn abonnement/désabonnement
-  intra-vue devient réel.
-- **C3 (minor)** — handlers playback (`getElementById(...).style` sans garde ;
-  éléments statiques aujourd'hui) → durcir en `?.` ; champs metadata numériques
-  (`durationFormatted`/`tempo`/`channelCount`, serveur-calculés) → échapper en
-  défense-en-profondeur.
+- **C2 (minor) — `BaseView.off()` ne purge pas `eventSubscriptions`** → ✅ **Corrigé**
+  (suivi 2026-08-08) : `on()` tague la closure unsub (`_gmEvent`/`_gmHandler`) et
+  `off()` retire l'abonnement suivi correspondant, donc les cycles on()/off() ne
+  laissent plus de closures mortes. Tests : `tests/frontend/base-view-off-leak.test.js`.
+- **C3 (minor)** — handlers playback (`getElementById(...).style` sans garde) →
+  ✅ **Corrigé** (suivi 2026-08-08) : helper `setHeaderProgress()` null-safe
+  utilisé par `playback_status` / `playback_position` / `virtualplayback_progress`.
+  Reste : champs metadata numériques (`durationFormatted`/`tempo`/`channelCount`,
+  serveur-calculés) → échappement défense-en-profondeur (non bloquant).
 
 ---
 
