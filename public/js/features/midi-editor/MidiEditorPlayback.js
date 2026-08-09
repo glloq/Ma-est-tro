@@ -344,18 +344,19 @@
       const currentSequence = m.pianoRollRenderer?.getSequence();
       if (!currentSequence) return;
 
-      const previousMap = new Map();
-      previousSequence.forEach((note, index) => {
-        const key = `${note.t}_${note.c}_${index}`;
-        previousMap.set(key, note);
+      // Key notes by musical identity (tick + channel + pitch), NOT array index:
+      // inserting or deleting a note shifts every later index, which made the
+      // diff treat unchanged notes as new and play wrong/extra feedback (audit
+      // D N3). A note counts as "new" when its (tick, channel, pitch) triple was
+      // not present before.
+      const previousKeys = new Set();
+      previousSequence.forEach((note) => {
+        previousKeys.add(`${note.t}_${note.c}_${note.n}`);
       });
 
       const notesToPlay = [];
-      currentSequence.forEach((note, index) => {
-        const key = `${note.t}_${note.c}_${index}`;
-        const prevNote = previousMap.get(key);
-
-        if (!prevNote || prevNote.n !== note.n) {
+      currentSequence.forEach((note) => {
+        if (!previousKeys.has(`${note.t}_${note.c}_${note.n}`)) {
           notesToPlay.push(note);
         }
       });

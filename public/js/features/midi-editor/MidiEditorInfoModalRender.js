@@ -166,7 +166,10 @@
       let html = '';
 
       // ── 🗂 Fichier ───────────────────────────────────────────────── //
-      const routingLabel = ROUTING_LABELS[meta.routingStatus] || meta.routingStatus || '—';
+      // Escape the whole label: the ROUTING_LABELS values are static, but the
+      // fallback (raw backend enum) is interpolated raw at the row() sink, so
+      // escape it for defense-in-depth if that contract ever changes (audit D L2).
+      const routingLabel = esc(ROUTING_LABELS[meta.routingStatus] || meta.routingStatus || '—');
       const adaptedLabel = meta.isAdapted ? 'Oui' : meta.isAdapted === false ? 'Non' : '—';
       const karaokeBadge = hasLyrics
         ? `<span class="fi-karaoke-badge" title="${lyrics.length} événements de paroles">🎤 Karaoké</span>`
@@ -234,7 +237,9 @@
               m.getInstrumentName?.(ch.program) || ch.instrument || `Prog. ${ch.program ?? '?'}`;
             const isDrum = ch.channel === 9;
             const typeRaw = ch.estimated_type;
-            const typeStr = typeRaw ? TYPE_LABELS[typeRaw] || typeRaw : '—';
+            // typeStr is interpolated raw into the <td>; escape it so the raw
+            // enum fallback can't inject if the backend contract changes (audit D L2).
+            const typeStr = typeRaw ? esc(TYPE_LABELS[typeRaw] || typeRaw) : '—';
             const conf =
               ch.type_confidence != null
                 ? `<span class="fi-conf">${ch.type_confidence}%</span>`

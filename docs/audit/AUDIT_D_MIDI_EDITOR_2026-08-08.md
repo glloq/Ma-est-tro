@@ -107,15 +107,20 @@ MD1 préservé/recalculé, arrondi MN1).
 - **N2 (D3)** — ✅ **Corrigé** (suivi 2026-08-08) : `setTempo(newTempo, { silent })`
   ; le handler `input` (temps réel) applique le tempo sans toast/log, seul le
   `change` (commit) notifie une fois. Tests : `tests/frontend/midi-editor-tempo-silent.test.js`.
-- **N3/N4 (D3)** — diff de feedback de notes clé par index (feedback audio erroné
-  après insert/delete) ; refresh du bouton undo/redo sauté après paste/delete
+- **N3 (D3)** — ✅ **Corrigé** (suivi 2026-08-08) : le diff de feedback de notes
+  est désormais clé par identité musicale (`tick_canal_hauteur`) au lieu de
+  l'index de tableau, donc insert/delete ne déclenche plus de feedback audio
+  erroné. Tests : `tests/frontend/midi-editor-note-feedback.test.js`.
+  **N4** reste ouvert : refresh du bouton undo/redo sauté après paste/delete
   spécialisé (choix historique).
 - **MN2/MN3 (D2)** — `programNumber` non clampé côté frontend (le serveur valide
   désormais) ; code mort `defaultGate>0?…:480` et asymétrie note de longueur 0.
-- **L2/L3/L4 (D4)** — libellés d'enum fallback non échappés (enums backend, pas du
-  texte de fichier) ; `showConfirmModal` traite ses entrées comme HTML (tous les
-  appelants passent de l'i18n/valeurs sûres) ; `NaN`/`Infinity` de coordonnées à
-  tailles pathologiques (gardé/cosmétique).
+- **L2/L3 (D4)** — ✅ **Corrigé** (suivi 2026-08-08) : libellés d'enum fallback
+  (`ROUTING_LABELS`/`TYPE_LABELS` → `routingStatus`/`estimated_type`) échappés à
+  la construction ; `showConfirmModal` échappe `title`/`message`/`confirmText`/
+  `cancelText`/`btn.text`/`btn.value` (`details` reste du HTML intentionnel).
+  **L4** reste ouvert : `NaN`/`Infinity` de coordonnées à tailles pathologiques
+  (gardé/cosmétique).
 - **Smell de câblage** — les contrôles transport utilisent `getElementById` global ;
   collision d'ID possible si l'éditeur de fichiers ET l'éditeur de boucle étaient
   ouverts simultanément (non confirmé possible ; mode boucle omet ces contrôles).
