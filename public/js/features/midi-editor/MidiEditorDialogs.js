@@ -139,7 +139,7 @@
           count: noteCount,
           channel: newChannel + 1
         }),
-        details: `${this._detailRow(m.t('midiEditor.fromChannel'), currentChannelText)}${this._detailRow(m.t('midiEditor.toChannel'), m.t('midiEditor.channelWithInstrument', { channel: newChannel + 1, instrument: newChannelInstrument }))}
+        details: `${this._detailRow(m.t('midiEditor.fromChannel'), currentChannelText)}${this._detailRow(m.t('midiEditor.toChannel'), m.tHtml('midiEditor.channelWithInstrument', { channel: newChannel + 1, instrument: newChannelInstrument }))}
                 `,
         confirmText: m.t('midiEditor.apply'),
         confirmClass: 'primary'

@@ -60,7 +60,7 @@
                 const ccEnabled = this.modal._stringInstrumentCCEnabled?.get(ch.channel);
                 if (ccEnabled !== false) {
                   tabBtn = `<button class="channel-tab-btn" data-channel="${ch.channel}" data-color="${color}"
-                                    title="${this.modal.t('tablature.tabButton', { instrument: ch.instrument || this.modal.t('stringInstrument.string') })}">${this.modal.t('midiEditor.tabButton')}</button>`;
+                                    title="${this.modal.tHtml('tablature.tabButton', { instrument: ch.instrument || this.modal.t('stringInstrument.string') })}">${this.modal.t('midiEditor.tabButton')}</button>`;
                 }
               }
               if (
@@ -69,7 +69,7 @@
               ) {
                 const preset = WindInstrumentDatabase.getPresetByProgram(effectiveProgram);
                 windBtn = `<button class="channel-wind-btn" data-channel="${ch.channel}"
-                                title="${this.modal.t('windEditor.windEditorTitle', { name: preset?.name || this.modal.t('windEditor.icon') })}">${this.modal.t('midiEditor.windButton')}</button>`;
+                                title="${this.modal.tHtml('windEditor.windEditorTitle', { name: preset?.name || this.modal.t('windEditor.icon') })}">${this.modal.t('midiEditor.windButton')}</button>`;
               }
             }
           }

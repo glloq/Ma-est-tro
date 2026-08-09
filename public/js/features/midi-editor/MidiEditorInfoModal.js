@@ -135,7 +135,7 @@
         this._attachInteractivity(body);
       } catch (err) {
         overlay.querySelector('.file-info-modal-body').innerHTML =
-          `<p class="file-info-error">${this.modal.t('midiEditor.fileInfoLoadFailed', { error: esc(err.message) })}</p>`;
+          `<p class="file-info-error">${this.modal.tHtml('midiEditor.fileInfoLoadFailed', { error: err.message })}</p>`;
       }
     }
 

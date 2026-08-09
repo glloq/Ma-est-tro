@@ -130,3 +130,9 @@ editor (`public/js/features/midi-editor/`) is a large multi-view modal — see
 - `docs/` holds feature docs and ADRs (`docs/adr/`); `docs/ARCHITECTURE.md`
   predates the `managers/`→`transports/` and `views/components/`→`features/`
   renames — trust the actual tree and this file over it.
+- **i18n into HTML:** `t(key, params)` does NOT escape its param values. When the
+  result is interpolated into `innerHTML`/`insertAdjacentHTML`, use
+  **`tHtml(key, params)`** (on `i18n`, `BaseModal`, `MidiEditorModal`) — it
+  escapes each param value against the trusted locale template. Keep plain `t()`
+  for `textContent`, element `.title`/`.value`/`.placeholder`, and `setAttribute`
+  sinks, where `tHtml` would double-escape. Never re-escape a `tHtml` result.
