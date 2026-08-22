@@ -24,7 +24,13 @@
   ],
   "overrides": [
     {
-      "files": ["src/**/*.js", "server.js", "scripts/**/*.js", "ecosystem.config.cjs"],
+      "files": [
+        "src/**/*.js",
+        "server.js",
+        "scripts/**/*.js",
+        "scripts/**/*.mjs",
+        "ecosystem.config.cjs"
+      ],
       "env": {
         "node": true
       }
