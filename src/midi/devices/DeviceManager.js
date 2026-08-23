@@ -1308,8 +1308,8 @@ class DeviceManager {
         });
         return;
       default: {
-        // System common / real-time.
-        const sysType = {
+        // System real-time — no data bytes.
+        const realtimeType = {
           0xf8: 'clock',
           0xfa: 'start',
           0xfb: 'continue',
@@ -1317,7 +1317,25 @@ class DeviceManager {
           0xfe: 'sensing',
           0xff: 'reset'
         }[status];
-        if (sysType) this.handleMidiMessage(deviceName, sysType, {});
+        if (realtimeType) {
+          this.handleMidiMessage(deviceName, realtimeType, {});
+          return;
+        }
+
+        // System common (MTC quarter frame, Song Position Pointer, Song
+        // Select, Tune Request). The UART parser already forwards these as
+        // `{bytes}` (SerialMidiManager#_emitSystemCommon); mirroring the same
+        // type names and payload shape here keeps BLE/network input identical
+        // to serial input for the same wire bytes, instead of dropping them.
+        const commonType = {
+          0xf1: 'mtc',
+          0xf2: 'position',
+          0xf3: 'select',
+          0xf6: 'tune'
+        }[status];
+        if (commonType) {
+          this.handleMidiMessage(deviceName, commonType, { bytes: bytes.slice(1) });
+        }
       }
     }
   }
