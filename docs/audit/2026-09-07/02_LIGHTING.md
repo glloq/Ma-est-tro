@@ -31,14 +31,17 @@ et des **doubles en mémoire**.
 | AB04 | `SacnDriver` (E1.31) | **PASS** | 5 | F-35, F-36 |
 | AB05 | `OscLightDriver` (UDP) | **PASS** | 5 | F-35, F-36 |
 | AB06 | `HttpLightDriver` (WLED / Hue / générique) | **PASS** | 5 | F-36 |
-| AB07 | `MqttLightDriver` | **FAIL** | 5 | **F-34 (P2)** |
+| AB07 | `MqttLightDriver` | **FAIL — capacité morte** | 5 | **F-34a (P2)** |
+| — | Profils de fixtures DMX (`mapColorToFixture`) | **FAIL — capacité morte** | 5 | **F-34b (P2)** |
+| — | `LightingEffectsEngine` (8 effets animés) | **PASS** | 5 | — |
+| — | Contrat `BaseLightingDriver` | **PASS** | 5 | — |
 | — | Cap de débit réseau | **FAIL** | 5 | **F-36 (P2)** |
 | — | Détection de présence du luminaire | **FAIL** | 5 | **F-35 (P2)** |
 | — | Surface de commandes `lighting_*` (38) | **PARTIAL** | 5 | **F-37 (P2)** |
 | — | `LightingDatabase.js` | **NOT TESTED** | 0 | voir §7 |
 | AC | Synchronisation MIDI ↔ lumière (mesure d'offset) | **HW REQUIRED** | 0 | → L15 |
 
-**Couverture `src/lighting/**` + `LightingCommands.js` : 2,35 % → 77,18 %.**
+**Couverture `src/lighting/**` + `LightingCommands.js` : 2,35 % → 83,56 %.**
 
 **Findings :** 1 P1 corrigé (F-30), 3 P1 ouverts (F-28, F-31, + F-30 partiellement
 résiduel côté conception), 6 P2 ouverts. Aucun P0.
@@ -350,7 +353,12 @@ l'intention (priorité haute = écrite en premier = recouverte).
 
 ---
 
-### F-34 (P2) — `MqttLightDriver` ne peut pas fonctionner : `mqtt` n'est pas une dépendance du projet
+### F-34 (P2) — Deux capacités annoncées et mortes : le driver MQTT et les profils de fixtures DMX
+
+> Les deux volets ont été signalés en parallèle par le lot **L14** (docs ↔ code)
+> et sont ici **confirmés par l'exécution**, pas seulement par lecture statique.
+
+#### F-34a — `MqttLightDriver` ne peut pas fonctionner : `mqtt` n'est pas une dépendance du projet
 
 `MqttLightDriver.connect()` fait `await import('mqtt')`. Or :
 
@@ -377,10 +385,79 @@ fonctionnalité annoncée n'existe pas.
 Le reste du driver (formats WLED / Tasmota / ESPHome / générique) a néanmoins
 été testé **client injecté** et se révèle correct — cf. §4.
 
+**La dégradation ne touche pas le chemin MIDI** — vérifié de bout en bout à
+travers `LightingManager._initDriver`, avec un appareil `mqtt` en base et une
+règle qui le vise :
+
+```
+✓ a device of type "mqtt" configured in the DB degrades WITHOUT touching the MIDI path
+```
+
+`_initDriver` attrape l'échec du `import()`, journalise
+`Failed to connect lighting device "Barre MQTT"`, diffuse
+`lighting_device_status {connected:false}` sur le WebSocket, et **n'enregistre
+aucun driver**. 50 messages MIDI émis ensuite : aucune exception, **aucune ligne
+de log supplémentaire** (la règle vise un appareil sans driver, `_executeAction`
+sort à la première ligne). Une seule ligne `error` au total, à l'initialisation.
+
+**→ Ce n'est donc PAS un cas de F-28** : la panne est contenue à l'initialisation,
+pas sur le chemin chaud. Le problème est fonctionnel (capacité annoncée absente),
+pas temps-réel.
+
+L'écart documentaire : `README.md:115` annonce « **MQTT** drivers »,
+`docs/ARCHITECTURE.md:101` liste le fichier, l'UI propose le type d'appareil.
+
 **État : CONFIRMÉ OUVERT.** Correctif hors périmètre (ajout de dépendance +
 `package.json` interdit). Recommandation §8.
 
 `tests/lighting/driver-degraded.test.js`
+
+#### F-34b — Les profils de fixtures DMX ne sont branchés sur rien
+
+`DmxFixtureProfiles.js` publie un catalogue d'une vingtaine de profils
+(PAR, wash, moving head 16ch, laser, machine à fumée, stroboscope) et trois
+fonctions. Recherche exhaustive des appelants :
+
+```
+$ grep -rn "mapColorToFixture\|listProfiles\|setFixture\|setDmxChannel" src/ public/js/ --include=*.js
+src/api/commands/LightingCommands.js:912:    const { listProfiles } = await import('../../lighting/DmxFixtureProfiles.js');
+src/api/commands/LightingCommands.js:913:    return { success: true, profiles: listProfiles() };
+```
+
+* `mapColorToFixture` : **0 appelant**.
+* `getProfile` (celui de `DmxFixtureProfiles`) : **0 appelant**.
+* `ArtNetDriver.setFixture()` et `ArtNetDriver.setDmxChannel()` : **0 appelant**
+  — les seules portes d'entrée DMX brutes du projet ne sont câblées nulle part.
+* `listProfiles` : un seul appelant, la commande `lighting_dmx_profiles`.
+
+Et l'usage frontal de cette commande
+(`public/js/features/LightingControlPage.js:1050-1084`) se limite à **remplir un
+`<select>` dont la seule action est de pré-remplir le champ numérique
+`channels_per_led`** (`_onDmxProfileChange`). La clé du profil choisi **n'est
+jamais persistée** dans `connection_config`, et la carte de canaux
+(`{dimmer, pan, tilt, gobo, strobe, …}`) **n'est jamais appliquée**.
+
+`LightingManager._executeAction()` n'appelle jamais que `setColor` / `setRange`
+/ `allOff` : le pipeline entier suppose une fixture RGB linéaire.
+
+Conséquence concrète, mesurée sur tout le catalogue :
+
+```
+✓ F-34b: profiles addressing more than RGB are unusable — `speed`, `mode`,
+  `pattern`, `output`, `fan`, `gobo`, `prism`, `focus` … are never emitted
+```
+
+`mapColorToFixture` ne connaît que `r/g/b/dimmer/w/a/uv/strobe/pan/tilt` ; tous
+les autres attributs déclarés sont **silencieusement ignorés**. Pour une machine
+à fumée (`fog_basic_2ch`) et un laser (`laser_basic_3ch`), la fonction renvoie
+**une liste de canaux vide** : ces fixtures ne sont adressables par aucun moyen.
+
+**État : CONFIRMÉ OUVERT — capacité morte.** Soit on câble le profil
+(persister `dmx_profile` dans `connection_config`, faire passer
+`_executeAction` par `mapColorToFixture` + `driver.setFixture`), soit on retire
+le sélecteur et le catalogue. Recommandation §8.
+
+`tests/lighting/effects-and-profiles.test.js`
 
 ---
 
