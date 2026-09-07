@@ -117,15 +117,15 @@ suite('02 · canonical scenario', () => {
       });
       ctx.evidenceAdd('screenshot while playing', await shoot(page, deps.artifactsDir, '02-06-playing'));
 
-      await ctx.step('6b · stop returns the transport to an idle state', async () => {
+      await ctx.step('6b · Stop halts playback', async () => {
         await page.click('#headerStopBtn');
         await page.waitForTimeout(2000);
         const st = await app.playbackStatus();
         ctx.evidenceAdd('playback_status after stop', st);
         expect(st.playing).toBeFalsy('backend playback is stopped');
-        const header = await app.transportState();
-        ctx.evidenceAdd('header transport after stop', header);
-        expect(header.stopDisabled).toBeTruthy('the Stop button is disabled again when nothing plays');
+        // The *button state* after stopping is asserted by its own test below,
+        // so a cosmetic transport bug does not hide steps 7-10 of the journey.
+        ctx.evidenceAdd('header transport after stop', await app.transportState());
       });
 
       // ── 7. edit ────────────────────────────────────────────────────────────
@@ -228,6 +228,41 @@ suite('02 · canonical scenario', () => {
       await page.context().close();
     }
   }, { timeoutMs: 420000 });
+  test('the header transport buttons reflect whether anything is playing', async (ctx, deps) => {
+    const { page, rec } = await newInstrumentedPage(deps.browser);
+    const app = new AppPage(page, rec, deps.server.baseUrl);
+    const filename = 'e2e-two-channel.mid';
+    try {
+      await ctx.step('boot onto the state the journey left behind', () => app.open());
+
+      const idle = await app.transportState();
+      ctx.evidenceAdd('transport on a fresh page, nothing playing', idle);
+      await ctx.step('on a fresh page with nothing playing, Stop is disabled', () => {
+        expect(idle.stopDisabled).toBeTruthy();
+      });
+
+      await ctx.step('play, then stop', async () => {
+        await app.fileAction(filename, 'play');
+        await page.waitForTimeout(2000);
+        expect((await app.playbackStatus()).playing).toBeTruthy();
+        await page.click('#headerStopBtn');
+        await page.waitForTimeout(2000);
+      });
+
+      const after = await app.transportState();
+      const backend = await app.playbackStatus();
+      ctx.evidenceAdd('backend after stop', backend);
+      ctx.evidenceAdd('header after stop', after);
+      await ctx.step('after Stop, the Stop button is disabled again', () => {
+        expect(backend.playing).toBeFalsy('precondition: the backend really stopped');
+        expect(after.stopDisabled).toBeTruthy(
+          'Stop stays clickable although nothing is playing'
+        );
+      });
+    } finally {
+      await page.context().close();
+    }
+  }, { timeoutMs: 180000 });
 });
 
 /** @param {any} page @returns {Promise<Array<{value:string,text:string}>>} */

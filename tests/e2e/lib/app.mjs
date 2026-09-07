@@ -150,12 +150,32 @@ export class AppPage {
   // ── Files ─────────────────────────────────────────────────────────────────
 
   /**
-   * Import a MIDI file through the real `<input type=file>` the drop zone uses.
+   * Import a MIDI file through the real `<input type=file>` the drop zone uses,
+   * then dismiss the upload report the way a user must.
+   *
+   * `#uploadProgressOverlay` is `aria-modal` and covers the page; it is only
+   * removed by its own "Done" button (no Escape, no backdrop click), so a
+   * harness that skipped this step would have every later click intercepted.
+   *
    * @param {string} absPath
    * @returns {Promise<void>}
    */
   async importMidiViaUi(absPath) {
     await this.page.setInputFiles('#fileInput', absPath);
+    const done = this.page.locator('#uploadDoneBtn');
+    await done.waitFor({ state: 'visible', timeout: 60000 });
+    await done.click();
+    await this.page
+      .locator('#uploadProgressOverlay.show')
+      .waitFor({ state: 'detached', timeout: 10000 })
+      .catch(async () => {
+        // The overlay keeps the node and drops the `show` class.
+        await this.page.waitForFunction(
+          () => !document.getElementById('uploadProgressOverlay')?.classList.contains('show'),
+          null,
+          { timeout: 10000 }
+        );
+      });
   }
 
   /**

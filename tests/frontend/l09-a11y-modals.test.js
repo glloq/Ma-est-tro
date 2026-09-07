@@ -53,7 +53,11 @@ function makeModal(opts = {}, body = '<input id="f1"><button id="f2">B</button>'
 
 describe('L09 · BaseModal — focus trap', () => {
   it('never treats a disabled control as the trap boundary (F-100, corrigé)', () => {
-    const m = makeModal({ id: 'ft1' }, '<input id="a"><button id="b">B</button>', '<button id="c" disabled>C</button>');
+    const m = makeModal(
+      { id: 'ft1' },
+      '<input id="a"><button id="b">B</button>',
+      '<button id="c" disabled>C</button>'
+    );
     m.open();
     // Reproduce the selector the trap uses after the fix.
     const trapList = [
@@ -69,7 +73,9 @@ describe('L09 · BaseModal — focus trap', () => {
   it('wraps Tab from the last control back to the first', () => {
     const m = makeModal({ id: 'ft2' });
     m.open();
-    const focusables = [...m.dialog.querySelectorAll('button:not([disabled]), input:not([disabled])')];
+    const focusables = [
+      ...m.dialog.querySelectorAll('button:not([disabled]), input:not([disabled])')
+    ];
     const last = focusables[focusables.length - 1];
     last.focus();
     document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
@@ -121,7 +127,10 @@ describe('L09 · BaseModal — stacked modals (F-99, ouvert)', () => {
 
 describe('L09 · BaseModal — the page behind the modal (F-103, ouvert)', () => {
   it('KNOWN DEFECT: background content is neither inert nor aria-hidden', () => {
-    document.body.insertAdjacentHTML('beforeend', '<div id="page"><button id="bg">bg</button></div>');
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      '<div id="page"><button id="bg">bg</button></div>'
+    );
     const m = makeModal({ id: 'bg1' });
     m.open();
     const page = document.getElementById('page');
@@ -195,13 +204,19 @@ describe('L09 · icon-only controls need an accessible name (F-104)', () => {
 
   it('the count with NO accessible name at all never grows (ratchet: 33)', () => {
     const nameless = buttons.filter((b) => !b.named && !b.titled);
-    expect(nameless.length, nameless.map((b) => `${b.file}:${b.line}`).join('\n')).toBeLessThanOrEqual(33);
+    expect(
+      nameless.length,
+      nameless.map((b) => `${b.file}:${b.line}`).join('\n')
+    ).toBeLessThanOrEqual(33);
   });
 
   it('the two largest modals name their close button (corrigé L09)', () => {
     const kb = readFileSync(resolve(ROOT, 'public/js/features/keyboard/KeyboardPiano.js'), 'utf8');
     expect(kb).toMatch(/id="keyboard-close-btn"[^>]*aria-label=/);
-    const me = readFileSync(resolve(ROOT, 'public/js/features/midi-editor/MidiEditorView.js'), 'utf8');
+    const me = readFileSync(
+      resolve(ROOT, 'public/js/features/midi-editor/MidiEditorView.js'),
+      'utf8'
+    );
     expect(me).toMatch(/class="modal-close" data-action="close" aria-label=/);
   });
 });

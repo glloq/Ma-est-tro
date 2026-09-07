@@ -44,7 +44,9 @@ describe('L09 · CSS custom properties (F-101)', () => {
     const broken = [
       ...new Set(uses.filter((m) => m[2] === ')' && !declared.has(m[1])).map((m) => m[1]))
     ];
-    expect(broken, `tokens jamais déclarés et sans valeur de repli : ${broken.join(', ')}`).toEqual([]);
+    expect(broken, `tokens jamais déclarés et sans valeur de repli : ${broken.join(', ')}`).toEqual(
+      []
+    );
   });
 
   it('keyboard.css no longer emits bare var(--bg-medium|--bg-light|--bg-dark)', () => {
@@ -94,7 +96,11 @@ describe('L09 · dark theme token parity (F-102)', () => {
 describe('L09 · WCAG contrast of the shipped token pairs (F-106)', () => {
   const hex = (h) => {
     h = h.replace('#', '');
-    if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+    if (h.length === 3)
+      h = h
+        .split('')
+        .map((c) => c + c)
+        .join('');
     return [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16));
   };
   const lum = (rgb) =>
@@ -137,20 +143,28 @@ describe('L09 · WCAG contrast of the shipped token pairs (F-106)', () => {
 
 describe('L09 · focus visibility safety net (§AR)', () => {
   it('accessibility-focus.css is the LAST stylesheet loaded', () => {
-    const links = [...INDEX.matchAll(/<link[^>]*rel="stylesheet"[^>]*href="([^"]+)"/g)].map((m) => m[1]);
+    const links = [...INDEX.matchAll(/<link[^>]*rel="stylesheet"[^>]*href="([^"]+)"/g)].map(
+      (m) => m[1]
+    );
     expect(links[links.length - 1]).toBe('styles/accessibility-focus.css');
   });
 
   it('it reasserts a focus ring for the generic interactive elements', () => {
     const css = fs.readFileSync(path.join(STYLES, 'accessibility-focus.css'), 'utf-8');
-    for (const sel of ['button:focus-visible', 'input:focus-visible', '[role="button"]:focus-visible']) {
+    for (const sel of [
+      'button:focus-visible',
+      'input:focus-visible',
+      '[role="button"]:focus-visible'
+    ]) {
       expect(css).toContain(sel);
     }
     expect(css).toMatch(/outline:\s*2px solid[^;]*!important/);
   });
 
   it('the skip link exists and targets a real element', () => {
-    expect(INDEX).toMatch(/class="sr-only sr-only-focusable"[^>]*href="#app"|href="#app"[^>]*class="sr-only sr-only-focusable"/);
+    expect(INDEX).toMatch(
+      /class="sr-only sr-only-focusable"[^>]*href="#app"|href="#app"[^>]*class="sr-only sr-only-focusable"/
+    );
     expect(INDEX).toMatch(/id="app"/);
   });
 });
