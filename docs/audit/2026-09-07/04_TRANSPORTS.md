@@ -689,7 +689,7 @@ modification**.
 ## 11. Reproduction
 
 ```bash
-# Les 92 tests de ce lot (~2 s)
+# 110 tests (les 92 de ce lot + les 18 préexistants de bluetooth-manager), ~2 s
 node --experimental-vm-modules node_modules/jest/bin/jest.js tests/transports/
 
 # Couverture des trois modules cibles
