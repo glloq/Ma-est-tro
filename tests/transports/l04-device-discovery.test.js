@@ -267,7 +267,7 @@ describe('L04/§G04 — hot-plug : apparition, disparition, état interne', () =
     // Comportement voulu : pas de mémorisation d'un port jamais ouvert.
     expect(discovery.knownInputs.has('GHOST')).toBe(false);
     // Conséquence : nouvelle tentative + un log d'erreur toutes les 5 s, sans
-    // borne (F-47, sévérité P3 — bruit d'observabilité, pas de fuite mémoire).
+    // borne (F-48, sévérité P3 — bruit d'observabilité, pas de fuite mémoire).
     expect(attempts).toEqual(['GHOST', 'GHOST', 'GHOST']);
     expect(inputs.size).toBe(0);
   });

@@ -65,7 +65,7 @@ describe('L02 — trigger type', () => {
   });
 });
 
-describe('L02 F-30 — a `noteon` rule never sees the release: the light stays lit', () => {
+describe('L02 F-31 — a `noteon` rule never sees the release: the light stays lit', () => {
   test('trigger:noteon (the UI default for a new rule) lights the LED and never clears it', () => {
     const { bus, driver } = build([
       rule({ condition_config: { trigger: 'noteon' }, action_config: { type: 'static', color: '#FF0000' } })
@@ -95,7 +95,7 @@ describe('L02 F-30 — a `noteon` rule never sees the release: the light stays l
     expect(writes[1]).toMatchObject({ r: 0, g: 0, b: 0, brightness: 0 });
   });
 
-  test('F-31: a velocity floor on an `any` rule re-creates the stuck light', () => {
+  test('F-31b: a velocity floor on an `any` rule re-creates the stuck light', () => {
     // "Only react to notes played at velocity >= 64" — a natural rule. The
     // release carries velocity 0, so it fails the SAME velocity filter.
     const { bus, driver } = build([
@@ -146,7 +146,7 @@ describe('L02 — channel / note / velocity / CC filters', () => {
     expect(driver.of('setRange').length).toBe(1);
   });
 
-  test('F-32: cc_number [0] (Bank Select MSB) is silently treated as "no filter"', () => {
+  test('F-37: cc_number [0] (Bank Select MSB) is silently treated as "no filter"', () => {
     const { manager } = build([]);
     const n = (controller) =>
       manager._normalizeMidiData(midiMessage('cc', { channel: 0, controller, value: 1 }));
@@ -154,7 +154,7 @@ describe('L02 — channel / note / velocity / CC filters', () => {
     // the array, so [0] IS a filter and works…
     expect(manager._matchesCondition({ cc_number: [0] }, n(0))).toBe(true);
     expect(manager._matchesCondition({ cc_number: [0] }, n(7))).toBe(false);
-    // …but a scalar 0 (what an unvalidated payload can carry, F-34) disables it.
+    // …but a scalar 0 (what an unvalidated payload can carry, F-37) disables it.
     expect(manager._matchesCondition({ cc_number: 0 }, n(7))).toBe(true);
   });
 
@@ -279,7 +279,7 @@ describe('L02 — action semantics', () => {
     expect(driver.of('setRange').filter((w) => w.brightness === 0).length).toBe(1);
   });
 
-  test('F-33: a release with no matching press leaves the LED untouched', () => {
+  test('F-31c: a release with no matching press leaves the LED untouched', () => {
     // Server restarted (or the stale-note sweep ran) while a key was held:
     // activeNotes has no entry for the device, so `_handleNoteOff` does nothing.
     const { bus, driver } = build([rule({ condition_config: { trigger: 'any' } })]);
@@ -305,7 +305,7 @@ describe('L02 — several rules on one event', () => {
     expect(w[1]).toMatchObject({ r: 0, g: 255, b: 0 });
   });
 
-  test('F-34: a high-priority wildcard rule is overwritten by a low-priority instrument rule', () => {
+  test('F-33: a high-priority wildcard rule is overwritten by a low-priority instrument rule', () => {
     const { bus, drivers } = build(
       [
         rule({ id: 1, priority: 100, instrument_id: null, action_config: { type: 'static', color: '#FF0000' } }),
@@ -326,7 +326,7 @@ describe('L02 — several rules on one event', () => {
     expect(w[1]).toMatchObject({ r: 255 });
   });
 
-  test('F-35: a wildcard rule fires TWICE per logical input note', () => {
+  test('F-32: a wildcard rule fires TWICE per logical input note', () => {
     // DeviceManager emits `midi_message` first, then routeMessage() emits
     // `midi_routed`; `_recentRoutedEvents` is only populated by the second,
     // so the de-dup can never suppress the first. Both paths run the '*' rules.

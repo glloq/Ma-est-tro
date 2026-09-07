@@ -108,23 +108,47 @@ function collectWiredSchemaFiles() {
 }
 
 function collectFrontendCalls() {
-  const files = walk(join(ROOT, 'public/js'), (p) => p.endsWith('.js'));
+  // AUDIT L01 (2026-09-07): `public/index.html` carries ~14.5k lines of inline
+  // SPA script with 75 `sendCommand(...)` call sites. Scanning only
+  // `public/js/**.js` therefore over-reported orphan commands by a wide margin
+  // (the 2026-08-22 figure of "123 never called by the frontend" was inflated).
+  // Every `public/**` .js AND .html file is now scanned.
+  const files = walk(join(ROOT, 'public'), (p) => p.endsWith('.js') || p.endsWith('.html'));
   const map = new Map();
+  const add = (cmd, f) => {
+    if (!map.has(cmd)) map.set(cmd, []);
+    const rel = f.slice(ROOT.length + 1);
+    if (!map.get(cmd).includes(rel)) map.get(cmd).push(rel);
+  };
   for (const f of files) {
     const src = readFileSync(f, 'utf8');
+    // Direct call with a literal name (quote or backtick).
     for (const m of src.matchAll(
-      /(?:sendCommand|sendCommandWithRetry)\(\s*['"]([a-zA-Z0-9_]+)['"]/g
+      /(?:sendCommand|sendCommandWithRetry)\(\s*['"`]([a-zA-Z0-9_]+)['"`]/g
     )) {
-      if (!map.has(m[1])) map.set(m[1], []);
-      map.get(m[1]).push(f.slice(ROOT.length + 1));
+      add(m[1], f);
     }
     // Dispatch-table style: { command: 'x' } / command = 'x'
-    for (const m of src.matchAll(/command:\s*['"]([a-zA-Z0-9_]+)['"]/g)) {
-      if (!map.has(m[1])) map.set(m[1], []);
-      map.get(m[1]).push(f.slice(ROOT.length + 1));
+    for (const m of src.matchAll(/command:\s*['"`]([a-zA-Z0-9_]+)['"`]/g)) {
+      add(m[1], f);
     }
   }
   return map;
+}
+
+/**
+ * Weaker signal: the command name appears as a bare quoted string anywhere in
+ * `public/**` without matching a call pattern (dynamic dispatch, a name held in
+ * a constant, a label in a table). Used only to split "orphan" into
+ * "plausibly reachable" vs "no trace at all in the frontend".
+ */
+function collectFrontendMentions() {
+  const files = walk(join(ROOT, 'public'), (p) => p.endsWith('.js') || p.endsWith('.html'));
+  const blobs = files.map((f) => ({ f: f.slice(ROOT.length + 1), src: readFileSync(f, 'utf8') }));
+  return (cmd) => {
+    const needle = new RegExp(`['"\`]${cmd}['"\`]`);
+    return blobs.filter((b) => needle.test(b.src)).map((b) => b.f);
+  };
 }
 
 function collectTestMentions() {
@@ -148,6 +172,7 @@ const sites = collectRegistrationSites();
 const schemas = await collectSchemas();
 const wiredFiles = collectWiredSchemaFiles();
 const feCalls = collectFrontendCalls();
+const feMentions = collectFrontendMentions();
 const testsFor = collectTestMentions();
 const documented = collectDocumented();
 
@@ -159,6 +184,9 @@ const rows = registered.map((cmd) => {
     schema: schemaFile,
     schemaWired: schemaFile ? wiredFiles.has(schemaFile) : false,
     frontend: feCalls.get(cmd)?.length ?? 0,
+    frontendFiles: feCalls.get(cmd) ?? [],
+    // Bare-string occurrence in public/** without a matched call site.
+    frontendMentionOnly: (feCalls.get(cmd)?.length ?? 0) === 0 ? feMentions(cmd) : [],
     tests: testsFor(cmd).length,
     documented: documented.has(cmd)
   };
@@ -178,6 +206,13 @@ const summary = {
   ],
   calledByFrontend: rows.filter((r) => r.frontend > 0).length,
   neverCalledByFrontend: rows.filter((r) => r.frontend === 0).map((r) => r.command),
+  // Orphans split by strength of evidence (audit L01).
+  orphanMentionedOnly: rows
+    .filter((r) => r.frontend === 0 && r.frontendMentionOnly.length > 0)
+    .map((r) => r.command),
+  orphanNoTrace: rows
+    .filter((r) => r.frontend === 0 && r.frontendMentionOnly.length === 0)
+    .map((r) => r.command),
   withTests: rows.filter((r) => r.tests > 0).length,
   withoutTests: rows.filter((r) => r.tests === 0).map((r) => r.command),
   documented: rows.filter((r) => r.documented).length,
@@ -200,6 +235,9 @@ if (process.argv.includes('--json')) {
   );
   console.log(`  mentioned in tests      : ${summary.withTests} (${pct(summary.withTests)})`);
   console.log(`  documented in API.md    : ${summary.documented} (${pct(summary.documented)})`);
+  console.log(
+    `  orphan: mentioned only  : ${summary.orphanMentionedOnly.length} / no trace in public/: ${summary.orphanNoTrace.length}`
+  );
   console.log(`Orphan schemas (no command): ${orphanSchemas.length} ${orphanSchemas.join(', ')}`);
   console.log(`Phantom frontend calls     : ${phantomCalls.length} ${phantomCalls.join(', ')}`);
   console.log(`Schema files not wired     : ${summary.schemaFileNotWired.join(', ') || '(none)'}`);

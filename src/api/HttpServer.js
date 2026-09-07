@@ -284,6 +284,16 @@ class HttpServer {
     // Mount API routes (health, status, metrics)
     this.expressApp.use('/api', createApiRouter(this._deps));
 
+    // Any /api path that reached this point matched no route (unknown endpoint
+    // or unsupported method). Answer with JSON here, BEFORE the SPA fallback:
+    // without it, `GET /api/typo` returned 200 + the whole 615 KB index.html,
+    // so an API client could not tell "no such endpoint" from "here is your
+    // page" and a mistyped path cost 615 KB instead of ~40 bytes
+    // (audit L01 F-10). Non-/api paths are untouched and still get the SPA.
+    this.expressApp.use('/api', (_req, res) => {
+      res.status(404).json({ error: 'Not found', code: 'ERR_NOT_FOUND' });
+    });
+
     // Fallback to index.html for SPA
     this.expressApp.get('*', (req, res) => {
       res.sendFile(path.join(publicPath, 'index.html'));

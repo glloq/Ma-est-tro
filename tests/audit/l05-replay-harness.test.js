@@ -72,9 +72,16 @@ const IS_SELF_RUN = (() => {
  * Ordonnanceur de timers purement logique. Aucun temps réel n'est consommé.
  */
 export class VirtualClock {
-  constructor(start = 1000) {
+  /**
+   * @param {number} [start] instant virtuel initial (ms)
+   * @param {?Function} [lateness] `(timer) => ms` — retard appliqué au
+   *   déclenchement de chaque timer. Permet de modéliser la gigue réelle
+   *   (libuv/ordonnanceur) tout en restant reproductible. `null` = temps idéal.
+   */
+  constructor(start = 1000, lateness = null) {
     /** Instant virtuel courant, en millisecondes. */
     this.now = start;
+    this._lateness = lateness;
     this._seq = 0;
     /** @type {Map<number, {id:number, at:number, seq:number, fn:Function, args:any[], every:?number}>} */
     this._timers = new Map();
@@ -104,23 +111,27 @@ export class VirtualClock {
     };
   }
 
+  /** Retard (ms) appliqué au déclenchement — 0 en temps idéal. */
+  _late(timer) {
+    return this._lateness ? Math.max(0, this._lateness(timer)) : 0;
+  }
+
   setTimeout(fn, ms = 0, ...args) {
     const id = ++this._seq;
-    this._timers.set(id, {
-      id,
-      at: this.now + Math.max(0, Number(ms) || 0),
-      seq: id,
-      fn,
-      args,
-      every: null
-    });
+    const nominal = this.now + Math.max(0, Number(ms) || 0);
+    const t = { id, seq: id, fires: 0, nominal, at: nominal, fn, args, every: null };
+    t.at = nominal + this._late(t);
+    this._timers.set(id, t);
     return this._handle(id);
   }
 
   setInterval(fn, ms = 0, ...args) {
     const id = ++this._seq;
     const period = Math.max(1, Number(ms) || 1);
-    this._timers.set(id, { id, at: this.now + period, seq: id, fn, args, every: period });
+    const nominal = this.now + period;
+    const t = { id, seq: id, fires: 0, nominal, at: nominal, fn, args, every: period };
+    t.at = nominal + this._late(t);
+    this._timers.set(id, t);
     return this._handle(id);
   }
 
@@ -151,9 +162,16 @@ export class VirtualClock {
       }
       if (!next) break;
       if (++guard > maxFire) throw new Error(`VirtualClock: >${maxFire} timers fired — runaway`);
-      this.now = next.at;
-      if (next.every === null) this._timers.delete(next.id);
-      else next.at = this.now + next.every;
+      this.now = Math.max(this.now, next.at);
+      next.fires++;
+      if (next.every === null) {
+        this._timers.delete(next.id);
+      } else {
+        // Ré-armement sur la grille NOMINALE (pas de dérive cumulative), le
+        // retard étant ré-appliqué à chaque déclenchement.
+        next.nominal += next.every;
+        next.at = next.nominal + this._late(next);
+      }
       this.fired++;
       next.fn(...next.args);
     }
@@ -163,6 +181,48 @@ export class VirtualClock {
   /** Avance de `ms` à partir de l'instant courant. */
   advanceBy(ms, maxFire) {
     this.advanceTo(this.now + ms, maxFire);
+  }
+
+  /**
+   * Variante **asynchrone** : identique à {@link VirtualClock#advanceTo} mais
+   * vide la file de micro-tâches entre deux déclenchements de timer, comme le
+   * fait la boucle d'événements réelle. Indispensable dès qu'un callback
+   * `async` participe au flot (`MidiPlayer._handleFileEnd`, avance de file
+   * d'attente…) : sans cela, un `finally` de fonction `async` ne s'exécute
+   * jamais pendant l'avance et l'état reste figé (garde `_fileEndPending`).
+   * @param {number} target
+   * @param {number} [maxFire]
+   */
+  async advanceToAsync(target, maxFire = 200000) {
+    let guard = 0;
+    for (;;) {
+      let next = null;
+      for (const t of this._timers.values()) {
+        if (t.at > target) continue;
+        if (next === null || t.at < next.at || (t.at === next.at && t.seq < next.seq)) next = t;
+      }
+      if (!next) break;
+      if (++guard > maxFire) throw new Error(`VirtualClock: >${maxFire} timers fired — runaway`);
+      this.now = Math.max(this.now, next.at);
+      next.fires++;
+      if (next.every === null) {
+        this._timers.delete(next.id);
+      } else {
+        next.nominal += next.every;
+        next.at = next.nominal + this._late(next);
+      }
+      this.fired++;
+      next.fn(...next.args);
+      // Laisse tourner la file de micro-tâches (Promises) entre deux timers.
+      await Promise.resolve();
+      await Promise.resolve();
+    }
+    if (target > this.now) this.now = target;
+  }
+
+  /** Variante asynchrone de {@link VirtualClock#advanceBy}. */
+  async advanceByAsync(ms, maxFire) {
+    await this.advanceToAsync(this.now + ms, maxFire);
   }
 }
 
@@ -447,7 +507,7 @@ export async function buildPlayer({
  * @returns {Promise<{trace:Array, player:MidiPlayer, clock:VirtualClock}>}
  */
 export async function replay(opts) {
-  const clock = new VirtualClock(opts.startNow ?? 1000);
+  const clock = new VirtualClock(opts.startNow ?? 1000, opts.lateness ?? null);
   const { player, deviceManager } = await buildPlayer({ ...opts, clock });
   if (opts.routing) {
     player.channelRouting = new Map(
@@ -462,11 +522,11 @@ export async function replay(opts) {
     const step = opts.stepMs ?? 1;
     const end = clock.now + (player.duration + (opts.tailMs ?? 500) / 1000) * 1000;
     while (clock.now < end && (player.playing || player._advancing)) {
-      clock.advanceBy(step);
+      await clock.advanceByAsync(step);
       if (opts.onStep) opts.onStep(clock.now, player, clock);
     }
     // Drain des note-off différés encore armés.
-    if (player.playing) clock.advanceBy(opts.tailMs ?? 500);
+    if (player.playing) await clock.advanceByAsync(opts.tailMs ?? 500);
   } finally {
     installed.restore();
   }
@@ -634,8 +694,12 @@ if (IS_SELF_RUN) {
       });
       expect(player.events.length).toBe(6);
       expect(trace.length).toBe(6);
-      expect(analyseNotePairing(trace).orphanOn).toEqual([]);
       expect(trace[0]).toMatchObject({ device: 'dev1', status: 0x90, data1: 60 });
+      // NB : la dernière trame n'est PAS le note-off attendu mais un CC 123
+      // (All Notes Off) — c'est le finding F-54, démontré dans
+      // l05-transport.test.js. Le harnais l'expose, il ne le masque pas.
+      expect(trace[5]).toMatchObject({ status: 0xb0, data1: 123 });
+      expect(analyseNotePairing(trace).orphanOn).toEqual([{ key: 'dev1:0:67', count: 1 }]);
     });
   });
 }

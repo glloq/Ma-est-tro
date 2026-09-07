@@ -153,3 +153,92 @@ export function hardStop(manager) {
     manager._ledBatchTimers.clear();
   }
 }
+
+// ==================== local stub servers (no hardware, no LAN) ====================
+
+import dgram from 'dgram';
+import http from 'http';
+
+/**
+ * UDP sink on 127.0.0.1. Used as an Art-Net / sACN / OSC receiver.
+ * @param {number} [port=0] 0 = ephemeral.
+ */
+export async function startUdpServer(port = 0) {
+  const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true });
+  const packets = [];
+  const waiters = [];
+  sock.on('message', (msg, rinfo) => {
+    packets.push({ msg, rinfo });
+    while (waiters.length && packets.length >= waiters[0].n) waiters.shift().resolve();
+  });
+  await new Promise((resolve, reject) => {
+    sock.once('error', reject);
+    sock.bind(port, '127.0.0.1', resolve);
+  });
+  return {
+    port: sock.address().port,
+    packets,
+    /** Resolve once at least `n` packets have arrived (or reject after `ms`). */
+    async waitFor(n, ms = 2000) {
+      if (packets.length >= n) return;
+      await new Promise((resolve, reject) => {
+        const t = setTimeout(
+          () => reject(new Error(`only ${packets.length}/${n} UDP packets after ${ms} ms`)),
+          ms
+        );
+        waiters.push({
+          n,
+          resolve: () => {
+            clearTimeout(t);
+            resolve();
+          }
+        });
+      });
+    },
+    close: () => new Promise((r) => sock.close(r))
+  };
+}
+
+/**
+ * HTTP stub on 127.0.0.1. `routes` maps `"METHOD /path"` to
+ * `{ status, body }` or to a function `(req, body) => ({status, body})`.
+ */
+export async function startHttpServer(routes = {}, opts = {}) {
+  const requests = [];
+  const server = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', (c) => (body += c));
+    req.on('end', () => {
+      const path = req.url.split('?')[0];
+      requests.push({ method: req.method, path, body, headers: req.headers });
+      if (opts.hang) return; // never answer: models an unresponsive controller
+      const key = `${req.method} ${path}`;
+      let route = routes[key] ?? routes['*'] ?? { status: 200, body: '{}' };
+      if (typeof route === 'function') route = route(req, body);
+      res.writeHead(route.status, { 'Content-Type': 'application/json' });
+      res.end(typeof route.body === 'string' ? route.body : JSON.stringify(route.body));
+    });
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  return {
+    port: server.address().port,
+    baseUrl: `http://127.0.0.1:${server.address().port}`,
+    requests,
+    async waitFor(n, ms = 2000) {
+      const deadline = Date.now() + ms;
+      while (requests.length < n) {
+        if (Date.now() > deadline)
+          throw new Error(`only ${requests.length}/${n} HTTP requests after ${ms} ms`);
+        await new Promise((r) => setTimeout(r, 10));
+      }
+    },
+    close: () =>
+      new Promise((r) => {
+        server.closeAllConnections?.();
+        server.close(r);
+      })
+  };
+}
+
+/** Yield to the macrotask queue so `queueMicrotask`-batched renders flush. */
+export const tick = () => new Promise((r) => setTimeout(r, 0));
