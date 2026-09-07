@@ -1115,7 +1115,10 @@ class PlaybackScheduler {
           return null;
         }
       } else if (
-        !this._isCCSupported(event.controller, this._getTimingConstraints(routing.device, outChannel))
+        !this._isCCSupported(
+          event.controller,
+          this._getTimingConstraints(routing.device, outChannel)
+        )
       ) {
         // Drop a CC the instrument does not declare in supported_ccs so an
         // unsupported controller can't deregulate the firmware (audit P2-4).

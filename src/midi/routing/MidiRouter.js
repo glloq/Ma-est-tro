@@ -463,7 +463,13 @@ class MidiRouter {
 
     if (isNoteOn) {
       const constraints = resolver.getTimingConstraints(dest, out.channel);
-      const res = this._noteGate.noteOn(dest, out.channel, out.note, constraints, performance.now());
+      const res = this._noteGate.noteOn(
+        dest,
+        out.channel,
+        out.note,
+        constraints,
+        performance.now()
+      );
       if (res.evictNote != null) {
         // Release the evicted (median) voice before admitting the new note-on.
         this._deps.deviceManager.sendMessage(dest, DEVICE_MSG_TYPES.NOTE_OFF, {
