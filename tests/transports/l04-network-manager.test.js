@@ -14,7 +14,12 @@
 import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import dgram from 'dgram';
 import NetworkManager from '../../src/transports/NetworkManager.js';
-import { CMD, commandOf, decodeInvitation, encodeInvitation } from '../../src/transports/AppleMidi.js';
+import {
+  CMD,
+  commandOf,
+  decodeInvitation,
+  encodeInvitation
+} from '../../src/transports/AppleMidi.js';
 
 const LOOPBACK = '127.0.0.1';
 const silentLogger = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
@@ -168,10 +173,12 @@ describe('L04/§N01 — sockets AppleMIDI partagées', () => {
     await nm.shutdown();
     expect(nm._controlSocket).toBeNull();
     const probe = dgram.createSocket({ type: 'udp4', reuseAddr: false });
-    await expect(new Promise((r, j) => {
-      probe.once('error', j);
-      probe.bind(base, r);
-    })).resolves.toBeUndefined();
+    await expect(
+      new Promise((r, j) => {
+        probe.once('error', j);
+        probe.bind(base, r);
+      })
+    ).resolves.toBeUndefined();
     await new Promise((r) => probe.close(r));
   });
 });

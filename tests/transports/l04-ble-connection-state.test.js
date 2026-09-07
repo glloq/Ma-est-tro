@@ -156,7 +156,11 @@ describe('L04/§L — back-off, épuisement et fuites', () => {
         throw new Error('out of range');
       };
       const events = [];
-      for (const e of ['bluetooth:disconnected', 'bluetooth:reconnect_exhausted', 'bluetooth:error'])
+      for (const e of [
+        'bluetooth:disconnected',
+        'bluetooth:reconnect_exhausted',
+        'bluetooth:error'
+      ])
         mgr.on(e, (p) => events.push({ e, p }));
 
       const t0 = Date.now();
@@ -272,7 +276,9 @@ describe('L04/§L — trames entrantes : horodatage, messages multiples, running
   test('un paquet portant plusieurs messages horodatés les émet tous, dans l’ordre', () => {
     port._injectIncoming(
       ADDR,
-      Uint8Array.from([0x80, 0x81, 0x90, 0x3c, 0x40, 0x82, 0x80, 0x3c, 0x00, 0x83, 0xb0, 0x07, 0x64])
+      Uint8Array.from([
+        0x80, 0x81, 0x90, 0x3c, 0x40, 0x82, 0x80, 0x3c, 0x00, 0x83, 0xb0, 0x07, 0x64
+      ])
     );
     expect(midi).toEqual([
       [0x90, 0x3c, 0x40],

@@ -136,8 +136,7 @@ describe('L04/§G04 — débranchement d’un device PENDANT la lecture', () => 
     const statuses = new Set();
     for (let i = 0; i < 200; i++) {
       statuses.add(
-        dm.sendMessageEx(DEVICE, 'noteon', { channel: 0, note: 60 + (i % 12), velocity: 90 })
-          .status
+        dm.sendMessageEx(DEVICE, 'noteon', { channel: 0, note: 60 + (i % 12), velocity: 90 }).status
       );
     }
 

@@ -155,7 +155,13 @@ describe('L04/§K — scanAndReopen : énumération, filtres, erreurs', () => {
 
   test('noms Unicode, espaces et très longs : transmis tels quels, sans normalisation', async () => {
     const long = 'X'.repeat(512);
-    const names = ['Piano à queue — Steinway', '  espaces  autour  ', '日本語シンセ', long, '🎹 BLE'];
+    const names = [
+      'Piano à queue — Steinway',
+      '  espaces  autour  ',
+      '日本語シンセ',
+      long,
+      '🎹 BLE'
+    ];
     const d = makeDiscovery(makeEnumerator(names, []));
     const inputs = new Map();
 
@@ -202,11 +208,14 @@ describe('L04/§G04 — hot-plug : apparition, disparition, état interne', () =
     inputs = new Map();
     outputs = new Map();
     changes = [];
-    discovery.setChangeCallbacks(async (c) => {
-      changes.push(c);
-      if (c.type === 'addInput') inputs.set(c.name, fakePort(c.name));
-      if (c.type === 'addOutput') outputs.set(c.name, fakePort(c.name));
-    }, async () => {});
+    discovery.setChangeCallbacks(
+      async (c) => {
+        changes.push(c);
+        if (c.type === 'addInput') inputs.set(c.name, fakePort(c.name));
+        if (c.type === 'addOutput') outputs.set(c.name, fakePort(c.name));
+      },
+      async () => {}
+    );
     discovery.startHotPlugMonitoring(inputs, outputs);
   });
 
@@ -247,17 +256,22 @@ describe('L04/§G04 — hot-plug : apparition, disparition, état interne', () =
   test('les ports système n’apparaissent jamais dans les changements de hot-plug', async () => {
     enumerator.inputs = ['Midi Through Port-0', 'loopMIDI Port', 'Real Device'];
     await discovery._onCheckDeviceChanges();
-    expect(changes.filter((c) => c.type === 'addInput').map((c) => c.name)).toEqual(['Real Device']);
+    expect(changes.filter((c) => c.type === 'addInput').map((c) => c.name)).toEqual([
+      'Real Device'
+    ]);
   });
 
   test('port fantôme au hot-plug : l’ouverture échoue → NON mémorisé, donc retenté à chaque tick', async () => {
     const attempts = [];
-    discovery.setChangeCallbacks(async (c) => {
-      if (c.type === 'addInput') {
-        attempts.push(c.name);
-        throw new Error('ENODEV');
-      }
-    }, async () => {});
+    discovery.setChangeCallbacks(
+      async (c) => {
+        if (c.type === 'addInput') {
+          attempts.push(c.name);
+          throw new Error('ENODEV');
+        }
+      },
+      async () => {}
+    );
     enumerator.inputs = ['GHOST'];
 
     await discovery._onCheckDeviceChanges();
