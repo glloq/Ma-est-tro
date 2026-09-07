@@ -42,8 +42,10 @@ suite('02 · canonical scenario', () => {
         expect(devices.some((d) => d.type === 'virtual')).toBeTruthy('a virtual device is registered');
         ctx.state.deviceId = devices.find((d) => d.type === 'virtual').id;
       });
-      await page.keyboard.press('Escape');
-      await page.waitForTimeout(800);
+      await ctx.step('2b · the instrument page closes and stops intercepting clicks', async () => {
+        await app.closeInstruments();
+        expect(await page.locator('.inst-mgmt-modal').count()).toBe(0);
+      });
 
       // ── 3. import ──────────────────────────────────────────────────────────
       await ctx.step('3 · import a MIDI file through the drop-zone input', async () => {

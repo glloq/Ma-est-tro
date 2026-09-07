@@ -142,8 +142,7 @@ async function prepare(page, app, deps) {
     await app.openInstruments();
     await app.createVirtualInstrumentViaUi({ preset: 'piano' });
     await page.waitForTimeout(1200);
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(600);
+    await app.closeInstruments();
   }
 
   const files = await app.filesInList();
