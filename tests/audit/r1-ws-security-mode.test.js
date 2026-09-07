@@ -103,7 +103,9 @@ function forgedConnect(query = '') {
       resolve(result);
     };
     client.on('open', () => settle({ opened: true, status: null }));
-    client.on('unexpected-response', (_req, res) => settle({ opened: false, status: res.statusCode }));
+    client.on('unexpected-response', (_req, res) =>
+      settle({ opened: false, status: res.statusCode })
+    );
     client.on('error', () => settle({ opened: false, status: null }));
   });
 }
@@ -194,12 +196,9 @@ describe('R1 / F-108 — the loopback shortcut is anchored on the source address
     server.start();
     const verifyClient = server.wss.options.verifyClient;
     let accepted = null;
-    verifyClient(
-      { req: { url, headers: { origin, host }, socket: { remoteAddress } } },
-      (ok) => {
-        accepted = ok;
-      }
-    );
+    verifyClient({ req: { url, headers: { origin, host }, socket: { remoteAddress } } }, (ok) => {
+      accepted = ok;
+    });
     server.close();
     if (savedMode === undefined) delete process.env.GMBOOP_SECURITY_MODE;
     else process.env.GMBOOP_SECURITY_MODE = savedMode;

@@ -11,10 +11,18 @@
  * control-byte-laden device path has no business reaching the serial layer or
  * the logs in the first place.
  */
-import { fieldRules, isBoolLike, isNonEmptyStr, isStr, MAX_ID_LEN, MAX_NAME_LEN } from './helpers.js';
+import {
+  fieldRules,
+  isBoolLike,
+  isNonEmptyStr,
+  isStr,
+  MAX_ID_LEN,
+  MAX_NAME_LEN
+} from './helpers.js';
 
 /** A POSIX device path: printable, bounded, no control bytes, no NUL. */
 function isDevicePath(v) {
+  // eslint-disable-next-line no-control-regex -- control bytes are exactly what we reject
   return isNonEmptyStr(v, MAX_ID_LEN) && !/[\x00-\x1f\x7f]/.test(v);
 }
 

@@ -45,6 +45,7 @@ export const system_restore = {
     if (data.path === undefined || data.path === null) return null;
     if (typeof data.path !== 'string' || data.path.length === 0) return 'path must be a string';
     if (data.path.length > 255) return 'path must be at most 255 characters';
+    // eslint-disable-next-line no-control-regex -- control bytes are exactly what we reject
     if (/[\x00-\x1f]/.test(data.path)) return 'path must not contain control bytes';
     return null;
   }

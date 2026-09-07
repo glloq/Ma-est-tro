@@ -179,7 +179,11 @@ const optionalDeviceIdRule = [
 /** Rule columns, shared by add (device_id required) and update (id required). */
 const ruleColumnRules = [
   ['instrument_id', isIdLike, 'instrument_id must be a number or non-empty string'],
-  ['name', (v) => isStr(v, MAX_NAME_LEN), `name must be a string of at most ${MAX_NAME_LEN} characters`],
+  [
+    'name',
+    (v) => isStr(v, MAX_NAME_LEN),
+    `name must be a string of at most ${MAX_NAME_LEN} characters`
+  ],
   [
     'priority',
     (v) => isIntLike(v, -1000, 1000),
@@ -192,12 +196,7 @@ const ruleColumnRules = [
 
 export const lighting_rule_add = {
   custom: fieldRules([
-    [
-      'device_id',
-      isIdLike,
-      'device_id must be a number or non-empty string',
-      { required: true }
-    ],
+    ['device_id', isIdLike, 'device_id must be a number or non-empty string', { required: true }],
     ...ruleColumnRules
   ])
 };

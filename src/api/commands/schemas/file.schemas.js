@@ -340,6 +340,7 @@ export const file_list = {
   custom: fieldRules([
     [
       'folder',
+      // eslint-disable-next-line no-control-regex -- control bytes are exactly what we reject
       (v) => isStr(v, 512) && !/[\x00-\x1f]/.test(v),
       'folder must be a string of at most 512 characters without control bytes'
     ]

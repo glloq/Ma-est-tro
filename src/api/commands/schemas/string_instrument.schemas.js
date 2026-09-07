@@ -24,6 +24,7 @@ import {
   isBoolLike,
   isChannel,
   isNonEmptyStr,
+  isStr,
   isArrayMax,
   isPlainObject,
   MAX_ID_LEN,
@@ -37,10 +38,13 @@ const MAX_STRINGS = 12;
 
 /** Shared column rules for create/update (all optional — partial updates). */
 const instrumentColumnRules = [
+  // Kept liberal on purpose: the modal can submit an empty name and the column
+  // carries `NOT NULL DEFAULT 'Guitar'`, so '' is a value the product accepts
+  // today. Only the type and the length are gated.
   [
     'instrument_name',
-    (v) => isNonEmptyStr(v, MAX_NAME_LEN),
-    `instrument_name must be a non-empty string of at most ${MAX_NAME_LEN} characters`
+    (v) => isStr(v, MAX_NAME_LEN),
+    `instrument_name must be a string of at most ${MAX_NAME_LEN} characters`
   ],
   ['num_strings', (v) => isIntLike(v, 1, MAX_STRINGS), 'num_strings must be an integer 1-12'],
   ['num_frets', (v) => isIntLike(v, 0, 36), 'num_frets must be an integer 0-36'],
@@ -52,11 +56,7 @@ const instrumentColumnRules = [
   ['is_fretless', isBoolLike, 'is_fretless must be a boolean'],
   ['capo_fret', (v) => isIntLike(v, 0, 36), 'capo_fret must be an integer 0-36'],
   ['cc_enabled', isBoolLike, 'cc_enabled must be a boolean'],
-  [
-    'tab_algorithm',
-    (v) => isNonEmptyStr(v, MAX_NAME_LEN),
-    'tab_algorithm must be a non-empty string'
-  ],
+  ['tab_algorithm', (v) => isStr(v, MAX_NAME_LEN), 'tab_algorithm must be a string'],
   ['cc_string_number', (v) => isIntLike(v, 0, 127), 'cc_string_number must be an integer 0-127'],
   ['cc_string_min', (v) => isIntLike(v, 0, 127), 'cc_string_min must be an integer 0-127'],
   ['cc_string_max', (v) => isIntLike(v, 0, 127), 'cc_string_max must be an integer 0-127'],

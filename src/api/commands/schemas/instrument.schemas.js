@@ -154,7 +154,9 @@ export const instrument_voice_update = {
   ])
 };
 export const instrument_voice_delete = {
-  custom: fieldRules([['id', isIdLike, 'id must be a number or non-empty string', { required: true }]])
+  custom: fieldRules([
+    ['id', isIdLike, 'id must be a number or non-empty string', { required: true }]
+  ])
 };
 export const instrument_voice_replace = {
   custom: fieldRules([
@@ -178,7 +180,11 @@ export const instrument_light_set_supported = {
     ...lightTargetRules,
     ['supported_mask', (v) => isIntLike(v, 0, 31), 'supported_mask must be an integer 0-31'],
     ['brightness_mode', (v) => isIntLike(v, 0, 1), 'brightness_mode must be 0 or 1'],
-    ['supported_effects', (v) => isIntLike(v, 0, 1023), 'supported_effects must be an integer 0-1023']
+    [
+      'supported_effects',
+      (v) => isIntLike(v, 0, 1023),
+      'supported_effects must be an integer 0-1023'
+    ]
   ])
 };
 
@@ -186,7 +192,11 @@ export const instrument_light_set_supported = {
 
 export const instrument_create_virtual = {
   custom: fieldRules([
-    ['preset', (v) => isNonEmptyStr(v, MAX_NAME_LEN) || isPlainObject(v), 'preset must be a string or an object'],
+    [
+      'preset',
+      (v) => isNonEmptyStr(v, MAX_NAME_LEN) || isPlainObject(v),
+      'preset must be a string or an object'
+    ],
     ['name', (v) => isStr(v, 255), 'name must be a string'],
     channelRule,
     ...capabilityRules

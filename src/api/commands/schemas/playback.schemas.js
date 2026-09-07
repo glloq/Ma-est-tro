@@ -11,7 +11,16 @@
  * double-error pattern (`"X is required, X must be Y"`) preserves
  * historical behaviour where missing fields also fail the type check.
  */
-import { fieldRules, isIdLike, isIntLike, isNumLike, isBoolLike, isChannel, isPlainObject, isNonEmptyStr } from './helpers.js';
+import {
+  fieldRules,
+  isIdLike,
+  isIntLike,
+  isNumLike,
+  isBoolLike,
+  isChannel,
+  isPlainObject,
+  isNonEmptyStr
+} from './helpers.js';
 
 export const playback_start = {
   custom: (data) => {
@@ -149,7 +158,12 @@ export const playback_set_tempo = {
 // schema exists to REJECT nonsense instead of silently correcting it.
 export const playback_set_volume = {
   custom: fieldRules([
-    ['volume', (v) => isIntLike(v, 0, 127), 'volume must be an integer between 0 and 127', { required: true }]
+    [
+      'volume',
+      (v) => isIntLike(v, 0, 127),
+      'volume must be an integer between 0 and 127',
+      { required: true }
+    ]
   ])
 };
 
@@ -180,13 +194,23 @@ export const playback_validate_routing = {
 
 export const get_instrument_defaults = {
   custom: fieldRules([
-    ['instrumentId', isIdLike, 'instrumentId must be a number or non-empty string', { required: true }]
+    [
+      'instrumentId',
+      isIdLike,
+      'instrumentId must be a number or non-empty string',
+      { required: true }
+    ]
   ])
 };
 
 export const update_instrument_capabilities = {
   custom: fieldRules([
-    ['updates', isPlainObject, 'updates must be an object keyed by instrument id', { required: true }]
+    [
+      'updates',
+      isPlainObject,
+      'updates must be an object keyed by instrument id',
+      { required: true }
+    ]
   ])
 };
 

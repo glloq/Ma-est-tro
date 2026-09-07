@@ -136,7 +136,7 @@ export const PAYLOAD_BLIND_COMMANDS = new Set([
   'system_shutdown',
   'system_status',
   // VirtualInstrumentCommands.js
-  'virtual_list',
+  'virtual_list'
 ]);
 
 /**

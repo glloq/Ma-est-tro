@@ -259,9 +259,7 @@ async function runCheck() {
   const pending = policy.PENDING_SCHEMA_COMMANDS;
 
   if (withSchema < baseline.withSchema) {
-    failures.push(
-      `schema coverage dropped: ${withSchema} < ${baseline.withSchema} (baseline).`
-    );
+    failures.push(`schema coverage dropped: ${withSchema} < ${baseline.withSchema} (baseline).`);
   }
   if (summary.schemaFileNotWired.length) {
     failures.push(
@@ -282,9 +280,7 @@ async function runCheck() {
     );
   }
 
-  const uncovered = registered.filter(
-    (c) => !schemas.has(c) && !blind.has(c) && !pending.has(c)
-  );
+  const uncovered = registered.filter((c) => !schemas.has(c) && !blind.has(c) && !pending.has(c));
   if (uncovered.length) {
     failures.push(
       `these registered commands have no payload schema and no exemption, so they are ` +

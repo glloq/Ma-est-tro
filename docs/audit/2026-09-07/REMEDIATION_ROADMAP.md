@@ -33,6 +33,31 @@ Tout ce qui suit est **livré, testé rouge→vert, et vert à HEAD** :
 
 ---
 
+## ✅ Vague 1 — LIVRÉE (2026-09-07)
+
+Les cinq items de la vague 1 sont corrigés, chacun avec un test rouge→vert.
+État à l'issue : **199 suites / 2 677 tests backend · 86 / 1 560 frontend ·
+0 erreur lint · `tsc` clean · `format:check` vert.**
+
+| # | Finding | Résultat mesuré |
+|---|---|---|
+| **R1** | F-108, F-114 | `security.mode` résolu en **un seul endroit**, lu par HTTP **et** WS. En `secure`, le WS exige le token pour toute connexion. Les deux portes HTTP forgeables (`Sec-Fetch-Site`, `Origin==Host`) sont **supprimées**. |
+| **R2** | F-110 | Toutes les données d'appareil BLE échappées dans les deux renderers ; sélecteurs CSS ne concaténant plus de valeur non fiable. |
+| **R3** | F-19 / F-03 | Couverture de schémas **86/270 → 198/270 (73,3 %)**. Liste d'exemption = **72 commandes sans payload, dette nulle** — fait vérifié, pas affirmé. Cliquet CI en place, vérifié rouge. |
+| **R4** | F-76, F-77, F-81, F-85 | Verrou par fichier **+** CAS optimiste. Le perdant reçoit un **409** ; plus jamais deux `success`. |
+| **R5** | F-130, F-78 | Gel de la boucle d'événements **5 031 ms → 257 ms**. Borné, pas supprimé (`better-sqlite3` est synchrone) — dit explicitement. |
+
+> ⚠️ **Conséquence à traiter avant d'annoncer le mode `secure`.** Maintenant que
+> R1 l'applique réellement de bout en bout, **la SPA ne sait pas présenter de
+> token** : `GMBOOP_SECURITY_MODE=secure` rend donc l'interface inutilisable.
+> Avant R1 le mode était inopérant côté WS, ce qui masquait le trou. Il faut
+> soit donner un porteur de token à la SPA, soit documenter `secure` comme
+> « accès API uniquement ». Détail dans `WAVE1_R1_R3.md`.
+
+Comptes rendus : `WAVE1_R1_R3.md`, `WAVE1_R4_R5.md`.
+
+---
+
 ## Vague 1 — sécurité et intégrité (à faire avant toute release)
 
 ### R1 · Fermer le contournement d'authentification WebSocket — F-108

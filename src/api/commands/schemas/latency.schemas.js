@@ -4,7 +4,16 @@
  * commands (P1-3.2c, ADR-004). Consumed by
  * `JsonValidator.validateByCommand`.
  */
-import { fieldRules, isIdLike, isIntLike, isNumLike, isChannel, isNonEmptyStr, isArrayMax, MAX_ID_LEN } from './helpers.js';
+import {
+  fieldRules,
+  isIdLike,
+  isIntLike,
+  isNumLike,
+  isChannel,
+  isNonEmptyStr,
+  isArrayMax,
+  MAX_ID_LEN
+} from './helpers.js';
 
 const requireDeviceId = {
   custom: (data) => (!data.deviceId ? 'deviceId is required' : null)
@@ -48,7 +57,11 @@ export const calibrate_delay = {
     ['deviceId', isIdLike, 'deviceId must be a number or non-empty string'],
     ['channel', isChannel, 'channel must be between 0 and 15'],
     ['threshold', (v) => isNumLike(v, 0, 1), 'threshold must be a number'],
-    ['measurements', (v) => isIntLike(v, 1, 20), 'measurements must be an integer between 1 and 20'],
+    [
+      'measurements',
+      (v) => isIntLike(v, 1, 20),
+      'measurements must be an integer between 1 and 20'
+    ],
     alsaRule
   ])
 };
