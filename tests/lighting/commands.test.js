@@ -111,13 +111,21 @@ describe('L02 — command surface', () => {
     expect(names).toEqual(expect.arrayContaining(['lighting_blackout', 'lighting_midi_learn']));
   });
 
-  test('only 7 of the 38 have a payload schema — the other 31 are unvalidated', async () => {
+  // F-37 (was: "only 7 of the 38 have a payload schema — the other 31 are
+  // unvalidated"). Closed by wave 1 / R3: the 28 payload-taking commands now
+  // carry a schema, and the 10 that are left take no payload argument at all
+  // (`registry.register('lighting_all_off', () => ...)`), so nothing they
+  // receive can reach anything.
+  test('every payload-taking lighting command has a schema (F-37 closed)', async () => {
     const { h } = build();
     const schemas = await import('../../src/api/commands/schemas/lighting.schemas.js');
     const withSchema = Object.keys(schemas.default);
-    expect(withSchema.length).toBe(7);
     const without = Object.keys(h).filter((n) => !withSchema.includes(n));
-    expect(without.length).toBe(31);
+    expect(withSchema.length + without.length).toBe(38);
+    // Anything without a schema must be provably unable to read a payload.
+    for (const name of without) {
+      expect(h[name].length).toBe(0);
+    }
   });
 });
 

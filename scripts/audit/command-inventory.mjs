@@ -14,7 +14,13 @@
  * permissive Proxy because `register()` only *binds* handlers — it never
  * resolves `app.*` until a command is dispatched.
  *
- * Usage: node scripts/audit/command-inventory.mjs [--json]
+ * It doubles as the CI ratchet for the fail-closed payload validation
+ * (audit F-19, wave 1 / R3): `--check` compares the live numbers against
+ * `scripts/audit/schema-coverage.baseline.json` and exits 1 when schema
+ * coverage drops, when the exemption list grows, or when a newly registered
+ * command is neither schema-backed nor exempt.
+ *
+ * Usage: node scripts/audit/command-inventory.mjs [--json|--check]
  */
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
@@ -167,6 +173,14 @@ function collectDocumented() {
   return new Set([...src.matchAll(/`([a-z][a-z0-9_]{2,})`/g)].map((m) => m[1]));
 }
 
+/** Command name -> registered handler, used by the --check ratchet. */
+async function collectHandlers() {
+  const { default: CommandRegistry } = await import(join(ROOT, 'src/api/CommandRegistry.js'));
+  const registry = new CommandRegistry(makeStubDeps());
+  await registry.loadCommandModules();
+  return registry.handlers;
+}
+
 const registered = await collectRegisteredCommands();
 const sites = collectRegistrationSites();
 const schemas = await collectSchemas();
@@ -221,7 +235,93 @@ const summary = {
   phantomFrontendCalls: phantomCalls
 };
 
-if (process.argv.includes('--json')) {
+/**
+ * CI ratchet (wave 1 / R3). Three invariants, all one-directional:
+ *   1. schema coverage never decreases;
+ *   2. the `PENDING_SCHEMA_COMMANDS` debt list never grows;
+ *   3. every registered command is covered — by a schema, or by an exemption
+ *      that is itself justified (a payload-blind handler really takes no
+ *      payload argument).
+ * Exits 1 with a readable diff when any of them is violated.
+ */
+async function runCheck() {
+  const baselinePath = join(__dirname, 'schema-coverage.baseline.json');
+  const baseline = JSON.parse(readFileSync(baselinePath, 'utf8'));
+  const policy = await import(join(ROOT, 'src/api/commands/schemas/validation-policy.js'));
+  const handlers = await collectHandlers();
+  const failures = [];
+
+  // The metric that matters at RUNTIME is `withWiredSchema`: a schema file
+  // that JsonValidator does not import is dead weight, and dropping the import
+  // would silently reopen the fail-open hole for a whole module.
+  const withSchema = summary.withWiredSchema;
+  const blind = policy.PAYLOAD_BLIND_COMMANDS;
+  const pending = policy.PENDING_SCHEMA_COMMANDS;
+
+  if (withSchema < baseline.withSchema) {
+    failures.push(
+      `schema coverage dropped: ${withSchema} < ${baseline.withSchema} (baseline).`
+    );
+  }
+  if (summary.schemaFileNotWired.length) {
+    failures.push(
+      'these schema files are not imported by src/utils/JsonValidator.js, so they validate ' +
+        `nothing at runtime: ${summary.schemaFileNotWired.join(', ')}.`
+    );
+  }
+  if (pending.size > baseline.pendingSchema) {
+    failures.push(
+      `the PENDING_SCHEMA_COMMANDS debt grew: ${pending.size} > ${baseline.pendingSchema} ` +
+        '(baseline). That list may only shrink — write the schema instead.'
+    );
+  }
+  if (blind.size > baseline.payloadBlind) {
+    failures.push(
+      `PAYLOAD_BLIND_COMMANDS grew: ${blind.size} > ${baseline.payloadBlind} (baseline). ` +
+        'A command only belongs there when its handler takes no payload argument.'
+    );
+  }
+
+  const uncovered = registered.filter(
+    (c) => !schemas.has(c) && !blind.has(c) && !pending.has(c)
+  );
+  if (uncovered.length) {
+    failures.push(
+      `these registered commands have no payload schema and no exemption, so they are ` +
+        `refused at runtime (fail-closed): ${uncovered.join(', ')}. ` +
+        'Add a schema in src/api/commands/schemas/.'
+    );
+  }
+
+  const notBlind = [...blind].filter((c) => handlers[c] && handlers[c].length !== 0);
+  if (notBlind.length) {
+    failures.push(
+      `these commands are listed as payload-blind but their handler DOES take a payload ` +
+        `argument: ${notBlind.join(', ')}. They need a real schema.`
+    );
+  }
+
+  const ghosts = [...blind, ...pending].filter((c) => !registered.includes(c));
+  if (ghosts.length) {
+    failures.push(`exempted commands that are no longer registered: ${ghosts.join(', ')}.`);
+  }
+
+  console.log(
+    `Schema coverage : ${withSchema}/${summary.registered} ` +
+      `(baseline ${baseline.withSchema}) · payload-blind ${blind.size}/${baseline.payloadBlind} ` +
+      `· pending schema ${pending.size}/${baseline.pendingSchema}`
+  );
+  if (failures.length) {
+    console.error('\nSchema coverage ratchet FAILED:');
+    for (const f of failures) console.error(`  - ${f}`);
+    process.exit(1);
+  }
+  console.log('Schema coverage ratchet OK');
+}
+
+if (process.argv.includes('--check')) {
+  await runCheck();
+} else if (process.argv.includes('--json')) {
   console.log(JSON.stringify({ summary, rows }, null, 2));
 } else {
   const pct = (n) => `${((n / summary.registered) * 100).toFixed(1)}%`;

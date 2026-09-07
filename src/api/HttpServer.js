@@ -28,6 +28,7 @@ import { dirname } from 'path';
 import { readFileSync, existsSync } from 'fs';
 import { createApiRouter } from './apiRoutes.js';
 import { createCaptivePortalMiddleware } from './middleware/captivePortal.js';
+import { isSecureMode, isPrivateAddress } from './securityPolicy.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -43,24 +44,12 @@ const __dirname = dirname(__filename);
  *
  * Public IPs always fall through to the token check, so an internet-exposed
  * instance still requires authentication.
+ *
+ * The address predicate itself lives in `securityPolicy.js` so the HTTP and
+ * WebSocket layers share one definition (audit L10 F-108/F-114).
  */
 function isPrivateClient(req) {
-  let ip = req.ip || req.socket?.remoteAddress || '';
-  if (!ip) return false;
-  // Strip IPv6-mapped-IPv4 prefix: ::ffff:192.168.1.10 → 192.168.1.10
-  if (ip.startsWith('::ffff:')) ip = ip.slice(7);
-  if (ip === '::1' || ip === '127.0.0.1' || ip.startsWith('127.')) return true;
-  if (ip.startsWith('10.') || ip.startsWith('192.168.')) return true;
-  if (ip.startsWith('169.254.')) return true; // link-local
-  if (ip.startsWith('172.')) {
-    const second = Number(ip.split('.')[1]);
-    if (second >= 16 && second <= 31) return true; // 172.16/12
-  }
-  // IPv6 ULA: fc00::/7 — first byte is 0xfc or 0xfd
-  if (/^f[cd][0-9a-f]{2}:/i.test(ip)) return true;
-  // IPv6 link-local: fe80::/10
-  if (/^fe[89ab][0-9a-f]:/i.test(ip)) return true;
-  return false;
+  return isPrivateAddress(req.ip || req.socket?.remoteAddress || '');
 }
 
 /**
@@ -175,12 +164,7 @@ class HttpServer {
     // request — no same-origin or private-network exception — for
     // deployments on shared/untrusted networks. Set via GMBOOP_SECURITY_MODE
     // or config.security.mode.
-    const securityMode = (
-      process.env.GMBOOP_SECURITY_MODE ||
-      this.config?.security?.mode ||
-      'trusted-lan'
-    ).toLowerCase();
-    const secureMode = securityMode === 'secure';
+    const secureMode = isSecureMode(this.config);
     this.logger.info(`HTTP security mode: ${secureMode ? 'secure' : 'trusted-lan'}`);
 
     const apiToken = process.env.GMBOOP_API_TOKEN;
@@ -202,57 +186,32 @@ class HttpServer {
           return this._checkBearer(req, res, next, apiTokenBuf);
         }
 
-        // SECURITY NOTE (accepted risk, trusted-lan mode): the Sec-Fetch-Site
-        // and Origin==Host bypasses below are browser-set signals but are
-        // freely forgeable by a NON-browser client (curl/script can send any
-        // header). They therefore do NOT prove same-origin against a direct
-        // WAN attacker, so in this default mode the API token can be bypassed
-        // by an internet client that reaches the box directly. This is
-        // acceptable only while the box is NOT exposed to the WAN (the token's
-        // stated job). If you port-forward / tunnel the box to the internet,
-        // switch security.mode to "secure" (token required for every request)
-        // — see the CLAUDE.md security section. A stricter option is to gate
-        // these header bypasses behind isPrivateClient(req).
+        // trusted-lan bypasses, anchored on the SOURCE ADDRESS (audit L10
+        // F-114). Three gates used to run here: `Sec-Fetch-Site: same-origin`,
+        // `Origin ∈ {localhost, 127.0.0.1, req.hostname}` and
+        // `isPrivateClient(req)`. The first two are browser-set signals, but a
+        // non-browser client sends whatever headers it likes — measured:
+        // `curl -H "Sec-Fetch-Site: same-origin"` and
+        // `curl -H "Origin: http://127.0.0.1:<port>"` both returned 200
+        // without a token, and a WRONG token passed too because these gates
+        // were evaluated BEFORE `_checkBearer`. They granted a direct WAN
+        // client exactly the access the token exists to deny, so they are now
+        // subsumed by the one signal a client cannot forge: the peer address
+        // of the accepted connection.
         //
-        // Same-origin SPA bypass: mirrors WebSocketServer.verifyClient.
-        // The CORS middleware above already restricts the Origin header to
-        // localhost / the request host, so an Origin echo here is a strong
-        // same-origin signal.
+        // What that means, stated plainly: in `trusted-lan` any client whose
+        // source address is private (RFC 1918, link-local, loopback, IPv6 ULA)
+        // has full API access, token or not. This is also the only signal left
+        // for browsers configured to strip Sec-Fetch-* and Origin headers via
+        // privacy extensions.
         //
-        // Modern browsers (Chrome 76+, FF 90+, Safari 16+) send
-        // `Sec-Fetch-Site: same-origin` on every fetch/XHR triggered from
-        // our own page — and they refuse to let JS set Sec-Fetch-* headers,
-        // so this is forgeable only by the browser itself. For same-origin
-        // GETs the Origin header is frequently omitted (notably by Firefox),
-        // which used to force the SPA's `/api/sf2/...` fetches into the
-        // Bearer-token path and break preset loading on remote-IP installs.
-        if (req.headers['sec-fetch-site'] === 'same-origin') {
-          return next();
-        }
-        const origin = req.headers.origin;
-        if (origin) {
-          try {
-            const url = new URL(origin);
-            if (
-              url.hostname === 'localhost' ||
-              url.hostname === '127.0.0.1' ||
-              url.hostname === req.hostname
-            ) {
-              return next();
-            }
-          } catch {
-            /* fall through to token check */
-          }
-        }
-
-        // Private-network bypass. The API token guards against random
-        // internet users on a port-forwarded instance; clients on the same
-        // LAN (RFC 1918, link-local, loopback, IPv6 ULA) are inside the
-        // same trust boundary as a same-origin SPA. This is also the only
-        // signal we have for browsers configured to strip Sec-Fetch-* and
-        // Origin headers via privacy extensions or about:config — there is
-        // no header check that survives those, so we have to fall back to
-        // the network-layer source IP.
+        // Two consequences worth knowing before deploying:
+        //   - a client reaching the box on a PUBLIC address (a routed IPv6
+        //     GUA, a port-forward) now needs the token, even from a browser;
+        //   - any local reverse proxy or tunnel makes every request look like
+        //     127.0.0.1 (`trust proxy` is deliberately not set, so
+        //     `X-Forwarded-For` is never honoured). Behind one of those, this
+        //     bypass is worthless and `security.mode=secure` is mandatory.
         if (isPrivateClient(req)) {
           return next();
         }

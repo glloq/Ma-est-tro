@@ -13,8 +13,11 @@
  *   - ping/pong heartbeat that terminates dead sockets after a missed
  *     beat.
  *
- * Auth: same `GMBOOP_API_TOKEN` as the HTTP layer; same-origin browsers
- * connect without a token because the SPA is served from the same host.
+ * Auth: same `GMBOOP_API_TOKEN` and same `security.mode` as the HTTP layer
+ * (resolved once in {@link ../api/securityPolicy.js}). In `trusted-lan`
+ * (default) a same-origin browser connects without a token because the SPA is
+ * served from the same host; in `secure` the token is required for every
+ * connection, loopback included (audit L10 F-108).
  */
 import { WebSocketServer as WSServer } from 'ws';
 import { timingSafeEqual } from 'crypto';
@@ -24,6 +27,7 @@ import { dirname, join } from 'path';
 import { ApplicationError } from '../core/errors/index.js';
 import { TIMING } from '../core/constants.js';
 import { WsOutputQueue } from './WsOutputQueue.js';
+import { isSecureMode, isLoopbackAddress } from './securityPolicy.js';
 
 const __wsFilename = fileURLToPath(import.meta.url);
 const __wsDirname = dirname(__wsFilename);
@@ -202,6 +206,14 @@ class WebSocketServer {
     const apiToken = process.env.GMBOOP_API_TOKEN;
     const serverPort = this.config?.server?.port || 8080;
 
+    // The security mode must cover the WHOLE API surface, not HTTP alone: the
+    // WebSocket carries the 270 commands, `system_update` and
+    // `system_shutdown` included, with no further authorisation check. Read
+    // through the shared resolver so HTTP and WS can never drift apart again
+    // (audit L10 F-108).
+    const secureMode = isSecureMode(this.config);
+    this.logger.info(`WebSocket security mode: ${secureMode ? 'secure' : 'trusted-lan'}`);
+
     // Soft-warn rather than fail-closed when the token is missing.
     // ApiTokenManager.ensure() runs during boot and is supposed to
     // populate this env, but a misconfigured deployment (token forced
@@ -212,9 +224,13 @@ class WebSocketServer {
     // from the same host still works.
     if (!apiToken) {
       this.logger.warn(
-        'GMBOOP_API_TOKEN is empty — cross-origin clients are refused (only the ' +
-          'loopback and same-origin SPA bypasses remain). Verify ' +
-          'ApiTokenManager.ensure() ran successfully to enable authenticated remote access.'
+        secureMode
+          ? 'GMBOOP_API_TOKEN is empty while security.mode=secure — every WebSocket ' +
+              'connection will be refused, including the local SPA. Verify ' +
+              'ApiTokenManager.ensure() ran successfully.'
+          : 'GMBOOP_API_TOKEN is empty — cross-origin clients are refused (only the ' +
+              'loopback and same-origin SPA bypasses remain). Verify ' +
+              'ApiTokenManager.ensure() ran successfully to enable authenticated remote access.'
       );
     }
 
@@ -231,16 +247,27 @@ class WebSocketServer {
       maxPayload: MAX_PAYLOAD_BYTES,
       perMessageDeflate: false,
       verifyClient: ({ req }, done) => {
-        // Same-origin bypass. The server typically binds 0.0.0.0 so the
-        // SPA can be reached over LAN (http://192.168.1.42:8080) as well
-        // as locally — we cannot pre-enumerate every LAN interface, so
-        // we accept the request when the Origin matches the inbound Host
-        // header (the URL the browser was actually told to use). Both
-        // headers are browser-set, so JS in a third-party page cannot
-        // forge them — XSS-style attacks therefore still hit the token
-        // gate below. A determined attacker with a custom HTTP client
-        // can match both, but at that point they can also just include
-        // the token, so the bypass adds no extra surface.
+        // `secure` mode: no bypass at all. The token is required for every
+        // connection, same-origin and loopback included. This is the mode the
+        // documentation points operators to for shared/untrusted networks, and
+        // until now it hardened HTTP only (audit L10 F-108).
+        if (secureMode) {
+          this._verifyToken(req, apiToken, serverPort, done);
+          return;
+        }
+
+        // Same-origin bypass (trusted-lan mode only). The server typically
+        // binds 0.0.0.0 so the SPA can be reached over LAN
+        // (http://192.168.1.42:8080) as well as locally — we cannot
+        // pre-enumerate every LAN interface, so we accept the request when the
+        // Origin matches the inbound Host header (the URL the browser was
+        // actually told to use). Both headers are browser-set, so JS in a
+        // third-party page cannot forge them — XSS-style attacks therefore
+        // still hit the token gate below.
+        //
+        // A non-browser client CAN match both, so this bypass hands full
+        // command access to anything that reaches the port. That is what
+        // `trusted-lan` means, and it is exactly what `secure` above closes.
         const origin = req.headers.origin || '';
         const host = req.headers.host || '';
         if (origin) {
@@ -248,8 +275,15 @@ class WebSocketServer {
             const originUrl = new URL(origin);
             const originHost = originUrl.hostname;
             const originPort = originUrl.port || (originUrl.protocol === 'https:' ? '443' : '80');
-            // Loopback short-circuit (no Host needed).
-            if (loopbackHosts.has(originHost) && originPort === String(serverPort)) {
+            // Loopback short-circuit (no Host needed) — but only when the
+            // connection REALLY comes from the loopback interface. `Origin` is
+            // forgeable by any non-browser client; the peer address of an
+            // accepted TCP connection is not (audit L10 F-108).
+            if (
+              isLoopbackAddress(req.socket?.remoteAddress) &&
+              loopbackHosts.has(originHost) &&
+              originPort === String(serverPort)
+            ) {
               done(true);
               return;
             }
@@ -276,41 +310,8 @@ class WebSocketServer {
           }
         }
 
-        // External (cross-origin) connections must present the token. With no
-        // token configured there is no secret to match — fail CLOSED for
-        // cross-origin clients (the loopback/same-origin bypasses above still
-        // serve the local SPA). Otherwise `timingSafeEqual(Buffer.from(''),
-        // Buffer.from(''))` returns true and the socket is accepted with no
-        // credential (audit A2 C1 — fail-open on empty secret).
-        if (!apiToken) {
-          this.logger.warn(
-            `WebSocket auth rejected (no token configured): ip=${req.socket.remoteAddress} ` +
-              `origin=${req.headers.origin || '(none)'} host=${req.headers.host || '(none)'}`
-          );
-          done(false, 401, 'Unauthorized');
-          return;
-        }
-        const url = new URL(req.url, 'http://localhost');
-        const token = url.searchParams.get('token') || req.headers['sec-websocket-protocol'] || '';
-        try {
-          const tokenBuf = Buffer.from(token);
-          const apiTokenBuf = Buffer.from(apiToken);
-          if (tokenBuf.length !== apiTokenBuf.length || !timingSafeEqual(tokenBuf, apiTokenBuf)) {
-            // Include the headers we just compared so operators can tell
-            // apart "running the old build" from "headers don't actually
-            // match" without instrumenting the runtime.
-            this.logger.warn(
-              `WebSocket auth rejected: ip=${req.socket.remoteAddress} ` +
-                `origin=${req.headers.origin || '(none)'} host=${req.headers.host || '(none)'} ` +
-                `expectedPort=${serverPort}`
-            );
-            done(false, 401, 'Unauthorized');
-          } else {
-            done(true);
-          }
-        } catch {
-          done(false, 401, 'Unauthorized');
-        }
+        // External (cross-origin) connections must present the token.
+        this._verifyToken(req, apiToken, serverPort, done);
       }
     });
 
@@ -326,6 +327,59 @@ class WebSocketServer {
     this.logger.info(
       `WebSocket server attached to HTTP server (max clients: ${MAX_WS_CLIENTS}, max payload: ${MAX_PAYLOAD_BYTES / 1024 / 1024}MB)`
     );
+  }
+
+  /**
+   * Constant-time bearer-token check for the WebSocket upgrade. The token
+   * travels either as the `token` query parameter or as the
+   * `Sec-WebSocket-Protocol` header. Calls `done(true)` on success and
+   * `done(false, 401, 'Unauthorized')` on every failure — including the
+   * "no token configured" case, where there is no secret to match and
+   * `timingSafeEqual(Buffer.from(''), Buffer.from(''))` would otherwise
+   * return true and accept a credential-less socket (audit A2 C1).
+   *
+   * @param {import('http').IncomingMessage} req
+   * @param {?string} apiToken - Expected token (`GMBOOP_API_TOKEN`).
+   * @param {number|string} serverPort - Logged so operators can tell a stale
+   *   build from a genuine header mismatch.
+   * @param {Function} done - `ws` verifyClient callback.
+   * @returns {void}
+   * @private
+   */
+  _verifyToken(req, apiToken, serverPort, done) {
+    const describe = () =>
+      `ip=${req.socket?.remoteAddress} origin=${req.headers.origin || '(none)'} ` +
+      `host=${req.headers.host || '(none)'}`;
+
+    if (!apiToken) {
+      this.logger.warn(`WebSocket auth rejected (no token configured): ${describe()}`);
+      done(false, 401, 'Unauthorized');
+      return;
+    }
+
+    let token = '';
+    try {
+      const url = new URL(req.url, 'http://localhost');
+      token = url.searchParams.get('token') || req.headers['sec-websocket-protocol'] || '';
+    } catch {
+      token = req.headers['sec-websocket-protocol'] || '';
+    }
+
+    try {
+      const tokenBuf = Buffer.from(token);
+      const apiTokenBuf = Buffer.from(apiToken);
+      if (tokenBuf.length !== apiTokenBuf.length || !timingSafeEqual(tokenBuf, apiTokenBuf)) {
+        // Include the headers we just compared so operators can tell
+        // apart "running the old build" from "headers don't actually
+        // match" without instrumenting the runtime.
+        this.logger.warn(`WebSocket auth rejected: ${describe()} expectedPort=${serverPort}`);
+        done(false, 401, 'Unauthorized');
+      } else {
+        done(true);
+      }
+    } catch {
+      done(false, 401, 'Unauthorized');
+    }
   }
 
   /**
