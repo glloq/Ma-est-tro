@@ -186,12 +186,13 @@ suite('02 · canonical scenario', () => {
 
       // ── 8. save ────────────────────────────────────────────────────────────
       await ctx.step('8 · save from the editor', async () => {
-        ctx.state.bytesBefore = await fileBytes(app, ctx.state.fileId);
+        ctx.state.before = await fileFingerprint(app, ctx.state.fileId);
         await page.click('#save-btn');
         await page.waitForTimeout(4000);
-        ctx.state.bytesAfter = await fileBytes(app, ctx.state.fileId);
-        ctx.evidenceAdd('file size before/after save', [ctx.state.bytesBefore, ctx.state.bytesAfter]);
-        expect(ctx.state.bytesAfter).toBeGreaterThan(0);
+        ctx.state.after = await fileFingerprint(app, ctx.state.fileId);
+        ctx.evidenceAdd('persisted file before save', ctx.state.before);
+        ctx.evidenceAdd('persisted file after save', ctx.state.after);
+        expect(ctx.state.after.noteOn).toBeGreaterThan(0);
       });
       ctx.evidenceAdd('screenshot after save', await shoot(page, deps.artifactsDir, '02-08-saved'));
 
@@ -222,12 +223,15 @@ suite('02 · canonical scenario', () => {
       });
 
       await ctx.step('10d · the edit survived the reload (tempo is 96 BPM)', async () => {
+        const persisted = await fileFingerprint(app, ctx.state.fileId);
+        ctx.evidenceAdd('persisted file after reload', persisted);
         await app.fileAction(filename, 'edit');
         await page.waitForSelector('#tempo-input', { timeout: 45000 });
         await page.waitForTimeout(3000);
         const tempo = await page.inputValue('#tempo-input');
-        ctx.evidenceAdd('tempo after reload', tempo);
+        ctx.evidenceAdd('tempo shown by the editor after reload', tempo);
         ctx.evidenceAdd('screenshot after reload', await shoot(page, deps.artifactsDir, '02-10-reloaded'));
+        expect(persisted.tempoBpm).toBe(96);
         expect(tempo).toBe('96');
       });
     } finally {
@@ -334,10 +338,27 @@ function readAssignments(page) {
   );
 }
 
-/** @param {AppPage} app @param {string} fileId @returns {Promise<number>} */
-async function fileBytes(app, fileId) {
+/**
+ * Summarise the persisted file so "did the save change anything" is answerable.
+ * `file_read` returns the **parsed** MIDI object (`{header, tracks}`), not bytes,
+ * so counting note events and reading the tempo meta is the meaningful measure.
+ *
+ * @param {AppPage} app @param {string} fileId
+ * @returns {Promise<{tracks:number, noteOn:number, tempoBpm:(number|null)}>}
+ */
+async function fileFingerprint(app, fileId) {
   const res = await app.command('file_read', { fileId });
-  const payload = res?.midiData ?? res?.data ?? res?.content ?? '';
-  if (Array.isArray(payload)) return payload.length;
-  return String(payload).length;
+  const midi = res?.midiData;
+  const tracks = Array.isArray(midi?.tracks) ? midi.tracks : [];
+  let noteOn = 0;
+  let tempoBpm = null;
+  for (const tr of tracks) {
+    for (const ev of tr) {
+      if (ev.type === 'noteOn' && (ev.velocity ?? 1) > 0) noteOn++;
+      if (ev.type === 'setTempo' && ev.microsecondsPerBeat && tempoBpm === null) {
+        tempoBpm = Math.round(60000000 / ev.microsecondsPerBeat);
+      }
+    }
+  }
+  return { tracks: tracks.length, noteOn, tempoBpm };
 }

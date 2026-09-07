@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-07T11:47:18.646Z",
+  "generatedAt": "2026-09-07T11:49:05.440Z",
   "baseUrl": "http://127.0.0.1:8108",
   "playwright": "/opt/node22/lib/node_modules/playwright/index.mjs",
   "chromium": "141.0.7390.37",
@@ -7,9 +7,9 @@
   "health": {
     "status": "ok",
     "version": "0.8.1",
-    "gitHash": "7a0529f",
-    "uptime": 44.444700992,
-    "timestamp": 1788781638643,
+    "gitHash": "c4d2024",
+    "uptime": 66.420521583,
+    "timestamp": 1788781745435,
     "capabilitiesOverall": "degraded",
     "capabilities": {
       "database": {
@@ -41,79 +41,115 @@
   },
   "summary": {
     "passed": 0,
-    "failed": 2,
-    "total": 2
+    "failed": 3,
+    "total": 3
   },
   "results": [
     {
       "suite": "02 · canonical scenario",
       "name": "boot → instrument → import → assign → adapt → play → edit → save → reload → verify",
       "status": "FAIL",
-      "ms": 33911,
-      "error": "Error: expected 0, got 3\n    at fail (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:137:11)\n    at Object.toBe (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:141:27)\n    at file:///home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:173:67\n    at async TestContext.step (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:87:19)\n    at async test.timeoutMs [as fn] (file:///home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:149:7)\n    at async run (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:194:9)\n    at async main (file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:95:39)\n    at async file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:119:10",
+      "ms": 46032,
+      "error": "Error: expected \"96\", got \"120\"\n    at fail (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:137:11)\n    at Object.toBe (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:141:27)\n    at file:///home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:231:23\n    at async TestContext.step (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:87:19)\n    at async test.timeoutMs [as fn] (file:///home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:224:7)\n    at async run (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:194:9)\n    at async main (file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:95:39)\n    at async file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:119:10",
       "steps": [
         {
           "label": "1 · boot the SPA",
           "status": "PASS",
-          "ms": 10127
+          "ms": 10387
         },
         {
           "label": "2 · create a virtual instrument through the UI",
           "status": "PASS",
-          "ms": 1986
+          "ms": 1944
         },
         {
           "label": "2b · the instrument page closes and stops intercepting clicks",
           "status": "PASS",
-          "ms": 201
+          "ms": 41
         },
         {
           "label": "3 · import a MIDI file through the drop-zone input",
           "status": "PASS",
-          "ms": 210
+          "ms": 229
         },
         {
           "label": "4 · open the routing page and auto-assign every channel",
           "status": "PASS",
-          "ms": 6922
+          "ms": 6911
         },
         {
           "label": "5 · adaptation is engaged for the assignment",
           "status": "PASS",
-          "ms": 9
+          "ms": 6
         },
         {
           "label": "5b · apply the routing",
           "status": "PASS",
-          "ms": 2840
+          "ms": 2645
         },
         {
           "label": "6 · play the file to the virtual instrument",
           "status": "PASS",
-          "ms": 2620
+          "ms": 2599
         },
         {
           "label": "6b · Stop halts playback",
           "status": "PASS",
-          "ms": 2138
+          "ms": 2100
         },
         {
           "label": "7 · open the MIDI editor on the file",
           "status": "PASS",
-          "ms": 3755
+          "ms": 3784
         },
         {
           "label": "7b · change the tempo in the editor header",
+          "status": "PASS",
+          "ms": 1529
+        },
+        {
+          "label": "7c · the tempo edit raises no uncaught exception",
+          "status": "WARN",
+          "ms": 0,
+          "error": "this.modal.setTempo is not a function | this.modal.setTempo is not a function | this.modal.setTempo is not a function"
+        },
+        {
+          "label": "8 · save from the editor",
+          "status": "PASS",
+          "ms": 4186
+        },
+        {
+          "label": "9 · reload the page",
+          "status": "PASS",
+          "ms": 4907
+        },
+        {
+          "label": "10a · the virtual instrument survived the reload",
+          "status": "PASS",
+          "ms": 5
+        },
+        {
+          "label": "10b · the imported file survived the reload",
+          "status": "PASS",
+          "ms": 7
+        },
+        {
+          "label": "10c · the routing survived the reload",
+          "status": "PASS",
+          "ms": 4
+        },
+        {
+          "label": "10d · the edit survived the reload (tempo is 96 BPM)",
           "status": "FAIL",
-          "ms": 1532,
-          "error": "expected 0, got 3"
+          "ms": 3277,
+          "error": "expected \"96\", got \"120\""
         }
       ],
       "evidence": [
         {
           "label": "devices after creation",
           "value": [
-            "virtual_1788781605687_nnu7ou · Virtual Piano · virtual"
+            "virtual_1788781690848_lo1mew · Virtual Piano · virtual"
           ]
         },
         {
@@ -152,11 +188,11 @@
           "label": "assignments after auto-routing",
           "value": [
             {
-              "value": "virtual_1788781605687_nnu7ou_0",
+              "value": "virtual_1788781690848_lo1mew_0",
               "text": "Virtual Piano (100)"
             },
             {
-              "value": "virtual_1788781605687_nnu7ou_0",
+              "value": "virtual_1788781690848_lo1mew_0",
               "text": "Virtual Piano (58)"
             }
           ]
@@ -190,10 +226,10 @@
           "value": {
             "playing": true,
             "paused": false,
-            "position": 2.453196758000002,
+            "position": 2.437395573999998,
             "duration": 15.979166666666666,
-            "percentage": 15.352469932724915,
-            "outputDevice": "virtual_1788781605687_nnu7ou",
+            "percentage": 15.25358377470664,
+            "outputDevice": "virtual_1788781690848_lo1mew",
             "loop": false,
             "tempo": 120,
             "events": 99
@@ -220,7 +256,7 @@
             "position": 0,
             "duration": 15.979166666666666,
             "percentage": 0,
-            "outputDevice": "virtual_1788781605687_nnu7ou",
+            "outputDevice": "virtual_1788781690848_lo1mew",
             "loop": false,
             "tempo": 120,
             "events": 99
@@ -253,12 +289,64 @@
           "value": "96"
         },
         {
+          "label": "editor component state after the tempo edit",
+          "value": null
+        },
+        {
           "label": "uncaught page errors after the tempo edit",
           "value": [
             "this.modal.setTempo is not a function",
             "this.modal.setTempo is not a function",
             "this.modal.setTempo is not a function"
           ]
+        },
+        {
+          "label": "file size before/after save",
+          "value": [
+            15,
+            15
+          ]
+        },
+        {
+          "label": "screenshot after save",
+          "value": "/home/user/General-Midi-Boop/tests/e2e/artifacts/02-08-saved.png"
+        },
+        {
+          "label": "devices after reload",
+          "value": [
+            "virtual_1788781690848_lo1mew · Virtual Piano"
+          ]
+        },
+        {
+          "label": "file list after reload",
+          "value": [
+            {
+              "id": "1",
+              "name": "e2e-two-channel.mid",
+              "state": "● Routé",
+              "classes": "file-item routing-routed-incomplete routed"
+            }
+          ]
+        },
+        {
+          "label": "file_routing_status after reload",
+          "value": {
+            "success": true,
+            "fileId": "1",
+            "status": "routed_incomplete",
+            "isAdapted": false,
+            "hasAutoAssigned": true,
+            "routedCount": 2,
+            "channelCount": 2
+          }
+        },
+        {
+          "label": "tempo after reload",
+          "value": "120"
+        },
+        {
+          "label": "screenshot after reload",
+          "value": "/home/user/General-Midi-Boop/tests/e2e/artifacts/02-10-reloaded.png"
         },
         {
           "label": "console errors over the whole journey",
@@ -269,6 +357,11 @@
             "[error] Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED",
             "[error] [MidiSynthesizer] Failed to initialize: Error: WebAudioFontPlayer not loaded\n    at MidiSynthesizer.initialize (http://127.0.0.1:8108/js/audio/MidiSynthesizer.js:732:15)\n    at MidiEditorPlayback.initSynthesizer (http://127.0.0.1:8108/js/features/mid",
             "[error] [MidiEditorModal] Failed to initialize synthesizer",
+            "[error] Refused to execute script from 'http://127.0.0.1:8108/lib/WebAudioFontPlayer.js' because its MIME type ('text/html') is not executable, and strict MIME type checking is enabled.",
+            "[error] Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED",
+            "[error] [MidiSynthesizer] Failed to initialize: Error: WebAudioFontPlayer not loaded\n    at MidiSynthesizer.initialize (http://127.0.0.1:8108/js/audio/MidiSynthesizer.js:732:15)\n    at MidiEditorPlayback.initSynthesizer (http://127.0.0.1:8108/js/features/mid",
+            "[error] [MidiEditorModal] Failed to initialize synthesizer",
+            "[pageerror] this.modal.setTempo is not a function",
             "[pageerror] this.modal.setTempo is not a function",
             "[pageerror] this.modal.setTempo is not a function",
             "[pageerror] this.modal.setTempo is not a function"
@@ -276,6 +369,50 @@
         },
         {
           "label": "uncaught page errors over the whole journey",
+          "value": [
+            "this.modal.setTempo is not a function",
+            "this.modal.setTempo is not a function",
+            "this.modal.setTempo is not a function",
+            "this.modal.setTempo is not a function"
+          ]
+        }
+      ]
+    },
+    {
+      "suite": "02 · canonical scenario",
+      "name": "the MIDI editor's tempo control applies the tempo it displays",
+      "status": "FAIL",
+      "ms": 9831,
+      "error": "Error: expected \"\", got \"this.modal.setTempo is not a function | this.modal.setTempo is not a function | this.modal.setTempo is not a function\"\n    at fail (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:137:11)\n    at Object.toBe (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:141:27)\n    at file:///home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:283:66\n    at TestContext.step (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:87:25)\n    at test.timeoutMs [as fn] (file:///home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:282:17)\n    at async run (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:194:9)\n    at async main (file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:95:39)\n    at async file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:119:10",
+      "steps": [
+        {
+          "label": "open the editor on the imported file",
+          "status": "PASS",
+          "ms": 8552
+        },
+        {
+          "label": "type a new tempo",
+          "status": "PASS",
+          "ms": 1226
+        },
+        {
+          "label": "no uncaught exception is raised by the tempo control",
+          "status": "FAIL",
+          "ms": 0,
+          "error": "expected \"\", got \"this.modal.setTempo is not a function | this.modal.setTempo is not a function | this.modal.setTempo is not a function\""
+        }
+      ],
+      "evidence": [
+        {
+          "label": "input value vs component state",
+          "value": {
+            "shown": "84",
+            "modalTempo": 120,
+            "isDirty": false
+          }
+        },
+        {
+          "label": "uncaught page errors",
           "value": [
             "this.modal.setTempo is not a function",
             "this.modal.setTempo is not a function",
@@ -288,28 +425,28 @@
       "suite": "02 · canonical scenario",
       "name": "the header transport buttons reflect whether anything is playing",
       "status": "FAIL",
-      "ms": 9678,
-      "error": "Error: expected truthy (Stop stays clickable although nothing is playing), got false\n    at fail (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:137:11)\n    at Object.toBeTruthy (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:149:20)\n    at file:///home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:258:36\n    at TestContext.step (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:87:25)\n    at test.timeoutMs [as fn] (file:///home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:256:17)\n    at async run (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:194:9)\n    at async main (file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:95:39)\n    at async file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:119:10",
+      "ms": 9586,
+      "error": "Error: expected truthy (Stop stays clickable although nothing is playing), got false\n    at fail (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:137:11)\n    at Object.toBeTruthy (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:149:20)\n    at file:///home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:320:36\n    at TestContext.step (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:87:25)\n    at test.timeoutMs [as fn] (file:///home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:318:17)\n    at async run (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:194:9)\n    at async main (file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:95:39)\n    at async file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:119:10",
       "steps": [
         {
           "label": "boot onto the state the journey left behind",
           "status": "PASS",
-          "ms": 5449
+          "ms": 5364
         },
         {
           "label": "on a fresh page with nothing playing, Stop is disabled",
           "status": "PASS",
-          "ms": 1
+          "ms": 0
         },
         {
           "label": "play, then stop",
           "status": "PASS",
-          "ms": 4155
+          "ms": 4170
         },
         {
           "label": "after Stop, the Stop button is disabled again",
           "status": "FAIL",
-          "ms": 0,
+          "ms": 1,
           "error": "expected truthy (Stop stays clickable although nothing is playing), got false"
         }
       ],
@@ -331,7 +468,7 @@
             "position": 0,
             "duration": 15.979166666666666,
             "percentage": 0,
-            "outputDevice": "virtual_1788781605687_nnu7ou",
+            "outputDevice": "virtual_1788781690848_lo1mew",
             "loop": false,
             "tempo": 120,
             "events": 99
