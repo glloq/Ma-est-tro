@@ -168,9 +168,20 @@ suite('02 · canonical scenario', () => {
 
         const shown = await page.inputValue('#tempo-input');
         ctx.evidenceAdd('tempo input shows', shown);
+        const applied = await page.evaluate(() => {
+          const i = window.__midiEditorInstance;
+          return i ? { modalTempo: i.tempo, isDirty: i.isDirty } : null;
+        });
+        ctx.evidenceAdd('editor component state after the tempo edit', applied);
+      });
+
+      // Recorded, not thrown: the journey must keep going to steps 8-10 so the
+      // report can say whether save / reload / verify work at all. The defect
+      // itself is asserted end-to-end by step 10d and by its own test below.
+      await ctx.softStep('7c · the tempo edit raises no uncaught exception', () => {
         const uncaught = rec.pageErrors.map((e) => e.message);
         ctx.evidenceAdd('uncaught page errors after the tempo edit', uncaught);
-        expect(uncaught.filter((m) => /setTempo/.test(m)).length).toBe(0);
+        if (uncaught.length) throw new Error(uncaught.join(' | '));
       });
 
       // ── 8. save ────────────────────────────────────────────────────────────
@@ -228,6 +239,57 @@ suite('02 · canonical scenario', () => {
       await page.context().close();
     }
   }, { timeoutMs: 420000 });
+  test("the MIDI editor's tempo control applies the tempo it displays", async (ctx, deps) => {
+    const { page, rec } = await newInstrumentedPage(deps.browser);
+    const app = new AppPage(page, rec, deps.server.baseUrl);
+    try {
+      await ctx.step('open the editor on the imported file', async () => {
+        await app.open();
+        await page.evaluate(() => {
+          const p = window.MidiEditorModal && window.MidiEditorModal.prototype;
+          if (p && !p.__e2ePatched) {
+            const orig = p.log;
+            p.log = function (...a) {
+              window.__midiEditorInstance = this;
+              return orig.apply(this, a);
+            };
+            p.__e2ePatched = true;
+          }
+        });
+        await app.fileAction('e2e-two-channel.mid', 'edit');
+        await page.waitForSelector('#tempo-input', { timeout: 45000 });
+        await page.waitForTimeout(3000);
+      });
+
+      await ctx.step('type a new tempo', async () => {
+        await page.fill('#tempo-input', '84');
+        await page.dispatchEvent('#tempo-input', 'input');
+        await page.dispatchEvent('#tempo-input', 'change');
+        await page.waitForTimeout(1200);
+      });
+
+      const state = await page.evaluate(() => {
+        const i = window.__midiEditorInstance;
+        return {
+          shown: document.querySelector('#tempo-input')?.value,
+          modalTempo: i ? i.tempo : null,
+          isDirty: i ? i.isDirty : null
+        };
+      });
+      ctx.evidenceAdd('input value vs component state', state);
+      ctx.evidenceAdd('uncaught page errors', rec.pageErrors.map((e) => e.message));
+
+      await ctx.step('no uncaught exception is raised by the tempo control', () => {
+        expect(rec.pageErrors.map((e) => e.message).join(' | ')).toBe('');
+      });
+      await ctx.step('the component adopts the displayed tempo', () => {
+        expect(state.modalTempo).toBe(84);
+      });
+    } finally {
+      await page.context().close();
+    }
+  }, { timeoutMs: 180000 });
+
   test('the header transport buttons reflect whether anything is playing', async (ctx, deps) => {
     const { page, rec } = await newInstrumentedPage(deps.browser);
     const app = new AppPage(page, rec, deps.server.baseUrl);
