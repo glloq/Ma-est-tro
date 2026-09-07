@@ -494,7 +494,7 @@ Les 12 noms suivants sont acceptés et stockés **verbatim** dans
 
 ```
 "../../../etc/passwd.mid"   "..\\..\\windows\\system32.mid"   "/absolu/x.mid"
-"saut\nligne.mid"           "nul octet.mid"              "<img src=x onerror=alert(1)>.mid"
+"saut\nligne.mid"           "nul\0octet.mid"              "<img src=x onerror=alert(1)>.mid"
 "xxxx…(404 caractères)"     "."                               ".."
 ""  (chaîne vide)           "emoji-🎹-ünïcødé.mid"            "مرحبا.mid"
 ```
