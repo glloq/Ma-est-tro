@@ -26,14 +26,14 @@ const ROOT = resolve(__dirname, '../..');
 const indexHtml = readFileSync(join(ROOT, 'public/index.html'), 'utf8');
 
 describe('L11 §AG — F-14 : le repli CDN bloquant de public/index.html', () => {
-  test("le repli synchrone vers surikov.github.io est toujours présent (F-14 ouvert)", () => {
+  test('le repli synchrone vers surikov.github.io est toujours présent (F-14 ouvert)', () => {
     // À INVERSER quand F-14 est corrigé : plus aucun document.write, plus
     // aucune URL externe dans index.html.
     expect(indexHtml).toContain('surikov.github.io');
     expect(indexHtml).toMatch(/document\.write\(\s*'<scr'\s*\+\s*'ipt src="https:/);
   });
 
-  test("le repli est déclenché par une simple absence du fichier vendorisé", () => {
+  test('le repli est déclenché par une simple absence du fichier vendorisé', () => {
     // La garde est `typeof WebAudioFontPlayer === 'undefined'`. Elle est
     // vraie non seulement quand le fichier est absent, mais aussi quand le
     // serveur renvoie le shell SPA à sa place (cas réel : voir en-tête).
@@ -58,13 +58,18 @@ describe('L11 §AG — F-14 : le repli CDN bloquant de public/index.html', () =>
     expect(existsSync(vendored)).toBe(false);
   });
 
-  test("174 des 191 balises <script src> sont situées APRÈS le repli : toute la SPA est derrière lui", () => {
+  test('174 des 191 balises <script src> sont situées APRÈS le repli : toute la SPA est derrière lui', () => {
     const lines = indexHtml.split('\n');
     const fallbackLine = lines.findIndex((l) => l.includes('surikov.github.io'));
     expect(fallbackLine).toBeGreaterThan(0);
 
     const total = (indexHtml.match(/<script src=/g) || []).length;
-    const after = (lines.slice(fallbackLine + 1).join('\n').match(/<script src=/g) || []).length;
+    const after = (
+      lines
+        .slice(fallbackLine + 1)
+        .join('\n')
+        .match(/<script src=/g) || []
+    ).length;
 
     expect(total).toBe(191);
     expect(after).toBe(174);
@@ -73,7 +78,7 @@ describe('L11 §AG — F-14 : le repli CDN bloquant de public/index.html', () =>
     // résolution réseau du CDN avant d'être seulement demandés.
   });
 
-  test("le seul consommateur du global échoue proprement — mais seulement si le parseur y arrive", () => {
+  test('le seul consommateur du global échoue proprement — mais seulement si le parseur y arrive', () => {
     const synth = readFileSync(join(ROOT, 'public/js/audio/MidiSynthesizer.js'), 'utf8');
     expect(synth).toMatch(/throw new Error\('WebAudioFontPlayer not loaded'\)/);
     // La dégradation « pas d'aperçu audio, le reste fonctionne » EXISTE déjà
@@ -98,7 +103,7 @@ describe('L11 §AG — F-14 (aggravation) : dist/ ne peut jamais contenir lib/',
     expect(dirs).not.toContain('lib');
   });
 
-  test("HttpServer sert dist/ en production dès que dist/index.html existe", () => {
+  test('HttpServer sert dist/ en production dès que dist/index.html existe', () => {
     const http = readFileSync(join(ROOT, 'src/api/HttpServer.js'), 'utf8');
     expect(http).toMatch(/isProduction && existsSync\(path\.join\(distPath, 'index\.html'\)\)/);
     // Conjonction fatale : Install.sh lance `npm run build`, le service

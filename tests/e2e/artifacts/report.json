@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-07T11:41:37.615Z",
+  "generatedAt": "2026-09-07T11:42:51.265Z",
   "baseUrl": "http://127.0.0.1:8108",
   "playwright": "/opt/node22/lib/node_modules/playwright/index.mjs",
   "chromium": "141.0.7390.37",
@@ -7,9 +7,9 @@
   "health": {
     "status": "ok",
     "version": "0.8.1",
-    "gitHash": "f58e612",
-    "uptime": 19.271351053,
-    "timestamp": 1788781297613,
+    "gitHash": "f62ae34",
+    "uptime": 58.133497061,
+    "timestamp": 1788781371262,
     "capabilitiesOverall": "degraded",
     "capabilities": {
       "database": {
@@ -40,128 +40,175 @@
     }
   },
   "summary": {
-    "passed": 1,
-    "failed": 2,
-    "total": 3
+    "passed": 0,
+    "failed": 1,
+    "total": 1
   },
   "results": [
     {
-      "suite": "01 · boot",
-      "name": "the SPA boots, connects, and reaches an interactive state",
-      "status": "PASS",
-      "ms": 5394,
+      "suite": "02 · canonical scenario",
+      "name": "boot → instrument → import → assign → adapt → play → edit → save → reload → verify",
+      "status": "FAIL",
+      "ms": 57235,
+      "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#headerStopBtn')\u001b[22m\n\u001b[2m    - locator resolved to <button aria-label=\"Stop\" id=\"headerStopBtn\" class=\"btn btn-danger\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"modal-overlay inst-mgmt-modal\">…</div> from <div>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"modal-overlay inst-mgmt-modal\">…</div> from <div>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    44 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div class=\"modal-overlay inst-mgmt-modal\">…</div> from <div>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at /home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:119:20\n    at TestContext.step (/home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:87:25)\n    at test.timeoutMs (/home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:118:17)\n    at async run (/home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:194:9)\n    at async main (/home/user/General-Midi-Boop/tests/e2e/run.mjs:95:39)\n    at async file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:119:10",
       "steps": [
         {
-          "label": "navigate and wait for #app + WebSocket",
+          "label": "1 · boot the SPA",
           "status": "PASS",
-          "ms": 5218
+          "ms": 10141
         },
         {
-          "label": "the splash is gone and the file panel is present",
+          "label": "2 · create a virtual instrument through the UI",
           "status": "PASS",
-          "ms": 4
+          "ms": 1943
         },
         {
-          "label": "the WebSocket is OPEN",
+          "label": "3 · import a MIDI file through the drop-zone input",
           "status": "PASS",
-          "ms": 2
+          "ms": 71
         },
         {
-          "label": "no uncaught page exception during boot",
+          "label": "4 · open the routing page and auto-assign every channel",
           "status": "PASS",
-          "ms": 0
+          "ms": 6734
+        },
+        {
+          "label": "5 · adaptation is engaged for the assignment",
+          "status": "PASS",
+          "ms": 8
+        },
+        {
+          "label": "5b · apply the routing",
+          "status": "PASS",
+          "ms": 2987
+        },
+        {
+          "label": "6 · play the file to the virtual instrument",
+          "status": "PASS",
+          "ms": 2518
+        },
+        {
+          "label": "6b · stop returns the transport to an idle state",
+          "status": "FAIL",
+          "ms": 30007,
+          "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#headerStopBtn')\u001b[22m\n\u001b[2m    - locator resolved to <button aria-label=\"Stop\" id=\"headerStopBtn\" class=\"btn btn-danger\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"modal-overlay inst-mgmt-modal\">…</div> from <div>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"modal-overlay inst-mgmt-modal\">…</div> from <div>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    44 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div class=\"modal-overlay inst-mgmt-modal\">…</div> from <div>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
         }
       ],
       "evidence": [
         {
-          "label": "time to interactive (ms)",
-          "value": 5218
-        },
-        {
-          "label": "screenshot",
-          "value": "/home/user/General-Midi-Boop/tests/e2e/artifacts/01-boot-home.png"
-        },
-        {
-          "label": "console errors at boot",
+          "label": "devices after creation",
           "value": [
+            "virtual_1788781324632_2ne969 · Virtual Piano · virtual"
+          ]
+        },
+        {
+          "label": "imported file id",
+          "value": "1"
+        },
+        {
+          "label": "file list",
+          "value": [
+            {
+              "id": "1",
+              "name": "e2e-two-channel.mid",
+              "state": "○ Non routé",
+              "classes": "file-item"
+            }
+          ]
+        },
+        {
+          "label": "screenshot after import",
+          "value": "/home/user/General-Midi-Boop/tests/e2e/artifacts/02-03-imported.png"
+        },
+        {
+          "label": "assignments before auto-routing",
+          "value": [
+            {
+              "value": "ignore",
+              "text": "Skipped"
+            },
+            {
+              "value": "ignore",
+              "text": "Skipped"
+            }
+          ]
+        },
+        {
+          "label": "assignments after auto-routing",
+          "value": [
+            {
+              "value": "virtual_1788781324632_2ne969_0",
+              "text": "Virtual Piano (100)"
+            },
+            {
+              "value": "virtual_1788781324632_2ne969_0",
+              "text": "Virtual Piano (58)"
+            }
+          ]
+        },
+        {
+          "label": "feasibility score",
+          "value": "74/100 — Average"
+        },
+        {
+          "label": "screenshot after assign",
+          "value": "/home/user/General-Midi-Boop/tests/e2e/artifacts/02-04-assigned.png"
+        },
+        {
+          "label": "adaptation toggle class",
+          "value": "rs-adapt-toggle active"
+        },
+        {
+          "label": "file_routing_status after apply",
+          "value": {
+            "success": true,
+            "fileId": "1",
+            "status": "routed_incomplete",
+            "isAdapted": false,
+            "hasAutoAssigned": true,
+            "routedCount": 2,
+            "channelCount": 2
+          }
+        },
+        {
+          "label": "playback_status while playing",
+          "value": {
+            "playing": true,
+            "paused": false,
+            "position": 2.490682513,
+            "duration": 3.9791666666666665,
+            "percentage": 62.593068389528796,
+            "outputDevice": "virtual_1788781324632_2ne969",
+            "loop": false,
+            "tempo": 120,
+            "events": 27
+          }
+        },
+        {
+          "label": "header transport while playing",
+          "value": {
+            "playing": true,
+            "label": "⏸️ Pause",
+            "file": "e2e-two-channel.mid",
+            "stopDisabled": false
+          }
+        },
+        {
+          "label": "screenshot while playing",
+          "value": "/home/user/General-Midi-Boop/tests/e2e/artifacts/02-06-playing.png"
+        },
+        {
+          "label": "console errors over the whole journey",
+          "value": [
+            "[error] Refused to execute script from 'http://127.0.0.1:8108/lib/WebAudioFontPlayer.js' because its MIME type ('text/html') is not executable, and strict MIME type checking is enabled.",
+            "[error] Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED",
             "[error] Refused to execute script from 'http://127.0.0.1:8108/lib/WebAudioFontPlayer.js' because its MIME type ('text/html') is not executable, and strict MIME type checking is enabled.",
             "[error] Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED"
           ]
         },
         {
-          "label": "failed requests at boot",
-          "value": [
-            "https://surikov.github.io/webaudiofont/npm/dist/WebAudioFontPlayer.js :: net::ERR_TUNNEL_CONNECTION_FAILED"
-          ]
-        },
-        {
-          "label": "http >=400 at boot",
+          "label": "uncaught page errors over the whole journey",
           "value": []
-        }
-      ]
-    },
-    {
-      "suite": "01 · boot",
-      "name": "the vendored WebAudioFont player is served (F-14 precondition)",
-      "status": "FAIL",
-      "ms": 40,
-      "error": "Error: expected truthy (expected a JS content-type, got \"text/html; charset=UTF-8\" (status 200) — the vendored player is absent and the SPA fallback served index.html instead), got false\n    at fail (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:137:11)\n    at Object.toBeTruthy (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:149:20)\n    at Object.fn (file:///home/user/General-Midi-Boop/tests/e2e/specs/01-boot.spec.mjs:60:68)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async run (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:194:9)\n    at async main (file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:95:39)\n    at async file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:119:10",
-      "steps": [],
-      "evidence": [
-        {
-          "label": "GET /lib/WebAudioFontPlayer.js",
-          "value": "200 text/html; charset=UTF-8 613826 bytes"
-        }
-      ]
-    },
-    {
-      "suite": "01 · boot",
-      "name": "boot with the CDN unreachable — measures the real blocking time (F-14)",
-      "status": "FAIL",
-      "ms": 13006,
-      "error": "Error: expected 8384 < 8000\n    at fail (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:137:11)\n    at Object.toBeLessThan (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:162:26)\n    at file:///home/user/General-Midi-Boop/tests/e2e/specs/01-boot.spec.mjs:117:36\n    at TestContext.step (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:87:25)\n    at Object.fn (file:///home/user/General-Midi-Boop/tests/e2e/specs/01-boot.spec.mjs:116:17)\n    at async run (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:194:9)\n    at async main (file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:95:39)\n    at async file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:119:10",
-      "steps": [
-        {
-          "label": "the CDN fallback did fire (document.write path is live)",
-          "status": "PASS",
-          "ms": 0
-        },
-        {
-          "label": "WebAudioFontPlayer is undefined once the CDN fails",
-          "status": "PASS",
-          "ms": 1
-        },
-        {
-          "label": "document parsing is not blocked by the unreachable CDN (< 8000ms)",
-          "status": "FAIL",
-          "ms": 1,
-          "error": "expected 8384 < 8000"
-        }
-      ],
-      "evidence": [
-        {
-          "label": "CDN stall injected (ms)",
-          "value": 8000
-        },
-        {
-          "label": "CDN request intercepted",
-          "value": 1
-        },
-        {
-          "label": "DOMContentLoaded (ms)",
-          "value": 8384
-        },
-        {
-          "label": "time to interactive (ms)",
-          "value": 12777
-        },
-        {
-          "label": "screenshot",
-          "value": "/home/user/General-Midi-Boop/tests/e2e/artifacts/01-boot-offline.png"
-        },
-        {
-          "label": "typeof WebAudioFontPlayer",
-          "value": "undefined"
         }
       ]
     }

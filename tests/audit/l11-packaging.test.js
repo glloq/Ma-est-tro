@@ -38,7 +38,7 @@ function copySources(text) {
 describe('L11 §B04 — le Dockerfile ne se construit pas', () => {
   const sources = copySources(dockerfile);
 
-  test('COPY locales/ désigne un répertoire qui n\'existe pas (build FAIL, F-118)', () => {
+  test("COPY locales/ désigne un répertoire qui n'existe pas (build FAIL, F-118)", () => {
     expect(sources).toContain('locales/');
     // Les locales vivent sous public/locales/ — déjà copiées par COPY public/.
     expect(existsSync(join(ROOT, 'locales'))).toBe(false);
@@ -64,7 +64,7 @@ describe('L11 §B04 — le Dockerfile ne se construit pas', () => {
     expect(sysCmds).toMatch(/Update script not found or not executable/);
   });
 
-  test('`npm ci --ignore-scripts` prive l\'image des bindings better-sqlite3 (F-119)', () => {
+  test("`npm ci --ignore-scripts` prive l'image des bindings better-sqlite3 (F-119)", () => {
     expect(dockerfile).toMatch(/npm ci --omit=dev --ignore-scripts/);
     // Aucune étape ne recompile ni ne télécharge le binding ensuite.
     expect(dockerfile).not.toMatch(/npm rebuild/);
@@ -106,7 +106,9 @@ describe('L11 §B03 — PM2 et systemd divergent', () => {
     // PM2 est installé globalement (étape 3) puis n'est utilisé que sur macOS.
     expect(install).toMatch(/sudo npm install -g pm2/);
     expect(install).toMatch(/\/etc\/systemd\/system\/gmboop\.service/);
-    const macosBlock = install.slice(install.indexOf('elif [ "$OS" == "macos" ]', install.indexOf('print_step "8.')));
+    const macosBlock = install.slice(
+      install.indexOf('elif [ "$OS" == "macos" ]', install.indexOf('print_step "8.'))
+    );
     expect(macosBlock).toMatch(/pm2 start ecosystem\.config\.cjs/);
   });
 

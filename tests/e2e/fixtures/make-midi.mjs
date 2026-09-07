@@ -30,17 +30,21 @@ const TPQ = 480;
 export function buildTwoChannelMidi(opts = {}) {
   const bpm = opts.bpm ?? 120;
   const usPerBeat = Math.round(60000000 / bpm);
+  // Long enough that a spec can start playback, observe it, cut the WebSocket
+  // and still be mid-piece. 4 repeats × 8 beats at 120 BPM ≈ 16 s.
+  const repeats = opts.repeats ?? 4;
 
   /** C major scale, one note per beat. */
-  const melody = [60, 62, 64, 65, 67, 69, 71, 72];
+  const scale = [60, 62, 64, 65, 67, 69, 71, 72];
+  const melody = Array.from({ length: repeats }, () => scale).flat();
   /** Root/fifth alternation, one note per two beats. */
-  const bass = [36, 43, 36, 43];
+  const bass = Array.from({ length: repeats }, () => [36, 43, 36, 43]).flat();
 
   const track0 = [
     { deltaTime: 0, meta: true, type: 'trackName', text: 'Conductor' },
     { deltaTime: 0, meta: true, type: 'setTempo', microsecondsPerBeat: usPerBeat },
     { deltaTime: 0, meta: true, type: 'timeSignature', numerator: 4, denominator: 4, metronome: 24, thirtyseconds: 8 },
-    { deltaTime: TPQ * 8, meta: true, type: 'endOfTrack' }
+    { deltaTime: TPQ * 8 * repeats, meta: true, type: 'endOfTrack' }
   ];
 
   const track1 = [

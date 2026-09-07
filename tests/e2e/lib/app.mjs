@@ -124,6 +124,22 @@ export class AppPage {
   }
 
   /**
+   * Close the instrument-management page.
+   *
+   * NOTE: this modal has **no Escape and no backdrop handler** — `close()` is
+   * only reachable from the ✕ and the footer button. Pressing Escape leaves a
+   * full-screen `rgba(0,0,0,0.7)` overlay at z-index 10000 that swallows every
+   * subsequent click, so the harness must click a real close affordance.
+   * @returns {Promise<void>}
+   */
+  async closeInstruments() {
+    const overlay = this.page.locator('.inst-mgmt-modal');
+    if (!(await overlay.count())) return;
+    await overlay.locator('.modal-close').first().click({ timeout: 10000 });
+    await overlay.waitFor({ state: 'detached', timeout: 10000 });
+  }
+
+  /**
    * @returns {Promise<Array<{id:string,name:string,type:string,connected:boolean}>>}
    */
   async listDevices() {
@@ -168,31 +184,23 @@ export class AppPage {
 
   /**
    * Click one of the per-file action buttons.
+   *
+   * A **real** Playwright click on purpose, never `element.click()` from
+   * `evaluate()`: a dispatched DOM click ignores hit-testing, so it would
+   * happily "work" through an invisible or forgotten overlay left behind by a
+   * modal that failed to close — exactly the class of defect a browser harness
+   * exists to catch. Buttons are appended in a fixed order (edit, route, play,
+   * delete) by `createFileElement()` in index.html.
+   *
    * @param {string} filename
    * @param {'edit'|'route'|'play'|'delete'} action
    */
   async fileAction(filename, action) {
-    const emoji = { edit: '✏️', route: '🔀', delete: '🗑️' }[action];
-    const sel = `#fileList li[data-file-name="${filename}"] .file-actions button`;
-    await this.page.waitForSelector(sel, { timeout: 15000 });
-    if (action === 'play') {
-      // The play button's label is ▶️ or ⚠️▶️ depending on routing state.
-      await this.page.evaluate((name) => {
-        const li = document.querySelector(`#fileList li[data-file-name="${CSS.escape(name)}"]`);
-        const btn = [...li.querySelectorAll('.file-actions button')].find((b) => b.textContent.includes('▶'));
-        btn.click();
-      }, filename);
-      return;
-    }
-    await this.page.evaluate(
-      ([name, mark]) => {
-        const li = document.querySelector(`#fileList li[data-file-name="${CSS.escape(name)}"]`);
-        const btn = [...li.querySelectorAll('.file-actions button')].find((b) => b.textContent.trim() === mark);
-        if (!btn) throw new Error(`no action button "${mark}" on "${name}"`);
-        btn.click();
-      },
-      [filename, emoji]
-    );
+    const index = { edit: 0, route: 1, play: 2, delete: 3 }[action];
+    if (index === undefined) throw new Error(`unknown file action "${action}"`);
+    const row = this.page.locator(`#fileList li[data-file-name="${filename}"]`);
+    await row.waitFor({ timeout: 15000 });
+    await row.locator('.file-actions button').nth(index).click({ timeout: 20000 });
   }
 
   // ── Modals ────────────────────────────────────────────────────────────────
