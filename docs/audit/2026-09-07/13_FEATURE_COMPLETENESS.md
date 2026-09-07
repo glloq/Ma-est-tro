@@ -129,6 +129,32 @@ réel prouvé · **Test** = couverture automatisée.
 | `presets.is_favorite`, `sessions.last_opened`, `devices.port_id` | ❌ | ✅ | ❌ | **Dette de schéma** |
 | `bagpipe_config` / `accordion_config` / `harmonica_config` | ✅ | ✅ mig. 022/023 | ✅ vues clavier (T1.3 — sémantique de vue, pas de playback) | **PASS** (arbitrage documenté) |
 
+#### Capacités mortes supplémentaires confirmées par le lot L06 (croisement)
+
+Le rapport `06_ROUTING_ADAPTATION.md`, rendu pendant ce lot, confirme F-143
+(son F-67), F-146 (F-66) et F-144 (F-71), et **ajoute quatre capacités mortes
+que ce lot n'avait pas isolées**. Elles entrent de plein droit dans la matrice :
+
+| Capacité | Constat L06 | Finding L06 |
+|---|---|---|
+| `midi_instrument_routings.behavior_mode` | écrit par `PlaybackAssignmentCommands.js:503`, relu par personne → **le choix « overflow »/« alternate » est perdu au rechargement** | F-65 |
+| `instrument_voices.{min_note_interval, min_note_duration, supported_ccs, octave_mode, scale_root}` (5 colonnes/voix) | écrites et validées, `VoiceSelector.js` ne les nomme même pas — alors que la Phase 8 §4 de la roadmap familles les exige | F-70 |
+| `shared/gm-instrument-capabilities.json` (128 × 6 champs) | seul `name` est consommé ; `getGmDefaultPolyphony()` sans appelant ⇒ **aucune monophonie de famille** : un instrument à vent sans `polyphony=1` saisi à la main reçoit l'accord entier | F-73 |
+| `octave_mode` / `scale_root` sans validation ; scoring aveugle à `octave_mode` en mode `range` | `octave_mode='banana'` accepté → retour silencieux au chromatique ; un instrument pentatonique est noté comme un chromatique | F-68, F-69 |
+
+Un point d'attention pour F-140 : L06 (F-72) relève que
+`DescriptorProtocol.js:360` mappe `physical.capo → capo_fret`. Le `capo_fret`
+inerte cesse donc d'être inoffensif dès que T1.8 aboutit — **le traiter avant
+de livrer le descripteur v2**, pas après.
+
+**Écart de sévérité assumé avec L06.** L06 classe ces capacités mortes en P2 et
+conclut « 0 P1 ». Ce lot en classe trois en **P1**, non par désaccord technique
+mais par référentiel : la définition que le projet s'est donnée
+(`V0.9_ROADMAP.md` §1) fait de « plus aucune capacité morte » un **critère
+d'acceptation** de la v0.9. Une capacité morte n'est donc pas un défaut de
+qualité parmi d'autres — c'est, littéralement, ce qui empêche de tagger la
+version.
+
 ### 2.4 Lecture, playback, timing
 
 | Fonctionnalité | Promise | BE | UI | Effet | Test | Verdict |
@@ -611,8 +637,12 @@ volontairement interne)*.
 | A10 | Statuer les **72** commandes orphelines une à une : « interne assumée » / « à câbler » / « à retirer » — c'est le livrable qui ferme littéralement le critère v0.9 | 2 j | **L01** (avec cette matrice en entrée) |
 | A11 | T1.8 : persistance + diff du descripteur v2, chemin HTTP, `capabilities_source='descriptor'` (F-143) | 4-6 j | L06 + L07 |
 | A12 | T1.1(b) : injection de voix sur le route-through live — **conditionné à A1** (F-144) | 1-2 j | L06 |
+| A13 | Persister/relire `behavior_mode` (L06 F-65) — sinon le mode de split choisi est perdu à chaque rechargement | 0,5 j | L06 |
+| A14 | Consommer les 5 colonnes par voix d'`instrument_voices` dans `VoiceSelector` (L06 F-70, roadmap familles Phase 8 §4) | 2-3 j | L06 |
+| A15 | Brancher `shared/gm-instrument-capabilities.json` (polyphonie/monophonie de famille) ou le retirer (L06 F-73) | 1-2 j | L06 |
+| A16 | Gardes de validation sur `octave_mode`/`scale_root` + prise en compte dans le scoring (L06 F-68/F-69) | 1-2 j | L06 + L07 |
 
-**Sous-total bloc A : ~21 à 33 jours** (hors A1 en variante UI).
+**Sous-total bloc A : ~26 à 42 jours** (hors A1 en variante UI).
 
 ### Bloc B — périmètre v0.9 arbitré le 2026-08-07, toujours non commencé
 
@@ -723,7 +753,7 @@ pas posé, ligne par ligne, le critère « plus aucune fonctionnalité backend s
 surface UI » ne peut pas être déclaré satisfait — indépendamment de tout
 correctif.
 
-**Combien de travail.** Environ **21 à 33 jours** pour fermer les blockers
+**Combien de travail.** Environ **26 à 42 jours** pour fermer les blockers
 fonctionnels, **9 à 13 jours** pour remettre le contrat et la documentation en
 accord avec le code, plus les lots de validation L02 et L08 qui tournent en
 parallèle. Les deux gros chantiers retenus le 2026-08-07 pour la v0.9 —
@@ -743,7 +773,7 @@ est de la fermeture d'écarts déjà identifiés ici.
 | **L01** | Le chiffre corrigé (**72** orphelines, pas 123) et sa cause (`command-inventory.mjs` ignore `index.html`) ; la ventilation par module du §2 ; A10 (statuer les 72) ; F-141, F-142, F-147, F-152 |
 | **L02** | F-152 (3 diffusions lumière sans écouteur, priorisées dans `WsOutputQueue`) ; `lighting_scene_apply`/`lighting_led_broadcast` orphelines ; commentaire périmé `LightingCommands.js:277` |
 | **L05** | F-154 (`MidiBaker` ignore les pins de main) et `min_note_duration` playback-only : deux divergences live ≠ baké à mesurer avec le harnais de rejeu |
-| **L06** | F-139, F-140, F-143, F-144, F-146 ; la colonne « capacité morte » du §2.3 est le squelette de sa matrice |
+| **L06** | F-139, F-140 (l'écrasement de `is_fretless`/`capo_fret` par `ISMSave.js:266-267` **n'est pas dans son rapport**), F-154 ; réciproquement ce lot reprend ses F-65, F-68/69, F-70, F-72, F-73 dans sa matrice (§2.3) et sa liste close (A13→A16) |
 | **L07** | F-140 (intégrité `is_fretless`), T5.1 (atomicité), migration de nettoyage (`instrument_light_config` 33 colonnes, `instruments_latency.midi_clock_enabled`, `presets.is_favorite`, `sessions.last_opened`, `devices.port_id`), rebuild `CHECK` pour `'descriptor'` |
 | **L08** | F-150 — la QA du piano roll n'est plus optionnelle : le V2 est **déjà** le défaut sans avoir été validé |
 | **L09** | F-153 (découvrabilité) ; la mesure i18n par locale du §2.8 (68→88 %) |

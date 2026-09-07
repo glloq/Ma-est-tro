@@ -18,19 +18,27 @@
 import { describe, test, expect, beforeAll, afterAll } from '@jest/globals';
 import BetterSqlite3 from 'better-sqlite3';
 import { spawn } from 'child_process';
-import { mkdtempSync, rmSync } from 'fs';
+import { mkdtempSync, mkdirSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { openDatabase } from '../../src/persistence/DatabaseLifecycle.js';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
+
+// Toutes les bases de test vivent dans un bac à sable HORS du dépôt : les
+// processus fils sont lancés avec `cwd = REPO_ROOT` (pour résoudre
+// `better-sqlite3`), donc un chemin relatif créerait un fichier de base À LA
+// RACINE DU DÉPÔT. `GMBOOP_TEST_TMP` permet de rediriger vers un scratchpad.
+const SANDBOX = process.env.GMBOOP_TEST_TMP || join(tmpdir(), 'gmboop-l07');
+mkdirSync(SANDBOX, { recursive: true });
 const silentLogger = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
 
 /** Script CommonJS exécuté dans un processus fils : N insertions en transaction. */
 const WRITER_SRC = `
 const Database = require('better-sqlite3');
 const [dbPath, tag, n] = process.argv.slice(1);
+if (!dbPath || dbPath[0] !== '/') { throw new Error('chemin de base non absolu: ' + dbPath); }
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
@@ -55,6 +63,7 @@ db.close();
 const LOCKER_SRC = `
 const Database = require('better-sqlite3');
 const [dbPath, holdMs] = process.argv.slice(1);
+if (!dbPath || dbPath[0] !== '/') { throw new Error('chemin de base non absolu: ' + dbPath); }
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.exec('BEGIN EXCLUSIVE');
@@ -69,7 +78,7 @@ describe('L07 §X — concurrence SQLite réelle', () => {
   let tempDir;
 
   beforeAll(() => {
-    tempDir = mkdtempSync(join(tmpdir(), 'gmboop-l07-conc-'));
+    tempDir = mkdtempSync(join(SANDBOX, 'conc-'));
   });
 
   afterAll(() => {

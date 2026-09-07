@@ -15,13 +15,19 @@
 
 import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import BetterSqlite3 from 'better-sqlite3';
-import { mkdtempSync, rmSync, readdirSync } from 'fs';
+import { mkdtempSync, mkdirSync, rmSync, readdirSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { runMigrations } from '../../src/persistence/DatabaseLifecycle.js';
 
 const MIGRATIONS_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../migrations');
+
+// Toutes les bases de test vivent dans un bac à sable HORS du dépôt (jamais
+// ./data/gmboop.db, jamais la racine du dépôt). `GMBOOP_TEST_TMP` permet à
+// l'agent d'audit de les diriger vers son scratchpad.
+const SANDBOX = process.env.GMBOOP_TEST_TMP || join(tmpdir(), 'gmboop-l07');
+mkdirSync(SANDBOX, { recursive: true });
 
 function collectingLogger() {
   const lines = { info: [], warn: [], error: [] };
@@ -45,7 +51,7 @@ describe('L07 §Y — migrations : panne au milieu du fichier N, reprise, rejeu'
   let db;
 
   beforeEach(() => {
-    tempDir = mkdtempSync(join(tmpdir(), 'gmboop-l07-mig-'));
+    tempDir = mkdtempSync(join(SANDBOX, 'mig-'));
     db = new BetterSqlite3(join(tempDir, 'mig.db'));
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');
@@ -153,32 +159,64 @@ describe('L07 §Y — migrations : panne au milieu du fichier N, reprise, rejeu'
     expect(db.pragma('integrity_check', { simple: true })).toBe('ok');
   });
 
-  test('Y-5 — base « legacy » pré-baseline : réconciliée une seule fois, schéma complet', () => {
-    // Reproduit l'ancienne chaîne : schema_version rempli 1..40 avec des
-    // descriptions non-baseline, sans les tables post-baseline.
-    db.exec(
-      'CREATE TABLE schema_version (version INTEGER PRIMARY KEY, description TEXT, applied_at TEXT DEFAULT (datetime(\'now\')))'
+  test('Y-5 — base « legacy » pré-baseline RÉALISTE : réconciliée une fois, schéma complet', () => {
+    // Fixture fidèle : l'ancienne chaîne produisait les MÊMES tables que le
+    // baseline, avec un `schema_version` numéroté 1..40 et des descriptions
+    // qui ne commencent pas par « Baseline schema ».
+    db.exec(readFileSync(join(MIGRATIONS_DIR, '001_baseline.sql'), 'utf8'));
+    db.prepare("UPDATE schema_version SET description = 'initial schema' WHERE version = 1").run();
+    const ins = db.prepare(
+      'INSERT OR IGNORE INTO schema_version (version, description) VALUES (?, ?)'
     );
-    const ins = db.prepare('INSERT INTO schema_version (version, description) VALUES (?, ?)');
-    for (let v = 1; v <= 40; v++) ins.run(v, `legacy migration ${v}`);
+    for (let v = 2; v <= 40; v++) ins.run(v, `legacy migration ${v}`);
 
     const logger = collectingLogger();
     runMigrations(db, logger);
 
     expect(logger.lines.warn.join('\n')).toMatch(/pre-baseline schema_version/i);
-    // La version 1 est ré-étiquetée baseline et les post-baseline ré-appliquées.
     expect(
       db.prepare('SELECT description FROM schema_version WHERE version = 1').get().description
     ).toMatch(/^Baseline schema/);
+    // Les migrations post-baseline ont bien été ré-appliquées.
     expect(applied()).toEqual(migrationVersions());
     expect(hasObject('loops')).toBe(true);
     expect(hasObject('instrument_light_state')).toBe(true);
+    expect(db.pragma('integrity_check', { simple: true })).toBe('ok');
 
-    // Deuxième passage : plus aucun avertissement de réconciliation.
+    // Deuxième passage : plus aucun avertissement, aucun changement.
     const logger2 = collectingLogger();
     runMigrations(db, logger2);
     expect(logger2.lines.warn.join('\n')).not.toMatch(/pre-baseline/i);
     expect(applied()).toEqual(migrationVersions());
+  });
+
+  test('Y-5b — DÉFAUT F-80 : la détection « legacy » ne regarde que la DESCRIPTION, jamais les tables', () => {
+    // Une base dont la ligne version 1 porte une description quelconque — base
+    // restaurée partiellement, éditée à la main, issue d'un fork — est prise
+    // pour une base legacy. `reconcileLegacySchemaVersion` conserve alors la
+    // version 1, donc `001_baseline.sql` est DÉFINITIVEMENT SAUTÉ, et la
+    // première migration qui touche une table du baseline échoue au démarrage.
+    db.exec(
+      "CREATE TABLE schema_version (version INTEGER PRIMARY KEY, description TEXT, applied_at TEXT DEFAULT (datetime('now')))"
+    );
+    db.prepare('INSERT INTO schema_version (version, description) VALUES (1, ?)').run(
+      'schema initial (base restaurée à la main)'
+    );
+
+    const logger = collectingLogger();
+    // Comportement CONSTATÉ (et non souhaitable) : plantage dur, pas de
+    // message actionnable pour l'opérateur.
+    expect(() => runMigrations(db, logger)).toThrow(/no such table/);
+
+    // La preuve du mécanisme : le baseline a été considéré comme déjà appliqué
+    // alors qu'AUCUNE de ses tables n'existe.
+    expect(
+      db.prepare('SELECT COUNT(*) c FROM schema_version WHERE version = 1').get().c
+    ).toBe(1);
+    expect(hasObject('midi_files')).toBe(false);
+    expect(hasObject('instruments_latency')).toBe(false);
+    // Le seul signal est un log d'erreur — le service ne démarre pas.
+    expect(logger.lines.error.join('\n')).toMatch(/failed/i);
   });
 
   test('Y-6 — ordre NUMÉRIQUE des fichiers et unicité des préfixes', () => {
