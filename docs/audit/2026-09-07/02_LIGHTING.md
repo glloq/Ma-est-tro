@@ -18,7 +18,7 @@ et des **doubles en mémoire**.
 |---|---|---|---|---|
 | **Risque n°1** | Un driver lent bloque-t-il le chemin MIDI ? | **FAIL** | 5 | **F-28 (P1)** |
 | — | Isolation d'une règle en échec | **FAIL** | 5 | **F-29 (P2)** |
-| — | Retour à un état sûr (`Application.stop()`) | **FAIL → CORRIGÉ** | 5 | **F-30 (P1)** |
+| — | Retour à un état sûr (`Application.stop()`) | **FAIL → CORRIGÉ** | 5 | **F-30 (P1)** · L01 **F-27** |
 | AB01 | Moteur de règles — sémantique note/vél./CC/plage | **PARTIAL** | 5 | **F-31 (P1)** |
 | AB01 | Moteur de règles — double évaluation `*` | **FAIL** | 5 | **F-32 (P2)** |
 | AB01 | Moteur de règles — priorités / conflits | **FAIL** | 5 | **F-33 (P2)** |
@@ -41,7 +41,7 @@ et des **doubles en mémoire**.
 | — | `LightingDatabase.js` | **NOT TESTED** | 0 | voir §7 |
 | AC | Synchronisation MIDI ↔ lumière (mesure d'offset) | **HW REQUIRED** | 0 | → L15 |
 
-**Couverture `src/lighting/**` + `LightingCommands.js` : 2,35 % → 83,56 %.**
+**Couverture `src/lighting/**` + `LightingCommands.js` : 2,35 % → 83,82 %.**
 
 **Findings :** 1 P1 corrigé (F-30), 3 P1 ouverts (F-28, F-31, + F-30 partiellement
 résiduel côté conception), 6 P2 ouverts. Aucun P0.
@@ -243,6 +243,66 @@ désormais sa promesse et `_doDisconnect()` l'attend :
 ✓ disconnect() only resolves after the off request reached the controller                  (HTTP/WLED)
 ✓ hue disconnect turns every light off before resolving
 ```
+
+#### (c) 4e site de la même classe : une fuite d'écouteur **silencieuse**
+
+L01 (F-27) a signalé qu'il restait des appels `eventBus.removeListener` hors de
+son périmètre. Inventaire complet à l'issue de ce lot :
+
+```
+$ grep -rn "removeListener" src/
+src/lighting/LightingManager.js:215                 → commentaire du correctif L02
+src/lighting/instrument/InstrumentLightManager.js:259 → 4e site           ← traité ici
+src/transports/NetworkManager.js:745,749            → sockets Node, correct
+src/api/commands/LightingCommands.js:822            → commentaire du correctif L01
+src/core/Application.js:832                         → `process`, correct
+```
+
+Le 4e site, `InstrumentLightManager.shutdown()`, s'écrivait
+`this.eventBus?.removeListener?.(...)` — **appel optionnel**. Il ne levait donc
+rien : il **ne faisait rien**, sans erreur ni journal. L'écouteur
+`instrument_settings_changed` posé par `initialize()` n'était **jamais**
+détaché. Sur `Application.restart()` (exposé par les commandes de maintenance),
+chaque cycle en accumulait un de plus, jusqu'à l'avertissement de fuite
+d'`EventBus` (seuil 50).
+
+Sortie **avant** correctif :
+
+```
+✓ the listener is attached at construction
+✕ shutdown() releases it
+✕ a restart cycle does not accumulate listeners
+```
+
+**Correctif appliqué** — `src/lighting/instrument/InstrumentLightManager.js` :
+
+```diff
+-    this.eventBus?.removeListener?.('instrument_settings_changed', this._onReload);
++    this.eventBus?.off?.('instrument_settings_changed', this._onReload);
+```
+
+Après : 60 cycles construire/arrêter laissent **0 écouteur** et **aucun**
+avertissement de fuite.
+
+#### Arbitrage du test `test.failing` de L12
+
+L12 avait écrit un test affirmant que `shutdown()` n'atteint jamais `allOff()`,
+et ce test **passait** — d'où le doute. L'explication est dans la construction
+du sujet : leur double était bâti par `Object.create(LightingManager.prototype)`
+avec un `eventBus` fourni à la main. Le défaut ne se manifeste **que** si cet
+`eventBus` est le **vrai** `EventBus` du projet (celui qui n'a pas
+`removeListener`). Ma preuve utilise un `LightingManager` réel branché sur un
+`EventBus` réel — et L12 a depuis constaté le même échec **sur serveur vivant**,
+journalisé le 2026-09-07 à 11:07 :
+
+```
+ERROR Stop step "lightingManager" failed (continuing):
+      this.eventBus.removeListener is not a function
+```
+
+**Verdict : le défaut était réel en production.** L12 a converti son
+`test.failing` en test de non-régression qui verrouille le correctif L02 ;
+`tests/audit/l12-resilience.test.js` passe au vert avec la présente correction.
 
 **Résidu de conception (non corrigé, P2).** `Application.stop()` appelle
 `lightingManager.shutdown()` **après** `wsServer.close()` et `deviceManager.close()`
@@ -733,21 +793,25 @@ $ NODE_OPTIONS=--experimental-vm-modules npx jest \
 ```
 $ NODE_OPTIONS=--experimental-vm-modules npx jest tests/lighting \
     --coverage --collectCoverageFrom='src/lighting/**/*.js'
-→ All files 64.92 % stmt · 51.02 % branch · 64.17 % func
-  (src/lighting/instrument/** est à 0 % dans CE run : il est couvert par
-   les suites préexistantes, pas par tests/lighting)
+Statements   : 72.58 % ( 1128/1554 )
+Branches     : 58.72 % (  542/923  )
+Functions    : 73.50 % (  197/268  )
+Test Suites: 10 passed · Tests: 198 passed
+  (src/lighting/instrument/** est à 0 % dans CE run : il est couvert par les
+   suites préexistantes, pas par tests/lighting — d'où la mesure globale
+   ci-dessous, seule comparable au chiffre de F-13.)
 
-$ … tests/lighting + les 4 suites lighting préexistantes,
+$ … tests/lighting + les 4 suites lighting préexistantes + tests/audit/l12-resilience,
     --collectCoverageFrom='src/lighting/**/*.js'
     --collectCoverageFrom='src/api/commands/LightingCommands.js'
-→ 1441 / 1867 statements = 77,18 % · 61,88 % branch · 79,60 % func
-  Test Suites: 13 passed · Tests: 204 passed
+→ 1565 / 1867 statements = 83,82 % · 68,55 % branch · 86,96 % func
+  Test Suites: 15 passed · Tests: 260 passed
 ```
 
 | Fichier | stmts | avant | après |
 |---|---:|---:|---:|
 | `api/commands/LightingCommands.js` | 313 | **0 %** | **85,9 %** |
-| `lighting/LightingManager.js` | 521 | **0 %** | **67,2 %** |
+| `lighting/LightingManager.js` | 521 | **0 %** | **69,7 %** |
 | `lighting/SacnDriver.js` | 124 | **0 %** | **91,1 %** |
 | `lighting/ArtNetDriver.js` | 99 | **0 %** | **90,9 %** |
 | `lighting/HttpLightDriver.js` | 98 | **0 %** | **94,9 %** |
@@ -756,21 +820,31 @@ $ … tests/lighting + les 4 suites lighting préexistantes,
 | `lighting/OscLightDriver.js` | 70 | **0 %** | **97,1 %** |
 | `lighting/GpioLedDriver.js` | 39 | **0 %** | **100 %** |
 | `lighting/SerialLedDriver.js` | 38 | **0 %** | **76,3 %** |
-| `lighting/BaseLightingDriver.js` | 36 | **0 %** | **63,9 %** |
-| `lighting/LightingEffectsEngine.js` | 131 | 30,5 % | 45,8 % |
-| `lighting/DmxFixtureProfiles.js` | 30 | **0 %** | 10,0 % |
-| `lighting/instrument/**` | 192 | 84,9 % | 84,9 % |
-| **Total périmètre F-13** | **1 867** | **2,35 %** | **77,18 %** |
+| `lighting/BaseLightingDriver.js` | 36 | **0 %** | **100 %** |
+| `lighting/LightingEffectsEngine.js` | 131 | 30,5 % | **98,5 %** |
+| `lighting/DmxFixtureProfiles.js` | 30 | **0 %** | **100 %** |
+| `lighting/instrument/**` | 192 | 84,9 % | 86,5 % |
+| **Total périmètre F-13** | **1 867** | **2,35 %** | **83,82 %** |
 
 > Le total de statements est passé de 1 785 à 1 867 : `LightingCommands.js` a été
 > modifié par le lot L01 (correctif F-18) pendant ce lot.
 
 **F-13 : de FAIL niveau 0 à PARTIAL niveau 4.** Le sous-système n'est plus
-« le plus gros trou non testé du dépôt ». Ce qui reste non couvert est
-principalement : les implémentations d'effets animés de
-`LightingEffectsEngine` (dessin pur, §9), `DmxFixtureProfiles` (table de
-données, §9), et les branches de `LightingManager` liées aux fades/effets/
-diffusion WebSocket.
+« le plus gros trou non testé du dépôt » : c'est désormais l'un des mieux
+couverts. Quatre fichiers sont à **100 %** (`BaseLightingDriver`,
+`DmxFixtureProfiles`, `GpioLedDriver`) ou quasi (`GpioStripDriver` 98,8 %,
+`LightingEffectsEngine` 98,5 %, `OscLightDriver` 97,1 %).
+
+Ce qui reste non couvert :
+* `LightingManager` (69,7 %) — les minuteries de fondu (`_fadeIn`/`_fadeOut`),
+  la diffusion WebSocket par lots (`_broadcastLedState`) et le chemin
+  `connectDevice`/`reloadDevices` complet, tous liés au temps ou à un
+  `wsServer` vivant ; le lot L08 (E2E navigateur) les atteindra mieux.
+* `MqttLightDriver` (63,4 %) — le corps de `connect()` est **inatteignable**
+  tant que F-34a n'est pas résolu (le module n'existe pas).
+* `SerialLedDriver` (76,3 %) — le corps de `connect()` exige un port série.
+* `LightingCommands` (85,9 %) — `lighting_device_scan` (balayage /24 réel) et
+  la découverte de ponts Hue (appel Internet sortant).
 
 ---
 

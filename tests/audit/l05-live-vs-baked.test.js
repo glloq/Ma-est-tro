@@ -176,8 +176,7 @@ describe('L05 · T3.2 — repli de plage', () => {
     const caps = { 'devA:0': { noteRangeMin: 48, noteRangeMax: 72 } };
     const live = await replay({ buffer, routing: ROUTING, capabilities: caps });
     const baked = await replay({
-      buffer: bakeOffline(buffer, { 0: {} }, { compress: { channel: 0, min: 48, max: 72 } })
-        .buffer,
+      buffer: bakeOffline(buffer, { 0: {} }, { compress: { channel: 0, min: 48, max: 72 } }).buffer,
       routing: ROUTING,
       capabilities: caps
     });
@@ -201,7 +200,8 @@ describe('L05 · T3 — cas 4 : suppressOutOfRange (offline) vs repli (live)', (
       routing: ROUTING,
       capabilities: caps
     });
-    const ons = (t) => t.filter((e) => (e.status & 0xf0) === 0x90 && e.data2 > 0).map((e) => e.data1);
+    const ons = (t) =>
+      t.filter((e) => (e.status & 0xf0) === 0x90 && e.data2 > 0).map((e) => e.data1);
     expect(ons(live.trace)).toEqual([52, 60, 72]); // 40→52, 96→72 (repli d'octave)
     expect(ons(baked.trace)).toEqual([60]); // 40 et 96 supprimées
     expect(serializeBytes(baked.trace)).not.toBe(serializeBytes(live.trace));
@@ -387,7 +387,8 @@ describe('L05 · T3.4 — min_note_interval / min_note_duration', () => {
       routing: ROUTING,
       capabilities: { 'devA:0': { polyphony: 8, minNoteInterval: 100 } }
     });
-    const ons = (t) => t.filter((e) => (e.status & 0xf0) === 0x90 && e.data2 > 0).map((e) => e.data1);
+    const ons = (t) =>
+      t.filter((e) => (e.status & 0xf0) === 0x90 && e.data2 > 0).map((e) => e.data1);
     expect(ons(mono.trace)).not.toContain(64); // bridé par canal
     expect(ons(poly.trace)).toContain(64); // accord préservé
   });

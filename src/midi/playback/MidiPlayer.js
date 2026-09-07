@@ -31,7 +31,11 @@ import HandPositionPlanner from '../adaptation/HandPositionPlanner.js';
 import LongitudinalPlanner from '../adaptation/LongitudinalPlanner.js';
 import { planVoiceProgramChanges } from '../adaptation/VoiceSelector.js';
 import { ConfigurationError, NotFoundError, ValidationError } from '../../core/errors/index.js';
-import { DEFAULT_MICROSECONDS_PER_BEAT, EVENT_ORDER_PRIORITY, TIMING } from '../../core/constants.js';
+import {
+  DEFAULT_MICROSECONDS_PER_BEAT,
+  EVENT_ORDER_PRIORITY,
+  TIMING
+} from '../../core/constants.js';
 
 /** Used to convert MIDI `microsecondsPerBeat` into BPM. */
 const MICROSECONDS_PER_MINUTE = 60000000;
@@ -1521,10 +1525,7 @@ class MidiPlayer {
     // SCHEDULER_TICK_MS stale). resume() rewinds the event cursor against
     // this value, so it has to be the real pause instant.
     const pauseRate = this.playbackRate > 0 ? this.playbackRate : 1;
-    this.position = Math.min(
-      this.duration,
-      ((this.pauseTime - this.startTime) * pauseRate) / 1000
-    );
+    this.position = Math.min(this.duration, ((this.pauseTime - this.startTime) * pauseRate) / 1000);
     this.scheduler.stopScheduler();
     this.sendAllNotesOff();
     // All Notes Off just released every sounding voice; reset the scheduler's

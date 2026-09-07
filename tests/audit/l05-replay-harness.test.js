@@ -510,9 +510,7 @@ export async function replay(opts) {
   const clock = new VirtualClock(opts.startNow ?? 1000, opts.lateness ?? null);
   const { player, deviceManager } = await buildPlayer({ ...opts, clock });
   if (opts.routing) {
-    player.channelRouting = new Map(
-      Object.entries(opts.routing).map(([ch, r]) => [Number(ch), r])
-    );
+    player.channelRouting = new Map(Object.entries(opts.routing).map(([ch, r]) => [Number(ch), r]));
   }
   if (opts.mutate) opts.mutate(player);
 
@@ -619,12 +617,9 @@ if (IS_SELF_RUN) {
     test('restore() est complet (aucune globale laissée détournée)', () => {
       const before = [globalThis.setTimeout, globalThis.setInterval, performance.now, Date.now];
       installVirtualClock(new VirtualClock()).restore();
-      expect([
-        globalThis.setTimeout,
-        globalThis.setInterval,
-        performance.now,
-        Date.now
-      ]).toEqual(before);
+      expect([globalThis.setTimeout, globalThis.setInterval, performance.now, Date.now]).toEqual(
+        before
+      );
     });
   });
 

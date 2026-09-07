@@ -85,7 +85,9 @@ describe('L05 · F-54 — les événements situés exactement à `duration` sont
     const { trace } = await replay({ buffer, routing: ROUTING_A });
     const ch5 = trace.filter((e) => (e.status & 0x0f) === 5);
     // Canal 5 non routé : aucune NOTE n'est émise…
-    expect(ch5.filter((e) => (e.status & 0xf0) === 0x90 || (e.status & 0xf0) === 0x80)).toHaveLength(0);
+    expect(
+      ch5.filter((e) => (e.status & 0xf0) === 0x90 || (e.status & 0xf0) === 0x80)
+    ).toHaveLength(0);
     // …mais le CC 123 de secours part quand même, vers le périphérique de
     // sortie PAR DÉFAUT (`dev1`), qui n'a jamais rien reçu de ce canal.
     expect(ch5).toEqual([expect.objectContaining({ device: 'dev1', status: 0xb5, data1: 123 })]);
@@ -473,7 +475,8 @@ describe('L05 · F02 — boucle', () => {
   });
 
   test('T2.10 — aucune boucle A/B côté backend : `playback_set_loop` est un simple booléen', async () => {
-    const { playback_set_loop } = await import('../../src/api/commands/schemas/playback.schemas.js');
+    const { playback_set_loop } =
+      await import('../../src/api/commands/schemas/playback.schemas.js');
     // Le schéma n'accepte que `enabled` : pas de loopStart / loopEnd.
     expect(playback_set_loop.custom({ enabled: true })).toEqual([]);
     expect(playback_set_loop.custom({ start: 1, end: 2 }).length).toBeGreaterThan(0);

@@ -61,9 +61,7 @@ describe('L05 · F04 — 16 canaux saturés, sans contrainte', () => {
   test('960 notes sur 16 canaux : ZÉRO note orpheline', async () => {
     const buffer = denseFile({ channels: 16, notesPerChannel: 60 });
     const { trace, player } = await replay({ buffer, routing: routing16() });
-    const noteMsgs = trace.filter(
-      (e) => (e.status & 0xf0) === 0x90 || (e.status & 0xf0) === 0x80
-    );
+    const noteMsgs = trace.filter((e) => (e.status & 0xf0) === 0x90 || (e.status & 0xf0) === 0x80);
     expect(noteMsgs.length).toBeGreaterThan(1800);
     const pairing = analyseNotePairing(trace);
     expect(pairing.orphanOff).toHaveLength(0);
@@ -125,9 +123,7 @@ describe('L05 · F04 — plafond de polyphonie & éviction', () => {
       routing: { 0: { device: 'dev0', targetChannel: 0 } },
       capabilities: { 'dev0:0': { polyphony: 3 } }
     });
-    const notes = trace.filter(
-      (e) => (e.status & 0xf0) === 0x90 || (e.status & 0xf0) === 0x80
-    );
+    const notes = trace.filter((e) => (e.status & 0xf0) === 0x90 || (e.status & 0xf0) === 0x80);
     // La 4e note (72) est admise ; la médiane de [60,64,67,72] = 67 est évincée.
     const seq = notes.map((e) => `${(e.status & 0xf0) === 0x90 ? 'on' : 'off'}${e.data1}`);
     expect(seq).toContain('on72');

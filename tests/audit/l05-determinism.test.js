@@ -311,7 +311,10 @@ describe('L05 · §BN — sources de non-déterminisme absentes du chemin de lec
       ],
       { ppq: PPQ }
     );
-    const { trace } = await replay({ buffer, routing: { 0: { device: 'devA', targetChannel: 0 } } });
+    const { trace } = await replay({
+      buffer,
+      routing: { 0: { device: 'devA', targetChannel: 0 } }
+    });
     const pairing = analyseNotePairing(trace);
     expect(pairing.orphanOn).toEqual([]);
     expect(pairing.orphanOff).toEqual([]);

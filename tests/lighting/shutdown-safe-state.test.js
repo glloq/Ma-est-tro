@@ -153,3 +153,73 @@ describe('L02 — the safe-state primitives themselves are correct (once reached
     expect(manager.drivers.has(DEV.id)).toBe(false);
   });
 });
+
+// ==========================================================================
+// The 4th `removeListener` site (L01 F-27 hand-off). Unlike the three that
+// threw, this one is an OPTIONAL call — `eventBus?.removeListener?.(...)` —
+// so it fails SILENTLY: no error, no log, and the listener simply stays
+// attached for the life of the process.
+// ==========================================================================
+
+describe('L02 F-30c — InstrumentLightManager.shutdown() must actually detach its listener', () => {
+  async function build() {
+    const { default: InstrumentLightManager } = await import(
+      '../../src/lighting/instrument/InstrumentLightManager.js'
+    );
+    const logger = makeLogger();
+    const bus = new EventBus(logger);
+    const database = {
+      getAllInstrumentLightStates: () => [],
+      getInstrumentSettings: () => null,
+      saveInstrumentLightState: () => {}
+    };
+    const m = new InstrumentLightManager({
+      logger,
+      database,
+      eventBus: bus,
+      deviceManager: null,
+      wsServer: null
+    });
+    return { m, bus, logger };
+  }
+
+  test('the listener is attached at construction', async () => {
+    const { bus } = await build();
+    expect(bus.listenerCount('instrument_settings_changed')).toBe(1);
+  });
+
+  test('shutdown() releases it', async () => {
+    const { m, bus } = await build();
+    await m.shutdown();
+    expect(bus.listenerCount('instrument_settings_changed')).toBe(0);
+    expect(m.controllers.size).toBe(0);
+  });
+
+  test('a restart cycle does not accumulate listeners', async () => {
+    // Application.restart() = stop() → initialize() → start(); the maintenance
+    // command exposes it. Each cycle used to leave one more listener behind,
+    // and EventBus warns past 50.
+    const { default: InstrumentLightManager } = await import(
+      '../../src/lighting/instrument/InstrumentLightManager.js'
+    );
+    const logger = makeLogger();
+    const bus = new EventBus(logger);
+    const deps = {
+      logger,
+      eventBus: bus,
+      deviceManager: null,
+      wsServer: null,
+      database: {
+        getAllInstrumentLightStates: () => [],
+        getInstrumentSettings: () => null,
+        saveInstrumentLightState: () => {}
+      }
+    };
+    for (let i = 0; i < 60; i++) {
+      const m = new InstrumentLightManager(deps);
+      await m.shutdown();
+    }
+    expect(bus.listenerCount('instrument_settings_changed')).toBe(0);
+    expect(logger._rec.warn.join(' ')).not.toMatch(/possible memory leak/);
+  });
+});
