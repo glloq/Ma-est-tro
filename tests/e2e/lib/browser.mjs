@@ -63,8 +63,10 @@ export class Recorder {
   /** @returns {string} a compact human-readable dump for the report. */
   summary(limit = 40) {
     const lines = [];
-    for (const e of this.errors().slice(0, limit)) lines.push(`  [${e.type}] ${e.text.slice(0, 300)}`);
-    for (const f of this.requestFailures.slice(0, limit)) lines.push(`  [netfail] ${f.url} :: ${f.error}`);
+    for (const e of this.errors().slice(0, limit))
+      lines.push(`  [${e.type}] ${e.text.slice(0, 300)}`);
+    for (const f of this.requestFailures.slice(0, limit))
+      lines.push(`  [netfail] ${f.url} :: ${f.error}`);
     for (const h of this.httpErrors.slice(0, limit)) lines.push(`  [http ${h.status}] ${h.url}`);
     return lines.join('\n');
   }
@@ -124,10 +126,15 @@ export async function newInstrumentedPage(browser, opts = {}) {
     rec.pageErrors.push({ message: e.message, stack: e.stack || '', at: Date.now() })
   );
   page.on('requestfailed', (r) =>
-    rec.requestFailures.push({ url: r.url(), error: r.failure()?.errorText || 'unknown', at: Date.now() })
+    rec.requestFailures.push({
+      url: r.url(),
+      error: r.failure()?.errorText || 'unknown',
+      at: Date.now()
+    })
   );
   page.on('response', (r) => {
-    if (r.status() >= 400) rec.httpErrors.push({ url: r.url(), status: r.status(), at: Date.now() });
+    if (r.status() >= 400)
+      rec.httpErrors.push({ url: r.url(), status: r.status(), at: Date.now() });
   });
   page.on('websocket', (ws) => {
     rec.websockets.push({ url: ws.url(), event: 'open', at: Date.now() });

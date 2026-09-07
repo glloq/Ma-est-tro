@@ -37,9 +37,18 @@ suite('01 · boot', () => {
       // to *report* what the browser saw. The assertion below is deliberately
       // limited to "nothing threw an uncaught exception in application code".
       const errs = rec.errors();
-      ctx.evidenceAdd('console errors at boot', errs.map((e) => `[${e.type}] ${e.text.slice(0, 220)}`));
-      ctx.evidenceAdd('failed requests at boot', rec.requestFailures.map((f) => `${f.url} :: ${f.error}`));
-      ctx.evidenceAdd('http >=400 at boot', rec.httpErrors.map((h) => `${h.status} ${h.url}`));
+      ctx.evidenceAdd(
+        'console errors at boot',
+        errs.map((e) => `[${e.type}] ${e.text.slice(0, 220)}`)
+      );
+      ctx.evidenceAdd(
+        'failed requests at boot',
+        rec.requestFailures.map((f) => `${f.url} :: ${f.error}`)
+      );
+      ctx.evidenceAdd(
+        'http >=400 at boot',
+        rec.httpErrors.map((h) => `${h.status} ${h.url}`)
+      );
 
       await ctx.softStep('no uncaught page exception during boot', () => {
         const pe = rec.pageErrors.map((e) => e.message);
@@ -113,9 +122,12 @@ suite('01 · boot', () => {
       });
 
       // The finding: parsing is blocked for as long as the CDN takes to fail.
-      await ctx.step(`document parsing is not blocked by the unreachable CDN (< ${stallMs}ms)`, () => {
-        expect(domContentLoadedMs).toBeLessThan(stallMs);
-      });
+      await ctx.step(
+        `document parsing is not blocked by the unreachable CDN (< ${stallMs}ms)`,
+        () => {
+          expect(domContentLoadedMs).toBeLessThan(stallMs);
+        }
+      );
     } finally {
       await page.context().close();
     }

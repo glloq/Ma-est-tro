@@ -57,9 +57,13 @@ export class AppPage {
     const timeout = opts.timeoutMs ?? 60000;
     await this.page.waitForSelector('#app:not(.hidden)', { timeout });
     if (opts.waitWs !== false) {
-      await this.page.waitForFunction(() => window.api && window.api.isConnected && window.api.isConnected(), null, {
-        timeout
-      });
+      await this.page.waitForFunction(
+        () => window.api && window.api.isConnected && window.api.isConnected(),
+        null,
+        {
+          timeout
+        }
+      );
     }
   }
 
@@ -70,10 +74,7 @@ export class AppPage {
    * @returns {Promise<any>}
    */
   async command(command, data = {}) {
-    return this.page.evaluate(
-      ([c, d]) => window.api.sendCommand(c, d),
-      [command, data]
-    );
+    return this.page.evaluate(([c, d]) => window.api.sendCommand(c, d), [command, data]);
   }
 
   // ── Instruments ───────────────────────────────────────────────────────────
@@ -237,7 +238,11 @@ export class AppPage {
       const close = this.page.locator(
         `${selector} .close-btn, ${selector} .modal-close, ${selector} [aria-label*="lose"], ${selector} [aria-label*="ermer"]`
       );
-      if (await close.count()) await close.first().click({ timeout: 3000 }).catch(() => {});
+      if (await close.count())
+        await close
+          .first()
+          .click({ timeout: 3000 })
+          .catch(() => {});
     }
   }
 

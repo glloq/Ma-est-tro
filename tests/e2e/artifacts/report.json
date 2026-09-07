@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-07T11:49:05.440Z",
+  "generatedAt": "2026-09-07T12:15:59.054Z",
   "baseUrl": "http://127.0.0.1:8108",
   "playwright": "/opt/node22/lib/node_modules/playwright/index.mjs",
   "chromium": "141.0.7390.37",
@@ -7,9 +7,9 @@
   "health": {
     "status": "ok",
     "version": "0.8.1",
-    "gitHash": "c4d2024",
-    "uptime": 66.420521583,
-    "timestamp": 1788781745435,
+    "gitHash": "449bb54",
+    "uptime": 14.692325432,
+    "timestamp": 1788783359052,
     "capabilitiesOverall": "degraded",
     "capabilities": {
       "database": {
@@ -40,448 +40,128 @@
     }
   },
   "summary": {
-    "passed": 0,
-    "failed": 3,
+    "passed": 1,
+    "failed": 2,
     "total": 3
   },
   "results": [
     {
-      "suite": "02 · canonical scenario",
-      "name": "boot → instrument → import → assign → adapt → play → edit → save → reload → verify",
-      "status": "FAIL",
-      "ms": 46032,
-      "error": "Error: expected \"96\", got \"120\"\n    at fail (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:137:11)\n    at Object.toBe (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:141:27)\n    at file:///home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:231:23\n    at async TestContext.step (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:87:19)\n    at async test.timeoutMs [as fn] (file:///home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:224:7)\n    at async run (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:194:9)\n    at async main (file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:95:39)\n    at async file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:119:10",
+      "suite": "01 · boot",
+      "name": "the SPA boots, connects, and reaches an interactive state",
+      "status": "PASS",
+      "ms": 5602,
       "steps": [
         {
-          "label": "1 · boot the SPA",
+          "label": "navigate and wait for #app + WebSocket",
           "status": "PASS",
-          "ms": 10387
+          "ms": 5379
         },
         {
-          "label": "2 · create a virtual instrument through the UI",
+          "label": "the splash is gone and the file panel is present",
           "status": "PASS",
-          "ms": 1944
+          "ms": 9
         },
         {
-          "label": "2b · the instrument page closes and stops intercepting clicks",
+          "label": "the WebSocket is OPEN",
           "status": "PASS",
-          "ms": 41
+          "ms": 2
         },
         {
-          "label": "3 · import a MIDI file through the drop-zone input",
+          "label": "no uncaught page exception during boot",
           "status": "PASS",
-          "ms": 229
-        },
-        {
-          "label": "4 · open the routing page and auto-assign every channel",
-          "status": "PASS",
-          "ms": 6911
-        },
-        {
-          "label": "5 · adaptation is engaged for the assignment",
-          "status": "PASS",
-          "ms": 6
-        },
-        {
-          "label": "5b · apply the routing",
-          "status": "PASS",
-          "ms": 2645
-        },
-        {
-          "label": "6 · play the file to the virtual instrument",
-          "status": "PASS",
-          "ms": 2599
-        },
-        {
-          "label": "6b · Stop halts playback",
-          "status": "PASS",
-          "ms": 2100
-        },
-        {
-          "label": "7 · open the MIDI editor on the file",
-          "status": "PASS",
-          "ms": 3784
-        },
-        {
-          "label": "7b · change the tempo in the editor header",
-          "status": "PASS",
-          "ms": 1529
-        },
-        {
-          "label": "7c · the tempo edit raises no uncaught exception",
-          "status": "WARN",
-          "ms": 0,
-          "error": "this.modal.setTempo is not a function | this.modal.setTempo is not a function | this.modal.setTempo is not a function"
-        },
-        {
-          "label": "8 · save from the editor",
-          "status": "PASS",
-          "ms": 4186
-        },
-        {
-          "label": "9 · reload the page",
-          "status": "PASS",
-          "ms": 4907
-        },
-        {
-          "label": "10a · the virtual instrument survived the reload",
-          "status": "PASS",
-          "ms": 5
-        },
-        {
-          "label": "10b · the imported file survived the reload",
-          "status": "PASS",
-          "ms": 7
-        },
-        {
-          "label": "10c · the routing survived the reload",
-          "status": "PASS",
-          "ms": 4
-        },
-        {
-          "label": "10d · the edit survived the reload (tempo is 96 BPM)",
-          "status": "FAIL",
-          "ms": 3277,
-          "error": "expected \"96\", got \"120\""
+          "ms": 0
         }
       ],
       "evidence": [
         {
-          "label": "devices after creation",
-          "value": [
-            "virtual_1788781690848_lo1mew · Virtual Piano · virtual"
-          ]
+          "label": "time to interactive (ms)",
+          "value": 5379
         },
         {
-          "label": "imported file id",
-          "value": "1"
+          "label": "screenshot",
+          "value": "/home/user/General-Midi-Boop/tests/e2e/artifacts/01-boot-home.png"
         },
         {
-          "label": "file list",
-          "value": [
-            {
-              "id": "1",
-              "name": "e2e-two-channel.mid",
-              "state": "○ Non routé",
-              "classes": "file-item"
-            }
-          ]
-        },
-        {
-          "label": "screenshot after import",
-          "value": "/home/user/General-Midi-Boop/tests/e2e/artifacts/02-03-imported.png"
-        },
-        {
-          "label": "assignments before auto-routing",
-          "value": [
-            {
-              "value": "ignore",
-              "text": "Skipped"
-            },
-            {
-              "value": "ignore",
-              "text": "Skipped"
-            }
-          ]
-        },
-        {
-          "label": "assignments after auto-routing",
-          "value": [
-            {
-              "value": "virtual_1788781690848_lo1mew_0",
-              "text": "Virtual Piano (100)"
-            },
-            {
-              "value": "virtual_1788781690848_lo1mew_0",
-              "text": "Virtual Piano (58)"
-            }
-          ]
-        },
-        {
-          "label": "feasibility score",
-          "value": "74/100 — Average"
-        },
-        {
-          "label": "screenshot after assign",
-          "value": "/home/user/General-Midi-Boop/tests/e2e/artifacts/02-04-assigned.png"
-        },
-        {
-          "label": "adaptation toggle class",
-          "value": "rs-adapt-toggle active"
-        },
-        {
-          "label": "file_routing_status after apply",
-          "value": {
-            "success": true,
-            "fileId": "1",
-            "status": "routed_incomplete",
-            "isAdapted": false,
-            "hasAutoAssigned": true,
-            "routedCount": 2,
-            "channelCount": 2
-          }
-        },
-        {
-          "label": "playback_status while playing",
-          "value": {
-            "playing": true,
-            "paused": false,
-            "position": 2.437395573999998,
-            "duration": 15.979166666666666,
-            "percentage": 15.25358377470664,
-            "outputDevice": "virtual_1788781690848_lo1mew",
-            "loop": false,
-            "tempo": 120,
-            "events": 99
-          }
-        },
-        {
-          "label": "header transport while playing",
-          "value": {
-            "playing": true,
-            "label": "⏸️ Pause",
-            "file": "e2e-two-channel.mid",
-            "stopDisabled": false
-          }
-        },
-        {
-          "label": "screenshot while playing",
-          "value": "/home/user/General-Midi-Boop/tests/e2e/artifacts/02-06-playing.png"
-        },
-        {
-          "label": "playback_status after stop",
-          "value": {
-            "playing": false,
-            "paused": false,
-            "position": 0,
-            "duration": 15.979166666666666,
-            "percentage": 0,
-            "outputDevice": "virtual_1788781690848_lo1mew",
-            "loop": false,
-            "tempo": 120,
-            "events": 99
-          }
-        },
-        {
-          "label": "header transport after stop",
-          "value": {
-            "playing": true,
-            "label": "▶️ Lecture",
-            "file": "e2e-two-channel.mid",
-            "stopDisabled": false
-          }
-        },
-        {
-          "label": "editor shape",
-          "value": {
-            "channels": 7,
-            "canvases": 3,
-            "tempo": "120",
-            "hasSave": true
-          }
-        },
-        {
-          "label": "screenshot of the editor",
-          "value": "/home/user/General-Midi-Boop/tests/e2e/artifacts/02-07-editor.png"
-        },
-        {
-          "label": "tempo input shows",
-          "value": "96"
-        },
-        {
-          "label": "editor component state after the tempo edit",
-          "value": null
-        },
-        {
-          "label": "uncaught page errors after the tempo edit",
-          "value": [
-            "this.modal.setTempo is not a function",
-            "this.modal.setTempo is not a function",
-            "this.modal.setTempo is not a function"
-          ]
-        },
-        {
-          "label": "file size before/after save",
-          "value": [
-            15,
-            15
-          ]
-        },
-        {
-          "label": "screenshot after save",
-          "value": "/home/user/General-Midi-Boop/tests/e2e/artifacts/02-08-saved.png"
-        },
-        {
-          "label": "devices after reload",
-          "value": [
-            "virtual_1788781690848_lo1mew · Virtual Piano"
-          ]
-        },
-        {
-          "label": "file list after reload",
-          "value": [
-            {
-              "id": "1",
-              "name": "e2e-two-channel.mid",
-              "state": "● Routé",
-              "classes": "file-item routing-routed-incomplete routed"
-            }
-          ]
-        },
-        {
-          "label": "file_routing_status after reload",
-          "value": {
-            "success": true,
-            "fileId": "1",
-            "status": "routed_incomplete",
-            "isAdapted": false,
-            "hasAutoAssigned": true,
-            "routedCount": 2,
-            "channelCount": 2
-          }
-        },
-        {
-          "label": "tempo after reload",
-          "value": "120"
-        },
-        {
-          "label": "screenshot after reload",
-          "value": "/home/user/General-Midi-Boop/tests/e2e/artifacts/02-10-reloaded.png"
-        },
-        {
-          "label": "console errors over the whole journey",
+          "label": "console errors at boot",
           "value": [
             "[error] Refused to execute script from 'http://127.0.0.1:8108/lib/WebAudioFontPlayer.js' because its MIME type ('text/html') is not executable, and strict MIME type checking is enabled.",
-            "[error] Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED",
-            "[error] Refused to execute script from 'http://127.0.0.1:8108/lib/WebAudioFontPlayer.js' because its MIME type ('text/html') is not executable, and strict MIME type checking is enabled.",
-            "[error] Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED",
-            "[error] [MidiSynthesizer] Failed to initialize: Error: WebAudioFontPlayer not loaded\n    at MidiSynthesizer.initialize (http://127.0.0.1:8108/js/audio/MidiSynthesizer.js:732:15)\n    at MidiEditorPlayback.initSynthesizer (http://127.0.0.1:8108/js/features/mid",
-            "[error] [MidiEditorModal] Failed to initialize synthesizer",
-            "[error] Refused to execute script from 'http://127.0.0.1:8108/lib/WebAudioFontPlayer.js' because its MIME type ('text/html') is not executable, and strict MIME type checking is enabled.",
-            "[error] Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED",
-            "[error] [MidiSynthesizer] Failed to initialize: Error: WebAudioFontPlayer not loaded\n    at MidiSynthesizer.initialize (http://127.0.0.1:8108/js/audio/MidiSynthesizer.js:732:15)\n    at MidiEditorPlayback.initSynthesizer (http://127.0.0.1:8108/js/features/mid",
-            "[error] [MidiEditorModal] Failed to initialize synthesizer",
-            "[pageerror] this.modal.setTempo is not a function",
-            "[pageerror] this.modal.setTempo is not a function",
-            "[pageerror] this.modal.setTempo is not a function",
-            "[pageerror] this.modal.setTempo is not a function"
+            "[error] Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED"
           ]
         },
         {
-          "label": "uncaught page errors over the whole journey",
+          "label": "failed requests at boot",
           "value": [
-            "this.modal.setTempo is not a function",
-            "this.modal.setTempo is not a function",
-            "this.modal.setTempo is not a function",
-            "this.modal.setTempo is not a function"
+            "https://surikov.github.io/webaudiofont/npm/dist/WebAudioFontPlayer.js :: net::ERR_TUNNEL_CONNECTION_FAILED"
           ]
+        },
+        {
+          "label": "http >=400 at boot",
+          "value": []
         }
       ]
     },
     {
-      "suite": "02 · canonical scenario",
-      "name": "the MIDI editor's tempo control applies the tempo it displays",
+      "suite": "01 · boot",
+      "name": "the vendored WebAudioFont player is served (F-14 precondition)",
       "status": "FAIL",
-      "ms": 9831,
-      "error": "Error: expected \"\", got \"this.modal.setTempo is not a function | this.modal.setTempo is not a function | this.modal.setTempo is not a function\"\n    at fail (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:137:11)\n    at Object.toBe (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:141:27)\n    at file:///home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:283:66\n    at TestContext.step (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:87:25)\n    at test.timeoutMs [as fn] (file:///home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:282:17)\n    at async run (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:194:9)\n    at async main (file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:95:39)\n    at async file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:119:10",
-      "steps": [
-        {
-          "label": "open the editor on the imported file",
-          "status": "PASS",
-          "ms": 8552
-        },
-        {
-          "label": "type a new tempo",
-          "status": "PASS",
-          "ms": 1226
-        },
-        {
-          "label": "no uncaught exception is raised by the tempo control",
-          "status": "FAIL",
-          "ms": 0,
-          "error": "expected \"\", got \"this.modal.setTempo is not a function | this.modal.setTempo is not a function | this.modal.setTempo is not a function\""
-        }
-      ],
+      "ms": 49,
+      "error": "Error: expected truthy (expected a JS content-type, got \"text/html; charset=UTF-8\" (status 200) — the vendored player is absent and the SPA fallback served index.html instead), got false\n    at fail (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:137:11)\n    at Object.toBeTruthy (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:150:9)\n    at Object.fn (file:///home/user/General-Midi-Boop/tests/e2e/specs/01-boot.spec.mjs:69:68)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async run (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:204:9)\n    at async main (file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:95:39)\n    at async file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:119:10",
+      "steps": [],
       "evidence": [
         {
-          "label": "input value vs component state",
-          "value": {
-            "shown": "84",
-            "modalTempo": 120,
-            "isDirty": false
-          }
-        },
-        {
-          "label": "uncaught page errors",
-          "value": [
-            "this.modal.setTempo is not a function",
-            "this.modal.setTempo is not a function",
-            "this.modal.setTempo is not a function"
-          ]
+          "label": "GET /lib/WebAudioFontPlayer.js",
+          "value": "200 text/html; charset=UTF-8 613826 bytes"
         }
       ]
     },
     {
-      "suite": "02 · canonical scenario",
-      "name": "the header transport buttons reflect whether anything is playing",
+      "suite": "01 · boot",
+      "name": "boot with the CDN unreachable — measures the real blocking time (F-14)",
       "status": "FAIL",
-      "ms": 9586,
-      "error": "Error: expected truthy (Stop stays clickable although nothing is playing), got false\n    at fail (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:137:11)\n    at Object.toBeTruthy (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:149:20)\n    at file:///home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:320:36\n    at TestContext.step (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:87:25)\n    at test.timeoutMs [as fn] (file:///home/user/General-Midi-Boop/tests/e2e/specs/02-canonical.spec.mjs:318:17)\n    at async run (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:194:9)\n    at async main (file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:95:39)\n    at async file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:119:10",
+      "ms": 8225,
+      "error": "Error: expected 3424 < 3000\n    at fail (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:137:11)\n    at Object.toBeLessThan (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:164:26)\n    at file:///home/user/General-Midi-Boop/tests/e2e/specs/01-boot.spec.mjs:128:38\n    at TestContext.step (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:87:25)\n    at Object.fn (file:///home/user/General-Midi-Boop/tests/e2e/specs/01-boot.spec.mjs:125:17)\n    at async run (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:204:9)\n    at async main (file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:95:39)\n    at async file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:119:10",
       "steps": [
         {
-          "label": "boot onto the state the journey left behind",
-          "status": "PASS",
-          "ms": 5364
-        },
-        {
-          "label": "on a fresh page with nothing playing, Stop is disabled",
+          "label": "the CDN fallback did fire (document.write path is live)",
           "status": "PASS",
           "ms": 0
         },
         {
-          "label": "play, then stop",
+          "label": "WebAudioFontPlayer is undefined once the CDN fails",
           "status": "PASS",
-          "ms": 4170
+          "ms": 3
         },
         {
-          "label": "after Stop, the Stop button is disabled again",
+          "label": "document parsing is not blocked by the unreachable CDN (< 3000ms)",
           "status": "FAIL",
-          "ms": 1,
-          "error": "expected truthy (Stop stays clickable although nothing is playing), got false"
+          "ms": 0,
+          "error": "expected 3424 < 3000"
         }
       ],
       "evidence": [
         {
-          "label": "transport on a fresh page, nothing playing",
-          "value": {
-            "playing": false,
-            "label": "▶️  Play",
-            "file": "No file selected",
-            "stopDisabled": true
-          }
+          "label": "CDN stall injected (ms)",
+          "value": 3000
         },
         {
-          "label": "backend after stop",
-          "value": {
-            "playing": false,
-            "paused": false,
-            "position": 0,
-            "duration": 15.979166666666666,
-            "percentage": 0,
-            "outputDevice": "virtual_1788781690848_lo1mew",
-            "loop": false,
-            "tempo": 120,
-            "events": 99
-          }
+          "label": "CDN request intercepted",
+          "value": 1
         },
         {
-          "label": "header after stop",
-          "value": {
-            "playing": true,
-            "label": "▶️ Lecture",
-            "file": "e2e-two-channel.mid",
-            "stopDisabled": false
-          }
+          "label": "DOMContentLoaded (ms)",
+          "value": 3424
+        },
+        {
+          "label": "time to interactive (ms)",
+          "value": 7826
+        },
+        {
+          "label": "screenshot",
+          "value": "/home/user/General-Midi-Boop/tests/e2e/artifacts/01-boot-offline.png"
+        },
+        {
+          "label": "typeof WebAudioFontPlayer",
+          "value": "undefined"
         }
       ]
     }

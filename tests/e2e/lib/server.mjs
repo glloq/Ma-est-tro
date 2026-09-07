@@ -36,7 +36,8 @@ export class AppServer {
    */
   constructor(opts = {}) {
     this.port = opts.port ?? DEFAULT_PORT;
-    this.workspace = opts.workspace ?? path.join(REPO_ROOT, 'tests', 'e2e', 'artifacts', 'workspace');
+    this.workspace =
+      opts.workspace ?? path.join(REPO_ROOT, 'tests', 'e2e', 'artifacts', 'workspace');
     this.keepDb = !!opts.keepDb;
     this.readyTimeoutMs = opts.readyTimeoutMs ?? 45000;
     this.extraEnv = opts.env ?? {};
@@ -113,7 +114,9 @@ export class AppServer {
       await sleep(200);
     }
     await this.stop();
-    throw new Error(`server did not answer ${this.baseUrl}/api/health within ${this.readyTimeoutMs}ms`);
+    throw new Error(
+      `server did not answer ${this.baseUrl}/api/health within ${this.readyTimeoutMs}ms`
+    );
   }
 
   /** @returns {Promise<boolean>} true when /api/health answers 200. */

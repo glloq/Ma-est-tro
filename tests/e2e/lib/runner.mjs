@@ -146,14 +146,16 @@ export function expect(actual) {
       if (a !== b) fail(`expected ${b}, got ${a}`);
     },
     toBeTruthy(hint) {
-      if (!actual) fail(`expected truthy${hint ? ` (${hint})` : ''}, got ${JSON.stringify(actual)}`);
+      if (!actual)
+        fail(`expected truthy${hint ? ` (${hint})` : ''}, got ${JSON.stringify(actual)}`);
     },
     toBeFalsy(hint) {
       if (actual) fail(`expected falsy${hint ? ` (${hint})` : ''}, got ${JSON.stringify(actual)}`);
     },
     toContain(sub) {
       const ok = Array.isArray(actual) ? actual.includes(sub) : String(actual).includes(sub);
-      if (!ok) fail(`expected ${JSON.stringify(actual).slice(0, 300)} to contain ${JSON.stringify(sub)}`);
+      if (!ok)
+        fail(`expected ${JSON.stringify(actual).slice(0, 300)} to contain ${JSON.stringify(sub)}`);
     },
     toBeGreaterThan(n) {
       if (!(actual > n)) fail(`expected ${actual} > ${n}`);
@@ -162,7 +164,8 @@ export function expect(actual) {
       if (!(actual < n)) fail(`expected ${actual} < ${n}`);
     },
     toMatch(re) {
-      if (!re.test(String(actual))) fail(`expected ${JSON.stringify(String(actual)).slice(0, 300)} to match ${re}`);
+      if (!re.test(String(actual)))
+        fail(`expected ${JSON.stringify(String(actual)).slice(0, 300)} to match ${re}`);
     }
   };
 }
@@ -183,7 +186,14 @@ export async function run(deps, log = (l) => process.stdout.write(l + '\n')) {
     for (const t of s.tests) {
       if (t.opts.skip) {
         log(`  ○ SKIP  ${t.name} — ${typeof t.opts.skip === 'string' ? t.opts.skip : ''}`);
-        results.push({ suite: s.name, name: t.name, status: 'SKIP', ms: 0, steps: [], evidence: [] });
+        results.push({
+          suite: s.name,
+          name: t.name,
+          status: 'SKIP',
+          ms: 0,
+          steps: [],
+          evidence: []
+        });
         continue;
       }
       const ctx = new TestContext(t.name);
@@ -197,7 +207,15 @@ export async function run(deps, log = (l) => process.stdout.write(l + '\n')) {
         error = err && err.stack ? err.stack : String(err);
       }
       const ms = Date.now() - t0;
-      results.push({ suite: s.name, name: t.name, status, ms, error, steps: ctx.steps, evidence: ctx.evidence });
+      results.push({
+        suite: s.name,
+        name: t.name,
+        status,
+        ms,
+        error,
+        steps: ctx.steps,
+        evidence: ctx.evidence
+      });
       log(`  ${status === 'PASS' ? '✔' : '✘'} ${status}  ${t.name}  (${ms}ms)`);
       for (const st of ctx.steps) {
         const mark = st.status === 'PASS' ? '·' : st.status === 'WARN' ? '!' : '✘';
@@ -216,7 +234,9 @@ export async function run(deps, log = (l) => process.stdout.write(l + '\n')) {
 function withTimeout(p, ms, label) {
   return Promise.race([
     p,
-    new Promise((_, rej) => setTimeout(() => rej(new Error(`test timed out after ${ms}ms: ${label}`)), ms))
+    new Promise((_, rej) =>
+      setTimeout(() => rej(new Error(`test timed out after ${ms}ms: ${label}`)), ms)
+    )
   ]);
 }
 

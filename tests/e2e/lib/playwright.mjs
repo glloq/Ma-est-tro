@@ -36,7 +36,10 @@ function globalRoots() {
     roots.push(path.join(process.env.NPM_CONFIG_PREFIX, 'lib', 'node_modules'));
   }
   try {
-    const out = execFileSync('npm', ['root', '-g'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    const out = execFileSync('npm', ['root', '-g'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore']
+    });
     if (out.trim()) roots.push(out.trim());
   } catch {
     /* npm not on PATH — fall back to the static hints below */
@@ -62,9 +65,10 @@ export async function loadPlaywright() {
   // 2. Explicit override.
   const override = process.env.PLAYWRIGHT_MODULE;
   if (override) {
-    const entry = override.endsWith('.mjs') || override.endsWith('.js')
-      ? override
-      : path.join(override, 'index.mjs');
+    const entry =
+      override.endsWith('.mjs') || override.endsWith('.js')
+        ? override
+        : path.join(override, 'index.mjs');
     if (!existsSync(entry)) {
       throw new Error(`PLAYWRIGHT_MODULE points at "${entry}" which does not exist`);
     }

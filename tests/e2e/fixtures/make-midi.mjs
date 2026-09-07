@@ -43,7 +43,15 @@ export function buildTwoChannelMidi(opts = {}) {
   const track0 = [
     { deltaTime: 0, meta: true, type: 'trackName', text: 'Conductor' },
     { deltaTime: 0, meta: true, type: 'setTempo', microsecondsPerBeat: usPerBeat },
-    { deltaTime: 0, meta: true, type: 'timeSignature', numerator: 4, denominator: 4, metronome: 24, thirtyseconds: 8 },
+    {
+      deltaTime: 0,
+      meta: true,
+      type: 'timeSignature',
+      numerator: 4,
+      denominator: 4,
+      metronome: 24,
+      thirtyseconds: 8
+    },
     { deltaTime: TPQ * 8 * repeats, meta: true, type: 'endOfTrack' }
   ];
 
@@ -53,8 +61,20 @@ export function buildTwoChannelMidi(opts = {}) {
   ];
   for (const note of melody) {
     // 20-tick gap between notes is carried by the *next* noteOn's deltaTime.
-    track1.push({ deltaTime: track1.length > 2 ? 20 : 0, type: 'noteOn', channel: 0, noteNumber: note, velocity: 96 });
-    track1.push({ deltaTime: TPQ - 20, type: 'noteOff', channel: 0, noteNumber: note, velocity: 0 });
+    track1.push({
+      deltaTime: track1.length > 2 ? 20 : 0,
+      type: 'noteOn',
+      channel: 0,
+      noteNumber: note,
+      velocity: 96
+    });
+    track1.push({
+      deltaTime: TPQ - 20,
+      type: 'noteOff',
+      channel: 0,
+      noteNumber: note,
+      velocity: 0
+    });
   }
   track1.push({ deltaTime: 0, meta: true, type: 'endOfTrack' });
 
@@ -64,7 +84,13 @@ export function buildTwoChannelMidi(opts = {}) {
   ];
   for (const note of bass) {
     track2.push({ deltaTime: 0, type: 'noteOn', channel: 1, noteNumber: note, velocity: 80 });
-    track2.push({ deltaTime: TPQ * 2 - 20, type: 'noteOff', channel: 1, noteNumber: note, velocity: 0 });
+    track2.push({
+      deltaTime: TPQ * 2 - 20,
+      type: 'noteOff',
+      channel: 1,
+      noteNumber: note,
+      velocity: 0
+    });
   }
   track2.push({ deltaTime: 0, meta: true, type: 'endOfTrack' });
 
@@ -90,7 +116,10 @@ export function buildSingleChannelMidi() {
     track0.push({ deltaTime: TPQ, type: 'noteOff', channel: 0, noteNumber: note, velocity: 0 });
   }
   track0.push({ deltaTime: 0, meta: true, type: 'endOfTrack' });
-  const bytes = writeMidi({ header: { format: 0, numTracks: 1, ticksPerBeat: TPQ }, tracks: [track0] });
+  const bytes = writeMidi({
+    header: { format: 0, numTracks: 1, ticksPerBeat: TPQ },
+    tracks: [track0]
+  });
   return Buffer.from(bytes);
 }
 
