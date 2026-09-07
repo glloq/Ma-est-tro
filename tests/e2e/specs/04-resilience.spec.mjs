@@ -1,0 +1,167 @@
+/**
+ * @file tests/e2e/specs/04-resilience.spec.mjs
+ * @description What the user sees when the link to the Pi breaks, and what
+ * survives a reload in the middle of a piece.
+ *
+ * Answers the plan's §AN/§BW questions that only a browser can answer:
+ *   - the WebSocket drops during playback: is there feedback? does it recover?
+ *   - the page is reloaded during playback: does the backend keep playing, and
+ *     does the reloaded UI re-attach to that playback or lose it?
+ */
+import { suite, test, expect } from '../lib/runner.mjs';
+import { newInstrumentedPage, shoot } from '../lib/browser.mjs';
+import { AppPage } from '../lib/app.mjs';
+import { writeFixtures } from '../fixtures/make-midi.mjs';
+
+const FILENAME = 'e2e-two-channel.mid';
+
+suite('04 · resilience', () => {
+  test('the WebSocket drops mid-playback: the UI reacts and the client reconnects', async (ctx, deps) => {
+    const { page, rec } = await newInstrumentedPage(deps.browser);
+    const app = new AppPage(page, rec, deps.server.baseUrl);
+    try {
+      await ctx.step('prepare a routed, playable file', () => prepare(page, app, deps));
+
+      // Record the client's own connection lifecycle events so the assertion is
+      // about the documented contract (`disconnected` / `reconnecting` /
+      // `reconnect_exhausted` / `connected`), not about a spinner's CSS.
+      await page.evaluate(() => {
+        window.__wsEvents = [];
+        for (const e of ['disconnected', 'reconnecting', 'reconnect_exhausted', 'connected']) {
+          window.api.on(e, (d) => window.__wsEvents.push({ e, d, at: Date.now() }));
+        }
+      });
+
+      await ctx.step('start playback', async () => {
+        await app.fileAction(FILENAME, 'play');
+        await page.waitForTimeout(1200);
+        const st = await app.playbackStatus();
+        expect(st.playing).toBeTruthy('playback started before the cut');
+      });
+
+      await ctx.step('sever the WebSocket', async () => {
+        await app.killWebSocket();
+        await page.waitForTimeout(1500);
+      });
+
+      const seen = await page.evaluate(() => window.__wsEvents.map((x) => x.e));
+      ctx.evidenceAdd('client events after the cut', seen);
+      ctx.evidenceAdd('visible feedback after the cut', await app.toasts());
+      ctx.evidenceAdd('screenshot right after the cut', await shoot(page, deps.artifactsDir, '04-ws-cut'));
+
+      await ctx.step('the client reports the disconnection', () => {
+        expect(seen).toContain('disconnected');
+      });
+
+      await ctx.step('the user is told something is wrong', async () => {
+        const visible = await page.evaluate(() =>
+          document.body.innerText.match(/reconnect|connexion|connection|perdue|lost|hors ligne|offline/gi) || []
+        );
+        ctx.evidenceAdd('on-screen wording', visible.slice(0, 10));
+        expect(visible.length).toBeGreaterThan(0);
+      });
+
+      await ctx.step('the client reconnects on its own within 20 s', async () => {
+        await page.waitForFunction(() => window.api && window.api.isConnected && window.api.isConnected(), null, {
+          timeout: 20000
+        });
+        const after = await page.evaluate(() => window.__wsEvents.map((x) => x.e));
+        ctx.evidenceAdd('client events after recovery', after);
+        expect(await app.wsReadyState()).toBe(1);
+      });
+
+      await ctx.step('the UI is usable again after reconnection', async () => {
+        const devices = await app.listDevices();
+        ctx.evidenceAdd('device_list after reconnection', devices.length);
+        expect(devices.length).toBeGreaterThan(0);
+      });
+      ctx.evidenceAdd('screenshot after reconnection', await shoot(page, deps.artifactsDir, '04-ws-recovered'));
+    } finally {
+      await page.context().close();
+    }
+  }, { timeoutMs: 300000 });
+
+  test('the page is reloaded mid-playback', async (ctx, deps) => {
+    const { page, rec } = await newInstrumentedPage(deps.browser);
+    const app = new AppPage(page, rec, deps.server.baseUrl);
+    try {
+      await ctx.step('prepare a routed, playable file', () => prepare(page, app, deps));
+
+      await ctx.step('start playback', async () => {
+        await app.fileAction(FILENAME, 'play');
+        await page.waitForTimeout(1200);
+        expect((await app.playbackStatus()).playing).toBeTruthy();
+      });
+
+      await ctx.step('reload while it is playing', async () => {
+        await page.reload({ waitUntil: 'load' });
+        await app.waitReady();
+      });
+
+      const st = await app.playbackStatus();
+      ctx.evidenceAdd('backend playback_status after the reload', st);
+      const header = await app.transportState();
+      ctx.evidenceAdd('header transport after the reload', header);
+      ctx.evidenceAdd('screenshot after the reload', await shoot(page, deps.artifactsDir, '04-reload-midplay'));
+
+      // The honest assertion is about *coherence*, not about a particular
+      // policy: whatever the backend is doing, the header must say the same.
+      await ctx.step('the reloaded UI agrees with the backend about what is playing', () => {
+        if (st.playing) {
+          expect(header.stopDisabled).toBeFalsy(
+            'the backend is still playing, so the header must offer Stop'
+          );
+          expect(header.file).toContain(FILENAME);
+        } else {
+          expect(header.stopDisabled).toBeTruthy(
+            'nothing is playing, so the header must not offer Stop'
+          );
+        }
+      });
+
+      await app.command('playback_stop', {}).catch(() => {});
+    } finally {
+      await page.context().close();
+    }
+  }, { timeoutMs: 300000 });
+});
+
+/**
+ * Boot, create a virtual instrument, import and auto-route the fixture so a
+ * resilience test starts from a playable state.
+ * @param {any} page @param {AppPage} app @param {Object} deps
+ */
+async function prepare(page, app, deps) {
+  const fx = writeFixtures();
+  await app.open();
+  await app.enableVirtualInstruments();
+  await app.open();
+
+  const devices = await app.listDevices();
+  if (!devices.some((d) => d.type === 'virtual')) {
+    await app.openInstruments();
+    await app.createVirtualInstrumentViaUi({ preset: 'piano' });
+    await page.waitForTimeout(1200);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(600);
+  }
+
+  const files = await app.filesInList();
+  if (!files.some((f) => f.name === FILENAME)) {
+    await app.importMidiViaUi(fx.twoChannel);
+    await app.waitForFileInList(FILENAME);
+  }
+
+  const fileId = await app.waitForFileInList(FILENAME);
+  const status = await app.command('file_routing_status', { fileId }).catch(() => ({ routedCount: 0 }));
+  if (!status.routedCount) {
+    await app.fileAction(FILENAME, 'route');
+    await page.waitForSelector('#routingSummaryModal', { timeout: 30000 });
+    await page.waitForTimeout(2500);
+    await page.click('#rsAutoRoutingBtn');
+    await page.waitForTimeout(3500);
+    await page.click('#rsSummaryApply');
+    await page.waitForSelector('#routingSummaryModal', { state: 'detached', timeout: 30000 });
+    await page.waitForTimeout(2000);
+  }
+}

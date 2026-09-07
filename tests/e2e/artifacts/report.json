@@ -1,0 +1,169 @@
+{
+  "generatedAt": "2026-09-07T11:41:37.615Z",
+  "baseUrl": "http://127.0.0.1:8108",
+  "playwright": "/opt/node22/lib/node_modules/playwright/index.mjs",
+  "chromium": "141.0.7390.37",
+  "node": "v22.22.2",
+  "health": {
+    "status": "ok",
+    "version": "0.8.1",
+    "gitHash": "f58e612",
+    "uptime": 19.271351053,
+    "timestamp": 1788781297613,
+    "capabilitiesOverall": "degraded",
+    "capabilities": {
+      "database": {
+        "status": "ready"
+      },
+      "playback": {
+        "status": "ready"
+      },
+      "usb": {
+        "status": "failed",
+        "detail": "Native MIDI library unavailable (easymidi/ALSA bindings missing) — USB MIDI ports cannot be opened"
+      },
+      "ble": {
+        "status": "failed",
+        "detail": "D-Bus system bus not available"
+      },
+      "network": {
+        "status": "degraded",
+        "detail": "RTP-MIDI is a simplified AppleMIDI implementation (no IN/OK, CK sync or journal)"
+      },
+      "serial": {
+        "status": "disabled",
+        "detail": "Serial MIDI disabled in configuration"
+      },
+      "lighting": {
+        "status": "ready"
+      }
+    }
+  },
+  "summary": {
+    "passed": 1,
+    "failed": 2,
+    "total": 3
+  },
+  "results": [
+    {
+      "suite": "01 · boot",
+      "name": "the SPA boots, connects, and reaches an interactive state",
+      "status": "PASS",
+      "ms": 5394,
+      "steps": [
+        {
+          "label": "navigate and wait for #app + WebSocket",
+          "status": "PASS",
+          "ms": 5218
+        },
+        {
+          "label": "the splash is gone and the file panel is present",
+          "status": "PASS",
+          "ms": 4
+        },
+        {
+          "label": "the WebSocket is OPEN",
+          "status": "PASS",
+          "ms": 2
+        },
+        {
+          "label": "no uncaught page exception during boot",
+          "status": "PASS",
+          "ms": 0
+        }
+      ],
+      "evidence": [
+        {
+          "label": "time to interactive (ms)",
+          "value": 5218
+        },
+        {
+          "label": "screenshot",
+          "value": "/home/user/General-Midi-Boop/tests/e2e/artifacts/01-boot-home.png"
+        },
+        {
+          "label": "console errors at boot",
+          "value": [
+            "[error] Refused to execute script from 'http://127.0.0.1:8108/lib/WebAudioFontPlayer.js' because its MIME type ('text/html') is not executable, and strict MIME type checking is enabled.",
+            "[error] Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED"
+          ]
+        },
+        {
+          "label": "failed requests at boot",
+          "value": [
+            "https://surikov.github.io/webaudiofont/npm/dist/WebAudioFontPlayer.js :: net::ERR_TUNNEL_CONNECTION_FAILED"
+          ]
+        },
+        {
+          "label": "http >=400 at boot",
+          "value": []
+        }
+      ]
+    },
+    {
+      "suite": "01 · boot",
+      "name": "the vendored WebAudioFont player is served (F-14 precondition)",
+      "status": "FAIL",
+      "ms": 40,
+      "error": "Error: expected truthy (expected a JS content-type, got \"text/html; charset=UTF-8\" (status 200) — the vendored player is absent and the SPA fallback served index.html instead), got false\n    at fail (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:137:11)\n    at Object.toBeTruthy (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:149:20)\n    at Object.fn (file:///home/user/General-Midi-Boop/tests/e2e/specs/01-boot.spec.mjs:60:68)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async run (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:194:9)\n    at async main (file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:95:39)\n    at async file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:119:10",
+      "steps": [],
+      "evidence": [
+        {
+          "label": "GET /lib/WebAudioFontPlayer.js",
+          "value": "200 text/html; charset=UTF-8 613826 bytes"
+        }
+      ]
+    },
+    {
+      "suite": "01 · boot",
+      "name": "boot with the CDN unreachable — measures the real blocking time (F-14)",
+      "status": "FAIL",
+      "ms": 13006,
+      "error": "Error: expected 8384 < 8000\n    at fail (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:137:11)\n    at Object.toBeLessThan (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:162:26)\n    at file:///home/user/General-Midi-Boop/tests/e2e/specs/01-boot.spec.mjs:117:36\n    at TestContext.step (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:87:25)\n    at Object.fn (file:///home/user/General-Midi-Boop/tests/e2e/specs/01-boot.spec.mjs:116:17)\n    at async run (file:///home/user/General-Midi-Boop/tests/e2e/lib/runner.mjs:194:9)\n    at async main (file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:95:39)\n    at async file:///home/user/General-Midi-Boop/tests/e2e/run.mjs:119:10",
+      "steps": [
+        {
+          "label": "the CDN fallback did fire (document.write path is live)",
+          "status": "PASS",
+          "ms": 0
+        },
+        {
+          "label": "WebAudioFontPlayer is undefined once the CDN fails",
+          "status": "PASS",
+          "ms": 1
+        },
+        {
+          "label": "document parsing is not blocked by the unreachable CDN (< 8000ms)",
+          "status": "FAIL",
+          "ms": 1,
+          "error": "expected 8384 < 8000"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "CDN stall injected (ms)",
+          "value": 8000
+        },
+        {
+          "label": "CDN request intercepted",
+          "value": 1
+        },
+        {
+          "label": "DOMContentLoaded (ms)",
+          "value": 8384
+        },
+        {
+          "label": "time to interactive (ms)",
+          "value": 12777
+        },
+        {
+          "label": "screenshot",
+          "value": "/home/user/General-Midi-Boop/tests/e2e/artifacts/01-boot-offline.png"
+        },
+        {
+          "label": "typeof WebAudioFontPlayer",
+          "value": "undefined"
+        }
+      ]
+    }
+  ]
+}
