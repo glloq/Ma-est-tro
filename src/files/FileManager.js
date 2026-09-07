@@ -288,6 +288,13 @@ class FileManager {
   async exportFile(fileId) {
     const file = this.database.getFile(fileId);
     if (!file) throw new Error(`File not found: ${fileId}`);
+    // Verify the bytes are actually there BEFORE handing the client a download
+    // URL. Without this, a DB↔blobstore divergence (blob GC'd, partial restore,
+    // SD-card loss) produced a successful `file_export` whose URL then failed
+    // with an opaque 404/500 — the operator had no way to tell an export bug
+    // from a missing file (audit 2026-09-07 L07, F-83). `loadFile` already
+    // resolved the blob; this makes the two read paths agree.
+    this.blobStore.resolve(file.blob_path);
     return {
       filename: file.filename,
       contentHash: file.content_hash,

@@ -226,11 +226,7 @@ describe('L07 §Z — sauvegardes, restauration, rétention, GC', () => {
     const kept = readdirSync(backupDir)
       .filter((f) => f.startsWith('gmboop-') && f.endsWith('.db'))
       .sort();
-    expect(kept).toEqual([
-      'gmboop-2026-09-03.db',
-      'gmboop-2026-09-04.db',
-      'gmboop-2026-09-05.db'
-    ]);
+    expect(kept).toEqual(['gmboop-2026-09-03.db', 'gmboop-2026-09-04.db', 'gmboop-2026-09-05.db']);
     expect(readdirSync(backupDir).filter((f) => f.endsWith('.manifest.json')).length).toBe(3);
   }, 30000);
 

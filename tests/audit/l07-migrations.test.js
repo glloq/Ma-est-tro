@@ -116,15 +116,9 @@ describe('L07 §Y — migrations : panne au milieu du fichier N, reprise, rejeu'
     runMigrations(db, logger);
     const snapshot = () => ({
       versions: applied(),
-      tables: db
-        .prepare("SELECT COUNT(*) c FROM sqlite_master WHERE type='table'")
-        .get().c,
-      indexes: db
-        .prepare("SELECT COUNT(*) c FROM sqlite_master WHERE type='index'")
-        .get().c,
-      triggers: db
-        .prepare("SELECT COUNT(*) c FROM sqlite_master WHERE type='trigger'")
-        .get().c
+      tables: db.prepare("SELECT COUNT(*) c FROM sqlite_master WHERE type='table'").get().c,
+      indexes: db.prepare("SELECT COUNT(*) c FROM sqlite_master WHERE type='index'").get().c,
+      triggers: db.prepare("SELECT COUNT(*) c FROM sqlite_master WHERE type='trigger'").get().c
     });
     const first = snapshot();
     runMigrations(db, logger);
@@ -210,9 +204,7 @@ describe('L07 §Y — migrations : panne au milieu du fichier N, reprise, rejeu'
 
     // La preuve du mécanisme : le baseline a été considéré comme déjà appliqué
     // alors qu'AUCUNE de ses tables n'existe.
-    expect(
-      db.prepare('SELECT COUNT(*) c FROM schema_version WHERE version = 1').get().c
-    ).toBe(1);
+    expect(db.prepare('SELECT COUNT(*) c FROM schema_version WHERE version = 1').get().c).toBe(1);
     expect(hasObject('midi_files')).toBe(false);
     expect(hasObject('instruments_latency')).toBe(false);
     // Le seul signal est un log d'erreur — le service ne démarre pas.

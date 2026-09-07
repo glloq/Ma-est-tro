@@ -870,3 +870,609 @@ Registered commands       : 270
 **92 commandes** n'ont aucun site d'appel reconnu, en **deux classes de force de
 preuve** :
 
+| Classe | n | Signification | Verdict |
+|---|---:|---|---|
+| **A — mention seule** | **20** | le nom apparaît dans `public/**` sans site d'appel reconnu par l'outil (dispatch dynamique, table de correspondance) | **atteignable** — faux orphelins |
+| **B — aucune trace** | **72** | le nom n'apparaît **nulle part** dans `public/**` | **orphelines réelles** |
+
+**Le chiffre à retenir, et à republier partout dans l'audit :
+198 / 270 commandes (73,3 %) sont atteignables depuis le frontend,
+72 (26,7 %) ne le sont pas.** (Base L00 : « 147 (54,4 %) » → **à corriger**.)
+
+Ce 72 **coïncide exactement** avec le chiffre établi indépendamment par le lot
+L13. La classification fine des 72 surfaces (interne assumé / orpheline suspecte
+/ UI manquante) et les 6 diffusions WS sans écouteur sont traitées dans
+**`13_FEATURE_COMPLETENESS.md`** — je ne la duplique pas ici.
+
+#### Classe A — les 20 faux orphelins (à ne pas traiter comme morts)
+
+| Commande | Module | Fichier frontend |
+|---|---|---|
+| `instrument_list_connected` | InstrumentSettings | `public/index.html` |
+| `playback_status` | PlaybackControl | `public/index.html` |
+| `lighting_all_off`, `lighting_blackout`, `lighting_device_test`, `lighting_rule_test` | Lighting | `public/js/features/lighting/LightingHelpersMixin.js` |
+| `session_delete`, `session_export`, `session_list`, `session_load`, `session_save` | Session | `public/js/features/SystemAdminModal.js` |
+| `system_backup`, `system_clear_logs`, `system_info`, `system_logs`, `system_reboot`, `system_restart`, `system_restore`, `system_shutdown`, `system_status` | System | `public/js/features/SystemAdminModal.js` |
+
+Ces deux fichiers construisent le nom de commande dynamiquement (table d'actions
+d'administration, mixin d'aides lighting). Ce sont des **appels réels**.
+
+#### Classe B — les 72 orphelines réelles, par module
+
+Le marqueur ⚠ signale une commande **sans schéma** : orpheline **et** non validée
+— la combinaison la plus coûteuse à laisser vivre.
+
+| Module | Commandes |
+|---|---|
+| `BankEffects` (1) | `bank_effects_list` |
+| `Bluetooth` (1) | `ble_scan_stop`⚠ |
+| `Device` (3) | `device_enable`, `device_info`, `device_set_properties` |
+| `File` (8) | `file_bake_cc`⚠, `file_duplicate`⚠, `file_export`, `file_move`, `file_routing_status`⚠, `file_search`⚠, `midi_categories_list`⚠, `midi_instruments_list`⚠ |
+| `InstrumentLight` (2) | `instrument_light_all_off`⚠, `instrument_light_test`⚠ |
+| `InstrumentSettings` (2) | `instrument_type_detect`⚠, `instrument_types_list`⚠ |
+| `InstrumentVoice` (4) | `instrument_voice_create`⚠, `instrument_voice_delete`⚠, `instrument_voice_replace`⚠, `instrument_voice_update`⚠ |
+| `Latency` (8) | `latency_auto_calibrate`⚠, `latency_delete`, `latency_export`⚠, `latency_get`, `latency_list`⚠, `latency_measure`, `latency_recommendations`⚠, `latency_set` |
+| `Lighting` (2) | `lighting_led_broadcast`⚠, `lighting_scene_apply`⚠ |
+| `Midi` (3) | `midi_all_notes_off`, `midi_reset`, `midi_send` |
+| `PlaybackAnalysis` (1) | `analyze_channel` |
+| `PlaybackControl` (1) | `playback_set_loop` |
+| `PlaybackRouting` (5) | `playback_clear_channel_routing`⚠, `playback_get_channels`⚠, `playback_set_channel_routing`⚠, `playback_set_disconnect_policy`⚠, `playback_validate_routing`⚠ |
+| `Playlist` (2) | `playlist_clear`⚠, `playlist_status`⚠ |
+| `Preset` (6) | `preset_delete`, `preset_export`, `preset_list`, `preset_load`, `preset_rename`, `preset_save` |
+| `Routing` (15) | `channel_map`, `file_routing_bulk_sync`⚠, `filter_clear`, `filter_set`, `route_clear_all`⚠, `route_create`, `route_delete`, `route_duplicate`⚠, `route_enable`, `route_export`⚠, `route_import`⚠, `route_info`⚠, `route_list`⚠, `route_test`⚠, `validate_routing_feasibility`⚠ |
+| `Serial` (2) | `serial_list`⚠, `serial_status`⚠ |
+| `Session` (1) | `session_import` |
+| `StringInstrument` (2) | `tablature_delete`⚠, `tablature_get_by_file`⚠ |
+| `VirtualInstrument` (3) | `virtual_create`, `virtual_delete`, `virtual_list`⚠ |
+
+**Deux observations du point de vue « contrat » (le reste est à L13) :**
+
+1. **`RoutingCommands` — 15 des 21 commandes orphelines.** C'est le module de
+   routage MIDI, cœur fonctionnel du produit, et **aucune** de ses commandes
+   n'est appelée par l'UI. Le SPA route donc *autrement* (`playback_*`,
+   `file_routing_*`). `route_create` / `route_delete` / `route_list` /
+   `filter_set` / `channel_map` forment une **API parallèle complète et
+   inatteignable**. Soit c'est une API d'intégration assumée — et elle doit être
+   documentée comme telle et versionnée — soit c'est du code mort à supprimer.
+   Aucune position intermédiaire n'est tenable pour « complet et fonctionnel ».
+2. **`midi_panic` est appelé, `midi_all_notes_off` et `midi_reset` ne le sont
+   pas.** Les deux commandes de secours « douces » (extinction respectant les
+   enveloppes, reset système) n'ont **aucun bouton**. C'est un manque d'UI, pas
+   du code mort — et il est directement lié à F-07.
+
+---
+
+## 9. Matrice complète et plan de remédiation des schémas
+
+### 9.1 Les 10 schémas prioritaires — prêts à coller
+
+Priorisation **par la mesure**, pas par intuition. Le critère est le croisement
+`(payloads hostiles acceptés) × (effet réel : persistance, réseau, GPIO, MIDI)`.
+
+#### 1-2. `playback.schemas.js` — `playback_set_tempo`, `playback_set_volume` (F-20)
+
+`PlaybackControlCommands` accepte **100 %** (42/42) des payloads hostiles.
+`playbackSetTempo` se réduit à `Number(data?.bpm ?? data?.tempo)` sans borne.
+Mesuré :
+
+```
+set_tempo {bpm:1e308}   → ACCEPTÉ   et mémorisé
+set_tempo {}            → {"success":false,"bpm":1e+308}     ← état empoisonné conservé
+set_tempo {bpm:"fast"}  → {"success":false,"bpm":1e+308}
+playback_status         → {"tempo":1e+308, …}                ← remonté à l'UI
+```
+
+Récupérable (`{bpm:120}` restaure), donc **P2 et non P1** — mais le tempo affiché
+par l'UI est faux jusque-là, sans qu'aucune erreur ne soit émise.
+`playbackSetVolume` se protège déjà (`Number.isFinite` + clamp 0-127) : le schéma
+sert à **rejeter** au lieu de **corriger en silence**.
+
+```js
+export const playback_set_tempo = {
+  custom: (data) => {
+    const raw = data.bpm ?? data.tempo;
+    if (raw === undefined) return 'bpm is required';
+    if (typeof raw !== 'number' || !Number.isFinite(raw)) return 'bpm must be a number';
+    if (raw < 20 || raw > 400) return 'bpm must be between 20 and 400';
+    return null;
+  }
+};
+
+export const playback_set_volume = {
+  fields: { volume: { type: 'integer', required: true, min: 0, max: 127 } }
+};
+```
+
+#### 3. `lighting.schemas.js` — `lighting_rule_add`
+
+Persiste une règle **évaluée synchrone à chaque message MIDI** (F-13). Le handler
+valide les bornes MIDI mais laisse passer `condition_config` / `action_config`
+non-objets, `priority` non entier, `device_id` objet (→ erreur interne SQLite).
+
+```js
+export const lighting_rule_add = {
+  fields: {
+    device_id: { type: 'id', required: true },
+    instrument_id: { type: 'id' },
+    name: { type: 'string', maxLength: 128 },
+    priority: { type: 'integer', min: -1000, max: 1000 },
+    enabled: { type: 'boolean' },
+    condition_config: { type: 'object' },
+    action_config: { type: 'object' }
+  }
+};
+```
+
+#### 4. `lighting.schemas.js` — `lighting_rule_update`
+
+Même surface, en écriture sur une règle existante ; `updateRule(data.id, data)`
+passe **l'enveloppe entière** au repository.
+
+```js
+export const lighting_rule_update = {
+  fields: {
+    id: { type: 'id', required: true },
+    device_id: { type: 'id' },
+    instrument_id: { type: 'id' },
+    name: { type: 'string', maxLength: 128 },
+    priority: { type: 'integer', min: -1000, max: 1000 },
+    enabled: { type: 'boolean' },
+    condition_config: { type: 'object' },
+    action_config: { type: 'object' }
+  }
+};
+```
+
+#### 5. `lighting.schemas.js` — `lighting_scene_save` / `lighting_scene_apply`
+
+`deepNest` (600 niveaux), `bigArray` (50 000) et `bigString` (200 000 car.) sont
+tous **acceptés** par `lighting_scene_save`. La scène est ensuite rejouée par
+`_applySceneObject`, qui itère `scene.effects` et démarre un effet par entrée.
+
+```js
+const MAX_SCENE_ENTRIES = 512;
+
+export const lighting_scene_save = {
+  fields: { name: { type: 'string', required: true, minLength: 1, maxLength: 128 } },
+  custom: (data) => {
+    if (data.scene !== undefined) {
+      if (typeof data.scene !== 'object' || data.scene === null || Array.isArray(data.scene)) {
+        return 'scene must be an object';
+      }
+      if (Array.isArray(data.scene.effects) && data.scene.effects.length > MAX_SCENE_ENTRIES) {
+        return `scene.effects must hold at most ${MAX_SCENE_ENTRIES} entries`;
+      }
+    }
+    return null;
+  }
+};
+
+export const lighting_scene_apply = {
+  custom: (data) => {
+    const s = data.scene;
+    if (typeof s !== 'object' || s === null || Array.isArray(s)) return 'scene data is required';
+    if (Array.isArray(s.effects) && s.effects.length > MAX_SCENE_ENTRIES) {
+      return `scene.effects must hold at most ${MAX_SCENE_ENTRIES} entries`;
+    }
+    return null;
+  }
+};
+```
+
+#### 6. `lighting.schemas.js` — `lighting_led_broadcast`
+
+Ouvre une diffusion LED continue vers le réseau ; orpheline (aucun appelant
+frontend) et non validée — `enabled` non booléen est interprété par
+`data?.enabled !== false`, donc **toute valeur non-`false` active la diffusion**.
+
+```js
+export const lighting_led_broadcast = {
+  fields: { enabled: { type: 'boolean', required: true } }
+};
+```
+
+#### 7. Nouveau `playlist.schemas.js` — `playlist_create` / `playlist_update_settings`
+
+**Preuve directe de F-19** : un nom de 200 000 caractères a été persisté.
+
+```js
+export const playlist_create = {
+  fields: {
+    name: { type: 'string', required: true, minLength: 1, maxLength: 128 },
+    description: { type: 'string', maxLength: 1024 }
+  }
+};
+
+export const playlist_update_settings = {
+  fields: {
+    playlistId: { type: 'id', required: true },
+    loop: { type: 'boolean' },
+    shuffle: { type: 'boolean' },
+    autoAdvance: { type: 'boolean' },
+    gapMs: { type: 'integer', min: 0, max: 600000 }
+  }
+};
+```
+
+#### 8. Nouveau `playlist.schemas.js` — `playlist_add_file` / `playlist_remove_file` / `playlist_reorder`
+
+```js
+export const playlist_add_file = {
+  fields: {
+    playlistId: { type: 'id', required: true },
+    fileId: { type: 'id', required: true },
+    position: { type: 'integer', min: 0, max: 100000 }
+  }
+};
+
+export const playlist_remove_file = {
+  fields: { playlistId: { type: 'id', required: true }, itemId: { type: 'id', required: true } }
+};
+
+export const playlist_reorder = {
+  fields: {
+    playlistId: { type: 'id', required: true },
+    itemId: { type: 'id', required: true },
+    newPosition: { type: 'integer', required: true, min: 0, max: 100000 }
+  }
+};
+```
+
+#### 9. `file.schemas.js` — les lectures par identifiant
+
+7 commandes `file_*` transforment `{fileId:{}}` en erreur interne SQLite
+(`Too few parameter values were provided`). Un seul type `id` suffit à toutes.
+
+```js
+const byFileId = { fields: { fileId: { type: 'id', required: true } } };
+
+export const file_read = byFileId;
+export const file_metadata = byFileId;
+export const file_channels = byFileId;
+export const file_tempo_map = byFileId;
+export const file_text_events = byFileId;
+export const file_routing_status = byFileId;
+export const file_duplicate = byFileId;
+
+export const file_list = {
+  fields: { folder: { type: 'string', maxLength: 512 } }
+};
+export const file_search = {
+  fields: { query: { type: 'string', required: true, minLength: 1, maxLength: 256 } }
+};
+```
+
+#### 10. Nouveau `instrument.schemas.js` — `instrument_update_settings` / `instrument_update_capabilities`
+
+Écrit dans les colonnes de capacité que **tout le moteur d'adaptation lit**
+(périmètre L06). Mesuré : `NOT NULL constraint failed: instruments_latency.device_id`
+— autrement dit, le payload arrive brut jusqu'à `INSERT`.
+
+```js
+export const instrument_update_settings = {
+  fields: {
+    deviceId: { type: 'string', required: true, minLength: 1, maxLength: 256 },
+    instrumentId: { type: 'id' },
+    settings: { type: 'object' }
+  }
+};
+
+export const instrument_update_capabilities = {
+  fields: {
+    instrumentId: { type: 'id', required: true },
+    capabilities: { type: 'object', required: true }
+  }
+};
+
+export const instrument_delete = {
+  fields: { deviceId: { type: 'string', required: true, minLength: 1, maxLength: 256 } }
+};
+```
+
+> `instrument_delete` fait partie du lot parce qu'il produit un TypeError franc :
+> `data.deviceId.startsWith is not a function`.
+
+### 9.2 Ordre de bataille complet (les 184)
+
+| Rang | Cible | n | Justification mesurée |
+|---|---|---:|---|
+| 1 | **Inverser le défaut de `validateByCommand`** | — | fait une fois, protège les 184 et **toute commande future** |
+| 2 | `PlaybackControlCommands` (`set_tempo`, `set_volume`, `pause`, `resume`, `stop`, `status`) | 6 | 100 % des payloads hostiles acceptés · F-20 |
+| 3 | `LightingCommands` (règles, scènes, groupes, presets, broadcast) | 31 | 122 acceptations · pilote réseau + GPIO · 0 % de couverture (F-13) |
+| 4 | `PlaylistCommands` | 15 | persistance non bornée prouvée (200 000 car.) |
+| 5 | `FileCommands` (lectures par id + `file_list`/`file_search`) | 16 | 34 erreurs internes — pire ratio après `DeviceCommands` |
+| 6 | `InstrumentSettingsCommands` | 11 | écrit les capacités lues par tout le moteur (L06) |
+| 7 | `RoutingCommands` | 13 | 15 des 21 orphelines : **schéma + décision d'existence** ensemble |
+| 8 | `StringInstrumentCommands` | 15 | `CHECK constraint failed` atteint depuis le réseau |
+| 9 | `LatencyCommands` | 12 | 56 acceptations / 70 |
+| 10 | `PlaybackRoutingCommands`, `InstrumentVoiceCommands`, `InstrumentLightCommands`, `SerialCommands`, `DeviceSettingsCommands` | 25 | déjà bien auto-validés — schéma = formalisation |
+| 11 | `SystemCommands`, `HotspotCommands`, `BluetoothCommands` | 24 | majoritairement sans paramètre → **liste blanche**, pas schéma |
+| 12 | reste (`Device`, `VirtualInstrument`, `Loop*`, `Session`, `PlaybackAssignment`) | 16 | |
+
+**Garde-fou CI recommandé** (à appliquer en vague 2, `package.json` + workflow
+sont des fichiers partagés) : brancher `command-inventory.mjs` avec un cliquet —
+la couverture de schémas ne peut pas baisser sous sa valeur courante.
+
+### 9.3 Matrice complète — 270 commandes
+
+**Légende.**
+`Schéma` : ✅ schéma déclaré et câblé · ❌ défaut permissif.
+`Front` : ✅ site d'appel reconnu · 〰️ mention seule (classe A) · ❌ aucune trace (classe B).
+`Tests` : nombre de fichiers de test citant la commande.
+`Doc` : présent dans `docs/API.md`.
+`Fuzz` : issue des 7 payloads hostiles — `A`=accepté, `I`=erreur interne masquée,
+`V`=rejet de validation propre, `E`=autre `ApplicationError`, `—`=non fuzzée
+(schéma présent, ou exclue pour effet hôte irréversible).
+
+| Commande | Module | Schéma | Front | Tests | Doc | Fuzz |
+|---|---|:--:|:--:|--:|:--:|---|
+| `analyze_channel` | PlaybackAnalysis | ✅ | ❌ | 2 | ✅ | — |
+| `apply_assignments` | PlaybackAssignment | ✅ | ✅ | 3 | ✅ | — |
+| `arrangement_add_block` | LoopArrangement | ✅ | ✅ | 1 | ❌ | — |
+| `arrangement_add_track` | LoopArrangement | ✅ | ✅ | — | ❌ | — |
+| `arrangement_create` | LoopArrangement | ✅ | ✅ | 1 | ❌ | — |
+| `arrangement_delete` | LoopArrangement | ✅ | ✅ | — | ❌ | — |
+| `arrangement_delete_block` | LoopArrangement | ✅ | ✅ | — | ❌ | — |
+| `arrangement_delete_track` | LoopArrangement | ✅ | ✅ | — | ❌ | — |
+| `arrangement_get` | LoopArrangement | ✅ | ✅ | — | ❌ | — |
+| `arrangement_list` | LoopArrangement | ❌ | ✅ | — | ❌ | 7A |
+| `arrangement_update` | LoopArrangement | ✅ | ✅ | — | ❌ | — |
+| `arrangement_update_block` | LoopArrangement | ✅ | ✅ | — | ❌ | — |
+| `arrangement_update_track` | LoopArrangement | ✅ | ✅ | — | ❌ | — |
+| `bank_effects_get` | BankEffects | ✅ | ✅ | 1 | ❌ | — |
+| `bank_effects_list` | BankEffects | ✅ | ❌ | 1 | ❌ | — |
+| `bank_effects_reset` | BankEffects | ✅ | ✅ | 1 | ❌ | — |
+| `bank_effects_update` | BankEffects | ✅ | ✅ | 1 | ❌ | — |
+| `ble_connect` | Bluetooth | ✅ | ✅ | — | ✅ | — |
+| `ble_disconnect` | Bluetooth | ✅ | ✅ | — | ✅ | — |
+| `ble_forget` | Bluetooth | ❌ | ✅ | — | ✅ | 7V |
+| `ble_paired` | Bluetooth | ❌ | ✅ | — | ✅ | 7A |
+| `ble_power_off` | Bluetooth | ❌ | ✅ | — | ✅ | — |
+| `ble_power_on` | Bluetooth | ❌ | ✅ | — | ✅ | — |
+| `ble_scan_start` | Bluetooth | ❌ | ✅ | — | ✅ | 7E |
+| `ble_scan_stop` | Bluetooth | ❌ | ❌ | — | ✅ | 7A |
+| `ble_status` | Bluetooth | ❌ | ✅ | — | ✅ | 7A |
+| `calibrate_delay` | Latency | ❌ | ✅ | — | ✅ | — |
+| `calibrate_list_alsa_devices` | Latency | ❌ | ✅ | — | ✅ | 7I |
+| `calibrate_monitor_start` | Latency | ❌ | ✅ | — | ❌ | 7A |
+| `calibrate_monitor_stop` | Latency | ❌ | ✅ | — | ❌ | 7A |
+| `calibrate_preview_note` | Latency | ❌ | ✅ | — | ❌ | 7V |
+| `channel_map` | Routing | ✅ | ❌ | — | ✅ | — |
+| `device_enable` | Device | ✅ | ❌ | — | ✅ | — |
+| `device_get_settings` | DeviceSettings | ❌ | ✅ | — | ❌ | 1I/6V |
+| `device_identity_request` | Device | ❌ | ✅ | — | ✅ | 7I |
+| `device_info` | Device | ✅ | ❌ | — | ✅ | — |
+| `device_list` | Device | ❌ | ✅ | 2 | ✅ | 7A |
+| `device_refresh` | Device | ❌ | ✅ | — | ✅ | 7A |
+| `device_save_sysex_identity` | Device | ❌ | ✅ | — | ✅ | 7I |
+| `device_set_properties` | Device | ✅ | ❌ | — | ✅ | — |
+| `device_update_settings` | DeviceSettings | ❌ | ✅ | — | ❌ | 1A/6V |
+| `file_bake_cc` | File | ❌ | ❌ | — | ❌ | 7I |
+| `file_channels` | File | ❌ | ✅ | — | ✅ | 1A/1I/5V |
+| `file_delete` | File | ✅ | ✅ | — | ✅ | — |
+| `file_duplicate` | File | ❌ | ❌ | — | ✅ | 7I |
+| `file_export` | File | ✅ | ❌ | — | ✅ | — |
+| `file_filter` | File | ❌ | ✅ | 1 | ✅ | 6A/1I |
+| `file_folders_get` | File | ❌ | ✅ | — | ❌ | 7A |
+| `file_folders_set` | File | ✅ | ✅ | — | ❌ | — |
+| `file_list` | File | ❌ | ✅ | — | ✅ | 6A/1I |
+| `file_metadata` | File | ❌ | ✅ | — | ✅ | 7I |
+| `file_move` | File | ✅ | ❌ | — | ✅ | — |
+| `file_read` | File | ❌ | ✅ | — | ✅ | 7I |
+| `file_reanalyze_all` | File | ❌ | ✅ | — | ✅ | — |
+| `file_reanalyze_check` | File | ❌ | ✅ | — | ❌ | 7A |
+| `file_rename` | File | ✅ | ✅ | 1 | ✅ | — |
+| `file_routing_bulk_sync` | Routing | ❌ | ❌ | 1 | ✅ | 7A |
+| `file_routing_status` | File | ❌ | ❌ | — | ✅ | 1I/5V/1E |
+| `file_routing_sync` | Routing | ❌ | ✅ | 1 | ✅ | 2A/5V |
+| `file_save_as` | File | ✅ | ✅ | 1 | ✅ | — |
+| `file_search` | File | ❌ | ❌ | — | ✅ | 7A |
+| `file_tempo_map` | File | ❌ | ✅ | — | ❌ | 1I/6V |
+| `file_text_events` | File | ❌ | ✅ | — | ❌ | 1I/6V |
+| `file_write` | File | ✅ | ✅ | 2 | ✅ | — |
+| `filter_clear` | Routing | ✅ | ❌ | — | ✅ | — |
+| `filter_set` | Routing | ✅ | ❌ | — | ✅ | — |
+| `generate_assignment_suggestions` | PlaybackAnalysis | ✅ | ✅ | 2 | ✅ | — |
+| `get_file_routings` | PlaybackAssignment | ✅ | ✅ | 1 | ✅ | — |
+| `get_instrument_defaults` | PlaybackAssignment | ❌ | ✅ | — | ✅ | 7E |
+| `hotspot_disable` | Hotspot | ❌ | ✅ | — | ❌ | — |
+| `hotspot_enable` | Hotspot | ❌ | ✅ | — | ❌ | — |
+| `hotspot_get_config` | Hotspot | ❌ | ✅ | — | ❌ | 7A |
+| `hotspot_status` | Hotspot | ❌ | ✅ | — | ❌ | 7A |
+| `hotspot_update_config` | Hotspot | ✅ | ✅ | — | ❌ | — |
+| `instrument_add_to_device` | VirtualInstrument | ❌ | ✅ | — | ✅ | 1I/6V |
+| `instrument_create_virtual` | VirtualInstrument | ❌ | ✅ | — | ✅ | 5A/1I/1V |
+| `instrument_delete` | InstrumentSettings | ❌ | ✅ | 1 | ✅ | 1I/6V |
+| `instrument_get_capabilities` | InstrumentSettings | ❌ | ✅ | — | ✅ | 1I/6V |
+| `instrument_get_settings` | InstrumentSettings | ❌ | ✅ | — | ✅ | 6A/1I |
+| `instrument_light_all_off` | InstrumentLight | ❌ | ❌ | — | ❌ | 1I/6V |
+| `instrument_light_get` | InstrumentLight | ❌ | ✅ | — | ❌ | 1A/6V |
+| `instrument_light_list` | InstrumentLight | ❌ | ✅ | — | ❌ | 7A |
+| `instrument_light_set` | InstrumentLight | ❌ | ✅ | — | ❌ | 7V |
+| `instrument_light_set_supported` | InstrumentLight | ❌ | ✅ | — | ❌ | 7V |
+| `instrument_light_test` | InstrumentLight | ❌ | ❌ | — | ❌ | 1A/6V |
+| `instrument_list_by_device` | VirtualInstrument | ❌ | ✅ | — | ✅ | 1I/6V |
+| `instrument_list_capabilities` | InstrumentSettings | ❌ | ✅ | 1 | ✅ | 7A |
+| `instrument_list_connected` | InstrumentSettings | ❌ | 〰️ | — | ✅ | 7A |
+| `instrument_list_registered` | InstrumentSettings | ❌ | ✅ | — | ✅ | 7A |
+| `instrument_save_all` | InstrumentSettings | ❌ | ✅ | 1 | ❌ | 1I/6V |
+| `instrument_type_detect` | InstrumentSettings | ❌ | ❌ | — | ❌ | 7A |
+| `instrument_types_list` | InstrumentSettings | ❌ | ❌ | — | ❌ | 7A |
+| `instrument_update_capabilities` | InstrumentSettings | ❌ | ✅ | 1 | ✅ | 1I/6V |
+| `instrument_update_settings` | InstrumentSettings | ❌ | ✅ | — | ✅ | 6I/1V |
+| `instrument_voice_create` | InstrumentVoice | ❌ | ❌ | — | ❌ | 7V |
+| `instrument_voice_delete` | InstrumentVoice | ❌ | ❌ | — | ❌ | 1A/6V |
+| `instrument_voice_list` | InstrumentVoice | ❌ | ✅ | — | ❌ | 7V |
+| `instrument_voice_replace` | InstrumentVoice | ❌ | ❌ | — | ❌ | 7V |
+| `instrument_voice_update` | InstrumentVoice | ❌ | ❌ | — | ❌ | 1A/6V |
+| `latency_auto_calibrate` | Latency | ❌ | ❌ | — | ✅ | — |
+| `latency_delete` | Latency | ✅ | ❌ | — | ✅ | — |
+| `latency_export` | Latency | ❌ | ❌ | — | ✅ | 7A |
+| `latency_get` | Latency | ✅ | ❌ | — | ✅ | — |
+| `latency_list` | Latency | ❌ | ❌ | — | ✅ | 7A |
+| `latency_measure` | Latency | ✅ | ❌ | — | ✅ | — |
+| `latency_recommendations` | Latency | ❌ | ❌ | — | ✅ | 7A |
+| `latency_set` | Latency | ✅ | ❌ | — | ✅ | — |
+| `lighting_all_off` | Lighting | ❌ | 〰️ | — | ✅ | 7A |
+| `lighting_blackout` | Lighting | ❌ | 〰️ | 1 | ✅ | 7A |
+| `lighting_bpm_get` | Lighting | ❌ | ✅ | — | ✅ | 7A |
+| `lighting_bpm_set` | Lighting | ✅ | ✅ | — | ✅ | — |
+| `lighting_bpm_tap` | Lighting | ❌ | ✅ | 1 | ✅ | 7A |
+| `lighting_device_add` | Lighting | ✅ | ✅ | 1 | ✅ | — |
+| `lighting_device_delete` | Lighting | ❌ | ✅ | — | ✅ | 4A/1I/2V |
+| `lighting_device_list` | Lighting | ❌ | ✅ | — | ✅ | 7A |
+| `lighting_device_scan` | Lighting | ❌ | ✅ | — | ✅ | — |
+| `lighting_device_test` | Lighting | ❌ | 〰️ | — | ✅ | 5I/2V |
+| `lighting_device_update` | Lighting | ✅ | ✅ | — | ✅ | — |
+| `lighting_dmx_profiles` | Lighting | ❌ | ✅ | — | ✅ | 7A |
+| `lighting_effect_list` | Lighting | ❌ | ✅ | — | ✅ | 7A |
+| `lighting_effect_start` | Lighting | ✅ | ✅ | 1 | ✅ | — |
+| `lighting_effect_stop` | Lighting | ❌ | ✅ | — | ✅ | 7V |
+| `lighting_get_enabled` | Lighting | ❌ | ✅ | — | ❌ | 7A |
+| `lighting_group_color` | Lighting | ✅ | ✅ | 1 | ✅ | — |
+| `lighting_group_create` | Lighting | ✅ | ✅ | 1 | ✅ | — |
+| `lighting_group_delete` | Lighting | ❌ | ✅ | — | ✅ | 3A/1I/3V |
+| `lighting_group_list` | Lighting | ❌ | ✅ | — | ✅ | 7A |
+| `lighting_group_off` | Lighting | ❌ | ✅ | — | ✅ | 4I/3V |
+| `lighting_led_broadcast` | Lighting | ❌ | ❌ | 1 | ✅ | 7A |
+| `lighting_master_dimmer` | Lighting | ✅ | ✅ | 2 | ✅ | — |
+| `lighting_midi_learn` | Lighting | ❌ | ✅ | 2 | ✅ | — |
+| `lighting_preset_delete` | Lighting | ❌ | ✅ | — | ✅ | 4A/1I/2V |
+| `lighting_preset_list` | Lighting | ❌ | ✅ | — | ✅ | 7A |
+| `lighting_preset_load` | Lighting | ❌ | ✅ | — | ✅ | 2V/5E |
+| `lighting_preset_save` | Lighting | ❌ | ✅ | — | ✅ | 3A/1I/3V |
+| `lighting_rule_add` | Lighting | ❌ | ✅ | 1 | ✅ | 1I/2V/4E |
+| `lighting_rule_delete` | Lighting | ❌ | ✅ | — | ✅ | 4A/1I/2V |
+| `lighting_rule_list` | Lighting | ❌ | ✅ | — | ✅ | 6A/1I |
+| `lighting_rule_test` | Lighting | ❌ | 〰️ | — | ✅ | 5I/2V |
+| `lighting_rule_update` | Lighting | ❌ | ✅ | — | ✅ | 4A/1I/2V |
+| `lighting_rules_export` | Lighting | ❌ | ✅ | — | ✅ | 6A/1I |
+| `lighting_rules_import` | Lighting | ❌ | ✅ | — | ✅ | 7V |
+| `lighting_scene_apply` | Lighting | ❌ | ❌ | — | ✅ | 7V |
+| `lighting_scene_save` | Lighting | ❌ | ✅ | — | ✅ | 4A/3V |
+| `lighting_set_enabled` | Lighting | ❌ | ✅ | — | ❌ | 7A |
+| `loop_create` | Loop | ✅ | ✅ | 1 | ❌ | — |
+| `loop_delete` | Loop | ✅ | ✅ | 1 | ❌ | — |
+| `loop_get` | Loop | ✅ | ✅ | 1 | ❌ | — |
+| `loop_list` | Loop | ❌ | ✅ | — | ❌ | 7A |
+| `loop_update` | Loop | ✅ | ✅ | — | ❌ | — |
+| `midi_all_notes_off` | Midi | ✅ | ❌ | 2 | ✅ | — |
+| `midi_categories_list` | File | ❌ | ❌ | — | ✅ | 7A |
+| `midi_clock_toggle` | Midi | ✅ | ✅ | — | ❌ | — |
+| `midi_instruments_list` | File | ❌ | ❌ | — | ✅ | 7A |
+| `midi_panic` | Midi | ✅ | ✅ | 2 | ✅ | — |
+| `midi_reset` | Midi | ✅ | ❌ | 2 | ✅ | — |
+| `midi_send` | Midi | ✅ | ❌ | — | ✅ | — |
+| `midi_send_cc` | Midi | ✅ | ✅ | 1 | ✅ | — |
+| `midi_send_note` | Midi | ✅ | ✅ | 1 | ✅ | — |
+| `midi_send_pitchbend` | Midi | ✅ | ✅ | — | ✅ | — |
+| `monitor_start` | Routing | ✅ | ✅ | — | ✅ | — |
+| `monitor_start_all` | Routing | ❌ | ✅ | — | ❌ | 7A |
+| `monitor_stop` | Routing | ✅ | ✅ | — | ✅ | — |
+| `monitor_stop_all` | Routing | ❌ | ✅ | — | ❌ | 7A |
+| `network_connect` | Network | ✅ | ✅ | 1 | ✅ | — |
+| `network_connected_list` | Network | ✅ | ✅ | 1 | ✅ | — |
+| `network_disconnect` | Network | ✅ | ✅ | 1 | ✅ | — |
+| `network_scan` | Network | ✅ | ✅ | 1 | ✅ | — |
+| `playback_clear_channel_routing` | PlaybackRouting | ❌ | ❌ | — | ✅ | 7A |
+| `playback_get_channels` | PlaybackRouting | ❌ | ❌ | — | ✅ | 7A |
+| `playback_mute_channel` | PlaybackRouting | ❌ | ✅ | — | ✅ | 7V |
+| `playback_pause` | PlaybackControl | ❌ | ✅ | — | ✅ | 7A |
+| `playback_resume` | PlaybackControl | ❌ | ✅ | — | ✅ | 7A |
+| `playback_seek` | PlaybackControl | ✅ | ✅ | 1 | ✅ | — |
+| `playback_set_channel_routing` | PlaybackRouting | ❌ | ❌ | — | ✅ | 7V |
+| `playback_set_disconnect_policy` | PlaybackRouting | ❌ | ❌ | — | ❌ | 7V |
+| `playback_set_loop` | PlaybackControl | ✅ | ❌ | 2 | ✅ | — |
+| `playback_set_tempo` | PlaybackControl | ❌ | ✅ | 1 | ✅ | 7A |
+| `playback_set_volume` | PlaybackControl | ❌ | ✅ | — | ✅ | 7A |
+| `playback_start` | PlaybackControl | ✅ | ✅ | 2 | ✅ | — |
+| `playback_status` | PlaybackControl | ❌ | 〰️ | 1 | ✅ | 7A |
+| `playback_stop` | PlaybackControl | ❌ | ✅ | 2 | ✅ | 7A |
+| `playback_transpose` | PlaybackControl | ✅ | ✅ | 1 | ✅ | — |
+| `playback_validate_routing` | PlaybackRouting | ❌ | ❌ | 1 | ❌ | 1I/5V/1E |
+| `playlist_add_file` | Playlist | ❌ | ✅ | — | ✅ | 7V |
+| `playlist_clear` | Playlist | ❌ | ❌ | — | ❌ | 1I/6V |
+| `playlist_create` | Playlist | ❌ | ✅ | 1 | ✅ | 3A/4I |
+| `playlist_delete` | Playlist | ❌ | ✅ | — | ✅ | 6A/1I |
+| `playlist_get` | Playlist | ❌ | ✅ | — | ❌ | 1I/6V |
+| `playlist_list` | Playlist | ❌ | ✅ | — | ✅ | 7A |
+| `playlist_next` | Playlist | ❌ | ✅ | — | ❌ | 7V |
+| `playlist_previous` | Playlist | ❌ | ✅ | — | ❌ | 7V |
+| `playlist_remove_file` | Playlist | ❌ | ✅ | — | ❌ | 7V |
+| `playlist_reorder` | Playlist | ❌ | ✅ | — | ❌ | 7V |
+| `playlist_set_loop` | Playlist | ❌ | ✅ | — | ❌ | 1I/6V |
+| `playlist_start` | Playlist | ❌ | ✅ | — | ❌ | 1I/6V |
+| `playlist_status` | Playlist | ❌ | ❌ | — | ✅ | 7A |
+| `playlist_stop` | Playlist | ❌ | ✅ | — | ❌ | 7A |
+| `playlist_update_settings` | Playlist | ❌ | ✅ | — | ❌ | 1I/6V |
+| `preset_delete` | Preset | ✅ | ❌ | 1 | ✅ | — |
+| `preset_export` | Preset | ✅ | ❌ | 1 | ❌ | — |
+| `preset_list` | Preset | ✅ | ❌ | 1 | ✅ | — |
+| `preset_load` | Preset | ✅ | ❌ | 1 | ✅ | — |
+| `preset_rename` | Preset | ✅ | ❌ | 1 | ❌ | — |
+| `preset_save` | Preset | ✅ | ❌ | 1 | ✅ | — |
+| `route_clear_all` | Routing | ❌ | ❌ | — | ✅ | 7A |
+| `route_create` | Routing | ✅ | ❌ | 1 | ✅ | — |
+| `route_delete` | Routing | ✅ | ❌ | 1 | ✅ | — |
+| `route_duplicate` | Routing | ❌ | ❌ | — | ✅ | 7E |
+| `route_enable` | Routing | ✅ | ❌ | 1 | ✅ | — |
+| `route_export` | Routing | ❌ | ❌ | — | ✅ | 7E |
+| `route_import` | Routing | ❌ | ❌ | — | ✅ | 7I |
+| `route_info` | Routing | ❌ | ❌ | 1 | ✅ | 7E |
+| `route_list` | Routing | ❌ | ❌ | 1 | ✅ | 7A |
+| `route_test` | Routing | ❌ | ❌ | 1 | ✅ | 7E |
+| `routing_save_hand_overrides` | Routing | ❌ | ✅ | 2 | ❌ | 7V |
+| `serial_close` | Serial | ❌ | ✅ | — | ✅ | 2I/5V |
+| `serial_list` | Serial | ❌ | ❌ | — | ✅ | 7A |
+| `serial_open` | Serial | ❌ | ✅ | — | ✅ | 2I/5V |
+| `serial_scan` | Serial | ❌ | ✅ | — | ✅ | 7I |
+| `serial_set_enabled` | Serial | ❌ | ✅ | — | ✅ | 1A/6V |
+| `serial_status` | Serial | ❌ | ❌ | — | ✅ | 7A |
+| `session_delete` | Session | ✅ | 〰️ | 1 | ✅ | — |
+| `session_export` | Session | ✅ | 〰️ | 1 | ✅ | — |
+| `session_import` | Session | ✅ | ❌ | 1 | ✅ | — |
+| `session_list` | Session | ❌ | 〰️ | 1 | ✅ | 7A |
+| `session_load` | Session | ✅ | 〰️ | 2 | ✅ | — |
+| `session_save` | Session | ✅ | 〰️ | 2 | ✅ | — |
+| `string_instrument_apply_preset` | StringInstrument | ❌ | ✅ | — | ✅ | 7V |
+| `string_instrument_create` | StringInstrument | ❌ | ✅ | 1 | ✅ | 3A/4I |
+| `string_instrument_create_from_preset` | StringInstrument | ❌ | ✅ | — | ✅ | 7V |
+| `string_instrument_delete` | StringInstrument | ❌ | ✅ | — | ✅ | 5A/1I/1V |
+| `string_instrument_get` | StringInstrument | ❌ | ✅ | — | ✅ | 5A/1I/1V |
+| `string_instrument_get_presets` | StringInstrument | ❌ | ✅ | — | ✅ | 7A |
+| `string_instrument_get_scale_length_presets` | StringInstrument | ❌ | ✅ | — | ❌ | 7A |
+| `string_instrument_list` | StringInstrument | ❌ | ✅ | — | ✅ | 6A/1I |
+| `string_instrument_update` | StringInstrument | ❌ | ✅ | — | ✅ | 5A/2V |
+| `sysex_identity_request` | Device | ❌ | ✅ | — | ❌ | 7I |
+| `system_backup` | System | ✅ | 〰️ | — | ✅ | — |
+| `system_check_update` | System | ❌ | ✅ | — | ✅ | — |
+| `system_clear_logs` | System | ❌ | 〰️ | — | ✅ | — |
+| `system_info` | System | ❌ | 〰️ | — | ✅ | 7A |
+| `system_logs` | System | ❌ | 〰️ | 3 | ✅ | 7A |
+| `system_reboot` | System | ❌ | 〰️ | — | ❌ | — |
+| `system_restart` | System | ❌ | 〰️ | — | ✅ | — |
+| `system_restore` | System | ❌ | 〰️ | 1 | ✅ | — |
+| `system_shutdown` | System | ❌ | 〰️ | 1 | ✅ | — |
+| `system_status` | System | ❌ | 〰️ | 1 | ✅ | 7A |
+| `system_update` | System | ❌ | ✅ | — | ✅ | — |
+| `tablature_convert_from_midi` | StringInstrument | ❌ | ✅ | — | ✅ | 7V |
+| `tablature_convert_to_midi` | StringInstrument | ❌ | ✅ | — | ✅ | 7V |
+| `tablature_delete` | StringInstrument | ❌ | ❌ | — | ✅ | 7V |
+| `tablature_get` | StringInstrument | ❌ | ✅ | — | ✅ | 7V |
+| `tablature_get_by_file` | StringInstrument | ❌ | ❌ | — | ✅ | 7V |
+| `tablature_save` | StringInstrument | ❌ | ✅ | — | ✅ | 7V |
+| `tuner_list_instruments` | Latency | ❌ | ✅ | — | ❌ | 7A |
+| `tuner_monitor_start` | Latency | ❌ | ✅ | — | ❌ | 7A |
+| `tuner_monitor_stop` | Latency | ❌ | ✅ | — | ❌ | 7A |
+| `update_instrument_capabilities` | PlaybackAssignment | ❌ | ✅ | — | ✅ | 7V |
+| `validate_instrument_capabilities` | PlaybackAssignment | ❌ | ✅ | — | ✅ | 7A |
+| `validate_routing_feasibility` | Routing | ❌ | ❌ | — | ❌ | 7V |
+| `virtual_create` | VirtualInstrument | ✅ | ❌ | — | ✅ | — |
+| `virtual_delete` | VirtualInstrument | ✅ | ❌ | — | ✅ | — |
+| `virtual_instrument_toggle` | VirtualInstrument | ❌ | ✅ | — | ❌ | 1I/6V |
+| `virtual_list` | VirtualInstrument | ❌ | ❌ | — | ✅ | 7A |
+| `wifi_connect` | Hotspot | ✅ | ✅ | — | ❌ | — |
+| `wifi_disconnect` | Hotspot | ❌ | ✅ | — | ❌ | — |
+| `wifi_forget` | Hotspot | ✅ | ✅ | — | ❌ | — |
+| `wifi_list_saved` | Hotspot | ❌ | ✅ | — | ❌ | 7A |
+| `wifi_scan` | Hotspot | ❌ | ✅ | — | ❌ | 7A |

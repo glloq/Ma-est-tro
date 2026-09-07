@@ -194,9 +194,9 @@ describe('L07 §W — concurrence applicative (« deux onglets ouverts »)', () 
     ]);
     expect(a.adaptedFileId).toBe(b.adaptedFileId);
     expect(database.getAllFiles().length).toBe(2); // original + 1 adapté
-    expect(database.pragmaIntegrity?.() ?? database.db.pragma('integrity_check', { simple: true })).toBe(
-      'ok'
-    );
+    expect(
+      database.pragmaIntegrity?.() ?? database.db.pragma('integrity_check', { simple: true })
+    ).toBe('ok');
   });
 
   test('W-4 — DÉFAUT F-85 : apply concurrent d’une suppression du même fichier → blob orphelin sur disque', async () => {
@@ -270,9 +270,7 @@ describe('L07 §W — concurrence applicative (« deux onglets ouverts »)', () 
 
     // En revanche rien n'INTERDIT structurellement la collision : aucune
     // contrainte UNIQUE(playlist_id, position) n'existe.
-    const idx = database.db
-      .pragma('index_list(playlist_items)')
-      .filter((i) => i.unique === 1);
+    const idx = database.db.pragma('index_list(playlist_items)').filter((i) => i.unique === 1);
     expect(idx).toEqual([]);
   });
 });

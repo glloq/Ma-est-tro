@@ -223,14 +223,27 @@ describe('L05 · F-58 — mute/unmute pendant la lecture : fuite du compteur de 
     } finally {
       inst.restore();
     }
-    // Le compteur interne du scheduler croit toujours 3 voix actives…
+    // 1. Le compteur interne du scheduler croit encore que 60 et 64 sonnent :
+    //    leurs note-off n'ont jamais atteint `_dispatchToDevice` (le test de
+    //    mute est FAIT AVANT, dans sendEvent), donc rien ne les a décrémentés.
     const counts = player.scheduler._activeNotes.get('dev0:0');
-    const voices = counts ? [...counts.values()].reduce((a, b) => a + b, 0) : 0;
-    expect(voices).toBeGreaterThanOrEqual(3);
-    // …donc les notes émises APRÈS le unmute sont évincées/filtrées.
-    const after = deviceManager.trace.filter(
-      (e) => (e.status & 0xf0) === 0x90 && e.data2 > 0 && (e.data1 === 72 || e.data1 === 74)
+    const stillCounted = counts ? [...counts.keys()].sort((a, b) => a - b) : [];
+    expect(stillCounted).toEqual(expect.arrayContaining([60, 64]));
+
+    // 2. Conséquence audible : au retour du unmute, la polyphonie est déjà
+    //    saturée, donc la note suivante déclenche une éviction et le moteur
+    //    émet un note-off FANTÔME pour une hauteur qui ne sonne plus
+    //    (elle avait été coupée par le CC 123 du mute).
+    const trace = deviceManager.trace;
+    const muteIdx = trace.findIndex((e) => (e.status & 0xf0) === 0xb0 && e.data1 === 123);
+    const afterMute = trace.slice(muteIdx + 1);
+    const phantomOffs = afterMute.filter(
+      (e) => (e.status & 0xf0) === 0x80 && [60, 64, 67].includes(e.data1)
     );
-    expect(after.length).toBeLessThan(2); // au moins une note perdue
+    expect(phantomOffs.length).toBeGreaterThanOrEqual(1);
+    // La note 72 est bien jouée, mais précédée de ce note-off fantôme.
+    const on72 = afterMute.findIndex((e) => (e.status & 0xf0) === 0x90 && e.data1 === 72);
+    expect(on72).toBeGreaterThan(0);
+    expect(afterMute[on72 - 1]).toMatchObject({ status: 0x80, data1: 67 });
   });
 });

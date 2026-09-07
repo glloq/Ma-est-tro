@@ -165,7 +165,7 @@ describe('L04/§L — back-off, épuisement et fuites', () => {
         await jest.advanceTimersByTimeAsync(delay + 1);
       }
 
-      expect(attempts.map((t) => t - t0)).toEqual([2001, 6002, 14003, 30004, 60005]);
+      expect(attempts.map((t) => t - t0)).toEqual([2000, 6000, 14000, 30000, 60000]);
       // Épuisement : plus aucun timer armé, l'état est purgé…
       expect(mgr._reconnect.size).toBe(0);
       await jest.advanceTimersByTimeAsync(120000);

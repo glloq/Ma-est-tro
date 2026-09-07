@@ -133,40 +133,49 @@ describe('L12 §C02 — séquence d’arrêt', () => {
   });
 });
 
-describe('L12 §C02 — F-129 : LightingManager.shutdown() n’atteint jamais allOff()', () => {
-  test('EventBus n’expose pas removeListener (il expose off)', () => {
+describe('L12 §C02 — F-129 : l’arrêt du lighting doit atteindre allOff()', () => {
+  // Historique. Le 2026-09-07 à 11:07, sur serveur vivant, CHAQUE arrêt
+  // journalisait :
+  //   ERROR Stop step "lightingManager" failed (continuing):
+  //         this.eventBus.removeListener is not a function
+  // `_removeEventListeners()` est la PREMIÈRE instruction de `shutdown()` :
+  // la TypeError sautait tout le reste, dont `allOff()` — les lumières
+  // restaient allumées après la fin du spectacle. Le lot L02 a corrigé le
+  // point (leur F-30, `off()` au lieu de `removeListener()`) pendant que ce
+  // lot tournait. Les deux tests ci-dessous verrouillent la correction.
+
+  test('EventBus expose off(), pas removeListener() — l’origine du défaut', () => {
     const bus = new EventBus();
     expect(typeof bus.off).toBe('function');
-    // Constat, pas souhait : c’est l’origine de F-129. Si un jour EventBus
-    // gagne removeListener, ce test tombe et F-129 devient caduc — c’est
-    // exactement le signal voulu.
     expect(typeof bus.removeListener).toBe('undefined');
   });
 
-  test.failing(
-    'F-129 — shutdown() doit couper les lumières ; aujourd’hui il lève avant allOff()',
-    async () => {
-      const { default: LightingManager } = await import('../../src/lighting/LightingManager.js');
-      const bus = new EventBus();
-      const self = Object.create(LightingManager.prototype);
-      self.eventBus = bus;
-      self._onMidiRouted = () => {};
-      self._onMidiMessage = () => {};
-      self._healthCheckInterval = null;
-      self._ledBatchTimers = new Map();
-      self._ledBatchBuffer = new Map();
-      self.activeFades = new Map();
-      self.activeNotes = new Map();
-      self.drivers = new Map();
-      let allOffCalled = false;
-      self.effectsEngine = { shutdown() {} };
-      self.allOff = () => {
-        allOffCalled = true;
-      };
-      await self.shutdown();
-      expect(allOffCalled).toBe(true);
-    }
-  );
+  test('shutdown() détache les écouteurs ET coupe les lumières', async () => {
+    const { default: LightingManager } = await import('../../src/lighting/LightingManager.js');
+    const bus = new EventBus();
+    const self = Object.create(LightingManager.prototype);
+    self.eventBus = bus;
+    self._onMidiRouted = () => {};
+    self._onMidiMessage = () => {};
+    bus.on('midi_routed', self._onMidiRouted);
+    bus.on('midi_message', self._onMidiMessage);
+    self._healthCheckInterval = null;
+    self._ledBatchTimers = new Map();
+    self._ledBatchBuffer = new Map();
+    self.activeFades = new Map();
+    self.activeNotes = new Map();
+    self.drivers = new Map();
+    let allOffCalled = false;
+    self.effectsEngine = { shutdown() {} };
+    self.allOff = () => {
+      allOffCalled = true;
+    };
+
+    await expect(self.shutdown()).resolves.toBeUndefined();
+
+    expect(allOffCalled).toBe(true); // état sûr atteint
+    expect(bus.listenerCount?.('midi_message') ?? 0).toBe(0);
+  });
 });
 
 describe('L12 §AZ — backpressure : un client qui ne lit plus', () => {

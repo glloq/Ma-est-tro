@@ -111,23 +111,25 @@ describe('L07 §X — concurrence SQLite réelle', () => {
     // Lancés en PARALLÈLE (spawn, pas spawnSync) : c'est la contention qui
     // nous intéresse, pas le débit.
     const reports = await Promise.all(
-      Array.from({ length: N_PROC }, (_, i) =>
-        new Promise((resolve, reject) => {
-          const c = spawn('node', ['-e', WRITER_SRC, '--', dbPath, `w${i}`, String(N_ROWS)], {
-            cwd: REPO_ROOT
-          });
-          let out = '';
-          let err = '';
-          c.stdout.on('data', (d) => (out += d));
-          c.stderr.on('data', (d) => (err += d));
-          c.on('close', () => {
-            try {
-              resolve(JSON.parse(out));
-            } catch (e) {
-              reject(new Error(`fils ${i} : ${err || out}`));
-            }
-          });
-        })
+      Array.from(
+        { length: N_PROC },
+        (_, i) =>
+          new Promise((resolve, reject) => {
+            const c = spawn('node', ['-e', WRITER_SRC, '--', dbPath, `w${i}`, String(N_ROWS)], {
+              cwd: REPO_ROOT
+            });
+            let out = '';
+            let err = '';
+            c.stdout.on('data', (d) => (out += d));
+            c.stderr.on('data', (d) => (err += d));
+            c.on('close', () => {
+              try {
+                resolve(JSON.parse(out));
+              } catch (e) {
+                reject(new Error(`fils ${i} : ${err || out}`));
+              }
+            });
+          })
       )
     );
     const totalOk = reports.reduce((n, r) => n + r.ok, 0);
