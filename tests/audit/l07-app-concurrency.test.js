@@ -8,12 +8,20 @@
 // Node est mono-thread et better-sqlite3 est synchrone : l'entrelacement n'est
 // possible qu'aux points `await`. `apply_assignments` en possède un
 // (`await fileManager.replaceFileBytes / createDerivedFile`) — et c'est
-// exactement là que ça casse.
+// exactement là que ça cassait.
+//
+// MISE À JOUR — vague 1, R4 (F-76 / F-77). Le défaut est corrigé : verrou par
+// fichier + contrôle de version optimiste (compare-and-swap sur le couple
+// « empreinte des octets + empreinte du jeu de routages »). W-1..W-4 verrouillent
+// désormais le BON comportement : parmi deux applies concurrents, un seul
+// écrit, l'autre reçoit un `ConflictError` explicite — plus jamais deux
+// `success: true` pour un fichier corrompu.
 //
 // Les handlers sont obtenus via le vrai `register()` du module, contre une
 // vraie base SQLite, un vrai BlobStore et un vrai FileManager.
 
 import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
+import { ConflictError } from '../../src/core/errors/index.js';
 import { writeMidi, parseMidi } from 'midi-file';
 import { mkdtempSync, mkdirSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
@@ -116,90 +124,146 @@ describe('L07 §W — concurrence applicative (« deux onglets ouverts »)', () 
     }
   });
 
-  test('W-1 — DÉFAUT F-76 : deux apply concurrents avec `overwriteOriginal` CUMULENT leurs transpositions', async () => {
+  /**
+   * Résout deux applies concurrents et exige EXACTEMENT un gagnant : l'autre
+   * doit avoir été refusé par un ConflictError (jamais un `success` mensonger).
+   */
+  async function raceTwoApplies(payloadA, payloadB) {
+    const settled = await Promise.allSettled([apply(payloadA), apply(payloadB)]);
+    const winners = settled.filter((r) => r.status === 'fulfilled');
+    const losers = settled.filter((r) => r.status === 'rejected');
+    expect(winners.length).toBe(1);
+    expect(losers.length).toBe(1);
+    expect(losers[0].reason).toBeInstanceOf(ConflictError);
+    expect(losers[0].reason.code).toBe('ERR_CONFLICT');
+    expect(losers[0].reason.statusCode).toBe(409);
+    return { winner: winners[0].value, conflict: losers[0].reason };
+  }
+
+  test('W-1 — F-76 CORRIGÉ : deux apply concurrents avec `overwriteOriginal` ne cumulent plus ; le perdant est refusé', async () => {
     const up = await fileManager.handleUpload('song.mid', midiBuffer(70));
     expect(notesOf(up.fileId)[0]).toBe(70);
 
-    const [a, b] = await Promise.all([
-      apply({
+    const { winner } = await raceTwoApplies(
+      {
         originalFileId: up.fileId,
         createAdaptedFile: true,
         overwriteOriginal: true,
         assignments: assignment('dev-a', 5)
-      }),
-      apply({
+      },
+      {
         originalFileId: up.fileId,
         createAdaptedFile: true,
         overwriteOriginal: true,
         assignments: assignment('dev-b', 7)
-      })
-    ]);
+      }
+    );
+    expect(winner.success).toBe(true);
 
-    // Les deux clients reçoivent un ACQUITTEMENT POSITIF…
-    expect(a.success).toBe(true);
-    expect(b.success).toBe(true);
-
-    // …et le fichier ne porte NI +5 NI +7 : le second a lu la SORTIE du premier
-    // comme entrée, donc +12. Une octave d'écart, silencieusement.
+    // Le fichier porte EXACTEMENT une transposition — celle du gagnant.
     const notes = notesOf(up.fileId);
-    expect(notes[0]).not.toBe(75); // ni le résultat de A
-    expect(notes[0]).not.toBe(77); // ni celui de B
-    expect(notes[0]).toBe(82); // 70 + 5 + 7 : cumul
+    expect(notes[0]).not.toBe(82); // le cumul 70+5+7 mesuré par l'audit
+    expect([75, 77]).toContain(notes[0]);
   });
 
-  test('W-2 — DÉFAUT F-77 : sans overwrite, dernier arrivé gagne mais les DEUX reçoivent success + le même adaptedFileId', async () => {
+  test('W-1b — F-76 CORRIGÉ : la variante +5 / −5 ne peut plus ramener le fichier à l’original', async () => {
+    const up = await fileManager.handleUpload('song.mid', midiBuffer(70));
+
+    await raceTwoApplies(
+      {
+        originalFileId: up.fileId,
+        createAdaptedFile: true,
+        overwriteOriginal: true,
+        assignments: assignment('dev-a', 5)
+      },
+      {
+        originalFileId: up.fileId,
+        createAdaptedFile: true,
+        overwriteOriginal: true,
+        assignments: assignment('dev-b', -5)
+      }
+    );
+
+    // L'audit mesurait un retour à 70 : les DEUX adaptations perdues.
+    const notes = notesOf(up.fileId);
+    expect(notes[0]).not.toBe(70);
+    expect([75, 65]).toContain(notes[0]);
+  });
+
+  test('W-2 — F-77 CORRIGÉ : sans overwrite, le perdant apprend le conflit au lieu de recevoir un adaptedFileId mensonger', async () => {
     const up = await fileManager.handleUpload('song.mid', midiBuffer(60));
 
-    const [a, b] = await Promise.all([
-      apply({
+    const { winner } = await raceTwoApplies(
+      {
         originalFileId: up.fileId,
         createAdaptedFile: true,
         assignments: assignment('dev-a', 12)
-      }),
-      apply({
+      },
+      {
         originalFileId: up.fileId,
         createAdaptedFile: true,
         assignments: assignment('dev-b', -12)
-      })
-    ]);
+      }
+    );
 
-    expect(a.success).toBe(true);
-    expect(b.success).toBe(true);
-    // Un SEUL fichier adapté existe, et les deux clients pointent dessus.
-    expect(a.adaptedFileId).toBe(b.adaptedFileId);
+    // Un seul fichier adapté, et son contenu est bien celui du gagnant.
     expect(database.getAllFiles().filter((f) => f.parent_file_id === up.fileId).length).toBe(1);
+    expect([72, 48]).toContain(notesOf(winner.adaptedFileId)[0]);
 
-    // Son contenu est celui de B. A croit pourtant avoir persisté +12.
-    expect(notesOf(a.adaptedFileId)[0]).toBe(48);
-
-    // Idem pour le routage : une seule ligne, celle de B.
-    const routings = app.routingRepository.findByFileId(a.adaptedFileId);
+    // Le routage correspond au MÊME apply que le contenu : plus de divergence
+    // « octets de B, routage de B, mais A croit avoir persisté ».
+    const routings = app.routingRepository.findByFileId(winner.adaptedFileId);
     expect(routings.length).toBe(1);
-    expect(routings[0].device_id).toBe('dev-b');
+    expect(routings[0].device_id).toBe(winner.routings[0].device_id);
   });
 
-  test('W-3 — deux apply IDENTIQUES en parallèle : dédoublonnage propre, aucune ligne en double', async () => {
+  test('W-3 — deux apply concurrents IDENTIQUES : un seul fichier adapté, aucune ligne en double, base intègre', async () => {
     const up = await fileManager.handleUpload('song.mid', midiBuffer(60));
-    const [a, b] = await Promise.all([
-      apply({
+    // Même destination ET même transposition : les deux plans convergent, mais
+    // un seul écrit — l'autre est refusé plutôt que d'écraser en aveugle.
+    const { winner } = await raceTwoApplies(
+      {
         originalFileId: up.fileId,
         createAdaptedFile: true,
         assignments: assignment('dev-a', 12)
-      }),
-      apply({
+      },
+      {
         originalFileId: up.fileId,
         createAdaptedFile: true,
-        assignments: assignment('dev-b', 12)
-      })
-    ]);
-    expect(a.adaptedFileId).toBe(b.adaptedFileId);
+        assignments: assignment('dev-a', 12)
+      }
+    );
+    expect(winner.adaptedFileId).toBeTruthy();
     expect(database.getAllFiles().length).toBe(2); // original + 1 adapté
+    expect(app.routingRepository.findByFileId(winner.adaptedFileId).length).toBe(1);
     expect(
       database.pragmaIntegrity?.() ?? database.db.pragma('integrity_check', { simple: true })
     ).toBe('ok');
   });
 
-  test('W-4 — DÉFAUT F-85 : apply concurrent d’une suppression du même fichier → blob orphelin sur disque', async () => {
+  test('W-3b — deux apply SÉQUENTIELS ne déclenchent aucun conflit (le verrou ne casse pas le ré-apply normal)', async () => {
+    const up = await fileManager.handleUpload('song.mid', midiBuffer(60));
+    const first = await apply({
+      originalFileId: up.fileId,
+      createAdaptedFile: true,
+      assignments: assignment('dev-a', 12)
+    });
+    // Ré-apply après réponse complète : l'instantané est pris APRÈS l'écriture
+    // précédente, donc aucune dérive — le flux normal reste inchangé.
+    const second = await apply({
+      originalFileId: up.fileId,
+      createAdaptedFile: true,
+      assignments: assignment('dev-b', 3)
+    });
+    expect(first.success).toBe(true);
+    expect(second.success).toBe(true);
+    expect(second.adaptedFileId).toBe(first.adaptedFileId);
+    const routings = app.routingRepository.findByFileId(second.adaptedFileId);
+    expect(routings.length).toBe(1);
+    expect(routings[0].device_id).toBe('dev-b');
+  });
+
+  test('W-4 — F-85 : apply concurrent d’une suppression du même fichier → plus aucun blob orphelin', async () => {
     const up = await fileManager.handleUpload('song.mid', midiBuffer(80));
 
     const applying = apply({
@@ -210,13 +274,14 @@ describe('L07 §W — concurrence applicative (« deux onglets ouverts »)', () 
     const deleting = fileManager.deleteFile(up.fileId);
     const results = await Promise.allSettled([applying, deleting]);
 
-    // Les deux opérations « réussissent ».
-    expect(results.every((r) => r.status === 'fulfilled')).toBe(true);
-    // La base est cohérente : le fichier adapté a bien été cascadé avec son parent.
+    // La suppression réussit ; l'apply, qui prend le verrou AVANT de lire, voit
+    // le fichier disparu et le dit (NotFound) au lieu de « réussir » à vide.
+    expect(results[1].status).toBe('fulfilled');
+    expect(results[0].status).toBe('rejected');
     expect(database.getAllFiles().length).toBe(0);
 
-    // Mais l'octet du fichier adapté reste sur disque, sans aucune ligne qui le
-    // référence. Il ne sera réclamé qu'au prochain BACKUP RÉUSSI (gcOrphans).
+    // Et surtout : l'octet adapté n'est plus écrit du tout, donc plus d'orphelin
+    // en attente du prochain GC de sauvegarde (F-85).
     const referenced = new Set(database.midiDB.listBlobsForManifest().map((r) => r.blob_path));
     const onDisk = [];
     const { readdirSync, existsSync } = await import('fs');
@@ -227,7 +292,7 @@ describe('L07 §W — concurrence applicative (« deux onglets ouverts »)', () 
       }
     }
     const orphans = onDisk.filter((b) => !referenced.has(b));
-    expect(orphans.length).toBe(1);
+    expect(orphans.length).toBe(0);
   });
 
   test('W-5 — deux enregistrements concurrents du MÊME instrument : dernier arrivé gagne, sans jeton de version', () => {

@@ -95,10 +95,11 @@ describe('L07 §X — concurrence SQLite réelle', () => {
     const { db } = freshDb('pragmas');
     expect(db.pragma('journal_mode', { simple: true })).toBe('wal');
     expect(db.pragma('foreign_keys', { simple: true })).toBe(1);
-    // `busy_timeout` n'est JAMAIS positionné par le code du projet : la valeur
-    // observée est le défaut de better-sqlite3 (`timeout: 5000`). Le test fige
-    // ce contrat implicite — s'il change, la contention devient immédiate.
-    expect(db.pragma('busy_timeout', { simple: true })).toBe(5000);
+    // R5 (F-130/F-78) : `busy_timeout` est désormais posé EXPLICITEMENT par
+    // `applyConnectionPragmas`. Ce n'est plus le défaut implicite 5 000 ms du
+    // pilote — parce que better-sqlite3 est synchrone et que cette attente est
+    // littéralement le gel maximal du processus (donc de l'ordonnanceur MIDI).
+    expect(db.pragma('busy_timeout', { simple: true })).toBe(250);
     db.close();
   });
 
@@ -153,7 +154,9 @@ describe('L07 §X — concurrence SQLite réelle', () => {
     const { db, dbPath } = freshDb('lock-short');
     db.close();
 
-    const child = spawn('node', ['-e', LOCKER_SRC, '--', dbPath, '600'], { cwd: REPO_ROOT });
+    // 150 ms < busy_timeout (250 ms depuis R5) : l'écriture doit ATTENDRE puis
+    // réussir, exactement comme avant — seul le seuil a changé.
+    const child = spawn('node', ['-e', LOCKER_SRC, '--', dbPath, '150'], { cwd: REPO_ROOT });
     await new Promise((res) => child.stdout.once('data', res));
 
     const app = openDatabase(dbPath, silentLogger);
@@ -166,10 +169,10 @@ describe('L07 §X — concurrence SQLite réelle', () => {
     child.kill('SIGKILL');
 
     // L'écriture a bien ATTENDU la libération du verrou (elle n'a pas échoué).
-    expect(waited).toBeGreaterThanOrEqual(300);
+    expect(waited).toBeGreaterThanOrEqual(60);
   }, 30000);
 
-  test('X-4 — verrou plus long que busy_timeout : échec PROPRE (SQLITE_BUSY), zéro donnée perdue silencieusement', async () => {
+  test('X-4 — verrou plus long que busy_timeout : échec PROPRE (SQLITE_BUSY) en ~250 ms, zéro donnée perdue silencieusement', async () => {
     const { db, dbPath } = freshDb('lock-long');
     db.prepare("INSERT INTO settings (key, value) VALUES ('avant','1')").run();
     db.close();
@@ -189,8 +192,10 @@ describe('L07 §X — concurrence SQLite réelle', () => {
 
     expect(caught).not.toBeNull();
     expect(caught.code).toBe('SQLITE_BUSY');
-    // ~busy_timeout : l'appel a bloqué 5 s avant d'abandonner.
-    expect(waited).toBeGreaterThanOrEqual(4500);
+    // ~busy_timeout : l'appel abandonne au bout de ~250 ms (R5), plus des 5 s
+    // mesurées par l'audit. L'échec reste propre et explicite.
+    expect(waited).toBeGreaterThanOrEqual(200);
+    expect(waited).toBeLessThan(1500);
     // L'échec est explicite : rien n'a été écrit à moitié.
     expect(app.prepare("SELECT COUNT(*) c FROM settings WHERE key='pendant'").get().c).toBe(0);
     expect(app.prepare("SELECT COUNT(*) c FROM settings WHERE key='avant'").get().c).toBe(1);
@@ -198,7 +203,7 @@ describe('L07 §X — concurrence SQLite réelle', () => {
     child.kill('SIGKILL');
   }, 40000);
 
-  test('X-5 — une écriture contendue GÈLE la boucle d’événements ~busy_timeout (risque timing MIDI)', async () => {
+  test('X-5 — une écriture contendue gèle la boucle d’événements ~busy_timeout — ramené de ~5 000 ms à ~250 ms (R5)', async () => {
     const { db, dbPath } = freshDb('eventloop');
     db.close();
 
@@ -227,8 +232,12 @@ describe('L07 §X — concurrence SQLite réelle', () => {
     child.kill('SIGKILL');
 
     // better-sqlite3 est synchrone : l'attente « busy » bloque TOUT le
-    // processus. Sur un Pi, cela suspend l'ordonnanceur MIDI d'autant.
-    expect(maxGap).toBeGreaterThanOrEqual(4000);
+    // processus. Sur un Pi, cela suspend l'ordonnanceur MIDI d'autant — c'est
+    // pour cela que le remède est un timeout COURT (le gel n'est pas supprimé,
+    // il est ramené de ~5 000 ms à ~250 ms) doublé d'un réessai asynchrone
+    // (`runWithBusyRetry`, testé dans r5-busy-timeout.test.js).
+    expect(maxGap).toBeGreaterThanOrEqual(150);
+    expect(maxGap).toBeLessThan(1500);
   }, 40000);
 
   test('X-6 — transactions imbriquées : savepoints corrects, rollback complet', () => {

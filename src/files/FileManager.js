@@ -412,7 +412,7 @@ class FileManager {
           this.database.midiDB.insertFileTextEvents(fileId, textEvents);
         }
       });
-      persist();
+      await this._persistWithRetry(persist, 'saveFile');
     } catch (err) {
       // The blob was written above (line ~336) before this re-parse/analysis.
       // If any of it throws, roll the blob back — unless it was deduplicated or
@@ -503,7 +503,7 @@ class FileManager {
         this.database.midiDB.insertFileTextEvents(fileId, textEvents);
       }
     });
-    persist();
+    await this._persistWithRetry(persist, 'bakeAndSave');
 
     if (oldBlobPath && oldBlobPath !== newBlob.relativePath) {
       this._safeBlobDelete(oldBlobPath);
@@ -594,7 +594,7 @@ class FileManager {
         this.database.midiDB.insertFileTextEvents(fileId, textEvents);
       }
     });
-    persist();
+    await this._persistWithRetry(persist, 'replaceFileBytes');
 
     if (oldBlobPath && oldBlobPath !== newBlob.relativePath) {
       this._safeBlobDelete(oldBlobPath);
@@ -673,7 +673,7 @@ class FileManager {
 
     let fileId;
     try {
-      fileId = persist();
+      fileId = await this._persistWithRetry(persist, 'createDerivedFile');
     } catch (err) {
       if (
         err.code !== 'DUPLICATE_CONTENT' &&
@@ -1054,6 +1054,31 @@ class FileManager {
     } catch (err) {
       this.logger.warn(`BlobStore delete failed for ${relativePath}: ${err.message}`);
     }
+  }
+
+  /**
+   * Commit a `db.transaction(...)` wrapper, retrying `SQLITE_BUSY` across
+   * `await` points.
+   *
+   * `better-sqlite3` is synchronous, so a contended write freezes the whole
+   * process — the MIDI scheduler included — for the entire `busy_timeout`.
+   * The timeout is now short (250 ms, F-78/F-130); this restores the tolerance
+   * that short timeout gives up, without ever holding the event loop for more
+   * than one attempt. A transaction that failed to take its lock wrote nothing,
+   * so re-running it is safe.
+   *
+   * @template T
+   * @param {() => T} persist - The transaction wrapper.
+   * @param {string} operation - Symbolic name for logs / DatabaseBusyError.
+   * @returns {Promise<T>}
+   * @private
+   */
+  async _persistWithRetry(persist, operation) {
+    if (typeof this.database?.runWriteWithRetry === 'function') {
+      return this.database.runWriteWithRetry(persist, { operation });
+    }
+    // Test doubles / older facades: behave exactly as before.
+    return persist();
   }
 }
 
