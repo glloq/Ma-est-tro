@@ -34,8 +34,8 @@ const ROUTING_A = { 0: { device: 'devA', targetChannel: 0 } };
 // F-54 — le dernier événement du fichier
 // ---------------------------------------------------------------------------
 
-describe('L05 · F-54 — les événements situés exactement à `duration` sont annulés', () => {
-  test('un accord final sur temps fort perd TOUS ses note-off (remplacés par CC 123)', async () => {
+describe('L05 · F-54 — les événements situés exactement à `duration` (corrigé)', () => {
+  test('un accord final sur temps fort conserve TOUS ses note-off', async () => {
     // Accord de 3 notes, fin à 1920 ticks = 2 000 ms (multiple du tick 10 ms).
     const buffer = buildNoteTrack(
       [
@@ -47,15 +47,20 @@ describe('L05 · F-54 — les événements situés exactement à `duration` sont
     );
     const { trace, player } = await replay({ buffer, routing: ROUTING_A });
     expect(player.duration).toBeCloseTo(2.0, 9);
+    // AVANT correctif : 0 note-off, 3 notes orphelines, seul le CC 123 les
+    // relâchait — inopérant sur un firmware qui n'implémente pas CC 123.
     const offs = trace.filter((e) => (e.status & 0xf0) === 0x80);
-    expect(offs).toHaveLength(0); // AUCUN note-off émis
-    // À la place : un unique All Notes Off (CC 123) sur le canal routé.
+    expect(offs).toHaveLength(3);
+    expect(analyseNotePairing(trace).orphanOn).toHaveLength(0);
+    // Le CC 123 de fin de lecture reste émis (filet de sécurité).
     expect(trace.filter((e) => (e.status & 0xf0) === 0xb0 && e.data1 === 123)).toHaveLength(1);
-    // Les trois notes restent « ouvertes » du point de vue du protocole.
-    expect(analyseNotePairing(trace).orphanOn).toHaveLength(3);
+    // Les note-off précèdent bien le CC 123.
+    expect(trace.indexOf(offs[2])).toBeLessThan(
+      trace.findIndex((e) => (e.status & 0xf0) === 0xb0 && e.data1 === 123)
+    );
   });
 
-  test('la même fin décalée hors de la grille 10 ms délivre bien les note-off', async () => {
+  test('une fin hors de la grille 10 ms (cas qui fonctionnait déjà) reste correcte', async () => {
     // Fin à 1921 ticks ≈ 2 001,04 ms → le timer précède le tick de fin.
     const buffer = buildNoteTrack(
       [

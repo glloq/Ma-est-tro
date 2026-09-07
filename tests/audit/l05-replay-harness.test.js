@@ -688,13 +688,12 @@ if (IS_SELF_RUN) {
         routing: { 0: { device: 'dev1', targetChannel: 0 } }
       });
       expect(player.events.length).toBe(6);
-      expect(trace.length).toBe(6);
+      // 6 messages de note + le CC 123 émis par stop() en fin de fichier.
+      expect(trace).toHaveLength(7);
       expect(trace[0]).toMatchObject({ device: 'dev1', status: 0x90, data1: 60 });
-      // NB : la dernière trame n'est PAS le note-off attendu mais un CC 123
-      // (All Notes Off) — c'est le finding F-54, démontré dans
-      // l05-transport.test.js. Le harnais l'expose, il ne le masque pas.
-      expect(trace[5]).toMatchObject({ status: 0xb0, data1: 123 });
-      expect(analyseNotePairing(trace).orphanOn).toEqual([{ key: 'dev1:0:67', count: 1 }]);
+      expect(trace[5]).toMatchObject({ status: 0x80, data1: 67 }); // dernier note-off (F-54 corrigé)
+      expect(trace[6]).toMatchObject({ status: 0xb0, data1: 123 });
+      expect(analyseNotePairing(trace).orphanOn).toEqual([]);
     });
   });
 }

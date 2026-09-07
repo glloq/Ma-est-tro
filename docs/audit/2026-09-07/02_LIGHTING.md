@@ -504,7 +504,8 @@ Conséquence concrète, mesurée sur tout le catalogue :
 
 ```
 ✓ F-34b: profiles addressing more than RGB are unusable — `speed`, `mode`,
-  `pattern`, `output`, `fan`, `gobo`, `prism`, `focus` … are never emitted
+  `pattern`, `output`, `fan`, `gobo`, `gobo_rotation`, `prism`, `focus`,
+  `color_macro`, `pan_fine`, `tilt_fine` are never emitted
 ```
 
 `mapColorToFixture` ne connaît que `r/g/b/dimmer/w/a/uv/strobe/pan/tilt` ; tous
@@ -856,13 +857,13 @@ Ce qui reste non couvert :
 | `tests/lighting/midi-path-isolation.test.js` | 10 | **risque n°1** : blocage, exception, pendaison, déconnexion, coupe-circuit |
 | `tests/lighting/rule-engine.test.js` | 26 | sémantique des conditions et des actions, priorités, recouvrements |
 | `tests/lighting/shutdown-safe-state.test.js` | 15 | retour à l'état sûr, `Application.stop()`, blackout, groupes, fuite d'écouteur |
-| `tests/lighting/commands.test.js` | 27 | les 38 commandes, validation réelle, payloads absurdes |
+| `tests/lighting/commands.test.js` | 28 | les 38 commandes, validation réelle, payloads absurdes |
 | `tests/lighting/driver-udp.test.js` | 25 | Art-Net / sACN / OSC contre socket locale |
 | `tests/lighting/driver-http.test.js` | 16 | WLED / Hue / générique contre serveur local |
 | `tests/lighting/driver-degraded.test.js` | 18 | MQTT / série / GPIO sans leur transport |
 | `tests/lighting/driver-gpio.test.js` | 21 | GPIO avec modules natifs simulés |
 | `tests/lighting/effects-and-profiles.test.js` | 39 | moteur d'effets animés, contrat `BaseLightingDriver`, profils DMX |
-| **Total** | **196** | + les 4 suites lighting préexistantes + `l12-resilience` = **260 tests verts** |
+| **Total** | **198** | + les 4 suites lighting préexistantes + `l12-resilience` = **260 tests verts** |
 
 `l02-fakes.js` n'est pas un `*.test.js` : il n'est pas collecté par Jest, il est
 importé par les suites.
