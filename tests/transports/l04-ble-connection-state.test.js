@@ -303,6 +303,24 @@ describe('L04/§L — trames entrantes : horodatage, messages multiples, running
     expect(midi).toEqual([]); // correctement ignoré, pas de note fantôme
   });
 
+  test('F-48 — un horodatage dont les bits bas valent 0x78-0x7F ne doit pas être lu comme du temps réel', () => {
+    // ts & 0x7F === 0x7F ⇒ octet d'horodatage 0xFF, identique au System Reset.
+    port._injectIncoming(ADDR, blePacket(127, [0x90, 0x3c, 0x40]));
+    // ts & 0x7F === 0x78 ⇒ 0xF8, identique au MIDI Clock.
+    port._injectIncoming(ADDR, blePacket(120, [0xb0, 0x07, 0x64]));
+    expect(midi).toEqual([
+      [0x90, 0x3c, 0x40],
+      [0xb0, 0x07, 0x64]
+    ]);
+    // Aucun message temps réel fantôme n'a été injecté.
+    expect(midi.some((m) => m.length === 1 && m[0] >= 0xf8)).toBe(false);
+  });
+
+  test('un vrai message temps réel (précédé de son horodatage) reste émis', () => {
+    port._injectIncoming(ADDR, Uint8Array.from([0x80, 0x81, 0xf8, 0x82, 0x90, 0x3c, 0x40]));
+    expect(midi).toEqual([[0xf8], [0x90, 0x3c, 0x40]]);
+  });
+
   test('horodatage BLE qui RECULE (bouclage 13 bits) : aucun message perdu ni réordonné', () => {
     port._injectIncoming(ADDR, blePacket(8190, [0x90, 0x3c, 0x40]));
     port._injectIncoming(ADDR, blePacket(3, [0x90, 0x3e, 0x40])); // wrap : 8190 → 3

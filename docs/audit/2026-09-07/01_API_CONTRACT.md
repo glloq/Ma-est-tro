@@ -847,7 +847,10 @@ $ grep -c "sendCommand" public/index.html   →  75
 
 **14 584 lignes de script SPA inline, 75 sites d'appel `sendCommand`**, tous
 invisibles pour l'outil. Le « 123 commandes jamais appelées par le frontend » du
-2026-08-22 était donc **surévalué de 25 %**.
+2026-08-22 était donc **faux** : 31 commandes n'ont retrouvé un site d'appel que
+par ce seul fichier, et 20 de plus y sont atteintes par dispatch dynamique.
+**123 annoncées → 72 réellement orphelines : l'erreur portait sur 51 commandes,
+soit 41 % du chiffre publié.** Le lot L13 a établi le même 72 indépendamment.
 
 **Outil corrigé** (`collectFrontendCalls` scanne `public/**` `.js` **et**
 `.html`, accepte les backticks ; `collectFrontendMentions` ajoute un signal
@@ -1476,3 +1479,105 @@ la couverture de schémas ne peut pas baisser sous sa valeur courante.
 | `wifi_forget` | Hotspot | ✅ | ✅ | — | ❌ | — |
 | `wifi_list_saved` | Hotspot | ❌ | ✅ | — | ❌ | 7A |
 | `wifi_scan` | Hotspot | ❌ | ✅ | — | ❌ | 7A |
+
+---
+
+## 10. Recommandations
+
+### 10.1 À appliquer en vague 2 — fichiers partagés (diffs exacts)
+
+**a. `CLAUDE.md` — le pipeline de dispatch décrit une résolution versionnée qui
+n'existe pas (F-23) et la liste des endpoints publics est incomplète (F-24).**
+
+```diff
+ `CommandRegistry` (`src/api/`) auto-discovers every `*.js` in
+ `src/api/commands/`; each module exports `register(registry, app)` and binds
+ named handlers. Dispatch pipeline: envelope validation → per-command payload
+ validation via `JsonValidator.validateByCommand` (precompiled from
+-`src/api/commands/schemas/*.schemas.js`) → versioned-handler lookup → async
+-handler → response correlated by `id`.
++`src/api/commands/schemas/*.schemas.js`) → handler lookup **by command name**
++→ async handler → response correlated by `id`. There is **no dispatch on the
++envelope's `version` field**: ADR-003 deliberately chose additive `_vN` command
++names instead, so `version` is accepted for wire compatibility and ignored.
++**`validateByCommand` fails OPEN**: a command with no registered schema accepts
++any payload (86/270 have one — see `docs/audit/2026-09-07/01_API_CONTRACT.md`).
+```
+
+```diff
+ Layered: `config.json` (committed defaults) → `.env` (dotenv) →
+ `GMBOOP_*` environment variables. See `.env.example`. Optional token auth via
+-`GMBOOP_API_TOKEN` (HTTP Bearer + WS query param); `/api/health` and
+-`/api/update-status` are always public (the latter so the dashboard can poll
+-during an in-place update).
++`GMBOOP_API_TOKEN` (HTTP Bearer + WS query param); `/api/health`,
++`/api/update-status` and `/api/capabilities` are always public (the second so
++the dashboard can poll during an in-place update, the third as a monitoring
++probe).
+```
+
+**b. `.github/workflows/*` — cliquet de couverture de schémas.** À ajouter à
+l'étape `lint` (le script doit être ajouté à `package.json` par la vague 2) :
+
+```yaml
+      - name: WS command contract ratchet
+        run: |
+          COUNT=$(node scripts/audit/command-inventory.mjs | sed -n 's/.*with payload schema *: *\([0-9]*\).*/\1/p')
+          echo "commands with a payload schema: $COUNT"
+          test "$COUNT" -ge 86 || { echo "::error::schema coverage regressed below 86"; exit 1; }
+```
+
+**c. `docs/API.md`** — 83 commandes absentes (69,3 %). Liste exacte :
+`node scripts/audit/command-inventory.mjs --json | jq -r '.summary.undocumented[]'`.
+Périmètre §BD / lot L14.
+
+### 10.2 Correctifs de code recommandés, non appliqués
+
+| Pri | Cible | Action | Finding |
+|---|---|---|---|
+| **P1** | `src/utils/JsonValidator.js` | Inverser le défaut : `validateByCommand` échoue si aucun schéma **et** `data` non vide, sauf liste blanche explicite de commandes sans paramètre | F-19 |
+| **P1** | `src/api/commands/schemas/` | Écrire les schémas dans l'ordre du §9.2, en commençant par les 10 du §9.1 | F-19 / F-20 |
+| P2 | `src/lighting/LightingManager.js:215,218`, `src/lighting/instrument/InstrumentLightManager.js:259` | `eventBus.removeListener` → `eventBus.off` — **hors de mon périmètre**, échoue à chaque `Application.stop()` | **F-27** → L02 |
+| P2 | `src/api/WebSocketServer.js` | Séparer le `try/catch` du parse de celui du dispatch (diff en §5.2) | F-21 |
+| P2 | `src/utils/JsonValidator.js` | Valider `id` dans `validateCommand` (diff en §5.3) | F-22 |
+| P3 | `src/api/CommandRegistry.js` | Corriger la JSDoc du versionnement (texte en §6) | F-23 |
+| P3 | `src/api/HttpServer.js` | Exporter `isPrivateClient` pour la rendre testable ; trancher le statut public de `/api/capabilities` | F-24 |
+| P3 | `public/js/` | Vérifier que `error.message` n'est jamais rendu en `innerHTML` (les messages reflètent l'entrée utilisateur) | F-25 → L09/L10 |
+| P3 | UI | Exposer `midi_all_notes_off` et `midi_reset` (aucun bouton aujourd'hui) | §8.2 |
+
+### 10.3 Ce que L01 n'a pas pu établir
+
+| Sujet | Pourquoi | À qui |
+|---|---|---|
+| Départage des 3 bypass d'auth HTTP et comportement d'un client public | toutes les requêtes partent de `127.0.0.1` → `isPrivateClient()` toujours vrai, aucune interface non-privée dans le conteneur | **L10** |
+| `GMBOOP_SECURITY_MODE=secure` en direct | non rejoué (session coupée) | **L10** |
+| Soak du limiteur, 10 clients simultanés, backpressure sortante, flood MIDI/lighting | hors du temps de ce lot | **L12** |
+| Reconnexion / heartbeat / coupure brutale du WebSocket | non testé | **L08** |
+| Classification interne/mort des 72 orphelines | fait par le lot voisin | **L13** (`13_FEATURE_COMPLETENESS.md`) |
+| `POST /api/sf2/` (upload), `POST /api/files` avec un vrai MIDI, corps HTTP géants | non sondés | **L07** |
+
+---
+
+## 11. Reproduire ce rapport
+
+```bash
+S=/tmp/.../scratchpad/L01
+GMBOOP_API_TOKEN=<token> GMBOOP_SERVER_PORT=8101 \
+GMBOOP_DATABASE_PATH=$S/gmboop.db GMBOOP_LOG_FILE=$S/app.log node server.js
+
+node scripts/audit/command-inventory.mjs            # 270 / 86 schémas / 178+20 front
+node $S/fuzz.mjs                                    # 167 cmds × 7 payloads hostiles
+node $S/t_crash.mjs                                 # F-18 : une trame tue le processus
+node $S/t_f06.mjs                                   # F-06 : 40/100 pendent 10 s
+node $S/t_f07.mjs $S/t_f07b.mjs                     # F-07 : 13/19 panics perdus
+node $S/t_env.mjs $S/t_env2.mjs $S/t_ver.mjs        # enveloppe, trames binaires, version
+node $S/t_exploit.mjs $S/t_leak.mjs $S/t_tempo.mjs  # F-19/F-20/F-25
+curl -s -o /dev/null -w '%{http_code} %{size_download}' http://127.0.0.1:8101/api/nope
+
+node --experimental-vm-modules node_modules/jest/bin/jest.js tests/audit/l01-
+```
+
+> ⚠️ **Le serveur réécrit `config.json`** avec les surcharges d'environnement
+> (port 8101, chemin de base) au démarrage. Après tout run :
+> `git diff --stat config.json` puis `git checkout -- config.json`.
+> Vérifié propre à la clôture de ce lot.

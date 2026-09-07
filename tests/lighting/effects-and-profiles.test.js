@@ -205,11 +205,17 @@ describe('L02 — LightingEffectsEngine: what each effect actually draws', () =>
     expect(Math.min(...bris)).toBeGreaterThanOrEqual(0);
   });
 
-  test('sparkle with density 1 lights everything, density 0 lights nothing', () => {
+  test('sparkle with density 1 lights every LED', () => {
     const all = run('sparkle', { density: 1, color: '#FFFFFF' }, 1, 4);
     expect(all.of('setColor').every((c) => c[2] + c[3] + c[4] > 0)).toBe(true);
-    const none = run('sparkle', { density: 0 }, 1, 4);
-    expect(none.of('setColor').every((c) => c[2] + c[3] + c[4] === 0)).toBe(true);
+  });
+
+  test('density 0 is unreachable: `config.density || 0.1` turns it into 10 %', () => {
+    // Minor: `0` is falsy, so "never sparkle" cannot be expressed. Documented
+    // rather than fixed — it is a UI-range question, not a defect.
+    const none = run('sparkle', { density: 0, color: '#FFFFFF' }, 6, 8);
+    const lit = none.of('setColor').filter((c) => c[2] + c[3] + c[4] > 0);
+    expect(lit.length).toBeGreaterThan(0);
   });
 
   test('color_cycle writes one uniform colour per tick and moves through the wheel', () => {
@@ -418,8 +424,8 @@ describe('L02 — DmxFixtureProfiles', () => {
     );
     expect(moved.get(0)).toBe(0);
     expect(moved.get(1)).toBe(255);
-    const strobe = new Map(mapColorToFixture('strobe_rgb_5ch', 1, 2, 3, 255, { strobe: 42 }));
-    expect(strobe.get(1)).toBe(42);
+    const par = new Map(mapColorToFixture('par_rgb_7ch', 1, 2, 3, 255, { strobe: 42 }));
+    expect(par.get(4)).toBe(42); // par_rgb_7ch declares `strobe` at offset 4
   });
 
   test('an unknown profile maps to an empty channel list, not an exception', () => {
@@ -429,5 +435,24 @@ describe('L02 — DmxFixtureProfiles', () => {
   test('a fixture with no colour channels (fog, laser) yields only its own controls', () => {
     expect(mapColorToFixture('fog_basic_2ch', 255, 255, 255, 255)).toEqual([]);
     expect(mapColorToFixture('generic_dimmer', 0, 0, 0, 180)).toEqual([[0, 180]]);
+  });
+
+  test('F-34b: profiles addressing more than RGB are unusable — `speed`, `mode`, `pattern`, `output`, `fan` are never emitted', () => {
+    // `mapColorToFixture` only knows r/g/b/dimmer/w/a/uv/strobe/pan/tilt. Every
+    // other declared attribute of the catalogue is silently dropped, so a fog
+    // machine, a laser or a strobe cannot be driven through it at all.
+    const unreachable = new Set();
+    for (const [key, p] of Object.entries(DMX_PROFILES)) {
+      const emitted = new Set(mapColorToFixture(key, 1, 2, 3, 4).map(([ch]) => ch));
+      for (const [attr, ch] of Object.entries(p.map)) {
+        if (!emitted.has(ch)) unreachable.add(attr);
+      }
+    }
+    for (const attr of ['speed', 'mode', 'pattern', 'output', 'fan', 'gobo', 'prism', 'focus']) {
+      expect([...unreachable]).toContain(attr);
+    }
+    // A fog machine and a laser end up with NO addressable channel at all.
+    expect(mapColorToFixture('fog_basic_2ch', 1, 2, 3, 4)).toEqual([]);
+    expect(mapColorToFixture('laser_basic_3ch', 1, 2, 3, 4)).toEqual([]);
   });
 });

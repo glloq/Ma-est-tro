@@ -11,7 +11,6 @@
  *          playback_stop are dropped like any other frame (measured: 13 of 19
  *          panic attempts silently dropped under a 200 msg/s flood).
  */
-import { jest } from '@jest/globals';
 import WebSocketServer from '../../src/api/WebSocketServer.js';
 
 const RATE_LIMIT_MAX_MESSAGES = 60;

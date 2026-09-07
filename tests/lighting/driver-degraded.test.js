@@ -49,6 +49,73 @@ describe('L02 F-34 — MqttLightDriver can never connect: `mqtt` is not a depend
     expect(logger._rec.error.join(' ')).toMatch(/MQTT Light driver connect failed/);
   });
 
+  test('a device of type "mqtt" configured in the DB degrades WITHOUT touching the MIDI path', async () => {
+    // End-to-end through LightingManager._initDriver: the dynamic import()
+    // failure must be caught there (like the optional transports), not escape
+    // to the caller and not reach the MIDI dispatch. (L14 hand-off.)
+    const { default: LightingManager } = await import('../../src/lighting/LightingManager.js');
+    const { default: EventBus } = await import('../../src/core/EventBus.js');
+    const logger = makeLogger();
+    const bus = new EventBus(logger);
+    const broadcasts = [];
+    const m = new LightingManager({
+      logger,
+      database: {
+        getLightingDevices: () => [
+          {
+            id: 1,
+            name: 'Barre MQTT',
+            type: 'mqtt',
+            enabled: true,
+            led_count: 30,
+            connection_config: { broker_url: 'mqtt://127.0.0.1:1883' }
+          }
+        ],
+        getAllEnabledLightingRules: () => [
+          {
+            id: 1,
+            device_id: 1,
+            instrument_id: null,
+            enabled: true,
+            priority: 0,
+            condition_config: { trigger: 'any' },
+            action_config: { type: 'static', color: '#FF0000' }
+          }
+        ],
+        getLightingGroups: () => []
+      },
+      eventBus: bus,
+      wsServer: { broadcast: (ev, d) => broadcasts.push([ev, d]) }
+    });
+
+    // _initDriver is async and fire-and-forget from loadDevices(); let it settle.
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
+
+    expect(m.drivers.size).toBe(0);
+    expect(logger._rec.warn.join(' ')).toMatch(/Failed to connect lighting device "Barre MQTT"/);
+    expect(broadcasts).toContainEqual([
+      'lighting_device_status',
+      expect.objectContaining({ deviceId: 1, connected: false })
+    ]);
+
+    // The only `error` line is the driver's own connect failure, logged once
+    // during initialisation — nothing is logged per MIDI message afterwards.
+    expect(logger._rec.error.length).toBe(1);
+    expect(logger._rec.error[0]).toMatch(/MQTT Light driver connect failed/);
+
+    // The MIDI path is untouched: the rule points at a device with no driver.
+    const errorsBefore = logger._rec.error.length;
+    for (let i = 0; i < 50; i++) {
+      expect(() =>
+        bus.emit('midi_message', { type: 'noteon', data: { channel: 0, note: 60 + i, velocity: 100 } })
+      ).not.toThrow();
+    }
+    expect(logger._rec.error.length).toBe(errorsBefore);
+
+    await m.shutdown();
+  });
+
   test('every write on the failed driver is an inert no-op', async () => {
     const d = new MqttLightDriver(device({ type: 'mqtt' }), makeLogger());
     await d.connect().catch(() => {});
