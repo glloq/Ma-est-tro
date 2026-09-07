@@ -55,7 +55,7 @@ describe('L02 — LightingEffectsEngine: lifecycle', () => {
     expect(e.getActiveEffects()[0].effectType).toBe('strobe');
   });
 
-  test('stopEffectsForDriver stops only that driver\'s effects', () => {
+  test("stopEffectsForDriver stops only that driver's effects", () => {
     jest.useFakeTimers();
     const e = engine();
     const a = recorder();
@@ -99,7 +99,12 @@ describe('L02 — LightingEffectsEngine: lifecycle', () => {
     e.startEffect('k', 'chase', d, { speed: 400 });
     jest.advanceTimersByTime(400);
     expect(d.of('setColor').length % 4).toBe(0);
-    expect(d.of('setColor').map((c) => c[1]).sort()).toContain(3);
+    expect(
+      d
+        .of('setColor')
+        .map((c) => c[1])
+        .sort()
+    ).toContain(3);
   });
 });
 
@@ -419,9 +424,7 @@ describe('L02 — DmxFixtureProfiles', () => {
     const wash = new Map(mapColorToFixture('wash_rgbw_6ch', 1, 2, 3, 255));
     expect(wash.get(0)).toBe(128); // pan centred
     expect(wash.get(1)).toBe(128); // tilt centred
-    const moved = new Map(
-      mapColorToFixture('wash_rgbw_6ch', 1, 2, 3, 255, { pan: 0, tilt: 255 })
-    );
+    const moved = new Map(mapColorToFixture('wash_rgbw_6ch', 1, 2, 3, 255, { pan: 0, tilt: 255 }));
     expect(moved.get(0)).toBe(0);
     expect(moved.get(1)).toBe(255);
     const par = new Map(mapColorToFixture('par_rgb_7ch', 1, 2, 3, 255, { strobe: 42 }));

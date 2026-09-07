@@ -70,7 +70,13 @@ function makeRepo(state) {
 function build({ withManager = true, rules = [] } = {}) {
   const logger = makeLogger();
   const eventBus = new EventBus(logger);
-  const state = { devices: [{ ...DEV }], rules: [...rules], presets: [], updated: [], updatedRules: [] };
+  const state = {
+    devices: [{ ...DEV }],
+    rules: [...rules],
+    presets: [],
+    updated: [],
+    updatedRules: []
+  };
   let manager = null;
   let driver = null;
   if (withManager) {
@@ -175,20 +181,22 @@ describe('L02 — validation actually enforced by the handlers', () => {
   test('lighting_rule_add refuses an unknown device and out-of-range MIDI bounds', () => {
     const { h } = build();
     expect(() => h.lighting_rule_add({ device_id: 4242 })).toThrow(NotFoundError);
-    expect(() => h.lighting_rule_add({ device_id: 1, condition_config: { note_min: 200 } })).toThrow(
-      /note_min must be 0-127/
-    );
-    expect(() => h.lighting_rule_add({ device_id: 1, condition_config: { velocity_min: -1 } })).toThrow(
-      ValidationError
-    );
+    expect(() =>
+      h.lighting_rule_add({ device_id: 1, condition_config: { note_min: 200 } })
+    ).toThrow(/note_min must be 0-127/);
+    expect(() =>
+      h.lighting_rule_add({ device_id: 1, condition_config: { velocity_min: -1 } })
+    ).toThrow(ValidationError);
   });
 
   test('lighting_device_scan rejects an SSRF-shaped subnet', async () => {
     const { h } = build();
-    await expect(h.lighting_device_scan({ type: 'wled', subnet: '127.0.0' })).resolves.toBeDefined();
-    await expect(h.lighting_device_scan({ type: 'wled', subnet: '10.0.0.1:8080/x' })).rejects.toThrow(
-      ValidationError
-    );
+    await expect(
+      h.lighting_device_scan({ type: 'wled', subnet: '127.0.0' })
+    ).resolves.toBeDefined();
+    await expect(
+      h.lighting_device_scan({ type: 'wled', subnet: '10.0.0.1:8080/x' })
+    ).rejects.toThrow(ValidationError);
     await expect(h.lighting_device_scan({ type: 'wled', subnet: '999.1.1' })).rejects.toThrow(
       ValidationError
     );
@@ -196,8 +204,12 @@ describe('L02 — validation actually enforced by the handlers', () => {
 
   test('lighting_rules_import rejects malformed JSON, a missing array and an oversized batch', () => {
     const { h } = build();
-    expect(() => h.lighting_rules_import({ import_data: '{oops' })).toThrow(/Invalid import data JSON/);
-    expect(() => h.lighting_rules_import({ import_data: { rules: 'nope' } })).toThrow(ValidationError);
+    expect(() => h.lighting_rules_import({ import_data: '{oops' })).toThrow(
+      /Invalid import data JSON/
+    );
+    expect(() => h.lighting_rules_import({ import_data: { rules: 'nope' } })).toThrow(
+      ValidationError
+    );
     expect(() =>
       h.lighting_rules_import({ import_data: { rules: new Array(1001).fill({}) } })
     ).toThrow(/Too many rules/);
@@ -280,8 +292,13 @@ describe('L02 F-37 — what the 31 schemaless commands accept', () => {
     h.lighting_scene_apply({
       scene: {
         masterDimmer: 255,
-        devices: [{ id: 1, color: '#00FF00' }, { id: 99, color: '#FF0000' }],
-        effects: [{ key: 'x_device_1', effectType: 'rainbow', config: { led_start: 0, led_end: 7 } }]
+        devices: [
+          { id: 1, color: '#00FF00' },
+          { id: 99, color: '#FF0000' }
+        ],
+        effects: [
+          { key: 'x_device_1', effectType: 'rainbow', config: { led_start: 0, led_end: 7 } }
+        ]
       }
     });
     expect(driver.of('setRange')[0]).toMatchObject({ r: 0, g: 255, b: 0 });
@@ -321,7 +338,10 @@ describe('L02 — happy paths of the persistence-backed commands', () => {
   test('an import whose device name is unknown is skipped unless a default is given', () => {
     const { h } = build();
     const doc = { rules: [{ name: 'x', device_name: 'ghost' }] };
-    expect(h.lighting_rules_import({ import_data: doc })).toMatchObject({ imported: 0, skipped: 1 });
+    expect(h.lighting_rules_import({ import_data: doc })).toMatchObject({
+      imported: 0,
+      skipped: 1
+    });
     expect(h.lighting_rules_import({ import_data: doc, default_device_id: 1 })).toMatchObject({
       imported: 1,
       skipped: 0
@@ -345,7 +365,9 @@ describe('L02 — happy paths of the persistence-backed commands', () => {
   test('groups: create → colour → off → delete', () => {
     const { h, driver } = build();
     expect(h.lighting_group_create({ name: 'front', device_ids: [1] })).toEqual({ success: true });
-    expect(() => h.lighting_group_create({ name: 'x', device_ids: 'nope' })).toThrow(ValidationError);
+    expect(() => h.lighting_group_create({ name: 'x', device_ids: 'nope' })).toThrow(
+      ValidationError
+    );
     expect(h.lighting_group_list().groups).toEqual({ front: [1] });
     driver.reset();
     h.lighting_group_color({ name: 'front', color: '#FF00FF', brightness: 255 });

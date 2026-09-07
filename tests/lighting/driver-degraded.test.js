@@ -108,7 +108,10 @@ describe('L02 F-34 — MqttLightDriver can never connect: `mqtt` is not a depend
     const errorsBefore = logger._rec.error.length;
     for (let i = 0; i < 50; i++) {
       expect(() =>
-        bus.emit('midi_message', { type: 'noteon', data: { channel: 0, note: 60 + i, velocity: 100 } })
+        bus.emit('midi_message', {
+          type: 'noteon',
+          data: { channel: 0, note: 60 + i, velocity: 100 }
+        })
       ).not.toThrow();
     }
     expect(logger._rec.error.length).toBe(errorsBefore);
@@ -282,7 +285,10 @@ describe('L02 AB02 — GPIO drivers on a host that is not a Raspberry Pi', () =>
   test('GpioStripDriver.connect() fails cleanly with no rpi-ws281x-native binding', async () => {
     const logger = makeLogger();
     const d = new GpioStripDriver(
-      device({ type: 'gpio_strip', connection_config: { strips: [{ channel: 0, gpio: 18, led_count: 8 }] } }),
+      device({
+        type: 'gpio_strip',
+        connection_config: { strips: [{ channel: 0, gpio: 18, led_count: 8 }] }
+      }),
       logger
     );
     await expect(d.connect()).rejects.toThrow();

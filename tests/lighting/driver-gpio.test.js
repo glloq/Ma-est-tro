@@ -150,7 +150,14 @@ describe('L02 AB02 — GpioLedDriver (pigpio faked)', () => {
 
   test('allOff drives every pin to 0 and disconnect releases the instances', async () => {
     const d = new GpioLedDriver(
-      device({ connection_config: { leds: [{ r: 1, g: 2, b: 3 }, { r: 4, g: 5, b: 6 }] } }),
+      device({
+        connection_config: {
+          leds: [
+            { r: 1, g: 2, b: 3 },
+            { r: 4, g: 5, b: 6 }
+          ]
+        }
+      }),
       makeLogger()
     );
     await d.connect();

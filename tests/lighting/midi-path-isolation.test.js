@@ -68,7 +68,9 @@ describe('L02 F-28 — a synchronously slow driver blocks the MIDI path', () => 
     // instrument_id null → indexed under '*' → evaluated on every raw message.
     driver.blockMs = 120;
 
-    const blocked = dispatchAndMeasure(midiMessage('noteon', { channel: 0, note: 60, velocity: 100 }));
+    const blocked = dispatchAndMeasure(
+      midiMessage('noteon', { channel: 0, note: 60, velocity: 100 })
+    );
 
     driver.blockMs = 0;
     const free = dispatchAndMeasure(midiMessage('noteon', { channel: 0, note: 61, velocity: 100 }));

@@ -181,7 +181,14 @@ describe('L12 §C02 — F-129 : l’arrêt du lighting doit atteindre allOff()',
 describe('L12 §AZ — backpressure : un client qui ne lit plus', () => {
   /** Client WS dont le tampon de sortie ne se vide jamais. */
   function stalledClient(bufferedAmount) {
-    return { readyState: 1, bufferedAmount, sent: 0, send() { this.sent++; } };
+    return {
+      readyState: 1,
+      bufferedAmount,
+      sent: 0,
+      send() {
+        this.sent++;
+      }
+    };
   }
 
   test('la file reste bornée et compte les rejets face à un client bloqué', () => {
@@ -268,9 +275,8 @@ describe('L12 §AZ — backpressure : un client qui ne lit plus', () => {
 
 describe('L12 §AZ — EventLoopMonitor : la sonde qui a vu le gel de 10 s', () => {
   test('mesure la latence et n’émet le rapport qu’une fois par fenêtre', async () => {
-    const { EventLoopMonitor } = await import(
-      '../../src/infrastructure/monitoring/EventLoopMonitor.js'
-    );
+    const { EventLoopMonitor } =
+      await import('../../src/infrastructure/monitoring/EventLoopMonitor.js');
     const warns = [];
     const broadcasts = [];
     const mon = new EventLoopMonitor({
@@ -296,9 +302,8 @@ describe('L12 §AZ — EventLoopMonitor : la sonde qui a vu le gel de 10 s', () 
   });
 
   test('stop() est idempotent et libère le timer', async () => {
-    const { EventLoopMonitor } = await import(
-      '../../src/infrastructure/monitoring/EventLoopMonitor.js'
-    );
+    const { EventLoopMonitor } =
+      await import('../../src/infrastructure/monitoring/EventLoopMonitor.js');
     const mon = new EventLoopMonitor({ logger: silentLogger });
     mon.start();
     mon.start(); // no-op

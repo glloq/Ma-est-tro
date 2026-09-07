@@ -60,15 +60,22 @@ describe('L02 — trigger type', () => {
     const { manager } = build([]);
     const cond = { trigger: 'cc' };
     const norm = (t, d) => manager._normalizeMidiData(midiMessage(t, d));
-    expect(manager._matchesCondition(cond, norm('cc', { channel: 0, controller: 7, value: 64 }))).toBe(true);
-    expect(manager._matchesCondition(cond, norm('noteon', { channel: 0, note: 60, velocity: 1 }))).toBe(false);
+    expect(
+      manager._matchesCondition(cond, norm('cc', { channel: 0, controller: 7, value: 64 }))
+    ).toBe(true);
+    expect(
+      manager._matchesCondition(cond, norm('noteon', { channel: 0, note: 60, velocity: 1 }))
+    ).toBe(false);
   });
 });
 
 describe('L02 F-31 — a `noteon` rule never sees the release: the light stays lit', () => {
   test('trigger:noteon (the UI default for a new rule) lights the LED and never clears it', () => {
     const { bus, driver } = build([
-      rule({ condition_config: { trigger: 'noteon' }, action_config: { type: 'static', color: '#FF0000' } })
+      rule({
+        condition_config: { trigger: 'noteon' },
+        action_config: { type: 'static', color: '#FF0000' }
+      })
     ]);
 
     bus.emit('midi_message', midiMessage('noteon', { channel: 0, note: 60, velocity: 100 }));
@@ -86,7 +93,10 @@ describe('L02 F-31 — a `noteon` rule never sees the release: the light stays l
 
   test("trigger:'any' does clear it — the note-off path is only reachable that way", () => {
     const { bus, driver } = build([
-      rule({ condition_config: { trigger: 'any' }, action_config: { type: 'static', color: '#FF0000' } })
+      rule({
+        condition_config: { trigger: 'any' },
+        action_config: { type: 'static', color: '#FF0000' }
+      })
     ]);
     bus.emit('midi_message', midiMessage('noteon', { channel: 0, note: 60, velocity: 100 }));
     bus.emit('midi_message', midiMessage('noteoff', { channel: 0, note: 60, velocity: 0 }));
@@ -111,15 +121,22 @@ describe('L02 — channel / note / velocity / CC filters', () => {
   test('channels is an inclusion list on the 0-based channel', () => {
     const { manager } = build([]);
     const n = (d) => manager._normalizeMidiData(midiMessage('noteon', d));
-    expect(manager._matchesCondition({ channels: [9] }, n({ channel: 9, note: 36, velocity: 100 }))).toBe(true);
-    expect(manager._matchesCondition({ channels: [9] }, n({ channel: 0, note: 36, velocity: 100 }))).toBe(false);
+    expect(
+      manager._matchesCondition({ channels: [9] }, n({ channel: 9, note: 36, velocity: 100 }))
+    ).toBe(true);
+    expect(
+      manager._matchesCondition({ channels: [9] }, n({ channel: 0, note: 36, velocity: 100 }))
+    ).toBe(false);
     // An empty list means "no filter", not "match nothing".
-    expect(manager._matchesCondition({ channels: [] }, n({ channel: 3, note: 36, velocity: 100 }))).toBe(true);
+    expect(
+      manager._matchesCondition({ channels: [] }, n({ channel: 3, note: 36, velocity: 100 }))
+    ).toBe(true);
   });
 
   test('note_min / note_max bounds are inclusive', () => {
     const { manager } = build([]);
-    const n = (note) => manager._normalizeMidiData(midiMessage('noteon', { channel: 0, note, velocity: 100 }));
+    const n = (note) =>
+      manager._normalizeMidiData(midiMessage('noteon', { channel: 0, note, velocity: 100 }));
     const c = { note_min: 60, note_max: 72 };
     expect(manager._matchesCondition(c, n(59))).toBe(false);
     expect(manager._matchesCondition(c, n(60))).toBe(true);
@@ -129,7 +146,8 @@ describe('L02 — channel / note / velocity / CC filters', () => {
 
   test('velocity_min / velocity_max bounds are inclusive', () => {
     const { manager } = build([]);
-    const n = (velocity) => manager._normalizeMidiData(midiMessage('noteon', { channel: 0, note: 60, velocity }));
+    const n = (velocity) =>
+      manager._normalizeMidiData(midiMessage('noteon', { channel: 0, note: 60, velocity }));
     const c = { velocity_min: 40, velocity_max: 100 };
     expect(manager._matchesCondition(c, n(39))).toBe(false);
     expect(manager._matchesCondition(c, n(40))).toBe(true);
@@ -138,9 +156,7 @@ describe('L02 — channel / note / velocity / CC filters', () => {
   });
 
   test('cc_number selects the controller; a different CC does not fire', () => {
-    const { bus, driver } = build([
-      rule({ condition_config: { trigger: 'cc', cc_number: [7] } })
-    ]);
+    const { bus, driver } = build([rule({ condition_config: { trigger: 'cc', cc_number: [7] } })]);
     bus.emit('midi_message', midiMessage('cc', { channel: 0, controller: 7, value: 100 }));
     bus.emit('midi_message', midiMessage('cc', { channel: 0, controller: 11, value: 100 }));
     expect(driver.of('setRange').length).toBe(1);
@@ -160,7 +176,9 @@ describe('L02 — channel / note / velocity / CC filters', () => {
 
   test('cc_value_min / cc_value_max only apply to cc messages', () => {
     const { manager } = build([]);
-    const cc = manager._normalizeMidiData(midiMessage('cc', { channel: 0, controller: 7, value: 10 }));
+    const cc = manager._normalizeMidiData(
+      midiMessage('cc', { channel: 0, controller: 7, value: 10 })
+    );
     expect(manager._matchesCondition({ cc_value_min: 64 }, cc)).toBe(false);
     // A pitchbend carries `value` too but is not filtered by cc_value_*.
     const pb = manager._normalizeMidiData(midiMessage('pitch', { channel: 0, value: 10 }));
@@ -183,7 +201,9 @@ describe('L02 — action semantics', () => {
   });
 
   test('an invalid hex colour degrades to white instead of throwing', () => {
-    const { bus, driver } = build([rule({ action_config: { type: 'static', color: 'not-a-color' } })]);
+    const { bus, driver } = build([
+      rule({ action_config: { type: 'static', color: 'not-a-color' } })
+    ]);
     bus.emit('midi_message', midiMessage('noteon', { channel: 0, note: 60, velocity: 100 }));
     expect(driver.of('setRange')[0]).toMatchObject({ r: 255, g: 255, b: 255 });
   });
@@ -242,7 +262,13 @@ describe('L02 — action semantics', () => {
   test('note_led maps a note to exactly one LED, clamped to the strip', () => {
     const { bus, driver } = build([
       rule({
-        action_config: { type: 'note_led', note_led_min: 60, note_led_max: 67, led_start: 0, led_end: 7 }
+        action_config: {
+          type: 'note_led',
+          note_led_min: 60,
+          note_led_max: 67,
+          led_start: 0,
+          led_end: 7
+        }
       })
     ]);
     bus.emit('midi_message', midiMessage('noteon', { channel: 0, note: 60, velocity: 100 }));
@@ -261,7 +287,10 @@ describe('L02 — action semantics', () => {
 
   test("off_action:'hold' keeps the LED lit on release", () => {
     const { bus, driver } = build([
-      rule({ condition_config: { trigger: 'any' }, action_config: { type: 'static', off_action: 'hold' } })
+      rule({
+        condition_config: { trigger: 'any' },
+        action_config: { type: 'static', off_action: 'hold' }
+      })
     ]);
     bus.emit('midi_message', midiMessage('noteon', { channel: 0, note: 60, velocity: 100 }));
     bus.emit('midi_message', midiMessage('noteoff', { channel: 0, note: 60, velocity: 0 }));
@@ -308,15 +337,28 @@ describe('L02 — several rules on one event', () => {
   test('F-33: a high-priority wildcard rule is overwritten by a low-priority instrument rule', () => {
     const { bus, drivers } = build(
       [
-        rule({ id: 1, priority: 100, instrument_id: null, action_config: { type: 'static', color: '#FF0000' } }),
-        rule({ id: 2, priority: 0, instrument_id: 'inst-1', action_config: { type: 'static', color: '#00FF00' } })
+        rule({
+          id: 1,
+          priority: 100,
+          instrument_id: null,
+          action_config: { type: 'static', color: '#FF0000' }
+        }),
+        rule({
+          id: 2,
+          priority: 0,
+          instrument_id: 'inst-1',
+          action_config: { type: 'static', color: '#00FF00' }
+        })
       ],
       [1]
     );
     const d = drivers.get(1);
     bus.emit('midi_routed', {
-      route: 'r', source: 'in', destination: 'inst-1',
-      type: 'noteon', data: { channel: 0, note: 60, velocity: 100 }
+      route: 'r',
+      source: 'in',
+      destination: 'inst-1',
+      type: 'noteon',
+      data: { channel: 0, note: 60, velocity: 100 }
     });
     const w = d.of('setRange');
     expect(w.length).toBe(2);
@@ -330,10 +372,18 @@ describe('L02 — several rules on one event', () => {
     // DeviceManager emits `midi_message` first, then routeMessage() emits
     // `midi_routed`; `_recentRoutedEvents` is only populated by the second,
     // so the de-dup can never suppress the first. Both paths run the '*' rules.
-    const { bus, driver } = build([rule({ instrument_id: null, condition_config: { trigger: 'any' } })]);
+    const { bus, driver } = build([
+      rule({ instrument_id: null, condition_config: { trigger: 'any' } })
+    ]);
     const data = { channel: 0, note: 60, velocity: 100 };
     bus.emit('midi_message', midiMessage('noteon', data));
-    bus.emit('midi_routed', { route: 'r', source: 'in', destination: 'inst-1', type: 'noteon', data });
+    bus.emit('midi_routed', {
+      route: 'r',
+      source: 'in',
+      destination: 'inst-1',
+      type: 'noteon',
+      data
+    });
     expect(driver.of('setRange').length).toBe(2);
   });
 

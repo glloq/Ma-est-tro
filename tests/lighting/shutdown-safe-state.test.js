@@ -98,7 +98,11 @@ describe('L02 F-30 — shutdown() must actually darken the rig', () => {
 describe('L02 — the safe-state primitives themselves are correct (once reached)', () => {
   test('allOff() stops effects, cancels fades, darkens every connected driver', () => {
     const { manager, driver } = build();
-    manager.effectsEngine.startEffect('e1', 'rainbow', driver, { led_start: 0, led_end: 7, speed: 500 });
+    manager.effectsEngine.startEffect('e1', 'rainbow', driver, {
+      led_start: 0,
+      led_end: 7,
+      speed: 500
+    });
     manager._fadeIn(driver, 0, 7, 255, 0, 0, 255, 500);
     expect(manager.effectsEngine.activeEffects.size).toBe(1);
     expect(manager.activeFades.size).toBe(1);
@@ -135,9 +139,13 @@ describe('L02 — the safe-state primitives themselves are correct (once reached
     expect(manager.getSystemEnabled()).toEqual({ success: true, enabled: false });
   });
 
-  test('disconnectDevice() stops that device\'s effects and drops the driver', async () => {
+  test("disconnectDevice() stops that device's effects and drops the driver", async () => {
     const { manager, driver } = build();
-    manager.effectsEngine.startEffect('k', 'rainbow', driver, { led_start: 0, led_end: 7, speed: 500 });
+    manager.effectsEngine.startEffect('k', 'rainbow', driver, {
+      led_start: 0,
+      led_end: 7,
+      speed: 500
+    });
     await manager.disconnectDevice(DEV.id);
     expect(manager.drivers.has(DEV.id)).toBe(false);
     expect(driver.disconnectCalls).toBe(1);
@@ -163,9 +171,8 @@ describe('L02 — the safe-state primitives themselves are correct (once reached
 
 describe('L02 F-30c — InstrumentLightManager.shutdown() must actually detach its listener', () => {
   async function build() {
-    const { default: InstrumentLightManager } = await import(
-      '../../src/lighting/instrument/InstrumentLightManager.js'
-    );
+    const { default: InstrumentLightManager } =
+      await import('../../src/lighting/instrument/InstrumentLightManager.js');
     const logger = makeLogger();
     const bus = new EventBus(logger);
     const database = {
@@ -199,9 +206,8 @@ describe('L02 F-30c — InstrumentLightManager.shutdown() must actually detach i
     // Application.restart() = stop() → initialize() → start(); the maintenance
     // command exposes it. Each cycle used to leave one more listener behind,
     // and EventBus warns past 50.
-    const { default: InstrumentLightManager } = await import(
-      '../../src/lighting/instrument/InstrumentLightManager.js'
-    );
+    const { default: InstrumentLightManager } =
+      await import('../../src/lighting/instrument/InstrumentLightManager.js');
     const logger = makeLogger();
     const bus = new EventBus(logger);
     const deps = {

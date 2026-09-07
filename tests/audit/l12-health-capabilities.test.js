@@ -154,7 +154,7 @@ describe('L12 §BB — /api/health dit la vérité sur les capacités', () => {
       expect(capabilities.ble.status).toBe('disabled');
     });
 
-    test("un échec du constructeur reste failed (comportement conservé)", () => {
+    test('un échec du constructeur reste failed (comportement conservé)', () => {
       const { capabilities } = statusFor({
         bluetoothManager: null,
         _capabilityErrors: { ble: 'noble missing' }

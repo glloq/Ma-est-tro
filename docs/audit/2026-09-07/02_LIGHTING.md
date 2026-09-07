@@ -855,13 +855,14 @@ Ce qui reste non couvert :
 | `tests/lighting/l02-fakes.js` | — | doubles partagés : `FakeLightingDriver`, base en mémoire, serveurs bouchons `dgram` / `http` |
 | `tests/lighting/midi-path-isolation.test.js` | 10 | **risque n°1** : blocage, exception, pendaison, déconnexion, coupe-circuit |
 | `tests/lighting/rule-engine.test.js` | 26 | sémantique des conditions et des actions, priorités, recouvrements |
-| `tests/lighting/shutdown-safe-state.test.js` | 12 | retour à l'état sûr, `Application.stop()`, blackout, groupes |
+| `tests/lighting/shutdown-safe-state.test.js` | 15 | retour à l'état sûr, `Application.stop()`, blackout, groupes, fuite d'écouteur |
 | `tests/lighting/commands.test.js` | 27 | les 38 commandes, validation réelle, payloads absurdes |
 | `tests/lighting/driver-udp.test.js` | 25 | Art-Net / sACN / OSC contre socket locale |
 | `tests/lighting/driver-http.test.js` | 16 | WLED / Hue / générique contre serveur local |
-| `tests/lighting/driver-degraded.test.js` | 17 | MQTT / série / GPIO sans leur transport |
+| `tests/lighting/driver-degraded.test.js` | 18 | MQTT / série / GPIO sans leur transport |
 | `tests/lighting/driver-gpio.test.js` | 21 | GPIO avec modules natifs simulés |
-| **Total** | **154** | + les 4 suites lighting préexistantes = **204 tests verts** |
+| `tests/lighting/effects-and-profiles.test.js` | 39 | moteur d'effets animés, contrat `BaseLightingDriver`, profils DMX |
+| **Total** | **196** | + les 4 suites lighting préexistantes + `l12-resilience` = **260 tests verts** |
 
 `l02-fakes.js` n'est pas un `*.test.js` : il n'est pas collecté par Jest, il est
 importé par les suites.
@@ -896,7 +897,8 @@ importé par les suites.
 | **P2** | **F-29** — envelopper `this._executeAction(rule, midiData)` dans un `try/catch` par règle, avec compteur d'échecs par appareil et mise en quarantaine au-delà d'un seuil. | `LightingManager` |
 | **P2** | **F-32** — plomber un identifiant d'événement unique depuis `DeviceManager` jusqu'au routeur et dédupliquer dessus ; ou, plus simple et sans plomberie, ne plus évaluer les règles `*` dans `_evaluateRoutedEvent` (elles sont déjà couvertes par `midi_message`). | `LightingManager` |
 | **P2** | **F-33** — soit appliquer *first-match-wins* par appareil après tri global sur `priority`, soit renommer le champ en `order` et documenter que tout s'exécute. L'état actuel est le contraire de l'intention. | `LightingManager._evaluateRoutedEvent` |
-| **P2** | **F-34** — ajouter `mqtt` aux `optionalDependencies` (vague 2, `package.json` interdit ici) **ou** retirer le type `mqtt` de l'UI et de `DRIVER_MAP`. Diff proposé : `"optionalDependencies": { "mqtt": "^5.10.1", "pigpio": "^3.3.1", "rpi-ws281x-native": "^1.0.0" }`. | `package.json` (vague 2) |
+| **P2** | **F-34a** — ajouter `mqtt` aux `optionalDependencies` (vague 2, `package.json` interdit ici) **ou** retirer le type `mqtt` de l'UI, de `DRIVER_MAP` et du README. Diff proposé : `"optionalDependencies": { "mqtt": "^5.10.1", "pigpio": "^3.3.1", "rpi-ws281x-native": "^1.0.0" }`. À coordonner avec L14 (écart docs ↔ code). | `package.json` (vague 2) |
+| **P2** | **F-34b** — câbler les profils DMX ou les retirer. Câblage minimal : persister `dmx_profile` dans `connection_config` (le `<select>` existe déjà), puis, dans `_executeAction`, router vers `driver.setFixture(startChannel, mapColorToFixture(profil, r, g, b, brightness))` quand le driver expose `setFixture`. Sinon, supprimer `mapColorToFixture`, `getProfile`, le sélecteur et l'entrée du wiki. | `LightingManager` + `LightingForms.js` (L09) |
 | **P2** | **F-35** — implémenter `ArtPoll`/`ArtPollReply` (Art-Net) et, à défaut de découverte, marquer les appareils UDP `connected: unknown` plutôt que `true`, comme le fait déjà `/api/health` pour les capacités dégradées. | drivers UDP + `getDeviceStatus` |
 | **P2** | **F-36** — plafonner l'émission à 44 Hz par univers (fusion de trames dans un timer, dernière valeur gagnante), à l'image du `batch_delay_ms` de `HttpLightDriver`. | `BaseLightingDriver` |
 | **P2** | **F-37** — écrire les 31 schémas manquants ; à traiter avec F-03 (L01). Les plus urgents : `lighting_bpm_set`, `lighting_scene_apply`, `lighting_rule_add`/`update`, `lighting_group_color`. Et remplacer `validateMidiRange` par un contrôle `Number.isInteger`. | `schemas/lighting.schemas.js` (L01) |
@@ -920,7 +922,8 @@ couvert **sans matériel**.
 | **AB04-HW** | Récepteur E1.31 réel (QLC+, MagicQ, ETC) : multicast sur un vrai réseau, priorité, fusion de sources, perte de synchro | Le multicast local ne reproduit pas IGMP ni un commutateur |
 | **AB05-HW** | QLC+ / QLab / TouchDesigner : mappage OSC réel | Le décodeur de test valide l'encodage, pas l'interprétation |
 | **AB06-HW** | Boîtier WLED / pont Hue réels : réponse du firmware, appairage, limite de requêtes | Le bouchon répond ce qu'on lui dit de répondre |
-| **AB07-HW** | Courtier MQTT réel + Tasmota/ESPHome : reconnexion, QoS 1/2, messages retenus. **Bloqué en amont par F-34.** | Le module `mqtt` n'est pas installable ici |
+| **AB07-HW** | Courtier MQTT réel + Tasmota/ESPHome : reconnexion, QoS 1/2, messages retenus. **Bloqué en amont par F-34a** — inutile de prévoir le banc tant que la dépendance n'existe pas. | Le module `mqtt` n'est pas installable ici |
+| **AB03/04-HW2** | Fixture non-RGB réelle (moving head, machine à fumée, stroboscope) pilotée par profil. **Bloqué en amont par F-34b** — aucun chemin logiciel n'y mène aujourd'hui. | Capacité morte : rien à valider sur banc avant câblage |
 | **AC-HW** | **Offset MIDI ↔ lumière** : mesurer le délai réel entre l'événement musical et l'événement lumineux | Photodiode / caméra rapide + capture MIDI sur base de temps commune. Sans objet tant que F-28 n'est pas corrigé : l'offset serait dominé par le blocage synchrone |
 | **C02-HW** | Extinction sur coupure secteur / SIGKILL | Relève du *hold-last-look* du pupitre, pas du logiciel |
 
@@ -936,6 +939,7 @@ couvert **sans matériel**.
 | 4 | `src/lighting/SacnDriver.js` | idem | `driver-udp.test.js` « F-30b … » |
 | 5 | `src/lighting/OscLightDriver.js` | idem | `driver-udp.test.js` « F-30b … » |
 | 6 | `src/lighting/HttpLightDriver.js` | `allOff()` renvoie sa promesse, `_doDisconnect()` l'attend, `_sendHueAllOff` attend ses requêtes | `driver-http.test.js` « F-30b … » |
+| 7 | `src/lighting/instrument/InstrumentLightManager.js` | `eventBus?.removeListener?.` → `eventBus?.off?.` (fuite d'écouteur silencieuse, L01 F-27) | `shutdown-safe-state.test.js` « F-30c … » — 2 tests rouges avant, verts après |
 
 Aucun fichier partagé modifié (`package.json`, `config.json`, `jest.config.cjs`,
 CI, `CLAUDE.md`). Aucune commande git, aucun `npm install`.

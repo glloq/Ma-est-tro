@@ -539,12 +539,29 @@ l'écouteur `midi_message` restait attaché — donc s'accumulait à chaque
 C'est exactement le point de la checklist §C02 que l'audit d'août signalait
 comme *« complètement non testé, et le seul avec une conséquence physique »*.
 
-**État : CORRIGÉ pendant cet audit, par le lot L02** (leur finding F-30 :
-`off()` au lieu de `removeListener()`, plus la mise à `null` des handlers).
-Vérifié à HEAD et verrouillé ici par deux tests : `EventBus` n'expose bien que
-`off()`, et `shutdown()` atteint désormais `allOff()` en détachant ses
-écouteurs. Le mérite du correctif revient à L02 ; ce lot apporte la preuve
-d'exploitation (le journal de chaque arrêt réel) et le verrou de non-régression.
+**La même cause racine a mordu ailleurs, plus fort.** Le lot L01 a trouvé le
+même appel `eventBus.removeListener` dans `lighting_midi_learn`, mais à
+l'intérieur d'un `setTimeout` : la `TypeError` y devenait un
+`uncaughtException`, donc **le processus était tué** (leur P0). Le même défaut
+d'API produit donc, selon le site d'appel, soit un arrêt incomplet (ici), soit
+une mort du serveur (là). C'est le signe d'un problème de contrat, pas d'une
+faute de frappe isolée : `EventBus` ressemble assez à un `EventEmitter` pour que
+`removeListener` soit écrit par réflexe, et assez peu pour qu'il explose.
+
+**État : CORRIGÉ pendant cet audit** (L02, leur finding F-30 : `off()` au lieu
+de `removeListener()`, plus la mise à `null` des handlers ; L01 pour le site
+`midi_learn`). Vérifié à HEAD : `grep -rn "\.removeListener(" src/` ne renvoie
+plus que trois appels **légitimes** sur de vrais `EventEmitter` Node
+(`NetworkManager.js:745,749` sur un socket, `Application.js:832` sur `process`).
+Verrouillé ici par deux tests : `EventBus` n'expose bien que `off()`, et
+`shutdown()` atteint désormais `allOff()` en détachant ses écouteurs. Le mérite
+des correctifs revient à L02 et L01 ; ce lot apporte la preuve d'exploitation
+(le journal de **chaque** arrêt réel) et le verrou de non-régression.
+
+**Recommandation résiduelle** (vague 2, une ligne dans `src/core/EventBus.js`) :
+ajouter `removeListener(event, cb) { return this.off(event, cb); }`. La classe
+imite déjà `on` / `off` / `once` / `emit` / `removeAllListeners` ; l'alias
+manquant est le seul écart, et il aura coûté un P0 et un P1 dans le même audit.
 
 ### 6.2 F-137 (P2) — le route-through live n'est jamais silencé à l'arrêt
 

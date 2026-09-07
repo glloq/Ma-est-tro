@@ -168,7 +168,9 @@ class HttpLightDriver extends BaseLightingDriver {
   async _sendHueAllOff() {
     const pending = [];
     for (let i = 0; i < this.device.led_count; i++) {
-      pending.push(this._sendRequest('PUT', `/api/${this.apiKey}/lights/${i + 1}/state`, { on: false }));
+      pending.push(
+        this._sendRequest('PUT', `/api/${this.apiKey}/lights/${i + 1}/state`, { on: false })
+      );
     }
     await Promise.all(pending);
   }

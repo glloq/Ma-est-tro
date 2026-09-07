@@ -49,7 +49,10 @@ describe('L02 AB03 — ArtNetDriver against a local UDP sink', () => {
     const srv = track(await startUdpServer());
     const logger = makeLogger();
     const d = new ArtNetDriver(
-      device({ led_count: ledCount, connection_config: { host: '127.0.0.1', port: srv.port, ...cfg } }),
+      device({
+        led_count: ledCount,
+        connection_config: { host: '127.0.0.1', port: srv.port, ...cfg }
+      }),
       logger
     );
     await d.connect();
@@ -239,7 +242,11 @@ describe('L02 AB04 — SacnDriver against a local UDP sink', () => {
   }
 
   test('the emitted frame is a conformant E1.31 data packet', async () => {
-    const { srv, d, skipped } = await connect({ universe: 7, priority: 120, source_name: 'GMB-test' });
+    const { srv, d, skipped } = await connect({
+      universe: 7,
+      priority: 120,
+      source_name: 'GMB-test'
+    });
     if (skipped) return expect(skipped).toBeUndefined();
     d.setColor(0, 10, 20, 30, 255);
     await srv.waitFor(1);

@@ -47,7 +47,9 @@ async function driverFor(srv, cfg = {}, ledCount = 3) {
 
 describe('L02 AB06 — connection handling', () => {
   test('a WLED controller answering /json/info connects', async () => {
-    const srv = track(await startHttpServer({ 'GET /json/info': { status: 200, body: { name: 'w' } } }));
+    const srv = track(
+      await startHttpServer({ 'GET /json/info': { status: 200, body: { name: 'w' } } })
+    );
     const { d } = await driverFor(srv, { firmware: 'wled' });
     await d.connect();
     expect(d.isConnected()).toBe(true);
@@ -87,20 +89,16 @@ describe('L02 AB06 — connection handling', () => {
     expect(srv.requests[0].headers.authorization).toBe('Bearer s3cret');
   });
 
-  test(
-    'an unresponsive controller times out after 5 s instead of hanging forever',
-    async () => {
-      const srv = track(await startHttpServer({}, { hang: true }));
-      const { d } = await driverFor(srv, { firmware: 'wled' });
-      const t0 = Date.now();
-      await expect(d.connect()).rejects.toThrow();
-      const ms = Date.now() - t0;
-      process.stdout.write(`\n[L02 AB06] hung controller: connect() gave up after ${ms} ms\n`);
-      expect(ms).toBeGreaterThan(4000);
-      expect(ms).toBeLessThan(9000);
-    },
-    15000
-  );
+  test('an unresponsive controller times out after 5 s instead of hanging forever', async () => {
+    const srv = track(await startHttpServer({}, { hang: true }));
+    const { d } = await driverFor(srv, { firmware: 'wled' });
+    const t0 = Date.now();
+    await expect(d.connect()).rejects.toThrow();
+    const ms = Date.now() - t0;
+    process.stdout.write(`\n[L02 AB06] hung controller: connect() gave up after ${ms} ms\n`);
+    expect(ms).toBeGreaterThan(4000);
+    expect(ms).toBeLessThan(9000);
+  }, 15000);
 });
 
 describe('L02 AB06 — write batching and payload shape', () => {
